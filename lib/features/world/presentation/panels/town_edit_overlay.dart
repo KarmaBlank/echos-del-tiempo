@@ -200,6 +200,30 @@ class TownEditOverlay extends StatelessWidget {
               key: const ValueKey('town-edit-info'),
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
+          // Ayudantes (farming.md § 8): uno por área, tope por tamaño.
+          DsSectionHeader(lake ? 'PESCADORES' : 'GRANJEROS',
+              trailing: DsBadge('${b.helper} / ${TownRules.helperCap(b)}',
+                  key: const ValueKey('town-edit-helpers'))),
+          Text(TownRules.helperLine(b), style: DsText.detail()),
+          Builder(builder: (_) {
+            final p = c.view?.me?.profile;
+            final why = p == null
+                ? 'Sin personaje'
+                : TownRules.cannotHire(p, town, b.id);
+            return Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              DsButton('CONTRATAR AYUDANTE',
+                  key: const ValueKey('town-edit-hire'),
+                  size: DsButtonSize.compact,
+                  kind: DsButtonKind.primary,
+                  tooltip: why ?? '${TownRules.helperCost} de oro',
+                  onPressed: why == null ? () => c.hireHelper(b.id) : null),
+              DsButton('DESPEDIR',
+                  key: const ValueKey('town-edit-fire'),
+                  size: DsButtonSize.compact,
+                  onPressed: b.helper > 0 ? () => c.fireHelper(b.id) : null),
+            ]);
+          }),
+          SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
             if (lake)
               DsButton('AGREGAR ESPECIES',

@@ -74,9 +74,6 @@ class _TraderPanelState extends State<TraderPanel> {
                       ? c.sellFish(materials: _materials)
                       : c.sellCrop(null, materials: _materials)
                   : null),
-        if (_tab == 0)
-          PanelButton('AUTO-PESCA',
-              key: const ValueKey('fish-auto'), onPressed: c.autoFish),
         PanelButton('CERRAR',
             key: const ValueKey('trade-close'), onPressed: c.closePanel),
       ],
@@ -308,7 +305,6 @@ class _TraderPanelState extends State<TraderPanel> {
       for (final e in (f?.crops ?? const <String, int>{}).entries)
         if (parseCropKey(e.key) case final pc?) (e.key, pc.$1, pc.$2, e.value)
     ]..sort((a, b) => a.$1.compareTo(b.$1));
-    final silo = c.town.silo;
     return [
       for (final s in seeds)
         _Row(
@@ -387,22 +383,6 @@ class _TraderPanelState extends State<TraderPanel> {
                     '${d.area > 0 ? ' · área ${d.area == 1 ? 'en cruz' : '3 × 3'}' : ''}',
                 trailing: _toolButton(d),
               )),
-      if (silo.isNotEmpty)
-        _Row(
-            'Granero del ayudante',
-            'cultivos',
-            sell: true,
-            DsListRow(
-              key: const ValueKey('trade-silo'),
-              compact: true,
-              title: 'Granero del ayudante',
-              detail:
-                  '${silo.values.fold(0, (a, b) => a + b)} cosechas para recoger',
-              trailing: DsButton('RECOGER',
-                  key: const ValueKey('trade-silo-take'),
-                  size: DsButtonSize.compact,
-                  onPressed: c.collectSilo),
-            )),
       for (final (key, crop, quality, n) in crops)
         _Row(
             crop.name,

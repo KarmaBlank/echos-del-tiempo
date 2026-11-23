@@ -7,7 +7,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 
 /// FUENTE RÚNICA (town_editor.md § 1, farming.md § 8): entrar a EDITAR
-/// PUEBLO (solo el dueño del mundo), contratar al ayudante de la huerta y,
+/// PUEBLO (solo el dueño del mundo), 
 /// como antes, ir al tablero de encargos.
 class FountainPanel extends StatelessWidget {
   const FountainPanel({super.key, required this.view, required this.controller});
@@ -21,7 +21,6 @@ class FountainPanel extends StatelessWidget {
     final p = view.me?.profile;
     final t = c.town;
     final editWhy = c.cannotEditTown;
-    final hireWhy = p == null ? 'Sin personaje' : TownRules.cannotHire(p, t);
     return PanelFrame(
       key: const ValueKey('panel-fountain'),
       title: 'FUENTE RÚNICA',
@@ -68,37 +67,11 @@ class FountainPanel extends StatelessWidget {
                     onPressed: editWhy == null ? c.enterTownEdit : null),
               ),
               SizedBox(height: DsSpace.sm),
-              DsSectionHeader('AYUDANTE DE LA HUERTA',
-                  trailing: DsBadge(
-                      '${t.helper}/${TownRules.t.i('helperMax')}',
-                      key: const ValueKey('fountain-helper-level'))),
-              DsListRow(
-                key: const ValueKey('fountain-helper'),
-                compact: true,
-                title: t.helper == 0 ? 'Contratar' : 'Mejorar',
-                subtitleWidget: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                          '${TownRules.helperCost(t.helper + 1)} de oro · '
-                          'hasta ${TownRules.t.i('helperPlots') * (t.helper + 1)} '
-                          'parcelas · cosecha al granero del comerciante',
-                          softWrap: true,
-                          style: DsText.detail()),
-                      // El motivo del botón gris, a la vista.
-                      if (hireWhy != null)
-                        Text(hireWhy,
-                            key: const ValueKey('fountain-helper-why'),
-                            softWrap: true,
-                            style: DsText.detail(DsColors.danger)),
-                    ]),
-                trailing: DsButton(t.helper == 0 ? 'CONTRATAR' : 'MEJORAR',
-                    key: const ValueKey('fountain-helper-btn'),
-                    size: DsButtonSize.compact,
-                    tooltip: hireWhy,
-                    onPressed: hireWhy == null ? c.hireHelper : null),
-              ),
+              Text(
+                  'Los granjeros y pescadores se contratan en EDITAR PUEBLO: '
+                  'tocá una huerta o un lago.',
+                  key: const ValueKey('fountain-helper-note'),
+                  style: DsText.detail()),
             ],
           ),
         ),

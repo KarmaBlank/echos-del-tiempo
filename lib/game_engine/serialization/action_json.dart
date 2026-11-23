@@ -177,7 +177,7 @@ abstract final class ActionJson {
         // Pesca v0.22.0 (protocolo 42, fishing.md § 6).
         FishBiteAction() => {'t': 'fBite', 'pw': a.power},
         FishResultAction() => {'t': 'fRes', 'ok': a.success},
-        AutoFishAction() => {'t': 'fAuto'},
+
         // Protocolo 43 (v0.22.2): pesca en el mapa.
         FishLineAction() => {
             't': 'fLn',
@@ -213,6 +213,7 @@ abstract final class ActionJson {
             if (a.target != null) 'tg': a.target,
             if (a.x != null) 'x': a.x,
             if (a.y != null) 'y': a.y,
+            if (a.n != 1) 'n': a.n,
           },
         LifeTreeAction() => {
             't': 'lifeTree',
@@ -419,8 +420,7 @@ abstract final class ActionJson {
         return FishResultAction(j.boolean('ok'));
       case 'fLn':
         return FishLineAction(FishLine.fromJson(j['l']));
-      case 'fAuto':
-        return const AutoFishAction();
+
       case 'fSell':
         return SellFishAction(
             species: j.strOrNull('sp'), materials: j['mat'] == true);
@@ -444,7 +444,8 @@ abstract final class ActionJson {
             id: j.strOrNull('id'),
             target: j.strOrNull('tg'),
             x: j.intOrNull('x'),
-            y: j.intOrNull('y'));
+            y: j.intOrNull('y'),
+            n: j.intOrNull('n') ?? 1);
       case 'lifeTree':
         return LifeTreeAction(j.str('k'), j.strOrNull('n'));
     }

@@ -14,8 +14,8 @@ class FarmingHostState {
   /// Segundos sin aplicar al crecimiento (se aplica de a 1 s).
   double acc = 0;
 
-  /// Segundos hasta la próxima vuelta del ayudante.
-  double helperIn = 0;
+  /// Última vuelta de los ayudantes (`s.time ~/ período`).
+  int? lastRound;
 
   void newStay() => charXp.clear();
 }
@@ -68,12 +68,14 @@ extension _FarmingOp on _Op {
       }
       if (changed) s.town = t.copyWith(plots: out);
     }
-    if (s.town.helper > 0) {
-      _fa.helperIn -= step;
-      if (_fa.helperIn <= 0) {
-        _fa.helperIn = TownRules.t.d('helperEverySec');
-        _helperRound();
-      }
+    if (s.town.builds.any((b) => b.helper > 0)) {
+      // Vueltas alineadas al reloj de la sala: los clientes saben cuánto
+      // falta (`TownRules.nextRoundIn`).
+      final k = (s.time /
+              TownRules.helperPeriod(humans.map((h) => h.profile)))
+          .floor();
+      if (_fa.lastRound != null && k != _fa.lastRound) _helperRound();
+      _fa.lastRound = k;
     }
   }
 
@@ -85,43 +87,50 @@ extension _FarmingOp on _Op {
     }));
   }
 
-  /// El ayudante riega las secas y cosecha (y replanta) las maduras de
-  /// hasta `helperPlots` parcelas; lo cosechado va al granero.
+  /// Una vuelta de los ayudantes (farming.md § 8): cada granjero atiende
+  /// su área (cosecha al cofre, planta de sus semillas, riega) y cada
+  /// pescador saca `fisherCatch` peces del lago al cofre.
   void _helperRound() {
-    final t = s.town;
-    var left = TownRules.helperPlots(t,
-        boost: TownRules.helperBoost(humans.map((h) => h.profile)));
-    final plots = {...t.plots};
-    final silo = {...t.silo};
     final owner = humans.firstOrNull;
-    for (final e in t.plots.entries) {
-      if (left <= 0) break;
-      final pl = e.value;
-      if (!pl.planted) continue;
-      if (FarmingRules.ripe(pl) && owner != null) {
-        final h =
-            FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!;
-        final k = cropKey(h.crop.id, h.quality);
-        silo[k] = (silo[k] ?? 0) + h.count;
-        plots[e.key] = FarmPlot(
-            seed: pl.seed,
-            boost: pl.boost,
-            potential: pl.potential,
-            planter: pl.planter);
-        final (x, y) = parsePlotKey(e.key)!;
-        events.add(CropHarvestedEvent(
-            owner.id, h.crop.id, h.quality.index, h.count, x, y,
+    if (owner == null) return;
+    final net = humans.fold(
+        0.0, (a, h) => math.max(a, LifeTreeRules.fish(h.profile, LifeFx.auto)));
+    for (final b0 in s.town.builds) {
+      if (b0.helper <= 0) continue;
+      s.town = s.town.withBuild(b0.kind == BuildKind.huerta
+          ? _farmerRound(owner, b0)
+          : _fisherRound(b0, net));
+    }
+  }
+
+  TownBuild _farmerRound(SessionPlayer owner, TownBuild b0) {
+    var b = b0;
+    final (ox, oy) = s.town.origin;
+    final (ax, ay) = b0.anchor;
+    for (var i = 0; i < b0.helper; i++) {
+      final (nb, hs) = TownRules.farmerCycle(b, i,
+          (pl) => FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!);
+      b = nb;
+      for (final (x, y, h) in hs) {
+        events.add(CropHarvestedEvent(owner.id, h.crop.id, h.quality.index,
+            h.count, ax + x + ox, ay + y + oy,
             helper: true));
-        left--;
-      } else if (!pl.watered) {
-        plots[e.key] = pl.copyWith(
-            wet: _fat.d('waterSec'),
-            waterRate: _fat.d('waterRateMin'),
-            waterer: 'Ayudante');
-        left--;
       }
     }
-    s.town = t.copyWith(plots: plots, silo: silo);
+    return b;
+  }
+
+  TownBuild _fisherRound(TownBuild b0, double net) {
+    var b = b0;
+    final roll = TownRules.lakeRoll(s.town, b0);
+    final n = b0.helper * (TownRules.t.i('fisherCatch') + net.round());
+    for (var i = 0; i < n && !TownRules.chestFull(b); i++) {
+      // Como la red de antes: nunca legendarios.
+      final f = FishingRules.roll(_rand, roll, auto: true);
+      if (f.rarity == FishRarity.legendario) continue;
+      b = TownRules.addToChest(b, f.species, 1);
+    }
+    return b;
   }
 
   // ---------------- labores ----------------
@@ -317,13 +326,7 @@ extension _FarmingOp on _Op {
         }
         say('${p.name} canjeó ${parseCropKey(id)!.$1.name} por materiales raros.');
         return true;
-      case FarmShopOp.collectSilo:
-        final r = TownRules.collectSilo(prof, s.town);
-        if (r == null) return false;
-        s.town = r.$2;
-        _profileChange(p, r.$1);
-        say('${p.name} recogió el granero del ayudante.');
-        return true;
+
     }
   }
 
@@ -392,11 +395,49 @@ extension _FarmingOp on _Op {
         say('${p.name} soltó ${kFish[sp]!.name} en el lago.');
         return true;
       case TownOp.hireHelper:
-        final r = TownRules.hire(p.profile, s.town);
+        final id = a.target;
+        if (!_isOwner(p) || id == null) return false;
+        final r = TownRules.hire(p.profile, s.town, id);
         if (r == null) return false;
         s.town = r.$2;
         _profileChange(p, r.$1);
-        say('${p.name} contrató al ayudante de la huerta (nivel ${s.town.helper}).');
+        final b = s.town.build(id)!;
+        say('${p.name} contrató un '
+            '${b.kind == BuildKind.huerta ? 'granjero' : 'pescador'}.');
+        return true;
+      case TownOp.fireHelper:
+        final id = a.target;
+        if (!_isOwner(p) || id == null) return false;
+        final r = TownRules.fire(s.town, id);
+        if (r == null) return false;
+        s.town = r;
+        return true;
+      case TownOp.helperTasks:
+        final id = a.target, i = a.x;
+        if (!_isOwner(p) || id == null || i == null) return false;
+        final r = TownRules.setTasks(s.town, id, i, a.n);
+        if (r == null) return false;
+        s.town = r;
+        return true;
+      case TownOp.giveSeeds || TownOp.takeSeeds:
+        final id = a.target, seed = a.id;
+        if (id == null || seed == null) return false;
+        final r = a.op == TownOp.giveSeeds
+            ? TownRules.giveSeeds(p.profile, s.town, id, seed, a.n)
+            : TownRules.takeSeeds(p.profile, s.town, id, seed, a.n);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1);
+        return true;
+      case TownOp.collectChest:
+        final id = a.target;
+        if (id == null) return false;
+        final n = s.town.build(id)?.chestTotal ?? 0;
+        final r = TownRules.collectChest(p.profile, s.town, id);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1, gain: true);
+        say('${p.name} recogió $n del cofre.');
         return true;
     }
   }

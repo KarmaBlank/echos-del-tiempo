@@ -1421,12 +1421,14 @@ const _townLabels = {
   'breedRare': 'Rareza por especie criando',
   'breedRareCap': 'Tope de rareza por cría',
   'breedChance': 'Chance de cría por misión ganada',
-  'helperLevel': 'Ayudante: nivel de Cultivo × nivel',
-  'helperCost': 'Ayudante: oro × nivel',
-  'helperMax': 'Ayudante: nivel máximo',
-  'helperPlots': 'Ayudante: parcelas por nivel',
+  'helperLevel': 'Ayudante: nivel del oficio para contratar',
+  'helperCost': 'Ayudante: oro por ayudante',
+  'helperPlots': 'Granjero: parcelas que atiende',
+  'fisherTiles': 'Pescador: tiles de lago por pescador',
+  'fisherCatch': 'Pescador: peces por vuelta',
   'helperEverySec': 'Ayudante: segundos entre rondas',
-  'helperXpShare': 'Granero: parte de la XP',
+  'helperXpShare': 'Cofre: parte de la XP',
+  'chestMax': 'Cofre: tope de cosas',
 };
 
 Map<String, String> _lifeTreeLabels() => {

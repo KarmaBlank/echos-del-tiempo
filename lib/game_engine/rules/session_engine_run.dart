@@ -88,7 +88,6 @@ extension _RunOp on _Op {
             TakeLostLootAction() ||
             FishBiteAction() ||
             FishResultAction() ||
-            AutoFishAction() ||
             SellFishAction() ||
             ExchangeFishAction() ||
             BuyRodAction() ||

@@ -1,10 +1,13 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
+import '../../../../game_engine/rules/town_rules.dart';
+import '../../../combat/presentation/sprite_catalog.dart';
 import 'map_themes.dart';
 
 class _Pop {
@@ -167,20 +170,62 @@ class MapFarmLayer {
     }
   }
 
-  /// El ayudante de la huerta (si está contratado), al costado de la
-  /// primera huerta.
-  void drawHelper(Canvas c, TownState town, double t) {
-    final f = town.farms.firstOrNull;
-    if (town.helper <= 0 || f == null) return;
+  /// Los ayudantes (farming.md § 8, v0.25.4): granjeros caminando por
+  /// su área y pescadores en su lugar de la orilla, con sus sprites
+  /// (`items.vida_npc_*` del manifest; [sprite] los resuelve), el cofre
+  /// de cada construcción con lo que tiene y, con el mouse encima de un
+  /// ayudante ([hover]), el contorno de su área. [time]: reloj de la sala
+  /// (igual en todos); [t]: ms de animación.
+  void drawHelpers(Canvas c, TownState town, double time, double t,
+      ui.Image? Function(String id) sprite, MapText text,
+      {({TownBuild build, int index})? hover}) {
     final (ox, oy) = town.origin;
-    final bf = f.bounds;
-    final x = (bf.right + ox) * ts + 6, y = (bf.y + oy + 1) * ts + 6;
-    final bob = math.sin(t / 300) * 1;
-    final p = Paint()..color = FarmPalette.helper;
-    c.drawRect(Rect.fromLTWH(x - 3, y - 6 + bob, 6, 8), p);
-    c.drawRect(Rect.fromLTWH(x - 2, y - 11 + bob, 4, 4), p);
-    c.drawRect(Rect.fromLTWH(x - 4, y - 12 + bob, 8, 2),
-        p..color = FarmPalette.helperHat);
+    final paint = SpriteCatalog.pixelPaint();
+    void img(String id, double cx, double bottom) {
+      final im = sprite(id);
+      if (im == null) return;
+      final w = im.width.toDouble(), h = im.height.toDouble();
+      c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+          Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h), paint);
+    }
+
+    for (final b in town.builds) {
+      // Cofre al lado del cartel, con cuántas cosas tiene.
+      final (cx, cy) = TownRules.chestOf(town, b);
+      final px = (cx + ox + 0.5) * ts, py = (cy + oy + 1) * ts;
+      img('cofre_oficio', px, py);
+      if (b.chestTotal > 0) {
+        text('${b.chestTotal}', px, py - ts - 2, TownPalette.label, 6);
+      }
+      for (var i = 0; i < b.helper; i++) {
+        final pos = TownRules.helperPos(town, b, i, time);
+        final farm = b.kind == BuildKind.huerta;
+        final work = pos.work && (t ~/ 400) % 2 == 0;
+        final id = farm
+            ? (work ? 'npc_granjero_trabajo' : 'npc_granjero')
+            : (work ? 'npc_pescador_trabajo' : 'npc_pescador');
+        final bob = pos.work ? 0.0 : (math.sin(t / 120) * 1).roundToDouble();
+        img(id, pos.x, pos.y + 6 + bob);
+      }
+    }
+    final h = hover;
+    if (h == null) return;
+    final b = town.build(h.build.id) ?? h.build;
+    final line = Paint()
+      ..color = FarmPalette.targetOk
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final tiles = b.kind == BuildKind.huerta
+        ? [
+            for (final (x, y) in TownRules.helperArea(b, h.index))
+              (x + b.anchor.$1, y + b.anchor.$2)
+          ]
+        : [TownRules.fisherSpot(b, h.index)];
+    for (final (x, y) in tiles) {
+      c.drawRect(
+          Rect.fromLTWH((x + ox) * ts + 0.5, (y + oy) * ts + 0.5, ts - 1, ts - 1),
+          line);
+    }
   }
 
   /// Cosecha: el fruto salta del tile hacia quien cosechó.

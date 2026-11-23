@@ -744,7 +744,14 @@ class MapGame extends Game {
     if (map.lobby) {
       fishing.drawShadows(c);
       farm.drawPlots(c, s.town, worldView, t);
-      farm.drawHelper(c, s.town, t);
+      farm.drawHelpers(
+          c,
+          s.town,
+          s.time,
+          t,
+          (id) => sprites.lifeIcon(id, 'herramienta'),
+          (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
+          hover: controller.hoverHelper);
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);

@@ -40,6 +40,20 @@ enum BuildKind {
   }
 }
 
+/// Tarea de un granjero (farming.md § 8.2). Cada vuelta hace una sola: la
+/// primera de este orden que tenga algo para hacer en su área.
+enum HelperTask {
+  plantar('Plantar'),
+  regar('Regar'),
+  cosechar('Cosechar');
+
+  const HelperTask(this.label);
+  final String label;
+  int get bit => 1 << index;
+}
+
+const kAllHelperTasks = 7;
+
 /// Rectángulo de tiles en coordenadas del pueblo base (el origen del
 /// pueblo sin ampliar; las ampliaciones al norte y al oeste dan valores
 /// negativos).
@@ -99,7 +113,12 @@ class TownRect {
 /// [anchor]: al mover la huerta conservan sus cultivos.
 class TownBuild {
   const TownBuild(this.id, this.kind, this.parts,
-      {this.stock = const {}, this.plots = const {}});
+      {this.stock = const {},
+      this.plots = const {},
+      this.helper = 0,
+      this.chest = const {},
+      this.seeds = const {},
+      this.tasks = const []});
 
   final String id;
   final BuildKind kind;
@@ -110,6 +129,27 @@ class TownBuild {
 
   /// Parcelas (solo huertas): `"dx,dy"` desde [anchor] → parcela.
   final Map<String, FarmPlot> plots;
+
+  /// Ayudantes contratados en esta construcción (farming.md § 8): los
+  /// GRANJEROS de una huerta o los PESCADORES de un lago. Cada uno
+  /// atiende su área (`TownRules.helperArea`).
+  final int helper;
+
+  /// Cofre al lado del cartel: lo que juntaron los ayudantes. Huerta:
+  /// `cropKey` → cantidad; lago: especie → cantidad.
+  final Map<String, int> chest;
+
+  /// Semillas que le dieron a los granjeros (solo huertas): cultivo →
+  /// cantidad. Plantan solo de acá.
+  final Map<String, int> seeds;
+
+  /// Tareas de cada granjero (bits de [HelperTask]); falta = todas.
+  final List<int> tasks;
+
+  int taskMask(int i) => i < tasks.length ? tasks[i] : kAllHelperTasks;
+
+  int get chestTotal => chest.values.fold(0, (a, b) => a + b);
+  int get seedTotal => seeds.values.fold(0, (a, b) => a + b);
 
   /// Rectángulo que encierra todas las partes.
   TownRect get bounds {
@@ -166,9 +206,18 @@ class TownBuild {
   TownBuild copyWith(
           {List<TownRect>? parts,
           Map<String, int>? stock,
-          Map<String, FarmPlot>? plots}) =>
+          Map<String, FarmPlot>? plots,
+          int? helper,
+          Map<String, int>? chest,
+          Map<String, int>? seeds,
+          List<int>? tasks}) =>
       TownBuild(id, kind, parts ?? this.parts,
-          stock: stock ?? this.stock, plots: plots ?? this.plots);
+          stock: stock ?? this.stock,
+          plots: plots ?? this.plots,
+          helper: helper ?? this.helper,
+          chest: chest ?? this.chest,
+          seeds: seeds ?? this.seeds,
+          tasks: tasks ?? this.tasks);
 
   /// Movida para que su esquina quede en ([x], [y]).
   TownBuild movedTo(int x, int y) {
@@ -183,7 +232,19 @@ class TownBuild {
         if (stock.isNotEmpty) 'st': stock,
         if (plots.isNotEmpty)
           'pl': {for (final e in plots.entries) e.key: e.value.toJson()},
+        if (helper > 0) 'hp': helper,
+        if (chest.isNotEmpty) 'ch': chest,
+        if (seeds.isNotEmpty) 'sd': seeds,
+        if (tasks.any((m) => m != kAllHelperTasks)) 'tk': tasks,
       };
+
+  static Map<String, int> ints(Object? v) => v is Map
+      ? {
+          for (final e in v.entries)
+            if (e.value is num && (e.value as num) > 0)
+              '${e.key}': (e.value as num).round(),
+        }
+      : const {};
 
   static TownBuild? fromJson(Object? raw) {
     if (raw is! Map) return null;
@@ -199,13 +260,16 @@ class TownBuild {
     final st = raw['st'];
     final pl = raw['pl'];
     return TownBuild(id, kind, parts,
-        stock: st is Map
-            ? {
-                for (final e in st.entries)
-                  if (e.value is num && (e.value as num) > 0)
-                    '${e.key}': (e.value as num).round(),
-              }
-            : const {},
+        stock: ints(st),
+        helper: raw['hp'] is num ? (raw['hp'] as num).round().clamp(0, 99) : 0,
+        chest: ints(raw['ch']),
+        seeds: ints(raw['sd']),
+        tasks: raw['tk'] is List
+            ? [
+                for (final m in raw['tk'] as List)
+                  m is num ? m.round() & kAllHelperTasks : kAllHelperTasks
+              ]
+            : const [],
         plots: pl is Map
             ? {
                 for (final e in pl.entries)

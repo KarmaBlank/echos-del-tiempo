@@ -184,6 +184,58 @@ RgbaImage _crop(String id, int accent) {
   return p.img;
 }
 
+/// Ayudante del pueblo (farming.md § 8): cuerpo, cara, sombrero y la
+/// herramienta. [work]: el cuadro de trabajo (regando o con la línea).
+RgbaImage _npc({required bool farmer, required bool work}) {
+  final p = _Pen();
+  const skin = 0xe8b890;
+  final shirt = farmer ? 0x6a8a3a : 0x3a6a9a;
+  final pants = farmer ? 0x4a5a8a : 0x5a4a3a;
+  final hat = farmer ? 0xe0c060 : 0x2a4a7a;
+  p.rect(6, 13, 2, 3, pants);
+  p.rect(9, 13, 2, 3, pants);
+  p.rect(5, 8, 7, 5, shirt);
+  p.rect(6, 4, 5, 4, skin);
+  p.px(7, 6, _outline);
+  p.px(9, 6, _outline);
+  if (farmer) {
+    p.rect(4, 3, 9, 1, hat);
+    p.rect(6, 2, 5, 1, hat);
+    p.rect(6, 10, 5, 3, pants); // pechera
+    if (work) {
+      p.rect(12, 9, 3, 3, _metal);
+      p.px(15, 9, _metal);
+      p.px(15, 12, 0x6fb6ff);
+      p.px(14, 14, 0x6fb6ff);
+    } else {
+      p.line(12, 6, 12, 14, _wood);
+      p.rect(11, 5, 3, 1, _metal);
+    }
+  } else {
+    p.rect(5, 3, 7, 2, hat);
+    p.rect(11, 4, 2, 1, hat);
+    if (work) {
+      p.line(11, 10, 15, 3, _wood);
+      p.line(15, 3, 15, 9, 0xe0e0e0);
+    } else {
+      p.line(12, 14, 13, 4, _wood);
+    }
+    p.rect(3, 11, 2, 3, 0x8a6a3a); // canasto
+  }
+  p.outline();
+  return p.img;
+}
+
+RgbaImage _chest() {
+  final p = _Pen();
+  p.rect(2, 7, 12, 7, _wood);
+  p.rect(2, 5, 12, 3, _woodDark);
+  p.rect(2, 9, 12, 1, _woodDark);
+  p.rect(7, 8, 2, 3, 0xe0c060);
+  p.outline();
+  return p.img;
+}
+
 RgbaImage _category(String cat) => switch (cat) {
       'herramienta' => _hoe(_metal),
       'pescado' => _fish('generico', 0xd8d8d8),
@@ -210,6 +262,11 @@ void main() {
     },
     for (final cat in ['herramienta', 'pescado', 'semilla', 'cosecha', 'basura'])
       'vida_cat_$cat': _category(cat),
+    'vida_npc_granjero': _npc(farmer: true, work: false),
+    'vida_npc_granjero_trabajo': _npc(farmer: true, work: true),
+    'vida_npc_pescador': _npc(farmer: false, work: false),
+    'vida_npc_pescador_trabajo': _npc(farmer: false, work: true),
+    'vida_cofre_oficio': _chest(),
   };
   for (final e in icons.entries) {
     File('assets/sprites/items/${e.key}.png').writeAsBytesSync(encodePng(e.value));
