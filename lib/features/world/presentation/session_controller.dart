@@ -1172,7 +1172,7 @@ class SessionController extends StateNotifier<SessionView?> {
         'la orilla o a un muelle y tocá E.';
   }
 
-  // ---- Pesca y comerciante (fishing.md § 6): el host valida ----
+  // ---- Pesca y agropecuario (fishing.md § 6): el host valida ----
 
   bool fishBite(double power) => _apply(FishBiteAction(power));
   bool fishResult(bool ok) => _apply(FishResultAction(ok));
@@ -1341,7 +1341,7 @@ class SessionController extends StateNotifier<SessionView?> {
           : pl.planted
               ? 'Ya está plantada'
               : p.life.farm.activeSeed == null
-                  ? 'Sin semillas: comprá en el comerciante'
+                  ? 'Sin semillas: comprá en el agropecuario'
                   : null,
       FarmHand.can => pl == null
           ? 'Primero arala'

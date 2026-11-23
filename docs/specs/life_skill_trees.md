@@ -53,7 +53,7 @@ excluyentes: Capataz (ayudante +50 % parcelas) o Manos propias
 | legend | rareza de la tirada del pez |
 | loot | chance del botín del agua |
 | auto | peces por auto-pesca |
-| sell | precio del pescado / la cosecha en el comerciante |
+| sell | precio del pescado / la cosecha en el agropecuario |
 | xp | XP de Pesca / Cultivo |
 | grow | velocidad del cultivo (se guarda al plantar en `b`) |
 | quality | puntaje de quien planta, riega y cosecha (farming.md § 2.4) |

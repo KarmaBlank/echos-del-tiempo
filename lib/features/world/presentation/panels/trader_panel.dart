@@ -10,7 +10,7 @@ import '../session_view.dart';
 import 'life_icon.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 
-/// Puesto del COMERCIANTE (fishing.md § 5, v0.23.2): primero COMPRAR o
+/// Puesto del AGROPECUARIO (fishing.md § 5, v0.23.2): primero COMPRAR o
 /// VENDER, después PESCA o CULTIVO. Buscador y filtro por tipo siempre a
 /// la vista; "Cobrar en" (oro o materiales) solo al VENDER.
 class TraderPanel extends StatefulWidget {
@@ -61,7 +61,7 @@ class _TraderPanelState extends State<TraderPanel> {
             .any((k) => parseCropKey(k)?.$1.rarity != FishRarity.legendario);
     return PanelFrame(
       key: const ValueKey('panel-trader'),
-      title: 'COMERCIANTE',
+      title: 'AGROPECUARIO',
       width: 760,
       onClose: c.closePanel,
       actions: [

@@ -24,7 +24,7 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 - XP y nivel por personaje, como Pesca: `xpBase × l^xpExp` por nivel,
   tope `maxLevel` (30). JSON `life.farm.xp`.
 - Se ve donde se ve Pesca: PERSONAJE (línea OFICIOS y pestaña OFICIOS),
-  el comerciante y la pestaña PESCA Y CULTIVO.
+  el agropecuario y la pestaña PESCA Y CULTIVO.
 - XP por cosecha: `xp base × xp<Rareza> × qualityMult<Calidad>` (+ el
   árbol). Arar, plantar y regar dan `workXp` (1). XP de personaje por
   cosecha `charXp<Rareza>` con tope `charXpCap` por estadía en el pueblo
@@ -45,7 +45,7 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 | Herramienta en la mano | Sirve en | Si no sirve, el aviso dice |
 |---|---|---|
 | Azada | Tierra sin arar (área según azada, § 4) | "Ya está arada" |
-| Semilla (la del carrusel) | Arada vacía | "Primero arala" / "Ya está plantada" / "Sin semillas: comprá en el comerciante" |
+| Semilla (la del carrusel) | Arada vacía | "Primero arala" / "Ya está plantada" / "Sin semillas: comprá en el agropecuario" |
 | Regadera | Plantada, creciendo (área según regadera) | "Primero arala" / "Primero plantá" |
 | Cualquiera | Madura: cosechar (pop + aviso + chat) | — |
 
@@ -97,7 +97,7 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   está cerca de la huerta (se deduce de la posición, con la azada; sin
   protocolo nuevo).
 - Solo en el pueblo; nunca en misiones.
-- Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el comerciante:
+- Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el agropecuario:
   EQUIPAR en cada azada / regadera (`farmShop` `equipTool`, ya autoritativo
   del anfitrión; no hace falta protocolo nuevo).
 
@@ -182,7 +182,7 @@ Tooltip: "Mejora las chances: normal / rara / épica / legendaria".
 (precio y XP).
 
 ## 4. Herramientas (como las cañas)
-Espacio de herramienta aparte de las armas; se compran en el comerciante
+Espacio de herramienta aparte de las armas; se compran en el agropecuario
 y rinden según `efectividad = piso + (1 − piso) × (nivel/requerido)^curva`
 (town_loop.md § 11c).
 
@@ -246,11 +246,11 @@ herramienta de área trabaja menos tiles.
   cosecha las maduras (calidad normal, sin hallazgos) de hasta
   `helperPlots × nivel` parcelas (+ «Capataz» del árbol), y replanta la
   misma semilla. Lo cosechado va al granero (`town.silo`).
-- Cualquiera recoge el granero en el comerciante (CULTIVO → VENDER →
+- Cualquiera recoge el granero en el agropecuario (CULTIVO → VENDER →
   RECOGER) con `helperXpShare` (10 %) de la XP.
 - Se dibuja al costado de la huerta del pueblo.
 
-## 9. Comerciante (vista CULTIVO)
+## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →
 categoría).
 - COMPRAR: Semillas (×1 y ×5), Abonos (tooltip con lo que sesgan),

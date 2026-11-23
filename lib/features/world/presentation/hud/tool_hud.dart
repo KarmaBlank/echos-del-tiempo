@@ -153,7 +153,7 @@ class ToolHud extends StatelessWidget {
                 ? const ['Sin semillas']
                 : [d.seedName, '×${f.seedCount(d.id)}'],
             d == null
-                ? 'Sin semillas: comprá en el comerciante'
+                ? 'Sin semillas: comprá en el agropecuario'
                 : '${d.seedName} · [Q] o [ ]: otra semilla',
             Row(
               key: const ValueKey('hud-seed-carousel'),
