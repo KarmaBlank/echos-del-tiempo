@@ -436,3 +436,27 @@ PLANTAR), abonos y COSECHAS por calidad.
 - Semillas de otros biomas en sus mazmorras (hoy solo zona 1).
 - Arte en PNG (hoy procedural, como la pesca).
 - Ciclo de eventos del pueblo (town_loop.md § 7).
+
+## 13. Animales del bioma y CORRAL (especificado en v0.31.0, sin código)
+
+Visión del dueño; nombres propuestos, esperan su OK (lore.md):
+- Un animal por bioma: Bosque ciervo de musgo (leche de musgo), Ruinas
+  gallina de engranaje (huevo de cobre), Cavernas cabra de escarcha (lana
+  de escarcha), Grieta lagarto de brasa (escama tibia), Abismo polilla
+  del eco (seda del eco).
+- Se captura en su bioma con pienso hecho de cultivos (CONDENSAR) y se
+  lleva al pueblo.
+- CORRAL en EDITAR PUEBLO (candado y costo, como la CASA). Cada animal da
+  un bien por día del mundo si se lo alimentó con cultivos; la felicidad
+  sube la calidad.
+- Los bienes entran en cocina, pociones, encargos de forja y órdenes.
+
+## 14. Afinidad de los cultivos (v0.31.0)
+
+- Cada cultivo crece más de día, de noche, con lluvia o parejo
+  (`LifeTimeRules.cropAffinity`, primera pasada por id). En su franja
+  crece × (1 + `affinityBonus`); fuera, × (1 − `affinityMalus`). Lo aplica
+  el anfitrión en `farmTick` con el reloj del mundo.
+- SEMILLAS muestra origen, tiempo de crecimiento, afinidad y rinde.
+- Pendiente: registro de cultivos descubiertos ("???" hasta la primera
+  cosecha) y filtros por bioma y hora en SEMILLAS / COSECHAS.

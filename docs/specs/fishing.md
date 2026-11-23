@@ -264,3 +264,51 @@ dueño.
   materiales al tope siguen la regla de siempre.
 - Árbol de talentos de Pesca: `life_skill_trees.md` § 3. Peces soltados
   en el lago y cría: farming.md § 7.
+
+## 10. Bestiario de pesca (v0.31.0)
+
+- `life.lg`: especie → récord en cm. Toda captura de pez (no basura)
+  anota el récord.
+- Primera captura de una especie: XP de Pesca extra (`firstCatchFishXp` ×
+  la de la captura) y XP de personaje (`firstCatchCharXp` × la de la
+  captura, sin el tope por estadía). Se anuncia en el chat.
+- PERSONAJE → PESCA Y CULTIVO → BESTIARIO DE PESCA: grilla como el
+  inventario, filtro por bioma (botones con descubiertos / total, nunca
+  secciones apiladas); descubiertas con ícono y récord, sin descubrir en
+  silueta gris con "?"; detalle a la derecha.
+
+## 11. Agua brillante (v0.31.0)
+
+- Un tile de agua con orilla por bioma, elegido por bioma y día del mundo
+  (`FishingCast.hiddenSpot`, cambia cada día), dibujado con destellos.
+- Pescando a `spotRadius` tiles o menos: rareza + `spotRare` y botín del
+  agua con suerte + `spotLoot`. Solo en exteriores de bioma.
+
+## 12. Pescador nativo del bioma (v0.31.0)
+
+- Uno por bioma (`kBiomeFishers`): Nera de la Orilla (Bosque), Tadeo
+  Engranaje (Ruinas), Sila Escarcha (Cavernas), Bruno Brasa (Grieta), Eco
+  Viejo (Abismo). Camina por la orilla de su lago; nunca se muda al
+  pueblo. Sprite `items.vida_npc_pesc_<bioma>` (provisorio).
+- E cerca o clic: pantalla con el pedido del día (grilla, detalle a la
+  derecha, ENTREGAR gris con el motivo). Pide 1 a 3 de un pez de SU lago,
+  rareza hasta Pesca / `fisherRarityLevels`, tamaño mínimo que sube con el
+  nivel (hasta tres cuartos del rango; vale el récord del bestiario).
+- Entregar (`town {o: fisherReq, id: bioma}`, una vez por jugador y día,
+  en `town.dy`): XP de Pesca `fisherXpBase` + `fisherXpStep` × nivel, XP
+  de personaje = valor × `fisherCharXpPerValue`, oro = valor ×
+  `fisherGoldPerValue`.
+
+## 13. Horarios y clima de los peces (v0.31.0)
+
+- Cada especie tiene franja (`LifeTimeRules.fishTime`): comunes siempre;
+  raros de día o de noche; épicos al amanecer o al atardecer; legendarios
+  de noche. Algunos épicos piden lluvia y los legendarios de la Grieta y
+  el Abismo, tormenta (`fishWeather`). Primera pasada derivada por
+  rareza; el dueño puede fijarla por especie.
+- El anfitrión filtra la tabla del lago con el reloj del mundo: fuera de
+  su franja un pez entra solo con chance `offHoursChance` (nunca queda el
+  lago vacío).
+- BESTIARIO: cada pez muestra bioma, tamaño, "Pica: <franja> · <clima>",
+  récord; sin descubrir muestra "Pica: ???". Filtros por bioma y por hora
+  (botones, no secciones).

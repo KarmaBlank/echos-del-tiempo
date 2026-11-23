@@ -1492,6 +1492,7 @@ const _townLabels = {
   'orderRarityLevels': 'Órdenes: niveles de oficio por rareza',
   'orderAnyBiomeLevel': 'Órdenes: nivel para pedir de otros biomas',
   'orderQualityLevel': 'Órdenes: nivel de Cultivo para pedir calidad',
+  'orderSizeLevel': 'Órdenes: nivel de Pesca para pedir tamaño',
   'comGold': 'Forja de Brann: oro × nivel',
   'comMat': 'Forja de Brann: materiales',
   'comLoot': 'Forja de Brann: botín del bioma',
@@ -1513,6 +1514,13 @@ const _townLabels = {
 
 Map<String, String> _lifeTreeLabels() => {
       'pointsPerLevel': 'Puntos por nivel',
+      'smithMaxLevel': 'Herrería: nivel máximo',
+      'smithXpBase': 'Herrería: XP base por nivel',
+      'smithXpExp': 'Herrería: exponente de la curva',
+      'smithXpForge': 'Herrería: XP por forja',
+      'smithXpCommission': 'Herrería: XP por encargo de forja',
+      'smithXpCondense': 'Herrería: XP por condensado',
+      'smithForgeCap': 'Herrería: descuento máximo de forja',
       for (final e in kLifeTrees.entries)
         for (final n in e.value) ...{
           n.id: '${e.key.label}: ${n.name}',

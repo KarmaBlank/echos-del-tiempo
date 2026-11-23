@@ -97,6 +97,8 @@ LifeItemCellData? orderCell(SessionController c, BiomeNpcDef n,
   final have = p == null ? 0 : ResidentRules.orderHave(p, o, r.orderQ);
   final w = ResidentRules.orderReward(r);
   final q = CropQuality.values[r.orderQ];
+  final cm = ResidentRules.orderCm(o, r.orderQ);
+  final fish = kFish.containsKey(o);
   return LifeItemCellData(
     id: 'order-${n.id}',
     icon: residentItemIcon(o),
@@ -109,11 +111,15 @@ LifeItemCellData? orderCell(SessionController c, BiomeNpcDef n,
       nameColor: DsColors.textTitle,
       tags: [
         ('ORDEN', DsColors.reward),
-        if (r.orderQ > 0) (q.label.toUpperCase(), DsColors.textSecondary),
+        if (r.orderQ > 0)
+          (fish ? 'DESDE $cm CM' : q.label.toUpperCase(),
+              DsColors.textSecondary),
       ],
       lines: [
         '${r.orderN} × ${residentItemName(o)}'
-            '${r.orderQ > 0 ? ' (${q.label} o mejor)' : ''}',
+            '${r.orderQ > 0 ? (fish ? ' (de $cm cm o más)' : ' (${q.label} o mejor)') : ''}',
+        if (fish && cm > 0)
+          'Tu récord: ${p?.life.log[o] ?? 0} cm (bestiario de pesca)',
         'Tenés $have',
         'XP de personaje: +${w.xp} (con tope diario)',
         'Oro: +${w.gold} · Relación: +${w.rep}',

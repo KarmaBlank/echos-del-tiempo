@@ -46,6 +46,7 @@ import 'farm_layer.dart';
 import 'life_level_layer.dart';
 import '../../../../core/audio/sfx_catalog.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
+import '../../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
@@ -798,6 +799,10 @@ class MapGame extends Game {
     }
     if (map.lobby) {
       fishing.drawShadows(c);
+      if (map.place case final place?) {
+        fishing.drawHiddenSpot(
+            c, map, place, math.max(1, s.town.sky.day), t / 1000);
+      }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
       farm.drawPlots(c, s.town, worldView, t);
@@ -809,8 +814,10 @@ class MapGame extends Game {
           (id) => sprites.lifeIcon(id, 'herramienta'),
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
           hover: controller.hoverHelper);
-      } else if (biomeLayout(map.place) case final lay?) {
-        // Habitante del bioma (overworld_biomes.md § 9).
+      } else if (biomeLayout(map.place) case final lay?
+          when !s.town.resident(lay.npc.id).invited) {
+        // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
+        // pueblo, solo está allá (§ 10.1).
         final (nx, ny) = lay.npc.tile;
         final im = sprites.lifeIcon(lay.npc.sprite, 'herramienta');
         if (im != null) {
@@ -822,6 +829,21 @@ class MapGame extends Game {
         }
         _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts,
             ny * ts - 4, TownPalette.label, 6, 899);
+      }
+      // Pescador nativo del bioma (fishing.md § 12): camina por la orilla.
+      if (biomeLayout(map.place) case final lay?) {
+        if (kBiomeFishers[lay.id] case final f?) {
+          final (fx, fy) = BiomeFisherRules.position(lay, s.time);
+          final im = sprites.lifeIcon(f.sprite, 'herramienta');
+          if (im != null) {
+            final w = im.width.toDouble(), h = im.height.toDouble();
+            c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+                Rect.fromLTWH(fx - w / 2, fy + 8 - h, w, h),
+                SpriteCatalog.pixelPaint());
+          }
+          _rankedText(c, f.name.toUpperCase(), fx, fy - 12,
+              TownPalette.label, 6, 898);
+        }
       }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {

@@ -1,3 +1,4 @@
+import '../support/legacy_solo_mode.dart';
 import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
@@ -41,6 +42,7 @@ GameSession _inField(SessionEngine e, GameSession s, String mission) {
 }
 
 void main() {
+  useTimelineSoloDefault();
   group('compañeros en la sala', () {
     for (final n in [1, 2, 3]) {
       test('party de ${n + 1}: entran como jugadores con su líder', () {

@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/feature_flags.dart';
@@ -88,6 +89,7 @@ Future<SessionController> _pumpSession(WidgetTester tester, AccountRepository re
 }
 
 void main() {
+  useTimelineSoloDefault();
   // La party jugando solo está detrás de FeatureFlags.soloParty
   // (apagada en la build principal desde v0.9.14).
   setUpAll(() => FeatureFlags.instance = const FeatureFlags(soloParty: true));
