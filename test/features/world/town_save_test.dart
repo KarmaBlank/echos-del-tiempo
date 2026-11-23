@@ -50,6 +50,38 @@ void main() {
     c.dispose();
   });
 
+  test('el pueblo que cambia solo (cielo, ayudantes) no se guarda a cada rato',
+      () async {
+    final saved = <TownState>[];
+    final p = newProfile('Ana', 'guerrero');
+    final net = LoopbackNetSession(LoopbackHub());
+    await net.connect(SessionConfig(profile: p));
+    final c = SessionController(
+      engine: sessionEngine(zones: true),
+      store: InMemoryProfileStore(p),
+      clock: const SessionClock(autoStart: false),
+      net: net,
+      world: WorldSave(
+          id: 'w',
+          name: 'W',
+          label: WorldLabel.solitario,
+          created: DateTime.utc(2026, 11, 1)),
+      onWorldTown: (_, t) => saved.add(t),
+    );
+    await c.start();
+    for (var i = 0; i < 40; i++) {
+      c.advance(0.1);
+      await pumpEventQueue();
+    }
+    await Future<void>.delayed(
+        SessionController.townSaveDelay + const Duration(milliseconds: 300));
+    c.advance(0.1);
+    await pumpEventQueue();
+    expect(saved, isEmpty, reason: 'sin editar, mismo día: no escribe');
+    expect(c.saving, isFalse, reason: 'sin aviso de guardado');
+    c.dispose();
+  });
+
   group('política de guardado del perfil (save_indicator.md § 1)', () {
     late InMemoryProfileStore store;
     late SessionController c;
