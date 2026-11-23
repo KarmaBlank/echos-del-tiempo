@@ -104,7 +104,7 @@ Future<void> _run(WidgetTester tester, Size size, String sfx) async {
   addTearDown(mouse.removePointer);
   await mouse.moveTo(screenOf((10, -3))!);
   await h.frames(3);
-  // expect strip
+  expect(find.byKey(const ValueKey('town-strip-n')), findsOneWidget);
   await _shot(tester, 'edicion_franja_hover_$sfx', size);
 
   game.editZoom = 1;

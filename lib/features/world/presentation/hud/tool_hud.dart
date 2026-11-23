@@ -4,7 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
-import '../map/map_themes.dart';
+import '../panels/life_icon.dart';
 import '../session_controller.dart';
 
 /// HUD de la herramienta en la mano (farming.md § 4, fishing.md § 4),
@@ -58,11 +58,17 @@ class ToolHud extends StatelessWidget {
     final rod = kRods[life.rod];
     final many = life.rods.length > 1;
     return [
-      DsButton('Caña: ${rod?.name ?? life.rod}',
-          key: const ValueKey('hud-tool-rod'),
-          size: DsButtonSize.compact,
-          tooltip: many ? 'Cambiar a la siguiente caña' : null,
-          onPressed: many ? controller.cycleRod : null),
+      Row(children: [
+        LifeIcon(life.rod, LifeIconKind.herramienta, size: 24),
+        SizedBox(width: DsSpace.xs),
+        Expanded(
+          child: DsButton('Caña: ${rod?.name ?? life.rod}',
+              key: const ValueKey('hud-tool-rod'),
+              size: DsButtonSize.compact,
+              tooltip: many ? 'Cambiar a la siguiente caña' : null,
+              onPressed: many ? controller.cycleRod : null),
+        ),
+      ]),
     ];
   }
 
@@ -80,15 +86,16 @@ class ToolHud extends StatelessWidget {
     final many = prev != null && prev != active;
     final d = kCrops[active];
 
+    // Carrusel: la semilla en uso grande al centro, las vecinas chicas.
     Widget chip(String? id, double size, String key, VoidCallback? onTap) {
       final c = kCrops[id];
-      final box = Container(
+      final box = SizedBox(
         key: ValueKey(key),
         width: size,
         height: size,
-        color: c == null
-            ? DsColors.surfaceSunken
-            : FarmPalette.fruit[c.rarity.index],
+        child: c == null
+            ? const DsSpriteIcon(null, size: 0)
+            : LifeIcon('semilla_${c.id}', LifeIconKind.semilla, size: size),
       );
       if (onTap == null || c == null) return box;
       return GestureDetector(onTap: onTap, child: box);
@@ -121,8 +128,13 @@ class ToolHud extends StatelessWidget {
         key: const ValueKey('hud-farm-bar'),
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          slot(FarmHand.hoe, slotW, 'hud-tool-hoe', 'Azada',
-              'Azada: ${hoe?.name ?? f.hoe} · [Tab] o rueda: herramienta', null),
+          slot(
+              FarmHand.hoe,
+              slotW,
+              'hud-tool-hoe',
+              'Azada',
+              'Azada: ${hoe?.name ?? f.hoe} · [Tab] o rueda: herramienta',
+              LifeIcon(f.hoe, LifeIconKind.herramienta, size: 24)),
           slot(
               FarmHand.seed,
               seedW,
@@ -135,17 +147,22 @@ class ToolHud extends StatelessWidget {
                 key: const ValueKey('hud-seed-carousel'),
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  chip(many ? prev : null, 10, 'hud-seed-prev',
+                  chip(many ? prev : null, 16, 'hud-seed-prev',
                       controller.prevSeedPick),
                   SizedBox(width: DsSpace.xs),
-                  chip(active, 16, 'hud-seed-current', null),
+                  chip(active, 24, 'hud-seed-current', null),
                   SizedBox(width: DsSpace.xs),
-                  chip(many ? next : null, 10, 'hud-seed-next',
+                  chip(many ? next : null, 16, 'hud-seed-next',
                       controller.cycleSeed),
                 ],
               )),
-          slot(FarmHand.can, slotW, 'hud-tool-can', 'Regadera',
-              'Regadera: ${can?.name ?? f.can}', null),
+          slot(
+              FarmHand.can,
+              slotW,
+              'hud-tool-can',
+              'Regadera',
+              'Regadera: ${can?.name ?? f.can}',
+              LifeIcon(f.can, LifeIconKind.herramienta, size: 24)),
         ],
       ),
     ];
