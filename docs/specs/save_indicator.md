@@ -22,8 +22,10 @@
 - Abajo a la izquierda del HUD del mundo, justo debajo del chat (o del
   registro de mensajes si el chat está oculto): ícono que gira en bucle +
   `Guardando… no cierres el juego`.
-- Se ve mientras haya cualquier escritura a disco en curso: pueblo del
-  mundo, perfil del jugador local, compañeros de la party y niebla.
+- Se ve en los guardados importantes: pueblo del mundo, niebla y los
+  guardados forzados del perfil (fin de misión, volver al lobby, salir,
+  hazañas). El autoguardado de rutina del perfil (cada `saveEvery` = 2 s
+  si cambió) es silencioso desde v0.38.3: salía cada pocos segundos.
   Queda a la vista al menos 1,5 s (`savingMinVisible`) para poder leerlo.
 - El cliente lo muestra cuando se guarda su propio perfil.
 - Ícono: `items.eco` del manifest (cargado por `SpriteCatalog` con los

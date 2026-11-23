@@ -3872,6 +3872,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Marca [f] como guardado en curso para el aviso del HUD.
   Future<T> _tracked<T>(Future<T> f) {
+    if (!_announceSaves) return f;
     _beginSave();
     return f.whenComplete(_endSave);
   }
@@ -3922,11 +3923,18 @@ class SessionController extends StateNotifier<SessionView?> {
   void _save({bool force = false}) {
     if (!_persist) return;
     if (!force && _sinceSave < saveEvery) return;
+    // El autoguardado de rutina (cada [saveEvery] s) es silencioso: el
+    // aviso solo sale en los guardados importantes (save_indicator.md § 1).
+    _announceSaves = force;
     for (final id in _companions.keys) {
       if (_saveCompanion(id)) _sinceSave = 0;
     }
     _saveLocal();
+    _announceSaves = false;
   }
+
+  /// Los guardados de perfil en curso se muestran en el HUD.
+  bool _announceSaves = false;
 
   /// El compañero [id] si cambió; devuelve si mandó a escribir.
   bool _saveCompanion(String id) {
