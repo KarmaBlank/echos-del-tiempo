@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -24,7 +25,7 @@ PlayerProfile _profile() => PlayerProfile(
     );
 
 void main() {
-  testWidgets('cerca de la huerta: azada, carrusel y aviso sobre pociones',
+  testWidgets('cerca de la huerta: barra Azada | Semilla | Regadera y aviso',
       (tester) async {
     final h = await FishingMapHarness.pump(tester, profile: _profile());
     final c = h.c;
@@ -33,25 +34,88 @@ void main() {
     c.teleport((bf.x + 1.5) * 16, (bf.y + 1.5) * 16);
     await h.frames(6);
     expect(c.activeTool, ActiveTool.hoe);
-    expect(find.byKey(const ValueKey('hud-tool-hoe')), findsOneWidget);
+    expect(find.byKey(const ValueKey('hud-farm-bar')), findsOneWidget);
+    for (final k in ['hud-tool-hoe', 'hud-tool-seed', 'hud-tool-can']) {
+      expect(find.byKey(ValueKey(k)), findsOneWidget);
+    }
     expect(find.byKey(const ValueKey('hud-seed-carousel')), findsOneWidget);
-    final seed = c.session!.players[c.localId]!.profile.life.farm.activeSeed;
-    expect(seed, isNotNull);
-    expect(
-        tester.widget<Text>(find.byKey(const ValueKey('hud-seed-name'))).data,
-        matches(RegExp(r'^Semilla de .+ ×\d+$')));
+    // Sugerencia automática: tierra sin arar → azada.
+    expect(c.farmHand, FarmHand.hoe);
+    expect(c.farmHandManual, isFalse);
     expect(find.textContaining('[E o clic] Arar'), findsOneWidget);
-    // El aviso va arriba de las pociones, no en el cartel de abajo.
+    expect(c.farmTarget!.ok, isTrue);
+    // El aviso va arriba de las pociones, en una línea.
     expect(find.byKey(const ValueKey('hud-prompt')), findsNothing);
     final prompt =
         tester.getRect(find.byKey(const ValueKey('hud-tool-prompt')));
     final potions = tester.getRect(find.byKey(const ValueKey('hud-potions')));
     expect(prompt.bottom, lessThanOrEqualTo(potions.top));
-    // Q cambia de semilla.
+    final seed = c.session!.players[c.localId]!.profile.life.farm.activeSeed;
     c.cycleSeed();
     await h.frames(2);
     expect(c.session!.players[c.localId]!.profile.life.farm.activeSeed,
         isNot(seed));
+  });
+
+  testWidgets('herramienta activa: solo la válida hace la labor',
+      (tester) async {
+    final h = await FishingMapHarness.pump(tester, profile: _profile());
+    final c = h.c;
+    const bf = TownLayout.baseFarm;
+    // ignore: invalid_use_of_visible_for_testing_member
+    c.teleport((bf.x + 1.5) * 16, (bf.y + 1.5) * 16);
+    await h.frames(6);
+    final (tx, ty) = c.farmTile!;
+
+    Future<void> pick(String key) async {
+      await tester.tap(find.byKey(ValueKey(key)));
+      await h.frames(2);
+    }
+
+    Future<void> press() async {
+      expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);
+      await h.frames(8);
+    }
+
+    // Regadera sobre tierra sin arar: no hace nada y dice por qué.
+    await pick('hud-tool-can');
+    expect(c.farmHand, FarmHand.can);
+    expect(c.farmHandManual, isTrue);
+    expect(find.text('Primero arala'), findsOneWidget);
+    expect(c.farmTarget!.ok, isFalse);
+    await press();
+    expect(c.plotAt(tx, ty), isNull);
+    // Semilla: tampoco.
+    await pick('hud-tool-seed');
+    expect(find.text('Primero arala'), findsOneWidget);
+    await press();
+    expect(c.plotAt(tx, ty), isNull);
+    // Azada: ara. La elección manual se queda aunque la parcela cambie.
+    await pick('hud-tool-hoe');
+    await press();
+    expect(c.plotAt(tx, ty), isNotNull);
+    expect(c.farmHand, FarmHand.hoe);
+    expect(find.text('Ya está arada'), findsOneWidget);
+    // Regadera sobre arada vacía: primero plantá.
+    c.cycleFarmHand(); // Tab: azada → semilla
+    expect(c.farmHand, FarmHand.seed);
+    await h.frames(2);
+    expect(find.textContaining('[E o clic] Plantar'), findsOneWidget);
+    await press();
+    expect(c.plotAt(tx, ty)!.planted, isTrue);
+    await pick('hud-tool-can');
+    expect(find.textContaining('[E o clic] Regar'), findsOneWidget);
+    await press();
+    expect(c.plotAt(tx, ty)!.watered, isTrue);
+    // Tab con el teclado también cambia de herramienta.
+    expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
+    expect(c.farmHand, FarmHand.hoe);
+    // Lejos de la huerta se olvida la elección manual.
+    // ignore: invalid_use_of_visible_for_testing_member
+    c.teleport(17.0 * 16, 12.4 * 16); // junto a la fuente
+    await h.frames(4);
+    expect(c.nearFarm, isFalse);
+    expect(c.farmHandManual, isFalse);
   });
 
   testWidgets('en una misión no hay HUD de herramienta', (tester) async {

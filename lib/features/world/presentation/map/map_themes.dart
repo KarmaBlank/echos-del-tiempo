@@ -271,6 +271,12 @@ abstract final class FarmPalette {
   static const helperHat = Color(0xFF8C6A3C);
   static const hoeHandle = Color(0xFF8C6A3C);
   static const hoeBlade = Color(0xFFB8C2CC);
+  static const targetOk = Color(0xFF7BE07B);
+  static const targetBad = Color(0xFFFF9F43);
+  static const seedBag = Color(0xFFC9A46A);
+  static const seedBagTie = Color(0xFF6E4F2A);
+  static const can = Color(0xFF7E95A8);
+  static const canDark = Color(0xFF55697A);
 
   /// Color del fruto por rareza del cultivo (índice de `FishRarity`).
   static const fruit = [

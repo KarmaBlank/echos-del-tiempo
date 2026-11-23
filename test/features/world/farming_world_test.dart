@@ -1,9 +1,6 @@
-import 'package:echos_del_tiempo/features/world/presentation/map/map_game.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
-import 'package:flame/game.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -41,31 +38,7 @@ void main() {
     await press(FarmOp.water);
     expect(c.plotAt(tx, ty)!.watered, isTrue);
 
-    // Mouse sobre la parcela: tooltip con quién plantó y las chances.
-    final game = tester
-        .widget<GameWidget<MapGame>>(find.byType(GameWidget<MapGame>))
-        .game!;
-    final box = tester.getRect(find.byType(GameWidget<MapGame>));
-    Offset? at;
-    for (var y = 0.0; y < box.height && at == null; y += 4) {
-      for (var x = 0.0; x < box.width; x += 4) {
-        if (game.tileAtScreen(Offset(x, y)) == (tx, ty)) {
-          at = box.topLeft + Offset(x + 4, y + 4);
-          break;
-        }
-      }
-    }
-    expect(at, isNotNull);
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    addTearDown(mouse.removePointer);
-    await mouse.moveTo(at!);
-    await tester.pump();
-    expect(find.byKey(const ValueKey('farm-tooltip')), findsOneWidget);
-    expect(find.textContaining('Plantó Ana'), findsOneWidget);
-    expect(find.textContaining('Si la cosechás vos'), findsOneWidget);
-    await mouse.moveTo(Offset.zero);
-    await tester.pump();
+    // Sin tooltip sobre la parcela (v0.23.3).
     expect(find.byKey(const ValueKey('farm-tooltip')), findsNothing);
   });
 

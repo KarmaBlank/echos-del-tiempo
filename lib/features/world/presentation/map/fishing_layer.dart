@@ -115,6 +115,17 @@ class MapFishingLayer {
     }
   }
 
+  /// La caña en la mano sin lance (cerca del agua, antes de tirar).
+  void drawIdleRod(Canvas c, double px, double py, num face) {
+    final f = face < 0 ? -1.0 : 1.0;
+    final hand = Offset(px + f * 4, py - 6);
+    final tip = Offset(px + f * 11, py - 19);
+    c.drawLine(hand, tip, Paint()
+      ..color = FishingPalette.rod
+      ..strokeWidth = 1.5);
+    c.drawLine(tip, tip.translate(0, 6), Paint()..color = FishingPalette.line);
+  }
+
   /// Caña, línea y boya de un jugador en (px, py) mirando [dir]. [mine]:
   /// la pesca local (medidor, barra y boya en vuelo).
   void drawAngler(
