@@ -734,6 +734,7 @@ abstract final class LightPalette {
     'flora': Color(0xFFB8FFD8),
     'agua': Color(0xFFA8D0FF),
     'botin': Color(0xFFFFE8A8),
+    'hongo': Color(0xFFC8B8FF),
   };
   static const fallback = Color(0xFFFFFFFF);
 

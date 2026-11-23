@@ -31,15 +31,15 @@ void main() {
     const gw = 80, gh = 64; // vista con zoom + margen
     final sw = Stopwatch()..start();
     final fixed = LightRules.tileEmitters(map, 40, 40, 40 + gw, 40 + gh);
-    final steady = LightGrid(40, 40, gw, gh);
+    final steady = LightGrid(40, 40, gw, gh, sub: 2);
     LightRules.accumulate(steady, fixed, block, tint);
     final cold = sw.elapsedMicroseconds;
     sw.reset();
     for (var i = 0; i < 10; i++) {
-      LightRules.accumulate(LightGrid(40, 40, gw, gh), fixed, block, tint);
+      LightRules.accumulate(LightGrid(40, 40, gw, gh, sub: 2), fixed, block, tint);
     }
     final build = sw.elapsedMicroseconds / 10;
-    final out = LightGrid(40, 40, gw, gh);
+    final out = LightGrid(40, 40, gw, gh, sub: 2);
     final moving = [
       for (var i = 0; i < 4; i++)
         LightSource(70.0 + i, 70.0 + i, LightRules.carried(dark: true)),
