@@ -94,13 +94,13 @@ class UnusedPoints {
       ];
 
   /// Texto del aviso al subir de nivel (o al ganar puntos de ascensión):
-  /// `Tenés 2 puntos de árbol sin usar · [C]`; `null` si no hay nada que
+  /// `Tenés 2 puntos de árbol sin usar · [TAB]`; `null` si no hay nada que
   /// avisar.
   ///
   /// Con compañeros, una parte por cada uno: `Leo tiene 3 puntos sin usar`.
   String? get toastText {
     if (milestone > 0) {
-      return '¡Hito del nivel $milestone! Elegí tu keystone en ÁRBOL · [C]';
+      return '¡Hito del nivel $milestone! Elegí tu keystone en ÁRBOL · [TAB]';
     }
     final p = _ownParts;
     final mates = [
@@ -108,9 +108,9 @@ class UnusedPoints {
         '$name tiene $n punto${n == 1 ? '' : 's'} sin usar',
     ];
     if (p.isEmpty && mates.isEmpty) return null;
-    if (p.isEmpty) return '${mates.join(' · ')} · [C]';
+    if (p.isEmpty) return '${mates.join(' · ')} · [TAB]';
     final where = attributes > 0 || tree > 0 || oficios > 0 || mates.isNotEmpty
-        ? '[C]${ascension > 0 ? ' · ascensión: Estatua del Tiempo' : ''}'
+        ? '[TAB]${ascension > 0 ? ' · ascensión: Estatua del Tiempo' : ''}'
         : 'Estatua del Tiempo';
     final list = p.length == 1
         ? p.single

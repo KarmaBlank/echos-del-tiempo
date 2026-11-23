@@ -247,7 +247,7 @@ class WorldHud extends StatelessWidget {
                                 size: DsButtonSize.compact,
                                 onPressed: controller.toggleParty),
                           ],
-                          // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
+                          // Puntos sin usar: `PERSONAJE [TAB]` con `+N` (solo si hay;
                           // passive_tree_v4.md § 7).
                           if (_unused(s).any) ...[
                             const SizedBox(width: 8),

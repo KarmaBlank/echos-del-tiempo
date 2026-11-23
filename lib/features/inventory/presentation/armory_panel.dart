@@ -117,7 +117,7 @@ class _ShopTabsPanelState extends State<ShopTabsPanel> {
                 onChanged: (i) => setState(() => _tab = i),
               )),
           actions: [
-            PanelButton('PERSONAJE [C]',
+            PanelButton('PERSONAJE [TAB]',
                 onPressed: () => controller.openPanel(WorldPanel.character)),
             PanelButton('CERRAR [ESC]', onPressed: close),
           ],
