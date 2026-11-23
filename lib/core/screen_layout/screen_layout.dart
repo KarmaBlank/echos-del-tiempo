@@ -29,6 +29,7 @@ class ScreenElement {
     this.variant,
     this.size,
     this.text,
+    this.textKey,
     this.textStyle,
     this.role,
     required this.x,
@@ -49,6 +50,10 @@ class ScreenElement {
   final String? variant;
   final String? size;
   final String? text;
+
+  /// Clave de i18n del texto (docs/specs/i18n.md § 3): en un idioma que no
+  /// es el fuente, la pantalla la traduce; en es-AR manda [text].
+  final String? textKey;
   final String? textStyle;
 
   /// Rol semántico del texto: `titulo`, `subtitulo`, `texto`, `detalle`.
@@ -70,6 +75,7 @@ class ScreenElement {
     Object? variant = _keep,
     Object? size = _keep,
     Object? text = _keep,
+    Object? textKey = _keep,
     Object? textStyle = _keep,
     Object? role = _keep,
     double? x,
@@ -90,6 +96,8 @@ class ScreenElement {
         variant: identical(variant, _keep) ? this.variant : variant as String?,
         size: identical(size, _keep) ? this.size : size as String?,
         text: identical(text, _keep) ? this.text : text as String?,
+        textKey:
+            identical(textKey, _keep) ? this.textKey : textKey as String?,
         textStyle: identical(textStyle, _keep)
             ? this.textStyle
             : textStyle as String?,
@@ -117,6 +125,7 @@ class ScreenElement {
         if (variant != null) 'variant': variant,
         if (size != null) 'size': size,
         if (text != null) 'text': text,
+        if (textKey != null) 'textKey': textKey,
         if (textStyle != null) 'textStyle': textStyle,
         if (role != null) 'role': role,
         'x': x,
@@ -149,6 +158,7 @@ class ScreenElement {
       variant: j['variant'] as String?,
       size: j['size'] as String?,
       text: j['text'] as String?,
+      textKey: j['textKey'] as String?,
       textStyle: j['textStyle'] as String?,
       role: j['role'] as String?,
       x: n('x'),

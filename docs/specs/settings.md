@@ -412,6 +412,7 @@ protocolo ni lo que ve el resto de la sala.
 
 | Ajuste | Opciones | Efecto |
 |---|---|---|
+| IDIOMA (v0.38.0) | AUTOMÁTICO / ESPAÑOL / ENGLISH | idioma de los textos (`GameSettings.locale`, vacío = AUTOMÁTICO: Steam o sistema). Solo idiomas `published` de `assets/i18n/locales.json`; zh-Hans oculto. Ver docs/specs/i18n.md § 3.1-3.2 |
 | NÚMEROS FLOTANTES | SÍ / NO | dibujar o no los números flotantes de daño/cura (`FxKind.num`). Los textos (`¡CRÍTICO!`, estados) se mantienen |
 | CONFIRMAR AL TIRAR | SÍ / NO | con NO, `TIRAR` del inventario tira enseguida. `VENDER` y `DESARMAR` siempre confirman (destruyen el arma) |
 | TIEMPO DE TURNO | **NORMAL (30 S)** / LARGO (60 S) / SIN LÍMITE | cuánto espera la batalla a que elija el jugador de turno antes de pasarlo solo (`TurnTimer`). Jugando solo vale este; en co-op, el del **anfitrión** (la sala lo lleva en `GameSession.turnTimer`; el del cliente no cuenta). En el pueblo y la preparación la barra de misión dice `Turnos: sin límite (anfitrión)` si no es el normal. Con SIN LÍMITE no hay reloj ni cuenta regresiva |

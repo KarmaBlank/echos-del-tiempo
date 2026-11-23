@@ -24,6 +24,7 @@ import '../../../core/edition/game_edition.dart';
 import '../../../game_engine/models/game_mode.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/class_def.dart';
@@ -852,7 +853,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final a = _account;
     final has = a?.selected != null && !_busy;
     final notice = _noticeText(), status = _netStatusText();
+    final strings = ref.watch(stringsProvider);
     return ScreenRuntimeBindings(
+      // es-AR: el texto del layout (lo edita el Editor); otro idioma, el
+      // de la clave del elemento (docs/specs/i18n.md § 3).
+      translate: strings.isSource ? null : strings.lookup,
       actions: {
         'nuevaPartida': ScreenAction(_busy ? null : _openModes),
         'crearPersonaje': ScreenAction(_busy || a == null || a.isFull
@@ -941,24 +946,24 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                         textAlign: TextAlign.center, style: DsText.display()),
                     SizedBox(height: DsSpace.xl * 2),
                     // JUGAR es la acción principal (borde y texto dorados).
-                    item(DsButton('> JUGAR',
+                    item(DsButton(ref.t('ui.title.play'),
                         key: const ValueKey('title-start'),
                         kind: DsButtonKind.primary,
                         autofocus: true,
                         onPressed: _busy ? null : _openModes)),
-                    item(DsButton('VER NOTAS DEL PARCHE',
+                    item(DsButton(ref.t('ui.title.patch_notes'),
                         key: const ValueKey('title-patch-notes'),
                         trailing: _notesBadge == null
                             ? null
                             : DsBadge(_notesBadge!,
                                 key: const ValueKey('title-patch-notes-badge')),
                         onPressed: _openPatchNotes)),
-                    item(DsButton('OPCIONES',
+                    item(DsButton(ref.t('ui.title.options'),
                         key: const ValueKey('title-settings'),
                         onPressed: () => showSettingsDialog(context))),
                     // Salida segura (v0.8.2): confirma y guarda todo
                     // (ExitGuard) antes de cerrar, como la pausa.
-                    item(DsButton('SALIR',
+                    item(DsButton(ref.t('ui.title.quit'),
                         key: const ValueKey('title-quit'),
                         accent: DsColors.danger,
                         onPressed: _quitGame)),
@@ -1036,7 +1041,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              DsButton('VOLVER',
+              DsButton(ref.t('ui.title.back'),
                   key: const ValueKey('title-back'),
                   onPressed: _busy ? null : _back),
               SizedBox(width: gap),
@@ -1076,26 +1081,27 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         return _menu();
       case _Step.mode:
         return _frame(
-          title: 'JUGAR',
+          title: ref.t('ui.title.step.mode'),
           body: Column(mainAxisSize: MainAxisSize.min, children: [
-            _option('title-solo', 'SOLITARIO', 'Jugás vos solo.',
+            _option('title-solo', ref.t('ui.title.solo.label'),
+                ref.t('ui.title.solo.detail'),
                 () => _choose(_Path.solo),
                 autofocus: true),
-            _option('title-coop', 'COOPERATIVO',
-                'Con amigos: creás una sala o te unís a una.',
+            _option('title-coop', ref.t('ui.title.coop.label'),
+                ref.t('ui.title.coop.detail'),
                 () => _go(_Step.coop)),
           ]),
         );
       case _Step.coop:
         return _frame(
-          title: 'COOPERATIVO',
+          title: ref.t('ui.title.step.coop'),
           body: Column(mainAxisSize: MainAxisSize.min, children: [
-            _option('title-host', 'CREAR SALA',
-                'Abrís tu mundo y tus amigos se unen con el código.',
+            _option('title-host', ref.t('ui.title.host.label'),
+                ref.t('ui.title.host.detail'),
                 netOk ? () => _choose(_Path.host) : null,
                 autofocus: true),
-            _option('title-join-step', 'UNIRSE',
-                'Entrás a la sala de un amigo con su código.',
+            _option('title-join-step', ref.t('ui.title.join.label'),
+                ref.t('ui.title.join.detail'),
                 netOk ? () => _choose(_Path.join) : null),
             Text(
                 retroText(factory == null
@@ -1108,9 +1114,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         );
       case _Step.join:
         return _frame(
-          title: 'UNIRSE',
+          title: ref.t('ui.title.step.join'),
           body: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Código de la sala', style: DsText.detail()),
+            Text(ref.t('ui.title.room_code'), style: DsText.detail()),
             SizedBox(height: DsSpace.sm),
             SizedBox(
               // Crece con el texto (el hint nunca se corta).
@@ -1138,7 +1144,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               ),
             ),
           ]),
-          action: DsButton('> CONTINUAR',
+          action: DsButton(ref.t('ui.title.continue'),
               key: const ValueKey('title-join-next'),
               kind: DsButtonKind.primary,
               onPressed: _busy ? null : _joinNext),
@@ -1146,9 +1152,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       case _Step.worlds:
         final book = ref.watch(worldBookProvider);
         return _frame(
-          title: 'MUNDO',
+          title: ref.t('ui.title.step.world'),
           body: WorldPicker(busy: _busy),
-          action: DsButton('> CONTINUAR',
+          action: DsButton(ref.t('ui.title.continue'),
               key: const ValueKey('title-worlds-next'),
               kind: DsButtonKind.primary,
               onPressed: _busy || book?.selected == null
@@ -1163,9 +1169,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             !_busy &&
             (_path == _Path.solo || netOk);
         return _frame(
-          title: 'PERSONAJE',
+          title: ref.t('ui.title.step.character'),
           body: a == null
-              ? Text('Cargando...', style: DsText.detail())
+              ? Text(ref.t('ui.title.loading'), style: DsText.detail())
               : creating
                   ? _creator(a, sprites)
                   : _selector(a, sprites),
@@ -1173,9 +1179,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               ? null
               : DsButton(
                   switch (_path) {
-                    _Path.solo => '> JUGAR',
-                    _Path.host => '> CREAR SALA',
-                    _Path.join => '> UNIRSE',
+                    _Path.solo => ref.t('ui.title.start_play'),
+                    _Path.host => ref.t('ui.title.start_host'),
+                    _Path.join => ref.t('ui.title.start_join'),
                   },
                   key: const ValueKey('char-play'),
                   kind: DsButtonKind.primary,

@@ -21,21 +21,22 @@ import '../../world/presentation/map/map_labels.dart'
     show MapLabelSamplePainter;
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/game_settings.dart';
+import '../../../app/feature_flags.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/settings/settings_providers.dart';
 
 /// Pestañas del menú (docs/specs/settings.md § "Estructura").
+/// Nombre y descripción, por idioma: `ui.settings.tab.<name>.label|hint`
+/// (docs/specs/i18n.md).
 enum SettingsTab {
-  sound('SONIDO', 'Volumen general, de la música y de los efectos.'),
-  display('PANTALLA', 'Ventana, gráficos y rendimiento.'),
-  accessibility('ACCESIBILIDAD',
-      'Tema, texto, colores para daltonismo, movimiento y destellos.'),
-  game('JUEGO', 'Números de daño, tiempo de turno y avisos.'),
-  controls('CONTROLES', 'Todas las teclas del juego.');
+  sound,
+  display,
+  accessibility,
+  game,
+  controls;
 
-  const SettingsTab(this.label, this.hint);
-
-  final String label;
-  final String hint;
+  String label(Strings s) => s.t('ui.settings.tab.$name.label');
+  String hint(Strings s) => s.t('ui.settings.tab.$name.hint');
 }
 
 /// Qué salida se está confirmando.
@@ -116,10 +117,13 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
 
   /// Qué tiene cada pestaña (antes, una línea fija debajo de las
   /// pestañas; ahora en el "?": design_system.md § 2, principio 0).
-  static String get _tabsHelp => [
-        for (final t in SettingsTab.values)
-          '<span class="k">${t.label}</span>: ${t.hint}'
-      ].join('<br>');
+  String get _tabsHelp {
+    final s = ref.read(stringsProvider);
+    return [
+      for (final t in SettingsTab.values)
+        '<span class="k">${t.label(s)}</span>: ${t.hint(s)}'
+    ].join('<br>');
+  }
 
   String get _help => widget.inGame
       ? '<b>Pausa</b><br>Ajustes del juego y salidas. '
@@ -135,6 +139,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
   @override
   Widget build(BuildContext context) {
     final confirm = _confirm;
+    final s = ref.watch(stringsProvider);
     // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
     return MenuTabKeys(
       count: SettingsTab.values.length,
@@ -144,7 +149,9 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
         type: MaterialType.transparency,
         child: PanelFrame(
           key: const ValueKey('settings-menu'),
-          title: widget.inGame ? 'PAUSA' : 'CONFIGURACIÓN',
+          title: s.t(widget.inGame
+              ? 'ui.settings.pause_title'
+              : 'ui.settings.title'),
           width: 680,
           help: _help,
           onClose: _escape,
@@ -156,17 +163,17 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
             onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
             tabs: [
               for (final t in SettingsTab.values)
-                DsTab(t.label, key: ValueKey('tab-${t.index}')),
+                DsTab(t.label(s), key: ValueKey('tab-${t.index}')),
             ],
           ),
           leading: [
             if (widget.inGame && confirm == null) ...[
-              DsButton('SALIR AL TÍTULO',
+              DsButton(s.t('ui.settings.exit_to_title'),
                   key: const ValueKey('pause-exit-title'),
                   onPressed: widget.onExitToTitle == null
                       ? null
                       : () => setState(() => _confirm = _Exit.title)),
-              DsButton('SALIR DEL JUEGO',
+              DsButton(s.t('ui.settings.quit_game'),
                   key: const ValueKey('pause-quit'),
                   onPressed: widget.onQuitGame == null
                       ? null
@@ -178,15 +185,18 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
               : [
                   if (widget.inGame && widget.onGroupPause != null)
                     DsButton(
-                        widget.groupPaused
-                            ? 'REANUDAR AL GRUPO'
-                            : 'PAUSAR AL GRUPO',
+                        s.t(widget.groupPaused
+                            ? 'ui.settings.group_resume'
+                            : 'ui.settings.group_pause'),
                         key: const ValueKey('pause-group'),
                         selected: widget.groupPaused,
                         onPressed: () =>
                             widget.onGroupPause!(!widget.groupPaused)),
                   // CONTINUAR es la acción principal.
-                  DsButton(widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
+                  DsButton(
+                      s.t(widget.inGame
+                          ? 'ui.settings.resume'
+                          : 'ui.settings.close'),
                       key: const ValueKey('settings-close'),
                       kind: DsButtonKind.primary,
                       onPressed: widget.onClose),
@@ -238,10 +248,11 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
           '${protoColor(ProtoColors.orange, consequence)}',
         ),
       ),
-      DsButton('CANCELAR',
+      DsButton(ref.t('ui.settings.cancel'),
           key: const ValueKey('pause-confirm-cancel'),
           onPressed: () => setState(() => _confirm = null)),
-      DsButton(quit ? 'SALIR DEL JUEGO' : 'SALIR AL TÍTULO',
+      DsButton(
+          ref.t(quit ? 'ui.settings.quit_game' : 'ui.settings.exit_to_title'),
           key: const ValueKey('pause-confirm-yes'),
           accent: DsColors.danger, onPressed: () {
         setState(() => _confirm = null);
@@ -1300,9 +1311,31 @@ class _GameTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(gameSettingsProvider);
     final c = ref.read(gameSettingsProvider.notifier);
+    final strings = ref.watch(stringsProvider);
+    final tables = ref.watch(stringTablesProvider);
+    final locales = tables.registry
+        .selectable(showHidden: FeatureFlags.instance.showHiddenLocales);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // IDIOMA (docs/specs/i18n.md § 3.1): solo los idiomas publicados
+        // (los ocultos, solo en la build de desarrollo).
+        _SettingRow(
+          label: strings.t('ui.settings.language.label'),
+          hint: strings.t('ui.settings.language.hint'),
+          control: _Choice<String>(
+            keyPrefix: 'game-locale',
+            options: {
+              '': strings.t('ui.settings.language.auto'),
+              for (final l in locales) l.tag: l.nativeName,
+            },
+            value: LocaleId.fromTag(s.locale) != null &&
+                    locales.contains(LocaleId.fromTag(s.locale))
+                ? s.locale
+                : '',
+            onChanged: (v) => c.update(s.copyWith(locale: v)),
+          ),
+        ),
         _SettingRow(
           label: 'NÚMEROS FLOTANTES',
           hint: 'Daño y curas flotando sobre cada personaje.',

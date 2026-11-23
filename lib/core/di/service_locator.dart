@@ -43,6 +43,7 @@ import '../persistence/exit_guard.dart';
 import '../settings/frame_limiter.dart';
 import '../settings/game_settings.dart';
 import '../settings/window_mode.dart';
+import '../i18n/string_tables.dart';
 
 final sl = GetIt.instance;
 
@@ -61,8 +62,12 @@ void registerSharedDependencies(
     {AccountStore? accountStore,
     BalanceParseResult? balance,
     UltData? ults,
+    StringTables? strings,
     GameEdition edition = GameEdition.mundo}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
+  // Textos por idioma (docs/specs/i18n.md § 3): sin tablas (tests), el
+  // provider los lee de assets/i18n en disco.
+  if (strings != null) sl.registerSingleton<StringTables>(strings);
   // Qué juego es (docs/specs/distribution.md § "Dos juegos, un repo"):
   // versión, canal de releases, carpeta de datos y protocolo. Va antes del
   // log, que ya escribe en la carpeta del juego.

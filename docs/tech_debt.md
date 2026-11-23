@@ -271,3 +271,22 @@ Funcionalidad pendiente:
 - Sin test visual / captura del dibujo de la llama (`_drawWisp`).
 - La predicción local no la prende al instante: se ve cuando vuelve el
   snapshot del host.
+
+## Idiomas (v0.38.0, docs/specs/i18n.md)
+
+- Test de glifos: zh-Hans se saltea (`pendingFont` en
+  `test/i18n/glyph_coverage_test.dart`) hasta que entre Fusion Pixel
+  subseteada; al agregarla, mapear zh a esa fuente y sacar el salto.
+- Idioma automático: sin binding de Steamworks (`steamLanguageProvider`
+  devuelve `null`); se usa el idioma del sistema.
+- Solo están migrados el menú del título y lo principal de OPCIONES
+  (pestañas, título, salidas, IDIOMA). El resto de OPCIONES y del juego
+  sigue en literales (línea base en
+  `test/i18n/hardcoded_strings_baseline.json`, fase 2).
+- El lint de textos fijos es por línea y por patrones (`Text(`,
+  `DsButton(`, `label:`…): no ve literales que llegan por variables ni
+  concatenaciones partidas en varias líneas.
+- Los layouts de datos guardan `text` (es-AR) y `textKey`: el Editor de
+  pantallas todavía no edita `textKey` (fase 4); en es-AR manda `text`.
+- `showQuitGameDialog` y la confirmación de la pausa siguen con su
+  pregunta en español.

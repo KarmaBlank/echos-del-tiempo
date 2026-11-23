@@ -23,11 +23,16 @@ class ScreenRuntimeBindings {
     this.actions = const {},
     this.data = const {},
     this.slots = const {},
+    this.translate,
   });
 
   final Map<String, ScreenAction> actions;
   final Map<String, List<ScreenDataEntry>> data;
   final Map<String, Widget> slots;
+
+  /// Texto de un `textKey` en el idioma activo (`null` = usar `text`).
+  /// docs/specs/i18n.md § 3.
+  final String? Function(String key)? translate;
 }
 
 TextAlign textAlignOf(ScreenAlign a) => switch (a) {
@@ -62,7 +67,12 @@ Widget buildScreenElement(
   return c.build(
     context,
     DsElementContext(
-      text: e.text ?? c.defaultText ?? '',
+      text: (preview || e.textKey == null
+              ? null
+              : bindings.translate?.call(e.textKey!)) ??
+          e.text ??
+          c.defaultText ??
+          '',
       variant: c.hasVariant(e.variant) ? e.variant : c.defaultVariant,
       size: e.size ?? c.defaultSizeId,
       textStyle: DsTextStyleInfo.parse(e.textStyle) ?? c.defaultTextStyle,

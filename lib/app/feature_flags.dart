@@ -44,7 +44,16 @@ class FeatureFlags {
     this.soloParty = false,
     this.maxPlayers = kDefaultMaxPlayers,
     this.useLocalOverrides = false,
+    this.showHiddenLocales = false,
+    this.allowMachineText = false,
   });
+
+  /// Offers `hidden` languages (zh-Hans today) in OPCIONES → IDIOMA
+  /// (docs/specs/i18n.md § 3.1). Solo `main_dev`.
+  final bool showHiddenLocales;
+
+  /// Shows translations with `status: machine` (§ 3). Never in release.
+  final bool allowMachineText;
 
   static FeatureFlags instance = const FeatureFlags();
 
