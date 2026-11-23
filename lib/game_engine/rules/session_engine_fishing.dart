@@ -18,7 +18,6 @@ class FishPending {
 class FishingHostState {
   final pending = <String, FishPending>{};
   final lastCast = <String, double>{};
-  final nextAuto = <String, double>{};
 
   /// XP de personaje ganada pescando en esta estadía en el pueblo.
   final charXp = <String, int>{};
@@ -46,8 +45,7 @@ extension _FishingOp on _Op {
         return _fishBite(p, power);
       case FishResultAction(:final success):
         return _fishResult(p, success);
-      case AutoFishAction():
-        return _autoFish(p);
+
       case FishLineAction(:final line):
         return _fishLine(p, line);
       case SellFishAction(:final species, :final materials):
@@ -158,22 +156,6 @@ extension _FishingOp on _Op {
     return true;
   }
 
-  bool _autoFish(SessionPlayer p) {
-    if (!_inTown(p)) return false;
-    final next = _f.nextAuto[p.id];
-    if (next != null && s.time < next) return false;
-    _f.nextAuto[p.id] = s.time + _ft.d('autoCooldownSec');
-    final bonus = FishingRules.rodBonus(p.profile);
-    final n = math.max(1,
-        _ft.i('autoCount') + LifeTreeRules.fish(p.profile, LifeFx.auto).round());
-    for (var i = 0; i < n; i++) {
-      final fish =
-          FishingRules.roll(_rand, TownRules.lakeRoll(s.town),
-              rareBonus: bonus.rare, auto: true);
-      _grantFish(p, fish, auto: true);
-    }
-    return true;
-  }
 
   /// Materiales, cofre hundido o arma (fishing.md § 8). Va al inventario
   /// con las reglas de siempre (lo que no entra, al piso o al alijo).
