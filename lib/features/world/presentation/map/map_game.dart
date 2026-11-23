@@ -842,6 +842,7 @@ class MapGame extends Game {
           markOf: _npcMark);
       _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
       _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
+      _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al

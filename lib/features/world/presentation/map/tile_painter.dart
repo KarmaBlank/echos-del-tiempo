@@ -188,15 +188,9 @@ class TilePainter {
           _rect(c, const Color(0xFF74B9FF), px + 9, py + 3, 3, 3);
         }
       case Tile.armory:
+        // FORJA: only the floor here; the stall is the manifest sprite
+        // `items.vida_forja`, drawn over the landmark by MapGame.
         floor();
-        _rect(c, const Color(0xFF3D3D4A), px, py + 3, ts, ts - 3);
-        _rect(c, const Color(0xFF8395A7), px, py + 3, ts, 4);
-        if (tx.isOdd) {
-          _rect(c, const Color(0xFFDFE6E9), px + 7, py - 6, 2, 10);
-        } else {
-          _rect(c, const Color(0xFF8A5A2B), px + 7, py - 6, 1, 10);
-          _rect(c, const Color(0xFFFF7B29), px + 6, py - 8, 3, 3);
-        }
       case Tile.portal:
         // Portal del Eco (ecos_atlas.md § 1): base de piedra y, en el
         // tile del medio, un anillo turquesa que late.
