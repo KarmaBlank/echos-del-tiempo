@@ -419,3 +419,12 @@ abstract final class CropPalette {
 
   static CropLook of(String? id) => looks[id] ?? fallback;
 }
+
+/// Cartel de subida de nivel de oficio sobre el personaje (v0.24.6).
+abstract final class LifeLevelPalette {
+  static const frame = Color(0xFF2A1E12);
+  static const back = Color(0xE01A140E);
+  static const title = Color(0xFFFFD166);
+  static const fish = Color(0xFF7FC8FF);
+  static const farm = Color(0xFF7BE07B);
+}

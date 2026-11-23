@@ -123,6 +123,15 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 - La cosecha "salta" del tile hacia quien cosechó con chispas (como el
   pez) y el nombre con la calidad arriba del personaje.
 
+### 2.6 Cartel de subida de nivel de oficio (v0.24.6)
+- Al subir Pesca o Cultivo aparece un cartel pixel arriba del personaje
+  (encima del nombre): "¡Subiste de nivel!" (los demás ven "<nombre>
+  subió de nivel") y "Pescador N" / "Granjero N". Sube y se desvanece en
+  2,5 s, con el sonido de subida de nivel.
+- Sin evento nuevo: cada cliente compara el nivel de oficio del perfil
+  que manda el host con el último que vio (`MapLifeLevelLayer`), así lo
+  ven todos y el protocolo no cambia.
+
 ### 2.4 Huerta compartida: cada labor usa a quien la hace
 Cualquiera planta, riega, abona o cosecha cualquier parcela. Cada parcela
 guarda los aportes (JSON de la parcela):
