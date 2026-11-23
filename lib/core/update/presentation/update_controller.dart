@@ -24,6 +24,10 @@ class UpdateController extends ChangeNotifier {
 
   final UpdateService service;
 
+  /// La última versión nueva que se supo que existe (o `null`): la lee el
+  /// aviso del HUD del mundo (docs/specs/update_notice.md).
+  static final newerVersion = ValueNotifier<String?>(null);
+
   UpdatePhase _phase = UpdatePhase.idle;
   UpdatePhase get phase => _phase;
 
@@ -65,9 +69,11 @@ class UpdateController extends ChangeNotifier {
     switch (r) {
       case UpdateAvailable(:final release):
         _release = release;
+        newerVersion.value = release.version.toString();
         _set(UpdatePhase.available);
       case UpToDate(:final latest):
         _release = null;
+        newerVersion.value = null;
         _set(UpdatePhase.upToDate,
             message: latest == null ? 'Todavía no hay versiones publicadas.' : null);
       case UpdateCheckFailed(:final message):
