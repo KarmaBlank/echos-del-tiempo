@@ -41,6 +41,40 @@ void main() {
     await pumpEventQueue();
   }
 
+  test('loopback: el dueño mueve la huerta en la edición y el cliente la ve',
+      () async {
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub), cn = LoopbackNetSession(hub);
+    final hp =
+        progression.normalize(PlayerProfile(name: 'Host', classId: 'maga'));
+    final cp =
+        progression.normalize(PlayerProfile(name: 'Ana', classId: 'guerrero'));
+    await hn.connect(SessionConfig(profile: hp));
+    final host = make(hn, hp);
+    await host.start();
+    await cn.connect(SessionConfig(profile: cp, roomCode: hn.roomCode));
+    final me = make(cn, cp);
+    await me.start();
+    for (var i = 0; i < 3; i++) {
+      await tick(host, me);
+    }
+    // Solo el dueño edita.
+    expect(me.enterTownEdit(), isFalse);
+    expect(host.enterTownEdit(), isTrue);
+    host.editClick(20, 19);
+    expect(host.townEdit!.step, TownEditStep.options);
+    expect(host.editSelected!.id, 'h0');
+    host.editStartMove();
+    host.editHover(4, 8);
+    expect(host.editGhostError, isNull);
+    host.editClick(4, 8);
+    for (var i = 0; i < 4; i++) {
+      await tick(host, me);
+    }
+    expect(me.town.build('h0')!.bounds.x, 4);
+    expect(me.town.build('h0')!.bounds.y, 8);
+  });
+
   test('loopback: el cliente planta y cosecha; el host otorga', () async {
     final hub = LoopbackHub();
     final hn = LoopbackNetSession(hub), cn = LoopbackNetSession(hub);

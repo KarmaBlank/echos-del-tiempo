@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/construction_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/item.dart' show CraftMaterial;
@@ -7,25 +8,21 @@ import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
+import 'town_plan.dart';
 
-/// Costo de una ampliación del pueblo.
+//// Costo de una ampliación del pueblo.
 typedef ExpansionCost = ({int gold, int esquirlas, int cristales});
 
-/// Reglas del pueblo del mundo (docs/specs/farming.md § 6–8):
-/// ampliaciones y sus espacios (LAGO / HUERTA), peces soltados en el lago
-/// (capacidad, sesgo de la tabla, cría) y el ayudante de la huerta. Puras;
-/// los números en `kTuning[TuningId.town]` (Editor → Balance → Pueblo).
+/// Reglas del pueblo del mundo (docs/specs/town_editor.md y farming.md
+/// § 7–8): ampliaciones por lado, construcciones (poner, mover, fusionar
+/// lagos, borrar), peces soltados por lago (capacidad, sesgo de la
+/// tabla, cría) y el ayudante de la huerta. Puras; los números en
+/// `kTuning[TuningId.town]` (Editor → Balance → Pueblo).
 abstract final class TownRules {
   static TuningDef get t => tuning(TuningId.town);
 
-  /// Espacios por ampliación (fijo: cada franja tiene norte y sur).
-  static const slotsPerExpansion = 2;
-
-  static int get maxExpansions => t.i('maxExpansions').clamp(0, 4);
-
-  static int slots(TownState s) => s.expansions * slotsPerExpansion;
-  static int freeSlots(TownState s) =>
-      math.max(0, slots(s) - s.zones.length);
+  static int get maxExpansions => t.i('maxExpansions').clamp(0, 16);
+  static int get maxPerSide => t.i('maxPerSide').clamp(0, 6);
 
   /// Costo de la ampliación número [n] (1 = la primera).
   static ExpansionCost cost(int n) => (
@@ -41,10 +38,19 @@ abstract final class TownRules {
         if (c.cristales > 0) '${c.cristales} Cristales de Era',
       ].join(' · ');
 
-  /// Por qué [p] no puede pagar la próxima ampliación (o `null`).
-  static String? cannotExpand(PlayerProfile p, TownState s) {
+  /// Por qué el pueblo no se puede ampliar más hacia [side] (o `null`).
+  static String? sideFull(TownState s, TownSide side) {
     if (s.expansions >= maxExpansions) return 'El pueblo ya está al máximo';
-    if (freeSlots(s) > 0) return 'Primero elegí qué va en el espacio libre';
+    if (s.side(side) >= maxPerSide) {
+      return 'No se puede ampliar más al ${side.label.toLowerCase()}';
+    }
+    return null;
+  }
+
+  /// Por qué [p] no puede pagar la próxima ampliación hacia [side].
+  static String? cannotExpand(PlayerProfile p, TownState s, TownSide side) {
+    final full = sideFull(s, side);
+    if (full != null) return full;
     final c = cost(s.expansions + 1);
     if (p.credits < c.gold) return 'Falta oro (${p.credits}/${c.gold})';
     final esq = p.materials[CraftMaterial.esquirla] ?? 0;
@@ -54,8 +60,9 @@ abstract final class TownRules {
     return null;
   }
 
-  static (PlayerProfile, TownState)? expand(PlayerProfile p, TownState s) {
-    if (cannotExpand(p, s) != null) return null;
+  static (PlayerProfile, TownState)? expand(
+      PlayerProfile p, TownState s, TownSide side) {
+    if (cannotExpand(p, s, side) != null) return null;
     final c = cost(s.expansions + 1);
     final mats = {...p.materials};
     mats[CraftMaterial.esquirla] =
@@ -64,43 +71,242 @@ abstract final class TownRules {
         (mats[CraftMaterial.cristal] ?? 0) - c.cristales;
     return (
       p.copyWith(credits: p.credits - c.gold, materials: mats),
-      s.copyWith(expansions: s.expansions + 1),
+      s.copyWith(sides: {...s.sides, side: s.side(side) + 1}),
     );
   }
 
-  static TownState? assign(TownState s, TownZoneKind k) =>
-      freeSlots(s) <= 0 ? null : s.copyWith(zones: [...s.zones, k]);
+  // ---------------- construcciones ----------------
 
-  // ---------------- lago ----------------
+  /// La construcción que ocupa el tile del mapa ([mx], [my]).
+  static TownBuild? buildAt(TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    return s.builds.where((b) => b.contains(mx - ox, my - oy)).firstOrNull;
+  }
 
-  static int lakeCapacity(TownState s) =>
-      t.i('lakeBase') + t.i('lakePerZone') * s.zoneCount(TownZoneKind.lago);
+  /// La construcción cuyo cartel está en el tile del mapa ([mx], [my]).
+  static TownBuild? buildAtSign(TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    return s.builds
+        .where((b) => TownPlan.signOf(s, b) == (mx - ox, my - oy))
+        .firstOrNull;
+  }
 
-  /// Suelta un [species] de la bolsa de [p] en el lago.
+  static String _newId(TownState s, BuildKind k) {
+    var n = 0;
+    for (final b in s.builds) {
+      final v = int.tryParse(b.id.substring(1)) ?? 0;
+      if (v >= n) n = v + 1;
+    }
+    return '${k == BuildKind.lago ? 'l' : 'h'}$n';
+  }
+
+  /// Pone [b] en el pueblo; si es un lago y toca otros lagos, se funden
+  /// en uno (se queda con el id del primero y suma los peces; § 4.2).
+  static (TownState, String) _put(TownState s, TownBuild b) {
+    final rest = [...s.builds.where((o) => o.id != b.id)];
+    var merged = b;
+    final at = s.builds.indexWhere((o) => o.id == b.id);
+    var index = at < 0 ? rest.length : at;
+    if (b.kind == BuildKind.lago) {
+      var grew = true;
+      while (grew) {
+        grew = false;
+        for (final o in [...rest]) {
+          if (o.kind != BuildKind.lago) continue;
+          final touch = o.parts
+              .any((p) => merged.parts.any((q) => p.touches(q)));
+          if (!touch) continue;
+          final first = rest.indexOf(o) < index;
+          final stock = {...o.stock};
+          for (final e in merged.stock.entries) {
+            stock[e.key] = (stock[e.key] ?? 0) + e.value;
+          }
+          merged = TownBuild(first ? o.id : merged.id, BuildKind.lago,
+              first ? [...o.parts, ...merged.parts] : [...merged.parts, ...o.parts],
+              stock: stock);
+          final oi = rest.indexOf(o);
+          rest.removeAt(oi);
+          if (oi < index) index = oi;
+          grew = true;
+        }
+      }
+    }
+    rest.insert(index.clamp(0, rest.length), merged);
+    return (s.copyWith(builds: rest), merged.id);
+  }
+
+  /// Por qué [next] no es un pueblo válido tras cambiar [id] (o `null`):
+  /// dentro del pueblo, sin pisar caminos fijos, lugares, otras
+  /// construcciones ni carteles, y con camino a todo (§ 3.2).
+  static String? _invalid(TownState next, String id) {
+    final b = next.build(id);
+    if (b == null) return 'No existe';
+    final w = TownPlan.widthOf(next), h = TownPlan.heightOf(next);
+    final (ox, oy) = next.origin;
+    bool inside(int x, int y) =>
+        x + ox >= 2 && y + oy >= 2 && x + ox < w - 2 && y + oy < h - 2;
+    final bb = b.bounds;
+    final (sx, sy) = TownPlan.signOf(next, b);
+    if (!inside(bb.x, bb.y) ||
+        !inside(bb.right - 1, bb.bottom - 1) ||
+        !inside(sx, sy)) {
+      return 'Fuera del pueblo: ampliá hacia ese lado';
+    }
+    final sign = TownRect(sx, sy, 1, 1);
+    for (final r in TownPlan.reserved(next)) {
+      if (b.parts.any((p) => p.overlaps(r)) || sign.overlaps(r)) {
+        return 'Ahí hay un camino o un lugar del pueblo';
+      }
+    }
+    for (final o in next.builds) {
+      if (o.id == id) continue;
+      final os = TownPlan.signOf(next, o);
+      if (o.parts.any((p) => b.parts.any((q) => p.overlaps(q)))) {
+        return 'Se pisa con otra construcción';
+      }
+      if (o.contains(sx, sy) || b.contains(os.$1, os.$2) || os == (sx, sy)) {
+        return 'Se pisa con un cartel';
+      }
+    }
+    if (TownPlan.of(next).unreached.isNotEmpty) {
+      return 'Así queda algo sin camino';
+    }
+    return null;
+  }
+
+  /// Poner una construcción del catálogo con su esquina en el tile del
+  /// mapa ([mx], [my]). Devuelve el pueblo nuevo y el id, o el motivo.
+  static ({TownState? town, String? id, String? error}) place(
+      TownState s, String defId, int mx, int my) {
+    final def = construction(defId);
+    if (def == null) return (town: null, id: null, error: 'No existe');
+    final (ox, oy) = s.origin;
+    final b = TownBuild(_newId(s, def.kind), def.kind,
+        [TownRect(mx - ox, my - oy, def.w, def.h)]);
+    final (next, id) = _put(s, b);
+    final err = _invalid(next, id);
+    return err == null
+        ? (town: next, id: id, error: null)
+        : (town: null, id: null, error: err);
+  }
+
+  /// Mover [id] para que su esquina quede en el tile del mapa ([mx],
+  /// [my]); las parcelas viajan con la huerta.
+  static ({TownState? town, String? id, String? error}) move(
+      TownState s, String id, int mx, int my) {
+    final b = s.build(id);
+    if (b == null) return (town: null, id: null, error: 'No existe');
+    final (ox, oy) = s.origin;
+    final (next, nid) = _put(s, b.movedTo(mx - ox, my - oy));
+    final err = _invalid(next, nid);
+    return err == null
+        ? (town: next, id: nid, error: null)
+        : (town: null, id: null, error: err);
+  }
+
+  /// Borrar [id]. Lago: se pierden sus peces. Huerta: cada parcela
+  /// plantada le devuelve su semilla a [p] (la opción amable, § 5.3).
+  static (PlayerProfile, TownState)? remove(
+      PlayerProfile p, TownState s, String id) {
+    final b = s.build(id);
+    if (b == null) return null;
+    var prof = p;
+    if (b.kind == BuildKind.huerta) {
+      final seeds = {...p.life.farm.seeds};
+      for (final pl in b.plots.values) {
+        final sd = pl.seed;
+        if (sd != null) seeds[sd] = (seeds[sd] ?? 0) + 1;
+      }
+      prof = p.copyWith(
+          life: p.life.copyWith(farm: p.life.farm.copyWith(seeds: seeds)));
+    }
+    return (prof, s.copyWith(builds: [...s.builds.where((o) => o.id != id)]));
+  }
+
+  /// Semillas que vuelven al borrar la huerta [b].
+  static int seedsBack(TownBuild b) =>
+      b.plots.values.where((p) => p.planted).length;
+
+  /// Texto del cartel de una huerta (§ 6): cada cultivo plantado una
+  /// vez y «6 de 12 parcelas».
+  static String farmSignText(TownBuild f) {
+    final seeds = <String>{};
+    var planted = 0;
+    for (final pl in f.plots.values) {
+      final sd = pl.seed;
+      if (sd == null) continue;
+      seeds.add(sd);
+      planted++;
+    }
+    final crops = [for (final id in seeds) kCrops[id]?.name ?? id];
+    return '${crops.isEmpty ? 'Sin cultivos' : crops.join(', ')} · '
+        '$planted de ${f.area} parcelas';
+  }
+
+  /// Texto del cartel de un lago (§ 6): cada especie una vez y los
+  /// soltados.
+  static String lakeSignText(TownState s, TownBuild l) {
+    final base = s.lake ?? kTownLakeDefault;
+    final names = [
+      for (final id in {...base, ...l.stock.keys})
+        if (kFish[id] case final f?) f.name,
+    ];
+    return '${names.join(', ')} · ${l.stockTotal}/${lakeCapacity(l)} '
+        'soltados';
+  }
+
+  // ---------------- lagos ----------------
+
+  static int lakeCapacity(TownBuild l) => math.max(
+      t.i('lakeMin'), (l.area * t.d('lakePerTile')).round());
+
+  /// El lago más cercano al punto del mapa ([px], [py]) en px.
+  static TownBuild? lakeNear(TownState s, double px, double py) {
+    final (ox, oy) = s.origin;
+    final tx = px / 16 - ox, ty = py / 16 - oy;
+    TownBuild? best;
+    var bd = double.infinity;
+    for (final l in s.lakes) {
+      for (final p in l.parts) {
+        final dx = math.max(math.max(p.x - tx, 0.0), tx - p.right);
+        final dy = math.max(math.max(p.y - ty, 0.0), ty - p.bottom);
+        final d = dx * dx + dy * dy;
+        if (d < bd) (bd, best) = (d, l);
+      }
+    }
+    return best;
+  }
+
+  /// Suelta un [species] de la bolsa de [p] en el lago [lakeId] (o el
+  /// primero).
   static (PlayerProfile, TownState)? stock(
-      PlayerProfile p, TownState s, String species) {
+      PlayerProfile p, TownState s, String species, [String? lakeId]) {
     final f = kFish[species];
     if (f == null || f.biome == kWaterJunkBiome || p.life.count(species) < 1) {
       return null;
     }
-    if (s.stockTotal >= lakeCapacity(s)) return null;
+    final l = lakeId == null ? s.lakes.firstOrNull : s.build(lakeId);
+    if (l == null || l.kind != BuildKind.lago) return null;
+    if (l.stockTotal >= lakeCapacity(l)) return null;
+    final nl = l.copyWith(stock: {...l.stock, species: (l.stock[species] ?? 0) + 1});
     return (
       p.copyWith(
           life: p.life
               .copyWith(bag: {...p.life.bag, species: p.life.count(species) - 1})),
-      s.copyWith(stock: {...s.stock, species: (s.stock[species] ?? 0) + 1}),
+      s.copyWith(builds: [for (final b in s.builds) b.id == l.id ? nl : b]),
     );
   }
 
-  /// Las especies para la tirada: las del lago más las soltadas, y cada
-  /// soltada repetida (más peso dentro de su rareza).
-  static List<String> lakeRoll(TownState s) {
+  /// Las especies para la tirada en [lake] (o con los peces de todos los
+  /// lagos): las del pueblo más las soltadas, y cada soltada repetida.
+  static List<String> lakeRoll(TownState s, [TownBuild? lake]) {
     final base = s.lake ?? kTownLakeDefault;
     final w = t.i('stockWeight');
     final cap = t.i('stockWeightCap');
+    final stock = lake?.stock ?? s.stock;
     return [
       ...base,
-      for (final e in s.stock.entries)
+      for (final e in stock.entries)
         if (kFish.containsKey(e.key)) ...[
           if (!base.contains(e.key)) e.key,
           for (var i = 0; i < math.min(cap, e.value * w); i++) e.key,
@@ -108,26 +314,39 @@ abstract final class TownRules {
     ];
   }
 
-  /// Bonus de rareza del lago: zonas de LAGO y especies criando (≥ 2).
-  static double lakeRare(TownState s) {
-    final breeding = s.stock.values.where((n) => n >= 2).length;
-    return t.d('lakeZoneRare') * s.zoneCount(TownZoneKind.lago) +
+  /// Bonus de rareza de [lake] (o del más grande): tamaño por encima del
+  /// lago base y especies criando (≥ 2).
+  static double lakeRare(TownState s, [TownBuild? lake]) {
+    final l = lake ??
+        s.lakes.fold<TownBuild?>(
+            null, (a, b) => a == null || b.area > a.area ? b : a);
+    if (l == null) return 0;
+    final breeding = l.stock.values.where((n) => n >= 2).length;
+    return t.d('lakeZoneRare') * math.max(0, l.area - 48) / 36 +
         math.min(t.d('breedRareCap'), t.d('breedRare') * breeding);
   }
 
-  /// Misión ganada: las especies con pareja pueden criar (+1).
+  /// Misión ganada: en cada lago, las especies con pareja pueden criar.
   static TownState breed(double Function() rand, TownState s) {
-    final out = {...s.stock};
-    var total = s.stockTotal;
-    final cap = lakeCapacity(s);
-    for (final e in s.stock.entries) {
-      if (e.value < 2 || total >= cap) continue;
-      if (rand() < t.d('breedChance')) {
-        out[e.key] = e.value + 1;
-        total++;
-      }
-    }
-    return s.copyWith(stock: out);
+    return s.copyWith(builds: [
+      for (final b in s.builds)
+        if (b.kind != BuildKind.lago)
+          b
+        else
+          () {
+            final out = {...b.stock};
+            var total = b.stockTotal;
+            final cap = lakeCapacity(b);
+            for (final e in b.stock.entries) {
+              if (e.value < 2 || total >= cap) continue;
+              if (rand() < t.d('breedChance')) {
+                out[e.key] = e.value + 1;
+                total++;
+              }
+            }
+            return b.copyWith(stock: out);
+          }(),
+    ]);
   }
 
   // ---------------- ayudante ----------------

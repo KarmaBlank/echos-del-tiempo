@@ -329,29 +329,63 @@ extension _FarmingOp on _Op {
 
   // ---------------- pueblo ----------------
 
+  /// Corre a todos los del pueblo si el origen del mapa cambió (amplió al
+  /// norte o al oeste; town_editor.md § 2.2).
+  void _shiftTown(TownState before) {
+    final (ax, ay) = before.origin;
+    final (bx, by) = s.town.origin;
+    if (ax == bx && ay == by) return;
+    for (final p in s.playerList) {
+      p.x += (bx - ax) * 16;
+      p.y += (by - ay) * 16;
+      p.fishLine = null;
+      p.epoch++;
+    }
+  }
+
   bool _townAction(SessionPlayer p, TownAction a) {
     if (!_inTown(p)) return false;
     switch (a.op) {
       case TownOp.expand:
-        if (!_isOwner(p)) return false;
-        final r = TownRules.expand(p.profile, s.town);
+        final side = TownSide.fromCode(a.id);
+        if (!_isOwner(p) || side == null) return false;
+        final r = TownRules.expand(p.profile, s.town, side);
         if (r == null) return false;
+        final before = s.town;
+        s.town = r.$2;
+        _shiftTown(before);
+        _profileChange(p, r.$1);
+        say('${p.name} amplió el pueblo al ${side.label.toLowerCase()}.');
+        return true;
+      case TownOp.place:
+        final id = a.id, x = a.x, y = a.y;
+        if (!_isOwner(p) || id == null || x == null || y == null) return false;
+        final r = TownRules.place(s.town, id, x, y);
+        if (r.town == null) return false;
+        s.town = r.town!;
+        say('${p.name} construyó ${construction(id)!.name}.');
+        return true;
+      case TownOp.move:
+        final id = a.target, x = a.x, y = a.y;
+        if (!_isOwner(p) || id == null || x == null || y == null) return false;
+        final r = TownRules.move(s.town, id, x, y);
+        if (r.town == null) return false;
+        s.town = r.town!;
+        return true;
+      case TownOp.remove:
+        final id = a.target;
+        if (!_isOwner(p) || id == null) return false;
+        final b = s.town.build(id);
+        final r = TownRules.remove(p.profile, s.town, id);
+        if (b == null || r == null) return false;
         s.town = r.$2;
         _profileChange(p, r.$1);
-        say('${p.name} amplió el pueblo: elegí LAGO o HUERTA en la fuente.');
-        return true;
-      case TownOp.zoneLago || TownOp.zoneHuerta:
-        if (!_isOwner(p)) return false;
-        final k = a.op == TownOp.zoneLago ? TownZoneKind.lago : TownZoneKind.huerta;
-        final next = TownRules.assign(s.town, k);
-        if (next == null) return false;
-        s.town = next;
-        say('El pueblo suma una zona de ${k.label}.');
+        say('${p.name} borró ${b.kind == BuildKind.lago ? 'un lago' : 'una huerta'}.');
         return true;
       case TownOp.stock:
         final sp = a.id;
         if (sp == null) return false;
-        final r = TownRules.stock(p.profile, s.town, sp);
+        final r = TownRules.stock(p.profile, s.town, sp, a.target);
         if (r == null) return false;
         s.town = r.$2;
         _profileChange(p, r.$1);

@@ -196,19 +196,21 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // farming.md § 6–8 (v0.23.0): ampliaciones, lago y ayudante.
   TuningId.town: TuningDef('Pueblo', {
-    // Ampliaciones (cada una suma una franja con 2 espacios): tope y costo
-    // de la n-ésima (oro = base × mult^(n−1); Esquirlas × n; Cristales
-    // desde la 2.ª).
-    'maxExpansions': 3,
+    // Ampliaciones (town_editor.md § 2: cada una suma una franja de 8 a un
+    // lado): tope total, tope por lado y costo de la n-ésima (oro = base ×
+    // mult^(n−1); Esquirlas × n; Cristales desde la 2.ª).
+    'maxExpansions': 6,
+    'maxPerSide': 3,
     'expGoldBase': 1500,
     'expGoldMult': 2.5,
     'expEsquirlas': 6,
     'expCristales': 2,
-    // Lago: capacidad base y por zona de LAGO, peso extra por pez
-    // soltado (tope por especie), rareza por zona y por especie criando,
-    // chance de cría por misión ganada.
-    'lakeBase': 6,
-    'lakePerZone': 8,
+    // Lagos (town_editor.md § 5): capacidad mínima y por tile de agua,
+    // peso extra por pez soltado (tope por especie), rareza por cada 36
+    // tiles por encima del lago base y por especie criando, chance de
+    // cría por misión ganada.
+    'lakeMin': 2,
+    'lakePerTile': 0.2,
     'stockWeight': 1,
     'stockWeightCap': 4,
     'lakeZoneRare': 0.05,

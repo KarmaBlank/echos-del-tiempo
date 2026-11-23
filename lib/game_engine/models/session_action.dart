@@ -633,13 +633,18 @@ class FarmShopAction extends SessionAction {
 }
 
 /// Mejoras del pueblo en la fuente rúnica.
-enum TownOp { expand, zoneLago, zoneHuerta, stock, hireHelper }
+enum TownOp { expand, place, move, remove, stock, hireHelper }
 
-/// `town`: [id] = especie al soltar un pez.
+/// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),
+/// construcción del catálogo al poner o especie al soltar un pez;
+/// [target] = la construcción a mover, borrar o el lago donde soltar;
+/// ([x], [y]) = tile del mapa de la esquina al poner o mover.
 class TownAction extends SessionAction {
   final TownOp op;
   final String? id;
-  const TownAction(this.op, {this.id});
+  final String? target;
+  final int? x, y;
+  const TownAction(this.op, {this.id, this.target, this.x, this.y});
 }
 
 /// `lifeTree`: tomar un nodo ([node]) o reiniciar ([node] `null`) del

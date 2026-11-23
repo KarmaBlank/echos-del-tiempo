@@ -210,6 +210,9 @@ abstract final class ActionJson {
             't': 'town',
             'o': a.op.name,
             if (a.id != null) 'id': a.id,
+            if (a.target != null) 'tg': a.target,
+            if (a.x != null) 'x': a.x,
+            if (a.y != null) 'y': a.y,
           },
         LifeTreeAction() => {
             't': 'lifeTree',
@@ -438,7 +441,10 @@ abstract final class ActionJson {
             materials: j['mat'] == true);
       case 'town':
         return TownAction(j.enumByName('o', TownOp.values),
-            id: j.strOrNull('id'));
+            id: j.strOrNull('id'),
+            target: j.strOrNull('tg'),
+            x: j.intOrNull('x'),
+            y: j.intOrNull('y'));
       case 'lifeTree':
         return LifeTreeAction(j.str('k'), j.strOrNull('n'));
     }

@@ -1,0 +1,159 @@
+# Spec: Edición del pueblo (v0.24.0)
+
+El dueño del mundo arma su pueblo a mano: amplía hacia cualquier lado,
+pone lagos y huertas donde quiere, los mueve, funde lagos y suelta
+peces en cada uno. Reemplaza a las franjas al este con espacios LAGO /
+HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
+`TownRules` (reglas), `TownPlan` (el mapa), `ConstructionDef`
+(catálogo), `TownEdit` + `TownEditOverlay` + `TownEditLayer` (UI).
+
+## 1. Modo edición
+
+### 1.1 Entrar y salir
+- FUENTE RÚNICA → EDITAR PUEBLO. Solo el dueño del mundo (el primer
+  humano de la sala); para el resto el botón sale gris con el motivo.
+- El personaje se queda donde está (no camina, no pesca, E no hace
+  nada). La cámara queda libre: WASD / flechas, arrastrar con el mouse,
+  rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
+  franja por lado para ver las ampliaciones fantasma.
+- Esc vuelve un paso (cierra el menú o cancela lo que se mueve); en el
+  paso base sale. LISTO [ESC] sale siempre.
+- Los demás siguen jugando. Cada cambio es una acción al anfitrión, que
+  lo valida y lo manda en el estado: todos ven el pueblo nuevo al toque.
+
+### 1.2 Pasos (clic sin arrastrar)
+| Clic en | Abre |
+|---|---|
+| Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo |
+| Lago (o su cartel) | AGREGAR ESPECIES · MOVER · BORRAR LAGO |
+| Huerta (o su cartel) | MOVER · BORRAR |
+| Tile libre (pasto o árbol) | CONSTRUIR: lista del catálogo (§ 3) |
+
+MOVER y elegir qué construir dejan un fantasma que sigue al mouse
+(verde si entra, rojo con el motivo en la barra si no); un clic lo
+deja ahí (esa es la confirmación) y CANCELAR / Esc lo descarta. La
+esquina superior izquierda del fantasma va en el tile del mouse.
+
+### 1.3 Dibujo
+Franjas fantasma celestes con "AMPLIAR AL NORTE" y el costo (gris si no
+alcanza la plata), contorno de cada construcción (dorado la elegida),
+fantasma verde / rojo. Colores en `TownEditPalette`. El menú del paso
+va a la derecha, la barra con la ayuda y LISTO arriba.
+
+## 2. Ampliaciones por lado
+- Cada ampliación suma una franja de `kTownStrip` (8) tiles al norte,
+  sur, este u oeste. Tope total `maxExpansions` (6) y por lado
+  `maxPerSide` (3), Editor → Balance → Pueblo. Costo de la n-ésima (en
+  total, sin importar el lado): el de `farming.md` § 6.
+- La franja es terreno libre: no trae nada puesto.
+- 2.2 Coordenadas: todo se guarda en coordenadas del pueblo base. El
+  mapa pone el origen del pueblo base en (8 × oeste, 8 × norte)
+  (`GameMap.townOrigin`). Al ampliar al norte o al oeste, el anfitrión
+  corre a todos los del pueblo y les sube el `epoch` (así el cliente
+  toma la posición nueva) y la cámara de la edición acompaña.
+
+## 3. Construcciones
+### 3.1 Catálogo (`kConstructions`)
+| id | Tipo | Huella |
+|---|---|---|
+| `huerta` | HUERTA | 6 × 4 (24 parcelas) |
+| `huerta_chica` | HUERTA | 4 × 3 (12) |
+| `lago` | LAGO | 6 × 6 |
+| `lago_chico` | LAGO | 4 × 4 |
+
+Para sumar un tipo: valor en `BuildKind`, entrada en el catálogo y cómo
+se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
+
+### 3.2 Validación (anfitrión, `TownRules.place` / `move`)
+- Dentro del pueblo (sin tocar los dos tiles de bosque del borde), con
+  su cartel adentro.
+- Sin pisar los caminos fijos (frente de los edificios, eje norte-sur
+  hasta el borde sur, anillo de la fuente, ramal del lago y la torre)
+  ni los lugares con un tile de margen.
+- Sin pisar otra construcción ni un cartel. Huertas pegadas sí. Un lago
+  que toca o pisa otro lago se funde (§ 4.2).
+- Alcanzable: después del cambio, toda construcción tiene camino (§ 4.1).
+- Los árboles sueltos debajo de una construcción desaparecen.
+
+## 4. Mapa (`TownPlan`, determinista)
+### 4.1 Caminos procedurales
+Por cada construcción (en orden), Dijkstra desde los tiles de pasto al
+lado de su huella hasta el camino más cercano (fijo o ya generado),
+con costo 4 + ruido por tile (0–2) para que serpenteen. Se pinta el
+recorrido. Si un lado ya toca un camino, no se agrega nada. Se regenera
+con cada cambio; el plano se cachea por la clave de lados y huellas
+(las parcelas y los peces no lo rehacen).
+
+### 4.2 Lagos que se funden
+Un lago puede tener varias partes (rectángulos). Al poner o mover un
+lago que toca o pisa otros, quedan uno solo: el id del que estaba antes
+en la lista, todas las partes y la suma de sus peces. Orilla: las
+esquinas exteriores de cada parte son pasto; en un lago fundido, la
+mitad de esas esquinas (según un hash del tile) muerde también los dos
+tiles vecinos. Muelles: en cada parte, (derecha, fila 2), (derecha,
+anteúltima fila) y (columna 4, arriba) si quedan en la orilla; para el
+lago base dan los mismos tres de antes.
+
+### 4.3 Carteles
+Cada construcción tiene un cartel con su nombre (LAGO / HUERTA) encima,
+que se mueve con ella (`TownPlan.signOf`). Huerta: 2 tiles a la
+izquierda de su esquina superior izquierda; si ahí hay un camino fijo,
+un lugar u otra construcción, prueba una fila más abajo, después 1 tile
+a la izquierda (dos filas) y por último a la derecha. Lago: dos tiles a
+la derecha de su borde, en la segunda fila (alternativas: pegado a la
+derecha, una fila más abajo, a la izquierda). El del lago base queda en
+(12, 15) como antes; el de la huerta base, en (18, 18) (los dos tiles a
+la izquierda son el eje de caminos).
+
+## 5. Lagos y huertas
+- 5.1 Capacidad de un lago: `max(lakeMin, tiles × lakePerTile)` (2;
+  0,2: el base tiene 10, uno de 6 × 6, 7). Rareza: `lakeZoneRare` por
+  cada 36 tiles por encima de 48 + cría (`farming.md` § 7).
+- 5.2 Se pesca en el lago más cercano: su tabla (las especies del
+  pueblo + sus soltados) y su rareza. La pesca automática usa los
+  soltados de todos.
+- 5.3 Borrar: un lago pierde sus peces (la confirmación lo dice). Una
+  huerta devuelve una semilla por parcela plantada a quien la borra (la
+  opción amable: el cultivo se pierde, la semilla no). Lo arado vacío
+  se pierde.
+- Mover una huerta conserva sus parcelas (van relativas a su esquina).
+- AGREGAR ESPECIES (en las opciones del lago) suelta peces de la bolsa
+  en ese lago. La pestaña PESCA Y CULTIVO sigue con SOLTAR EN EL LAGO:
+  va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
+  peces); construir, mover, borrar y ampliar, solo el dueño.
+
+## 6. Carteles con el mouse
+Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip
+de tamaño fijo: LAGO con cada especie una vez y "N/M soltados"; HUERTA
+con cada cultivo plantado una vez y "6 de 12 parcelas" (plantadas /
+tiles de la huerta). Las parcelas y el agua no tienen tooltip.
+
+## 7. Datos
+### 7.1 `TownState`
+`sides` (lado → ampliaciones), `builds` (lista de `TownBuild`: `id`,
+`kind`, `parts` en coordenadas del pueblo base, `stock` si es lago,
+`plots` relativas a la esquina si es huerta). `plots` y `stock` del
+pueblo son vistas calculadas (todas las parcelas en coordenadas del
+mapa; los peces de todos los lagos). Mundo nuevo: el lago base `l0`
+(3, 14, 8 × 6) y la huerta base `h0` (19, 18, 4 × 3).
+
+JSON: `sides {n,s,e,o}`, `builds [{id, k, p: [[x,y,w,h]], st?, pl?}]`.
+
+### 7.2 Migración de v0.23
+Sin `builds`: `exp` pasa a ser ampliaciones al ESTE; cada zona i de
+`zones` una construcción en el mismo lugar (franja i ÷ 2, norte si es
+par): LAGO 6 × 6 en (33 + 8·franja, 7 | 14), HUERTA 6 × 4 una fila más
+abajo; `stock` al lago base; las parcelas a la huerta que las contiene.
+
+## 8. Red (protocolo 45)
+`town {o: expand|place|move|remove|stock|hireHelper, id?, tg?, x?, y?}`:
+`expand` con `id` = lado (`n`/`s`/`e`/`o`); `place` con `id` = la del
+catálogo y (x, y) la esquina en tiles del mapa; `move` con `tg` y (x,
+y); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
+anfitrión valida todo (pueblo, dueño, reglas de § 3.2) y el pueblo
+viaja en el estado.
+
+## 9. Pendiente
+- Otros tipos de construcción (decorado, corrales) y mover los lugares
+  fijos.
+- Rotar construcciones y achicar lagos.

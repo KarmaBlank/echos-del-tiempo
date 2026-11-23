@@ -139,23 +139,6 @@ void main() {
   });
 
   group('pueblo', () {
-    test('ampliar da 2 espacios; elegir zonas; tope', () {
-      final rich = newProfile('Ana', 'guerrero').copyWith(credits: 1000000,
-          materials: {CraftMaterial.esquirla: 99, CraftMaterial.cristal: 99});
-      var s = const TownState();
-      expect(TownRules.slots(s), 0);
-      final (p1, s1) = TownRules.expand(rich, s)!;
-      expect(TownRules.freeSlots(s1), 2);
-      expect(p1.credits, rich.credits - TownRules.cost(1).gold);
-      // No se amplía con espacios sin elegir.
-      expect(TownRules.expand(p1, s1), isNull);
-      s = TownRules.assign(s1, TownZoneKind.lago)!;
-      s = TownRules.assign(s, TownZoneKind.huerta)!;
-      expect(TownRules.assign(s, TownZoneKind.lago), isNull);
-      expect(TownRules.lakeCapacity(s),
-          greaterThan(TownRules.lakeCapacity(const TownState())));
-    });
-
     test('peces soltados sesgan la tirada y crían', () {
       final species = kFish.values
           .firstWhere((f) => f.biome != kWaterJunkBiome)

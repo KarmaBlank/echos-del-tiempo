@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/features/world/presentation/map/map_game.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/rules/town_plan.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/gestures.dart';
@@ -14,7 +15,7 @@ import 'fishing_map_harness.dart';
 /// riega con el aviso de abajo; el mouse sobre la parcela muestra los
 /// aportes y las chances; la fuente abre su panel.
 void main() {
-  testWidgets('huerta: arar, plantar, regar y tooltip de la parcela',
+  testWidgets('huerta: arar, plantar, regar y cartel con lo plantado',
       (tester) async {
     final h = await FishingMapHarness.pump(tester);
     final c = h.c;
@@ -41,35 +42,41 @@ void main() {
     await press(FarmOp.water);
     expect(c.plotAt(tx, ty)!.watered, isTrue);
 
-    // Mouse sobre la parcela: tooltip con quién plantó y las chances.
+    // Mouse sobre la parcela: nada; sobre el cartel de la huerta, qué
+    // hay plantado (town_editor.md § 6).
     final game = tester
         .widget<GameWidget<MapGame>>(find.byType(GameWidget<MapGame>))
         .game!;
     final box = tester.getRect(find.byType(GameWidget<MapGame>));
-    Offset? at;
-    for (var y = 0.0; y < box.height && at == null; y += 4) {
-      for (var x = 0.0; x < box.width; x += 4) {
-        if (game.tileAtScreen(Offset(x, y)) == (tx, ty)) {
-          at = box.topLeft + Offset(x + 4, y + 4);
-          break;
+    Offset? screenOf((int, int) tile) {
+      for (var y = 0.0; y < box.height; y += 4) {
+        for (var x = 0.0; x < box.width; x += 4) {
+          if (game.tileAtScreen(Offset(x, y)) == tile) {
+            return box.topLeft + Offset(x + 2, y + 2);
+          }
         }
       }
+      return null;
     }
-    expect(at, isNotNull);
+
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     addTearDown(mouse.removePointer);
-    await mouse.moveTo(at!);
+    await mouse.moveTo(screenOf((tx, ty))!);
     await tester.pump();
-    expect(find.byKey(const ValueKey('farm-tooltip')), findsOneWidget);
-    expect(find.textContaining('Plantó Ana'), findsOneWidget);
-    expect(find.textContaining('Si la cosechás vos'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sign-tooltip')), findsNothing);
+    final sign = TownPlan.signOf(c.town, c.town.build('h0')!);
+    await mouse.moveTo(screenOf(sign)!);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('sign-tooltip')), findsOneWidget);
+    expect(find.textContaining('1 de 12 parcelas'), findsOneWidget);
     await mouse.moveTo(Offset.zero);
     await tester.pump();
-    expect(find.byKey(const ValueKey('farm-tooltip')), findsNothing);
+    expect(find.byKey(const ValueKey('sign-tooltip')), findsNothing);
   });
 
-  testWidgets('fuente rúnica: E abre su panel con ampliar y el tablero',
+  testWidgets(
+      'fuente rúnica: EDITAR PUEBLO, cámara libre y opciones de un lago',
       (tester) async {
     final h = await FishingMapHarness.pump(tester);
     final c = h.c;
@@ -81,7 +88,52 @@ void main() {
     expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);
     await h.frames(2);
     expect(find.byKey(const ValueKey('panel-fountain')), findsOneWidget);
-    expect(find.byKey(const ValueKey('fountain-expand-btn')), findsOneWidget);
     expect(find.byKey(const ValueKey('fountain-board')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('fountain-edit-btn')));
+    await h.frames(3);
+    expect(c.editingTown, isTrue);
+    expect(find.byKey(const ValueKey('town-edit-bar')), findsOneWidget);
+    final me = (c.local.x, c.local.y);
+
+    final game = tester
+        .widget<GameWidget<MapGame>>(find.byType(GameWidget<MapGame>))
+        .game!;
+    final box = tester.getRect(find.byType(GameWidget<MapGame>));
+    Offset? screenOf((int, int) tile) {
+      for (var y = 0.0; y < box.height; y += 4) {
+        for (var x = 0.0; x < box.width; x += 4) {
+          if (game.tileAtScreen(Offset(x, y)) == tile) {
+            return box.topLeft + Offset(x + 2, y + 2);
+          }
+        }
+      }
+      return null;
+    }
+
+    // Arrastrar mueve la cámara, no al personaje.
+    final cam0 = game.camX;
+    await tester.dragFrom(box.center, const Offset(-120, 0));
+    await h.frames(2);
+    expect(game.camX, greaterThan(cam0));
+    expect((c.local.x, c.local.y), me);
+    await tester.dragFrom(box.center, const Offset(120, 0));
+    await h.frames(2);
+
+    // Clic en el lago base: sus opciones.
+    final at = screenOf((6, 17));
+    expect(at, isNotNull);
+    await tester.tapAt(at!);
+    await h.frames(2);
+    expect(find.byKey(const ValueKey('town-edit-menu')), findsOneWidget);
+    expect(find.byKey(const ValueKey('town-edit-stock')), findsOneWidget);
+    expect(find.byKey(const ValueKey('town-edit-move')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('town-edit-delete')));
+    await h.frames(2);
+    expect(find.textContaining('peces soltados'), findsWidgets);
+    // Esc vuelve un paso; LISTO sale.
+    expect(c.handleKey(LogicalKeyboardKey.escape), isTrue);
+    await tester.tap(find.byKey(const ValueKey('town-edit-done')));
+    await h.frames(2);
+    expect(c.editingTown, isFalse);
   });
 }
