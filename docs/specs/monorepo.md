@@ -1,4 +1,4 @@
-# Monorepo de juegos Ecos del Tiempo (Melos)
+﻿# Monorepo de juegos Ecos del Tiempo (Melos)
 
 Estado: **spec + plan de migración**; PR 1 (workspace + Melos) hecho,
 el resto pendiente. Base: `main` en v0.33.1 (Mundo) / Travesía
@@ -9,10 +9,10 @@ v0.3.x.
 El repo deja de ser "una app con dos flavors" y pasa a ser un **monorepo
 de juegos Ecos del Tiempo** que comparten paquetes:
 
-- `games/` — una app Flutter por juego (`adventures` y `paradox`, § 0.1). Cada
+- `games/` — una app Flutter por juego (`echoes` y `paradox`, § 0.1). Cada
   juego es un composition root con sus flavors (p2p, dev, lan…) y elige
   qué paquetes y qué lógica cablea. Los paquetes son un "recetario".
-- `apps/` — herramientas: un editor por juego (`adventures_editor`,
+- `apps/` — herramientas: un editor por juego (`echoes_editor`,
   `paradox_editor`). Sumar un juego suma su editor.
 - `packages/` — paquetes compartidos, Dart puro o Flutter.
 
@@ -26,12 +26,12 @@ Flutter porque no lo declara.
 
 | | RPG (hoy "Mundo") | Roguelike (hoy "Travesía") |
 |---|---|---|
-| Nombre (inglés) | Echoes of Time: Adventures | Echoes of Time: Paradox |
-| Nombre (español, al jugador) | Ecos del Tiempo: Aventuras | Ecos del Tiempo: Paradoja |
-| Carpeta | `games/adventures` | `games/paradox` |
-| Editor | `apps/adventures_editor` | `apps/paradox_editor` |
+| Nombre (inglés) | Echoes of Time | Echoes of Time: Paradox |
+| Nombre (español, al jugador) | Ecos del Tiempo | Ecos del Tiempo: Paradoja |
+| Carpeta | `games/echoes` | `games/paradox` |
+| Editor | `apps/echoes_editor` | `apps/paradox_editor` |
 | Reglas | `packages/adventures_rules` | `packages/paradox_rules` |
-| Tags | `adventures-vX.Y.Z` | `paradox-vX.Y.Z` |
+| Tags | `vX.Y.Z` | `paradox-vX.Y.Z` |
 | Ejecutable | `echos_del_tiempo.exe` (sin cambio) | `echoes_paradox.exe` |
 
 - **Todo el monorepo se nombra en inglés**: carpetas, paquetes,
@@ -49,9 +49,9 @@ Flutter porque no lo declara.
 El dueño puede cambiarlas después; mientras tanto rigen estas
 (*decididas por defecto*, 2026-11-23):
 
-1. **Tags**: pasan al prefijo por juego (`adventures-v*`, `paradox-v*`).
-   El actualizador de Adventures acepta además el viejo `v*` durante la
-   transición, y el release de Adventures sigue marcado `--latest`.
+1. **Tags**: pasan al prefijo por juego (`v*`, `paradox-v*`).
+   El actualizador de echoes acepta además el viejo `v*` durante la
+   transición, y el release de echoes sigue marcado `--latest`.
 2. **Assets**: un solo paquete compartido `echoes_assets` + overlays por
    juego (`games/<game>/assets`, con prioridad en `SpriteCatalog`).
 3. **Catálogo de Paradox**: se separa en el PR 3 (copia independiente,
@@ -115,15 +115,15 @@ echos-del-tiempo/
 ├─ pubspec.yaml               # workspace + melos (sin app)
 ├─ analysis_options.yaml      # base común; cada miembro hace include
 ├─ games/
-│  ├─ adventures/                  # app Flutter: lib/main_p2p.dart, main_dev,
+│  ├─ echoes/                  # app Flutter: lib/main_p2p.dart, main_dev,
 │  │  ├─ lib/                 #   main_lan, (main_gallery queda en echoes_ui)
 │  │  ├─ windows/             # runner propio (nombre exe, icono, AppId)
 │  │  ├─ installer/           # ecos_del_tiempo.iss
-│  │  ├─ assets/              # balance/adventures.json, datos propios del Mundo
+│  │  ├─ assets/              # balance/echoes.json, datos propios del Mundo
 │  │  └─ test/                # widget/integración del juego
 │  └─ paradox/               # ídem: main_p2p (ex main_roguelike), main_dev
 ├─ apps/
-│  ├─ adventures_editor/           # ex main_admin con edición Mundo
+│  ├─ echoes_editor/           # ex main_admin con edición Mundo
 │  └─ paradox_editor/        # editor con catálogo/tuning de Travesía
 ├─ packages/
 │  ├─ echoes_engine/            # Dart puro: modelos, reglas comunes, balance
@@ -161,14 +161,14 @@ Nombres con prefijo `echoes_` para que no choquen con paquetes de pub.dev.
 | `echoes_ui` | Flutter | `app/design`, `app/theme`, `app/widgets`, galería del DS | `echoes_assets`, `echoes_platform` (solo `text_detail`, `layout`) |
 | `echoes_features` | Flutter | features compartidas: `combat`, `inventory`, `characters`, `passive_tree`, `build_planner`, `bestiary`, `achievements`, `settings`, `lobby` (sala genérica), `tutorial` | `echoes_ui`, `echoes_engine`, `echoes_combat`, `echoes_net`, `echoes_platform` |
 | `echoes_editor_kit` | Flutter | `features/admin` sin lo específico de juego: balance, diff, impacto, sprites, fx, layouts, plantillas, monitoreo, release plan | `echoes_ui`, `echoes_engine`, `echoes_assets`, `archive`, `file_selector` |
-| `games/adventures` | app | flavors, `world`, `missions`, `endgame`, `ascension` (UI del Mundo), cableado | todo lo anterior salvo `paradox_rules` |
+| `games/echoes` | app | flavors, `world`, `missions`, `endgame`, `ascension` (UI del Mundo), cableado | todo lo anterior salvo `paradox_rules` |
 | `games/paradox` | app | flavors, `features/run`, cableado | todo salvo `adventures_rules`, `echoes_worldgen` (si la run no usa mapas de mundo) |
 | `apps/*_editor` | app | registra catálogo + tuning + balance de su juego en el kit | `echoes_editor_kit` + `<juego>_rules` |
 
 Grafo (sin ciclos; las flechas apuntan a la dependencia):
 
 ```
-echoes_engine ◄─ echoes_combat ◄─┬─ adventures_rules ◄──────────── games/adventures, apps/adventures_editor
+echoes_engine ◄─ echoes_combat ◄─┬─ adventures_rules ◄──────────── games/echoes, apps/echoes_editor
      ▲   ▲        ▲          └─ paradox_rules ◄───────── games/paradox, apps/paradox_editor
      │   └─ echoes_worldgen ◄─ adventures_rules
      ├─ echoes_net ◄─ echoes_net_lan, echoes_net_p2p ◄─ games/*
@@ -216,17 +216,17 @@ Reglas duras:
 | `lib/app/{design,theme,widgets}` | `echoes_ui` |
 | `lib/app/app.dart` (`EcosApp`) | `echoes_features` como `EchoesShell` parametrizable (home por juego) |
 | `lib/app/feature_flags.dart` | `echoes_platform` |
-| `lib/app/app_version.dart`, `travesia_version.dart` | `games/adventures/lib/version.dart`, `games/paradox/lib/version.dart` |
-| `lib/app/flavors/main_p2p|dev|lan.dart` | `games/adventures/lib/` |
+| `lib/app/app_version.dart`, `travesia_version.dart` | `games/echoes/lib/version.dart`, `games/paradox/lib/version.dart` |
+| `lib/app/flavors/main_p2p|dev|lan.dart` | `games/echoes/lib/` |
 | `lib/app/flavors/main_roguelike.dart` | `games/paradox/lib/main_p2p.dart` (+ `main_dev`, `main_lan` nuevos) |
-| `lib/app/flavors/main_admin.dart` | `apps/adventures_editor/lib/main.dart` y `apps/paradox_editor/lib/main.dart` |
+| `lib/app/flavors/main_admin.dart` | `apps/echoes_editor/lib/main.dart` y `apps/paradox_editor/lib/main.dart` |
 | `lib/app/flavors/main_gallery.dart` | `packages/echoes_ui/example/` (galería del DS) |
 | `lib/features/{combat,inventory,characters,passive_tree,build_planner,bestiary,achievements,settings,lobby,tutorial}` | `echoes_features` |
-| `lib/features/{world,missions,endgame,ascension}` | `games/adventures` |
+| `lib/features/{world,missions,endgame,ascension}` | `games/echoes` |
 | `lib/features/run` | `games/paradox` |
 | `lib/features/admin` | `echoes_editor_kit` (+ lo de cada juego en su editor) |
 | `assets/sprites,fx,sfx,layouts,fonts`, `shaders/` | `packages/echoes_assets/assets/` (se cargan como `packages/echoes_assets/...`) |
-| `assets/balance/balance.json` | `games/adventures/assets/balance/adventures.json`; Travesía estrena `paradox.json` |
+| `assets/balance/balance.json` | `games/echoes/assets/balance/echoes.json`; Travesía estrena `paradox.json` |
 | `assets/data/ults`, `enemy_ults`, `build_templates*` | `echoes_assets` mientras sean compartidos; copia por juego cuando § 7 de roguelike.md se aplique |
 | `windows/`, `installer/` | uno por juego (`games/<game>/windows`, `games/<game>/installer`) y por editor |
 | `test/game_engine/*` | junto a su paquete (`packages/<p>/test`) |
@@ -360,7 +360,7 @@ melos:
 
 Se suman cuando haya paquetes: `test:dart` (`dart test`,
 `packageFilters: { flutter: false }`), `test:flutter`, `test:pkg`,
-`build:adventures` / `build:paradox` (`flutter build windows --release
+`build:echoes` / `build:paradox` (`flutter build windows --release
 -t lib/main_p2p.dart` con `scope`).
 
 `format` hoy falla: 650 de 1015 archivos no están formateados en `main`
@@ -389,7 +389,7 @@ Flutter.
     `games/<game>/lib/version.dart` (generado).
   - `flutter build windows` corre **dentro** de `games/<game>`; la
     salida queda en `games/<game>/build/windows/x64/runner/Release`.
-  - Tags: `adventures-vX.Y.Z` y `paradox-vX.Y.Z`. Mundo hoy usa `vX.Y.Z`:
+  - Tags: `vX.Y.Z` y `paradox-vX.Y.Z`. Mundo hoy usa `vX.Y.Z`:
     el actualizador del Mundo debe aceptar **ambos** prefijos durante la
     transición (instalaciones viejas buscan `releases/latest`), ver § 9.
   - Capturas: `docs/release_shots/<juego>-vX.Y.Z` y `<juego>-base`.
@@ -405,11 +405,11 @@ Ya separado (distribution.md § "Dos juegos, un repo") y se conserva:
 
 | | Mundo | Travesía |
 |---|---|---|
-| Versión | `games/adventures/pubspec.yaml` | `games/paradox/pubspec.yaml` |
-| Tag | `adventures-vX.Y.Z` (antes `vX.Y.Z`) | `paradox-vX.Y.Z` |
+| Versión | `games/echoes/pubspec.yaml` | `games/paradox/pubspec.yaml` |
+| Tag | `vX.Y.Z` (antes `vX.Y.Z`) | `paradox-vX.Y.Z` |
 | Datos | `%APPDATA%\EcosDelTiempo` | `%APPDATA%\EcosDelTiempo-Travesia` |
-| Protocolo | `WireGame('mundo', kMundoProtocol)` en `games/adventures` | `WireGame('travesia', kTravesiaProtocol)` en `games/paradox` |
-| Balance | `adventures.json` | `paradox.json` |
+| Protocolo | `WireGame('mundo', kMundoProtocol)` en `games/echoes` | `WireGame('travesia', kTravesiaProtocol)` en `games/paradox` |
+| Balance | `echoes.json` | `paradox.json` |
 | AppId instalador | sin cambio | sin cambio |
 
 - `echoes_net` define `WireGame` y el handshake (`g` + versión); cada juego
@@ -442,9 +442,9 @@ como miembros del workspace y la app raíz los consume.
 | 7 | `echoes_assets` | Catálogos de sprites/fx/layouts/sfx + carpetas de assets + fuentes + shaders con prefijo `packages/echoes_assets`; Editor escribe en la ruta nueva; regenerar goldens | 1,5–2 d |
 | 8 | `echoes_ui` | design + theme + widgets + galería como `example/` | 1 d |
 | 9 | `echoes_features` | features compartidas + `EchoesShell` | 1,5–2 d |
-| 10 | `games/adventures` y `games/paradox` | Mover la app raíz a `games/adventures` (con `windows/`, `installer/`, flavors, features propias); crear `games/paradox` con su runner e instalador; balance `adventures.json`/`paradox.json`; raíz queda solo workspace | 1,5–2 d |
-| 11 | Editores | `echoes_editor_kit` + `apps/adventures_editor` + `apps/paradox_editor` (selector de versión de roguelike.md § 11.9 resuelto por app) | 1,5–2 d |
-| 12 | Release | `release.ps1` por carpeta de juego + `tool/games.json`, tags `adventures-v*`, actualizador del Mundo acepta `v*` y `adventures-v*`, sin CI (§ 0.2); ensayo `-DryRun` de los dos | 1 d |
+| 10 | `games/echoes` y `games/paradox` | Mover la app raíz a `games/echoes` (con `windows/`, `installer/`, flavors, features propias); crear `games/paradox` con su runner e instalador; balance `echoes.json`/`paradox.json`; raíz queda solo workspace | 1,5–2 d |
+| 11 | Editores | `echoes_editor_kit` + `apps/echoes_editor` + `apps/paradox_editor` (selector de versión de roguelike.md § 11.9 resuelto por app) | 1,5–2 d |
+| 12 | Release | `release.ps1` por carpeta de juego + `tool/games.json`, tags `v*`, actualizador del Mundo acepta `v*` y `v*`, sin CI (§ 0.2); ensayo `-DryRun` de los dos | 1 d |
 | 13 | Limpieza | `CLAUDE.md`, distribution.md, netcode.md, roguelike.md § 9 actualizados; `dart test` para paquetes puros | 0,5 d |
 
 Total estimado: **17–23 días de trabajo** de un agente/persona, en ~13
@@ -465,7 +465,7 @@ Riesgos:
 - **Assets con prefijo de paquete**: cualquier ruta hardcodeada que se
   escape falla en ejecución, no en compilación. Mitigación: una sola
   constante + test que carga todos los manifests.
-- **Actualizador del Mundo**: cambiar el tag a `adventures-v*` puede dejar a
+- **Actualizador del Mundo**: cambiar el tag a `v*` puede dejar a
   instalaciones viejas sin ver releases nuevos si `/releases/latest` deja
   de apuntar al Mundo. Mitigación: seguir marcando el release del Mundo
   como `latest` y aceptar ambos prefijos.
