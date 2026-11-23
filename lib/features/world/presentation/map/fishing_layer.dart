@@ -115,6 +115,28 @@ class MapFishingLayer {
     }
   }
 
+  /// Agua brillante de un bioma (fishing.md § 11): destellos que laten
+  /// sobre el tile del día. [t] en segundos.
+  void drawHiddenSpot(Canvas c, GameMap m, String place, int day, double t) {
+    final spot = FishingCast.hiddenSpot(m, place, day);
+    if (spot == null) return;
+    final cx = (spot.$1 + 0.5) * 16, cy = (spot.$2 + 0.5) * 16;
+    final pulse = 0.5 + 0.5 * math.sin(t * 3);
+    c.drawCircle(Offset(cx, cy), 6 + 3 * pulse,
+        Paint()..color = FishingPalette.shimmerGlow);
+    final p = Paint()..color = FishingPalette.shimmer;
+    for (var i = 0; i < 3; i++) {
+      final a = t * 1.7 + i * 2.1;
+      final r = 2 + 4 * ((t * 0.8 + i / 3) % 1);
+      c.drawRect(
+          Rect.fromCenter(
+              center: Offset(cx + math.cos(a) * r, cy + math.sin(a) * r),
+              width: 1.5,
+              height: 1.5),
+          p);
+    }
+  }
+
   /// La caña en la mano sin lance (cerca del agua, antes de tirar).
   void drawIdleRod(Canvas c, double px, double py, num face) {
     final f = face < 0 ? -1.0 : 1.0;

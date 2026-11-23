@@ -103,3 +103,10 @@ crossfade normal al atardecer y al amanecer. La pesca sigue ganando.
 ## 7. Red
 
 Protocolo 49 (netcode.md): `town.sky`, `town.lt`, evento `bolt`.
+
+## 6. Franjas para los oficios (v0.31.0)
+
+Amanecer 05:00-07:59, día 08:00-17:59, atardecer 18:00-20:59, noche
+21:00-04:59 (`LifeTimeRules.now`, con `SkyRules.hourOf`). Los peces pican
+según su franja y clima (fishing.md § 13); los cultivos crecen según su
+afinidad (farming.md § 14).

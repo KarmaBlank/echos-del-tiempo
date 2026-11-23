@@ -306,6 +306,12 @@ items:
   vida_npc_granjero_trabajo: { idle: items/vida_npc_granjero_trabajo.png, size: [16, 16] }
   vida_npc_pescador: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_pescador_trabajo: { idle: items/vida_npc_pescador_trabajo.png, size: [16, 16] }
+  # Pescadores nativos de los biomas (fishing.md § 12): arte provisorio.
+  vida_npc_pesc_bosque: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_pesc_ruinas: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_pesc_cavernas: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_pesc_grieta: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_pesc_abismo: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   # Habitantes de bioma (overworld_biomes.md § 9): arte provisorio.
   vida_npc_ilda: { idle: items/vida_npc_granjero.png, size: [16, 16] }
   vida_npc_velda: { idle: items/vida_npc_pescador.png, size: [16, 16] }

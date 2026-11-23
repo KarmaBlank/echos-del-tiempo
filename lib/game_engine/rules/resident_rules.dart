@@ -7,6 +7,7 @@ import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'helper_rules.dart';
+import 'life_tree_rules.dart';
 import 'town_plan.dart';
 
 export '../models/resident.dart';
@@ -224,6 +225,13 @@ abstract final class ResidentRules {
 
   /// Fracción (0,1 = 10 %) de un beneficio en porcentaje.
   static double frac(TownState s, NpcRole role) => bonus(s, role) / 100;
+
+  /// Descuento de la forja de estadísticas: Brann con casa más el árbol
+  /// de Herrería de [p] (roles.md § 6). Lo usan el anfitrión y la UI.
+  static double forgeDiscount(PlayerProfile p, TownState s) =>
+      (frac(s, NpcRole.forjador) + SmithRules.forgeDiscount(p))
+          .clamp(0.0, 0.75)
+          .toDouble();
 
   /// Los habitantes que viven en el pueblo, en el orden de los biomas.
   static List<BiomeNpcDef> living(TownState s) => [
@@ -587,9 +595,13 @@ abstract final class ResidentRules {
     if (items.isEmpty) return r;
     final item = items[(h ~/ 2) % items.length];
     final isFish = kFish.containsKey(item);
+    // Cultivos: calidad rara o mejor; pescados (v0.31.0): un tamaño
+    // mínimo (`orderCm`) desde `orderSizeLevel` de Pesca.
     final q = !isFish && farmLv >= t.i('orderQualityLevel') && h % 3 == 0
         ? CropQuality.raro.index
-        : 0;
+        : isFish && fishLv >= t.i('orderSizeLevel') && h % 3 != 1
+            ? 1 + (fishLv ~/ math.max(1, t.i('orderSizeLevel')) + h) % 3
+            : 0;
     return r.copyWith(
         order: item,
         orderN: isFish ? 1 + h % 2 : 2 + h % 3,
@@ -648,8 +660,8 @@ abstract final class ResidentRules {
   /// Legendaria solo arraigado, con su objeto único y el oficio en
   /// `comLegendLevel`.
   static int commissionRarity(ResidentState brann,
-      {required int fishLv, required int farmLv}) {
-    final lv = math.max(fishLv, farmLv);
+      {required int fishLv, required int farmLv, int smithLv = 1}) {
+    final lv = math.max(math.max(fishLv, farmLv), smithLv);
     final score = lv + brann.rep * 2;
     if (brann.relic &&
         stage(brann) == ResidentStage.arraigado &&
@@ -693,9 +705,24 @@ abstract final class ResidentRules {
   static int unitValue(String item) =>
       kFish[item]?.price ?? kCrops[item]?.price ?? 10;
 
-  /// Cuántos tiene [p] de [item] con calidad ≥ [q].
+  /// Tamaño mínimo (cm) de un pescado pedido con [q] (1..3), o 0: un
+  /// cuarto, la mitad o tres cuartos del rango de la especie.
+  static int orderCm(String item, int q) {
+    final d = kFish[item];
+    if (d == null || q <= 0) return 0;
+    return d.minCm + ((d.maxCm - d.minCm) * q / 4).round();
+  }
+
+  /// Cuántos tiene [p] de [item] con calidad ≥ [q]. Pescados con tamaño:
+  /// la bolsa no guarda tamaños, así que vale el récord del bestiario
+  /// (fishing.md § 10): con uno así de grande pescado, cuentan los que
+  /// tenga de esa especie.
   static int orderHave(PlayerProfile p, String item, int q) {
-    if (kFish.containsKey(item)) return p.life.count(item);
+    if (kFish.containsKey(item)) {
+      final cm = orderCm(item, q);
+      if (cm > 0 && (p.life.log[item] ?? 0) < cm) return 0;
+      return p.life.count(item);
+    }
     var n = 0;
     for (final e in p.life.farm.crops.entries) {
       final c = parseCropKey(e.key);

@@ -67,6 +67,8 @@ import '../data/town_layout.dart' show TownLayout, TownSpot;
 import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
+import 'biome_fisher_rules.dart';
+import 'life_time_rules.dart';
 import 'helper_rules.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
@@ -1049,9 +1051,10 @@ class _Op {
         if (!_profileChange(
             p,
             rules.upgrade(p.profile, a.weaponId, a.stat,
-                discount: ResidentRules.frac(s.town, NpcRole.forjador)))) {
+                discount: ResidentRules.forgeDiscount(p.profile, s.town)))) {
           return false;
         }
+        smithXp(p, SmithRules.t.i('smithXpForge'));
         say('${p.name} mejoró ${a.stat.label} de '
             '${rules.weaponDisplayName(p.profile, a.weaponId)}');
         return true;
@@ -1653,6 +1656,9 @@ class _Op {
         uids: a.uids,
         random: _rand);
     if (!_profileChange(p, r.profile)) return false;
+    if (a.op == CraftOp.condense && s.run == null) {
+      smithXp(p, SmithRules.t.i('smithXpCondense'));
+    }
     events.add(CraftedEvent(p.id, a.op, a.targetUid));
     final after = r.after;
     if (after != null) {

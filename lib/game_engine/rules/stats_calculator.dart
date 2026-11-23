@@ -123,6 +123,12 @@ class StatsCalculator {
         node.stats.forEach((k, v) => tree.add(k, v.toDouble()));
       }
     }
+    // Poder de aventurero de los oficios (roles.md § 5).
+    if (build.lifeHp != 0) tree.add('hp', build.lifeHp);
+    if (build.lifeAtk != 0) {
+      tree.add('atk', build.lifeAtk);
+      tree.add('mag', build.lifeAtk);
+    }
     maxHp = math.max(1, jsRound(maxHp * (1 + tree['hp'])));
     maxMp = jsRound(maxMp * (1 + tree['mp']));
     attack = math.max(1, jsRound(attack * (1 + tree['atk'])));

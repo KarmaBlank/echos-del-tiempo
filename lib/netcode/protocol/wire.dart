@@ -119,7 +119,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// 51 (v0.30.0): habitantes en el pueblo (overworld_biomes.md § 10):
 /// `town.res`, casas (`k: casa`, `lv`, `rs`) y `town` con `invite` /
 /// `assign` / `gift` / `turnIn` / `fulfil` / `invest` / `order`.
-const kProtocolVersion = 51;
+/// 52 (v0.31.0): roles de exploración: `town` con `fisherReq`, topes del
+/// día en `town.dy`, Herrería y bestiario de pesca en el perfil
+/// (`life.sx` / `life.st` / `life.lg`).
+const kProtocolVersion = 52;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

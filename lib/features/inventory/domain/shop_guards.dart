@@ -19,10 +19,14 @@ import 'item_text.dart';
 /// Ver docs/specs/panels.md § "Botones con motivo". Solo explica: la
 /// validación real la sigue haciendo el host.
 class ShopGuards {
-  const ShopGuards(this.rules, this.mode);
+  const ShopGuards(this.rules, this.mode, {this.forgeDiscount = 0});
 
   final ProgressionRules rules;
   final SessionMode mode;
+
+  /// Descuento de la forja que cobra el anfitrión (Brann y Herrería,
+  /// `ResidentRules.forgeDiscount`).
+  final double forgeDiscount;
 
   static const notShopping = 'Solo en el lobby o la preparación';
 
@@ -89,7 +93,7 @@ class ShopGuards {
     if (!canShop) return notShopping;
     final it = p.item(weaponId);
     if (it == null) return 'No la tienes';
-    return rules.crafting.forge(p, it.uid, stat).error;
+    return rules.crafting.forge(p, it.uid, stat, discount: forgeDiscount).error;
   }
 
   /// Vista previa de una operación de la mesa de fusión (sin azar: las
