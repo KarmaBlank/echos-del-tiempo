@@ -78,6 +78,7 @@ class DsElementContext {
     this.align = TextAlign.start,
     this.onPressed,
     this.tooltip,
+    this.badge,
     this.data = const [],
     this.slot,
     this.slotLabel,
@@ -93,6 +94,9 @@ class DsElementContext {
   /// `null` = deshabilitado (gris).
   final VoidCallback? onPressed;
   final String? tooltip;
+
+  /// Insignia del botón (`DsBadge` al lado del texto); `null` = sin.
+  final String? badge;
   final List<ScreenDataEntry> data;
 
   /// Hueco armado por la pantalla (o `null` en el editor).

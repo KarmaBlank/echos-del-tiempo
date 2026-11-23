@@ -24,6 +24,15 @@ Future<void> showPatchNotes(BuildContext context, {AssetBundle? bundle}) =>
       ),
     );
 
+/// Las notas de la edición actual empaquetadas en [bundle], la más nueva
+/// primero.
+Future<List<PatchNoteEntry>> loadPatchNoteIndex(AssetBundle bundle) async {
+  final manifest = await AssetManifest.loadFromAssetBundle(bundle);
+  final travesia = GameEdition.current.mode == GameModeKind.travesia;
+  return patchNotesFrom(manifest.listAssets(),
+      prefix: travesia ? 'travesia-' : '');
+}
+
 /// Versiones a la izquierda (la más nueva arriba), notas a la derecha con
 /// ancho de lectura fijo y scroll con rueda, barra y teclado.
 class PatchNotesPanel extends StatefulWidget {
@@ -64,10 +73,7 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
 
   Future<void> _loadIndex() async {
     try {
-      final manifest = await AssetManifest.loadFromAssetBundle(_bundle);
-      final travesia = GameEdition.current.mode == GameModeKind.travesia;
-      final list = patchNotesFrom(manifest.listAssets(),
-          prefix: travesia ? 'travesia-' : '');
+      final list = await loadPatchNoteIndex(_bundle);
       if (!mounted) return;
       setState(() => _entries = list);
       if (list.isNotEmpty) await _open(0);

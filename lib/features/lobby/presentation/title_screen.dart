@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -42,6 +43,7 @@ import '../../combat/presentation/sprite_catalog.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_loading.dart';
+import '../domain/patch_notes.dart';
 import 'patch_notes_panel.dart';
 import 'world_picker.dart';
 import 'worlds_providers.dart';
@@ -110,9 +112,47 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   String? _netStatus;
   bool _netError = false;
 
+  /// Versión de las notas del parche más nuevas empaquetadas (`null`:
+  /// todavía no se leyó o no hay).
+  String? _newestNotes;
+
   /// Doble clic en una tarjeta = jugar.
   DateTime? _lastTap;
   String? _lastTapId;
+
+  Future<void> _loadNotesIndex() async {
+    try {
+      final list = await loadPatchNoteIndex(rootBundle);
+      if (mounted && list.isNotEmpty) {
+        setState(() => _newestNotes = list.first.version);
+      }
+    } catch (_) {
+      // Sin índice: sin insignia.
+    }
+  }
+
+  /// Insignia `NUEVO` del botón de notas (title_screen.md § 4.1).
+  String? get _notesBadge {
+    final newest = _newestNotes;
+    if (newest == null) return null;
+    final seen = ref.watch(gameSettingsProvider).seenPatchNotes;
+    return hasUnseenPatchNotes([PatchNoteEntry(newest, '')], seen)
+        ? 'NUEVO'
+        : null;
+  }
+
+  /// Abre las notas y las marca como vistas.
+  void _openPatchNotes() {
+    final newest = _newestNotes;
+    if (newest != null) {
+      final c = ref.read(gameSettingsProvider.notifier);
+      final s = ref.read(gameSettingsProvider);
+      if (s.seenPatchNotes != newest) {
+        unawaited(c.update(s.copyWith(seenPatchNotes: newest)));
+      }
+    }
+    unawaited(showPatchNotes(context));
+  }
 
   ProgressionRules get _rules => ref.read(sessionEngineProvider).progression;
 
@@ -127,6 +167,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // Ajustes de pantalla y de juego (cargan de `game.json`; si quedó en
     // pantalla completa, la ventana vuelve a ella).
     ref.read(gameSettingsProvider);
+    unawaited(_loadNotesIndex());
     final music = ref.read(musicServiceProvider)..playTrack(Music.title);
     unawaited(music.preload(const [
       Music.town,
@@ -821,7 +862,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             ScreenAction(_busy || _travesia ? null : _openBestiary),
         'abrirHazanas':
             ScreenAction(_busy || _travesia ? null : _openAchievements),
-        'verNotasParche': ScreenAction(() => showPatchNotes(context)),
+        'verNotasParche': ScreenAction(_openPatchNotes, badge: _notesBadge),
       },
       data: {
         'personajes': [
@@ -835,7 +876,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         // § 1): pegado abajo; si crece (versión nueva), se desplaza.
         'version': const Align(
           alignment: Alignment.bottomLeft,
-          child: SingleChildScrollView(child: UpdateBanner()),
+          child: SingleChildScrollView(child: UpdateBanner(compact: true)),
         ),
         'personajes': SingleChildScrollView(
           child: Column(
@@ -923,7 +964,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 : () => setState(_openCreator))),
         item(DsButton('VER NOTAS DEL PARCHE',
             key: const ValueKey('title-patch-notes'),
-            onPressed: () => showPatchNotes(context))),
+            trailing: _notesBadge == null
+                ? null
+                : DsBadge(_notesBadge!,
+                    key: const ValueKey('title-patch-notes-badge')),
+            onPressed: _openPatchNotes)),
         item(DsButton('CONFIGURACIÓN',
             key: const ValueKey('title-settings'),
             onPressed: () => showSettingsDialog(context))),
@@ -992,7 +1037,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 const Flexible(
                     child: Align(
                         alignment: Alignment.bottomLeft,
-                        child: UpdateBanner())),
+                        child: UpdateBanner(compact: true))),
                 SizedBox(width: gap),
                 Expanded(
                   child: Align(

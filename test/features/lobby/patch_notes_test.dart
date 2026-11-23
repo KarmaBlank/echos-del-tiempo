@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/lobby/domain/patch_notes.dart';
 import 'package:echos_del_tiempo/features/lobby/presentation/patch_notes_panel.dart';
@@ -94,5 +95,20 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('patch-notes-close')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('patch-notes')), findsNothing);
+  });
+
+  test('hasUnseenPatchNotes: la más nueva contra la última vista', () {
+    const e = [PatchNoteEntry('0.37.1', ''), PatchNoteEntry('0.9.0', '')];
+    expect(hasUnseenPatchNotes(e, ''), isTrue);
+    expect(hasUnseenPatchNotes(e, '0.37.0'), isTrue);
+    expect(hasUnseenPatchNotes(e, '0.37.1'), isFalse);
+    expect(hasUnseenPatchNotes(e, '0.40.0'), isFalse);
+    expect(hasUnseenPatchNotes(const [], ''), isFalse);
+  });
+
+  test('seenPatchNotes se guarda en los ajustes', () {
+    const s = GameSettings(seenPatchNotes: '0.37.1');
+    expect(GameSettings.fromJson(s.toJson()).seenPatchNotes, '0.37.1');
+    expect(GameSettings.fromJson(const {}).seenPatchNotes, '');
   });
 }

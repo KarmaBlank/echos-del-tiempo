@@ -118,6 +118,7 @@ final dsDefaultComponents = <DsComponentSpec>[
             : DsButtonSize.normal,
         accent: e.variant == 'peligro' ? DsColors.danger : null,
         tooltip: e.tooltip,
+        trailing: e.badge == null ? null : DsBadge(e.badge!),
         onPressed: e.onPressed,
       ),
     ),
