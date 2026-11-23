@@ -237,3 +237,13 @@ Tests: `test/features/settings/text_detail_test.dart` (todas las
 habilidades y ULT del catálogo, estados, pasivas, mecánicas y mods
 cumplen § 8.2; el tooltip de una habilidad cambia al cambiar el
 ajuste; `game.json` viejo carga RESUMIDO y se guarda).
+
+### 8.6 Fichas de armas en RESUMIDO (v0.25.6)
+
+En RESUMIDO la ficha de un arma (inventario, alijo y `HoverCompareCard`)
+es corta de verdad: nombre, rareza, rol en una línea (`Espada pesada ·
+daño físico`), stat principal, requisitos solo si faltan, cada mod e
+implícito en una línea sin tier ni rango y la pasiva en una línea. Todo
+el resto (tiers, prefijos y sufijos, peso, forja, habilidades) va en un
+único plegable `MÁS DETALLE` con la ficha DETALLADA. En Ajustes, debajo
+de TEXTOS, una línea de ejemplo por modo.

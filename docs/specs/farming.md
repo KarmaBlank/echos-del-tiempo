@@ -125,8 +125,30 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   (100 %, con brillo). Arado con surcos; regado, tierra oscura y una gota;
   abonado, granitos claros. Dibujado en `MapFarmLayer` (colores en
   `FarmPalette`); registrado como procedural.
+- Aspecto por cultivo (v0.25.3): la semilla es un puntito del color de
+  su tipo en un punto al azar del tile, determinista por parcela, cultivo
+  y quien plantó (`MapFarmLayer.seedOffset`), así todos los clientes lo
+  ven igual y no salta. El brote y la planta crecen desde ese punto; al
+  madurar muestran el fruto con forma y color propios (`CropPalette` en
+  `map_themes.dart`: semilla, planta, fruto, acento y forma `CropShape`):
+  nabo (raíz blanca con cuello violeta), trigo dorado (espigas doradas),
+  papa (tubérculos grises al pie), calabaza (naranja con gajos), frutilla
+  (bayas rojas), cebolla de cobre (bulbo cobrizo con tallos), flor rúnica
+  (flor azul), melón engranaje (melón verde rayado), trigo del Mañana
+  (espigas claras), rosa del Reloj Quieto (rosa roja) y raíz de la Era
+  Antigua (cristal turquesa). Los legendarios destellan; el brillo de lo
+  maduro se mantiene. Pixel art procedural, sin cambios de protocolo.
 - La cosecha "salta" del tile hacia quien cosechó con chispas (como el
   pez) y el nombre con la calidad arriba del personaje.
+
+### 2.6 Cartel de subida de nivel de oficio (v0.25.3)
+- Al subir Pesca o Cultivo aparece un cartel pixel arriba del personaje
+  (encima del nombre): "¡Subiste de nivel!" (los demás ven "<nombre>
+  subió de nivel") y "Pescador N" / "Granjero N". Sube y se desvanece en
+  2,5 s, con el sonido de subida de nivel.
+- Sin evento nuevo: cada cliente compara el nivel de oficio del perfil
+  que manda el host con el último que vio (`MapLifeLevelLayer`), así lo
+  ven todos y el protocolo no cambia.
 
 ### 2.4 Huerta compartida: cada labor usa a quien la hace
 Cualquiera planta, riega, abona o cosecha cualquier parcela. Cada parcela

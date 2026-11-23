@@ -24,3 +24,13 @@
 - test/features/world/life_grid_shots_test.dart: VENDER pesca (CANJEAR
   de un legendario en el detalle) y la grilla angosta (detalle arriba,
   ancho < 560).
+
+## v0.25.6
+
+- Sin test propio: ficha RESUMIDA del arma (`itemTipSummaryParts`), el
+  ejemplo de TEXTOS en Ajustes y los textos y la comparación de
+  herramientas de oficio (`life_tool_text.dart`); verificados con
+  tool/shots/v0256_textos_ult_shots_test.dart y a mano.
+- tool/shots/v0256: `pumpPanel` fija su propio tamaño, así que la
+  captura de 1024×640 de la ULT sale igual a la de 1280×720; falta una
+  captura real a 1024×640.

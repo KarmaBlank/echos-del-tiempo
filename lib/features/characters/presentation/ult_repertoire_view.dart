@@ -94,6 +94,13 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
   late UltBrowsePrefs _prefs = widget.prefs;
   bool _hoverUpgrade = false;
   bool _confirm = false;
+  final _rightScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _rightScroll.dispose();
+    super.dispose();
+  }
   final _seenSent = <String>{};
 
   void _seen(String id) {
@@ -157,7 +164,11 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
           SizedBox(width: DsSpace.md),
           SizedBox(
               width: (box.maxWidth * 0.4).clamp(260.0, 420.0),
-              child: SingleChildScrollView(child: right)),
+              child: Scrollbar(
+                  controller: _rightScroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                      controller: _rightScroll, child: right))),
         ]);
       }
       // Angosta: la vista previa y su info arriba de la lista.
@@ -355,6 +366,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               if (o != null) ..._upgrade(o),
             ],
           ),
+        if (o != null && _upgradeSummary(o) != null) _upgradeSummary(o)!,
         Text(
             [
               e.origin.label,
@@ -399,24 +411,50 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 style: DsText.body()),
             if (cost != null) ...[
               SizedBox(height: DsSpace.sm),
-              // Qué cambia al mejorar (v0.21.1): siempre a la vista, sin
-              // depender del hover.
-              DsSectionHeader('AL MEJORAR: NIVEL $lv → ${lv + 1}',
-                  key: const ValueKey('ult-upgrade-diff')),
-              Text(
-                  'Poder ×${UltRules.levelFactor(lv).toStringAsFixed(2)}'
-                  ' → ×${UltRules.levelFactor(lv + 1).toStringAsFixed(2)}',
-                  style: DsText.body(DsColors.success)),
-              Text('Costo: ${cost.text}', style: DsText.detail()),
-              SizedBox(height: DsSpace.xs),
-              ProtoText(describeSkillMarkup(
-                  UltRules.leveled(o.skill, lv + 1), null,
-                  ultimate: true)),
+              // Diff completo plegado (v0.25.6): el resumen va junto al
+              // botón MEJORAR, siempre a la vista.
+              DsFold(
+                  key: const ValueKey('ult-upgrade-fold'),
+                  label: 'VER DETALLE',
+                  openLabel: 'OCULTAR DETALLE',
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DsSectionHeader('AL MEJORAR: NIVEL $lv → ${lv + 1}'),
+                        Text('Costo: ${cost.text}', style: DsText.detail()),
+                        SizedBox(height: DsSpace.xs),
+                        ProtoText(describeSkillMarkup(
+                            UltRules.leveled(o.skill, lv + 1), null,
+                            ultimate: true)),
+                      ])),
             ] else
               Text('Nivel máximo.', style: DsText.detail()),
           ],
         ],
       ),
+    );
+  }
+
+  /// "Al mejorar" corto debajo de MEJORAR (v0.25.6): poder antes →
+  /// después y costo, sin scrollear. `null` si no se puede mejorar.
+  Widget? _upgradeSummary(UltOption o) {
+    if (o.kind != UltOptionKind.learned) return null;
+    final lv = UltRules.levelOf(widget.profile, o.id);
+    final cost = UltRules.upgradeCost(o.id, lv);
+    if (cost == null) return null;
+    final a = UltRules.levelFactor(lv), b = UltRules.levelFactor(lv + 1);
+    final pct = ((b / a - 1) * 100).round();
+    return Column(
+      key: const ValueKey('ult-upgrade-diff'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+            'Al mejorar (Nv $lv → ${lv + 1}): poder ×${a.toStringAsFixed(2)}'
+            ' → ×${b.toStringAsFixed(2)}',
+            style: DsText.body(DsColors.success)),
+        Text('Daño y curación +$pct % · costo ${cost.text}',
+            style: DsText.detail()),
+      ],
     );
   }
 
