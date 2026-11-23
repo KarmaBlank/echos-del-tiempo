@@ -1,7 +1,6 @@
 // Editor de animaciones: qué se está animando (docs/specs/game_editor.md
 // § 7.7): filas por elemento y propiedad, dónde cae un key nuevo, antes
 // y después en el inspector, recuadro de selección y arrastre.
-import 'dart:ui';
 
 import 'package:echos_del_tiempo/core/fx/fx_catalog.dart';
 import 'package:echos_del_tiempo/features/admin/presentation/editor/fx_editor_controller.dart';
