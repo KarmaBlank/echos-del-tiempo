@@ -22,6 +22,9 @@
     "ui.tutorial",
     "ui.lobby",
     "ui.inventory",
-    "ui.characters"
+    "ui.characters",
+    "data.items",
+    "data.materials",
+    "data.crafting"
   ]
 }

@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/retro_hover_card.dart';
@@ -117,9 +118,9 @@ class ArmoryBuyGrid extends StatelessWidget {
                   accent: RarityColors.of(Rarity.comun),
                   procKey: procKeyForType(w.type)),
               border: RarityColors.of(Rarity.comun),
-              name: w.name,
+              name: w.text,
               tag: w.classId,
-              search: '${w.name} ${w.type}',
+              search: '${w.text} ${w.name} ${w.type}',
               description:
                   '${w.type} · ${classes[w.classId]?.name ?? w.classId}',
               cellWrap: weapons.tip(w.id, sample),
@@ -191,7 +192,7 @@ class ArmorySellGrid extends StatelessWidget {
               name: name,
               tag: it.rarity.name,
               search: '$name ${w?.type ?? ''}',
-              description: '${w?.type ?? ''} · ${it.rarity.label} · '
+              description: '${w?.type ?? ''} · ${it.rarity.text} · '
                   '${s.t('ui.inventory.craft.level_short', {'n': it.itemLevel})}',
               cellWrap: weapons.tip(it.uid, it),
               body: ArmoryItemSheet(shop: shop, item: it),

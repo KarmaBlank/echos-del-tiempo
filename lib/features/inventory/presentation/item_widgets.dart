@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -345,7 +346,7 @@ class LootLabel extends StatelessWidget {
 /// Texto de una etiqueta de drop: nombre del arma o `N Material`.
 String dropLabelText(ProgressionRules rules, LootDrop d) {
   final it = d.item;
-  if (it != null) return rules.items.displayName(it);
+  if (it != null) return localItemName(rules.items, it);
   final eco = d.eco;
   if (eco != null) return rules.ecos.fullName(eco);
   return d.count > 1 ? '${d.count} ${d.stack!.label}' : d.stack!.label;

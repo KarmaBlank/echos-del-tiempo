@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../inventory/domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../game_engine/models/item.dart';
@@ -78,7 +79,7 @@ String stashEntryName(StashEntry e, String Function(ItemInstance) itemName,
   if (e.item != null) return itemName(e.item!);
   if (e.eco != null) {
     return (strings ?? fallbackCharStrings()).t(
-        'ui.characters.stash.eco_unclaimed', {'rarity': e.eco!.rarity.label});
+        'ui.characters.stash.eco_unclaimed', {'rarity': e.eco!.rarity.text});
   }
   return '${e.count} ${e.material!.label}';
 }

@@ -4,6 +4,7 @@ import '../data/fog_store.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import '../../inventory/domain/item_names.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -3521,7 +3522,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   String _recoverName(LootDrop d) {
     final it = d.item;
-    if (it != null) return engine.progression.items.displayName(it);
+    if (it != null) return localItemName(engine.progression.items, it);
     if (d.eco != null) return 'Eco';
     return '${d.count} ${d.stack!.label}';
   }

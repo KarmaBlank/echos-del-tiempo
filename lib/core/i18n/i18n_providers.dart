@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/feature_flags.dart';
 import '../di/service_locator.dart';
 import '../settings/settings_providers.dart';
+import 'catalog_text.dart';
 import 'locale_id.dart';
 import 'string_tables.dart';
 import 'strings.dart';
@@ -53,10 +54,14 @@ final activeLocaleProvider = Provider<LocaleId>((ref) {
 
 /// Player-facing text of the active language: `ref.watch(stringsProvider)
 /// .t('ui.title.play')`, or `ref.t(…)` / `ref.strings`.
-final stringsProvider = Provider<Strings>((ref) => ref
-    .watch(stringTablesProvider)
-    .strings(ref.watch(activeLocaleProvider),
-        allowMachineText: FeatureFlags.instance.allowMachineText));
+/// Also publishes the result as [CatalogText.active] (catalog names).
+final stringsProvider = Provider<Strings>((ref) {
+  final s = ref.watch(stringTablesProvider).strings(
+      ref.watch(activeLocaleProvider),
+      allowMachineText: FeatureFlags.instance.allowMachineText);
+  CatalogText.active = s;
+  return s;
+});
 
 extension WidgetRefStrings on WidgetRef {
   /// Watches the active [Strings] (rebuilds when the language changes).
