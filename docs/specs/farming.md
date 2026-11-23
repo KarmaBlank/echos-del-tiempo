@@ -79,6 +79,16 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   herramienta va en el tooltip (tamaño fijo). El
   elegido lleva el borde dorado de selección. Clic en un casillero lo deja
   en la mano (no hace la labor).
+- Cuarto casillero ABONO (v0.24.4; la barra pasa a 480 px): ícono del
+  abono elegido, rótulo "Abono [F]" y la cantidad. Por defecto el mejor
+  abono que tengas; clic en el ícono pasa al siguiente propio (elección
+  local, no se guarda). Con ABONO en la mano, E / clic abona la parcela
+  de enfrente con ese abono (`FarmTileAction` con el id del abono en
+  `seed`, como ya aceptaba el host: sin cambio de protocolo). Motivos si
+  no sirve: "Primero arala", "Primero plantá", "Ya tiene abono", "Sin
+  abono: comprá en el agropecuario". F sigue abonando con el abono
+  elegido sin cambiar de herramienta, y frente a una parcela plantada sin
+  abono el aviso suma "· [F] Abonar".
 - Controles: Tab (Mayús+Tab al revés) o la rueda del mouse cambian de
   herramienta; Q o ] la semilla siguiente, [ la anterior (también clic en
   las semillas de los costados); E o clic izquierdo en el mapa hacen la
@@ -277,6 +287,12 @@ categoría).
   pueblo sin ampliar y sin parcelas.
 
 ## 11. Pestaña PESCA Y CULTIVO (PERSONAJE)
+Desde v0.24.4 cada categoría es una grilla de casillas como el
+inventario (`LifeItemGrid`, la misma del agropecuario): ícono de 32 px
+con borde del color de la rareza o calidad, cantidad, marca "E" si está
+equipada o elegida para plantar y un dato chico abajo. Clic en una
+casilla la muestra en el panel de detalle (nombre en el color de la
+rareza, etiquetas, datos completos y acciones). Nada se corta con "…".
 Solo en el pueblo (en una misión dice "Disponible en el pueblo."). No
 usa casilleros del inventario. Secciones: HERRAMIENTAS (cañas, azadas y
 regaderas, la equipada con EQUIPADA y las otras con EQUIPAR), PESCADOS

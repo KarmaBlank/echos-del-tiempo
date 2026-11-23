@@ -20,7 +20,7 @@ class ToolHud extends StatelessWidget {
   final PlayerProfile profile;
 
   /// Ancho de la barra (el aviso usa el mismo).
-  static const width = 372.0;
+  static const width = 480.0;
 
   /// Anchos fijos de los casilleros de la huerta (entran en [width]).
   static const slotW = 104.0, seedW = 140.0;
@@ -92,6 +92,7 @@ class ToolHud extends StatelessWidget {
     final next = FarmingRules.nextSeed(profile);
     final many = prev != null && prev != active;
     final d = kCrops[active];
+    final fert = kFertilizers[controller.farmFert];
 
     // Carrusel: la semilla en uso grande al centro, las vecinas chicas.
     Widget chip(String? id, double size, String key, VoidCallback? onTap) {
@@ -112,7 +113,7 @@ class ToolHud extends StatelessWidget {
     Widget label(String text) => Text(text,
         maxLines: 2,
         textAlign: TextAlign.center,
-        style: text == 'Azada' || text == 'Regadera'
+        style: text == 'Azada' || text == 'Regadera' || text == 'Abono [F]'
             ? DsText.subtitle(DsColors.text)
             : DsText.body());
 
@@ -175,6 +176,26 @@ class ToolHud extends StatelessWidget {
             const ['Regadera'],
             'Regadera: ${can?.name ?? f.can}',
             LifeIcon(f.can, LifeIconKind.herramienta, size: iconSize)),
+        // ABONO (v0.24.4): E con este casillero abona; F también, con
+        // cualquier herramienta. Clic en el ícono elige otro abono.
+        slot(
+            FarmHand.fert,
+            slotW,
+            'hud-tool-fert',
+            [
+              'Abono [F]',
+              if (fert != null) '×${f.fertCount(fert.id)}',
+            ],
+            fert == null
+                ? 'Sin abono: comprá en el agropecuario'
+                : '${fert.name}${controller.ownedFerts.length > 1 ? ' · clic en el ícono: otro abono' : ''}',
+            fert == null
+                ? const SizedBox(width: iconSize, height: iconSize)
+                : GestureDetector(
+                    key: const ValueKey('hud-fert-pick'),
+                    onTap: controller.cycleFert,
+                    child: LifeIcon(fert.id, LifeIconKind.semilla,
+                        size: iconSize))),
       ],
     );
   }

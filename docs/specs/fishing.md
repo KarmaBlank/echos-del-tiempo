@@ -154,6 +154,9 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   precio, el panel lista lo que está en el catálogo).
 
 ### 5.3 Puesto del agropecuario (v0.23.2)
+- Desde v0.24.4: grilla de casillas por categoría (farming.md § 11) con
+  el detalle de la elegida a la derecha (tipo, rareza, nivel, rinde,
+  rareza extra, precio y acciones). El nombre ya no repite el tipo.
 - Primer nivel: COMPRAR o VENDER. Segundo: PESCA o CULTIVO. Tercero:
   categorías (botones arriba de la lista, que también filtran; con TODO
   la lista sale agrupada con un encabezado por categoría, nunca mezclada).
