@@ -173,7 +173,7 @@ class _PrepPanelState extends State<PrepPanel> {
                 onPressed: w.onCancel),
           ],
           actions: [
-            DsButton('PERSONAJE [C]',
+            DsButton('PERSONAJE [TAB]',
                 key: const ValueKey('prep-character'),
                 onPressed: w.onCharacter),
             // ¡LISTO! es la acción principal (borde y texto dorados).

@@ -64,20 +64,30 @@ void main() {
     expect(LifeTreeRules.taken(me, LifeSkillKind.pesca), isEmpty);
   });
 
-  testWidgets('PESCA Y CULTIVO: herramientas y semillas iniciales',
+  testWidgets('OFICIOS → INVENTARIO: bolsas, herramientas y semillas',
       (tester) async {
     await pumpPanel(tester,
         profile: fisher(),
         build: (v, c) => CharacterPanel(
-            view: v, controller: c, initialTab: CharacterTab.lifeItems));
+            view: v, controller: c, initialTab: CharacterTab.oficios));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('oficios-sub-inventario')));
+    await tester.pump();
+    // PESCA primero: la caña de rama; la azada va en CULTIVO.
+    expect(find.byKey(const ValueKey('life-tool-cana_rama')), findsOneWidget);
+    expect(find.byKey(const ValueKey('life-tool-azada_rama')), findsNothing);
+    expect(find.textContaining('/40'), findsNWidgets(3));
+    await tester.tap(find.byKey(const ValueKey('oficio-bag-cultivo')));
     await tester.pump();
     // Grilla de casillas (v0.24.4): el nombre va en el detalle al elegirla.
     await tester.tap(find.byKey(const ValueKey('life-tool-azada_rama')));
     await tester.pump();
     expect(find.textContaining('Azada de rama'), findsWidgets);
-    // Una categoría por vez: las semillas, en su pestaña.
+    // Filtros por tipo: HERRAMIENTAS esconde las semillas.
+    await tester.tap(find.byKey(const ValueKey('oficio-filter-herramientas')));
+    await tester.pump();
     expect(find.byKey(const ValueKey('life-seed-nabo_claro')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('life-cat-semillas')));
+    await tester.tap(find.byKey(const ValueKey('oficio-filter-semillas')));
     await tester.pump();
     final seed = find.byKey(const ValueKey('life-seed-nabo_claro'));
     expect(seed, findsOneWidget);

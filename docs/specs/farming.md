@@ -389,8 +389,8 @@ Pueblo.
   - Pescador: RED (+`upPeces` pez por vuelta), RITMO (igual), RAREZA
     (+`upRareza` de chance de tirar otra vez y quedarse con el pez más
     raro; nunca legendarios).
-- Materiales de oficio: se hacen en CONDENSAR (materials_economy.md §
-  4.4). Viven en `life.cf` del perfil.
+- Materiales de oficio: se hacen en el TALLER DE OFICIOS del pueblo
+  (materials_economy.md § 4.4; v0.32.3). Viven en `life.cf` del perfil.
 - Datos: `TownBuild.crew` (`cr`: `x` XP, `u` rangos por mejora). Los
   ayudantes de antes quedan en nivel 1 sin mejoras; fundir dos
   construcciones junta sus ayudantes con su progreso; despedir saca el
@@ -450,6 +450,9 @@ categoría).
   pueblo sin ampliar y sin parcelas.
 
 ## 11. Pestaña PESCA Y CULTIVO (PERSONAJE)
+
+> **v0.32.4:** reemplazada por PERSONAJE → OFICIOS → INVENTARIO, con
+> bolsas de 40 casillas por oficio. Ver docs/specs/oficio_storage.md.
 Desde v0.24.4 cada categoría es una grilla de casillas como el
 inventario (`LifeItemGrid`, la misma del agropecuario): ícono de 32 px
 con borde del color de la rareza o calidad, cantidad, marca "E" si está

@@ -1,4 +1,5 @@
 import '../../../game_engine/models/combat_mode.dart';
+import '../../../game_engine/models/fog_of_war.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -63,6 +64,7 @@ import '../../../game_engine/rules/consumable_rules.dart';
 import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/tutorial_rules.dart';
+import '../../../game_engine/rules/world_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
@@ -505,7 +507,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _companions[id] = c.slotId;
     if (c.auto) _auto.add(id);
     _companionWants[id] = c.wants;
-    _step(step);
+    _commit(step);
     if (c.wants case final w?) _applyFor(id, SetBuildWantsAction(w));
     return true;
   }
@@ -527,7 +529,7 @@ class SessionController extends StateNotifier<SessionView?> {
       _auto.remove(id);
       _companionWants.remove(id);
       _companionSaved.remove(id);
-      _step(step);
+      _commit(step);
     }
     try {
       await ps.setCompanions(slotIds);
@@ -628,7 +630,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _turnTimer = t;
     final s = _s;
     if (isClient || s == null || !mounted) return;
-    _s = engine.setTurnTimer(s, t).state;
+    _setAll((x) => engine.setTurnTimer(x, t).state);
     _emit();
   }
 
@@ -641,7 +643,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _combatMode = m;
     final s = _s;
     if (isClient || s == null || !mounted) return;
-    _s = engine.setCombatMode(s, m).state;
+    _setAll((x) => engine.setCombatMode(x, m).state);
     _emit();
   }
 
@@ -681,6 +683,10 @@ class SessionController extends StateNotifier<SessionView?> {
   static const saveEvery = 2.0;
 
   final local = LocalPlayer();
+
+  /// Niebla de exploración del jugador local en mazmorras oscuras
+  /// (lighting.md § 5.4). Solo del cliente: no viaja ni se guarda.
+  final fog = FogOfWar();
   final _events = StreamController<SessionEvent>.broadcast();
   GameSession? _s;
   Timer? _timer;
@@ -793,8 +799,12 @@ class SessionController extends StateNotifier<SessionView?> {
       _tutorialVersion = 0; // sin disco: el sello pide el tutorial
     }
     if (!mounted) return;
-    var step = engine.addPlayer(room0, localId, profile,
+    // Movimiento libre (free_movement.md): el anfitrión maneja las
+    // instancias; esta vista es la del jugador local.
+    final w = _w = _we.create(room0);
+    final ws = _we.addPlayer(w, localId, profile,
         tutorialVersion: _tutorialVersion)!;
+    var step = SessionStep(w.town, ws.eventsFor(localId));
     final code = n?.roomCode;
     if (code != null) {
       // `sysChat('Sala creada. Comparte el código ...')` del prototipo.
@@ -897,7 +907,7 @@ class SessionController extends StateNotifier<SessionView?> {
     // Local / anfitrión: la sala usa este Atlas (los clientes, el del host).
     final s = _s;
     if (!isClient && s != null) {
-      _s = engine.setAtlas(s, next.nodes).state;
+      _setAll((x) => engine.setAtlas(x, next.nodes).state);
     }
     if (emit) _emit();
   }
@@ -945,9 +955,39 @@ class SessionController extends StateNotifier<SessionView?> {
   void _broadcast() {
     final n = net, s = _s;
     if (n == null || !n.isHost || s == null || !mounted) return;
-    final events = List<SessionEvent>.of(_unsent);
-    _unsent.clear();
-    n.broadcast(s, events);
+    final w = _w;
+    if (w == null) {
+      final events = List<SessionEvent>.of(_unsent);
+      _unsent.clear();
+      n.broadcast(s, events);
+      return;
+    }
+    // Cada cliente recibe su instancia (free_movement.md § 3); los que
+    // tienen los mismos eventos van en un solo envío.
+    for (final room in w.rooms.values) {
+      final groups = <(List<SessionEvent>, Set<String>)>[];
+      for (final pid in room.players.keys) {
+        if (pid == localId) continue;
+        final evs = _unsentBy.remove(pid) ?? const <SessionEvent>[];
+        final g = groups.where((g) => _sameEvents(g.$1, evs)).firstOrNull;
+        if (g != null) {
+          g.$2.add(pid);
+        } else {
+          groups.add((evs, {pid}));
+        }
+      }
+      for (final (evs, ids) in groups) {
+        n.broadcast(room, evs, only: ids);
+      }
+    }
+  }
+
+  static bool _sameEvents(List<SessionEvent> a, List<SessionEvent> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
   }
 
   /// Cliente: el `send({t:'pos'})` cada 50 ms.
@@ -977,25 +1017,29 @@ class SessionController extends StateNotifier<SessionView?> {
           :final profile,
           :final tutorialVersion
         ):
-        if (s == null || isClient) return;
-        final step = engine.addPlayer(s, peerId, profile,
+        final w = _w;
+        if (s == null || isClient || w == null) return;
+        final ws = _we.addPlayer(w, peerId, profile,
             tutorialVersion: tutorialVersion);
-        if (step != null) _step(step);
+        if (ws != null) _world(ws);
       case PeerActionEvent(:final peerId, :final action):
-        if (s == null || isClient) return;
-        final step = engine.apply(s, peerId, action);
-        if (step == null) return;
+        final w = _w;
+        if (s == null || isClient || w == null) return;
+        final ws = _we.apply(w, peerId, action);
+        if (ws == null) return;
         // Las posiciones (20 por segundo por cliente) no traen eventos:
         // se aplican sin emitir una vista nueva; la emite el próximo tick.
-        if (action is MoveAction && step.events.isEmpty) {
-          _s = step.state;
+        if (action is MoveAction && ws.events.isEmpty) {
+          _s = w.sessionOf(localId) ?? w.town;
         } else {
-          _step(step);
+          _world(ws);
         }
       case PeerLeftEvent(:final peerId):
-        if (s == null || isClient) return;
-        final step = engine.removePlayer(s, peerId);
-        if (step != null) _step(step);
+        final w = _w;
+        if (s == null || isClient || w == null) return;
+        _unsentBy.remove(peerId);
+        final ws = _we.removePlayer(w, peerId);
+        if (ws != null) _world(ws);
       case ConnectionLostEvent(:final reason):
         _disconnected = reason;
         _recoverLocalGround();
@@ -1011,7 +1055,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (s == null || !mounted) return;
     _sendPosition();
     _sinceSave += dt;
-    _step(engine.tick(_s!, dt));
+    _world(_we.tick(_w!, dt));
     _autoTurn();
     _save();
   }
@@ -1125,8 +1169,15 @@ class SessionController extends StateNotifier<SessionView?> {
       net!.sendAction(move);
       return;
     }
-    final step = engine.apply(s, localId, move);
-    if (step != null) _s = step.state;
+    final w = _w;
+    if (w == null) return;
+    final ws = _we.apply(w, localId, move);
+    if (ws == null) return;
+    if (ws.events.isEmpty) {
+      _s = w.sessionOf(localId) ?? w.town;
+    } else {
+      _world(ws);
+    }
   }
 
   /// Cambia el pueblo del anfitrión (capturas: cielo, faros).
@@ -1134,7 +1185,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void debugTown(TownState Function(TownState) f) {
     final s = _s;
     if (s == null || isClient) return;
-    s.town = f(s.town);
+    _setAll((x) => x.copy()..town = f(x.town));
     _emit();
   }
 
@@ -1164,7 +1215,13 @@ class SessionController extends StateNotifier<SessionView?> {
   /// también lo abre; v0.23.0).
   bool get nearCounter => townSpot == TownSpot.board;
 
-  bool get nearArmory => townSpot == TownSpot.forge;
+  bool get nearArmory => townSpot == TownSpot.armory;
+
+  /// Frente a la FORJA (v0.32.3: su propio panel).
+  bool get nearForge => townSpot == TownSpot.forge;
+
+  /// Frente al TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3).
+  bool get nearWorkshop => townSpot == TownSpot.workshop;
 
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
@@ -1213,12 +1270,11 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Dónde está el grupo: `pueblo` o el id del bioma.
   String get place => _s?.place ?? kPueblo;
 
-  /// Viajar (solo el dueño del mundo; los demás van con él).
+  /// Viajar: cada uno por su cuenta (free_movement.md § 2.2).
   String? get cannotTravel {
     final s = _s;
     if (s == null || s.mode != SessionMode.lobby) return 'Solo fuera de misión';
-    if (!isWorldOwner) return 'Decide el anfitrión';
-    if (s.vote != null) return 'Hay una votación en curso';
+    if (isRun) return 'Solo en el Mundo';
     return null;
   }
 
@@ -1366,7 +1422,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Soy el dueño del mundo (el anfitrión o el que juega solo).
   bool get isWorldOwner =>
-      _s?.playerList.where((p) => !p.isCompanion).firstOrNull?.id == localId;
+      (_s?.ownerId ??
+          _s?.playerList.where((p) => !p.isCompanion).firstOrNull?.id) ==
+      localId;
 
   bool _isSoil(int x, int y) {
     final s = _s;
@@ -2362,6 +2420,28 @@ class SessionController extends StateNotifier<SessionView?> {
     return m.poiUsed.contains(p.id) ? p : null;
   }
 
+  /// Puede salir solo de la mazmorra ahora (free_movement.md § 2.4): en la
+  /// entrada del piso 1 o junto a una piedra de paso activada. El host lo
+  /// vuelve a validar.
+  bool get canLeaveDungeon {
+    final s = _s;
+    if (s == null || isRun || !engine.freeMovement) return false;
+    final me = s.players[localId];
+    if (me == null) return false;
+    final probe = s.copy();
+    probe.players[localId]!
+      ..x = local.x
+      ..y = local.y;
+    return engine.canLeave(probe, localId, poiId: travelOrigin?.id);
+  }
+
+  /// SALIR DE LA MAZMORRA: vuelve solo al exterior de la entrada.
+  bool leaveDungeon() {
+    if (!canLeaveDungeon) return false;
+    closePanel();
+    return _apply(LeaveDungeonAction(poiId: travelOrigin?.id));
+  }
+
   /// Las piedras a las que se puede viajar desde [travelOrigin].
   List<MapPoi> get travelDestinations {
     final from = travelOrigin;
@@ -2431,6 +2511,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.missionBoard);
       } else if (nearArmory) {
         openPanel(WorldPanel.armory);
+      } else if (nearForge) {
+        openPanel(WorldPanel.forge);
+      } else if (nearWorkshop) {
+        openPanel(WorldPanel.workshop);
       } else if (nearPortal) {
         openPanel(WorldPanel.ecoPortal);
       } else if (nearStatue) {
@@ -2495,7 +2579,7 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
       if (s.mode == SessionMode.battle) return false;
-      if (key == LogicalKeyboardKey.keyC) {
+      if (key == LogicalKeyboardKey.tab || key == LogicalKeyboardKey.keyC) {
         toggleCharacter();
         return true;
       }
@@ -2544,7 +2628,8 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
     }
-    if (_panel == null && nearFarm && key == LogicalKeyboardKey.tab) {
+    // R: otra mano en la huerta (Tab abre PERSONAJE desde v0.32.4).
+    if (_panel == null && nearFarm && key == LogicalKeyboardKey.keyR) {
       cycleFarmHand(HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
       return true;
     }
@@ -2554,7 +2639,13 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
     }
-    if (key == LogicalKeyboardKey.keyC && s.mode != SessionMode.battle) {
+    // Tab (y C, de alias): abre / cierra PERSONAJE.
+    if ((key == LogicalKeyboardKey.tab || key == LogicalKeyboardKey.keyC) &&
+        s.mode != SessionMode.battle) {
+      if (HardwareKeyboard.instance.isShiftPressed &&
+          key == LogicalKeyboardKey.tab) {
+        return true;
+      }
       toggleCharacter();
       return true;
     }
@@ -2767,7 +2858,7 @@ class SessionController extends StateNotifier<SessionView?> {
       _emit();
       return false;
     }
-    _step(step);
+    _commit(step);
     return true;
   }
 
@@ -3122,6 +3213,17 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Marca como visto lo que [npc] tiene para decir (diálogo).
   bool markNpcSeen(String npc) => residentOp(TownOp.seen, npc);
 
+  /// Cuenta una charla con [npc] (una por día; overworld_biomes.md § 12).
+  bool npcTalked(String npc) => residentOp(TownOp.talk, npc);
+
+  /// Invita al arraigado del bioma actual (dice que no y da su regalo).
+  bool nativeInvite() => _apply(TownAction(TownOp.nativeInvite, id: place));
+
+  /// Compra ([buy]) o vende [n] de [species] al arraigado del bioma.
+  bool nativeTrade(String species, int n, {required bool buy}) => _apply(
+      TownAction(TownOp.nativeTrade,
+          id: place, target: species, n: n, x: buy ? 1 : 0));
+
   void toggleStash() {
     if (isRun) return; // la Travesía no tiene alijo
     if (_panel == WorldPanel.stash) {
@@ -3424,9 +3526,11 @@ class SessionController extends StateNotifier<SessionView?> {
       net!.sendAction(action);
       return true;
     }
-    final step = engine.apply(s, localId, action);
-    if (step == null) return false;
-    _step(step);
+    final w = _w;
+    if (w == null) return false;
+    final ws = _we.apply(w, localId, action);
+    if (ws == null) return false;
+    _world(ws);
     return true;
   }
 
@@ -3436,10 +3540,52 @@ class SessionController extends StateNotifier<SessionView?> {
     if (actorId == localId) return _apply(action);
     final s = _s;
     if (s == null || isClient) return false;
-    final step = engine.applyFor(s, localId, actorId, action);
-    if (step == null) return false;
-    _step(step);
+    final w = _w;
+    if (w == null) return false;
+    final ws = _we.apply(w, localId, action, actorId: actorId);
+    if (ws == null) return false;
+    _world(ws);
     return true;
+  }
+
+  /// Host / local: las instancias de la sala (free_movement.md § 2).
+  SessionWorld? _w;
+  late final WorldEngine _we = WorldEngine(engine);
+
+  /// Eventos sin difundir por cliente (cada uno, los de su instancia).
+  final _unsentBy = <String, List<SessionEvent>>{};
+
+  /// Host: aplica un paso del mundo; la vista es la instancia local.
+  void _world(WorldStep ws) {
+    final w = _w!;
+    for (final e in ws.events.entries) {
+      if (e.key == localId) continue;
+      _unsentBy.putIfAbsent(e.key, () => []).addAll(e.value);
+    }
+    _step(SessionStep(w.sessionOf(localId) ?? w.town, ws.eventsFor(localId)));
+  }
+
+  /// Host: un paso calculado sobre la instancia local (compañeros,
+  /// Travesía retomada).
+  void _commit(SessionStep step) {
+    final w = _w;
+    final key = w?.roomOf(localId);
+    if (w == null || key == null || isClient) {
+      _step(step);
+      return;
+    }
+    _world(_we.commit(w, key, step));
+  }
+
+  /// Cambia lo común en todas las instancias (o en la sala sola).
+  void _setAll(GameSession Function(GameSession) f) {
+    final w = _w;
+    if (w == null) {
+      if (_s case final s?) _s = f(s);
+      return;
+    }
+    _we.setAll(w, f);
+    _s = w.sessionOf(localId) ?? w.town;
   }
 
   // ------------------------------------------------------------------
@@ -3452,7 +3598,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _settleRun();
     _sendPrep();
     if (step.state.battle case final b?) _lastBattle = b.state;
-    if (role == SessionRole.host) _unsent.addAll(step.events);
+    if (role == SessionRole.host && _w == null) _unsent.addAll(step.events);
     var forceSave = false;
     var worldSave = false;
     // Un mismo tick puede traer varios pasos de batalla (p. ej. el turno
@@ -3706,7 +3852,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if (mode == SessionMode.prep &&
         (_panel == null ||
             _panel == WorldPanel.missionBoard ||
-            _panel == WorldPanel.armory)) {
+            _panel == WorldPanel.armory ||
+            _panel == WorldPanel.forge)) {
       _panel = WorldPanel.prep;
     }
     if (_panel == WorldPanel.prep && mode != SessionMode.prep) _panel = null;
@@ -3718,6 +3865,8 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastMode = mode;
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
+            _panel == WorldPanel.workshop ||
+            _panel == WorldPanel.forge ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
@@ -3728,7 +3877,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.questLog ||
             _panel == WorldPanel.helper) &&
         mode != SessionMode.lobby &&
-        !(_panel == WorldPanel.armory && _runShopOpen(s))) {
+        !((_panel == WorldPanel.armory || _panel == WorldPanel.forge) &&
+            _runShopOpen(s))) {
       _panel = null;
     }
     if (_panel == WorldPanel.party && !canEditParty) _panel = null;
@@ -3791,6 +3941,8 @@ class SessionController extends StateNotifier<SessionView?> {
   (WorldPrompt?, String?) _prompt() {
     if (_panel != null || editingTown) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
+    if (nearForge) return (WorldPrompt.forge, null);
+    if (nearWorkshop) return (WorldPrompt.workshop, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);

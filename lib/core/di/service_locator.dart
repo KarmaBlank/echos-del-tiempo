@@ -124,6 +124,7 @@ void registerSharedDependencies(
       devTools: FeatureFlags.instance.devTools,
       maxPlayers: FeatureFlags.instance.maxPlayers,
       gameMode: gameMode,
+      freeMovement: true,
     ),
   );
   // Cuenta con varios personajes y alijo (`account.json`, migra el

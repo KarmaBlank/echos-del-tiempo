@@ -169,7 +169,7 @@ class SessionSfx {
           PoiKind.shrine => Sfx.healSparkle,
           PoiKind.wind => Sfx.wind,
           PoiKind.waystone => Sfx.ascReveal,
-          PoiKind.brazier => Sfx.flare,
+          PoiKind.brazier || PoiKind.lantern => Sfx.flare,
           PoiKind.relic => Sfx.lootPickup,
         });
       default:

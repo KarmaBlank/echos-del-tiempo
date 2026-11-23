@@ -101,15 +101,19 @@ void main() {
       });
     }
 
-    testWidgets('PESCA Y CULTIVO cosechas a $w', (tester) async {
+    testWidgets('OFICIOS inventario cosechas a $w', (tester) async {
       await pumpPanel(tester,
           profile: _profile(),
           sprites: await _sprites(tester),
           build: (v, c) => CharacterPanel(
-              view: v, controller: c, initialTab: CharacterTab.lifeItems));
+              view: v, controller: c, initialTab: CharacterTab.oficios));
       tester.view.physicalSize = size;
       await tester.pump();
-      await tester.tap(find.byKey(const ValueKey('life-cat-cosechas')));
+      await tester.tap(find.byKey(const ValueKey('oficios-sub-inventario')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('oficio-bag-cultivo')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('oficio-filter-cosechas')));
       await tester.pump();
       await tester.tap(find.byKey(const ValueKey('life-crop-trigo_dorado-2')));
       await tester.pump();

@@ -23,7 +23,14 @@ class FarmingHostState {
   /// Último día del mundo procesado para los habitantes.
   int residentDay = 0;
 
-  void newStay() => charXp.clear();
+  /// Nueva estadía en el pueblo de [ids] (`null` = todos).
+  void newStay([Iterable<String>? ids]) {
+    if (ids == null) {
+      charXp.clear();
+    } else {
+      ids.forEach(charXp.remove);
+    }
+  }
 }
 
 extension _FarmingOp on _Op {
@@ -31,7 +38,8 @@ extension _FarmingOp on _Op {
   TuningDef get _fat => FarmingRules.t;
 
   /// El dueño del mundo: el primer humano de la sala (el anfitrión).
-  bool _isOwner(SessionPlayer p) => humans.firstOrNull?.id == p.id;
+  bool _isOwner(SessionPlayer p) =>
+      (s.ownerId ?? humans.firstOrNull?.id) == p.id;
 
   /// Puede cambiar el pueblo (town_editor.md § 1.3): quien tiene el
   /// candado; sin candado, el dueño (compatibilidad con las acciones
@@ -729,7 +737,7 @@ extension _FarmingOp on _Op {
         final r = BiomeFisherRules.deliver(p.profile, s.town, biome, day);
         if (r == null) return false;
         _profileChange(p, r.$1, gain: true);
-        s.town = r.$2;
+        s.town = NpcTalkRules.onOrder(r.$2, biome);
         grantCharXp(p, r.$3);
         say('${p.name} le entregó el pedido a '
             '${kBiomeFishers[biome]?.name ?? 'el pescador'} (+${r.$3} XP).');
@@ -738,6 +746,41 @@ extension _FarmingOp on _Op {
           say('${p.name} subió Pesca a nivel $lv1.');
           lifeLevelXp(p, lv1);
         }
+        return true;
+      case TownOp.talk:
+        // Charla con un habitante (overworld_biomes.md § 12): una por día.
+        final id = a.id;
+        if (id == null || p.isCompanion) return false;
+        final t = NpcTalkRules.talk(s.town, id, math.max(1, s.town.sky.day));
+        if (t == null) return false;
+        s.town = t;
+        return true;
+      case TownOp.nativeInvite:
+        final biome = a.id;
+        if (biome == null || s.place != biome || p.isCompanion) return false;
+        final lv0 = FishingRules.level(p.profile);
+        final r = NpcTalkRules.invite(p.profile, s.town, biome);
+        if (r == null) return false;
+        _profileChange(p, r.$1, gain: true);
+        s.town = r.$2;
+        final d = kNpcTalks[nativeId(biome)];
+        say('${kBiomeFishers[biome]?.name ?? 'El pescador'} no se muda, '
+            'pero le dio a ${p.name}: ${d?.gift ?? 'un regalo'}.');
+        final lv1 = FishingRules.level(p.profile);
+        if (lv1 > lv0) {
+          say('${p.name} subió Pesca a nivel $lv1.');
+          lifeLevelXp(p, lv1);
+        }
+        return true;
+      case TownOp.nativeTrade:
+        final biome = a.id, sp = a.target;
+        if (biome == null || sp == null || s.place != biome) return false;
+        if (p.isCompanion) return false;
+        final r = NpcTalkRules.trade(
+            p.profile, s.town, biome, sp, a.n, math.max(1, s.town.sky.day),
+            buy: a.x == 1);
+        if (r == null) return false;
+        _profileChange(p, r);
         return true;
       case TownOp.stock:
         final sp = a.id;

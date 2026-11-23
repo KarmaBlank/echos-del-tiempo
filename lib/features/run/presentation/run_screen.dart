@@ -98,13 +98,13 @@ class RunScreen extends StatelessWidget {
         ],
       );
 
-  /// PERSONAJE [C] e INVENTARIO [I] (las mismas teclas que en el Mundo).
+  /// PERSONAJE [TAB] y EQUIPAMIENTO [I] (las mismas teclas que en el Mundo).
   Widget _character() => Wrap(spacing: DsSpace.sm, children: [
-        DsButton('PERSONAJE [C]',
+        DsButton('PERSONAJE [TAB]',
             key: const ValueKey('run-open-character'),
             tooltip: 'Atributos, arma, ULT, mejoras y objetos de la run',
             onPressed: () => controller.openPanel(WorldPanel.character)),
-        DsButton('INVENTARIO [I]',
+        DsButton('EQUIPAMIENTO [I]',
             key: const ValueKey('run-open-inventory'),
             tooltip: 'Equipar armas, usar pociones y ordenar el bolso',
             onPressed: () => controller.openPanel(WorldPanel.inventory)),
@@ -273,9 +273,9 @@ class RunScreen extends StatelessWidget {
                 key: const ValueKey('run-open-shop'),
                 onPressed: () => controller.openPanel(WorldPanel.armory)),
           if (type == RunNodeType.armeria)
-            DsButton('ABRIR ARMERÍA',
+            DsButton('ABRIR FORJA',
                 key: const ValueKey('run-open-armory'),
-                onPressed: () => controller.openPanel(WorldPanel.armory)),
+                onPressed: () => controller.openPanel(WorldPanel.forge)),
           DsButton('LISTO',
               key: const ValueKey('run-ready'),
               kind: DsButtonKind.primary,
@@ -310,7 +310,7 @@ class RunScreen extends StatelessWidget {
       SizedBox(height: DsSpace.md),
       const DsSectionHeader('MEJORAR HABILIDADES'),
       Text(
-          'El arma (y lo que trae) se mejora en ABRIR ARMERÍA → FORJA. Acá, '
+          'El arma (y lo que trae) se mejora en ABRIR FORJA → MEJORAR. Acá, '
           'cada nivel suma +$pct % de poder a una habilidad libre (hasta '
           '+${RunTuning.skillUpMax}).',
           style: DsText.detail()),

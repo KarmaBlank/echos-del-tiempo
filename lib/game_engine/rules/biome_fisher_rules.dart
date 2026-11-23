@@ -6,6 +6,7 @@ import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'fishing_rules.dart';
+import 'npc_talk_rules.dart';
 import 'resident_rules.dart';
 
 /// Pescador nativo de un bioma (fishing.md § 12): camina por la orilla
@@ -98,6 +99,13 @@ abstract final class BiomeFisherRules {
     );
   }
 
+  /// Oro del pedido con su favor (overworld_biomes.md § 12.3): después de
+  /// invitarlo, paga [NpcTalkRules.favorGold] veces.
+  static int favorGold(TownState s, String biome, int gold) =>
+      NpcTalkRules.declined(s, biome)
+          ? (gold * NpcTalkRules.favorGold).round()
+          : gold;
+
   /// Por qué [p] no puede entregar hoy (o `null`).
   static String? cannot(PlayerProfile p, TownState s, String biome, int day) {
     final r = request(biome, day, FishingRules.level(p));
@@ -124,7 +132,7 @@ abstract final class BiomeFisherRules {
     if (taken == null) return null;
     final w = reward(r, lv);
     final prof = taken.copyWith(
-        credits: taken.credits + w.gold,
+        credits: taken.credits + favorGold(s, biome, w.gold),
         life: taken.life.copyWith(fishXp: taken.life.fishXp + w.fishXp));
     return (
       prof,

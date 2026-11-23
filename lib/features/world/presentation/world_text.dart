@@ -60,6 +60,8 @@ String poiPromptText(MapPoi p, MissionRun m, MapFloor f, double time) {
       return '[E] Abrir el atajo';
     case PoiKind.brazier:
       return '[E] Encender el brasero';
+    case PoiKind.lantern:
+      return '[E] Encender el farol';
     case PoiKind.shrine:
       final b = kBlessings[
           BlessingKind.values[p.variant % BlessingKind.values.length]]!;

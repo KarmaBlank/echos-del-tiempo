@@ -462,7 +462,7 @@ void main() {
             await tester.pumpWidget(const SizedBox());
 
             await pump((v, c) =>
-                ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+                ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
             await tapVisible(
                 tester, find.byKey(const ValueKey('bench-weapon-r1')));
             await tapVisible(tester, find.byKey(const ValueKey('bench-next')));

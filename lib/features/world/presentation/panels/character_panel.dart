@@ -2,8 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'fishing_widgets.dart' show lifeSkillsLine;
-import 'life_items_view.dart';
-import 'life_skills_view.dart';
+import 'oficios_view.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
 
 import '../../../../app/design/design.dart';
@@ -71,17 +70,14 @@ enum CharacterTab {
           'completo; después, la mitad. Nada cambia hasta CONFIRMAR.'),
   oficios(
       'OFICIOS',
-      'Pesca y Cultivo: nivel, XP y un árbol por oficio. 1 punto por nivel '
-          'de oficio; algunos nodos se excluyen entre sí. Reiniciar es gratis.'),
+      'HABILIDADES: nivel, XP y un árbol por oficio (1 punto por nivel; '
+          'reiniciar es gratis). INVENTARIO: las bolsas de Pesca, Cultivo y '
+          'Herrería, 40 casillas cada una. Solo en el pueblo.'),
   inventory(
-      'INVENTARIO',
+      'EQUIPAMIENTO',
       'Arrastra para mover · clic para ver · clic derecho (o Enter): '
           'acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a '
           'mano.'),
-  lifeItems(
-      'PESCA Y CULTIVO',
-      'Herramientas de oficio, pescados, semillas, abonos y cosechas. No '
-          'ocupan casilleros del inventario. Solo en el pueblo.'),
   tree(
       'ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Clic en un nodo lejano: tomar el '
@@ -138,8 +134,10 @@ class CharacterPanel extends StatefulWidget {
   static const help = '<b>Personaje</b><br>'
       '<span class="k">ATRIBUTOS</span>: reparte los puntos de nivel; a la '
       'derecha ves cómo cambian tus stats antes de confirmar.<br>'
-      '<span class="k">INVENTARIO</span> (tecla I): tus objetos; equipa, '
+      '<span class="k">EQUIPAMIENTO</span> (tecla I): tus objetos; equipa, '
       'compara, tira o da a un compañero.<br>'
+      '<span class="k">OFICIOS</span>: árboles y bolsas de Pesca, Cultivo '
+      'y Herrería.<br>'
       '<span class="k">ÁRBOL</span>: pasivas de clase.<br>'
       '<span class="k">FILTRO</span>: qué loot ves y cómo se marca.<br>'
       'Reiniciar puntos o árbol es gratis (salvo en batalla).';
@@ -204,16 +202,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
               stats: rules.derivedStats(prof),
               sprites: ref.watch(gameSpritesProvider).valueOrNull,
               sfx: ref.read(sfxServiceProvider))),
-      CharacterTab.oficios => LifeSkillsView(
+      CharacterTab.oficios => OficiosView(
           key: ValueKey('oficios-${view.actorId}'),
           profile: prof,
-          editBlocked: view.session.battle != null ? 'En batalla' : null,
-          onTake: c.takeLifeNode,
-          onReset: c.resetLifeTree),
-      CharacterTab.lifeItems => LifeItemsView(
-          key: ValueKey('life-items-${view.actorId}'),
-          profile: prof,
           controller: c,
+          editBlocked: view.session.battle != null ? 'En batalla' : null,
           inTown: view.session.mode == SessionMode.lobby &&
               view.session.run == null),
       CharacterTab.filter => LootFilterTab(
@@ -366,6 +359,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
             _ => CharacterPanel.help,
           }}<br><br><span class="k">${tab.label}</span>: ${protoEsc(tab.hint)}',
           onClose: close,
+          // Tab abre y cierra PERSONAJE (panels.md § "Personaje").
+          closeOnTab: true,
           // Flexible: con texto grande baja de línea en vez de desbordar.
           // Jerarquía por color: nombre en Cuerpo, clase en Subtítulo,
           // maestría y XP en Detalle (sin negritas).

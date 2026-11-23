@@ -199,8 +199,8 @@ CONFIRMAR MEJORA / CANCELAR.
 
 ### 2.5 Vista previa animada (v0.19.1)
 
-Pedido del dueño. Al lado del repertorio (ventana ancha, ≥ 760 px de
-panel) o arriba de la lista (angosta) hay una **mini escena de
+Pedido del dueño. En la columna PREVISUALIZACIÓN de la tabla de la
+pestaña ULT (v0.32.5, panels.md § Pestaña ULT) hay una **mini escena de
 batalla** en loop de la ULT elegida en la lista o bajo el mouse (filas
 del repertorio y de LAS 50 ULT), además del texto de siempre:
 

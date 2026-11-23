@@ -78,8 +78,10 @@ abstract class NetSession {
   void sendAction(SessionAction action);
 
   /// Host: manda el estado completo y los eventos ocurridos desde el
-  /// envío anterior a todos los clientes unidos.
-  void broadcast(GameSession state, List<SessionEvent> events);
+  /// envío anterior a todos los clientes unidos, o solo a [only]
+  /// (free_movement.md § 3: cada cliente recibe su instancia).
+  void broadcast(GameSession state, List<SessionEvent> events,
+      {Set<String>? only});
 
   /// Cierra la sala o sale de ella. Idempotente.
   Future<void> disconnect();

@@ -9,6 +9,9 @@ sea la línea de tiempo".
 
 ## 1. Opción en la sala
 
+> v0.33.0: "cooperativo" se mide en la instancia de la pelea
+> (free_movement.md): solo cuentan los humanos que están en esa mazmorra.
+
 El anfitrión elige "Modo de combate" en la preparación de la misión
 (`PrepPanel`, selector con flechas; el resto lo ve con "lo elige el
 anfitrión"). Cada opción tiene un tooltip de una línea (`CombatMode.tip`).

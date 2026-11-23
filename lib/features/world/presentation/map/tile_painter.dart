@@ -254,7 +254,7 @@ class TilePainter {
       case Tile.sign:
         _grass(c, th, px, py, h);
         _sign(c, px, py);
-      case Tile.house:
+      case Tile.house || Tile.workshop || Tile.shop:
         _grass(c, th, px, py, h);
       case Tile.spikes:
         // Púas de la Prueba: placa de metal y púas que suben y bajan.
@@ -372,6 +372,10 @@ class TilePainter {
       case Tile.brazier || Tile.brazierLit:
         floor();
         _brazier(c, px, py, t, lit: ch == Tile.brazierLit);
+      // Farol de mazmorra oscura (lighting.md § 5.5): como el faro.
+      case Tile.lantern || Tile.lanternLit:
+        floor();
+        faro(c, px, py, t, lit: ch == Tile.lanternLit);
       // Recolectable de un exterior (overworld_biomes.md § 3.2).
       case Tile.forage || Tile.forageUsed:
         _grass(c, th, px, py, h);
@@ -440,6 +444,8 @@ class TilePainter {
             Tile.rock ||
             Tile.sign ||
             Tile.house ||
+            Tile.workshop ||
+            Tile.shop ||
             Tile.forage ||
             Tile.forageUsed:
         return false;
@@ -476,7 +482,9 @@ class TilePainter {
             Tile.waystoneOn ||
             Tile.wind ||
             Tile.brazier ||
-            Tile.brazierLit:
+            Tile.brazierLit ||
+            Tile.lantern ||
+            Tile.lanternLit:
         return true;
       default:
         // Base de una entrada de zona (el arco va aparte) o desconocido.
@@ -502,7 +510,7 @@ class TilePainter {
         Tile.lava =>
           (0, 0, 0, 0),
         Tile.tree => (0, 1, 0, 0),
-        Tile.sign || Tile.house => (0, 0, 0, 0),
+        Tile.sign || Tile.house || Tile.workshop || Tile.shop => (0, 0, 0, 0),
         _ when Tile.entranceZone(ch) != null => (0, 0, 0, 0),
         _ when !handles(ch) => (0, 0, 0, 0),
         // Suelo y todo lo que se apoya en él (muros, PdI, mostradores...).
@@ -532,6 +540,8 @@ class TilePainter {
         Tile.fishing,
         Tile.sign,
         Tile.house,
+        Tile.workshop,
+        Tile.shop,
         Tile.spikes,
         Tile.pulse,
         Tile.grass,

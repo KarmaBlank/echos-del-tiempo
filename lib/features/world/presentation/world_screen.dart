@@ -17,7 +17,6 @@ import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
-import '../../../game_engine/rules/run_rules.dart';
 import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
@@ -35,6 +34,7 @@ import '../../endgame/domain/endgame_text.dart';
 import '../../endgame/presentation/eco_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
+import '../../inventory/presentation/workshop_panel.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/domain/mission_text.dart';
@@ -1034,16 +1034,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           onCharacter: () => controller.openPanel(WorldPanel.character),
         );
       case WorldPanel.armory:
-        // Travesía: la armería del mapa abre en FORJA.
-        final run = s.run;
-        final forge = run != null &&
-            run.phase == RunPhase.stop &&
-            run.node != null &&
-            RunRules.floorOf(run).node(run.node!).type == RunNodeType.armeria;
-        return ArmoryPanel(
-            view: view,
-            controller: controller,
-            initialTab: forge ? ArmoryTab.forge : ArmoryTab.buy);
+        return ArmoryPanel(view: view, controller: controller);
+      case WorldPanel.forge:
+        return ForgePanel(view: view, controller: controller);
+      case WorldPanel.workshop:
+        return WorkshopPanel(view: view, controller: controller);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.lostLoot:
@@ -1157,6 +1152,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               // Las pestañas de la armería (en `prep` la del lobby no se abre).
               shopTabs: [
                 for (final t in ArmoryTab.values)
+                  t.spec(() => ShopContext(view, controller)),
+                for (final t in ForgeHallTab.values)
                   t.spec(() => ShopContext(view, controller)),
               ],
             ));

@@ -52,16 +52,16 @@ void main() {
     test('texto del aviso', () {
       // Hito pendiente: aviso propio (progression_v2.md § 5).
       expect(const UnusedPoints(tree: 7, milestone: 10).toastText,
-          '¡Hito del nivel 10! Elegí tu keystone en ÁRBOL · [C]');
+          '¡Hito del nivel 10! Elegí tu keystone en ÁRBOL · [TAB]');
       expect(const UnusedPoints(tree: 2).toastText,
-          'Tenés 2 puntos de árbol sin usar · [C]');
+          'Tenés 2 puntos de árbol sin usar · [TAB]');
       expect(const UnusedPoints(tree: 1).toastText,
-          'Tenés 1 punto de árbol sin usar · [C]');
+          'Tenés 1 punto de árbol sin usar · [TAB]');
       expect(const UnusedPoints(ascension: 2).toastText,
           'Tenés 2 puntos de ascensión sin usar · Estatua del Tiempo');
       expect(
           const UnusedPoints(tree: 1, ascension: 2).toastText,
-          'Tenés 1 punto de árbol y 2 puntos de ascensión sin usar · [C] · '
+          'Tenés 1 punto de árbol y 2 puntos de ascensión sin usar · [TAB] · '
           'ascensión: Estatua del Tiempo');
       expect(UnusedPoints.none.toastText, isNull);
     });
@@ -75,9 +75,9 @@ void main() {
       expect(u.companions, [('Leo', 3)], reason: 'Mia no tiene puntos');
       expect(u.parts, ['2 puntos de árbol', 'Leo: 3 puntos']);
       expect(u.toastText,
-          'Tenés 2 puntos de árbol sin usar · Leo tiene 3 puntos sin usar · [C]');
+          'Tenés 2 puntos de árbol sin usar · Leo tiene 3 puntos sin usar · [TAB]');
       expect(UnusedPoints.none.withCompanions([('Leo', 1)]).toastText,
-          'Leo tiene 1 punto sin usar · [C]');
+          'Leo tiene 1 punto sin usar · [TAB]');
       expect(UnusedPoints.none.withCompanions([('Leo', 1)]).any, isTrue);
       expect(u, const UnusedPoints(tree: 2).withCompanions([('Leo', 3)]));
       expect(u == const UnusedPoints(tree: 2), isFalse);
@@ -164,7 +164,7 @@ void main() {
           .pumpWidget(_app(_toast(const UnusedPoints(tree: 2), level: 6)));
       await tester.pump(const Duration(milliseconds: 300));
       expect(
-          find.text('Tenés 2 puntos de árbol sin usar · [C]'), findsOneWidget);
+          find.text('Tenés 2 puntos de árbol sin usar · [TAB]'), findsOneWidget);
       await tester.pump(UnusedPointsToast.shown);
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('hud-points-toast')), findsNothing);
@@ -181,7 +181,7 @@ void main() {
       await tester.pumpWidget(
           _app(_toast(UnusedPoints.none.withCompanions([('Leo', 3)]))));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Leo tiene 3 puntos sin usar · [C]'), findsOneWidget);
+      expect(find.text('Leo tiene 3 puntos sin usar · [TAB]'), findsOneWidget);
     });
 
     testWidgets('espera a que termine el reparto (bloqueado)', (tester) async {
@@ -196,7 +196,7 @@ void main() {
           .pumpWidget(_app(_toast(const UnusedPoints(tree: 2), level: 6)));
       await tester.pump(const Duration(milliseconds: 300));
       expect(
-          find.text('Tenés 2 puntos de árbol sin usar · [C]'), findsOneWidget);
+          find.text('Tenés 2 puntos de árbol sin usar · [TAB]'), findsOneWidget);
       await tester.pump(UnusedPointsToast.shown);
     });
 
@@ -211,7 +211,7 @@ void main() {
   });
 
   group('en el juego', () {
-    testWidgets('HUD: PERSONAJE [C] +N abre el panel; pestañas con +N',
+    testWidgets('HUD: PERSONAJE [TAB] +N abre el panel; pestañas con +N',
         (tester) async {
       // Nivel 6 sin repartir: 5 de árbol (1 por nivel, progresión v2; y
       // los de atributos del nivel).

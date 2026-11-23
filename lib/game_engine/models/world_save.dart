@@ -3,11 +3,13 @@
 library;
 
 import 'farm_plot.dart';
+import 'npc_bond.dart';
 import 'resident.dart';
 import 'sky.dart';
 import 'town_build.dart';
 
 export 'farm_plot.dart';
+export 'npc_bond.dart';
 export 'resident.dart';
 export 'sky.dart';
 export 'town_build.dart';
@@ -46,7 +48,18 @@ class TownState {
       this.lights = const [],
       this.sky = const SkyState(),
       this.residents = const {},
-      this.daily = const {}});
+      this.daily = const {},
+      this.bonds = const {}});
+
+  /// Lazos con los habitantes (overworld_biomes.md § 12): charlas y,
+  /// para los arraigados, amistad y pedidos. JSON `nat`.
+  final Map<String, NpcBond> bonds;
+
+  /// El lazo con [npc] (vacío si todavía no hay nada).
+  NpcBond bond(String npc) => bonds[npc] ?? NpcBond(npc);
+
+  /// [b] guardado (por su id).
+  TownState withBond(NpcBond b) => copyWith(bonds: {...bonds, b.npc: b});
 
   /// Topes del día del mundo (roles.md § 3 y § 4), guardados en el mundo
   /// para que reabrir la sala no los reinicie: `<jugador>:<día>` → XP de
@@ -196,6 +209,7 @@ class TownState {
     Map<String, int>? wild,
     Map<String, ResidentState>? residents,
     Map<String, int>? daily,
+    Map<String, NpcBond>? bonds,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -209,7 +223,8 @@ class TownState {
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
         residents: residents ?? this.residents,
-        daily: daily ?? this.daily);
+        daily: daily ?? this.daily,
+        bonds: bonds ?? this.bonds);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -238,6 +253,10 @@ class TownState {
               residents[k]!.toJson()
           ],
         if (daily.isNotEmpty) 'dy': daily,
+        if (bonds.isNotEmpty)
+          'nat': [
+            for (final k in (bonds.keys.toList()..sort())) bonds[k]!.toJson()
+          ],
       };
 
   /// [r] guardado (por su id).
@@ -329,6 +348,12 @@ class TownState {
           ? {
               for (final e in (raw['dy'] as Map).entries)
                 if (e.value is num) '${e.key}': (e.value as num).round(),
+            }
+          : const {},
+      bonds: raw['nat'] is List
+          ? {
+              for (final v in raw['nat'] as List)
+                if (NpcBond.fromJson(v) case final b?) b.npc: b,
             }
           : const {},
     );

@@ -1,3 +1,4 @@
+import 'oficio_storage_rules.dart';
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
@@ -37,6 +38,8 @@ import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
+import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
+import 'npc_talk_rules.dart';
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
@@ -142,6 +145,7 @@ class SessionEngine {
     this.achievementsEnabled = true,
     this.cinematics,
     this.gameMode = GameModeKind.mundo,
+    this.freeMovement = false,
   })  : nowSeconds = nowSeconds ??
             (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
         tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
@@ -153,6 +157,11 @@ class SessionEngine {
   /// Versión del juego (docs/specs/roguelike.md § 9): la inyecta el
   /// composition root. En [GameModeKind.travesia] la sala juega la run.
   final GameModeKind gameMode;
+
+  /// Movimiento libre por jugador (docs/specs/free_movement.md): lo prende
+  /// el composition root. Apagado, `WorldEngine` deja una sola sala (el
+  /// flujo de votación de antes, que usan los tests viejos).
+  final bool freeMovement;
 
   /// Azar propio de los Jefes del Abismo (Fragmentos y recompensas
   /// exclusivas, docs/specs/abyss_bosses.md § 1.1): no mueve ninguna
@@ -176,7 +185,12 @@ class SessionEngine {
 
   /// Seguimiento de la batalla actual para las hazañas de combate (solo
   /// en el host; no viaja).
-  final achievementTracker = AchievementBattleTracker();
+  final _trackers = <String, AchievementBattleTracker>{};
+
+  /// Uno por instancia (free_movement.md § 2): dos peleas a la vez no se
+  /// mezclan.
+  AchievementBattleTracker trackerFor(String instance) =>
+      _trackers.putIfAbsent(instance, AchievementBattleTracker.new);
 
   /// Reglas de los Jefes del Abismo.
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
@@ -570,6 +584,60 @@ class SessionEngine {
   /// Solo del anfitrión.
   final runPreps = <String, RunPrep>{};
 
+  /// Pasa a [p] (que viene de otra instancia, free_movement.md § 2) a
+  /// [session]: aparece en la entrada del lugar, con la caña guardada; si
+  /// se está peleando, entra como refuerzo. `null` si ya está.
+  SessionStep? admit(GameSession session, SessionPlayer p, {String? text}) {
+    if (session.players.containsKey(p.id)) return null;
+    final op = _Op(this, session.copy());
+    op.admit(p.copy(), text: text);
+    return op.result;
+  }
+
+  /// Distancia (px) a la entrada del piso 1 para salir caminando.
+  static const exitReach = 28.0;
+
+  /// [id] puede salir solo de la mazmorra (free_movement.md § 2.4): en el
+  /// campo (nunca en batalla ni repartiendo puntos), vivo, sin resultado;
+  /// en la entrada del piso 1 o junto a una piedra de paso activada
+  /// ([poiId]).
+  bool canLeave(GameSession s, String id, {int? poiId}) {
+    final p = s.players[id];
+    final m = s.mission;
+    if (p == null ||
+        m == null ||
+        p.isCompanion ||
+        !p.alive ||
+        s.mode != SessionMode.field ||
+        s.result != null ||
+        s.run != null ||
+        s.tutorial != null) {
+      return false;
+    }
+    final map = mapFor(s);
+    final f = map.floor(m.floor);
+    if (poiId == null) {
+      if (m.floor != 0) return false;
+      final sp = f?.spawn ?? map.spawn;
+      return _Op._dist(p.x, p.y, sp.x, sp.y) <= exitReach;
+    }
+    final poi = f?.poi(poiId);
+    return f != null &&
+        poi != null &&
+        poi.kind == PoiKind.waystone &&
+        m.poiUsed.contains(poi.id) &&
+        identical(ExplorationRules.usable(f, m, p.x, p.y), poi);
+  }
+
+  /// Saca a [id] de [session] porque se va a otra instancia (sin el
+  /// "salió de la sala"). `null` si no estaba.
+  SessionStep? release(GameSession session, String id, {String? text}) {
+    if (!session.players.containsKey(id)) return null;
+    final op = _Op(this, session.copy());
+    op.release(id, text: text);
+    return op.result;
+  }
+
   SessionStep? removePlayer(GameSession session, String id) {
     if (!session.players.containsKey(id)) return null;
     final op = _Op(this, session.copy());
@@ -604,7 +672,14 @@ class SessionEngine {
     final op = _Op(this, session.copy());
     final p = op.s.players[playerId]!;
     final before = p.profile;
+    final snap = op.snapshot();
     if (!op.apply(p, action)) return null;
+    // Bolsas de oficio llenas: la compra no se hace (oficio_storage.md).
+    if (OficioStorageRules.isPurchase(action) &&
+        OficioStorageRules.overflows(before, p.profile)) {
+      return null;
+    }
+    op.settleOficios(snap);
     op.learnEarnedUlts(p);
     op.achievements(actor: p, action: action, before: before);
     return op.result;
@@ -612,10 +687,16 @@ class SessionEngine {
 
   /// `hostTick`: avanza [dt] segundos. Con la sala pausada no avanza
   /// nada (ni reloj, ni misión, ni campo, ni turnos).
-  SessionStep tick(GameSession session, double dt) {
+  ///
+  /// [world]: corre también el reloj del pueblo (huerta, cielo, ayudantes,
+  /// habitantes). Con varias instancias (free_movement.md § 2) solo la del
+  /// pueblo lo hace, una vez por tick.
+  SessionStep tick(GameSession session, double dt, {bool world = true}) {
     if (session.paused) return SessionStep(session, const []);
     final op = _Op(this, session.copy());
-    op.tick(dt);
+    final snap = op.snapshot();
+    op.tick(dt, world: world);
+    op.settleOficios(snap);
     op.achievements();
     return op.result;
   }
@@ -680,6 +761,27 @@ class _Op {
   Iterable<SessionPlayer> get humans => players.where((p) => !p.isCompanion);
 
   void say(String text) => events.add(SystemMessageEvent(text));
+
+  /// Perfiles antes del paso, para [settleOficios].
+  Map<String, PlayerProfile> snapshot() =>
+      {for (final p in players) p.id: p.profile};
+
+  /// Vende solo lo nuevo que no entra en una bolsa de oficio llena
+  /// (docs/specs/oficio_storage.md § 3).
+  void settleOficios(Map<String, PlayerProfile> before) {
+    for (final p in players) {
+      final b = before[p.id];
+      if (b == null || identical(b, p.profile)) continue;
+      if (!OficioStorageRules.overflows(b, p.profile)) continue;
+      final r = OficioStorageRules.settle(b, p.profile);
+      p.profile = r.profile;
+      if (r.sold.isNotEmpty) {
+        say('Bolsa de oficio llena: ${p.name} vendió '
+            '${r.sold.map(OficioStorageRules.name).join(', ')} '
+            '(+${r.gold} de oro).');
+      }
+    }
+  }
 
   // ---------------- ULT v2 (ultimates_v2.md § 2) ----------------
 
@@ -840,6 +942,42 @@ class _Op {
           'y recuperaste ${raw.treeRefunded} '
           'punto${raw.treeRefunded == 1 ? '' : 's'}.');
     }
+  }
+
+  void admit(SessionPlayer p, {String? text}) {
+    final sp = spawnPos(s.players.length);
+    p
+      ..x = sp.x
+      ..y = sp.y
+      ..epoch += 1
+      ..moving = false
+      ..fishLine = null
+      ..levelUpPending = false
+      ..trail = const [];
+    refresh(p);
+    if (s.mode == SessionMode.lobby || s.mode == SessionMode.prep) fill(p);
+    final b = s.battle;
+    if (s.mode == SessionMode.battle && b != null) {
+      b.state = e.battles
+          .join(b.state, e.partyMember(p, blessing: s.mission?.blessing),
+              delay: s.tutorial == null ? BiomeRules.reinforceDelay : 0)
+          .state;
+      say('${p.name} llega como refuerzo: actúa después de una espera.');
+    }
+    s.players[p.id] = p;
+    events.add(PlayerJoinedEvent(p.id));
+    if (text != null) say(text);
+  }
+
+  void release(String id, {String? text}) {
+    s.players.remove(id);
+    if (s.townEditor == id) s.townEditor = null;
+    e.fishing.newStay([id]);
+    s.leaveReady.remove(id);
+    final b = s.battle;
+    if (b != null) b.state = e.battles.leave(b.state, id).state;
+    events.add(PlayerLeftEvent(id));
+    if (text != null) say(text);
   }
 
   void removePlayer(String id) {
@@ -1146,6 +1284,9 @@ class _Op {
             LifeTreeAction():
         return farmingAction(p, a);
 
+      // Salir solo de la mazmorra lo resuelve WorldEngine (free_movement.md).
+      case LeaveDungeonAction():
+        return false;
       case TravelAction() || ForageAction():
         return biomeAction(p, a);
 
@@ -1372,9 +1513,9 @@ class _Op {
     for (final ev in events) {
       switch (ev) {
         case BattleStartedEvent():
-          e.achievementTracker.reset();
+          e.trackerFor(s.instance).reset();
         case BattleStepEvent(events: final list):
-          rules.fromBattle(hits, list, e.achievementTracker,
+          rules.fromBattle(hits, list, e.trackerFor(s.instance),
               isPlayer: (id) => s.players.containsKey(id),
               isBoss: (id) => battle?.byId(id)?.boss ?? false,
               skill: (id) => catalog.skills[id]);
@@ -2224,10 +2365,10 @@ class _Op {
 
   // ---------------- tick (`hostTick`) ----------------
 
-  void tick(double dt) {
+  void tick(double dt, {bool world = true}) {
     s.time += dt;
     releaseTownLock();
-    farmTick(dt);
+    if (world) farmTick(dt);
     final m = s.mission;
     if (m != null &&
         s.result == null &&
@@ -2970,6 +3111,9 @@ class _Op {
             ? (0, 0)
             : ExplorationRules.questProgress(q, m, f);
         say('${p.name} encendió un brasero ($a/$b).');
+      case PoiKind.lantern:
+        m.poiUsed.add(poi.id);
+        say('${p.name} encendió un farol.');
       case PoiKind.shrine:
         m.poiUsed.add(poi.id);
         _bless(BlessingKind.values[poi.variant % BlessingKind.values.length],
@@ -3916,8 +4060,9 @@ class _Op {
 
   /// `toLobby`.
   void toLobby() {
-    e.fishing.newStay();
-    e.farming.newStay();
+    final ids = [for (final p in players) p.id];
+    e.fishing.newStay(ids);
+    e.farming.newStay(ids);
     s
       ..eco = null
       ..ecoOwner = null

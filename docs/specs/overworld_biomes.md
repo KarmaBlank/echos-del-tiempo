@@ -19,15 +19,15 @@ Bosque, peces y semillas), `lib/game_engine/rules/biome_rules.dart`
 - Lista los lugares de `kBiomes`, en orden: PUEBLO, BOSQUE, RUINAS,
   CAVERNAS, GRIETA y ABISMO (v0.29.0). Un bioma todavía cerrado muestra el
   botón gris "ZONA N" con el tooltip "Se abre al llegar a la zona N".
-- El lugar actual muestra ACÁ. VIAJAR solo lo puede tocar el dueño del
-  mundo (el anfitrión o quien juega solo); al resto el botón le queda gris
-  con el tooltip "Decide el anfitrión".
+- El lugar actual muestra ACÁ. VIAJAR lo toca cualquiera y mueve solo a
+  quien lo toca (v0.33.0, free_movement.md).
 - Viaje instantáneo (sin cinemática en esta pasada).
 
 ### 1.1 Desbloqueo (v0.29.0)
 - Cada bioma tiene dos zonas (`BiomeDef.zones`); se puede viajar cuando el
-  dueño del mundo tiene desbloqueada la primera (`unlockedZone >=
-  zones.first`). Lo valida el anfitrión con su perfil (`canTravelTo`).
+  jugador que viaja tiene desbloqueada la primera (`unlockedZone >=
+  zones.first`). Lo valida el anfitrión con el perfil de quien viaja
+  (`canTravelTo`, v0.33.0).
 - BOSQUE 1-2, RUINAS 3-5, CAVERNAS 4-6, GRIETA 7-8, ABISMO 9-10. Las
   familias de enemigos y su escala por nivel son las de cada zona.
 
@@ -85,16 +85,15 @@ muelles, ocho matas y dos entradas de mazmorra.
 
 ### 3.4 Entradas de mazmorra
 - Pradera Esmeralda (zona 1) y Bosque Hondo (zona 2), con el arco de
-  siempre (`ZoneEntrance`): E propone la misión de la zona o vota que sí,
+  siempre (`ZoneEntrance`): E entra directo (v0.33.0: sin votación; se suma a amigos que ya estén),
   con el desbloqueo de siempre. El tablero del pueblo sigue andando igual.
 
 ## 4. Party
 
-- Primera pasada: **todos viajan juntos**, lo decide el anfitrión
-  (`TravelAction`). Al viajar, todos aparecen alrededor de la llegada del
-  lugar.
-- Futuro (deuda): party dividida, `ubicación` por jugador
-  (`pueblo | bioma:<id> | mazmorra:<id>:<piso>`, town_loop.md § 11b).
+- Desde v0.33.0 (free_movement.md): **cada jugador va por su cuenta**.
+  `TravelAction` mueve solo a quien la manda (y a sus compañeros de
+  solitario). Pueblo, cada exterior y cada mazmorra son instancias
+  separadas; `GameSession.place` es el lugar de la instancia.
 
 ## 5. Refuerzos
 
@@ -189,8 +188,9 @@ estado va en `TownState.residents` (JSON `res`, se guarda en el mundo y
 viaja en el snapshot). Tunables en Editor → Balance → Pueblo (`res*`,
 `order*`, `com*`). Red: protocolo 51 (netcode.md).
 
-Pantalla del habitante (en su bioma o en el pueblo, E cerca): frase,
-relación, etapa y "Beneficio: …" con el del nivel siguiente; pestañas
+Pantalla del habitante (en su bioma o en el pueblo, E cerca): cuadro de
+diálogo con HABLAR (§ 12) y el resto de las opciones; en cada ventana,
+relación, etapa (solo si vive en el pueblo y estás ahí, § 12.1) y "Beneficio: …" con el del nivel siguiente; pestañas
 TIENDA, ENCARGOS, PEDIDOS (orden del día y pedido), REGALOS y CASA, cada
 una una grilla con el detalle a la derecha.
 
@@ -287,3 +287,76 @@ lo que alumbran los jugadores, las antorchas de pared y los braseros, y
 los enemigos fuera de la luz no se dibujan (los jefes sí). Los
 recolectables de los exteriores brillan un poco de noche. Detalle y
 números en lighting.md § 3 y § 5.3.
+
+## 12. Charla, arraigados y su puesto (v0.32.6)
+
+Todos los habitantes (los cinco que se mudan y los cinco pescadores
+nativos) usan el mismo cuadro de diálogo (`DsDialogueBox` +
+`DsChoiceMenu`, ui_minimal.md § 10). Todo lo que hacen (tienda,
+encargos, pedidos, regalos, casa, pedido del día, puesto, invitar) sale
+de una opción del menú; no hay textos de sistema en la pantalla ("No se
+muda al pueblo…" se fue).
+
+### 12.1 HABLAR
+- Opción HABLAR en todos, aparte de los encargos y la tienda. Cambia el
+  menú a los temas abiertos; cada tema es 1 o 2 frases cortas y algunos
+  abren sub-temas (VOLVER sube un nivel). Si quedan temas por abrir, un
+  "…" gris dice "Volvé otro día".
+- Datos en `kNpcTalks` (game_engine/data/npc_talk_catalog.dart): por
+  habitante, saludos, temas (`TalkTopic`: charlas, pedidos y relación
+  mínimos; dónde: siempre, solo en el bioma o solo en el pueblo) y, para
+  los arraigados, la respuesta a la invitación y el nombre del regalo.
+  Lore: solo docs/lore.md.
+- Al abrir el diálogo dice un saludo al azar (sus saludos + sus frases
+  de siempre). Si tiene un encargo nuevo para contarte, eso va primero
+  (roles.md § 8.4).
+- Abrir el diálogo cuenta una charla (`town {o: talk, id}`), una por día
+  del mundo y por habitante. Las charlas, los pedidos / encargos
+  cumplidos y la relación abren temas ("¿Vivís acá?" desde la segunda
+  charla). Reglas: `NpcTalkRules` (puras, con test).
+- La etapa ("Recién llegado", "Asentado", "Arraigado") es de la vida en
+  el pueblo: solo se ve con el habitante que vive en el pueblo y
+  hablándole en el pueblo (y en el diario si ya vive ahí). En su bioma
+  no aparece.
+
+### 12.2 Se mudan / arraigados
+| Habitante | Bioma | Tipo |
+|---|---|---|
+| Ilda, Velda, Kael, Brann, Oren | uno por bioma | Se mudan (§ 10) |
+| Nera de la Orilla | Bosque | Arraigada |
+| Tadeo Engranaje | Ruinas | Arraigado |
+| Sila Escarcha | Cavernas | Arraigada |
+| Bruno Brasa | Grieta | Arraigado |
+| Eco Viejo | Abismo | Arraigado |
+
+Criterio (para revisar con el dueño): los que tienen oficio para el
+pueblo (curar, archivar, entrenar, forjar, ver) se mudan; los pescadores
+viven atados a su lago, que es único de su bioma. Se cambia con
+`NpcTalkDef.rooted`.
+
+### 12.3 Invitar a un arraigado
+- Amistad propia (`NpcBond.rep`, JSON `town.nat`): +1 por charla del
+  día, +2 por pedido del día cumplido.
+- Con amistad `inviteRep` (8) y `inviteOrders` (3) pedidos cumplidos
+  aparece INVITAR AL PUEBLO (antes no se muestra). Dice que no con sus
+  palabras ("acá me siento bien, no me voy a mover") y le da al que
+  invita su regalo único, una sola vez por mundo
+  (`town {o: nativeInvite, id: bioma}`): 400 de oro, 150 de XP de Pesca,
+  1 punto de árbol y su favor: desde entonces su pedido del día paga
+  ×1,25 de oro. (El objeto único de un habitante que se muda sube un
+  nivel su beneficio; este regalo es un poco más grande a propósito.)
+
+### 12.4 Después: visitas y PUESTO
+- Sigue pidiendo un pez distinto cada día (fishing.md § 12), sigue
+  abriendo temas con las charlas.
+- PUESTO (solo después de la invitación): grilla con el detalle a la
+  derecha. Vende los peces comunes de su lago (precio × 3) y, cada 3 días
+  del mundo, una NOVEDAD: el pez más raro de su lago. Compra los peces de
+  su lago que tengas en la bolsa a precio × 1,5
+  (`town {o: nativeTrade, id: bioma, tg: pez, n, x: 1 compra / 0 venta}`).
+- Constantes en `NpcTalkRules` (todavía no en Balance).
+
+### 12.5 Red y guardado
+- Protocolo 56: `town.nat` (lista de
+  `{n, t, td, r, o, d}`) y `town` con `talk` / `nativeInvite` /
+  `nativeTrade`. Un mundo guardado sin `nat` carga con todo en cero.

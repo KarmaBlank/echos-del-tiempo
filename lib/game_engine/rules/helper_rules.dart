@@ -90,7 +90,7 @@ abstract final class HelperRules {
       final have = p.life.craft(e.key);
       if (have < e.value) {
         final n = kLifeMaterials[e.key]?.name ?? e.key;
-        return 'Falta $n ($have/${e.value}): se hace en CONDENSAR';
+        return 'Falta $n ($have/${e.value}): se hace en el TALLER DE OFICIOS';
       }
     }
     return null;

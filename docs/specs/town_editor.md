@@ -44,7 +44,7 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 | Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo (pasar el mouse ya lo muestra en el panel de info) |
 | Lago (o su cartel) | AGREGAR ESPECIES · MOVER · BORRAR LAGO |
 | Huerta (o su cartel) | MOVER · BORRAR |
-| Lugar fijo (fuente, portal, tablero, forja, estatua, comerciante, loot perdido) | MOVER (no se borran; § 3.3) |
+| Lugar fijo (fuente, portal, tablero, forja, estatua, comerciante, loot perdido, taller de oficios, armería) | MOVER (no se borran; § 3.3) |
 | Tile libre (pasto o árbol) | CONSTRUIR: lista del catálogo (§ 3) |
 
 MOVER y elegir qué construir dejan un fantasma que sigue al mouse
@@ -129,11 +129,17 @@ se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
 ### 3.3 Lugares fijos (v0.25.2)
 Todos los lugares de `TownLayout.landmarks` (FUENTE RÚNICA, PORTAL,
 TABLERO DE ENCARGOS, FORJA, ESTATUA DEL TIEMPO, el puesto del
-comerciante y LOOT PERDIDO) se pueden mover; nunca borrar. Id de
+comerciante, LOOT PERDIDO y, desde v0.32.3, TALLER DE OFICIOS y ARMERÍA) se pueden
+mover; nunca borrar. Id de
 edición: `@` + el `TownSpot` (`@forge`, `@fountain`, …). Mismo fantasma
 verde / rojo; la esquina va en el tile del mouse.
 - Posición: `TownPlan.landmarksOf(town)` (los movidos donde quedaron,
-  el resto en su lugar de siempre). De ahí salen el dibujo, las
+  el resto en su lugar de siempre). Pueblos guardados antes de v0.32.3:
+  el TALLER DE OFICIOS sin marca va a (6, 6) y la ARMERÍA a (26, 6)
+  (`TownLayout.lateSpots`, en ese orden); si ahí ya hay algo (una
+  construcción a menos de 2 tiles, un faro, un árbol, un camino fijo u
+  otro lugar movido a menos de 1), va al hueco libre más cercano
+  (distancia Manhattan) sin guardar marca, hasta que el dueño lo mueva. De ahí salen el dibujo, las
   etiquetas, los E (`WorldRules.townSpot` con `GameMap.townMarks`), los
   lugares reservados para construir y la aparición. El minimapa sale de
   los tiles, así que acompaña solo.

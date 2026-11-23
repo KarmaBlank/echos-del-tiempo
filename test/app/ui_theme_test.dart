@@ -430,8 +430,8 @@ void main() {
             await pumpPanel(tester,
                 profile: lootWarrior(),
                 textSize: size,
-                build: (v, c) => ArmoryPanel(
-                    view: v, controller: c, initialTab: ArmoryTab.fuse));
+                build: (v, c) => ForgePanel(
+                    view: v, controller: c, initialTab: ForgeHallTab.fuse));
             await tapVisible(
                 tester, find.byKey(const ValueKey('bench-weapon-r1')));
             await tapVisible(tester, find.byKey(const ValueKey('bench-next')));

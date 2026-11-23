@@ -160,7 +160,7 @@ class ToolHud extends StatelessWidget {
             slotW,
             'hud-tool-hoe',
             const ['Azada'],
-            'Azada: ${hoe?.name ?? f.hoe} · [Tab] o rueda: herramienta',
+            'Azada: ${hoe?.name ?? f.hoe} · [R] o rueda: herramienta',
             LifeIcon(f.hoe, LifeIconKind.herramienta, size: iconSize)),
         slot(
             FarmHand.seed,

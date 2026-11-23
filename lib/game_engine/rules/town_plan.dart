@@ -35,12 +35,75 @@ class TownPlan {
   /// pueblo base; town_editor.md § 3.3): los movidos donde los dejó el
   /// dueño, el resto en su lugar de siempre. Mismo orden que
   /// `TownLayout.landmarks` (la prioridad de las etiquetas).
-  static List<TownLandmark> landmarksOf(TownState s) => s.marks.isEmpty
+  ///
+  /// La ARMERÍA y el TALLER DE OFICIOS (v0.32.3, `TownLayout.lateSpots`)
+  /// llegaron después: en un pueblo guardado antes, si su lugar de
+  /// siempre ya está ocupado (una construcción, un faro, otro lugar
+  /// movido), sin marca propia van al hueco libre más cercano
+  /// (town_editor.md § 3.3).
+  static List<TownLandmark> landmarksOf(TownState s) {
+    var raw = _rawLandmarks(s);
+    for (final spot in TownLayout.lateSpots) {
+      final i = raw.indexWhere((l) => l.spot == spot);
+      final def = raw[i];
+      if (s.marks.containsKey(def.id)) continue;
+      if (!_blocked(s, raw, def.x, def.y, def)) continue;
+      final (x, y) = _freeSpot(s, raw, def);
+      raw = [...raw]..[i] = def.at(x, y);
+    }
+    return raw;
+  }
+
+  static List<TownLandmark> _rawLandmarks(TownState s) => s.marks.isEmpty
       ? TownLayout.landmarks
       : [
           for (final l in TownLayout.landmarks)
             if (s.marks[l.id] case (final x, final y)) l.at(x, y) else l,
         ];
+
+  /// ¿El lugar [l] con su esquina en ([x], [y]) pisa algo de [s]?
+  static bool _blocked(
+      TownState s, List<TownLandmark> raw, int x, int y, TownLandmark l) {
+    final r = TownRect(x, y, l.w, l.h);
+    final (ox, oy) = s.origin;
+    if (x + ox < 2 ||
+        y + oy < 2 ||
+        r.right + ox > widthOf(s) - 2 ||
+        r.bottom + oy > heightOf(s) - 2) {
+      return true;
+    }
+    for (final o in raw) {
+      if (o.spot == l.spot) continue;
+      if (TownRect(o.x, o.y, o.w, o.h).inflate(1).overlaps(r)) return true;
+    }
+    for (final p in _fixedPathsOf(s, raw)) {
+      if (p.overlaps(r)) return true;
+    }
+    for (final b in s.builds) {
+      if (b.parts.any((p) => p.inflate(2).overlaps(r))) return true;
+    }
+    for (final (tx, ty) in [...TownLayout.trees, ...s.lights]) {
+      if (r.contains(tx, ty)) return true;
+    }
+    return false;
+  }
+
+  /// El hueco libre más cercano a la posición de siempre de [l] (o esa
+  /// misma si no hay ninguno).
+  static (int, int) _freeSpot(
+      TownState s, List<TownLandmark> raw, TownLandmark l) {
+    final (ox, oy) = s.origin;
+    (int, int)? best;
+    var bd = 1 << 30;
+    for (var y = 2 - oy; y + l.h + oy <= heightOf(s) - 2; y++) {
+      for (var x = 2 - ox; x + l.w + ox <= widthOf(s) - 2; x++) {
+        final d = (x - l.x).abs() + (y - l.y).abs();
+        if (d >= bd || _blocked(s, raw, x, y, l)) continue;
+        (bd, best) = (d, (x, y));
+      }
+    }
+    return best ?? (l.x, l.y);
+  }
 
   /// El lugar [spot] en este mundo.
   static TownLandmark landmarkOf(TownState s, TownSpot spot) =>
@@ -62,7 +125,11 @@ class TownPlan {
   /// hasta el borde sur del mapa). Sin lugares movidos, los de siempre;
   /// con alguno movido, el anillo de la fuente (la plaza, el centro de la
   /// red) y su eje al sur, donde esté la fuente.
-  static List<TownRect> fixedPaths(TownState s) {
+  static List<TownRect> fixedPaths(TownState s) =>
+      _fixedPathsOf(s, _rawLandmarks(s));
+
+  static List<TownRect> _fixedPathsOf(
+      TownState s, List<TownLandmark> marks) {
     final south = heightOf(s) - s.origin.$2;
     if (!rearranged(s)) {
       return [
@@ -72,7 +139,7 @@ class TownPlan {
         const TownRect(11, 16, 16, 1),
       ];
     }
-    final f = landmarkOf(s, TownSpot.fountain);
+    final f = marks.firstWhere((l) => l.spot == TownSpot.fountain);
     return [
       TownRect(f.x - 2, f.y - 2, 6, 6),
       TownRect(f.x, f.y + 4, 2, math.max(0, south - f.y - 4)),

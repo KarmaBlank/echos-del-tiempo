@@ -223,6 +223,11 @@ abstract final class ActionJson {
         // Protocolo 46 (v0.26.0): mapa de viaje y recolección.
         TravelAction() => {'t': 'travel', 'p': a.place},
         ForageAction() => {'t': 'forage', 'i': a.spot},
+        // Protocolo 57 (v0.33.0): salir solo de la mazmorra.
+        LeaveDungeonAction() => {
+            't': 'leaveD',
+            if (a.poiId != null) 'i': a.poiId,
+          },
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -455,6 +460,8 @@ abstract final class ActionJson {
         return TravelAction(j.str('p'));
       case 'forage':
         return ForageAction(j.integer('i'));
+      case 'leaveD':
+        return LeaveDungeonAction(poiId: j.intOrNull('i'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

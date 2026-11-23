@@ -247,7 +247,7 @@ class WorldHud extends StatelessWidget {
                                 size: DsButtonSize.compact,
                                 onPressed: controller.toggleParty),
                           ],
-                          // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
+                          // Puntos sin usar: `PERSONAJE [TAB]` con `+N` (solo si hay;
                           // passive_tree_v4.md § 7).
                           if (_unused(s).any) ...[
                             const SizedBox(width: 8),
@@ -435,6 +435,18 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
+            // Salir solo de la mazmorra (free_movement.md § 2.4).
+            if (controller.canLeaveDungeon)
+              Positioned(
+                top: _gap + 48,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: DsButton('SALIR DE LA MAZMORRA',
+                      key: const ValueKey('hud-leave-dungeon'),
+                      onPressed: controller.leaveDungeon),
+                ),
+              ),
             if (_voteBox(s) case final vote?)
               Positioned(
                 top: _gap + 48,
@@ -477,6 +489,21 @@ class WorldHud extends StatelessWidget {
                         child:
                             PotionShortcuts(controller: controller, player: me),
                       ),
+                  // Los que están en otro lugar (free_movement.md § 4).
+                  if (s.away.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        key: const ValueKey('hud-away'),
+                        width: rightWidth,
+                        child: Text(
+                          'En otro lugar: ${s.away.map((a) => '${a.name} (${a.where})').join(', ')}',
+                          textAlign: TextAlign.end,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
                   SizedBox(
                     key: const ValueKey('hud-party-boxes'),
                     width: partyWidth,
@@ -989,6 +1016,7 @@ Minimap hudMinimap(SessionView view, SessionController controller,
     loot: minimapLootFor(view, controller),
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
+    fog: controller.fog,
     cell: cell,
     view: zoom <= 1
         ? null
@@ -1045,6 +1073,7 @@ Widget fullMapPanel(SessionView view, SessionController controller,
     loot: minimapLootFor(view, controller),
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
+    fog: controller.fog,
     waystones: _seenWaystones(view),
     destinations: controller.travelDestinations,
     originId: controller.travelOrigin?.id,
