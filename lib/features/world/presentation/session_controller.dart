@@ -1,5 +1,6 @@
 import '../../../game_engine/models/combat_mode.dart';
 import '../../../game_engine/models/fog_of_war.dart';
+import '../data/fog_store.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -192,6 +193,7 @@ final sessionControllerProvider =
     // Mundo elegido en el título (town_loop.md § 11c).
     world: ref.read(worldBookProvider)?.selected,
     onWorldTown: books.saveTown,
+    fogStore: FogStore.forPlatform(),
   );
   // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
   // sala si este dispositivo corre el motor (solo o anfitrión).
@@ -241,6 +243,7 @@ class SessionController extends StateNotifier<SessionView?> {
     this.metaStore,
     this.world,
     this.onWorldTown,
+    this.fogStore,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         _combatMode = combatMode,
@@ -268,6 +271,24 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Guarda el pueblo del mundo jugado (pozo del Loot perdido, ciclo).
   final void Function(String worldId, TownState town)? onWorldTown;
   int _worldCycle = 0;
+
+  /// Niebla explorada de las mazmorras (persistent_dungeons.md § 2.2).
+  final FogStore? fogStore;
+  bool _fogLoaded = false;
+
+  /// Carga una vez lo explorado guardado en el disco.
+  void _loadFog() {
+    if (_fogLoaded) return;
+    _fogLoaded = true;
+    fog.archive.addAll(fogStore?.load() ?? const {});
+  }
+
+  void _saveFog() {
+    final st = fogStore;
+    if (st == null || !fog.dirty) return;
+    fog.dirty = false;
+    st.save(fog.archive);
+  }
 
   /// Travesía: progreso entre runs de este dispositivo (§ 8).
   final TravesiaMetaStore? metaStore;
@@ -687,6 +708,12 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Niebla de exploración del jugador local en mazmorras oscuras
   /// (lighting.md § 5.4). Solo del cliente: no viaja ni se guarda.
   final fog = FogOfWar();
+
+  /// La niebla con lo explorado del disco ya cargado (una vez).
+  FogOfWar get fogLoaded {
+    _loadFog();
+    return fog;
+  }
   final _events = StreamController<SessionEvent>.broadcast();
   GameSession? _s;
   Timer? _timer;
@@ -925,6 +952,8 @@ class SessionController extends StateNotifier<SessionView?> {
   @override
   void dispose() {
     _saveWorld();
+    fog.reset();
+    _saveFog();
     _timer?.cancel();
     _broadcastTimer?.cancel();
     unawaited(_netSub?.cancel());
@@ -2435,6 +2464,25 @@ class SessionController extends StateNotifier<SessionView?> {
     return engine.canLeave(probe, localId, poiId: travelOrigin?.id);
   }
 
+  /// Junto al altar de la Ofrenda del jefe vencido (persistent_dungeons.md
+  /// § 4). El host lo vuelve a validar.
+  bool get nearOffering {
+    final s = _s;
+    if (s == null || isRun || s.players[localId] == null) return false;
+    final probe = s.copy();
+    probe.players[localId]!
+      ..x = local.x
+      ..y = local.y;
+    return engine.canOffer(probe, localId);
+  }
+
+  /// OFRENDAR: paga los materiales y revive al jefe.
+  bool offerBoss() {
+    if (!nearOffering) return false;
+    closePanel();
+    return _apply(const OfferBossAction());
+  }
+
   /// SALIR DE LA MAZMORRA: vuelve solo al exterior de la entrada.
   bool leaveDungeon() {
     if (!canLeaveDungeon) return false;
@@ -2549,6 +2597,8 @@ class SessionController extends StateNotifier<SessionView?> {
       final seal = nearSeal;
       if (seal != null) {
         _apply(ActivateSealAction(seal.id));
+      } else if (nearOffering) {
+        openPanel(WorldPanel.offering);
       } else if (nearPoi case final p?) {
         // Piedra activada con destinos: mapa en modo "elegir destino".
         if (travelDestinations.isNotEmpty) {
@@ -3678,6 +3728,7 @@ class SessionController extends StateNotifier<SessionView?> {
         case ReturnedToLobbyEvent():
           forceSave = true;
           worldSave = true;
+          _saveFog();
         default:
           break;
       }
@@ -3725,9 +3776,11 @@ class SessionController extends StateNotifier<SessionView?> {
     final w = world, cb = onWorldTown, s = _s;
     if (w == null || cb == null || s == null || isClient || isRun) return;
     final codec = SessionJson(engine.catalog);
+    // Con las mazmorras de zona abiertas guardadas (persistent_dungeons.md).
+    final town = _w == null ? s.town : _we.savedTown(_w!);
     cb(
         w.id,
-        s.town.copyWith(
+        town.copyWith(
             upgrades: w.town.upgrades,
             lostLoot: [for (final g in s.lostLoot) codec.groundToJson(g)],
             cycle: _worldCycle));
@@ -3970,6 +4023,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearTrader) return (WorldPrompt.trader, null);
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
+    if (nearOffering) return (WorldPrompt.poi, '[E] Ofrenda del jefe');
     if (nearPoi case final p?) {
       final s = _s!;
       final m = s.mission!;

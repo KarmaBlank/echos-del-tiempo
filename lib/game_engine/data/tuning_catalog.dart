@@ -33,6 +33,7 @@ abstract final class TuningId {
   static const farming = 'farming';
   static const town = 'town';
   static const lifeTree = 'lifeTree';
+  static const dungeon = 'dungeon';
 }
 
 /// Los valores del código.
@@ -427,6 +428,20 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // worldgen.md § 6.8 (v0.20.22): misiones cortas. Tope de pisos por
   // misión, × de grupos normales por piso y × del área de cada piso.
+  // persistent_dungeons.md (v0.34.0): reaparición y Ofrenda del jefe.
+  // Costo de la Ofrenda en la zona z: esquirlas = esqBase + esqPerZone × z;
+  // cristales = crisPerZone × (z − crisFrom + 1) desde la zona crisFrom;
+  // prismas = prismaPerZone × (z − prismaFrom + 1) desde prismaFrom.
+  TuningId.dungeon: TuningDef('Mazmorras', {
+    'respawnDays': 5,
+    'esqBase': 2,
+    'esqPerZone': 2,
+    'crisFrom': 2,
+    'crisPerZone': 1,
+    'prismaFrom': 4,
+    'prismaPerZone': 1,
+    'altarReach': 40,
+  }),
   TuningId.mission: TuningDef('Misiones', {
     'maxFloors': 3,
     'groupScale': 0.7,

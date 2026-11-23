@@ -26,6 +26,8 @@ import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
 import '../../../../game_engine/data/exploration_catalog.dart';
+import '../../../../app/theme/proto_colors.dart';
+import '../../../../game_engine/rules/dungeon_rules.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
@@ -1033,6 +1035,18 @@ class MapGame extends Game {
         final cx = p.center.x, cy = p.center.y;
         add(cy, () => actors.relic(c, cx, cy, t));
       }
+      // Altar de la Ofrenda en la sala del jefe vencido
+      // (persistent_dungeons.md § 4).
+      if (DungeonRules.persistent(view.session, zone: mission.zone) &&
+          DungeonRules.altarActive(mission)) {
+        final b = DungeonRules.boss(mission)!;
+        if (b.floor == mission.floor) {
+          add(b.homeY, () {
+            actors.relic(c, b.homeX, b.homeY, t);
+            actors.text(c, 'OFRENDA', b.homeX, b.homeY - 22, ProtoColors.gold, 6);
+          });
+        }
+      }
       for (final e in mission.enemies) {
         if (!e.alive || e.floor != mission.floor) continue;
         final d = _lerpPos('f${e.id}', e.x, e.y);
@@ -1137,8 +1151,8 @@ class MapGame extends Game {
       final lg = light.last;
       final m = s.mission;
       if (darkMap && darknessKeep > 0 && m != null && lg != null) {
-        controller.fog
-          ..begin((m.missionId, m.seed), map.width, map.height)
+        controller.fogLoaded
+          ..begin('${m.missionId}:${m.seed}', map.width, map.height)
           ..reveal(lg.x0, lg.y0, lg.w, lg.h, lg.lum, darkSeen * darknessKeep);
       } else {
         controller.fog.reset();

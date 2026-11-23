@@ -229,6 +229,13 @@ batalla vuelven al jugador.
 Se borra misión, batalla, votación y preparación; jugadores al spawn del
 lobby con vida y maná llenos (la ULT se conserva), época +1.
 
+v0.34.0 (persistent_dungeons.md): antes de borrar la misión, si es una
+mazmorra de zona del Mundo, su `MissionRun` queda guardada en el mundo
+(`TownState.dungeons`). Completarla **no** la borra: queda con el jefe
+vencido y el altar de la Ofrenda; volver a ENTRAR la restaura. Las
+misiones opcionales cumplidas ahí no vuelven a aparecer; las falladas o
+sin hacer, sí. Ecos, Pruebas, Abismo y Travesía no se guardan.
+
 ## Desvíos intencionales respecto del prototipo
 
 - Reloj propio de la sesión en vez de `Date.now()` (determinístico).

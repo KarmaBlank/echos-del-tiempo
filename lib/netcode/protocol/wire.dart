@@ -134,7 +134,9 @@ import '../../game_engine/serialization/session_json.dart';
 
 /// 57 (v0.33.0): movimiento libre por jugador (free_movement.md): cada
 /// cliente recibe solo su instancia, `aw` con los que están en otro lugar.
-const kProtocolVersion = 57;
+/// 58 (v0.34.0): mazmorras de zona persistentes por mundo y la acción
+/// `offer` (Ofrenda del jefe; persistent_dungeons.md).
+const kProtocolVersion = 58;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
