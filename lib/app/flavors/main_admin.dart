@@ -18,6 +18,9 @@ import '../../features/combat/presentation/sprite_catalog.dart';
 import '../../firebase_options.dart';
 import '../../core/layout/layout_catalog.dart';
 import '../../core/layout/layout_overrides.dart';
+import '../../core/screen_layout/screen_layout_catalog.dart';
+import '../../features/screen_editor/data/screen_layout_writer.dart';
+import '../../features/screen_editor/presentation/screen_editor_controller.dart';
 
 /// Composition root del admin de balance y monitoreo
 /// (docs/specs/balance_admin.md § 5):
@@ -75,12 +78,20 @@ Future<void> main() async {
     overrides: layoutCatalog.overrides as EditableLayoutOverrides?,
     repoPath: repo,
   );
+  // PANTALLAS (docs/specs/screen_editor.md § 5): layouts de pantallas
+  // del repo en disco; GUARDAR escribe ahí.
+  final screenCatalog = ScreenLayoutCatalog();
+  await screenCatalog.load(
+      bundle: repo == null ? null : repoAssetBundle(repo));
+  final screens = ScreenEditorController(
+      catalog: screenCatalog, writer: createScreenLayoutWriter(repo));
   unawaited(sprites.loadAll());
   runApp(AdminApp(
       controller: controller,
       sprites: sprites,
       animations: fx,
-      layouts: layouts));
+      layouts: layouts,
+      screens: screens));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

@@ -8,6 +8,9 @@ import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/design/design.dart';
 import '../../../app/design/gallery/ds_gallery_screen.dart';
+import '../../../app/design/registry/ds_screen_view.dart';
+import '../../../core/screen_layout/screen_bindings.dart';
+import '../../../core/screen_layout/screen_layout_catalog.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -779,96 +782,177 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final creating = _creating || (a != null && a.characters.isEmpty);
     // Teclado (menu_focus.dart): flechas / Tab / Enter, Esc cancela el
     // creador y 1-9 eligen personaje o clase.
+    // Layout editado en Editor → PANTALLAS (screen_editor.md § 3); sin
+    // archivo, la pantalla armada en código de siempre.
+    final layout = ScreenLayoutCatalog.instance.get('title');
     return Scaffold(
       body: MenuKeyScope(
         onBack: creating && a != null && a.characters.isNotEmpty
             ? () => setState(() => _creating = false)
             : null,
         onDigit: _digit,
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: DefaultTextStyle.merge(
-              style: text.bodySmall,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+        child: layout == null
+            ? _codeLayout(text, a, sprites, factory, creating)
+            : DefaultTextStyle.merge(
+                style: text.bodySmall,
+                child: DsScreenView(
+                  key: const ValueKey('title-screen-layout'),
+                  layout: layout,
+                  spec: titleBindings,
+                  bindings: _bindings(context, a, sprites, factory, creating),
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// Lo que el layout de datos puede usar del título, por nombre.
+  ScreenRuntimeBindings _bindings(BuildContext context, Account? a,
+      GameSprites? sprites, NetSessionFactory? factory, bool creating) {
+    final has = a?.selected != null && !_busy;
+    final notice = _noticeText(), status = _netStatusText();
+    return ScreenRuntimeBindings(
+      actions: {
+        'nuevaPartida': ScreenAction(has ? _start : null),
+        'crearPersonaje': ScreenAction(_busy || a == null || a.isFull
+            ? null
+            : () => setState(_openCreator)),
+        'configuracion': ScreenAction(() => showSettingsDialog(context)),
+        'salirDelJuego': ScreenAction(_quitGame),
+        'ayudaTeclas': ScreenAction(() {}, tooltip: _keysHelp),
+        'abrirAlijo': ScreenAction(has && !_travesia ? _openStash : null),
+        'abrirBestiario':
+            ScreenAction(_busy || _travesia ? null : _openBestiary),
+        'abrirHazanas':
+            ScreenAction(_busy || _travesia ? null : _openAchievements),
+      },
+      data: {
+        'personajes': [
+          for (final c in a?.characters ?? const <CharacterSlot>[])
+            ScreenDataEntry(c.displayName, _className(_norm(c).classId)),
+        ],
+      },
+      slots: {
+        'avisos': SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const UpdateBanner(),
+            if (notice != null) notice,
+          ]),
+        ),
+        'personajes': SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _mainBlock(a, sprites, factory, creating),
+          ),
+        ),
+        if (status != null) 'estadoRed': status,
+      },
+    );
+  }
+
+  Widget? _noticeText() {
+    final n = [_notice, _saveError].nonNulls.join('\n');
+    if (n.isEmpty) return null;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 900),
+      child: Text(retroText(n),
+          key: const ValueKey('title-account-notice'),
+          textAlign: TextAlign.center,
+          style: DsText.body(DsColors.danger)),
+    );
+  }
+
+  Widget? _netStatusText() {
+    final status = _netStatus;
+    if (status == null) return null;
+    return Text(retroText(status),
+        key: const ValueKey('title-net-status'),
+        textAlign: TextAlign.center,
+        style: DsText.body(
+            _netError ? DsColors.danger : DsColors.textSecondary));
+  }
+
+  /// Mundo + personajes + sala, o el creador.
+  List<Widget> _mainBlock(Account? a, GameSprites? sprites,
+          NetSessionFactory? factory, bool creating) =>
+      [
+        if (a == null)
+          Text('Cargando...', style: DsText.detail())
+        else if (creating)
+          _creator(a, sprites)
+        else ...[
+          // Mundo + personaje (town_loop.md § 11c); la Travesía no tiene
+          // mundos.
+          if (!_travesia) ...[
+            WorldPicker(busy: _busy),
+            const SizedBox(height: 16),
+          ],
+          _selector(a, sprites),
+          const SizedBox(height: 16),
+          _netRow(factory),
+        ],
+      ];
+
+  /// La pantalla armada en código (fallback sin layout de datos).
+  Widget _codeLayout(TextTheme text, Account? a, GameSprites? sprites,
+      NetSessionFactory? factory, bool creating) {
+    final notice = _noticeText(), status = _netStatusText();
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: DefaultTextStyle.merge(
+          style: text.bodySmall,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('ECOS DEL TIEMPO',
+                  textAlign: TextAlign.center,
+                  style: text.displayLarge?.copyWith(
+                    color: RetroPalette.gold,
+                    shadows: const [
+                      Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
+                    ],
+                  )),
+              const SizedBox(height: 16),
+              Text(retroText('Co-op JRPG táctico · 1-8 jugadores'),
+                  style: DsText.detail()),
+              const SizedBox(height: 12),
+              // Aviso de versión nueva (docs/specs/distribution.md).
+              const UpdateBanner(),
+              if (notice != null) ...[
+                const SizedBox(height: 8),
+                notice,
+              ],
+              const SizedBox(height: 20),
+              ..._mainBlock(a, sprites, factory, creating),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
                 children: [
-                  Text('ECOS DEL TIEMPO',
-                      textAlign: TextAlign.center,
-                      style: text.displayLarge?.copyWith(
-                        color: RetroPalette.gold,
-                        shadows: const [
-                          Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
-                        ],
-                      )),
-                  const SizedBox(height: 16),
-                  Text(retroText('Co-op JRPG táctico · 1-8 jugadores'),
-                      style: DsText.detail()),
-                  const SizedBox(height: 12),
-                  // Aviso de versión nueva (docs/specs/distribution.md).
-                  const UpdateBanner(),
-                  if ([_notice, _saveError].nonNulls.join('\n') case final n
-                      when n.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
-                      child: Text(retroText(n),
-                          key: const ValueKey('title-account-notice'),
-                          textAlign: TextAlign.center,
-                          style: DsText.body(DsColors.danger)),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  if (a == null)
-                    Text('Cargando...', style: DsText.detail())
-                  else if (creating)
-                    _creator(a, sprites)
-                  else ...[
-                    // Mundo + personaje (town_loop.md § 11c); la
-                    // Travesía no tiene mundos.
-                    if (!_travesia) ...[
-                      WorldPicker(busy: _busy),
-                      const SizedBox(height: 16),
-                    ],
-                    _selector(a, sprites),
-                    const SizedBox(height: 16),
-                    _netRow(factory),
-                  ],
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      DsButton('CONFIGURACIÓN',
-                          key: const ValueKey('title-settings'),
-                          onPressed: () => showSettingsDialog(context)),
-                      // Salida segura (v0.8.2): confirma y guarda todo
-                      // (ExitGuard) antes de cerrar, como la pausa.
-                      DsButton('SALIR DEL JUEGO',
-                          key: const ValueKey('title-quit'),
-                          accent: DsColors.danger,
-                          onPressed: _quitGame),
-                      // Atajos de teclado al "?" (design_system.md § 2,
-                      // principio 0: nada de textos de ayuda fijos).
-                      DsButton.icon(const Text('?'),
-                          key: const ValueKey('title-help'),
-                          tooltip: _keysHelp,
-                          onPressed: () {}),
-                    ],
-                  ),
-                  if (_netStatus case final status?) ...[
-                    const SizedBox(height: 8),
-                    Text(retroText(status),
-                        key: const ValueKey('title-net-status'),
-                        textAlign: TextAlign.center,
-                        style: DsText.body(_netError
-                            ? DsColors.danger
-                            : DsColors.textSecondary)),
-                  ],
+                  DsButton('CONFIGURACIÓN',
+                      key: const ValueKey('title-settings'),
+                      onPressed: () => showSettingsDialog(context)),
+                  // Salida segura (v0.8.2): confirma y guarda todo
+                  // (ExitGuard) antes de cerrar, como la pausa.
+                  DsButton('SALIR DEL JUEGO',
+                      key: const ValueKey('title-quit'),
+                      accent: DsColors.danger,
+                      onPressed: _quitGame),
+                  // Atajos de teclado al "?" (design_system.md § 2,
+                  // principio 0: nada de textos de ayuda fijos).
+                  DsButton.icon(const Text('?'),
+                      key: const ValueKey('title-help'),
+                      tooltip: _keysHelp,
+                      onPressed: () {}),
                 ],
               ),
-            ),
+              if (status != null) ...[
+                const SizedBox(height: 8),
+                status,
+              ],
+            ],
           ),
         ),
       ),

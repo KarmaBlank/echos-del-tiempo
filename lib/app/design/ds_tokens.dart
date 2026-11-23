@@ -139,6 +139,10 @@ class DsTextColor extends Color {
 
 /// Estilos de texto con nombre (design_system.md § 3.2).
 abstract final class DsText {
+  /// Display: Press Start 2P 32 nominal (nombre del juego en el título).
+  static TextStyle display([Color? c]) =>
+      RetroType.style(RetroType.display, color: c ?? DsColors.textTitle);
+
   /// Título: Press Start 2P 16 nominal.
   static TextStyle title([Color? c]) =>
       RetroType.style(RetroType.title, color: c ?? DsColors.textTitle);
