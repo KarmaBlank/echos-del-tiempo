@@ -23,7 +23,14 @@ class FarmingHostState {
   /// Último día del mundo procesado para los habitantes.
   int residentDay = 0;
 
-  void newStay() => charXp.clear();
+  /// Nueva estadía en el pueblo de [ids] (`null` = todos).
+  void newStay([Iterable<String>? ids]) {
+    if (ids == null) {
+      charXp.clear();
+    } else {
+      ids.forEach(charXp.remove);
+    }
+  }
 }
 
 extension _FarmingOp on _Op {
@@ -31,7 +38,8 @@ extension _FarmingOp on _Op {
   TuningDef get _fat => FarmingRules.t;
 
   /// El dueño del mundo: el primer humano de la sala (el anfitrión).
-  bool _isOwner(SessionPlayer p) => humans.firstOrNull?.id == p.id;
+  bool _isOwner(SessionPlayer p) =>
+      (s.ownerId ?? humans.firstOrNull?.id) == p.id;
 
   /// Puede cambiar el pueblo (town_editor.md § 1.3): quien tiene el
   /// candado; sin candado, el dueño (compatibilidad con las acciones

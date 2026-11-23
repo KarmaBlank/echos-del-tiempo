@@ -124,7 +124,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`life.sx` / `life.st` / `life.lg`).
 /// 53 (v0.32.0): encargos seguidos y vistos en el perfil (`trk`, `seen`)
 /// y `town` con `track` / `seen` (roles.md § 8).
-const kProtocolVersion = 53;
+/// 54 (v0.33.0): movimiento libre por jugador (free_movement.md): cada
+/// cliente recibe solo su instancia, `aw` con los que están en otro lugar.
+const kProtocolVersion = 54;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

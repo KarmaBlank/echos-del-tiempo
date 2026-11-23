@@ -53,6 +53,12 @@ Grupos de enemigos posibles por misión: ver catálogo (copiados 1:1).
 
 ## Lobby: votación y preparación
 
+> v0.33.0 (free_movement.md): en el Mundo ya no hay votación ni
+> preparación. Quien propone entra solo a una instancia nueva (o se suma a
+> la de sus amigos si juegan la misma misión) y el host resuelve la
+> votación y el LISTO al instante. Lo de abajo sigue valiendo dentro de
+> cada instancia.
+
 - `ProposeMissionAction(id)`: en lobby, sin votación abierta y con una
   misión válida. Abre la votación con el voto a favor de quien propone.
 - `VoteMissionAction(sí/no)`: sí suma el voto; no cancela la votación.

@@ -25,10 +25,19 @@ class FishingHostState {
   /// Quién ya avisó en el chat que se puso a pescar (por estadía).
   final announced = <String>{};
 
-  void newStay() {
-    pending.clear();
-    charXp.clear();
-    announced.clear();
+  /// Nueva estadía en el pueblo de [ids] (`null` = todos).
+  void newStay([Iterable<String>? ids]) {
+    if (ids == null) {
+      pending.clear();
+      charXp.clear();
+      announced.clear();
+      return;
+    }
+    for (final id in ids) {
+      pending.remove(id);
+      charXp.remove(id);
+      announced.remove(id);
+    }
   }
 }
 

@@ -54,6 +54,7 @@ SessionEngine sessionEngine({
   // "vista previa = resultado" comparan solo la acción. Las de hazañas
   // las prenden.
   bool achievements = false,
+  bool freeMovement = false,
 }) =>
     SessionEngine(
       maxPlayers: maxPlayers,
@@ -65,6 +66,7 @@ SessionEngine sessionEngine({
       // Ecos (ecos_atlas.md § 3): por defecto 0.999, así nunca caen solos.
       ecoRandom: ecoRandom ?? () => 0.999,
       devTools: devTools,
+      freeMovement: freeMovement,
     );
 
 /// Perfil válido de [classId] (nivel 1, recién creado).

@@ -45,7 +45,8 @@ class _FakeNet implements NetSession, LatencyProbe {
   @override
   void sendAction(SessionAction action) {}
   @override
-  void broadcast(GameSession state, List<SessionEvent> events) {}
+  void broadcast(GameSession state, List<SessionEvent> events,
+      {Set<String>? only}) {}
   @override
   Future<void> disconnect() async => _out.close();
 }

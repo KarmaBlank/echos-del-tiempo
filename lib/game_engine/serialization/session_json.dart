@@ -94,6 +94,11 @@ class SessionJson {
         if (s.place != null) 'place': s.place,
         // v0.28.0 (protocolo 50): quién edita el pueblo.
         if (s.townEditor != null) 'ted': s.townEditor,
+        // v0.33.0 (protocolo 54): los que están en otro lugar.
+        if (s.away.isNotEmpty)
+          'aw': [
+            for (final a in s.away) [a.id, a.name, a.where]
+          ],
       };
 
   GameSession fromJson(Json j) {
@@ -145,6 +150,13 @@ class SessionJson {
       town: TownState.fromJson(j['town']),
       place: j.strOrNull('place'),
       townEditor: j.strOrNull('ted'),
+      away: j['aw'] == null
+          ? null
+          : [
+              for (final raw in j.list('aw'))
+                if (raw is List && raw.length >= 3)
+                  AwayPlayer('${raw[0]}', '${raw[1]}', '${raw[2]}'),
+            ],
     );
   }
 

@@ -691,7 +691,10 @@ class GameSession {
     this.town = const TownState(),
     this.place,
     this.townEditor,
+    this.ownerId,
+    List<AwayPlayer>? away,
   })  : players = players ?? LinkedHashMap(),
+        away = List.unmodifiable(away ?? const <AwayPlayer>[]),
         ground = ground ?? [],
         leaveReady = leaveReady ?? {},
         lostLoot = lostLoot ?? [],
@@ -808,6 +811,14 @@ class GameSession {
   /// el candado lo tiene el anfitrión; uno a la vez. `null` = nadie.
   String? townEditor;
 
+  /// El dueño del mundo (free_movement.md § 2): el primer jugador de la
+  /// sala, aunque esté en otra instancia. `null` = el primer humano de
+  /// esta instancia. Solo host: no viaja.
+  String? ownerId;
+
+  /// Los jugadores que están en otro lugar (free_movement.md § 3, `aw`).
+  List<AwayPlayer> away;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -906,5 +917,29 @@ class GameSession {
         town: town,
         place: place,
         townEditor: townEditor,
+        ownerId: ownerId,
+        away: away,
       );
+}
+
+/// Un jugador en otra instancia (pueblo, exterior o mazmorra): solo para
+/// la lista del grupo (free_movement.md § 3).
+class AwayPlayer {
+  const AwayPlayer(this.id, this.name, this.where);
+  final String id;
+  final String name;
+
+  /// Dónde está, listo para mostrar (`Pueblo`, `Bosque`, nombre de la
+  /// misión).
+  final String where;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AwayPlayer &&
+      other.id == id &&
+      other.name == name &&
+      other.where == where;
+
+  @override
+  int get hashCode => Object.hash(id, name, where);
 }

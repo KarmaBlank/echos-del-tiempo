@@ -38,6 +38,14 @@ class TravelAction extends SessionAction {
   const TravelAction(this.place);
 }
 
+/// `leaveD` (protocolo 54, free_movement.md § 2.4): salir solo de la
+/// mazmorra, caminando a la entrada del piso 1 o desde una piedra de paso
+/// activada ([poiId]). Los demás siguen adentro.
+class LeaveDungeonAction extends SessionAction {
+  final int? poiId;
+  const LeaveDungeonAction({this.poiId});
+}
+
 /// `forage` (protocolo 48): recolectar el punto [spot] del exterior
 /// (índice de `BosqueLayout.forage`; overworld_biomes.md § 3.2).
 class ForageAction extends SessionAction {
