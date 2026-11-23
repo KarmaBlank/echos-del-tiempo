@@ -107,7 +107,7 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   (100 %, con brillo). Arado con surcos; regado, tierra oscura y una gota;
   abonado, granitos claros. Dibujado en `MapFarmLayer` (colores en
   `FarmPalette`); registrado como procedural.
-- Aspecto por cultivo (v0.24.6): la semilla es un puntito del color de
+- Aspecto por cultivo (v0.25.3): la semilla es un puntito del color de
   su tipo en un punto al azar del tile, determinista por parcela, cultivo
   y quien plantó (`MapFarmLayer.seedOffset`), así todos los clientes lo
   ven igual y no salta. El brote y la planta crecen desde ese punto; al
@@ -123,7 +123,7 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 - La cosecha "salta" del tile hacia quien cosechó con chispas (como el
   pez) y el nombre con la calidad arriba del personaje.
 
-### 2.6 Cartel de subida de nivel de oficio (v0.24.6)
+### 2.6 Cartel de subida de nivel de oficio (v0.25.3)
 - Al subir Pesca o Cultivo aparece un cartel pixel arriba del personaje
   (encima del nombre): "¡Subiste de nivel!" (los demás ven "<nombre>
   subió de nivel") y "Pescador N" / "Granjero N". Sube y se desvanece en

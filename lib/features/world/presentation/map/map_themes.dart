@@ -330,7 +330,7 @@ abstract final class FishingPalette {
   static const zoneOut = Color(0xAAE0A040);
 }
 
-/// Forma del fruto maduro de un cultivo (farming.md § 2.3, v0.24.6).
+/// Forma del fruto maduro de un cultivo (farming.md § 2.3, v0.25.3).
 enum CropShape { root, grain, tuber, pumpkin, berries, bulb, flower, melon, rose, crystal }
 
 /// Aspecto de un cultivo en el mapa: semilla, planta y fruto.
@@ -420,7 +420,7 @@ abstract final class CropPalette {
   static CropLook of(String? id) => looks[id] ?? fallback;
 }
 
-/// Cartel de subida de nivel de oficio sobre el personaje (v0.24.6).
+/// Cartel de subida de nivel de oficio sobre el personaje (v0.25.3).
 abstract final class LifeLevelPalette {
   static const frame = Color(0xFF2A1E12);
   static const back = Color(0xE01A140E);

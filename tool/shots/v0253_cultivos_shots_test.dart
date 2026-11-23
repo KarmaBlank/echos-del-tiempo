@@ -1,6 +1,6 @@
-// Captura de los cultivos en la huerta (v0.24.6). NO es parte de la suite.
+// Captura de los cultivos en la huerta (v0.25.3). NO es parte de la suite.
 // Correr con
-//   flutter test tool/shots/v0246_cultivos_shots_test.dart
+//   flutter test tool/shots/v0253_cultivos_shots_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -34,7 +34,7 @@ void main() {
     }
     final img = await rec.endRecording().toImage(w.toInt(), h.toInt());
     final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-    final f = File('docs/release_shots/v0.24.6/huerta_cultivos.png');
+    final f = File('docs/release_shots/v0.25.3/huerta_cultivos.png');
     await f.parent.create(recursive: true);
     await f.writeAsBytes(bytes!.buffer.asUint8List());
   });

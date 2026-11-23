@@ -1,6 +1,6 @@
-// Captura del cartel de subida de nivel de oficio (v0.24.6). NO es parte
+// Captura del cartel de subida de nivel de oficio (v0.25.3). NO es parte
 // de la suite. Correr con
-//   flutter test tool/shots/v0246_nivel_oficio_shots_test.dart
+//   flutter test tool/shots/v0253_nivel_oficio_shots_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -12,7 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../test/features/world/fishing_map_harness.dart';
 import '../../test/real_fonts.dart';
 
-const _out = 'docs/release_shots/v0.24.6';
+const _out = 'docs/release_shots/v0.25.3';
 const _size = Size(1280, 720);
 
 Future<void> _shot(WidgetTester tester, String name) async {
