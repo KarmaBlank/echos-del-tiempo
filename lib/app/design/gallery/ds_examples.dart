@@ -287,7 +287,7 @@ class _TransferMockupState extends State<TransferMockup> {
         for (final e in m.entries)
           DsTransferItem(
             id: e.key,
-            icon: SizedBox.square(
+            icon: const SizedBox.square(
                 dimension: 24, child: ColoredBox(color: DsColors.border)),
             name: e.key.toUpperCase(),
             border: e.key == 'calabaza' ? DsColors.reward : DsColors.border,
