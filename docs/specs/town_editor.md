@@ -10,8 +10,13 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 ## 1. Modo edición
 
 ### 1.1 Entrar y salir
-- FUENTE RÚNICA → EDITAR PUEBLO. Solo el dueño del mundo (el primer
-  humano de la sala); para el resto el botón sale gris con el motivo.
+- FUENTE RÚNICA (v0.25.7): panel chico con una grilla de acciones
+  grandes (`DsButton` con una línea de detalle cada una; bloqueada = gris
+  con el motivo en esa línea): EDITAR PUEBLO, CONTRATAR GRANJERO,
+  CONTRATAR PESCADOR (farming.md § 8.1), TABLERO DE ENCARGOS, y CERRAR
+  abajo. Sin contador de ampliaciones.
+- EDITAR PUEBLO: solo el dueño del mundo (el primer humano de la sala);
+  para el resto el botón sale gris con el motivo.
 - El personaje se queda donde está (no camina, no pesca, E no hace
   nada). La cámara queda libre: WASD / flechas, arrastrar con el mouse,
   rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
@@ -27,6 +32,7 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 | Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo (pasar el mouse ya lo muestra en el panel de info) |
 | Lago (o su cartel) | AGREGAR ESPECIES · MOVER · BORRAR LAGO |
 | Huerta (o su cartel) | MOVER · BORRAR |
+| Lugar fijo (fuente, portal, tablero, forja, estatua, comerciante, loot perdido) | MOVER (no se borran; § 3.3) |
 | Tile libre (pasto o árbol) | CONSTRUIR: lista del catálogo (§ 3) |
 
 MOVER y elegir qué construir dejan un fantasma que sigue al mouse
@@ -47,6 +53,11 @@ esquina superior izquierda del fantasma va en el tile del mouse.
   60000)", verde si alcanza y rojo si no (`TownRules.costLines`). Se
   achica para entrar en la franja; si la parte visible es muy chica no
   se muestra. Borde dorado con el mouse encima o elegida.
+- Lado al tope (v0.25.7, `TownRules.sideFull`): la franja sale gris y su
+  tarjeta dice AMPLIAR en gris con "Límite de ampliación alcanzado" (tope
+  total) o "Límite de este lado" (tope por lado), sin costo; el clic no
+  hace nada. Ningún contador "n/6" (ni en la fuente ni en AMPLIAR AL
+  <LADO>).
 - Contorno de cada construcción (dorado la elegida) y fantasma verde /
   rojo. Colores en `TownEditPalette`.
 - Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
@@ -103,9 +114,40 @@ se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
 - Alcanzable: después del cambio, toda construcción tiene camino (§ 4.1).
 - Los árboles sueltos debajo de una construcción desaparecen.
 
+### 3.3 Lugares fijos (v0.25.2)
+Todos los lugares de `TownLayout.landmarks` (FUENTE RÚNICA, PORTAL,
+TABLERO DE ENCARGOS, FORJA, ESTATUA DEL TIEMPO, el puesto del
+comerciante y LOOT PERDIDO) se pueden mover; nunca borrar. Id de
+edición: `@` + el `TownSpot` (`@forge`, `@fountain`, …). Mismo fantasma
+verde / rojo; la esquina va en el tile del mouse.
+- Posición: `TownPlan.landmarksOf(town)` (los movidos donde quedaron,
+  el resto en su lugar de siempre). De ahí salen el dibujo, las
+  etiquetas, los E (`WorldRules.townSpot` con `GameMap.townMarks`), los
+  lugares reservados para construir y la aparición. El minimapa sale de
+  los tiles, así que acompaña solo.
+- Centro de la red: la FUENTE (la plaza). Mientras todos están en su
+  lugar, los caminos fijos son los de siempre. Si alguno se movió,
+  quedan fijos solo el anillo de la fuente (6 × 6 alrededor) y su eje al
+  sur hasta el borde; cada otro lugar, en el orden de la lista, se
+  conecta con un camino procedural (§ 4.1) a la red, y después las
+  construcciones.
+- Aparición: en el eje, 4,5 tiles debajo de la esquina de la fuente
+  (`TownLayout.spawnFor`; la de siempre es (17, 14,5)). Quien queda
+  dentro de algo sólido tras mover un lugar vuelve ahí.
+- Validación (`TownRules.moveLandmark`, revisa todo el pueblo porque los
+  caminos fijos cambian): dentro del pueblo (sin la fila de árboles);
+  sin pisar otro lugar con un tile de margen; ningún lugar sobre el
+  anillo o el eje de la fuente; la fuente necesita su anillo y el tile
+  de aparición adentro; ninguna construcción ni cartel sobre un lugar o
+  un camino fijo; todo alcanzable (lugares y construcciones). Lo que
+  deja el propio lugar no lo bloquea (se valida el pueblo ya movido).
+- Volver un lugar a su posición de siempre lo saca de `marks`; con
+  todos en su lugar el plano vuelve a ser el de siempre.
+
 ## 4. Mapa (`TownPlan`, determinista)
 ### 4.1 Caminos procedurales
-Por cada construcción (en orden), Dijkstra desde los tiles de pasto al
+Con lugares movidos, primero cada lugar (§ 3.3) y después cada
+construcción (en orden): Dijkstra desde los tiles de pasto al
 lado de su huella hasta el camino más cercano (fijo o ya generado),
 con costo 4 + ruido por tile (0–2) para que serpenteen. Se pinta el
 recorrido. Si un lado ya toca un camino, no se agrega nada. Se regenera
@@ -150,11 +192,20 @@ la izquierda son el eje de caminos).
   va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
   peces); construir, mover, borrar y ampliar, solo el dueño.
 
+- Huertas pegadas también se funden (v0.25.5): una huerta más grande con
+  las parcelas, semillas, ayudantes y cofre de las dos.
+- Opciones de una huerta o un lago: GRANJEROS / PESCADORES con CONTRATAR
+  AYUDANTE y DESPEDIR (farming.md § 8.1). Cada construcción tiene un cofre
+  al lado del cartel. AGREGAR ESPECIES es una grilla: elegís el pez, ves
+  el detalle y SOLTAR EN EL LAGO.
+
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip
 de tamaño fijo: LAGO con cada especie una vez y "N/M soltados"; HUERTA
 con cada cultivo plantado una vez y "6 de 12 parcelas" (plantadas /
-tiles de la huerta). Las parcelas y el agua no tienen tooltip.
+tiles de la huerta). Los dos suman la línea de ayudantes ("Granjeros 1 /
+2 · cada uno atiende 8 parcelas", con las semillas del granjero) y el
+cofre. Las parcelas y el agua no tienen tooltip.
 
 ## 7. Datos
 ### 7.1 `TownState`
@@ -165,7 +216,12 @@ pueblo son vistas calculadas (todas las parcelas en coordenadas del
 mapa; los peces de todos los lagos). Mundo nuevo: el lago base `l0`
 (3, 14, 8 × 6) y la huerta base `h0` (19, 18, 4 × 3).
 
-JSON: `sides {n,s,e,o}`, `builds [{id, k, p: [[x,y,w,h]], st?, pl?}]`.
+`marks`: lugar movido (`@forge`) → esquina en coordenadas del pueblo
+base; solo los que no están en su lugar de siempre.
+
+JSON: `sides {n,s,e,o}`, `builds [{id, k, p: [[x,y,w,h]], st?, pl?}]`,
+`marks? {"@forge": [x, y]}` (sin `marks`, todo en su lugar: los saves
+viejos no cambian).
 
 ### 7.2 Migración de v0.23
 Sin `builds`: `exp` pasa a ser ampliaciones al ESTE; cada zona i de
@@ -173,15 +229,14 @@ Sin `builds`: `exp` pasa a ser ampliaciones al ESTE; cada zona i de
 par): LAGO 6 × 6 en (33 + 8·franja, 7 | 14), HUERTA 6 × 4 una fila más
 abajo; `stock` al lago base; las parcelas a la huerta que las contiene.
 
-## 8. Red (protocolo 45)
+## 8. Red (protocolo 46)
 `town {o: expand|place|move|remove|stock|hireHelper, id?, tg?, x?, y?}`:
 `expand` con `id` = lado (`n`/`s`/`e`/`o`); `place` con `id` = la del
 catálogo y (x, y) la esquina en tiles del mapa; `move` con `tg` y (x,
-y); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
+y) (`tg` = `@<lugar>` mueve un lugar fijo, § 3.3; v0.25.2, protocolo 46); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
 anfitrión valida todo (pueblo, dueño, reglas de § 3.2) y el pueblo
 viaja en el estado.
 
 ## 9. Pendiente
-- Otros tipos de construcción (decorado, corrales) y mover los lugares
-  fijos.
+- Otros tipos de construcción (decorado, corrales).
 - Rotar construcciones y achicar lagos.

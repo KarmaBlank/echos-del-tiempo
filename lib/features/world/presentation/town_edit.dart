@@ -55,6 +55,10 @@ class TownEdit {
   /// Construcción bajo el mouse (panel de info, § 1.3).
   String? hoverBuild;
 
+  /// Elegir dónde contratar (fuente rúnica, farming.md § 8): huerta
+  /// (granjero) o lago (pescador). `null` = edición normal.
+  BuildKind? hire;
+
   void reset() {
     step = TownEditStep.browse;
     tile = null;

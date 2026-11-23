@@ -48,6 +48,15 @@ class TownLandmark {
   final String tile;
   final int x, y, w, h;
 
+  /// Id del lugar para la edición del pueblo (town_editor.md § 3.3):
+  /// `@` + el nombre del [TownSpot] (no choca con los ids de las
+  /// construcciones, que son `l<n>` / `h<n>`).
+  String get id => '@${spot.name}';
+
+  /// El mismo lugar con su esquina en (nx, ny) del pueblo base.
+  TownLandmark at(int nx, int ny) =>
+      TownLandmark(spot, name, tile, nx, ny, w: w, h: h);
+
   /// Centro en px.
   WorldPoint get center => WorldPoint((x + w / 2) * 16, (y + h / 2) * 16);
 }
@@ -65,6 +74,11 @@ abstract final class TownLayout {
 
   /// Aparición: en el camino, al sur de la fuente.
   static const spawn = WorldPoint(17.0 * 16, 14.5 * 16);
+
+  /// Aparición relativa a la esquina de la fuente (town_editor.md § 3.3):
+  /// donde esté la fuente, en el eje al sur de su anillo.
+  static WorldPoint spawnFor(int fx, int fy) =>
+      WorldPoint((fx + 1.0) * 16, (fy + 4.5) * 16);
 
   static const landmarks = <TownLandmark>[
     TownLandmark(TownSpot.portal, 'PORTAL', Tile.portal, 3, 3, w: 3),
@@ -108,6 +122,10 @@ abstract final class TownLayout {
 
   /// Cartel del lago base sin mover (la construcción `l0`).
   static const baseSign = (12, 15);
+
+  /// El lugar cuyo id de edición es [id] (`@forge`, …), o `null`.
+  static TownLandmark? byId(String id) =>
+      landmarks.where((l) => l.id == id).firstOrNull;
 
   static TownLandmark landmark(TownSpot s) =>
       landmarks.firstWhere((l) => l.spot == s);

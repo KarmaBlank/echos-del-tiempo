@@ -90,7 +90,7 @@ class SessionJson {
         if (s.worldName != null) 'wname': s.worldName,
         // v0.23.0 (protocolo 44): huerta, ampliaciones y lago.
         if (s.town.farmJson() case final t when t.isNotEmpty) 'town': t,
-        // v0.26.0 (protocolo 46): exterior de bioma donde está el grupo.
+        // v0.26.0 (protocolo 48): exterior de bioma donde está el grupo.
         if (s.place != null) 'place': s.place,
       };
 

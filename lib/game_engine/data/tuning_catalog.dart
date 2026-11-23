@@ -217,15 +217,18 @@ const Map<String, TuningDef> kTuningDefaults = {
     'breedRare': 0.03,
     'breedRareCap': 0.15,
     'breedChance': 0.35,
-    // Ayudante: nivel de Cultivo para contratar, costo (× nivel), tope,
-    // parcelas por nivel, cada cuántos segundos trabaja, × de XP al que
-    // recoge el granero.
+    // Ayudantes (farming.md § 8, v0.25.5): nivel del oficio para
+    // contratar, oro por ayudante, parcelas de cada granjero, tiles de
+    // lago por pescador, peces por vuelta, cada cuántos segundos trabajan,
+    // × de XP al que recoge el cofre y tope del cofre.
     'helperLevel': 5,
     'helperCost': 800,
-    'helperMax': 3,
     'helperPlots': 8,
+    'fisherTiles': 18,
+    'fisherCatch': 2,
     'helperEverySec': 45,
     'helperXpShare': 0.1,
+    'chestMax': 200,
     // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
     // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo
     // por recolectar, turnos de espera del refuerzo que llega a una pelea

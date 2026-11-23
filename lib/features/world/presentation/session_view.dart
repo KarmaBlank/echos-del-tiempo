@@ -40,11 +40,14 @@ enum WorldPanel {
   /// Puesto del agropecuario (fishing.md § 5).
   trader,
 
-  /// Fuente rúnica: mejoras del pueblo, lago y ayudante (farming.md § 6).
+  /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
   fountain,
 
   /// Mapa de viaje: pueblo y biomas (overworld_biomes.md § 1).
   travel,
+  /// Un ayudante (granjero o pescador): semillas, tareas y cofre
+  /// (farming.md § 8, v0.25.5).
+  helper,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
@@ -83,6 +86,12 @@ enum WorldPrompt {
 
   /// Cartel del lago.
   sign('[E] Leer cartel'),
+
+  /// Al lado de un granjero o un pescador (G: la huerta usa E).
+  helper('[G] Ayudante'),
+
+  /// Al lado del cofre de una huerta o un lago.
+  chest('[E] Recoger cofre'),
 
   /// Fuente rúnica (farming.md § 6).
   fountain('[E] Fuente rúnica'),

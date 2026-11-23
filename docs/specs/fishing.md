@@ -175,11 +175,11 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   haya.
 - "Cobrar en" (ORO / MATERIALES) y VENDER TODO solo en VENDER.
 
-## 6. Auto-pesca
+## 6. Auto-pesca (se fue en v0.25.5)
 
-AUTO-PESCA: botón del AGROPECUARIO o R con la caña afuera (sin ventana): `autoCount` (3) peces de una, con XP ×
-`autoMult` (0.4), tamaños de la mitad baja del rango, **nunca
-legendarios**; espera `autoCooldownSec` (30 s) del anfitrión entre usos.
+Ya no hay botón AUTO-PESCA ni tecla R: la reemplaza el PESCADOR de cada
+lago (farming.md § 8): saca peces solo, al cofre del lago, con la tabla
+de ese lago, nunca legendarios y poca XP para quien recoge.
 
 ## 7. Red (protocolo 43)
 

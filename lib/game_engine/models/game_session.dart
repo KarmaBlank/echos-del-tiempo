@@ -799,7 +799,7 @@ class GameSession {
   TownState town;
 
   /// Dónde está el grupo fuera de las mazmorras (overworld_biomes.md § 4,
-  /// protocolo 46): `null` = el pueblo, si no el id del bioma (`bosque`).
+  /// protocolo 48): `null` = el pueblo, si no el id del bioma (`bosque`).
   /// Lo decide el anfitrión; todos viajan juntos.
   String? place;
 

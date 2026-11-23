@@ -27,7 +27,7 @@ Bosque, peces y semillas), `lib/game_engine/rules/biome_rules.dart`
 ## 2. Lugar del grupo
 
 - `GameSession.place`: `null` = pueblo, si no el id del bioma
-  (`bosque`). Viaja en el snapshot (`place`, protocolo 46).
+  (`bosque`). Viaja en el snapshot (`place`, protocolo 48).
 - `SessionEngine.mapFor`: en `lobby` / `prep` sin misión, si `place` es
   `bosque` devuelve `MapGenerator.bosque(picked)`; si no, el pueblo.
 - El mapa del exterior es `lobby = true` (zona segura, sin combate) y

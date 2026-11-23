@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/game_engine/models/town_build.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/map_game.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
@@ -139,5 +140,30 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('town-edit-done')));
     await h.frames(2);
     expect(c.editingTown, isFalse);
+  });
+  testWidgets('fuente rúnica: CONTRATAR PESCADOR elige el lago en el mapa',
+      (tester) async {
+    final h = await FishingMapHarness.pump(tester);
+    final c = h.c;
+    // ignore: invalid_use_of_visible_for_testing_member
+    c.teleport(17.0 * 16, 12.4 * 16);
+    await h.frames(6);
+    expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);
+    await h.frames(2);
+    expect(find.byKey(const ValueKey('fountain-exp-count')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('fountain-hire-fisher')));
+    await h.frames(3);
+    expect(c.editingTown, isTrue);
+    expect(c.townEdit!.hire, BuildKind.lago);
+    expect(find.text('¿En qué lago querés el pescador?'), findsOneWidget);
+    final lake = c.town.builds.firstWhere((b) => b.kind == BuildKind.lago);
+    expect(find.byKey(ValueKey('town-hire-${lake.id}')), findsOneWidget);
+    // Sin nivel de Pesca: gris con el motivo, el clic no contrata.
+    expect(c.hireWhy(lake), isNotNull);
+    expect(find.text(c.hireWhy(lake)!), findsWidgets);
+    expect(c.handleKey(LogicalKeyboardKey.escape), isTrue);
+    await h.frames(2);
+    expect(c.editingTown, isFalse);
+    expect(c.town.build(lake.id)!.helper, lake.helper);
   });
 }

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'farm_layer.dart' show MapText;
@@ -40,16 +41,44 @@ abstract final class TownEditLayer {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final w = map.width * ts, h = map.height * ts;
+    // Elegir dónde contratar (farming.md § 8): solo las huertas o los
+    // lagos, dorados si se puede contratar, grises si no.
+    if (e.hire case final kind?) {
+      for (final b in town.builds) {
+        if (b.kind != kind) continue;
+        final ok = ctl.hireWhy(b) == null;
+        final hot = ok && b.id == e.hoverBuild;
+        for (final p in b.parts) {
+          final r = Rect.fromLTWH(
+              (p.x + ox) * ts, (p.y + oy) * ts, p.w * ts, p.h * ts);
+          c.drawRect(
+              r, fill..color = ok ? TownEditPalette.valid : TownEditPalette.sideFull);
+          c.drawRect(
+              r.deflate(0.5),
+              line
+                ..color = hot
+                    ? TownEditPalette.selected
+                    : ok
+                        ? TownEditPalette.validBorder
+                        : TownEditPalette.sideLocked);
+        }
+      }
+      return;
+    }
     for (final side in TownSide.values) {
-      if (TownRules.sideFull(town, side) != null) continue;
+      final full = TownRules.sideFull(town, side) != null;
       final r = stripRect(side, w, h);
       final picked = e.side == side;
-      c.drawRect(r, fill..color = TownEditPalette.side);
+      c.drawRect(
+          r, fill..color = full ? TownEditPalette.sideFull : TownEditPalette.side);
       c.drawRect(
           r.deflate(0.5),
           line
-            ..color =
-                picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
+            ..color = full
+                ? TownEditPalette.sideLocked
+                : picked
+                    ? TownEditPalette.selected
+                    : TownEditPalette.sideBorder);
       // El texto (AMPLIAR y el costo) va en px de pantalla, en
       // `TownStripCards` (town_editor.md § 1.3).
     }
@@ -62,6 +91,16 @@ abstract final class TownEditLayer {
                 .deflate(0.5),
             line);
       }
+    }
+    // Lugares fijos: también se pueden mover (town_editor.md § 3.3).
+    for (final l in TownPlan.landmarksOf(town)) {
+      line.color = l.id == e.selected
+          ? TownEditPalette.selected
+          : TownEditPalette.outline;
+      c.drawRect(
+          Rect.fromLTWH((l.x + ox) * ts, (l.y + oy) * ts, l.w * ts, l.h * ts)
+              .deflate(0.5),
+          line);
     }
     if (e.tile case (final tx, final ty)? when e.step == TownEditStep.choose) {
       c.drawRect(Rect.fromLTWH(tx * ts, ty * ts, ts, ts).deflate(0.5),
@@ -76,9 +115,15 @@ abstract final class TownEditLayer {
       parts = [TownRect(g.$1, g.$2, d.w, d.h)];
     } else if (e.step == TownEditStep.moving) {
       final b = ctl.editSelected;
-      if (b == null) return;
-      final m = b.movedTo(g.$1 - ox, g.$2 - oy);
-      parts = [for (final p in m.parts) p.shift(ox, oy)];
+      final l = ctl.editLandmark;
+      if (l != null) {
+        parts = [TownRect(g.$1, g.$2, l.w, l.h)];
+      } else if (b == null) {
+        return;
+      } else {
+        final m = b.movedTo(g.$1 - ox, g.$2 - oy);
+        parts = [for (final p in m.parts) p.shift(ox, oy)];
+      }
     } else {
       return;
     }

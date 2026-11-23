@@ -48,6 +48,7 @@ import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/travel_panel.dart';
+import 'panels/helper_panel.dart';
 import 'panels/town_edit_overlay.dart';
 import 'panels/town_strip_cards.dart';
 import 'panels/character_panel.dart';
@@ -455,8 +456,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 onHover: (e) {
                   final tile = game.tileAtScreen(e.localPosition);
                   if (tile != null) controller.editHover(tile.$1, tile.$2);
+                  final helper =
+                      tile == null ? null : controller.helperAt(tile.$1, tile.$2);
+                  controller.hoverHelper = helper;
                   final next = tile != null &&
-                          controller.signAt(tile.$1, tile.$2) != null
+                          (helper != null ||
+                              controller.signAt(tile.$1, tile.$2) != null)
                       ? (tile, e.localPosition)
                       : null;
                   if (next?.$1 != _hover?.$1) setState(() => _hover = next);
@@ -464,6 +469,30 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ),
             ),
           if (_hover case final h?
+              when view.mode == SessionMode.lobby &&
+                  view.panel == null &&
+                  controller.hoverHelper != null)
+            Positioned(
+              key: const ValueKey('helper-tooltip'),
+              left: h.$2.dx + 16,
+              top: h.$2.dy + 16,
+              child: IgnorePointer(
+                child: switch (controller.hoverHelper) {
+                  (:final build, :final index)? => () {
+                      final (title, lines) =
+                          controller.helperInfo(build, index);
+                      return DsTooltipCard(
+                        title: title,
+                        children: [
+                          for (final l in lines) Text(l, style: DsText.detail())
+                        ],
+                      );
+                    }(),
+                  null => const SizedBox.shrink(),
+                },
+              ),
+            )
+          else if (_hover case final h?
               when view.mode == SessionMode.lobby &&
                   view.panel == null &&
                   !controller.editingTown)
@@ -975,6 +1004,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return FountainPanel(view: view, controller: controller);
       case WorldPanel.travel:
         return TravelPanel(view: view, controller: controller);
+      case WorldPanel.helper:
+        return HelperPanel(view: view, controller: controller);
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:

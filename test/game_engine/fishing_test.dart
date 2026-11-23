@@ -254,24 +254,6 @@ void main() {
       expect(e.apply(s, 'p0', const FishBiteAction(1)), isNotNull);
     });
 
-    test('auto-pesca: sin legendarios, con espera; tope de XP de personaje', () {
-      final e = sessionEngine(fieldFallback: 0.99999);
-      var s = room(e);
-      final step = e.apply(s, 'p0', const AutoFishAction())!;
-      final caught = step.events.whereType<FishCaughtEvent>().toList();
-      expect(caught, hasLength(3));
-      expect(caught.every((c) => c.auto && kFish[c.species]!.rarity != FishRarity.legendario),
-          isTrue);
-      s = step.state;
-      expect(e.apply(s, 'p0', const AutoFishAction()), isNull);
-      s = wait(e, s, 31);
-      for (var i = 0; i < 20; i++) {
-        s = act(e, s, 'p0', const AutoFishAction());
-        s = wait(e, s, 31);
-      }
-      expect(s.players['p0']!.profile.xp, lessThanOrEqualTo(60));
-    });
-
     test('agropecuario en la sala: vender, canjear, cañas', () {
       final e = sessionEngine();
       var s = e.addPlayer(e.create(), 'p0',
@@ -290,7 +272,6 @@ void main() {
       for (final a in const <SessionAction>[
         FishBiteAction(0.4),
         FishResultAction(true),
-        AutoFishAction(),
         SellFishAction(species: 'carpa_musgo', materials: true),
         SellFishAction(),
         ExchangeFishAction('pez_reloj'),

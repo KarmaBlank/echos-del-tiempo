@@ -62,14 +62,14 @@ import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
 import '../data/tuning_catalog.dart';
 import '../data/fishing_catalog.dart';
-import '../data/town_layout.dart' show TownSpot;
+import '../data/town_layout.dart' show TownLayout, TownSpot;
 import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
 import '../data/biomes_catalog.dart';
-import '../models/world_save.dart' show TownState, TownSide, BuildKind;
+import '../models/world_save.dart' show TownState, TownSide, BuildKind, TownBuild;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
@@ -1117,7 +1117,6 @@ class _Op {
 
       case FishBiteAction() ||
             FishResultAction() ||
-            AutoFishAction() ||
             FishLineAction() ||
             SellFishAction() ||
             ExchangeFishAction() ||

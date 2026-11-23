@@ -103,7 +103,7 @@ abstract final class WorldRules {
 
     // Exterior de bioma: sin los lugares del pueblo.
     if (map?.place == null) {
-      for (final l in TownLayout.landmarks) {
+      for (final l in map?.townMarks ?? TownLayout.landmarks) {
         final d = rectDist(l.x + ox, l.y + oy, l.w, l.h);
         if (d < bd) (bd, best) = (d, l.spot);
       }

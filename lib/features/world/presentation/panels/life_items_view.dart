@@ -1,11 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../game_engine/data/farming_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
+import 'life_tool_text.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
@@ -56,6 +57,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   var _cat = LifeItemsCategory.herramientas;
   var _query = '';
 
+  /// Sub-filtro de HERRAMIENTAS: `null` todas, `pesca` o `cultivo`.
+  String? _toolKind;
+
   @override
   Widget build(BuildContext context) {
     if (!widget.inTown) {
@@ -70,7 +74,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
     final q = _query.trim().toLowerCase();
     final shown = [
       for (final c in cells[_cat]!)
-        if (q.isEmpty || c.search.toLowerCase().contains(q)) c
+        if ((q.isEmpty || c.search.toLowerCase().contains(q)) &&
+            (_cat != LifeItemsCategory.herramientas ||
+                _toolKind == null ||
+                c.id.startsWith('life-tool-cana') == (_toolKind == 'pesca')))
+          c
     ];
     return Column(
       key: const ValueKey('life-items'),
@@ -96,6 +104,17 @@ class _LifeItemsViewState extends State<LifeItemsView> {
               width: 180,
               onChanged: (v) => setState(() => _query = v)),
         ]),
+        if (_cat == LifeItemsCategory.herramientas) ...[
+          SizedBox(height: DsSpace.xs),
+          Wrap(spacing: DsSpace.xs, children: [
+            for (final k in const [null, 'pesca', 'cultivo'])
+              DsButton((k ?? 'todas').toUpperCase(),
+                  key: ValueKey('life-tool-filter-${k ?? 'todas'}'),
+                  size: DsButtonSize.compact,
+                  selected: _toolKind == k,
+                  onPressed: () => setState(() => _toolKind = k)),
+          ]),
+        ],
         SizedBox(height: DsSpace.xs),
         Expanded(
           child: LifeItemGrid(
@@ -117,8 +136,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
     final f = life.farm;
     switch (cat) {
       case LifeItemsCategory.herramientas:
+        final fishLv = FishingRules.level(widget.profile);
+        final farmLv = FarmingRules.level(widget.profile);
         LifeItemCellData tool(String id, String name, FishRarity r, String kind,
-                int reqLevel, bool equipped, VoidCallback onEquip) =>
+                int reqLevel, bool equipped, VoidCallback onEquip,
+                List<String> lines, List<(String, bool)> cmp) =>
             LifeItemCellData(
               id: 'life-tool-$id',
               icon: LifeIcon(id, LifeIconKind.herramienta, size: _icon),
@@ -133,7 +155,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   (kind.toUpperCase(), DsColors.textSecondary),
                   (r.label.toUpperCase(), fishRarityColor(r)),
                 ],
-                lines: ['Nivel requerido: $reqLevel'],
+                lines: lines,
+                compare: cmp,
+                hoverTip: true,
                 actions: [
                   equipped
                       ? const DsTag('EQUIPADA', color: DsColors.reward)
@@ -148,11 +172,19 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           for (final id in life.rods)
             if (kRods[id] case final r?)
               tool(id, r.name, r.rarity, 'Caña', r.reqLevel, life.rod == id,
-                  () => c.equipRod(id)),
+                  () => c.equipRod(id), rodLines(r, fishLv),
+                  rodCompare(r, kRods[life.rod] ?? kRods[kStarterRod]!, fishLv)),
           for (final id in [...f.hoes, ...f.cans])
             if (kFarmTools[id] case final d?)
               tool(id, d.name, d.rarity, d.kind.label, d.reqLevel,
-                  f.hoe == id || f.can == id, () => c.equipFarmTool(id)),
+                  f.hoe == id || f.can == id, () => c.equipFarmTool(id),
+                  farmToolLines(d, farmLv),
+                  farmToolCompare(
+                      d,
+                      d.kind == FarmToolKind.azada
+                          ? FarmingRules.hoeOf(widget.profile)
+                          : FarmingRules.canOf(widget.profile),
+                      farmLv)),
         ];
       case LifeItemsCategory.pescados:
         final lake = TownRules.lakeNear(c.town, c.local.x, c.local.y);
@@ -188,6 +220,19 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                             : (lakeFull ? 'El lago está lleno' : null),
                         onPressed:
                             lakeFull ? null : () => c.stockFish(d.id, lake.id)),
+                    // Con varios lagos: elegir en cuál.
+                    if (c.town.lakes.length > 1)
+                      for (final (i, l) in c.town.lakes.indexed)
+                        if (l.id != lake?.id)
+                          DsButton('LAGO ${i + 1}',
+                              key: ValueKey('life-fish-stock-${d.id}-${l.id}'),
+                              size: DsButtonSize.compact,
+                              tooltip: l.stockTotal >= TownRules.lakeCapacity(l)
+                                  ? 'El lago está lleno'
+                                  : '${l.stockTotal}/${TownRules.lakeCapacity(l)} soltados',
+                              onPressed: l.stockTotal >= TownRules.lakeCapacity(l)
+                                  ? null
+                                  : () => c.stockFish(d.id, l.id)),
                   ],
                 ),
               ),

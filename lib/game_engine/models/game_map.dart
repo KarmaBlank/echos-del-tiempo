@@ -1,3 +1,5 @@
+import '../data/town_layout.dart' show TownLandmark;
+
 /// Un punto del mundo en px (no en tiles).
 class WorldPoint {
   final double x;
@@ -399,6 +401,7 @@ class GameMap {
     this.zone = 0,
     this.townOrigin = (0, 0),
     this.place,
+    this.townMarks,
   })  : rows = List.unmodifiable(rows),
         floors = List.unmodifiable(floors),
         entrances = List.unmodifiable(entrances);
@@ -414,6 +417,9 @@ class GameMap {
   /// `null` en el pueblo y en las mazmorras. Con `lobby = true` es zona
   /// segura, pero sin los lugares del pueblo.
   final String? place;
+  /// Pueblo: los lugares en su posición de este mundo (coordenadas del
+  /// pueblo base; town_editor.md § 3.3). `null` = los de siempre.
+  final List<TownLandmark>? townMarks;
 
   /// Una fila por `y`, un carácter por `x` (ver [Tile]).
   final List<String> rows;

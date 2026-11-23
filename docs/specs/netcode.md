@@ -97,7 +97,10 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 
 ## Protocolo (versión 15)
 
-`kProtocolVersion` (`wire.dart`) = 24 desde v0.14.0 (Hazañas,
+`kProtocolVersion` (`wire.dart`) = 46 desde v0.25.2 (lugares fijos del
+pueblo movibles, town_editor.md § 3.3 y § 8: `town.marks` en el estado y
+`town {o: move, tg: "@forge", x, y}`; 45 era la edición del pueblo de
+v0.24.0; el resto del historial está en `wire.dart`). 24 desde v0.14.0 (Hazañas,
 achievements.md § 5.3: `ach` en el perfil del `hello` y del estado, acción
 `ach` `{id}` para las que detecta el cliente y evento `ach` `{p, id}`).
 23 desde v0.12.2 (acción `useItem`:
@@ -758,15 +761,29 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
-## Mundo, protocolo 46 (v0.26.0: mapa de viaje y Bosque)
+## Mundo, protocolo 48 (v0.26.0: mapa de viaje y Bosque)
 
 - Snapshot: `place` (opcional; `null` = pueblo, `bosque` = exterior del
   Bosque) y `town.wild` (recolectables usados → segundo de rebrote).
 - Acciones nuevas: `{"t":"travel","p":"bosque"}` (solo el dueño del
   mundo; viaja todo el grupo) y `{"t":"forage","i":3}`. Host autoritativo.
 - Un refuerzo que entra en batalla actúa con `reinforceDelay` intervalos
-  de espera. Un cliente 45 dibujaría el pueblo estando en el Bosque: la
+  de espera. Un cliente 47 dibujaría el pueblo estando en el Bosque: la
   sala no mezcla versiones. Ver `overworld_biomes.md`.
+
+## Mundo, protocolo 47 (v0.25.5: granjeros y pescadores)
+
+- Cada construcción de `town.builds` suma `hp` (ayudantes), `ch`
+  (cofre), `sd` (semillas de los granjeros) y `tk` (tareas por granjero,
+  bits plantar / regar / cosechar). Se van `town.helper` y `town.silo`
+  (el mundo guardado los migra; farming.md § 8.4).
+- `town` suma las operaciones `hireHelper` / `fireHelper` /
+  `collectChest` (`tg`), `giveSeeds` / `takeSeeds` (`tg`, `id`, `n`; 0 =
+  todas) y `helperTasks` (`tg`, `x` = granjero, `n` = bits). Las vuelve a
+  validar el anfitrión.
+- Se va `fAuto` (la auto-pesca) y `farmShop` pierde `collectSilo`.
+- Un cliente 46 no sabría dibujar a los ayudantes ni los cofres: la sala
+  no mezcla versiones.
 
 ## Mundo, protocolo 44 (v0.23.0: huerta, pueblo y oficios)
 

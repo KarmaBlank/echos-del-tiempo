@@ -41,6 +41,9 @@ import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
 import 'farm_layer.dart';
+import 'life_level_layer.dart';
+import '../../../../core/audio/sfx_catalog.dart';
+import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
@@ -130,6 +133,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
+
+  /// Carteles de subida de nivel de oficio (farming.md § 2.6).
+  final lifeLevels = MapLifeLevelLayer();
   final _lastBobber = <String, (double, double)>{};
 
   /// Lo último dibujado: en [update] se graba de antemano un bloque de la
@@ -385,6 +391,23 @@ class MapGame extends Game {
     if (playerId == controller.localId) _myFallT0 = t;
   }
 
+  /// Compara los niveles de Pesca y Cultivo de cada jugador con los
+  /// últimos vistos; una subida muestra el cartel y suena.
+  void _watchLifeLevels() {
+    final players = controller.session?.players;
+    if (players == null) return;
+    for (final p in players.values) {
+      final pr = p.profile;
+      final ups = lifeLevels.observe(
+          p.id,
+          pr.name,
+          LifeTreeRules.level(pr, LifeSkillKind.pesca),
+          LifeTreeRules.level(pr, LifeSkillKind.cultivo),
+          t);
+      if (ups.isNotEmpty) controller.fishSfx?.call(Sfx.levelUp);
+    }
+  }
+
   void _onEvent(SessionEvent e) {
     if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
@@ -517,6 +540,7 @@ class MapGame extends Game {
   @override
   void update(double dt) {
     t += dt * 1000;
+    _watchLifeLevels();
     _frameDt = dt;
     final (ix, iy) = _input();
     final editing = controller.editingTown;
@@ -726,7 +750,7 @@ class MapGame extends Game {
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
-      for (final l in TownLayout.landmarks) {
+      for (final l in map.townMarks ?? TownLayout.landmarks) {
         _rankedText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }
@@ -751,10 +775,17 @@ class MapGame extends Game {
     }
     if (map.lobby) {
       fishing.drawShadows(c);
-      // La huerta y el ayudante son del pueblo, no de los exteriores.
+      // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
-        farm.drawPlots(c, s.town, worldView, t);
-        farm.drawHelper(c, s.town, t);
+      farm.drawPlots(c, s.town, worldView, t);
+      farm.drawHelpers(
+          c,
+          s.town,
+          s.time,
+          t,
+          (id) => sprites.lifeIcon(id, 'herramienta'),
+          (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
+          hover: controller.hoverHelper);
       }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
@@ -927,6 +958,8 @@ class MapGame extends Game {
       farm.drawPops(c, t, (id) => _lastDrawn[id],
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
     }
+    lifeLevels.draw(c, t, controller.localId, (id) => _lastDrawn[id],
+        (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
     if (map.lobby && map.place == null) {
       TownEditLayer.draw(c, controller, map,

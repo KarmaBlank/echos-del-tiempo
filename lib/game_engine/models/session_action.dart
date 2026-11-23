@@ -31,14 +31,14 @@ class MoveAction extends SessionAction {
       {required this.epoch, this.dir = 1, this.moving = false});
 }
 
-/// `travel` (protocolo 46): el anfitrión lleva al grupo al lugar [place]
+/// `travel` (protocolo 48): el anfitrión lleva al grupo al lugar [place]
 /// del mapa de viaje (`pueblo`, `bosque`; overworld_biomes.md § 4).
 class TravelAction extends SessionAction {
   final String place;
   const TravelAction(this.place);
 }
 
-/// `forage` (protocolo 46): recolectar el punto [spot] del exterior
+/// `forage` (protocolo 48): recolectar el punto [spot] del exterior
 /// (índice de `BosqueLayout.forage`; overworld_biomes.md § 3.2).
 class ForageAction extends SessionAction {
   final int spot;
@@ -586,10 +586,6 @@ class FishLineAction extends SessionAction {
   const FishLineAction(this.line);
 }
 
-/// `fAuto`: auto-pesca (recompensa reducida, nunca legendarios).
-class AutoFishAction extends SessionAction {
-  const AutoFishAction();
-}
 
 /// `fSell`: vender en el agropecuario. [species] `null` = Vender todo
 /// (menos legendarios). [materials]: cobrar en Esquirlas.
@@ -633,7 +629,6 @@ enum FarmShopOp {
   sell,
   sellAll,
   exchange,
-  collectSilo,
   selectSeed
 }
 
@@ -647,18 +642,36 @@ class FarmShopAction extends SessionAction {
 }
 
 /// Mejoras del pueblo en la fuente rúnica.
-enum TownOp { expand, place, move, remove, stock, hireHelper }
+enum TownOp {
+  expand,
+  place,
+  move,
+  remove,
+  stock,
+  hireHelper,
+  fireHelper,
+  helperTasks,
+  giveSeeds,
+  takeSeeds,
+  collectChest
+}
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),
 /// construcción del catálogo al poner o especie al soltar un pez;
 /// [target] = la construcción a mover, borrar o el lago donde soltar;
 /// ([x], [y]) = tile del mapa de la esquina al poner o mover.
+/// Ayudantes (v0.25.5): `hireHelper` / `fireHelper` / `collectChest` con
+/// [target]; `giveSeeds` / `takeSeeds` con [target], [id] = cultivo y
+/// [n] = cantidad (0 = todas); `helperTasks` con [target], [x] = el
+/// granjero y [n] = bits de `HelperTask`.
 class TownAction extends SessionAction {
   final TownOp op;
   final String? id;
   final String? target;
   final int? x, y;
-  const TownAction(this.op, {this.id, this.target, this.x, this.y});
+  final int n;
+  const TownAction(this.op,
+      {this.id, this.target, this.x, this.y, this.n = 1});
 }
 
 /// `lifeTree`: tomar un nodo ([node]) o reiniciar ([node] `null`) del

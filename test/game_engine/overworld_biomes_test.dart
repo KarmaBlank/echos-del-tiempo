@@ -98,7 +98,7 @@ void main() {
     }
   });
 
-  test('el lugar y los recolectables viajan y se guardan (protocolo 46)', () {
+  test('el lugar y los recolectables viajan y se guardan (protocolo 48)', () {
     final e = sessionEngine(zones: true);
     var s = act(e, room(), 'p0', const TravelAction(kBosque));
     s.town = BiomeRules.pick(s.town, kBosque, 3, s.time);

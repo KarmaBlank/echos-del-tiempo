@@ -104,9 +104,14 @@ import '../../game_engine/serialization/session_json.dart';
 /// 44 (v0.23.0): huerta, ampliaciones del pueblo y árboles de oficios.
 /// 45 (v0.24.0): edición del pueblo (town_editor.md § 8): `town` con
 /// lados, construcciones y lagos propios.
-/// 46 (v0.26.0): mapa de viaje y exteriores de bioma (overworld_biomes.md):
+/// 46 (v0.25.2): lugares fijos movibles (town_editor.md § 3.3): `town`
+/// suma `marks` y `move` acepta `tg` = `@<lugar>`; un cliente 45 armaría
+/// el pueblo con los lugares en su sitio de siempre.
+/// 47 (v0.25.5): granjeros y pescadores con cofre por construcción
+/// (farming.md § 8); se va la auto-pesca.
+/// 48 (v0.26.0): mapa de viaje y exteriores de bioma (overworld_biomes.md):
 /// `place` en el snapshot, `town.wild` y acciones `travel` / `forage`.
-const kProtocolVersion = 46;
+const kProtocolVersion = 48;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
