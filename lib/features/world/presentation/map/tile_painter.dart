@@ -372,6 +372,10 @@ class TilePainter {
       case Tile.brazier || Tile.brazierLit:
         floor();
         _brazier(c, px, py, t, lit: ch == Tile.brazierLit);
+      // Farol de mazmorra oscura (lighting.md § 5.5): como el faro.
+      case Tile.lantern || Tile.lanternLit:
+        floor();
+        faro(c, px, py, t, lit: ch == Tile.lanternLit);
       // Recolectable de un exterior (overworld_biomes.md § 3.2).
       case Tile.forage || Tile.forageUsed:
         _grass(c, th, px, py, h);
@@ -476,7 +480,9 @@ class TilePainter {
             Tile.waystoneOn ||
             Tile.wind ||
             Tile.brazier ||
-            Tile.brazierLit:
+            Tile.brazierLit ||
+            Tile.lantern ||
+            Tile.lanternLit:
         return true;
       default:
         // Base de una entrada de zona (el arco va aparte) o desconocido.
