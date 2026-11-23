@@ -1,8 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/rendering.dart';
 
 import '../../game_engine/models/item.dart' show Rarity;
+import 'item_icon_rows.dart';
 import 'procedural_art.dart';
 import 'weapon_look.dart';
+
+export 'item_icon_rows.dart';
 
 /// Pintor del ícono de [entryId] (`items.espada`, o `items` = familia)
 /// con las perillas vigentes de [ProceduralArt.instance].
@@ -17,10 +22,25 @@ class ItemIconPainter extends CustomPainter {
   /// Identidad del arma concreta (aura sutil, acento, ULT, variante).
   final WeaponLook? look;
 
+  /// Clave del PNG (`items.<clave>` del manifest; ver [ItemIconImages]),
+  /// o `null` = siempre procedural.
+  String? pngKey;
+
   @override
-  void paint(Canvas canvas, Size size) => paintItemIcon(canvas,
-      Offset.zero & size, rows, accent, ProceduralArt.instance.resolve(entryId),
-      look: look);
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    final p = ProceduralArt.instance.resolve(entryId);
+    final png = pngKey == null ? null : ItemIconImages.base(pngKey!);
+    if (png == null) {
+      paintItemIcon(canvas, r, rows, accent, p, look: look);
+      return;
+    }
+    paintItemIconPng(canvas, r, png, ItemIconImages.accent(pngKey!), accent);
+    // Identidad del arma (aura, destello, ULT) encima del PNG.
+    if (look != null) {
+      paintItemIcon(canvas, r, rows, accent, p, look: look, base: false);
+    }
+  }
 
   @override
   bool shouldRepaint(ItemIconPainter old) =>
@@ -28,7 +48,51 @@ class ItemIconPainter extends CustomPainter {
       old.accent != accent ||
       old.entryId != entryId ||
       old.look != look ||
+      old.pngKey != pngKey ||
       old.revision != revision;
+}
+
+/// PNG de los íconos de armas e ítems (`items.<clave>` y
+/// `items.<clave>_acento` del manifest; tool/export_item_icons.dart). Los
+/// carga GameSprites vía SpriteCatalog; si falta uno, el pintor vuelve al
+/// dibujo procedural.
+abstract final class ItemIconImages {
+  static final _base = <String, ui.Image>{};
+  static final _accent = <String, ui.Image>{};
+
+  /// Registra la imagen de la entrada [key] del manifest.
+  static void put(String key, ui.Image img) => key.endsWith('_acento')
+      ? _accent[key.substring(0, key.length - 7)] = img
+      : _base[key] = img;
+
+  static void clear() {
+    _base.clear();
+    _accent.clear();
+  }
+
+  static ui.Image? base(String key) => _base[key];
+  static ui.Image? accent(String key) => _accent[key];
+
+  /// Clave del PNG de una forma (`báculo` → `baculo`).
+  static String keyOf(String shape) => shape.replaceAll('á', 'a');
+}
+
+/// Dibuja el PNG [base] en [r] sin difuminado y encima el acento [mask]
+/// (grises) teñido con [accent].
+void paintItemIconPng(
+    Canvas canvas, Rect r, ui.Image base, ui.Image? mask, Color accent) {
+  final side = r.shortestSide;
+  final dst = Rect.fromCenter(center: r.center, width: side, height: side);
+  Rect src(ui.Image i) =>
+      Rect.fromLTWH(0, 0, i.width.toDouble(), i.height.toDouble());
+  final paint = Paint()
+    ..filterQuality = FilterQuality.none
+    ..isAntiAlias = false;
+  canvas.drawImageRect(base, src(base), dst, paint);
+  if (mask != null) {
+    canvas.drawImageRect(mask, src(mask), dst,
+        paint..colorFilter = ColorFilter.mode(accent, BlendMode.modulate));
+  }
 }
 
 /// Dibuja la entrada [entryId] del manifest (`items.espada`) si tiene
@@ -46,275 +110,6 @@ bool paintProceduralEntry(Canvas canvas, Rect r, String entryId,
   return true;
 }
 
-/// Generador `item_icon` (docs/specs/game_editor.md § 7.5): íconos pixel
-/// 8 × 8 de armas e ítems. Catálogo único de formas; el pintor lee sus
-/// perillas de [ProceduralArt] (valores por defecto = aspecto de siempre).
-///
-/// Bitmaps 8 × 8: `.` vacío; `m` metal; `h` mango; `g` acento (gema,
-/// color de la rareza o del material); `s` cuerda; `p` papel; `c` tapa;
-/// `w` vidrio.
-const kItemIconRows = <String, List<String>>{
-  'espada': [
-    '.......m',
-    '......mm',
-    '.....mm.',
-    '.h..mm..',
-    '..hmm...',
-    '...h....',
-    '..h.h...',
-    '.h......',
-  ],
-  'hacha': [
-    '..mmm...',
-    '.mmmmh..',
-    '.mmmh...',
-    '..mh....',
-    '...h....',
-    '....h...',
-    '.....h..',
-    '......h.',
-  ],
-  'lanza': [
-    '......mm',
-    '......mm',
-    '.....h..',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '.h......',
-    'h.......',
-  ],
-  'báculo': [
-    '.....gg.',
-    '....gggg',
-    '.....gg.',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '.h......',
-    'h.......',
-  ],
-  'tomo': [
-    '........',
-    '.cccccc.',
-    '.cppppc.',
-    '.cpggpc.',
-    '.cppppc.',
-    '.cppppc.',
-    '.cccccc.',
-    '........',
-  ],
-  'varita': [
-    '......g.',
-    '.....g.g',
-    '......g.',
-    '.....h..',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '........',
-  ],
-  'arco': [
-    '..hh....',
-    '.h..s...',
-    'h....s..',
-    'h.....s.',
-    'h.....s.',
-    'h....s..',
-    '.h..s...',
-    '..hh....',
-  ],
-  'rifle': [
-    '........',
-    '........',
-    'mmmmmmm.',
-    'hhhmm...',
-    'hh.h....',
-    'h.......',
-    '........',
-    '........',
-  ],
-  'ballesta': [
-    '...m....',
-    '..mmm...',
-    '.h.m.h..',
-    'h..m..h.',
-    '...m....',
-    '...h....',
-    '...h....',
-    '........',
-  ],
-  'dagas': [
-    'm......m',
-    '.m....m.',
-    '..m..m..',
-    '...hh...',
-    '...hh...',
-    '..h..h..',
-    '.h....h.',
-    '........',
-  ],
-  'escudo': [
-    '.mmmmmm.',
-    '.mggggm.',
-    '.mgmmgm.',
-    '.mggggm.',
-    '.mggggm.',
-    '..mggm..',
-    '...mm...',
-    '........',
-  ],
-  // Íconos de inventario de las armas con escudo (weapon_identity.md
-  // § 3.1): el escudo a la izquierda y el arma de pie a la derecha, con
-  // una columna libre entre ambos para que se lean a 32 px.
-  'espada_escudo': [
-    '......m.',
-    '......m.',
-    'mmmm..m.',
-    'mggm..m.',
-    'mggm.hhh',
-    'mggm..h.',
-    '.mm...h.',
-    '......h.',
-  ],
-  'maza_escudo': [
-    '......g.',
-    '.....mmm',
-    'mmmm.gmg',
-    'mggm.mmm',
-    'mggm..h.',
-    'mggm..h.',
-    '.mm...h.',
-    '......h.',
-  ],
-  'martillo_escudo': [
-    '....mmmm',
-    '....mmmm',
-    'mmmm..h.',
-    'mggm..h.',
-    'mggm..h.',
-    'mggm..h.',
-    '.mm...h.',
-    '......h.',
-  ],
-  // Armas en mano de las familias con escudo (sprites.md § "Armas en
-  // mano"); en la mano el escudo va aparte, en el otro brazo.
-  'maza': [
-    '..g.g...',
-    '.gmmmg..',
-    '..mmm...',
-    '.gmmmg..',
-    '...h....',
-    '...h....',
-    '...h....',
-    '...h....',
-  ],
-  'martillo': [
-    'mmmmmmm.',
-    'mmmmmmm.',
-    'mmmhmmm.',
-    '...h....',
-    '...h....',
-    '...h....',
-    '...h....',
-    '...h....',
-  ],
-  'pocion': [
-    '...hh...',
-    '...ww...',
-    '..gggg..',
-    '.gggggg.',
-    '.gggggg.',
-    '.gggggg.',
-    '..gggg..',
-    '........',
-  ],
-  // Cofre (forma nueva del Editor, § 7.5).
-  'cofre': [
-    '........',
-    '.hhhhhh.',
-    'hmmmmmmh',
-    'hhhggghh',
-    'hhhgghhh',
-    'hhhhhhhh',
-    'hmmmmmmh',
-    '........',
-  ],
-  'esquirla': [
-    '....g...',
-    '...gg...',
-    '...ggg..',
-    '..gggg..',
-    '..ggg...',
-    '.ggg....',
-    '.gg.....',
-    '........',
-  ],
-  'cristal': [
-    '...gg...',
-    '..gggg..',
-    '.gggggg.',
-    'gggwgggg',
-    '.gggggg.',
-    '..gggg..',
-    '...gg...',
-    '........',
-  ],
-  'prisma': [
-    '...g....',
-    '...gg...',
-    '..gggm..',
-    '..ggmm..',
-    '.ggmmmh.',
-    '.gmmmhh.',
-    'gggmmhhh',
-    '........',
-  ],
-  // Eco: un portal con un reloj adentro (ecos_atlas.md § 2).
-  'eco': [
-    '..gggg..',
-    '.gwwwwg.',
-    'gww.mwwg',
-    'gww.mwwg',
-    'gwwmmwwg',
-    'gwwwwwwg',
-    '.gwwwwg.',
-    '..gggg..',
-  ],
-  // Ancla Temporal.
-  'ancla': [
-    '...gg...',
-    '...gg...',
-    '.mmggmm.',
-    '...gg...',
-    '...gg...',
-    'g..gg..g',
-    '.g.gg.g.',
-    '..gggg..',
-  ],
-  // Fragmento del Abismo (v0.8): rombo partido con núcleo.
-  'fragmento': [
-    '...m....',
-    '..mgm...',
-    '.mgwgm..',
-    'mggwggm.',
-    '.mggm...',
-    '..mgm...',
-    '...m....',
-    '........',
-  ],
-  // Esencia del Abismo (v0.8): gota.
-  'esencia': [
-    '...g....',
-    '...g....',
-    '..ggg...',
-    '.ggwgg..',
-    '.gwggg..',
-    '.ggggg..',
-    '..ggg...',
-    '........',
-  ],
-};
 
 /// Entrada `items.<clave>` del sprite_manifest.yaml → forma.
 const kItemEntryShapes = <String, String>{
@@ -362,7 +157,7 @@ Color _tone(Color c, double shine) => shine == 0
 /// partículas, destello del legendario y el píxel de la ULT en el pomo.
 /// [time] (segundos) anima el aura y el destello; con 0 queda quieto.
 void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
-    ProcParams p, {WeaponLook? look, double time = 0}) {
+    ProcParams p, {WeaponLook? look, double time = 0, bool base = true}) {
   final vary = look != null && p.flag('variation') ? look.variant : 0;
   final shine = (p.number('shine') +
           switch (vary) { 1 => 0.12, 2 => -0.12, _ => 0.0 })
@@ -394,7 +189,7 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
       y >= 0 && y < rows.length && x >= 0 && x < rows[y].length &&
       palette.containsKey(rows[y][x]);
 
-  if (p.flag('outline')) {
+  if (base && p.flag('outline')) {
     final oc = _hex(p.color('outline_color'));
     for (var y = 0; y < 8; y++) {
       for (var x = 0; x < 8; x++) {
@@ -422,7 +217,7 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
   }
   final highlight = p.flag('highlight') || look?.rarity == Rarity.epico;
   var gem = p.flag('gem') || vary == 2;
-  for (var y = 0; y < rows.length; y++) {
+  for (var y = 0; base && y < rows.length; y++) {
     var lit = false;
     for (var x = 0; x < rows[y].length; x++) {
       final k = rows[y][x];

@@ -80,7 +80,9 @@ void main() {
         expect(kEnemies[e.key]?.boss == true || e.key.contains('Fase2'), isTrue, reason: e.id);
       }
       expect(cat.entry('characters.guerrero.idle')!.path, 'characters/guerrero/idle.png');
-      expect(cat.entry('items.espada.idle')!.procedural, isTrue);
+      // Desde v0.25.7 los íconos de armas son PNG (tool/export_item_icons.dart).
+      expect(cat.entry('items.espada.idle')!.path, 'items/espada.png');
+      expect(cat.entry('tiles.suelo.idle')!.procedural, isTrue);
       expect(cat.entry('items.espada.idle')!.expectedSize, (16, 16));
       expect(cat.entry('fx.tajo.idle')!.publishPath, 'effects/tajo.png');
     });
@@ -124,7 +126,7 @@ void main() {
       expect(cat.hasOverride(e.id), isFalse);
       expect(await cat.bytes(e), asset);
       // Las procedurales: sin imagen hasta que hay override.
-      final p = cat.entry('items.espada.idle')!;
+      final p = cat.entry('tiles.suelo.idle')!;
       expect(await cat.bytes(p), isNull);
       await o.put(p.id, mine);
       expect(await cat.bytes(p), mine);

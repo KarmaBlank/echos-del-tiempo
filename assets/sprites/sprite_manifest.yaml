@@ -194,21 +194,58 @@ enemies:
 # `procedural`). `size: [ancho, alto]` es el tamaño esperado del PNG.
 # Carpetas: items/, tiles/, ui/ y effects/ (fx), ya en pubspec.yaml.
 items:
-  espada: { procedural: true, size: [16, 16] }
-  hacha: { procedural: true, size: [16, 16] }
-  lanza: { procedural: true, size: [16, 16] }
-  dagas: { procedural: true, size: [16, 16] }
-  espada_escudo: { procedural: true, size: [16, 16] }
-  maza_escudo: { procedural: true, size: [16, 16] }
-  martillo_escudo: { procedural: true, size: [16, 16] }
-  arco: { procedural: true, size: [16, 16] }
-  ballesta: { procedural: true, size: [16, 16] }
-  rifle: { procedural: true, size: [16, 16] }
-  baculo: { procedural: true, size: [16, 16] }
-  varita: { procedural: true, size: [16, 16] }
-  tomo: { procedural: true, size: [16, 16] }
-  pocion: { procedural: true, size: [16, 16] }
-  cofre: { procedural: true, size: [16, 16] }
+  # items:inicio — íconos de armas e ítems (tool/export_item_icons.dart)
+  espada: { idle: items/espada.png, size: [16, 16] }
+  espada_acento: { idle: items/espada_acento.png, size: [16, 16] }
+  hacha: { idle: items/hacha.png, size: [16, 16] }
+  hacha_acento: { idle: items/hacha_acento.png, size: [16, 16] }
+  lanza: { idle: items/lanza.png, size: [16, 16] }
+  lanza_acento: { idle: items/lanza_acento.png, size: [16, 16] }
+  baculo: { idle: items/baculo.png, size: [16, 16] }
+  baculo_acento: { idle: items/baculo_acento.png, size: [16, 16] }
+  tomo: { idle: items/tomo.png, size: [16, 16] }
+  tomo_acento: { idle: items/tomo_acento.png, size: [16, 16] }
+  varita: { idle: items/varita.png, size: [16, 16] }
+  varita_acento: { idle: items/varita_acento.png, size: [16, 16] }
+  arco: { idle: items/arco.png, size: [16, 16] }
+  arco_acento: { idle: items/arco_acento.png, size: [16, 16] }
+  rifle: { idle: items/rifle.png, size: [16, 16] }
+  rifle_acento: { idle: items/rifle_acento.png, size: [16, 16] }
+  ballesta: { idle: items/ballesta.png, size: [16, 16] }
+  ballesta_acento: { idle: items/ballesta_acento.png, size: [16, 16] }
+  dagas: { idle: items/dagas.png, size: [16, 16] }
+  dagas_acento: { idle: items/dagas_acento.png, size: [16, 16] }
+  escudo: { idle: items/escudo.png, size: [16, 16] }
+  escudo_acento: { idle: items/escudo_acento.png, size: [16, 16] }
+  espada_escudo: { idle: items/espada_escudo.png, size: [16, 16] }
+  espada_escudo_acento: { idle: items/espada_escudo_acento.png, size: [16, 16] }
+  maza_escudo: { idle: items/maza_escudo.png, size: [16, 16] }
+  maza_escudo_acento: { idle: items/maza_escudo_acento.png, size: [16, 16] }
+  martillo_escudo: { idle: items/martillo_escudo.png, size: [16, 16] }
+  martillo_escudo_acento: { idle: items/martillo_escudo_acento.png, size: [16, 16] }
+  maza: { idle: items/maza.png, size: [16, 16] }
+  maza_acento: { idle: items/maza_acento.png, size: [16, 16] }
+  martillo: { idle: items/martillo.png, size: [16, 16] }
+  martillo_acento: { idle: items/martillo_acento.png, size: [16, 16] }
+  pocion: { idle: items/pocion.png, size: [16, 16] }
+  pocion_acento: { idle: items/pocion_acento.png, size: [16, 16] }
+  cofre: { idle: items/cofre.png, size: [16, 16] }
+  cofre_acento: { idle: items/cofre_acento.png, size: [16, 16] }
+  esquirla: { idle: items/esquirla.png, size: [16, 16] }
+  esquirla_acento: { idle: items/esquirla_acento.png, size: [16, 16] }
+  cristal: { idle: items/cristal.png, size: [16, 16] }
+  cristal_acento: { idle: items/cristal_acento.png, size: [16, 16] }
+  prisma: { idle: items/prisma.png, size: [16, 16] }
+  prisma_acento: { idle: items/prisma_acento.png, size: [16, 16] }
+  eco: { idle: items/eco.png, size: [16, 16] }
+  eco_acento: { idle: items/eco_acento.png, size: [16, 16] }
+  ancla: { idle: items/ancla.png, size: [16, 16] }
+  ancla_acento: { idle: items/ancla_acento.png, size: [16, 16] }
+  fragmento: { idle: items/fragmento.png, size: [16, 16] }
+  fragmento_acento: { idle: items/fragmento_acento.png, size: [16, 16] }
+  esencia: { idle: items/esencia.png, size: [16, 16] }
+  esencia_acento: { idle: items/esencia_acento.png, size: [16, 16] }
+  # items:fin
   # vida:inicio — íconos de oficio (tool/export_life_icons.dart)
   vida_cana_rama: { idle: items/vida_cana_rama.png, size: [16, 16] }
   vida_cana_roble: { idle: items/vida_cana_roble.png, size: [16, 16] }
