@@ -35,7 +35,12 @@ class MoveAction extends SessionAction {
 /// del mapa de viaje (`pueblo`, `bosque`; overworld_biomes.md § 4).
 class TravelAction extends SessionAction {
   final String place;
-  const TravelAction(this.place);
+
+  /// Protocolo 59 (ecos_zone.md § 5): deja al jugador frente al portal de
+  /// Ecos de esa zona (que tiene que estar en [place]). Con esto se puede
+  /// "viajar" al exterior donde ya está, solo para acercarse al portal.
+  final int? ecoZone;
+  const TravelAction(this.place, {this.ecoZone});
 }
 
 /// `leaveD` (protocolo 57, free_movement.md § 2.4): salir solo de la

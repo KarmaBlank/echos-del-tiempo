@@ -42,6 +42,7 @@ import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
 import 'npc_talk_rules.dart';
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'dungeon_rules.dart';
+import 'eco_portal_rules.dart';
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
 import 'inventory_rules.dart';
@@ -1750,14 +1751,16 @@ class _Op {
 
   // ---------------- Ecos (docs/specs/ecos_atlas.md § 4) ----------------
 
-  /// `ProposeEcoAction`: en el pueblo, con el portal activado y el Eco en
-  /// el inventario. No se consume hasta empezar.
+  /// `ProposeEcoAction`: frente al portal de Ecos de la zona del Eco (en
+  /// el exterior de su bioma), con ese tier abierto y el Eco en el
+  /// inventario (ecos_zone.md § 4). No se consume hasta empezar.
   bool _proposeEco(SessionPlayer p, String uid) {
     final eco = p.profile.ecoByUid(uid);
     if (s.mode != SessionMode.lobby ||
         s.vote != null ||
-        !p.profile.ecosUnlocked ||
-        eco == null) {
+        eco == null ||
+        EcoPortalRules.near(s.place, p.x, p.y) != eco.zone ||
+        !EcoPortalRules.isUnlocked(p.profile, eco.zone, eco.tier)) {
       return false;
     }
     s
@@ -4071,6 +4074,9 @@ class _Op {
   void _ecoCompleted(EcoItem eco) {
     events.add(EcoCompletedEvent([for (final p in players) p.id],
         tier: eco.tier, zone: eco.zone, boss: eco.boss));
+    for (final p in players) {
+      p.profile = EcoPortalRules.recordCompleted(p.profile, eco.zone, eco.tier);
+    }
     say('¡Eco completado! ${ecos.fullName(eco)}');
     _ecoUlts(eco);
     for (final p in players) {
