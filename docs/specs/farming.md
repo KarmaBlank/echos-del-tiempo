@@ -346,6 +346,12 @@ herramienta de área trabaja menos tiles.
   con la construcción, no es sólido) con el número de cosas encima. E al
   lado: RECOGER todo a la bolsa PESCA Y CULTIVO, con `helperXpShare`
   (10 %) de la XP. Tope `chestMax` (200): lleno, no cosechan ni pescan.
+- Estado a la vista (v0.33.1): vacío se dibuja apagado
+  (`FarmPalette.chestEmpty`); con cosas, con un brillo atrás
+  (`chestGlow`) y el número; lleno, con marco y número en `chestFull`.
+  Mouse encima: tooltip del mapa "Cofre vacío", "Cofre: N objetos" o
+  "Cofre lleno" (`HelperRules.chestText`). Sale del pueblo del estado,
+  sin cambio de protocolo.
 - Pescador: cada vuelta saca `fisherCatch` (2) peces de la tabla de su
   lago (+ «Red de pescador») al cofre; nunca legendarios; XP como la
   vieja red (× `autoMult`) para quien recoge.
@@ -393,7 +399,7 @@ Pueblo.
   tormenta los pescadores sacan `stormFisher` de lo de siempre y los
   rayos pueden pegarle a una parcela.
 
-### 8.6 Ayudante bloqueado (v0.32.6)
+### 8.6 Ayudante bloqueado (v0.33.1)
 
 Un ayudante está BLOQUEADO cuando no puede hacer ninguna de sus tareas
 ni ahora ni en ninguna vuelta futura sin que un jugador cambie algo

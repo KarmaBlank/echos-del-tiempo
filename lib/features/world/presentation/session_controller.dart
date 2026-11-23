@@ -1752,6 +1752,19 @@ class SessionController extends StateNotifier<SessionView?> {
       ? TownRules.chestNear(town, local.x, local.y)
       : null;
 
+  /// El cofre de oficio en el tile [tx], [ty] del mapa (tooltip).
+  TownBuild? chestAt(int tx, int ty) {
+    if (_s?.mode != SessionMode.lobby || isRun || _s?.place != null) {
+      return null;
+    }
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      if (b.kind == BuildKind.casa) continue;
+      if (TownRules.chestOf(town, b) == (tx - ox, ty - oy)) return b;
+    }
+    return null;
+  }
+
   /// El ayudante bajo el mouse (tile del mapa): resalta su área.
   ({TownBuild build, int index})? hoverHelper;
 

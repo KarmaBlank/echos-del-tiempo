@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
-import '../models/farm_plot.dart';
-import '../models/town_build.dart';
 import 'farming_rules.dart';
 import 'life_craft_rules.dart';
 import 'town_rules.dart';
@@ -237,4 +235,11 @@ abstract final class HelperRules {
   }
 
   static bool blocked(TownBuild b, int i) => blockers(b, i).isNotEmpty;
+
+  /// Texto del cofre de [b] para el tooltip del mapa (farming.md § 8.3).
+  static String chestText(TownBuild b) => b.chestTotal <= 0
+      ? 'Cofre vacío'
+      : TownRules.chestFull(b)
+          ? 'Cofre lleno'
+          : 'Cofre: ${b.chestTotal} ${b.chestTotal == 1 ? 'objeto' : 'objetos'}';
 }

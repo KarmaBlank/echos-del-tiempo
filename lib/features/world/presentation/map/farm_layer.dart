@@ -332,12 +332,13 @@ class MapFarmLayer {
       NpcMark Function(BiomeNpcDef n)? markOf}) {
     final (ox, oy) = town.origin;
     final paint = SpriteCatalog.pixelPaint();
-    void img(String id, double cx, double bottom) {
+    Rect? img(String id, double cx, double bottom, [Paint? p]) {
       final im = sprite(id);
-      if (im == null) return;
+      if (im == null) return null;
       final w = im.width.toDouble(), h = im.height.toDouble();
-      c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
-          Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h), paint);
+      final dst = Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h);
+      c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h), dst, p ?? paint);
+      return dst;
     }
 
     for (final b in town.builds) {
@@ -351,9 +352,28 @@ class MapFarmLayer {
       // Cofre al lado del cartel, con cuántas cosas tiene.
       final (cx, cy) = TownRules.chestOf(town, b);
       final px = (cx + ox + 0.5) * ts, py = (cy + oy + 1) * ts;
-      img('cofre_oficio', px, py);
-      if (b.chestTotal > 0) {
-        text('${b.chestTotal}', px, py - ts - 2, TownPalette.label, 6);
+      // Estado (farming.md § 8.3): vacío apagado, con cosas con brillo,
+      // lleno con marco.
+      final empty = b.chestTotal <= 0, full = TownRules.chestFull(b);
+      if (!empty) {
+        c.drawRect(
+            Rect.fromCenter(
+                center: Offset(px, py - ts / 2), width: ts + 2, height: ts),
+            Paint()..color = FarmPalette.chestGlow);
+      }
+      final r = img('cofre_oficio', px, py,
+          empty ? (SpriteCatalog.pixelPaint()..color = FarmPalette.chestEmpty) : null);
+      if (full && r != null) {
+        c.drawRect(
+            r.inflate(1),
+            Paint()
+              ..color = FarmPalette.chestFull
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1);
+      }
+      if (!empty) {
+        text('${b.chestTotal}', px, py - ts - 2,
+            full ? FarmPalette.chestFull : TownPalette.label, 6);
       }
       for (var i = 0; i < b.helper; i++) {
         final pos = TownRules.helperPos(town, b, i, time);

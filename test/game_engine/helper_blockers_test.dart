@@ -4,7 +4,7 @@ import 'package:echos_del_tiempo/game_engine/rules/helper_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/town_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// Ayudantes bloqueados (farming.md § 8.6, v0.32.6).
+// Ayudantes bloqueados (farming.md § 8.6, v0.33.1).
 
 FarmPlot _seedling() => FarmingRules.plant(FarmingRules.till(), 'nabo_claro')!;
 
@@ -86,6 +86,14 @@ void main() {
       b = b.copyWith(plots: _all(b, _ripe()));
       expect(HelperRules.blockers(b, 0), isEmpty);
     });
+  });
+
+  test('texto del cofre: vacío, con cosas, lleno', () {
+    expect(HelperRules.chestText(kBaseLake), 'Cofre vacío');
+    expect(HelperRules.chestText(kBaseLake.copyWith(chest: {'mojarra_claro': 3})),
+        'Cofre: 3 objetos');
+    expect(HelperRules.chestText(kBaseLake.copyWith(chest: _fullChest())),
+        'Cofre lleno');
   });
 
   group('pescador', () {
