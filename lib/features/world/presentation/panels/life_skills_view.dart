@@ -8,6 +8,7 @@ import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
+import '../world_strings.dart';
 
 /// Texto de un nodo con sus números del Balance (`{v}`, `{v2}`).
 String lifeNodeText(LifeTreeNode n) {
@@ -93,7 +94,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       LifeSkillKind.pesca => kRods[p.life.rod]?.name ?? '',
       LifeSkillKind.cultivo =>
         '${kFarmTools[p.life.farm.hoe]?.name} · ${kFarmTools[p.life.farm.can]?.name}',
-      LifeSkillKind.herreria => 'Forjar, encargos de forja y condensar',
+      LifeSkillKind.herreria => context.t('ui.town.trades.smith_tools'),
     };
     // Tarjeta del oficio (v0.24.4): nombre y puntos libres arriba, el
     // nivel grande, la XP con lo que falta y la barra; todo entero.
@@ -112,23 +113,23 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
             Expanded(
                 child: Text(k.label.toUpperCase(), style: DsText.subtitle())),
             if (free > 0)
-              DsBadge('$free libre${free == 1 ? '' : 's'}',
+              DsBadge(context.t('ui.town.trades.free', {'n': free}),
                   key: ValueKey('life-free-${k.name}')),
           ]),
           SizedBox(height: DsSpace.xs),
-          Text('Nivel $lvl',
+          Text(context.t('ui.town.trades.level', {'n': lvl}),
               key: ValueKey('life-level-${k.name}'),
               style: DsText.title(DsColors.reward)),
           SizedBox(height: DsSpace.xs),
           Text(
               need > 0
-                  ? '$cur / $need XP · faltan ${need - cur}'
-                  : 'Nivel máximo',
+                  ? context.t('ui.town.trades.xp_left', {'xp': cur, 'need': need, 'left': need - cur})
+                  : context.t('ui.town.trades.max_level'),
               style: DsText.body()),
           SizedBox(height: DsSpace.xs),
           DsPercent(need > 0 ? (cur * 100 ~/ need) : 100,
               key: ValueKey('life-xp-${k.name}'),
-              label: 'XP de ${k.label}',
+              label: context.t('ui.town.trades.xp_of', {'skill': k.label}),
               barWidth: 160),
           SizedBox(height: DsSpace.xs),
           Text(tool, style: DsText.detail()),
@@ -147,22 +148,22 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DsSectionHeader(n.name.toUpperCase(),
-            trailing: Text(n.root ? 'Raíz' : 'costo ${n.cost}',
+            trailing: Text(n.root ? context.t('ui.town.trades.root') : context.t('ui.town.trades.cost', {'n': n.cost}),
                 style: DsText.detail())),
         Text(lifeNodeText(n),
             key: const ValueKey('life-node-text'), style: DsText.body()),
         if (n.exclusive != null)
-          Text('Excluyente: elegí uno de su par.', style: DsText.detail()),
-        Text(has ? 'Tomado' : why ?? 'Disponible', style: DsText.detail()),
+          Text(context.t('ui.town.trades.exclusive'), style: DsText.detail()),
+        Text(has ? context.t('ui.town.trades.taken') : why ?? context.t('ui.town.trades.available'),
+            style: DsText.detail()),
         SizedBox(height: DsSpace.sm),
         Text(
-            'Puntos libres ${LifeTreeRules.free(p, k)} · ganados '
-            '${LifeTreeRules.earned(p, k)}',
+            context.t('ui.town.trades.points', {'free': LifeTreeRules.free(p, k), 'earned': LifeTreeRules.earned(p, k)}),
             key: const ValueKey('life-points'),
             style: DsText.detail()),
         SizedBox(height: DsSpace.md),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          DsButton('REINICIAR (GRATIS)',
+          DsButton(context.t('ui.town.trades.reset'),
               key: const ValueKey('life-reset'),
               size: DsButtonSize.compact,
               onPressed: widget.editBlocked != null ||
@@ -170,7 +171,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
                   ? null
                   : () => widget.onReset(k)),
           if (!has)
-            DsButton('TOMAR',
+            DsButton(context.t('ui.town.trades.take'),
                 key: const ValueKey('life-take'),
                 kind: DsButtonKind.primary,
                 size: DsButtonSize.compact,

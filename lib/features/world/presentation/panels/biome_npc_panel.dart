@@ -19,6 +19,7 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import '../world_strings.dart';
 
 /// Nombre de un producto, cultivo o pez.
 String residentItemName(String id) => kFish[id]?.name ?? kCrops[id]?.name ?? id;
@@ -34,39 +35,42 @@ Widget trackButton(
   final key = QuestTrackRules.trackKey(kind, npc);
   final on = p?.tracked.contains(key) ?? false;
   final full = (p?.tracked.length ?? 0) >= QuestTrackRules.maxTracked;
-  return DsButton(on ? 'DEJAR DE SEGUIR' : 'SEGUIR',
-      key: ValueKey('track-$key'),
-      size: DsButtonSize.compact,
-      selected: on,
-      tooltip: !on && full
-          ? 'Ya seguís ${QuestTrackRules.maxTracked} encargos'
-          : null,
-      onPressed:
-          p == null || (!on && full) ? null : () => c.trackQuest(npc, key));
+  return Builder(builder: (context) {
+    final s = worldStrings(context);
+    return DsButton(on ? s.t('ui.town.npc.untrack') : s.t('ui.town.npc.track'),
+        key: ValueKey('track-$key'),
+        size: DsButtonSize.compact,
+        selected: on,
+        tooltip: !on && full
+            ? s.t('ui.town.npc.track_full', {'n': QuestTrackRules.maxTracked})
+            : null,
+        onPressed:
+            p == null || (!on && full) ? null : () => c.trackQuest(npc, key));
+  });
 }
 
 /// Casillas de la cadena de encargos de [n] (también en el registro):
 /// solo los que ya pidió (cumplidos + el activo). Los pasos futuros no se
 /// listan nunca; el próximo lo cuenta él en el diálogo.
-List<LifeItemCellData> questCells(
+List<LifeItemCellData> questCells(Strings s,
     SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p) {
   final chain = kResidentQuests[n.id] ?? const <QuestStepDef>[];
   // El activo aparece recién cuando él lo pidió en el diálogo.
   final asked = p == null || r.progress > 0 || QuestTrackRules.questSeen(p, r);
   final upTo = (r.quest + (asked ? 1 : 0)).clamp(0, chain.length);
   return [
-    for (var i = 0; i < upTo; i++) _questCell(c, n, r, p, chain, i),
+    for (var i = 0; i < upTo; i++) _questCell(s, c, n, r, p, chain, i),
   ];
 }
 
-LifeItemCellData _questCell(SessionController c, BiomeNpcDef n, ResidentState r,
+LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n, ResidentState r,
     PlayerProfile? p, List<QuestStepDef> chain, int i) {
   final q = chain[i];
   final done = i < r.quest, now = i == r.quest;
   final have = p == null ? 0 : ResidentRules.questHave(p, q);
   final what = switch (q.kind) {
-    QuestKind.mazmorra => 'Ganar la zona ${q.target}',
-    QuestKind.elite => 'Vencer un élite en la zona ${q.target}',
+    QuestKind.mazmorra => s.t('ui.town.npc.quest_zone', {'zone': q.target}),
+    QuestKind.elite => s.t('ui.town.npc.quest_elite', {'zone': q.target}),
     _ => '${q.n} × ${residentItemName(q.target)}',
   };
   final relic = kResidentRelics[q.reward];
@@ -81,26 +85,26 @@ LifeItemCellData _questCell(SessionController c, BiomeNpcDef n, ResidentState r,
             ? DsColors.selected
             : DsColors.border,
     search: what,
-    caption: done ? 'HECHO' : (now ? '${r.progress}/${q.n}' : '${i + 1}'),
+    caption: done ? s.t('ui.town.npc.done') : (now ? '${r.progress}/${q.n}' : '${i + 1}'),
     detail: LifeItemDetail(
-      name: '${n.name}: encargo ${i + 1}',
+      name: s.t('ui.town.npc.quest_name', {'name': n.name, 'n': i + 1}),
       nameColor: DsColors.textTitle,
       tags: [
         (q.kind.label.toUpperCase(), DsColors.textSecondary),
-        if (done) ('CUMPLIDO', DsColors.success),
+        if (done) (s.t('ui.town.npc.fulfilled'), DsColors.success),
       ],
       lines: [
         what,
-        if (now && q.kind.delivered) 'Tenés $have',
-        if (now) 'Avance: ${r.progress}/${q.n}',
-        'Premio: ${q.gold} de oro y +${q.rep} de relación',
-        if (relic != null) 'Objeto único: ${relic.name}',
+        if (now && q.kind.delivered) s.t('ui.town.npc.have', {'n': have}),
+        if (now) s.t('ui.town.npc.progress', {'n': r.progress, 'goal': q.n}),
+        s.t('ui.town.npc.quest_reward', {'gold': q.gold, 'rep': q.rep}),
+        if (relic != null) s.t('ui.town.npc.unique_item', {'name': relic.name}),
       ],
       description: q.text,
       actions: [
         if (now) trackButton(c, p, n.id, QuestTrackKind.encargo),
         if (now && q.kind.delivered)
-          DsButton('ENTREGAR',
+          DsButton(s.t('ui.town.npc.turn_in'),
               key: ValueKey('quest-turnin-${n.id}'),
               size: DsButtonSize.compact,
               onPressed:
@@ -111,7 +115,7 @@ LifeItemCellData _questCell(SessionController c, BiomeNpcDef n, ResidentState r,
 }
 
 /// Casilla de la orden de entrega de [r] (§ 10.5), o `null`.
-LifeItemCellData? orderCell(
+LifeItemCellData? orderCell(Strings s,
     SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p,
     {required bool home}) {
   final o = r.order;
@@ -127,34 +131,36 @@ LifeItemCellData? orderCell(
     border: DsColors.reward,
     search: residentItemName(o),
     count: r.orderN,
-    caption: 'ORDEN',
+    caption: s.t('ui.town.npc.order'),
     detail: LifeItemDetail(
-      name: 'Orden de ${n.name}',
+      name: s.t('ui.town.npc.order_name', {'name': n.name}),
       nameColor: DsColors.textTitle,
       tags: [
-        ('ORDEN', DsColors.reward),
+        (s.t('ui.town.npc.order'), DsColors.reward),
         if (r.orderQ > 0)
           (
-            fish ? 'DESDE $cm CM' : q.label.toUpperCase(),
+            fish ? s.t('ui.town.npc.from_cm', {'cm': cm}) : q.label.toUpperCase(),
             DsColors.textSecondary
           ),
       ],
       lines: [
-        '${r.orderN} × ${residentItemName(o)}'
-            '${r.orderQ > 0 ? (fish ? ' (de $cm cm o más)' : ' (${q.label} o mejor)') : ''}',
+        r.orderQ <= 0
+            ? '${r.orderN} × ${residentItemName(o)}'
+            : fish
+                ? s.t('ui.town.npc.order_line_cm', {'n': r.orderN, 'item': residentItemName(o), 'cm': cm})
+                : s.t('ui.town.npc.order_line_q', {'n': r.orderN, 'item': residentItemName(o), 'q': q.label}),
         if (fish && cm > 0)
-          'Tu récord: ${p?.life.log[o] ?? 0} cm (bestiario de pesca)',
-        'Tenés $have',
-        'XP de personaje: +${w.xp} (con tope diario)',
-        'Oro: +${w.gold} · Relación: +${w.rep}',
-        if (w.point) 'Punto de árbol: +1',
-        'Entregadas: ${r.orders}',
+          s.t('ui.town.npc.record', {'cm': p?.life.log[o] ?? 0}),
+        s.t('ui.town.npc.have', {'n': have}),
+        s.t('ui.town.npc.order_xp', {'n': w.xp}),
+        s.t('ui.town.npc.order_gold', {'gold': w.gold, 'rep': w.rep}),
+        if (w.point) s.t('ui.town.npc.order_point'),
+        s.t('ui.town.npc.delivered', {'n': r.orders}),
       ],
-      description: 'Pide algo nuevo cada día del mundo. Se entrega en el '
-          'pueblo.',
+      description: s.t('ui.town.npc.order_desc'),
       actions: [
         trackButton(c, p, n.id, QuestTrackKind.orden),
-        DsButton('ENTREGAR ORDEN',
+        DsButton(s.t('ui.town.npc.deliver_order'),
             key: ValueKey('order-deliver-${n.id}'),
             size: DsButtonSize.compact,
             onPressed: home && have >= r.orderN
@@ -184,6 +190,8 @@ class BiomeNpcPanel extends StatefulWidget {
 }
 
 class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
+  Strings get _s => worldStrings(context);
+
   NpcMenu? _menu;
   String? _sel;
   int _qty = 1;
@@ -210,9 +218,9 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       else
         NpcTalk.greet(n.id, extra: n.lines),
       if (fresh && r.request != null)
-        'Además, en el pueblo necesito esto: ${r.request!.label.toLowerCase()}.',
+        _s.t('ui.town.npc.line_request', {'what': r.request!.label.toLowerCase()}),
       if (fresh && r.order != null)
-        'Hoy te pido ${r.orderN} × ${residentItemName(r.order!)}.',
+        _s.t('ui.town.npc.line_order', {'n': r.orderN, 'item': residentItemName(r.order!)}),
     ];
     return parts.join(' ');
   }
@@ -279,35 +287,35 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                 ? talk.choices(town, refresh, inTown: home)
                 : [
                     talk.entry(town, refresh, inTown: home),
-                    opt(NpcMenu.comprar, 'Comprar',
-                        stock.isEmpty ? 'No vende nada todavía' : null),
+                    opt(NpcMenu.comprar, _s.t('ui.town.npc.menu_buy'),
+                        stock.isEmpty ? _s.t('ui.town.npc.sells_nothing') : null),
                     opt(
                         NpcMenu.encargos,
-                        'Encargos',
-                        questCells(c, n, r, p).isEmpty
-                            ? 'No te pidió nada'
+                        _s.t('ui.town.npc.menu_quests'),
+                        questCells(_s, c, n, r, p).isEmpty
+                            ? _s.t('ui.town.npc.asked_nothing')
                             : null),
                     opt(
                         NpcMenu.pedidos,
-                        'Pedidos',
+                        _s.t('ui.town.npc.menu_requests'),
                         r.invited
                             ? null
-                            : 'Pide cosas cuando vive en el pueblo'),
+                            : _s.t('ui.town.npc.requests_when_living')),
                     opt(
                         NpcMenu.regalar,
-                        'Regalar',
+                        _s.t('ui.town.npc.menu_gift'),
                         _gifts(c, n, p).isEmpty
-                            ? 'No tenés nada de su bioma'
+                            ? _s.t('ui.town.npc.nothing_from_biome')
                             : null),
-                    opt(NpcMenu.casa, 'Casa',
-                        r.invited ? null : 'Primero invitalo al pueblo'),
-                    DsChoice('Invitar al pueblo',
+                    opt(NpcMenu.casa, _s.t('ui.town.npc.menu_house'),
+                        r.invited ? null : _s.t('ui.town.npc.invite_first')),
+                    DsChoice(_s.t('ui.town.npc.invite'),
                         key: const ValueKey('npc-invite'),
                         reason: inviteWhy,
                         onSelected: inviteWhy == null
                             ? () => c.residentOp(TownOp.invite, n.id)
                             : null),
-                    DsChoice('Adiós',
+                    DsChoice(_s.t('ui.town.npc.bye'),
                         key: const ValueKey('npc-close'),
                         onSelected: c.closePanel),
                   ],
@@ -337,13 +345,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final goal = _repGoal(r);
     return DsStatusStrip([
       DsStatusCell(
-          'Relación',
+          _s.t('ui.town.npc.rep'),
           key: const ValueKey('npc-rep'),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${r.rep} / $goal', style: DsText.body(DsColors.mp)),
+              Text(_s.t('ui.town.npc.rep_value', {'n': r.rep, 'goal': goal}), style: DsText.body(DsColors.mp)),
               SizedBox(height: DsSpace.xs),
               DsMeter(r.rep, goal, color: DsColors.mp),
             ],
@@ -351,41 +359,42 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       // La etapa es de la vida en el pueblo: en su bioma no se muestra.
       if (inTown)
         DsStatusCell(
-            'Etapa',
+            _s.t('ui.town.npc.stage'),
             Text.rich(TextSpan(children: [
               TextSpan(
                   text: ResidentRules.stage(r).label,
                   style: DsText.body(DsColors.conditionReady)),
               TextSpan(
-                  text: r.invited ? '\nVive en el pueblo' : '\nEn su bioma',
+                  text: '\n${r.invited ? _s.t('ui.town.npc.lives_in_town') : _s.t('ui.town.npc.in_biome')}',
                   style: DsText.detail(DsColors.textSecondary)),
               if (r.unhappy)
                 TextSpan(
-                    text: '\nDescontento',
+                    text: '\n${_s.t('ui.town.npc.unhappy')}',
                     style: DsText.detail(DsColors.danger)),
             ]))),
       DsStatusCell(
-          'Beneficio actual',
+          _s.t('ui.town.npc.benefit_now'),
           key: const ValueKey('npc-benefit'),
           flex: 2,
           Text(
               tier < 0
-                  ? 'Ninguno (necesita casa)'
-                  : '${ResidentRules.benefitText(n, tier)} · nivel $tier',
+                  ? _s.t('ui.town.npc.benefit_none')
+                  : _s.t('ui.town.npc.benefit_level', {'benefit': ResidentRules.benefitText(n, tier), 'n': tier}),
               style: DsText.body(DsColors.success))),
       DsStatusCell(
-          'Siguiente',
+          _s.t('ui.town.npc.next'),
           flex: 2,
           Text(
               next == null
-                  ? 'Al máximo'
-                  : '${ResidentRules.benefitText(n, next)} · nivel $next',
+                  ? _s.t('ui.town.npc.maxed')
+                  : _s.t('ui.town.npc.benefit_level', {'benefit': ResidentRules.benefitText(n, next), 'n': next}),
               style: DsText.body(DsColors.reward))),
       if (shop)
         DsStatusCell(
-            'Tu oro',
+            _s.t('ui.town.npc.your_gold'),
             key: const ValueKey('npc-gold'),
-            Text('${p?.credits ?? 0}', style: DsText.body(DsColors.reward))),
+            Text((p?.credits ?? 0).toString(),
+                style: DsText.body(DsColors.reward))),
     ]);
   }
 
@@ -395,21 +404,22 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final tier = ResidentRules.tier(r);
     void back() => setState(() => _menu = null);
     final title = switch (menu) {
-      NpcMenu.comprar => 'TIENDA',
-      NpcMenu.encargos => 'ENCARGOS',
-      NpcMenu.pedidos => 'PEDIDOS',
-      NpcMenu.regalar => 'REGALAR',
-      NpcMenu.casa => 'CASA',
+      NpcMenu.comprar => _s.t('ui.town.npc.title_shop'),
+      NpcMenu.encargos => _s.t('ui.town.npc.title_quests'),
+      NpcMenu.pedidos => _s.t('ui.town.npc.title_requests'),
+      NpcMenu.regalar => _s.t('ui.town.npc.title_gift'),
+      NpcMenu.casa => _s.t('ui.town.npc.title_house'),
     };
     final Widget body = switch (menu) {
       NpcMenu.comprar => _shopView(c, n, tier, p, inBiome: !home),
-      NpcMenu.encargos => _grid(questCells(c, n, r, p), 'Nada por ahora.'),
+      NpcMenu.encargos =>
+        _grid(questCells(_s, c, n, r, p), _s.t('ui.town.npc.nothing_yet')),
       NpcMenu.pedidos => _grid(
-          _requests(c, n, r, p, town, home: home), 'No pidió nada por ahora.'),
+          _requests(c, n, r, p, town, home: home), _s.t('ui.town.npc.no_requests')),
       NpcMenu.regalar =>
-        _grid(_gifts(c, n, p), 'No tenés nada de su bioma para regalarle.'),
+        _grid(_gifts(c, n, p), _s.t('ui.town.npc.no_gifts')),
       NpcMenu.casa => _grid(
-          _house(c, n, r, p, town, home: home), 'Primero invitalo al pueblo.'),
+          _house(c, n, r, p, town, home: home), _s.t('ui.town.npc.invite_first_dot')),
     };
     return PanelFrame(
       key: const ValueKey('panel-biome-npc'),
@@ -419,10 +429,11 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       header: _status(n, r, p,
           shop: menu == NpcMenu.comprar, inTown: home && r.invited),
       leading: [
-        PanelButton('VOLVER', key: const ValueKey('npc-back'), onPressed: back),
+        PanelButton(_s.t('ui.town.npc.back'),
+            key: const ValueKey('npc-back'), onPressed: back),
       ],
       actions: [
-        PanelButton('ADIÓS',
+        PanelButton(_s.t('ui.town.npc.bye_button'),
             key: const ValueKey('npc-close'), onPressed: c.closePanel),
       ],
       child: KeyedSubtree(key: ValueKey('npc-menu-${menu.name}'), child: body),
@@ -453,7 +464,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         if (kCrops[e.key] case final s?) (s, e.value),
     ];
     if (goods.isEmpty) {
-      return Text('No vende nada todavía.',
+      return Text(_s.t('ui.town.npc.sells_nothing_dot'),
           style: DsText.detail(DsColors.textSecondary));
     }
     final sel = goods.where((g) => g.$1.id == _sel).firstOrNull ?? goods.first;
@@ -480,7 +491,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                         size: 32),
                     name: g.seedName,
                     nameColor: fishRarityColor(g.rarity),
-                    price: '$pr oro',
+                    price: _s.t('ui.town.npc.gold_short', {'n': pr}),
                     owned: f?.seedCount(g.id) ?? 0,
                     selected: g.id == s.id,
                     affordable: gold >= pr,
@@ -513,7 +524,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                   ]),
                   SizedBox(height: DsSpace.sm),
                   Wrap(spacing: DsSpace.xs, children: [
-                    const DsTag('SEMILLA', color: DsColors.textSecondary),
+                    DsTag(_s.t('ui.town.npc.seed'), color: DsColors.textSecondary),
                     DsTag(s.rarity.label.toUpperCase(),
                         color: fishRarityColor(s.rarity)),
                   ]),
@@ -524,9 +535,10 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                         style: DsText.detail(DsColors.textSecondary)),
                   ],
                   SizedBox(height: DsSpace.sm),
-                  _kv('Crece en', '${(s.growSec / 60).round()} min'),
-                  _kv('Tenés', '$owned'),
-                  _kv('Precio', '$price oro c/u'),
+                  _kv(_s.t('ui.town.npc.grows_in'),
+                      _s.t('ui.town.npc.minutes', {'n': (s.growSec / 60).round()})),
+                  _kv(_s.t('ui.town.npc.owned'), owned.toString()),
+                  _kv(_s.t('ui.town.npc.price'), _s.t('ui.town.npc.gold_each', {'n': price})),
                   SizedBox(height: DsSpace.md),
                   Row(children: [
                     DsQuantity(
@@ -534,14 +546,14 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                         max: maxQ,
                         onChanged: (v) => setState(() => _qty = v)),
                     SizedBox(width: DsSpace.sm),
-                    Text('Total ${price * qty}',
+                    Text(_s.t('ui.town.npc.total', {'n': price * qty}),
                         key: const ValueKey('npc-shop-total'),
                         style: DsText.body(gold >= price * qty
                             ? DsColors.reward
                             : DsColors.danger)),
                   ]),
                   SizedBox(height: DsSpace.sm),
-                  DsButton('COMPRAR',
+                  DsButton(_s.t('ui.town.npc.buy'),
                       key: ValueKey('npc-seed-buy-${s.id}'),
                       kind: DsButtonKind.primary,
                       onPressed: gold >= price * qty
@@ -562,7 +574,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final req = r.request;
     final why = ResidentRules.requestUnmet(town, n.id);
     return [
-      if (orderCell(c, n, r, p, home: home) case final o?) o,
+      if (orderCell(_s, c, n, r, p, home: home) case final o?) o,
       if (req != null)
         LifeItemCellData(
           id: 'request-${n.id}',
@@ -570,27 +582,26 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               size: 32),
           border: r.unhappy ? DsColors.danger : DsColors.selected,
           search: req.label,
-          caption: 'PEDIDO',
+          caption: _s.t('ui.town.npc.request'),
           detail: LifeItemDetail(
             name: req.label,
             nameColor: DsColors.textTitle,
             tags: [
-              ('PEDIDO', DsColors.selected),
-              if (r.unhappy) ('DESCONTENTO', DsColors.danger),
+              (_s.t('ui.town.npc.request'), DsColors.selected),
+              if (r.unhappy) (_s.t('ui.town.npc.unhappy_tag'), DsColors.danger),
             ],
             lines: [
-              'Pedido el día ${r.requestDay}',
-              'Premio: +${ResidentRules.t.i('resRequestRep')} de relación',
+              _s.t('ui.town.npc.requested_day', {'day': r.requestDay}),
+              _s.t('ui.town.npc.request_reward', {'rep': ResidentRules.t.i('resRequestRep')}),
               if (why != null) why,
             ],
             description: r.unhappy
-                ? 'Su beneficio bajó un nivel hasta que lo cumplas. '
-                    'Nunca se va del pueblo.'
-                : 'Si lo ignorás varios días, queda descontento.',
+                ? _s.t('ui.town.npc.unhappy_desc')
+                : _s.t('ui.town.npc.request_desc'),
             actions: [
               trackButton(c, p, n.id, QuestTrackKind.pedido),
               if (req != ResidentRequest.casa)
-                DsButton('CUMPLIDO',
+                DsButton(_s.t('ui.town.npc.fulfilled'),
                     key: ValueKey('request-fulfil-${n.id}'),
                     size: DsButtonSize.compact,
                     onPressed: home && why == null
@@ -614,24 +625,21 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       id: 'commission-brann',
       icon: const LifeIcon('cofre_oficio', LifeIconKind.herramienta, size: 32),
       border: DsColors.reward,
-      search: 'ENCARGO DE FORJA',
-      caption: 'FORJA',
+      search: _s.t('ui.town.npc.commission_search'),
+      caption: _s.t('ui.town.npc.forge'),
       detail: LifeItemDetail(
-        name: 'Encargo de forja',
+        name: _s.t('ui.town.npc.commission'),
         nameColor: DsColors.textTitle,
         tags: [(rr.label.toUpperCase(), DsColors.reward)],
         lines: [
-          'Un arma de tu clase, ${rr.label.toLowerCase()}, de nivel '
-              '${ResidentRules.commissionItemLevel(p.level)}',
-          'Costo: ${HelperRules.costText(cost.cost)} + ${cost.lootN} '
-              '${residentItemName(cost.loot)}',
-          'La rareza sube con tu oficio y la relación con Brann',
+          _s.t('ui.town.npc.commission_weapon', {'rarity': rr.label.toLowerCase(), 'level': ResidentRules.commissionItemLevel(p.level)}),
+          _s.t('ui.town.npc.cost_line', {'cost': HelperRules.costText(cost.cost), 'n': cost.lootN, 'item': residentItemName(cost.loot)}),
+          _s.t('ui.town.npc.commission_rarity'),
           if (why != null) why,
         ],
-        description: 'Si me conseguís esto, te hago un arma de tu clase. '
-            'Uno por día.',
+        description: _s.t('ui.town.npc.commission_desc'),
         actions: [
-          DsButton('ENCARGAR',
+          DsButton(_s.t('ui.town.npc.order_it'),
               key: const ValueKey('commission-brann'),
               size: DsButtonSize.compact,
               onPressed: home && why == null
@@ -657,13 +665,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             detail: LifeItemDetail(
               name: residentItemName(id),
               nameColor: DsColors.textTitle,
-              tags: const [('REGALO', DsColors.textSecondary)],
+              tags: [(_s.t('ui.town.npc.gift'), DsColors.textSecondary)],
               lines: [
-                'Tenés $have',
-                'El primer regalo de cada día suma +1 de relación',
+                _s.t('ui.town.npc.have', {'n': have}),
+                _s.t('ui.town.npc.gift_rule'),
               ],
               actions: [
-                DsButton('REGALAR 1',
+                DsButton(_s.t('ui.town.npc.gift_one'),
                     key: ValueKey('gift-$id'),
                     size: DsButtonSize.compact,
                     onPressed: () =>
@@ -683,7 +691,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final lv = h?.level ?? 0;
     final cost = lv < max ? ResidentRules.investCost(n, lv + 1) : null;
     final why =
-        p == null ? 'Sin perfil' : ResidentRules.cannotInvest(p, town, n.id);
+        p == null ? _s.t('ui.town.npc.no_profile') : ResidentRules.cannotInvest(p, town, n.id);
     final relicId = kResidentQuests[n.id]?.last.reward;
     final relic = r.relic ? kResidentRelics[relicId] : null;
     return [
@@ -692,27 +700,25 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         icon: LifeIcon('casa_${lv.clamp(1, 3)}', LifeIconKind.herramienta,
             size: 32),
         border: DsColors.border,
-        search: 'CASA',
-        caption: h == null ? 'SIN CASA' : 'NIVEL $lv',
+        search: _s.t('ui.town.npc.title_house'),
+        caption: h == null ? _s.t('ui.town.npc.no_house_caps') : _s.t('ui.town.npc.level_caps', {'n': lv}),
         detail: LifeItemDetail(
-          name: h == null ? 'Sin casa' : 'Casa de ${n.name}',
+          name: h == null ? _s.t('ui.town.npc.no_house') : _s.t('ui.town.npc.house_of', {'name': n.name}),
           nameColor: DsColors.textTitle,
-          tags: const [('CASA', DsColors.textSecondary)],
+          tags: [(_s.t('ui.town.npc.title_house'), DsColors.textSecondary)],
           lines: [
             if (h == null)
-              'Poné una CASA en EDITAR PUEBLO y asignásela '
-                  '(${HelperRules.costText(ResidentRules.placeCost())})'
+              _s.t('ui.town.npc.house_hint', {'cost': HelperRules.costText(ResidentRules.placeCost())})
             else
-              'Nivel $lv de $max',
+              _s.t('ui.town.npc.level_of', {'n': lv, 'max': max}),
             if (h != null && cost != null)
-              'Subir: ${HelperRules.costText(cost.cost)} + '
-                  '${cost.lootN} ${residentItemName(cost.loot)}',
+              _s.t('ui.town.npc.upgrade_line', {'cost': HelperRules.costText(cost.cost), 'n': cost.lootN, 'item': residentItemName(cost.loot)}),
             if (h != null && why != null && cost != null) why,
-            'Cada nivel sube su beneficio y su tienda',
+            _s.t('ui.town.npc.house_levels'),
           ],
           actions: [
             if (h != null && cost != null)
-              DsButton('INVERTIR',
+              DsButton(_s.t('ui.town.npc.invest'),
                   key: ValueKey('house-invest-${n.id}'),
                   size: DsButtonSize.compact,
                   onPressed: home && why == null
@@ -729,12 +735,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               size: 32),
           border: DsColors.reward,
           search: relic.name,
-          caption: 'ÚNICO',
+          caption: _s.t('ui.town.npc.unique'),
           detail: LifeItemDetail(
             name: relic.name,
             nameColor: DsColors.reward,
-            tags: const [('OBJETO ÚNICO', DsColors.reward)],
-            lines: const ['Su beneficio sube un nivel'],
+            tags: [(_s.t('ui.town.npc.unique_tag'), DsColors.reward)],
+            lines: [_s.t('ui.town.npc.relic_line')],
             description: relic.lore,
           ),
         ),

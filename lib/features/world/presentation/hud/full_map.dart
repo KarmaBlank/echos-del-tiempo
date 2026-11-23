@@ -13,6 +13,7 @@ import '../../../../game_engine/models/fog_of_war.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import 'minimap.dart';
+import '../world_strings.dart';
 
 /// Mapa del piso en grande (tecla M, v0.8.1; docs/specs/exploration.md §
 /// "HUD" → "Mapa en grande"): el mismo dibujo que el minimapa, ajustado
@@ -85,17 +86,18 @@ class FullMap extends StatefulWidget {
   /// Tiles por flecha.
   static const panStep = 4.0;
 
-  /// Íconos de la leyenda (las marcas del minimapa del tema activo).
+  /// Íconos de la leyenda (las marcas del minimapa del tema activo); el
+  /// texto es una clave de `ui.world`.
   static const legendMarks = <(String, MapMark)>[
-    ('Tú', MapMark.me),
-    ('Aliados', MapMark.ally),
-    ('Escalera', MapMark.stairs),
-    ('Jefe', MapMark.boss),
-    ('Cofre', MapMark.chest),
-    ('Secreto', MapMark.secret),
-    ('Santuario', MapMark.shrine),
-    ('Piedra de paso', MapMark.waystone),
-    ('Enemigos', MapMark.enemy),
+    ('ui.world.map.legend.me', MapMark.me),
+    ('ui.world.map.legend.ally', MapMark.ally),
+    ('ui.world.map.legend.stairs', MapMark.stairs),
+    ('ui.world.map.legend.boss', MapMark.boss),
+    ('ui.world.map.legend.chest', MapMark.chest),
+    ('ui.world.map.legend.secret', MapMark.secret),
+    ('ui.world.map.legend.shrine', MapMark.shrine),
+    ('ui.world.map.legend.waystone', MapMark.waystone),
+    ('ui.world.map.legend.enemy', MapMark.enemy),
   ];
 
   /// La leyenda con los colores del tema activo.
@@ -304,14 +306,14 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                 color: hi ? ProtoColors.ink : ProtoColors.panelBorder,
                 width: hi ? 2 : 1),
           ),
-          child: Text(retroText('${_number(poi)}'),
+          child: Text(retroText(_number(poi).toString()),
               style: const TextStyle(color: Color(0xFF001014))),
         ),
       );
       if (dest) {
         mark = Semantics(
           button: true,
-          label: 'Viajar a la piedra ${_number(poi)}',
+          label: context.t('ui.world.map.travel_to_stone', {'n': _number(poi)}),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
@@ -335,7 +337,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final choosing = widget.choosing;
     return PanelFrame(
-      title: retroText('MAPA · ${widget.title}'),
+      title: retroText(context.t('ui.world.map.title', {'name': widget.title})),
       width: 1100,
       fill: true,
       onClose: widget.onClose,
@@ -344,17 +346,17 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
             key: const ValueKey('full-map-out'), onPressed: _zoomOut),
         PanelButton('+',
             key: const ValueKey('full-map-in'), onPressed: _zoomIn),
-        PanelButton('CENTRAR [C]',
+        PanelButton(context.t('ui.world.map.center'),
             key: const ValueKey('full-map-center'), onPressed: _recenter),
       ],
       actions: [
         if (choosing)
           for (final d in widget.destinations)
-            PanelButton('VIAJAR A ${_number(d)} [${_number(d)}]',
+            PanelButton(context.t('ui.world.map.travel_button', {'n': _number(d)}),
                 key: ValueKey('full-map-travel-${d.id}'),
                 selected: widget.destinations[_sel].id == d.id,
                 onPressed: () => _travel(d)),
-        PanelButton('CERRAR [M]',
+        PanelButton(context.t('ui.world.map.close'),
             key: const ValueKey('full-map-close'), onPressed: widget.onClose),
       ],
       child: Column(
@@ -422,16 +424,15 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                             border: Border.all(
                                 color: ProtoColors.panelBorder, width: 1))),
                     const SizedBox(width: 6),
-                    Text(retroText(label)),
+                    Text(retroText(context.t(label))),
                   ],
                 ),
               if (choosing)
                 Text(
                     key: const ValueKey('full-map-choose-hint'),
-                    retroText('Elegí el destino: clic en una piedra, su '
-                        'número o Tab y Enter'),
+                    retroText(context.t('ui.world.map.choose_hint')),
                     style: const TextStyle(color: FullMap.waystoneColor)),
-              Text(retroText('Rueda / + -: zoom · Arrastrar / flechas: mover'),
+              Text(retroText(context.t('ui.world.map.controls')),
                   style: const TextStyle(color: ProtoColors.dim)),
             ],
           ),

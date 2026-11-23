@@ -6,11 +6,16 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
+import '../world_strings.dart';
 
 /// Texto de avance de un encargo: "Tenés 1/2 Helecho dulce" o su título.
-String questProgressText(ActiveQuest a) => a.item == null
+String questProgressText(Strings s, ActiveQuest a) => a.item == null
     ? a.title
-    : 'Tenés ${a.have}/${a.need} ${QuestTrackRules.itemName(a.item!)}';
+    : s.t('ui.world.quests.progress', {
+        'have': a.have,
+        'need': a.need,
+        'item': QuestTrackRules.itemName(a.item!)
+      });
 
 /// Encargos seguidos en el HUD (roles.md § 8.2): compacto, debajo del
 /// reloj; nombre y avance de cada uno. Cuando sube lo que tenés de algo
@@ -58,7 +63,11 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
     for (final a in QuestTrackRules.active(widget.profile, widget.town)) {
       final before = _have[a.key];
       if (a.item != null && before != null && a.have > before) {
-        _notes.add('Para: ${a.who} (${a.have.clamp(0, a.need)}/${a.need})');
+        _notes.add(context.t('ui.world.quests.progress_for', {
+          'who': a.who,
+          'have': a.have.clamp(0, a.need),
+          'need': a.need
+        }));
       }
     }
     _have = now;
@@ -120,7 +129,7 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('DIARIO [J]',
+                      Text(context.t('ui.world.hud.journal'),
                           style: DsText.detail(DsColors.textSecondary)),
                       for (final a in tracked) ...[
                         SizedBox(height: DsSpace.xs),
@@ -130,7 +139,7 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
                             style: DsText.detail(a.ready
                                 ? DsColors.success
                                 : DsColors.textTitle)),
-                        Text(questProgressText(a),
+                        Text(questProgressText(worldStrings(context), a),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: DsText.detail(DsColors.textSecondary)),

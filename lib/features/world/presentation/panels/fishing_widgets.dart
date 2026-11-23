@@ -7,6 +7,7 @@ import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../inventory/presentation/item_widgets.dart';
+import '../world_strings.dart';
 
 /// Color de una rareza de pez (los de las armas).
 Color fishRarityColor(FishRarity r) => RarityColors.of(switch (r) {
@@ -25,18 +26,31 @@ Widget lifeSkillsLine(PlayerProfile p) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DsSectionHeader('OFICIOS'),
-        Text(
-            'Pesca nivel $lvl${need > 0 ? ' · $cur/$need XP' : ' · máximo'}'
-            ' · ${kRods[p.life.rod]!.name} · Pescados ${p.life.bagTotal}',
-            key: const ValueKey('life-fishing'),
-            style: DsText.detail()),
-        Builder(builder: (_) {
+        Builder(
+            builder: (context) => DsSectionHeader(context.t('ui.town.trades.title'))),
+        Builder(
+            builder: (context) => Text(
+                context.t(
+                    need > 0 ? 'ui.town.trades.fishing' : 'ui.town.trades.fishing_max', {
+                  'level': lvl,
+                  'xp': cur,
+                  'need': need,
+                  'tool': kRods[p.life.rod]!.name,
+                  'n': p.life.bagTotal
+                }),
+                key: const ValueKey('life-fishing'),
+                style: DsText.detail())),
+        Builder(builder: (context) {
           final cl = FarmingRules.level(p);
           final (cc, cn) = FarmingRules.progress(p.life.farm.xp);
           return Text(
-              'Cultivo nivel $cl${cn > 0 ? ' · $cc/$cn XP' : ' · máximo'}'
-              ' · ${kFarmTools[p.life.farm.hoe]!.name} · Cosechas ${p.life.farm.cropTotal}',
+              context.t(cn > 0 ? 'ui.town.trades.farming' : 'ui.town.trades.farming_max', {
+                'level': cl,
+                'xp': cc,
+                'need': cn,
+                'tool': kFarmTools[p.life.farm.hoe]!.name,
+                'n': p.life.farm.cropTotal
+              }),
               key: const ValueKey('life-farming'),
               style: DsText.detail());
         }),

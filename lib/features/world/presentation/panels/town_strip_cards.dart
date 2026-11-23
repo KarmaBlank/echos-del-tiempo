@@ -9,6 +9,7 @@ import '../../../../game_engine/rules/town_rules.dart';
 import '../map/map_game.dart';
 import '../map/town_edit_layer.dart';
 import '../session_controller.dart';
+import '../world_strings.dart';
 
 /// Tarjetas de las franjas fantasma de la edición (town_editor.md §
 /// 1.3): en px de pantalla, centradas en la parte visible de cada franja
@@ -137,13 +138,16 @@ class _TownStripCardsState extends State<TownStripCards>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-              '${b.kind == BuildKind.huerta ? 'Granjeros' : 'Pescadores'} '
-              '${b.helper} / ${TownRules.helperCap(b)}',
+              context.t(
+                  b.kind == BuildKind.huerta
+                      ? 'ui.town.strip.farmers'
+                      : 'ui.town.strip.fishers',
+                  {'n': b.helper, 'max': TownRules.helperCap(b)}),
               style: DsText.title(ok ? null : DsColors.textDisabled)),
           SizedBox(height: DsSpace.xs),
           Text(
               why ??
-                  '${HelperRules.costText(HelperRules.hireCost(b.kind))} · clic para contratar',
+                  context.t('ui.town.strip.hire_line', {'cost': HelperRules.costText(HelperRules.hireCost(b.kind))}),
               key: ValueKey('town-hire-${b.id}-line'),
               softWrap: true,
               style: DsText.subtitle(ok ? DsColors.reward : DsColors.textDisabled)),
@@ -168,7 +172,7 @@ class _TownStripCardsState extends State<TownStripCards>
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('AMPLIAR',
+          Text(context.t('ui.town.strip.expand'),
               style: DsText.title(full == null ? null : DsColors.textDisabled)),
           SizedBox(height: DsSpace.xs),
           // Al tope: gris con el motivo, sin costo (town_editor.md § 1.3).
@@ -179,7 +183,7 @@ class _TownStripCardsState extends State<TownStripCards>
                 style: DsText.subtitle(DsColors.textDisabled)),
           if (full == null)
             for (final l in lines)
-            Text('${l.name} ${l.need} (tenés ${l.have})',
+            Text(context.t('ui.town.strip.need_line', {'name': l.name, 'need': l.need, 'have': l.have}),
                 key: ValueKey('town-strip-${side.code}-${l.name}'),
                 softWrap: true,
                 style: DsText.subtitle(

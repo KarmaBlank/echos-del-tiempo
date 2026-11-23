@@ -50,6 +50,7 @@ import 'tool_hud.dart';
 import 'tracked_quests_hud.dart';
 import 'update_notice.dart';
 import 'unused_points_notice.dart';
+import '../world_strings.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
 String clockText(double seconds) {
@@ -213,7 +214,7 @@ class WorldHud extends StatelessWidget {
                         children: [
                           if (s.mode == SessionMode.lobby &&
                               onExit != null) ...[
-                            DsButton('< TITULO',
+                            DsButton(context.t('ui.world.hud.to_title'),
                                 key: const ValueKey('hud-exit'),
                                 size: DsButtonSize.compact,
                                 onPressed: onExit),
@@ -229,7 +230,7 @@ class WorldHud extends StatelessWidget {
                               key: const ValueKey('hud-stash'),
                               style: RetroTheme.compactButton(),
                               onPressed: controller.toggleStash,
-                              child: const Text('ALIJO [B]'),
+                              child: Text(context.t('ui.world.hud.stash')),
                             ),
                           ],
                           // DIARIO de encargos (roles.md § 8.1), fuera de la
@@ -241,14 +242,15 @@ class WorldHud extends StatelessWidget {
                               key: const ValueKey('hud-journal'),
                               style: RetroTheme.compactButton(),
                               onPressed: controller.toggleJournal,
-                              child: const Text('DIARIO [J]'),
+                              child: Text(context.t('ui.world.hud.journal')),
                             ),
                           ],
                           // Party jugando solo, en el pueblo (solo_party.md § 2.3).
                           if (controller.canEditParty) ...[
                             const SizedBox(width: 8),
                             DsButton(
-                                'PARTY (${view.companions.length + 1}) [P]',
+                                context.t('ui.world.hud.party',
+                                    {'n': view.companions.length + 1}),
                                 key: const ValueKey('hud-party'),
                                 size: DsButtonSize.compact,
                                 onPressed: controller.toggleParty),
@@ -281,14 +283,14 @@ class WorldHud extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Sala: $code',
+                          Text(context.t('ui.world.hud.room', {'code': code}),
                               key: const ValueKey('hud-room-code'),
                               style: DsText.body(DsColors.textTitle)),
                           SizedBox(width: DsSpace.sm),
-                          DsButton('COPIAR',
+                          DsButton(context.t('ui.world.hud.copy'),
                               key: const ValueKey('hud-room-copy'),
                               size: DsButtonSize.compact,
-                              tooltip: 'Copiar el código de la sala',
+                              tooltip: context.t('ui.world.hud.copy_tip'),
                               onPressed: () =>
                                   Clipboard.setData(ClipboardData(text: code))),
                         ],
@@ -329,7 +331,7 @@ class WorldHud extends StatelessWidget {
                                   children: [
                                     DsButton.icon(const Text('-'),
                                         key: const ValueKey('minimap-zoom-out'),
-                                        tooltip: 'Alejar el minimapa',
+                                        tooltip: context.t('ui.world.hud.minimap_out'),
                                         size: DsButtonSize.compact,
                                         onPressed: zoom > 1
                                             ? () =>
@@ -338,7 +340,7 @@ class WorldHud extends StatelessWidget {
                                     SizedBox(width: DsSpace.xs),
                                     DsButton.icon(const Text('+'),
                                         key: const ValueKey('minimap-zoom-in'),
-                                        tooltip: 'Acercar el minimapa',
+                                        tooltip: context.t('ui.world.hud.minimap_in'),
                                         size: DsButtonSize.compact,
                                         onPressed: zoom <
                                                 GameSettings.minimapZooms
@@ -346,7 +348,7 @@ class WorldHud extends StatelessWidget {
                                                 setMinimapZoom(ref, zoom + 1)
                                             : null),
                                     SizedBox(width: DsSpace.xs),
-                                    DsButton('MAPA [M]',
+                                    DsButton(context.t('ui.world.hud.map'),
                                         key: const ValueKey('minimap-open-map'),
                                         size: DsButtonSize.compact,
                                         onPressed: controller.toggleMap),
@@ -458,7 +460,7 @@ class WorldHud extends StatelessWidget {
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: DsButton('SALIR DE LA MAZMORRA',
+                  child: DsButton(context.t('ui.world.hud.leave_dungeon'),
                       key: const ValueKey('hud-leave-dungeon'),
                       onPressed: controller.leaveDungeon),
                 ),
@@ -513,7 +515,11 @@ class WorldHud extends StatelessWidget {
                         key: const ValueKey('hud-away'),
                         width: rightWidth,
                         child: Text(
-                          'En otro lugar: ${s.away.map((a) => '${a.name} (${a.where})').join(', ')}',
+                          context.t('ui.world.hud.away', {
+                            'names': s.away
+                                .map((a) => '${a.name} (${a.where})')
+                                .join(', ')
+                          }),
                           textAlign: TextAlign.end,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -613,7 +619,7 @@ class WorldHud extends StatelessWidget {
                         ),
                       ),
                     ),
-                    for (final line in _banners(s))
+                    for (final line in _banners(context, s))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: DsToast(retroText(line),
@@ -625,7 +631,12 @@ class WorldHud extends StatelessWidget {
                     if (view.prompt == WorldPrompt.fishing ||
                         view.prompt == WorldPrompt.farm)
                       const SizedBox.shrink()
-                    else if (view.promptLabel case final label?)
+                    else if ((view.promptText ??
+                            switch (view.prompt) {
+                              final p? => context.t(p.key),
+                              null => null,
+                            })
+                        case final label?)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(label,
@@ -639,7 +650,7 @@ class WorldHud extends StatelessWidget {
                                     ? ProtoColors.gold
                                     : ProtoColors.sky),
                       )
-                    else if (_pickPrompt(s) case final text?)
+                    else if (_pickPrompt(context, s) case final text?)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(text,
@@ -756,12 +767,13 @@ class WorldHud extends StatelessWidget {
 
   /// `[E] Recoger <objeto>` a <= 24 px de algo dibujado (sin otra
   /// interacción a mano; ver `MapGame.tryPickUp`).
-  String? _pickPrompt(GameSession s) {
+  String? _pickPrompt(BuildContext context, GameSession s) {
     if (view.panel != null) return null;
     final l =
         nearestPickable(_floor(s), controller.local.x, controller.local.y);
     if (l == null) return null;
-    return '[E] Recoger ${MapGame.lootName(controller, l.ground.drop)}';
+    return context.t('ui.world.hud.pick_up',
+        {'item': MapGame.lootName(controller, l.ground.drop)});
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
@@ -783,7 +795,7 @@ class WorldHud extends StatelessWidget {
   }
 
   /// Avisos de una línea: barrera abierta (escalera o jefe).
-  List<String> _banners(GameSession s) {
+  List<String> _banners(BuildContext context, GameSession s) {
     final out = <String>[];
     final m = s.mission;
     final f = MapGame.currentFloor(view);
@@ -795,7 +807,7 @@ class WorldHud extends StatelessWidget {
           WorldRules.distance(
                   controller.local.x, controller.local.y, d.x, d.y) >
               140) {
-        out.add('La escalera se abrió → bajá al piso ${m.floor + 2}');
+        out.add(context.t('ui.world.hud.stairs_open', {'floor': m.floor + 2}));
       }
       return out;
     }
@@ -806,7 +818,7 @@ class WorldHud extends StatelessWidget {
         WorldRules.distance(
                 controller.local.x, controller.local.y, boss.x, boss.y) >
             140) {
-      out.add('La barrera se abrió → busca al JEFE (★ en el minimapa)');
+      out.add(context.t('ui.world.hud.barrier_open'));
     }
     return out;
   }
@@ -1138,8 +1150,8 @@ class _Toggle extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
         button: true,
         label: expanded
-            ? 'Compactar las cajas del grupo [H]'
-            : 'Ver el detalle del grupo [H]',
+            ? context.t('ui.world.hud.party_compact')
+            : context.t('ui.world.hud.party_expand'),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
@@ -1561,7 +1573,7 @@ class _PlayerBox extends StatelessWidget {
           ),
         ],
         ProtoText(
-          'Pociones: ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
+          '${protoEsc(context.t('ui.world.hud.potions'))} ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
           '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',
           style: const TextStyle(color: DsColors.textSecondary),
         ),
@@ -1592,9 +1604,9 @@ class _LevelUpBanner extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('¡SUBIDA DE NIVEL!', style: DsText.title()),
+            Text(context.t('ui.world.hud.level_up'), style: DsText.title()),
             SizedBox(height: DsSpace.sm),
-            Text(retroText('Esperando a: $waiting'),
+            Text(retroText(context.t('ui.world.hud.waiting', {'names': waiting})),
                 style: DsText.body(DsColors.textPrimary)),
           ],
         ),

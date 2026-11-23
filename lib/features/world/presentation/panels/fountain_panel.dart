@@ -6,6 +6,7 @@ import '../../../../game_engine/models/town_build.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
 /// FUENTE RÚNICA (town_editor.md § 1, farming.md § 8): panel chico con
 /// acciones grandes, una línea cada una: EDITAR PUEBLO, CONTRATAR
@@ -24,43 +25,45 @@ class FountainPanel extends StatelessWidget {
     final farmWhy = c.cannotPickHire(BuildKind.huerta);
     final fishWhy = c.cannotPickHire(BuildKind.lago);
     final actions = [
-      ('fountain-edit-btn', 'EDITAR PUEBLO',
-          'Ampliá, poné y mové lagos y huertas, soltá peces.', editWhy,
+      ('fountain-edit-btn', context.t('ui.town.fountain.edit'),
+          context.t('ui.town.fountain.edit_line'), editWhy,
           c.enterTownEdit),
-      ('fountain-hire-farmer', 'CONTRATAR GRANJERO',
-          'Elegí la huerta: siembra, riega y cosecha en su cofre.', farmWhy,
+      ('fountain-hire-farmer', context.t('ui.town.fountain.hire_farmer'),
+          context.t('ui.town.fountain.hire_farmer_line'), farmWhy,
           () => c.enterHirePick(BuildKind.huerta)),
-      ('fountain-hire-fisher', 'CONTRATAR PESCADOR',
-          'Elegí el lago: pesca solo y deja lo que saca en su cofre.',
+      ('fountain-hire-fisher', context.t('ui.town.fountain.hire_fisher'),
+          context.t('ui.town.fountain.hire_fisher_line'),
           fishWhy, () => c.enterHirePick(BuildKind.lago)),
-      ('fountain-board', 'TABLERO DE ENCARGOS',
-          'Encargos del pueblo para la próxima salida.', null,
+      ('fountain-board', context.t('ui.town.fountain.board'),
+          context.t('ui.town.fountain.board_line'), null,
           () => c.openPanel(WorldPanel.missionBoard)),
       // Mapa de viaje (overworld_biomes.md § 1).
-      ('fountain-travel', 'MAPA DE VIAJE',
-          'Viajá con el grupo al Bosque y a otros lugares.', null,
+      ('fountain-travel', context.t('ui.town.fountain.travel'),
+          context.t('ui.town.fountain.travel_line'), null,
           () => c.openPanel(WorldPanel.travel)),
       // Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
-      ('fountain-quests', 'REGISTRO DE ENCARGOS',
-          'Encargos, pedidos y órdenes de cada habitante.', null,
+      ('fountain-quests', context.t('ui.town.fountain.quests'),
+          context.t('ui.town.fountain.quests_line'), null,
           () => c.openPanel(WorldPanel.questLog)),
     ];
     // Resumen de los beneficios permanentes (§ 10.3).
     final town = c.town;
     final living = ResidentRules.living(town);
     final summary = living.isEmpty
-        ? 'Habitantes: nadie vive en el pueblo todavía.'
-        : 'Habitantes: ${[
-            for (final n in living)
-              '${n.name}: ${ResidentRules.tier(town.resident(n.id)) < 0 ? 'sin casa' : ResidentRules.benefitText(n, ResidentRules.tier(town.resident(n.id)))}'
-          ].join(' · ')}';
+        ? context.t('ui.town.fountain.residents_none')
+        : context.t('ui.town.fountain.residents', {
+            'list': [
+              for (final n in living)
+                '${n.name}: ${ResidentRules.tier(town.resident(n.id)) < 0 ? context.t('ui.town.fountain.no_house') : ResidentRules.benefitText(n, ResidentRules.tier(town.resident(n.id)))}'
+            ].join(' · ')
+          });
     return PanelFrame(
       key: const ValueKey('panel-fountain'),
-      title: 'FUENTE RÚNICA',
+      title: context.t('ui.town.fountain.title'),
       width: 560,
       onClose: c.closePanel,
       actions: [
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.town.fountain.close'),
             key: const ValueKey('fountain-close'), onPressed: c.closePanel),
       ],
       child: LayoutBuilder(builder: (context, box) {

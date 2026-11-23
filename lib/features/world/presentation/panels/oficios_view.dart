@@ -5,6 +5,7 @@ import '../../../../game_engine/models/player_profile.dart';
 import '../session_controller.dart';
 import 'life_items_view.dart';
 import 'life_skills_view.dart';
+import '../world_strings.dart';
 
 /// Subpestañas de OFICIOS.
 enum OficiosSubtab {
@@ -51,7 +52,8 @@ class _OficiosViewState extends State<OficiosView> {
         DsTabBar(
           tabs: [
             for (final t in OficiosSubtab.values)
-              DsTab(t.label, key: ValueKey('oficios-sub-${t.name}')),
+              DsTab(context.t('ui.town.trades.tab.${t.name}'),
+                  key: ValueKey('oficios-sub-${t.name}')),
           ],
           index: _sub.index,
           onChanged: (i) => setState(() => _sub = OficiosSubtab.values[i]),

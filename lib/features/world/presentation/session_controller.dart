@@ -86,6 +86,7 @@ import '../../../core/audio/sfx_catalog.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
+import 'world_strings.dart';
 
 /// Ritmo del host local. El prototipo corre `hostTick` cada 50 ms; los
 /// tests suben [timeScale] (más segundos de juego por tick) o apagan el
@@ -195,7 +196,9 @@ final sessionControllerProvider =
     world: ref.read(worldBookProvider)?.selected,
     onWorldTown: books.saveTown,
     fogStore: FogStore.forPlatform(),
-  );
+  )..strings = ref.read(stringsProvider);
+  // Texto del jugador en el idioma activo (docs/specs/i18n.md).
+  ref.listen(stringsProvider, (_, s) => c.strings = s);
   // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
   // sala si este dispositivo corre el motor (solo o anfitrión).
   ref.listen(gameSettingsProvider.select((s) => s.turnTimer),
@@ -253,6 +256,11 @@ class SessionController extends StateNotifier<SessionView?> {
         tutorialStore =
             tutorialStore ?? InMemoryTutorialStore(kTutorialVersion),
         super(null);
+
+  /// Texto del jugador (docs/specs/i18n.md § 3): avisos, motivos y
+  /// mensajes que arma el controlador. El provider lo mantiene al día con
+  /// el idioma; sin él, es-AR.
+  Strings strings = worldFallbackStrings();
 
   /// Compañeros de la party jugando solo (docs/specs/solo_party.md);
   /// `null` = sin party. Con red no se usa (en salas no hay compañeros).
@@ -847,7 +855,7 @@ class SessionController extends StateNotifier<SessionView?> {
       step = SessionStep(step.state, [
         ...step.events,
         SystemMessageEvent(
-            'Sala creada. Comparte el código $code con tus amigos.'),
+            strings.t('ui.world.ctl.room_created', {'code': code})),
       ]);
     }
     _lastSaved = null;
@@ -900,7 +908,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _bestiary = next;
     for (final t in lastUnlocked) {
       final name = engine.battles.catalog.enemies[t]?.name ?? t;
-      _addChat(ChatLine.system('Bestiario: $name agregado'));
+      _addChat(ChatLine.system(strings.t('ui.world.ctl.bestiary_added', {'name': name})));
     }
     if (!_persist) return;
     unawaited(bestiaryStore.save(next).catchError((Object e) {
@@ -1296,7 +1304,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Por qué no se puede ir al portal de Ecos de [zone], o `null`.
   String? ecoTravelBlocked(int zone) {
     final spot = EcoPortalRules.of(zone);
-    if (spot == null) return 'Sin portal';
+    if (spot == null) return strings.t('ui.world.ctl.no_portal');
     return cannotTravel ?? travelLocked(spot.biome);
   }
 
@@ -1315,9 +1323,10 @@ class SessionController extends StateNotifier<SessionView?> {
   String get signText {
     final p = _s?.players[localId]?.profile;
     final lake = TownRules.lakeNear(town, local.x, local.y);
-    return '${lake == null ? 'Sin lago' : TownRules.lakeSignText(town, lake)}. '
-        'Pesca nivel ${p == null ? 1 : FishingRules.level(p)}. Acercate a '
-        'la orilla o a un muelle y tocá E.';
+    return strings.t('ui.world.ctl.sign', {
+      'lake': lake == null ? strings.t('ui.world.ctl.no_lake') : TownRules.lakeSignText(town, lake),
+      'level': p == null ? 1 : FishingRules.level(p)
+    });
   }
 
   // ---- Pesca y agropecuario (fishing.md § 6): el host valida ----
@@ -1555,9 +1564,9 @@ class SessionController extends StateNotifier<SessionView?> {
   String? get toolPrompt {
     if (_fishing case final f?) return fishingHint(f);
     // Junto a un ayudante, su pantalla primero (antes que "Sin semillas…").
-    if (nearHelper != null) return WorldPrompt.helper.label;
+    if (nearHelper != null) return strings.t(WorldPrompt.helper.key);
     if (farmHint() case final h?) return h;
-    if (canFish) return WorldPrompt.fishing.label;
+    if (canFish) return strings.t(WorldPrompt.fishing.key);
     return null;
   }
 
@@ -1642,27 +1651,27 @@ class SessionController extends StateNotifier<SessionView?> {
     final pl = plotAt(t.$1, t.$2);
     if (pl != null && pl.planted && FarmingRules.ripe(pl)) return null;
     return switch (farmHand) {
-      FarmHand.hoe => pl == null ? null : 'Ya está arada',
+      FarmHand.hoe => pl == null ? null : strings.t('ui.world.ctl.farm.already_tilled'),
       FarmHand.seed => pl == null
-          ? 'Primero arala'
+          ? strings.t('ui.world.ctl.farm.till_first')
           : pl.planted
-              ? 'Ya está plantada'
+              ? strings.t('ui.world.ctl.farm.already_planted')
               : p.life.farm.activeSeed == null
-                  ? 'Sin semillas: comprá en el agropecuario'
+                  ? strings.t('ui.world.tools.no_seeds_tip')
                   : null,
       FarmHand.can => pl == null
-          ? 'Primero arala'
+          ? strings.t('ui.world.ctl.farm.till_first')
           : !pl.planted
-              ? 'Primero plantá'
+              ? strings.t('ui.world.ctl.farm.plant_first')
               : null,
       FarmHand.fert => pl == null
-          ? 'Primero arala'
+          ? strings.t('ui.world.ctl.farm.till_first')
           : !pl.planted
-              ? 'Primero plantá'
+              ? strings.t('ui.world.ctl.farm.plant_first')
               : pl.fert != null
-                  ? 'Ya tiene abono'
+                  ? strings.t('ui.world.ctl.farm.already_fert')
                   : farmFert == null
-                      ? 'Sin abono: comprá en el agropecuario'
+                      ? strings.t('ui.world.tools.no_fert_tip')
                       : null,
     };
   }
@@ -1777,23 +1786,31 @@ class SessionController extends StateNotifier<SessionView?> {
   String plotInfo(int x, int y) {
     final pl = plotAt(x, y);
     final me = _s?.players[localId]?.profile;
-    if (pl == null) return 'Tierra sin arar.';
-    if (!pl.planted) return 'Parcela arada y vacía.';
+    if (pl == null) return strings.t('ui.world.ctl.farm.untilled');
+    if (!pl.planted) return strings.t('ui.world.ctl.farm.empty_plot');
     final c = kCrops[pl.seed]!;
     final r = FarmingRules.ratio(pl);
     final parts = <String>[
-      '${c.name} · ${r >= 1 ? 'madura' : '${(r * 100).round()} %'}'
-          '${pl.watered ? ' · regada' : ' · seca'}',
-      if (pl.planter != null) 'Plantó ${pl.planter}',
-      if (pl.waterer != null) 'Regó ${pl.waterer} (${pl.waterings})',
+      strings.t('ui.world.ctl.farm.plot_line', {
+        'crop': c.name,
+        'ripe': r >= 1 ? 'yes' : 'no',
+        'pct': (r * 100).round(),
+        'watered': pl.watered ? 'yes' : 'no'
+      }),
+      if (pl.planter != null) strings.t('ui.world.ctl.farm.planted_by', {'name': pl.planter}),
+      if (pl.waterer != null)
+        strings.t('ui.world.ctl.farm.watered_by', {'name': pl.waterer, 'n': pl.waterings}),
       if (kFertilizers[pl.fert] case final f?)
-        '${f.name}${pl.fertBy == null ? '' : ' de ${pl.fertBy}'}',
+        pl.fertBy == null
+            ? f.name
+            : strings.t('ui.world.ctl.farm.fert_by', {'fert': f.name, 'name': pl.fertBy}),
     ];
     if (me != null) {
       final o = FarmingRules.odds(me, pl);
-      parts.add('Si la cosechás vos: '
-          '${_pct(o[CropQuality.epico]!)} épica · '
-          '${_pct(o[CropQuality.legendario]!)} legendaria');
+      parts.add(strings.t('ui.world.ctl.farm.odds', {
+        'epic': _pct(o[CropQuality.epico]!),
+        'legendary': _pct(o[CropQuality.legendario]!)
+      }));
     }
     return parts.join('\n');
   }
@@ -1810,21 +1827,21 @@ class SessionController extends StateNotifier<SessionView?> {
             pl.fert == null &&
             farmFert != null &&
             farmHand != FarmHand.fert
-        ? ' · [F] Abonar'
+        ? ' · ${strings.t('ui.world.ctl.farm.fert_key')}'
         : '';
     // Corto (una línea): el detalle completo está en el tooltip del mouse.
     if (pl != null && pl.planted && FarmingRules.ripe(pl)) {
       final o = FarmingRules.odds(p, pl);
-      return '[E o clic] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
+      return strings.t('ui.world.ctl.farm.harvest', {'legendary': _pct(o[CropQuality.legendario]!)});
     }
     if (farmBlockReason case final r?) return r;
     if (farmHand == FarmHand.fert && pl != null && pl.planted) {
-      return '[E o clic] Abonar con ${kFertilizers[farmFert]?.name ?? 'abono'}';
+      return strings.t('ui.world.ctl.farm.fertilize', {'fert': kFertilizers[farmFert]?.name ?? strings.t('ui.world.ctl.farm.fert_generic')});
     }
-    if (pl == null) return '[E o clic] Arar';
-    if (!pl.planted) return '[E o clic] Plantar ${kCrops[seed]!.name}';
+    if (pl == null) return strings.t('ui.world.ctl.farm.till');
+    if (!pl.planted) return strings.t('ui.world.ctl.farm.plant', {'crop': kCrops[seed]!.name});
     final r = (FarmingRules.ratio(pl) * 100).round();
-    return '[E o clic] Regar · $r %$fert';
+    return '${strings.t('ui.world.ctl.farm.water', {'pct': r})}$fert';
   }
 
   bool buySeed(String id, [int n = 1]) =>
@@ -1925,12 +1942,11 @@ class SessionController extends StateNotifier<SessionView?> {
     final secs = helperRoundIn.ceil();
     if (!farm) {
       return (
-        'PESCADOR ${i + 1} · NIVEL ${HelperRules.level(b.stat(i))}',
+        strings.t('ui.world.ctl.helper.fisher_title', {'n': i + 1, 'level': HelperRules.level(b.stat(i))}),
         [
-          'Pesca en la orilla del lago y guarda en el cofre.',
-          '${TownRules.t.i('fisherCatch') + HelperRules.extraFish(b, i)} peces '
-              'por vuelta · sin legendarios',
-          'Cofre ${b.chestTotal} · próxima vuelta en $secs s',
+          strings.t('ui.world.ctl.helper.fisher_line'),
+          strings.t('ui.world.ctl.helper.fisher_catch', {'n': TownRules.t.i('fisherCatch') + HelperRules.extraFish(b, i)}),
+          strings.t('ui.world.ctl.helper.chest_next', {'n': b.chestTotal, 's': secs}),
         ]
       );
     }
@@ -1941,12 +1957,15 @@ class SessionController extends StateNotifier<SessionView?> {
         if (mask & t.bit != 0) t.label
     ];
     return (
-      'GRANJERO ${i + 1} · NIVEL ${HelperRules.level(b.stat(i))}',
+      strings.t('ui.world.ctl.helper.farmer_title', {'n': i + 1, 'level': HelperRules.level(b.stat(i))}),
       [
-        'Atiende ${TownRules.helperArea(b, i).length} parcelas (resaltadas).',
-        'Semillas de la huerta: ${b.seedTotal}',
-        'Tareas: ${on.isEmpty ? 'ninguna' : on.join(', ')}',
-        'Próximo ciclo: ${next?.label.toLowerCase() ?? 'descansa'} · $secs s',
+        strings.t('ui.world.ctl.helper.farmer_area', {'n': TownRules.helperArea(b, i).length}),
+        strings.t('ui.world.ctl.helper.farmer_seeds', {'n': b.seedTotal}),
+        strings.t('ui.world.ctl.helper.farmer_tasks', {'list': on.isEmpty ? strings.t('ui.world.ctl.helper.none') : on.join(', ')}),
+        strings.t('ui.town.helper.next_cycle', {
+          'task': next?.label.toLowerCase() ?? strings.t('ui.town.helper.rests'),
+          's': secs
+        }),
       ]
     );
   }
@@ -1975,7 +1994,7 @@ class SessionController extends StateNotifier<SessionView?> {
   String? get cannotEditTown {
     final ed = _s?.townEditor;
     if (ed == null || ed == localId) return null;
-    return 'Está editando ${_s?.players[ed]?.name ?? 'otro jugador'}';
+    return strings.t('ui.world.ctl.editing', {'name': _s?.players[ed]?.name ?? strings.t('ui.world.ctl.other_player')});
   }
 
   bool enterTownEdit() {
@@ -1994,8 +2013,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if (cannotEditTown case final why?) return why;
     if (!town.builds.any((b) => b.kind == kind)) {
       return kind == BuildKind.huerta
-          ? 'No hay huertas en el pueblo'
-          : 'No hay lagos en el pueblo';
+          ? strings.t('ui.world.ctl.no_farms')
+          : strings.t('ui.world.ctl.no_lakes');
     }
     return null;
   }
@@ -2426,20 +2445,17 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Texto del aviso de abajo mientras pesca.
   String fishingHint(MapFishing f) => switch (f.phase) {
         FishPhase.idle =>
-          '[E o clic] mantené para cargar y soltá para tirar · Esc guarda',
-        FishPhase.charging => 'Cargando… soltá para tirar',
-        FishPhase.flying => 'La boya vuela…',
+          strings.t('ui.world.ctl.fish.idle'),
+        FishPhase.charging => strings.t('ui.world.ctl.fish.charging'),
+        FishPhase.flying => strings.t('ui.world.ctl.fish.flying'),
         FishPhase.waiting => f.game.nibbling
-            ? 'Tantea… todavía no'
-            : 'Esperá la picada; si tirás antes, se va',
-        FishPhase.bite => '¡PICÓ! [E o clic] ya',
-        FishPhase.hooking => 'Clavado…',
-        FishPhase.reel =>
-          'Mantené [E o clic] para subir la zona; tené al pez adentro',
-        FishPhase.won =>
-          'Sacaste ${f.fish?.def.name ?? 'un pez'} · [E o clic] para tirar de nuevo',
-        FishPhase.lost =>
-          '${f.game.lostReason ?? 'Se escapó.'} [E o clic] para tirar de nuevo',
+            ? strings.t('ui.world.ctl.fish.nibble')
+            : strings.t('ui.world.ctl.fish.waiting'),
+        FishPhase.bite => strings.t('ui.world.ctl.fish.bite'),
+        FishPhase.hooking => strings.t('ui.world.ctl.fish.hooking'),
+        FishPhase.reel => strings.t('ui.world.ctl.fish.reel'),
+        FishPhase.won => strings.t('ui.world.ctl.fish.won', {'fish': f.fish?.def.name ?? strings.t('ui.world.ctl.fish.a_fish')}),
+        FishPhase.lost => strings.t('ui.world.ctl.fish.lost', {'reason': f.game.lostReason ?? strings.t('ui.world.ctl.fish.escaped')}),
       };
 
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
@@ -3758,14 +3774,14 @@ class SessionController extends StateNotifier<SessionView?> {
           _fishing?.game.hook(FishCatch(species, sizeCm));
         case WaterLootEvent(:final playerId, :final label)
             when playerId == localId:
-          _messages.add('Pescaste $label');
+          _messages.add(strings.t('ui.world.ctl.caught', {'what': label}));
           if (_messages.length > maxMessages) _messages.removeAt(0);
         case LightningEvent():
           fishSfx?.call(Sfx.impactBolt);
         case FishCaughtEvent(:final playerId, :final species, :final sizeCm)
             when playerId == localId:
           final name = kFish[species]?.name ?? species;
-          _messages.add('Pescaste $name ($sizeCm cm)');
+          _messages.add(strings.t('ui.world.ctl.caught_cm', {'what': name, 'cm': sizeCm}));
           if (_messages.length > maxMessages) _messages.removeAt(0);
         case BattleFinishedEvent(victory: true):
           _onBattleWon();
@@ -3775,7 +3791,7 @@ class SessionController extends StateNotifier<SessionView?> {
             when controls(playerId):
           achievementLog.add(e);
           final name = kAchievementsById[id]?.name ?? id;
-          _addChat(ChatLine.system('Hazaña: $name'));
+          _addChat(ChatLine.system(strings.t('ui.world.ctl.achievement', {'name': name})));
           forceSave = true;
         case MissionEndedEvent(:final result):
           forceSave = true;
@@ -4007,7 +4023,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _saveFailed(Object e) {
     EcosLog.error('Guardado del personaje', e);
-    _saveError = 'No se pudo guardar';
+    _saveError = strings.t('ui.world.ctl.save_failed');
     _emit();
   }
 
@@ -4134,21 +4150,25 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
-    if (nearTravel) return (WorldPrompt.poi, '[E] Mapa de viaje');
+    if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));
     if (nearNpc case final n?) {
-      return (WorldPrompt.poi, '[E] Hablar con ${n.name}');
+      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': n.name}));
     }
     if (nearFisher case final f?) {
-      return (WorldPrompt.poi, '[E] Hablar con ${f.name}');
+      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': f.name}));
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
-    final helperTip = nearHelper == null ? '' : ' · ${WorldPrompt.helper.label}';
+    final helperTip = nearHelper == null
+        ? ''
+        : ' · ${strings.t(WorldPrompt.helper.key)}';
     if (farmHint() case final h?) return (WorldPrompt.farm, '$h$helperTip');
     if (nearHelper != null) return (WorldPrompt.helper, null);
     if (nearChest case final b?) {
       return (
         WorldPrompt.chest,
-        b.chest.isEmpty ? 'Cofre vacío' : '[E] Recoger cofre (${b.chestTotal})'
+        b.chest.isEmpty
+            ? strings.t('ui.world.ctl.chest_empty')
+            : strings.t('ui.world.ctl.chest_collect', {'n': b.chestTotal})
       );
     }
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
@@ -4156,7 +4176,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearTrader) return (WorldPrompt.trader, null);
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
-    if (nearOffering) return (WorldPrompt.poi, '[E] Ofrenda del jefe');
+    if (nearOffering) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_offering'));
     if (nearPoi case final p?) {
       final s = _s!;
       final m = s.mission!;

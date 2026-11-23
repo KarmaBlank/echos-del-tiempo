@@ -13,6 +13,7 @@ import '../../lobby/presentation/worlds_providers.dart';
 import 'map/map_game.dart';
 import 'session_controller.dart';
 import 'world_screen.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pantalla "Cargando el mundo…" (exploration.md § "Rendimiento",
 /// v0.35.1): al JUGAR, CREAR SALA o unirse. Antes de dejar caminar
@@ -32,13 +33,14 @@ class WorldLoadingScreen extends ConsumerStatefulWidget {
 }
 
 class _WorldLoadingScreenState extends ConsumerState<WorldLoadingScreen> {
-  /// Pasos de la carga previa (antes de armar el mundo).
+  /// Pasos de la carga previa (antes de armar el mundo): clave del
+  /// rótulo y tarea.
   late final List<(String, Future<void> Function())> _steps = [
-    ('Imágenes', () => ref.read(gameSpritesProvider.future)),
-    ('Catálogos', () async => ref.read(sessionEngineProvider)),
-    ('Letras', _fonts),
-    ('Filtros', () => CrtShaders.load()),
-    ('Pueblo', () async {
+    ('ui.world.loading.images', () => ref.read(gameSpritesProvider.future)),
+    ('ui.world.loading.catalogs', () async => ref.read(sessionEngineProvider)),
+    ('ui.world.loading.fonts', _fonts),
+    ('ui.world.loading.filters', () => CrtShaders.load()),
+    ('ui.world.loading.town', () async {
       final town = ref.read(worldBookProvider)?.selected?.town;
       if (town != null) TownPlan.reserved(town);
     }),
@@ -98,9 +100,9 @@ class _WorldLoadingScreenState extends ConsumerState<WorldLoadingScreen> {
   Widget build(BuildContext context) {
     final total = _steps.length + widget.warmFrames;
     final value = _done + _warm.clamp(0, widget.warmFrames);
-    final label = _done < _steps.length
+    final label = ref.t(_done < _steps.length
         ? _steps[_done].$1
-        : 'Mapa';
+        : 'ui.world.loading.map');
     final cover = ColoredBox(
       key: const ValueKey('world-loading'),
       color: DsColors.background,
@@ -110,7 +112,7 @@ class _WorldLoadingScreenState extends ConsumerState<WorldLoadingScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Cargando el mundo…', style: DsText.subtitle()),
+              Text(ref.t('ui.world.loading.title'), style: DsText.subtitle()),
               SizedBox(height: DsSpace.md),
               DsMeter(value, total, color: DsColors.actionPrimary),
               SizedBox(height: DsSpace.sm),
