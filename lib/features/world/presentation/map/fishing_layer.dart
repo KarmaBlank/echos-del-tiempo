@@ -45,21 +45,39 @@ class MapFishingLayer {
   /// Hay un salto de captura en curso (tests y capturas).
   bool get popping => _pops.isNotEmpty;
 
+  int? _waterKey;
+
+  /// Posiciones (x, y, tamaño) de las sombras (tests).
+  List<(double, double, double)> get shadowLayout =>
+      [for (final s in _shadows) (s.x, s.y, s.size)];
+
   void _sync(GameMap m) {
     if (identical(m, _map)) return;
     _map = m;
-    _shadows.clear();
-    if (!m.lobby) return;
+    if (!m.lobby) {
+      _waterKey = null;
+      _shadows.clear();
+      return;
+    }
     final water = <(int, int)>[
       for (var y = 0; y < m.height; y++)
         for (var x = 0; x < m.width; x++)
           if (FishingCast.isWater(m, x, y)) (x, y),
     ];
+    // Cada snapshot trae otra instancia de GameMap aunque el lago no cambie:
+    // las sombras solo se regeneran si cambia la geometría del agua.
+    final key = Object.hash(m.width, m.height,
+        Object.hashAll([for (final (x, y) in water) y * m.width + x]));
+    if (key == _waterKey) return;
+    _waterKey = key;
+    _shadows.clear();
     if (water.isEmpty) return;
+    // Disposición determinista por geometría del lago.
+    final seed = math.Random(key & 0x7fffffff);
     for (var i = 0; i < 7; i++) {
-      final (tx, ty) = water[_rand.nextInt(water.length)];
+      final (tx, ty) = water[seed.nextInt(water.length)];
       _shadows.add(_Shadow(
-          (tx + 0.5) * 16, (ty + 0.5) * 16, 3.0 + _rand.nextDouble() * 3));
+          (tx + 0.5) * 16, (ty + 0.5) * 16, 3.0 + seed.nextDouble() * 3));
     }
   }
 
