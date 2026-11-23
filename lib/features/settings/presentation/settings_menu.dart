@@ -895,6 +895,23 @@ class _AccessibilityTab extends ConsumerWidget {
           ),
         ),
         _TextPreview(settings: s),
+        // TEXTOS (ui_minimal.md § 8): descripciones cortas o completas.
+        _SettingRow(
+          label: 'TEXTOS',
+          hint: s.textDetail == TextDetail.full
+              ? 'DETALLADO: números, escalado y reglas en cada descripción.'
+              : 'Descripciones cortas y simples. En los tooltips, MÁS '
+                  'DETALLE muestra el texto completo.',
+          control: _Choice<TextDetail>(
+            keyPrefix: 'a11y-textdetail',
+            options: const {
+              TextDetail.summary: 'RESUMIDO',
+              TextDetail.full: 'DETALLADO',
+            },
+            value: s.textDetail,
+            onChanged: (v) => c.update(s.copyWith(textDetail: v)),
+          ),
+        ),
         const _SectionHeader('COLOR Y MOVIMIENTO'),
         _SettingRow(
           label: 'MODO DALTÓNICO',

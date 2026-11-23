@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/text/text_detail.dart';
 import '../theme/proto_colors.dart';
+import '../theme/proto_markup.dart';
 import '../theme/retro_hover_card.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
@@ -849,7 +851,13 @@ class DsTooltipCard extends StatelessWidget {
     this.tags = const [],
     this.children = const [],
     this.shortcuts = const [],
+    this.detail,
   });
+
+  /// Texto DETALLADO (plano) del objeto (ui_minimal.md § 8.3): con
+  /// TEXTOS en RESUMIDO va plegado en `MÁS DETALLE` debajo de
+  /// [children]; en DETALLADO no se dibuja (ya se ve todo).
+  final String? detail;
 
   final String title;
   final Color? titleColor;
@@ -885,7 +893,8 @@ class DsTooltipCard extends StatelessWidget {
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: tags),
           ],
-          if (children.isNotEmpty) ...[
+          if (children.isNotEmpty ||
+              (detail != null && TextDetail.isSummary)) ...[
             SizedBox(height: DsSpace.sm),
             Flexible(
               child: SingleChildScrollView(
@@ -893,7 +902,14 @@ class DsTooltipCard extends StatelessWidget {
                   style: DsText.body(),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: children),
+                      children: [
+                        ...children,
+                        if (detail != null && TextDetail.isSummary)
+                          RetroTipFold(
+                              key: const ValueKey('ds-tip-more'),
+                              title: 'MÁS DETALLE',
+                              body: protoEsc(detail!)),
+                      ]),
                 ),
               ),
             ),

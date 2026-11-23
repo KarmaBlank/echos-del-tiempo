@@ -2,6 +2,7 @@ import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/rules/js_math.dart';
+import '../../../core/text/text_detail.dart';
 import '../../combat/domain/skill_text.dart';
 
 /// Ficha de una habilidad fuera de la batalla (fusión, forja, tienda,
@@ -63,6 +64,10 @@ String skillTipMarkup(SkillDef s,
   final i = d.indexOf('<br>');
   final head = i < 0 ? d : d.substring(0, i);
   final rest = i < 0 ? '' : d.substring(i);
+  // RESUMIDO: la línea principal ya dice a quién; sin tipo ni crítico.
+  if (TextDetail.isSummary) {
+    return '$head${note == null ? '' : '<br>$note'}$rest';
+  }
   final crit = stats != null &&
           (s.kind == SkillKind.physical || s.kind == SkillKind.magical)
       ? ' · crítico ${jsRound(stats.critChance * 100 + s.critBonus * 100)}%'

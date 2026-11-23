@@ -1,3 +1,5 @@
+import '../../../../core/text/plain_text.dart';
+import '../../../../core/text/text_detail.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -178,9 +180,8 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final nodes = kLifeTrees[k]!;
     return LayoutBuilder(builder: (context, box) {
       const cols = 5, rows = 6;
-      final cell = (box.maxWidth / cols)
-          .clamp(0.0, box.maxHeight / rows)
-          .toDouble();
+      final cell =
+          (box.maxWidth / cols).clamp(0.0, box.maxHeight / rows).toDouble();
       Offset at(LifeTreeNode n) =>
           Offset((n.x + 2.5) * cell, (n.y + 0.5) * cell);
       return Center(
@@ -208,9 +209,15 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       top: c.dy - size / 2,
       width: cell,
       child: DsTooltip(
-        card: DsTooltipCard(
-            title: n.name,
-            children: [Text(lifeNodeText(n), style: DsText.detail())]),
+        // TEXTOS (ui_minimal.md § 8): corto en RESUMIDO, con el texto
+        // completo en MÁS DETALLE.
+        card: DsTooltipCard(title: n.name, detail: lifeNodeText(n), children: [
+          Text(
+              TextDetail.isSummary
+                  ? plainShort(lifeNodeText(n))
+                  : lifeNodeText(n),
+              style: DsText.detail())
+        ]),
         child: GestureDetector(
           key: ValueKey('life-node-${n.id}'),
           onTap: () => setState(() => _sel = n.id),
@@ -261,7 +268,8 @@ class _Links extends CustomPainter {
       for (final l in n.links) {
         final o = lifeTreeNode(k, l);
         if (o == null || o.id.compareTo(n.id) < 0) continue;
-        final both = LifeTreeRules.has(p, k, n.id) && LifeTreeRules.has(p, k, o.id);
+        final both =
+            LifeTreeRules.has(p, k, n.id) && LifeTreeRules.has(p, k, o.id);
         paint.color = both ? DsColors.reward : DsColors.border;
         canvas.drawLine(at(n), at(o), paint);
       }
