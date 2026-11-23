@@ -18,10 +18,10 @@ import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'npc_talk.dart';
 
 /// Nombre de un producto, cultivo o pez.
-String residentItemName(String id) =>
-    kFish[id]?.name ?? kCrops[id]?.name ?? id;
+String residentItemName(String id) => kFish[id]?.name ?? kCrops[id]?.name ?? id;
 
 /// Ícono de un producto, cultivo o pez.
 Widget residentItemIcon(String id) => kFish.containsKey(id)
@@ -29,8 +29,8 @@ Widget residentItemIcon(String id) => kFish.containsKey(id)
     : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
 
 /// Botón SEGUIR / DEJAR DE SEGUIR de un encargo activo (roles.md § 8).
-Widget trackButton(SessionController c, PlayerProfile? p, String npc,
-    QuestTrackKind kind) {
+Widget trackButton(
+    SessionController c, PlayerProfile? p, String npc, QuestTrackKind kind) {
   final key = QuestTrackRules.trackKey(kind, npc);
   final on = p?.tracked.contains(key) ?? false;
   final full = (p?.tracked.length ?? 0) >= QuestTrackRules.maxTracked;
@@ -41,28 +41,26 @@ Widget trackButton(SessionController c, PlayerProfile? p, String npc,
       tooltip: !on && full
           ? 'Ya seguís ${QuestTrackRules.maxTracked} encargos'
           : null,
-      onPressed: p == null || (!on && full)
-          ? null
-          : () => c.trackQuest(npc, key));
+      onPressed:
+          p == null || (!on && full) ? null : () => c.trackQuest(npc, key));
 }
 
 /// Casillas de la cadena de encargos de [n] (también en el registro):
 /// solo los que ya pidió (cumplidos + el activo). Los pasos futuros no se
 /// listan nunca; el próximo lo cuenta él en el diálogo.
-List<LifeItemCellData> questCells(SessionController c, BiomeNpcDef n,
-    ResidentState r, PlayerProfile? p) {
+List<LifeItemCellData> questCells(
+    SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p) {
   final chain = kResidentQuests[n.id] ?? const <QuestStepDef>[];
   // El activo aparece recién cuando él lo pidió en el diálogo.
   final asked = p == null || r.progress > 0 || QuestTrackRules.questSeen(p, r);
   final upTo = (r.quest + (asked ? 1 : 0)).clamp(0, chain.length);
   return [
-    for (var i = 0; i < upTo; i++)
-      _questCell(c, n, r, p, chain, i),
+    for (var i = 0; i < upTo; i++) _questCell(c, n, r, p, chain, i),
   ];
 }
 
-LifeItemCellData _questCell(SessionController c, BiomeNpcDef n,
-    ResidentState r, PlayerProfile? p, List<QuestStepDef> chain, int i) {
+LifeItemCellData _questCell(SessionController c, BiomeNpcDef n, ResidentState r,
+    PlayerProfile? p, List<QuestStepDef> chain, int i) {
   final q = chain[i];
   final done = i < r.quest, now = i == r.quest;
   final have = p == null ? 0 : ResidentRules.questHave(p, q);
@@ -105,17 +103,16 @@ LifeItemCellData _questCell(SessionController c, BiomeNpcDef n,
           DsButton('ENTREGAR',
               key: ValueKey('quest-turnin-${n.id}'),
               size: DsButtonSize.compact,
-              onPressed: have > 0
-                  ? () => c.residentOp(TownOp.turnIn, n.id)
-                  : null),
+              onPressed:
+                  have > 0 ? () => c.residentOp(TownOp.turnIn, n.id) : null),
       ],
     ),
   );
 }
 
 /// Casilla de la orden de entrega de [r] (§ 10.5), o `null`.
-LifeItemCellData? orderCell(SessionController c, BiomeNpcDef n,
-    ResidentState r, PlayerProfile? p,
+LifeItemCellData? orderCell(
+    SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p,
     {required bool home}) {
   final o = r.order;
   if (o == null) return null;
@@ -137,8 +134,10 @@ LifeItemCellData? orderCell(SessionController c, BiomeNpcDef n,
       tags: [
         ('ORDEN', DsColors.reward),
         if (r.orderQ > 0)
-          (fish ? 'DESDE $cm CM' : q.label.toUpperCase(),
-              DsColors.textSecondary),
+          (
+            fish ? 'DESDE $cm CM' : q.label.toUpperCase(),
+            DsColors.textSecondary
+          ),
       ],
       lines: [
         '${r.orderN} × ${residentItemName(o)}'
@@ -192,12 +191,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
   /// Lo que dijo al abrir el diálogo (no cambia al marcarlo visto).
   String? _spoken;
   String? _spokenTo;
+  NpcTalk? _talk;
 
   /// Lo que dice al hablarle (roles.md § 8.4): si tiene un paso nuevo de
   /// su cadena que todavía no te contó, lo pide con sus palabras; si no,
   /// su frase del día. Suma el pedido o la orden nuevos.
-  String _line(SessionController c, BiomeNpcDef n, ResidentState r,
-      PlayerProfile? p) {
+  String _line(
+      SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p) {
     final q = ResidentRules.currentQuest(r);
     final fresh = p != null && !QuestTrackRules.seen(p, r);
     final parts = [
@@ -208,7 +208,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           q.text.isNotEmpty)
         q.text
       else
-        c.npcLine(n),
+        NpcTalk.greet(n.id, extra: n.lines),
       if (fresh && r.request != null)
         'Además, en el pueblo necesito esto: ${r.request!.label.toLowerCase()}.',
       if (fresh && r.order != null)
@@ -229,6 +229,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     if (_spokenTo != n.id) {
       _spokenTo = n.id;
       _spoken = _line(c, n, r, p);
+      _talk = NpcTalk(n.id);
+      WidgetsBinding.instance.addPostFrameCallback((_) => c.npcTalked(n.id));
       if (p != null && !QuestTrackRules.seen(p, r)) {
         WidgetsBinding.instance
             .addPostFrameCallback((_) => c.markNpcSeen(n.id));
@@ -239,8 +241,9 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     return _window(c, n, r, p, town, menu, home: home);
   }
 
-  Widget _portrait(BiomeNpcDef n) => LifeIcon(n.portrait,
-      LifeIconKind.herramienta, size: DsDialogueBox.portraitSize);
+  Widget _portrait(BiomeNpcDef n) =>
+      LifeIcon(n.portrait, LifeIconKind.herramienta,
+          size: DsDialogueBox.portraitSize);
 
   Widget _dialogue(SessionController c, BiomeNpcDef n, ResidentState r,
       PlayerProfile? p, TownState town,
@@ -257,6 +260,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         reason: why,
         onSelected: why == null ? () => open(m) : null);
     final stock = ResidentRules.stock(n, tier, home: !home);
+    final talk = _talk ??= NpcTalk(n.id);
+    void refresh() => setState(() {});
     return Align(
       key: const ValueKey('panel-biome-npc'),
       alignment: Alignment.bottomCenter,
@@ -268,30 +273,44 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             portrait: _portrait(n),
             name: n.name,
             role: n.role.label,
-            text: _spoken ?? c.npcLine(n),
+            text: talk.text(_spoken ?? c.npcLine(n)),
             onCancel: c.closePanel,
-            choices: [
-              opt(NpcMenu.comprar, 'Comprar',
-                  stock.isEmpty ? 'No vende nada todavía' : null),
-              opt(NpcMenu.encargos, 'Encargos',
-                  questCells(c, n, r, p).isEmpty ? 'No te pidió nada' : null),
-              opt(NpcMenu.pedidos, 'Pedidos',
-                  r.invited ? null : 'Pide cosas cuando vive en el pueblo'),
-              opt(NpcMenu.regalar, 'Regalar',
-                  _gifts(c, n, p).isEmpty
-                      ? 'No tenés nada de su bioma'
-                      : null),
-              opt(NpcMenu.casa, 'Casa',
-                  r.invited ? null : 'Primero invitalo al pueblo'),
-              DsChoice('Invitar al pueblo',
-                  key: const ValueKey('npc-invite'),
-                  reason: inviteWhy,
-                  onSelected: inviteWhy == null
-                      ? () => c.residentOp(TownOp.invite, n.id)
-                      : null),
-              DsChoice('Adiós',
-                  key: const ValueKey('npc-close'), onSelected: c.closePanel),
-            ],
+            choices: talk.active
+                ? talk.choices(town, refresh, inTown: home)
+                : [
+                    talk.entry(town, refresh, inTown: home),
+                    opt(NpcMenu.comprar, 'Comprar',
+                        stock.isEmpty ? 'No vende nada todavía' : null),
+                    opt(
+                        NpcMenu.encargos,
+                        'Encargos',
+                        questCells(c, n, r, p).isEmpty
+                            ? 'No te pidió nada'
+                            : null),
+                    opt(
+                        NpcMenu.pedidos,
+                        'Pedidos',
+                        r.invited
+                            ? null
+                            : 'Pide cosas cuando vive en el pueblo'),
+                    opt(
+                        NpcMenu.regalar,
+                        'Regalar',
+                        _gifts(c, n, p).isEmpty
+                            ? 'No tenés nada de su bioma'
+                            : null),
+                    opt(NpcMenu.casa, 'Casa',
+                        r.invited ? null : 'Primero invitalo al pueblo'),
+                    DsChoice('Invitar al pueblo',
+                        key: const ValueKey('npc-invite'),
+                        reason: inviteWhy,
+                        onSelected: inviteWhy == null
+                            ? () => c.residentOp(TownOp.invite, n.id)
+                            : null),
+                    DsChoice('Adiós',
+                        key: const ValueKey('npc-close'),
+                        onSelected: c.closePanel),
+                  ],
           ),
         ),
       ),
@@ -312,12 +331,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
   }
 
   Widget _status(BiomeNpcDef n, ResidentState r, PlayerProfile? p,
-      {required bool shop}) {
+      {required bool shop, required bool inTown}) {
     final tier = ResidentRules.tier(r);
     final next = ResidentRules.nextTier(r);
     final goal = _repGoal(r);
     return DsStatusStrip([
-      DsStatusCell('Relación',
+      DsStatusCell(
+          'Relación',
           key: const ValueKey('npc-rep'),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -328,20 +348,24 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               DsMeter(r.rep, goal, color: DsColors.mp),
             ],
           )),
-      DsStatusCell('Etapa',
-          Text.rich(TextSpan(children: [
-            TextSpan(
-                text: ResidentRules.stage(r).label,
-                style: DsText.body(DsColors.conditionReady)),
-            TextSpan(
-                text: r.invited ? '\nVive en el pueblo' : '\nEn su bioma',
-                style: DsText.detail(DsColors.textSecondary)),
-            if (r.unhappy)
+      // La etapa es de la vida en el pueblo: en su bioma no se muestra.
+      if (inTown)
+        DsStatusCell(
+            'Etapa',
+            Text.rich(TextSpan(children: [
               TextSpan(
-                  text: '\nDescontento',
-                  style: DsText.detail(DsColors.danger)),
-          ]))),
-      DsStatusCell('Beneficio actual',
+                  text: ResidentRules.stage(r).label,
+                  style: DsText.body(DsColors.conditionReady)),
+              TextSpan(
+                  text: r.invited ? '\nVive en el pueblo' : '\nEn su bioma',
+                  style: DsText.detail(DsColors.textSecondary)),
+              if (r.unhappy)
+                TextSpan(
+                    text: '\nDescontento',
+                    style: DsText.detail(DsColors.danger)),
+            ]))),
+      DsStatusCell(
+          'Beneficio actual',
           key: const ValueKey('npc-benefit'),
           flex: 2,
           Text(
@@ -349,7 +373,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                   ? 'Ninguno (necesita casa)'
                   : '${ResidentRules.benefitText(n, tier)} · nivel $tier',
               style: DsText.body(DsColors.success))),
-      DsStatusCell('Siguiente',
+      DsStatusCell(
+          'Siguiente',
           flex: 2,
           Text(
               next == null
@@ -357,7 +382,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                   : '${ResidentRules.benefitText(n, next)} · nivel $next',
               style: DsText.body(DsColors.reward))),
       if (shop)
-        DsStatusCell('Tu oro',
+        DsStatusCell(
+            'Tu oro',
             key: const ValueKey('npc-gold'),
             Text('${p?.credits ?? 0}', style: DsText.body(DsColors.reward))),
     ]);
@@ -378,22 +404,22 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final Widget body = switch (menu) {
       NpcMenu.comprar => _shopView(c, n, tier, p, inBiome: !home),
       NpcMenu.encargos => _grid(questCells(c, n, r, p), 'Nada por ahora.'),
-      NpcMenu.pedidos => _grid(_requests(c, n, r, p, town, home: home),
-          'No pidió nada por ahora.'),
+      NpcMenu.pedidos => _grid(
+          _requests(c, n, r, p, town, home: home), 'No pidió nada por ahora.'),
       NpcMenu.regalar =>
         _grid(_gifts(c, n, p), 'No tenés nada de su bioma para regalarle.'),
-      NpcMenu.casa => _grid(_house(c, n, r, p, town, home: home),
-          'Primero invitalo al pueblo.'),
+      NpcMenu.casa => _grid(
+          _house(c, n, r, p, town, home: home), 'Primero invitalo al pueblo.'),
     };
     return PanelFrame(
       key: const ValueKey('panel-biome-npc'),
       title: '${n.name.toUpperCase()} · ${n.role.label.toUpperCase()} · $title',
       width: 1000,
       onClose: back,
-      header: _status(n, r, p, shop: menu == NpcMenu.comprar),
+      header: _status(n, r, p,
+          shop: menu == NpcMenu.comprar, inTown: home && r.invited),
       leading: [
-        PanelButton('VOLVER',
-            key: const ValueKey('npc-back'), onPressed: back),
+        PanelButton('VOLVER', key: const ValueKey('npc-back'), onPressed: back),
       ],
       actions: [
         PanelButton('ADIÓS',
@@ -412,8 +438,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         ]),
       );
 
-  Widget _grid(List<LifeItemCellData> cells, String empty) => LifeItemGrid(
-      groups: [LifeItemGroup(null, cells)], empty: empty);
+  Widget _grid(List<LifeItemCellData> cells, String empty) =>
+      LifeItemGrid(groups: [LifeItemGroup(null, cells)], empty: empty);
 
   /// Tienda: grilla de mercancía (ícono, nombre, precio, cuántos tenés) y
   /// el detalle a la derecha con cantidad y COMPRAR.
@@ -478,8 +504,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    LifeIcon('semilla_${s.id}', LifeIconKind.semilla,
-                        size: 48),
+                    LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: 48),
                     SizedBox(width: DsSpace.sm),
                     Expanded(
                       child: Text(s.seedName,

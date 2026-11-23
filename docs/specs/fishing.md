@@ -291,9 +291,10 @@ dueño.
 
 - Uno por bioma (`kBiomeFishers`): Nera de la Orilla (Bosque), Tadeo
   Engranaje (Ruinas), Sila Escarcha (Cavernas), Bruno Brasa (Grieta), Eco
-  Viejo (Abismo). Camina por la orilla de su lago; nunca se muda al
-  pueblo. Sprite `items.vida_npc_pesc_<bioma>` (provisorio).
-- E cerca o clic: pantalla con el pedido del día (grilla, detalle a la
+  Viejo (Abismo). Camina por la orilla de su lago; es arraigado: no se
+  muda al pueblo (overworld_biomes.md § 12: diálogo, HABLAR, invitación
+  con regalo único y PUESTO). Sprite `items.vida_npc_pesc_<bioma>` (provisorio).
+- E cerca o clic: el cuadro de diálogo; PEDIDO DEL DÍA abre el pedido (grilla, detalle a la
   derecha, ENTREGAR gris con el motivo). Pide 1 a 3 de un pez de SU lago,
   rareza hasta Pesca / `fisherRarityLevels`, tamaño mínimo que sube con el
   nivel (hasta tres cuartos del rango; vale el récord del bestiario).

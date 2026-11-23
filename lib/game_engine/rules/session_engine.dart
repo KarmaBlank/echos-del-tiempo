@@ -38,6 +38,8 @@ import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
+import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
+import 'npc_talk_rules.dart';
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
