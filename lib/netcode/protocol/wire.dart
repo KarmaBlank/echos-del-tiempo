@@ -124,7 +124,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`life.sx` / `life.st` / `life.lg`).
 /// 53 (v0.32.0): encargos seguidos y vistos en el perfil (`trk`, `seen`)
 /// y `town` con `track` / `seen` (roles.md § 8).
-const kProtocolVersion = 53;
+/// 56 (v0.32.7): lazos con los habitantes (`town.nat`) y `town` con
+/// `talk` / `nativeInvite` / `nativeTrade` (overworld_biomes.md § 12).
+/// (El 55 lo usa otra rama.)
+const kProtocolVersion = 56;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

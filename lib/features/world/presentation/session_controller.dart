@@ -3109,6 +3109,17 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Marca como visto lo que [npc] tiene para decir (diálogo).
   bool markNpcSeen(String npc) => residentOp(TownOp.seen, npc);
 
+  /// Cuenta una charla con [npc] (una por día; overworld_biomes.md § 12).
+  bool npcTalked(String npc) => residentOp(TownOp.talk, npc);
+
+  /// Invita al arraigado del bioma actual (dice que no y da su regalo).
+  bool nativeInvite() => _apply(TownAction(TownOp.nativeInvite, id: place));
+
+  /// Compra ([buy]) o vende [n] de [species] al arraigado del bioma.
+  bool nativeTrade(String species, int n, {required bool buy}) => _apply(
+      TownAction(TownOp.nativeTrade,
+          id: place, target: species, n: n, x: buy ? 1 : 0));
+
   void toggleStash() {
     if (isRun) return; // la Travesía no tiene alijo
     if (_panel == WorldPanel.stash) {

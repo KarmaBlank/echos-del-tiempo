@@ -91,9 +91,8 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
           SizedBox(height: DsSpace.xs),
           if (n != null && r != null)
             Text(
-                '${n.role.label} · relación ${r.rep} · '
-                '${ResidentRules.stage(r).label}'
-                '${r.invited ? '' : ' · vive en ${biomeDef(n.biome)?.name ?? n.biome}'}'
+                '${n.role.label} · relación ${r.rep}'
+                '${r.invited ? ' · ${ResidentRules.stage(r).label}' : ' · vive en ${biomeDef(n.biome)?.name ?? n.biome}'}'
                 '${r.request != null ? ' · pide: ${r.request!.label.toLowerCase()}' : ''}',
                 key: const ValueKey('quest-log-status'),
                 softWrap: true,
