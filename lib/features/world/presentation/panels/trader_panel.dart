@@ -7,6 +7,7 @@ import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import 'life_icon.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 
 /// Puesto del COMERCIANTE (fishing.md § 5, v0.23.2): primero COMPRAR o
@@ -220,6 +221,7 @@ class _TraderPanelState extends State<TraderPanel> {
             'cañas',
             DsListRow(
               key: ValueKey('trade-rod-${r.id}'),
+              leading: LifeIcon(r.id, LifeIconKind.herramienta),
               compact: true,
               title: r.name,
               titleColor: fishRarityColor(r.rarity),
@@ -239,6 +241,10 @@ class _TraderPanelState extends State<TraderPanel> {
             sell: true,
             DsListRow(
               key: ValueKey('trade-row-${f.id}'),
+              leading: LifeIcon(f.id,
+                  f.biome == kWaterJunkBiome
+                      ? LifeIconKind.basura
+                      : LifeIconKind.pescado),
               compact: true,
               title: '${f.name} ×${bag[f.id]}',
               titleColor: fishRarityColor(f.rarity),
@@ -308,6 +314,7 @@ class _TraderPanelState extends State<TraderPanel> {
             'semillas',
             DsListRow(
               key: ValueKey('trade-seed-${s.id}'),
+              leading: LifeIcon('semilla_${s.id}', LifeIconKind.semilla),
               compact: true,
               title: s.seedName,
               titleColor: fishRarityColor(s.rarity),
@@ -335,6 +342,7 @@ class _TraderPanelState extends State<TraderPanel> {
             'abonos',
             DsListRow(
               key: ValueKey('trade-fert-${d.id}'),
+              leading: LifeIcon(d.id, LifeIconKind.semilla),
               compact: true,
               title: d.name,
               titleColor: fishRarityColor(d.rarity),
@@ -359,6 +367,7 @@ class _TraderPanelState extends State<TraderPanel> {
               d.kind == FarmToolKind.azada ? 'azadas' : 'regaderas',
               DsListRow(
                 key: ValueKey('trade-tool-${d.id}'),
+                leading: LifeIcon(d.id, LifeIconKind.herramienta),
                 compact: true,
                 title: d.name,
                 titleColor: fishRarityColor(d.rarity),
@@ -390,6 +399,7 @@ class _TraderPanelState extends State<TraderPanel> {
             sell: true,
             DsListRow(
               key: ValueKey('trade-crop-$key'),
+              leading: LifeIcon('cosecha_${crop.id}', LifeIconKind.cosecha),
               compact: true,
               title: '${crop.name} ×$n',
               titleColor: fishRarityColor(crop.rarity),
