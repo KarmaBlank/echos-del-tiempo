@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/procedural/item_icons.dart';
 import 'sprite_catalog.dart';
 
 /// Los sprites del juego, cargados una vez por app (los tests lo pisan
@@ -56,6 +57,17 @@ class GameSprites {
         if (e.section == 'items' && e.key.startsWith('vida_'))
           catalog.image(e).then((img) {
             if (img != null) life[e.key.substring(5)] = img;
+          }),
+    ]);
+    // Íconos de armas e ítems (`items.<forma>` y `<forma>_acento`): si
+    // falta un PNG, PixelIcon usa el dibujo procedural.
+    await Future.wait([
+      for (final e in catalog.entries)
+        if (e.section == 'items' &&
+            kItemIconRows.containsKey(e.key.replaceAll('_acento', '')
+                .replaceAll('baculo', 'báculo')))
+          catalog.image(e).then((img) {
+            if (img != null) ItemIconImages.put(e.key, img);
           }),
     ]);
     return GameSprites._(heroes, enemies, scales, floats, life);
