@@ -7,6 +7,7 @@ import '../../../app/widgets/menu_focus.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/panels/party_member_bar.dart';
 import '../../world/presentation/session_view.dart';
+import 'inventory_strings.dart';
 import 'shop_sections.dart';
 
 /// ARMERÍA del pueblo (v0.32.3): COMPRAR · VENDER · CONSUMIBLES. Ver
@@ -27,8 +28,8 @@ class ArmoryPanel extends StatelessWidget {
   Widget build(BuildContext context) => ShopTabsPanel(
       view: view,
       controller: controller,
-      title: 'ARMERÍA',
-      help: kShopHelp,
+      title: invStrings(context).t('ui.inventory.armory.title'),
+      help: shopHelp(invStrings(context)),
       tabs: ArmoryTab.values,
       initial: initialTab.index);
 }
@@ -51,8 +52,8 @@ class ForgePanel extends StatelessWidget {
   Widget build(BuildContext context) => ShopTabsPanel(
       view: view,
       controller: controller,
-      title: 'FORJA',
-      help: kForgeHelp,
+      title: invStrings(context).t('ui.inventory.armory.forge_title'),
+      help: forgeHelp(invStrings(context)),
       tabs: ForgeHallTab.values,
       initial: initialTab.index);
 }
@@ -92,6 +93,7 @@ class _ShopTabsPanelState extends State<ShopTabsPanel> {
     final p = shop.profile;
     final tab = widget.tabs[_tab];
     final close = view.mustAllocate ? null : controller.closePanel;
+    final s = invStrings(context);
     // Q / E, Ctrl+Tab y 1-4 cambian de pestaña (menu_focus.dart).
     return PartyMemberKeys(
       view: view,
@@ -106,25 +108,27 @@ class _ShopTabsPanelState extends State<ShopTabsPanel> {
           fill: true,
           help: widget.help,
           onClose: close,
-          titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b> · '
-              '<span class="k">${protoEsc(shop.className())}</span>'),
+          titleTrailing: ProtoText(s.t('ui.inventory.armory.credits_class', {
+            'credits': '₵${p.credits}',
+            'class': protoEsc(shop.className()),
+          })),
           header: PartyMemberBar.header(
               view,
               controller,
               PanelTabs(
-                labels: [for (final t in widget.tabs) t.label],
+                labels: [for (final t in widget.tabs) t.label(s)],
                 index: _tab,
                 onChanged: (i) => setState(() => _tab = i),
               )),
           actions: [
-            PanelButton('PERSONAJE [TAB]',
+            PanelButton(s.t('ui.inventory.armory.character'),
                 onPressed: () => controller.openPanel(WorldPanel.character)),
-            PanelButton('CERRAR [ESC]', onPressed: close),
+            PanelButton(s.t('ui.inventory.armory.close'), onPressed: close),
           ],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(tab.hint),
+              PanelHint(tab.hint(s)),
               Expanded(
                   child: KeyedSubtree(
                       key: ValueKey((_tab, view.actorId)),

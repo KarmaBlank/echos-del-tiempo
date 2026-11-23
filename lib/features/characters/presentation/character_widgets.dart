@@ -19,15 +19,17 @@ import '../../../game_engine/data/weapons_catalog.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/hero_figure.dart';
 import '../domain/account.dart';
+import 'character_strings.dart';
 
 /// Piezas de la selección de personaje (docs/specs/characters.md § 2).
 
 /// `Jugado: DD/MM/AA` o `Nunca jugado` (año corto: entra en la tarjeta
 /// sin cortarse, docs/specs/title_screen.md § 3).
-String lastPlayedText(DateTime? t) {
-  if (t == null) return 'Nunca jugado';
+String lastPlayedText(Strings s, DateTime? t) {
+  if (t == null) return s.t('ui.characters.slot.never_played');
   String two(int n) => n.toString().padLeft(2, '0');
-  return 'Jugado: ${two(t.day)}/${two(t.month)}/${two(t.year % 100)}';
+  return s.t('ui.characters.slot.played',
+      {'date': '${two(t.day)}/${two(t.month)}/${two(t.year % 100)}'});
 }
 
 /// Campo de texto con la fuente pixel (nombre, confirmación).
@@ -119,6 +121,7 @@ class CharacterSlotCard extends StatelessWidget {
     // Una línea por dato; si no entra, baja de renglón (nunca "…"): con
     // texto grande la tarjeta crece en alto (title_screen.md § 3).
     final small = DsText.detail();
+    final s = charStrings(context);
     Widget line(String t, {TextStyle? style, Key? key}) =>
         Text(retroText(t), key: key, softWrap: true, style: style);
     return MenuFocusable(
@@ -164,10 +167,15 @@ class CharacterSlotCard extends StatelessWidget {
                       line(asc.name,
                           key: ValueKey('char-asc-${slot.id}'),
                           style: TextStyle(color: Color(asc.color))),
-                    line('$className · Nv ${profile.level}',
+                    line(
+                        s.t('ui.characters.slot.class_level',
+                            {'cls': className, 'level': profile.level}),
                         style: DsText.body(DsColors.textPrimary)),
-                    line('Zona ${profile.unlockedZone}', style: small),
-                    line(lastPlayedText(slot.lastPlayed), style: small),
+                    line(
+                        s.t('ui.characters.slot.zone',
+                            {'zone': profile.unlockedZone}),
+                        style: small),
+                    line(lastPlayedText(s, slot.lastPlayed), style: small),
                   ],
                 ),
               ),
@@ -196,7 +204,8 @@ class NewCharacterCard extends StatelessWidget {
             hot: hot,
             padding: EdgeInsets.all(DsSpace.sm),
             child: Center(
-              child: Text('+ NUEVO PERSONAJE', style: DsText.subtitle()),
+              child: Text(charStrings(context).t('ui.characters.slot.new'),
+                  style: DsText.subtitle()),
             ),
           ),
 
@@ -303,6 +312,7 @@ class ClassDetail extends StatelessWidget {
     final top = Attribute.values
         .map((a) => def.baseAttributes[a] ?? 0)
         .fold(1, (m, v) => v > m ? v : m);
+    final s = charStrings(context);
     return Column(
       key: const ValueKey('class-detail'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -315,7 +325,8 @@ class ClassDetail extends StatelessWidget {
         const SizedBox(height: 6),
         Text(retroText(def.description)),
         const SizedBox(height: 10),
-        const Text('ATRIBUTOS BASE', style: TextStyle(color: ProtoColors.sky)),
+        Text(s.t('ui.characters.create.base_attributes'),
+            style: const TextStyle(color: ProtoColors.sky)),
         for (final a in Attribute.values)
           Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -341,8 +352,8 @@ class ClassDetail extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-        ProtoText('<span class="k">Arma inicial:</span> '
-            '<b>${protoEsc(weaponName)}</b>'),
+        ProtoText(s.t('ui.characters.create.starting_weapon',
+            {'weapon': protoEsc(weaponName)})),
         if (skills != null) ...[const SizedBox(height: 4), skills!],
       ],
     );
@@ -381,21 +392,23 @@ class _RenameDialogState extends State<_RenameDialog> {
   void _ok() => Navigator.of(context).pop(CharacterRules.cleanName(_name.text));
 
   @override
-  Widget build(BuildContext context) => PanelFrame(
+  Widget build(BuildContext context) {
+    final s = charStrings(context);
+    return PanelFrame(
         key: const ValueKey('char-rename-dialog'),
-        title: 'RENOMBRAR',
+        title: s.t('ui.characters.rename.title'),
         width: 420,
         onClose: () => Navigator.of(context).pop(),
         actions: [
-          PanelButton('CANCELAR',
+          PanelButton(s.t('ui.characters.common.cancel'),
               key: const ValueKey('char-rename-cancel'),
               onPressed: () => Navigator.of(context).pop()),
-          PanelButton('GUARDAR',
+          PanelButton(s.t('ui.characters.rename.save'),
               key: const ValueKey('char-rename-ok'), onPressed: _ok),
         ],
         child: Row(
           children: [
-            const Text('Nombre:'),
+            Text(s.t('ui.characters.rename.name')),
             const SizedBox(width: 8),
             Expanded(
               child: RetroTextField(
@@ -410,6 +423,7 @@ class _RenameDialogState extends State<_RenameDialog> {
           ],
         ),
       );
+  }
 }
 
 /// Diálogo BORRAR PERSONAJE: `true` solo si se escribió el nombre y se
@@ -443,16 +457,17 @@ class _DeleteDialogState extends State<_DeleteDialog> {
   @override
   Widget build(BuildContext context) {
     final name = widget.slot.displayName;
+    final s = charStrings(context);
     return PanelFrame(
       key: const ValueKey('char-delete-dialog'),
-      title: 'BORRAR PERSONAJE',
+      title: s.t('ui.characters.delete.title'),
       width: 560,
       onClose: () => Navigator.of(context).pop(false),
       actions: [
-        PanelButton('CANCELAR',
+        PanelButton(s.t('ui.characters.common.cancel'),
             key: const ValueKey('char-delete-cancel'),
             onPressed: () => Navigator.of(context).pop(false)),
-        PanelButton('BORRAR',
+        PanelButton(s.t('ui.characters.delete.confirm'),
             key: const ValueKey('char-delete-ok'),
             accent: ProtoColors.red,
             onPressed: _ok ? () => Navigator.of(context).pop(true) : null),
@@ -461,17 +476,19 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ProtoText(
-              'Vas a borrar a <b>${protoEsc(retroText(name))}</b> '
-              '(${protoEsc(retroText(widget.className))}, nivel '
-              '${widget.slot.profile.level}). No se puede deshacer.',
+              s.t('ui.characters.delete.intro', {
+                'name': protoEsc(retroText(name)),
+                'cls': protoEsc(retroText(widget.className)),
+                'level': widget.slot.profile.level,
+              }),
               boldColor: ProtoColors.gold),
           const SizedBox(height: 8),
-          const Text(
-              'Sus armas, materiales, pociones y créditos se pierden. Si '
-              'quieres conservar algo, pásalo antes al ALIJO.',
-              style: TextStyle(color: ProtoColors.red)),
+          Text(s.t('ui.characters.delete.loss'),
+              style: const TextStyle(color: ProtoColors.red)),
           const SizedBox(height: 12),
-          Text(retroText('Escribe "$name" para confirmar:'),
+          Text(
+              retroText(
+                  s.t('ui.characters.delete.type_to_confirm', {'name': name})),
               style: const TextStyle(color: ProtoColors.dim)),
           const SizedBox(height: 8),
           RetroTextField(

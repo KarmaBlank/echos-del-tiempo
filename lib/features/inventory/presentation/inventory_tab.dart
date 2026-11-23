@@ -11,6 +11,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/widgets/menu_focus.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/layout/layout_doc.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/rules/build_guide_rules.dart';
@@ -133,7 +134,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     return [
       if (m != null) '<br>$m',
       if (pick != null)
-        '<br>${protoColor(kPlanColor, '» Recomendada: ${protoEsc(pick.reasons.join(' · '))}')}',
+        '<br>${protoColor(kPlanColor, _s.t('ui.inventory.bag.recommended', {'why': protoEsc(pick.reasons.join(' · '))}))}',
     ].join();
   }
 
@@ -329,6 +330,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   ShopContext get shop => widget.shop;
 
+  /// Active language (build() watches it, so a change rebuilds).
+  Strings get _s => ref.read(stringsProvider);
+
   CellContent? _content(PlayerProfile p, String? token) {
     if (token == null) return null;
     final st = StackKind.byToken(token);
@@ -379,6 +383,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(stringsProvider);
     final view = shop.view;
     // El miembro activo (el local o el compañero elegido; solo_party.md
     // § 6): DAR A lista a los demás, también al líder.
@@ -419,7 +424,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
 
     final owners = [
-      DsButton(view.actingCompanion ? me.name.toUpperCase() : 'TÚ',
+      DsButton(view.actingCompanion ? me.name.toUpperCase() : _s.t('ui.inventory.bag.owner_me'),
           key: ValueKey('inv-owner-${me.id}'),
           size: DsButtonSize.compact,
           selected: mine,
@@ -453,7 +458,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             child: KeyedSubtree(
               key: const ValueKey('inv-search'),
               child: DsSearchField(
-                hint: 'BUSCAR: nombre, tipo, mod',
+                hint: _s.t('ui.inventory.bag.search_hint'),
                 width: 280,
                 controller: _search,
                 onChanged: (v) => setState(() => _query = v),
@@ -464,7 +469,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ? null
           : DsButton.icon(const Text('×'),
               key: const ValueKey('inv-search-clear'),
-              tooltip: 'Borrar la búsqueda',
+              tooltip: _s.t('ui.inventory.bag.search_clear'),
               size: DsButtonSize.compact,
               onPressed: () => setState(() {
                     _search.clear();
@@ -505,11 +510,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       // La Travesía no tiene alijo (roguelike.md § 12.2).
       InventoryTabLayout.stash: (_) => !mine || shop.controller.isRun
           ? null
-          : DsButton('ALIJO',
+          : DsButton(_s.t('ui.inventory.bag.stash'),
               key: const ValueKey('inv-stash'),
               size: DsButtonSize.compact,
               tooltip: shop.controller.stashBlock ??
-                  'Abrir el alijo de la cuenta [B]',
+                  _s.t('ui.inventory.bag.stash_tip'),
               onPressed: shop.controller.stashBlock == null
                   ? shop.controller.openStash
                   : null),
@@ -654,7 +659,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(retroText('EQUIPADA'), style: DsText.subtitle()),
+                Text(retroText(_s.t('ui.inventory.bag.equipped')), style: DsText.subtitle()),
                 ProtoText(eq == null ? '—' : itemNameMarkup(shop.rules, eq)),
               ],
             ),
@@ -667,8 +672,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   child: ProtoText(
                       key: const ValueKey('inv-compare-pick'),
                       style: DsText.body(DsColors.textSubtitle),
-                      'Elige el arma B para comparar con ${_cmpAName()}')),
-              DsButton('CANCELAR',
+                      _s.t('ui.inventory.bag.compare_pick', {'a': _cmpAName()}))),
+              DsButton(_s.t('ui.inventory.common.cancel'),
                   key: const ValueKey('inv-compare-cancel'),
                   size: DsButtonSize.compact,
                   onPressed: _closeCompare),
@@ -676,15 +681,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           : _moveFrom != null
               ? Row(children: [
                   Expanded(
-                      child: Text('Elige la casilla destino',
+                      child: Text(_s.t('ui.inventory.bag.move_pick'),
                           style: DsText.body(DsColors.textSubtitle))),
-                  DsButton('CANCELAR',
+                  DsButton(_s.t('ui.inventory.common.cancel'),
                       key: const ValueKey('inv-move-cancel'),
                       size: DsButtonSize.compact,
                       onPressed: () => setState(() => _moveFrom = null)),
                 ])
               : !mine
-                  ? Text('Inventario de ${owner.name} (solo lectura)',
+                  ? Text(_s.t('ui.inventory.bag.read_only_of', {'name': owner.name}),
                       style: DsText.detail())
                   : null;
       final gridBox = SizedBox(
@@ -753,8 +758,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           key: const ValueKey('inv-summary'),
           child: Text.rich(TextSpan(children: [
             TextSpan(
-                text: 'Casillas ${InventoryRules.cellsUsed(p)}/'
-                    '${InventoryRules.cells}',
+                text: _s.t('ui.inventory.bag.cells', {
+                  'used': InventoryRules.cellsUsed(p),
+                  'total': InventoryRules.cells,
+                }),
                 style: DsText.detail()),
             if (mine)
               TextSpan(
@@ -762,7 +769,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   style: DsText.body(DsColors.reward)),
             if (layout.overflow.isNotEmpty)
               TextSpan(
-                  text: ' · ${layout.overflow.length} sin lugar',
+                  text: ' · ${_s.t('ui.inventory.bag.overflow', {'n': layout.overflow.length})}',
                   style: DsText.body(DsColors.warning)),
           ])));
       final selBar = mine && sel != null && _sel != null
@@ -866,7 +873,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
     final compareButton = sel?.item == null || _picking
         ? null
-        : DsButton('COMPARAR',
+        : DsButton(_s.t('ui.inventory.bag.compare'),
             key: const ValueKey('inv-compare'),
             size: DsButtonSize.compact,
             onPressed: () => _startCompare(WeaponRef(owner.id, _sel!)));
@@ -936,7 +943,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    Text('Solo lectura', style: DsText.detail()),
+                    Text(_s.t('ui.inventory.bag.read_only'), style: DsText.detail()),
                     if (compareButton != null) compareButton,
                   ],
                 ),
@@ -993,22 +1000,28 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final r = g.craftPreview(p, a);
     final targets = rules.crafting.batchTargets(p, _cleanRarity);
     final n = targets.length;
-    final what =
-        '$n ${n == 1 ? _cleanRarity.label : rarityPlural(_cleanRarity)}';
+    final plural = _s.t(rarityPluralKey(_cleanRarity));
+    final what = '$n ${n == 1 ? _cleanRarity.label : plural}';
     final summary = n == 0
-        ? protoColor(ProtoColors.dim,
-            'No tienes armas ${rarityPlural(_cleanRarity)} para ${sell ? 'vender' : 'desarmar'}.')
-        : 'Vas a ${sell ? 'vender' : 'desarmar'} ${protoEsc(what)} → '
-            '${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}';
+        ? protoColor(
+            ProtoColors.dim,
+            _s.t(sell ? 'ui.inventory.clean.empty_sell' : 'ui.inventory.clean.empty_salvage',
+                {'rarity': plural}))
+        : _s.t(sell ? 'ui.inventory.clean.summary_sell' : 'ui.inventory.clean.summary_salvage', {
+            'weapons': protoEsc(what),
+            'to': '→',
+            'gains': protoColor(ProtoColors.green,
+                protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes))),
+          });
     return PanelDetail(
       footer: [
-        DsButton('CANCELAR',
+        DsButton(_s.t('ui.inventory.common.cancel'),
             key: const ValueKey('inv-clean-cancel'),
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _cleaning = false)),
         DsButton(
-            '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
-            '${rarityPlural(_cleanRarity).toUpperCase()}',
+            _s.t(sell ? 'ui.inventory.clean.batch_sell' : 'ui.inventory.clean.batch_salvage',
+                {'n': n, 'rarity': plural.toUpperCase()}),
             key: const ValueKey('inv-clean-confirm'),
             size: DsButtonSize.compact,
             accent: DsColors.danger,
@@ -1021,16 +1034,17 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   }),
       ],
       children: [
-        const DsSectionHeader('LIMPIAR INVENTARIO'),
+        DsSectionHeader(_s.t('ui.inventory.clean.title')),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)
           ProtoText(protoColor(
-              ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')),
+              ProtoColors.orange,
+              _s.t('ui.inventory.clean.lost', {'what': protoEsc(r.lost.join(', '))}))),
         if (n > 0) ...[
           const SizedBox(height: 6),
           ProtoText(
               key: const ValueKey('inv-clean-list'),
-              '${protoColor(ProtoColors.red, 'Se destruyen:')}<br>'
+              '${protoColor(ProtoColors.red, _s.t('ui.inventory.clean.destroyed'))}<br>'
               '${[
                 for (final it in targets)
                   '• ${itemNameMarkup(rules, it)}'
@@ -1131,15 +1145,20 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return [
         ProtoText(
             key: const ValueKey('inv-craft-question'),
-            '¿${sell ? 'Vender' : 'Desarmar'} ${protoEsc(name)}? '
-            'Recibes ${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}. '
-            '${protoColor(ProtoColors.red, 'El arma se destruye.')}'
-            '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')}'}'),
-        DsButton('CANCELAR',
+            '${_s.t(sell ? 'ui.inventory.bag.sell_question' : 'ui.inventory.bag.salvage_question', {
+              'name': protoEsc(name),
+              'gains': protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes))),
+            })} '
+            '${protoColor(ProtoColors.red, _s.t('ui.inventory.bag.weapon_destroyed'))}'
+            '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, _s.t('ui.inventory.clean.lost', {'what': protoEsc(r.lost.join(', '))}))}'}'),
+        DsButton(_s.t('ui.inventory.common.cancel'),
             key: const ValueKey('inv-craft-cancel'),
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _confirmCraft = null)),
-        DsButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
+        DsButton(
+            sell
+                ? _s.t('ui.inventory.bag.sell_for', {'price': '₵${r.gainedCredits}'})
+                : _s.t('ui.inventory.clean.salvage'),
             key: const ValueKey('inv-craft-confirm'),
             size: DsButtonSize.compact,
             accent: DsColors.danger,
@@ -1156,13 +1175,12 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return [
         ProtoText(
             key: const ValueKey('inv-drop-question'),
-            '¿Tirar ${protoEsc(name)} al piso? Lo puede levantar '
-            'cualquiera.'),
-        DsButton('CANCELAR',
+            _s.t('ui.inventory.bag.drop_question', {'name': protoEsc(name)})),
+        DsButton(_s.t('ui.inventory.common.cancel'),
             key: const ValueKey('inv-drop-cancel'),
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _confirmDrop = false)),
-        DsButton('TIRAR',
+        DsButton(_s.t('ui.inventory.bag.drop'),
             key: const ValueKey('inv-drop-confirm'),
             size: DsButtonSize.compact,
             accent: DsColors.danger,
@@ -1180,11 +1198,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText('Cantidad'), style: DsText.detail()),
+            Text(retroText(_s.t('ui.inventory.bag.amount')), style: DsText.detail()),
             SizedBox(width: DsSpace.sm),
             DsButton.icon(const Text('-'),
                 key: const ValueKey('inv-count-dec'),
-                tooltip: 'Uno menos',
+                tooltip: _s.t('ui.inventory.bag.one_less'),
                 size: DsButtonSize.compact,
                 onPressed: count > 1
                     ? () => setState(() => _count = count - 1)
@@ -1196,7 +1214,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             SizedBox(width: DsSpace.xs),
             DsButton.icon(const Text('+'),
                 key: const ValueKey('inv-count-inc'),
-                tooltip: 'Uno más',
+                tooltip: _s.t('ui.inventory.bag.one_more'),
                 size: DsButtonSize.compact,
                 onPressed: count < c.count
                     ? () => setState(() => _count = count + 1)
@@ -1216,7 +1234,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     if (mates.where((o) => o.name == m.name).length < 2) return m.name;
     final p = m.profile;
     final cls = shop.rules.catalog.classes[p.classId]?.name ?? p.classId;
-    return '${m.name} ($cls, Nv ${p.level})';
+    return _s.t('ui.inventory.menu.mate_label',
+        {'name': m.name, 'cls': cls, 'level': p.level});
   }
 
   List<InventoryMenuEntry> _menuEntries(PlayerProfile p, SessionPlayer me,
@@ -1226,9 +1245,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final it = c.item;
     final count = it == null ? _count.clamp(1, c.count) : 1;
     String? why(InventoryMenuAction a, String? r) =>
-        r == null ? null : inventoryReasonLine(a, r);
+        r == null ? null : inventoryReasonLine(_s, a, r);
     String? short(InventoryMenuAction a, String? r) =>
-        r == null ? null : inventoryReasonShort(a, r);
+        r == null ? null : inventoryReasonShort(_s, a, r);
     InventoryMenuEntry craft(ItemInstance it, CraftOp op) {
       final act = CraftAction(op, it.uid);
       final sell = op == CraftOp.sell;
@@ -1242,7 +1261,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return InventoryMenuEntry(
         id: sell ? 'sell' : 'salvage',
         shortReason: short(ma, why2),
-        label: sell ? 'Vender ₵${shop.rules.crafting.sellPrice(it)}' : ma.label,
+        label: sell
+            ? _s.t('ui.inventory.menu.sell_for',
+                {'price': '₵${shop.rules.crafting.sellPrice(it)}'})
+            : ma.label(_s),
         note: sell ? null : gains,
         color: ProtoColors.orange,
         reason: why(ma, why2),
@@ -1262,7 +1284,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       if (usable != null)
         InventoryMenuEntry(
           id: 'use',
-          label: 'Usar',
+          label: _s.t('ui.inventory.menu.use'),
           color: ProtoColors.green,
           reason: shop.controller.useItemBlock(usable),
           onTap: () => shop.controller.useItem(usable),
@@ -1270,7 +1292,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       if (it != null)
         InventoryMenuEntry(
           id: 'equip',
-          label: InventoryMenuAction.equip.label,
+          label: InventoryMenuAction.equip.label(_s),
           color: ProtoColors.green,
           reason: why(InventoryMenuAction.equip, eqReason),
           shortReason: short(InventoryMenuAction.equip, eqReason),
@@ -1279,45 +1301,45 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       if (it != null && !_picking)
         InventoryMenuEntry(
           id: 'compare',
-          label: InventoryMenuAction.compare.label,
+          label: InventoryMenuAction.compare.label(_s),
           color: ProtoColors.sky,
           onTap: () => _startCompare(WeaponRef(me.id, token)),
         ),
       if (it != null || c.eco != null)
         InventoryMenuEntry(
           id: 'move',
-          label: InventoryMenuAction.move.label,
-          note: 'o arrastrá',
+          label: InventoryMenuAction.move.label(_s),
+          note: _s.t('ui.inventory.menu.move_note'),
           reason: _selCell == null
               ? (it != null && it.uid == p.equippedUid
-                  ? 'Está en su ranura de equipada'
-                  : 'Va en su sección fija')
+                  ? _s.t('ui.inventory.menu.reason.in_equipped_slot')
+                  : _s.t('ui.inventory.menu.reason.fixed_section'))
               : null,
           shortReason: _selCell == null
               ? (it != null && it.uid == p.equippedUid
-                  ? 'equipada'
-                  : 'lugar fijo')
+                  ? _s.t('ui.inventory.menu.short.equipped')
+                  : _s.t('ui.inventory.menu.short.fixed'))
               : null,
           onTap: () => setState(() => _moveFrom = _selCell),
         ),
       if (mates.isEmpty)
         InventoryMenuEntry(
           id: 'give',
-          label: InventoryMenuAction.give.label,
+          label: InventoryMenuAction.give.label(_s),
           reason: why(
               InventoryMenuAction.give,
               g.give(p, token, null, count: count) ??
-                  'No hay compañeros en la sala'),
+                  _s.t('ui.inventory.menu.reason.no_mates')),
           shortReason: short(
               InventoryMenuAction.give,
               g.give(p, token, null, count: count) ??
-                  'No hay compañeros en la sala'),
+                  _s.t('ui.inventory.menu.reason.no_mates')),
         )
       else
         for (final m in mates)
           InventoryMenuEntry(
             id: 'give-${m.id}',
-            label: 'Dar a ${_mateLabel(m, mates)}',
+            label: _s.t('ui.inventory.menu.give_to', {'name': _mateLabel(m, mates)}),
             color: ProtoColors.sky,
             reason: why(
                 InventoryMenuAction.give, g.give(p, token, m, count: count)),
@@ -1327,8 +1349,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ),
       InventoryMenuEntry(
         id: 'drop',
-        label: InventoryMenuAction.drop.label,
-        note: 'queda en el piso',
+        label: InventoryMenuAction.drop.label(_s),
+        note: _s.t('ui.inventory.menu.drop_note'),
         color: ProtoColors.orange,
         reason: why(InventoryMenuAction.drop,
             g.drop(p, token, count: count, alive: me.alive)),
@@ -1343,7 +1365,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       if (!shop.controller.isRun)
       InventoryMenuEntry(
         id: 'stash',
-        label: 'Guardar en alijo',
+        label: _s.t('ui.inventory.menu.stash_put'),
         color: ProtoColors.sky,
         reason: shop.controller.stashPutReason(token),
         onTap: () => shop.controller.stashPut([token]),

@@ -10,6 +10,7 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import 'craft_bench.dart' show materialColor, materialIcon;
 import 'craft_layout.dart';
+import 'inventory_strings.dart';
 import 'shop_sections.dart';
 
 /// CONDENSAR: pestaña propia de la ARMERÍA (v0.20.25; solo materiales de
@@ -59,15 +60,16 @@ class _CondensePanelState extends State<CondensePanel> {
     final max = CraftRules.condenseMax(p, _out);
     final n = (_n ?? max).clamp(1, max < 1 ? 1 : max);
     final a = CraftAction(CraftOp.condense, _out.name, index: n);
+    final s = invStrings(context);
     final why = shop.view.session.run != null
-        ? 'Solo en el Mundo'
+        ? s.t('ui.inventory.condense.world_only')
         : max < 1
-            ? 'No alcanza'
+            ? s.t('ui.inventory.condense.not_enough')
             : shop.guards.craft(p, a);
     final slots = <String, DsSlotBuilder>{
-      CondenseLayout.title: (_) => const DsSectionHeader('Condensar'),
+      CondenseLayout.title: (_) => DsSectionHeader(s.t('ui.inventory.condense.title')),
       CondenseLayout.intro: (_) =>
-          Text('Sin azar. No se puede deshacer.', style: DsText.detail()),
+          Text(s.t('ui.inventory.condense.intro'), style: DsText.detail()),
       CondenseLayout.recipes: (_) => _picker(context, max),
       CondenseLayout.summary: (_) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +83,7 @@ class _CondensePanelState extends State<CondensePanel> {
               ),
               KeyedSubtree(
                 key: ValueKey('condense-have-${_out.name}'),
-                child: Text('Alcanza para $max', style: DsText.detail()),
+                child: Text(s.t('ui.inventory.condense.enough_for', {'n': max}), style: DsText.detail()),
               ),
             ],
           ),
@@ -90,7 +92,7 @@ class _CondensePanelState extends State<CondensePanel> {
           : KeyedSubtree(
               key: const ValueKey('condense-error'),
               child: Text(why, style: DsText.detail(DsColors.textDisabled))),
-      CondenseLayout.go: (_) => DsButton('CONDENSAR',
+      CondenseLayout.go: (_) => DsButton(s.t('ui.inventory.condense.go'),
           key: const ValueKey('condense-go'),
           kind: DsButtonKind.primary,
           tooltip: why,
@@ -125,12 +127,13 @@ class _CondensePanelState extends State<CondensePanel> {
   /// Material (izquierda) → resultado (derecha) y la cantidad.
   Widget _picker(BuildContext context, int max) {
     final p = shop.profile;
+    final s = invStrings(context);
     Widget icon(CraftMaterial m) =>
         actionRowIcon(context, materialIcon(m), materialColor(m));
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DsSectionHeader('Elegí material'),
+        DsSectionHeader(s.t('ui.inventory.condense.pick_material')),
         for (final out in CraftRules.condensable)
           if (CraftRules.condenseRecipe(out) case (final src, final need, _))
             DsActionRow(
@@ -150,7 +153,7 @@ class _CondensePanelState extends State<CondensePanel> {
     final right = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DsSectionHeader('Se condensa en'),
+        DsSectionHeader(s.t('ui.inventory.condense.result')),
         DsListRow(
           key: const ValueKey('condense-result'),
           leading: icon(_out),
@@ -198,9 +201,9 @@ class _CondensePanelState extends State<CondensePanel> {
           runSpacing: DsSpace.xs,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('CANTIDAD', style: DsText.subtitle()),
+            Text(s.t('ui.inventory.condense.amount'), style: DsText.subtitle()),
             amount('×1', 1, '1'),
-            amount('MÁX ($max)', null, 'all'),
+            amount(s.t('ui.inventory.condense.max', {'n': max}), null, 'all'),
           ],
         ),
       ],

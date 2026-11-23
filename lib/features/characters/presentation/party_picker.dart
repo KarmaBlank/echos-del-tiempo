@@ -4,6 +4,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../domain/account.dart';
+import 'character_strings.dart';
 
 /// Un personaje que puede ir de compañero (docs/specs/solo_party.md § 2).
 class PartyCandidate {
@@ -60,19 +61,20 @@ class PartyPicker extends StatelessWidget {
     final full = selected.length >= Account.maxCompanions;
     final byId = {for (final c in candidates) c.id: c};
     const muted = TextStyle(color: ProtoColors.dim);
+    final s = charStrings(context);
+    const max = Account.maxCompanions;
     return Column(
       key: const ValueKey('party-picker'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('PARTY: tú + ${selected.length}',
+        Text(s.t('ui.characters.party.count', {'n': selected.length}),
             key: const ValueKey('party-count'),
             style: const TextStyle(color: ProtoColors.gold)),
         const SizedBox(height: 4),
         Text(
             retroText(candidates.isEmpty
-                ? 'Crea otro personaje para llevarlo de compañero.'
-                : 'Hasta ${Account.maxCompanions} compañeros. En batalla '
-                    'eliges su acción en su turno; con AUTO actúan solos.'),
+                ? s.t('ui.characters.party.none')
+                : s.t('ui.characters.party.hint', {'max': max})),
             textAlign: TextAlign.center,
             style: muted),
         if (candidates.isNotEmpty) ...[
@@ -84,7 +86,12 @@ class PartyPicker extends StatelessWidget {
             children: [
               for (final c in candidates)
                 PanelButton(
-                  '${selected.contains(c.id) ? '[x] ' : '[ ] '}${c.label}',
+                  '${selected.contains(c.id) ? '[x] ' : '[ ] '}'
+                  '${s.t('ui.characters.common.name_class_level', {
+                        'name': c.name,
+                        'cls': c.className,
+                        'level': c.level,
+                      })}',
                   key: ValueKey('party-pick-${c.id}'),
                   selected: selected.contains(c.id),
                   onPressed: !enabled ||
@@ -102,8 +109,8 @@ class PartyPicker extends StatelessWidget {
           ),
           if (full) ...[
             const SizedBox(height: 4),
-            const Text('Máximo ${Account.maxCompanions} compañeros.',
-                key: ValueKey('party-full'), style: muted),
+            Text(s.t('ui.characters.party.full', {'max': max}),
+                key: const ValueKey('party-full'), style: muted),
           ],
         ],
         if (onAuto != null && selected.isNotEmpty) ...[
@@ -117,7 +124,8 @@ class PartyPicker extends StatelessWidget {
               for (final id in selected)
                 if (byId[id] case final c?)
                   PanelButton(
-                    'AUTO ${c.name}: ${auto.contains(id) ? 'SÍ' : 'NO'}',
+                    s.t('ui.characters.party.auto',
+                        {'name': c.name, 'on': '${auto.contains(id)}'}),
                     key: ValueKey('party-auto-$id'),
                     selected: auto.contains(id),
                     onPressed: enabled

@@ -11,6 +11,7 @@ import '../../../app/theme/retro_type.dart';
 import '../../../core/edition/game_edition.dart';
 import '../../../game_engine/models/game_mode.dart';
 import '../domain/patch_notes.dart';
+import 'lobby_strings.dart';
 
 /// VER NOTAS DEL PARCHE (docs/specs/title_screen.md § 4).
 Future<void> showPatchNotes(BuildContext context, {AssetBundle? bundle}) =>
@@ -54,7 +55,7 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
   List<PatchNoteEntry>? _entries;
   int _sel = 0;
   List<NoteBlock>? _blocks;
-  String? _error;
+  bool _error = false;
 
   AssetBundle get _bundle => widget.bundle ?? rootBundle;
 
@@ -78,7 +79,7 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
       setState(() => _entries = list);
       if (list.isNotEmpty) await _open(0);
     } catch (e) {
-      if (mounted) setState(() => _error = 'No se pudieron leer las notas.');
+      if (mounted) setState(() => _error = true);
     }
   }
 
@@ -130,12 +131,12 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
   @override
   Widget build(BuildContext context) => PanelFrame(
         key: const ValueKey('patch-notes'),
-        title: 'NOTAS DEL PARCHE',
+        title: lobbyStrings(context).t('ui.lobby.patch_notes.title'),
         width: 980,
         fill: true,
         onClose: widget.onClose,
         actions: [
-          DsButton('CERRAR',
+          DsButton(lobbyStrings(context).t('ui.lobby.patch_notes.close'),
               key: const ValueKey('patch-notes-close'),
               onPressed: widget.onClose),
         ],
@@ -144,10 +145,16 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
 
   Widget _body() {
     final entries = _entries;
-    if (_error != null) return Text(retroText(_error!), style: DsText.body());
-    if (entries == null) return Text('Cargando...', style: DsText.detail());
+    final s = lobbyStrings(context);
+    if (_error) {
+      return Text(retroText(s.t('ui.lobby.patch_notes.read_error')),
+          style: DsText.body());
+    }
+    if (entries == null) {
+      return Text(s.t('ui.lobby.patch_notes.loading'), style: DsText.detail());
+    }
     if (entries.isEmpty) {
-      return Text(retroText('No hay notas en esta versión.'),
+      return Text(retroText(s.t('ui.lobby.patch_notes.empty')),
           style: DsText.body());
     }
     return Row(
@@ -161,7 +168,7 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
             itemBuilder: (context, i) => DsListRow(
               key: ValueKey('patch-notes-v${entries[i].version}'),
               title: 'v${entries[i].version}',
-              detail: i == 0 ? 'última' : null,
+              detail: i == 0 ? s.t('ui.lobby.patch_notes.latest') : null,
               selected: i == _sel,
               compact: true,
               onTap: () => unawaited(_open(i)),
@@ -203,7 +210,10 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
 
   Widget _notes() {
     final blocks = _blocks;
-    if (blocks == null) return Text('Cargando...', style: DsText.detail());
+    if (blocks == null) {
+      return Text(lobbyStrings(context).t('ui.lobby.patch_notes.loading'),
+          style: DsText.detail());
+    }
     final children = <Widget>[];
     for (final b in blocks) {
       switch (b.kind) {
@@ -214,15 +224,14 @@ class _PatchNotesPanelState extends State<PatchNotesPanel> {
           children.add(SizedBox(height: DsSpace.sm));
         case NoteBlockKind.bullet:
           children.add(Padding(
-            padding: EdgeInsets.only(
-                left: DsSpace.md * b.level, bottom: DsSpace.xs),
+            padding:
+                EdgeInsets.only(left: DsSpace.md * b.level, bottom: DsSpace.xs),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('·', style: DsText.body(DsColors.actionPrimary)),
                 SizedBox(width: DsSpace.sm),
-                Expanded(
-                    child: Text(retroText(b.text), style: DsText.body())),
+                Expanded(child: Text(retroText(b.text), style: DsText.body())),
               ],
             ),
           ));

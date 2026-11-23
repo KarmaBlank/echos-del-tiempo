@@ -10,6 +10,8 @@ import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
 import 'package:flutter/gestures.dart';
+import 'package:echos_del_tiempo/core/i18n/locale_id.dart';
+import 'package:echos_del_tiempo/core/i18n/string_tables.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -76,6 +78,9 @@ String _open(WidgetTester tester) => tester
     .map((t) => t.markup)
     .join('\n');
 
+final _es = StringTables.loadDirectorySync(StringTables.assetRoot)!
+    .strings(LocaleId.source);
+
 void main() {
   final help = CraftHelp(progression.crafting);
 
@@ -88,7 +93,7 @@ void main() {
       for (final s in [h.what, h.change, h.cost, h.lose, h.example]) {
         expect(s, isNotEmpty, reason: '${op.name}: falta una parte');
       }
-      final m = h.markup(op.title);
+      final m = h.markup(op.title(_es));
       for (final l in _labels) {
         expect(m, contains(l), reason: '${op.name} sin "$l"');
       }
@@ -146,7 +151,7 @@ void main() {
     for (final op in CraftOpText.bench) {
       await _hover(tester, find.byKey(ValueKey('bench-op-${op.name}')));
       final m = _tip(tester, op);
-      expect(m, contains(op.title));
+      expect(m, contains(op.title(_es)));
       for (final l in _labels) {
         expect(m, contains(l), reason: '${op.name} sin "$l"');
       }

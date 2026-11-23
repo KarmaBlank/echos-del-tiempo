@@ -24,6 +24,7 @@ import '../../../core/settings/game_settings.dart';
 import '../../../app/feature_flags.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/settings/settings_providers.dart';
+import 'settings_strings.dart';
 
 /// Pestañas del menú (docs/specs/settings.md § "Estructura").
 /// Nombre y descripción, por idioma: `ui.settings.tab.<name>.label|hint`
@@ -125,16 +126,16 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
     ].join('<br>');
   }
 
-  String get _help => widget.inGame
-      ? '<b>Pausa</b><br>Ajustes del juego y salidas. '
-          '${widget.multiplayer ? 'En multijugador el juego <b>no se detiene</b> solo: <b>PAUSAR AL GRUPO</b> lo pausa para todos y cualquiera puede reanudar.' : 'Jugando solo, la partida se detiene mientras el menú está abierto.'}'
-          '<br><span class="k">Esc</span> cierra · <span class="k">Tab</span> / flechas mueven · <span class="k">Enter</span> elige.<br>'
-          'Los ajustes se guardan solos. Pasá el mouse por un ajuste para '
-          'ver qué hace.<br>$_tabsHelp'
-      : '<b>Configuración</b><br>Sonido, pantalla, juego y controles. '
-          'Los cambios se aplican y se guardan al momento. Pasá el mouse '
-          'por un ajuste para ver qué hace.<br>'
-          '<span class="k">Esc</span> cierra · <span class="k">Tab</span> / flechas mueven · <span class="k">Enter</span> elige.<br>$_tabsHelp';
+  String get _help {
+    final s = ref.read(stringsProvider);
+    return widget.inGame
+        ? s.t('ui.settings.help.pause', {
+            'multiplayer': widget.multiplayer ? 'yes' : 'no',
+            'dot': kDot,
+            'tabs': _tabsHelp,
+          })
+        : s.t('ui.settings.help.settings', {'dot': kDot, 'tabs': _tabsHelp});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,9 +150,8 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
         type: MaterialType.transparency,
         child: PanelFrame(
           key: const ValueKey('settings-menu'),
-          title: s.t(widget.inGame
-              ? 'ui.settings.pause_title'
-              : 'ui.settings.title'),
+          title: s.t(
+              widget.inGame ? 'ui.settings.pause_title' : 'ui.settings.title'),
           width: 680,
           help: _help,
           onClose: _escape,
@@ -221,11 +221,11 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
   Widget _status() {
     final running = widget.multiplayer && !widget.groupPaused;
     return Text(
-      retroText(running
-          ? 'El juego sigue corriendo en multijugador'
+      retroText(ref.t(running
+          ? 'ui.settings.status.running'
           : widget.multiplayer
-              ? 'Grupo en pausa'
-              : 'Juego en pausa'),
+              ? 'ui.settings.status.group_paused'
+              : 'ui.settings.status.paused')),
       key: const ValueKey('pause-status'),
       maxLines: 1,
       style: DsText.detail(running ? DsColors.warning : DsColors.success),
@@ -234,17 +234,17 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
 
   List<Widget> _confirmRow(_Exit what) {
     final quit = what == _Exit.quit;
-    final consequence = widget.multiplayer
-        ? 'Dejas la sala; tus compañeros siguen sin ti.'
+    final consequence = ref.t(widget.multiplayer
+        ? 'ui.settings.confirm.leave_room'
         : widget.inMission
-            ? 'La misión en curso se abandona.'
-            : 'Tu personaje queda guardado.';
+            ? 'ui.settings.confirm.abandon_mission'
+            : 'ui.settings.confirm.character_saved');
     return [
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 300),
         child: ProtoText(
           key: const ValueKey('pause-confirm-question'),
-          '<b>${quit ? '¿Salir del juego?' : '¿Volver al título?'}</b> '
+          '<b>${ref.t(quit ? 'ui.settings.confirm.quit_question' : 'ui.settings.confirm.title_question')}</b> '
           '${protoColor(ProtoColors.orange, consequence)}',
         ),
       ),
@@ -278,31 +278,34 @@ Future<bool> showQuitGameDialog(BuildContext context) async =>
     await showDialog<bool>(
       context: context,
       barrierColor: ProtoColors.scrim(0.6),
-      builder: (ctx) => Material(
-        type: MaterialType.transparency,
-        child: PanelFrame(
-          key: const ValueKey('quit-dialog'),
-          title: 'SALIR DEL JUEGO',
-          width: 460,
-          onClose: () => Navigator.of(ctx).pop(false),
-          actions: [
-            InitialFocus(
-              child: DsButton('CANCELAR',
-                  key: const ValueKey('quit-cancel'),
-                  onPressed: () => Navigator.of(ctx).pop(false)),
+      builder: (ctx) {
+        final s = settingsStrings(ctx);
+        return Material(
+          type: MaterialType.transparency,
+          child: PanelFrame(
+            key: const ValueKey('quit-dialog'),
+            title: s.t('ui.settings.quit_game'),
+            width: 460,
+            onClose: () => Navigator.of(ctx).pop(false),
+            actions: [
+              InitialFocus(
+                child: DsButton(s.t('ui.settings.cancel'),
+                    key: const ValueKey('quit-cancel'),
+                    onPressed: () => Navigator.of(ctx).pop(false)),
+              ),
+              DsButton(s.t('ui.settings.quit_game'),
+                  key: const ValueKey('quit-yes'),
+                  accent: DsColors.danger,
+                  onPressed: () => Navigator.of(ctx).pop(true)),
+            ],
+            child: ProtoText(
+              key: const ValueKey('quit-question'),
+              '<b>${s.t('ui.settings.confirm.quit_question')}</b> '
+              '${protoColor(ProtoColors.green, s.t('ui.settings.confirm.account_saved'))}',
             ),
-            DsButton('SALIR DEL JUEGO',
-                key: const ValueKey('quit-yes'),
-                accent: DsColors.danger,
-                onPressed: () => Navigator.of(ctx).pop(true)),
-          ],
-          child: ProtoText(
-            key: const ValueKey('quit-question'),
-            '<b>¿Salir del juego?</b> '
-            '${protoColor(ProtoColors.green, 'Tu cuenta y tus personajes quedan guardados.')}',
           ),
-        ),
-      ),
+        );
+      },
     ) ??
     false;
 
@@ -313,11 +316,12 @@ class PauseMenuButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => DsButton('MENU [ESC]',
-      key: const ValueKey('pause-open'),
-      size: DsButtonSize.compact,
-      leading: const _MenuGlyph(),
-      onPressed: onPressed);
+  Widget build(BuildContext context) =>
+      DsButton(settingsStrings(context).t('ui.settings.menu_button'),
+          key: const ValueKey('pause-open'),
+          size: DsButtonSize.compact,
+          leading: const _MenuGlyph(),
+          onPressed: onPressed);
 }
 
 /// `≡` dibujado (la fuente pixel no lo tiene): tres barras de 2 px.
@@ -429,12 +433,13 @@ class _FontChoice extends StatelessWidget {
 
   static const _options = {
     ReadingFont.vt323: ('VT323', RetroType.vt323Family, 20.0),
-    ReadingFont.classic: ('CLÁSICA', RetroType.pixelFamily, 8.0),
+    ReadingFont.classic: ('', RetroType.pixelFamily, 8.0),
     ReadingFont.atkinson: ('ATKINSON', RetroType.atkinsonFamily, 18.0),
   };
 
   @override
   Widget build(BuildContext context) {
+    final s = settingsStrings(context);
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -453,7 +458,13 @@ class _FontChoice extends StatelessWidget {
                   : null,
             ),
             onPressed: () => onChanged(e.key),
-            child: Text(retroText('${e.value.$1} · Ñandú ¿áé?'),
+            child: Text(
+                retroText(s.t('ui.settings.a11y.font.sample', {
+                  'font': e.key == ReadingFont.classic
+                      ? s.t('ui.settings.a11y.font.classic')
+                      : e.value.$1,
+                  'dot': kDot,
+                })),
                 textScaler: TextScaler.noScaling,
                 style: TextStyle(
                     fontFamily: e.value.$2,
@@ -466,7 +477,8 @@ class _FontChoice extends StatelessWidget {
   }
 }
 
-const _yesNo = {true: 'SÍ', false: 'NO'};
+Map<bool, String> _yesNo(Strings s) =>
+    {true: s.t('ui.settings.yes'), false: s.t('ui.settings.no')};
 
 /// Slider de volumen en % (20 pasos). Se oye al arrastrar y se guarda al
 /// soltar.
@@ -539,13 +551,14 @@ class _SoundTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(audioSettingsProvider);
+    final t = ref.watch(stringsProvider);
     final c = ref.read(audioSettingsProvider.notifier);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SettingRow(
-          label: 'VOLUMEN GENERAL',
-          hint: 'Sube o baja todo a la vez.',
+          label: t.t('ui.settings.sound.master.label'),
+          hint: t.t('ui.settings.sound.master.hint'),
           control: _VolumeSlider(
             sliderKey: const ValueKey('audio-master'),
             value: s.masterVolume,
@@ -558,8 +571,8 @@ class _SoundTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'MÚSICA',
-          hint: 'La música de fondo y los jingles.',
+          label: t.t('ui.settings.sound.music.label'),
+          hint: t.t('ui.settings.sound.music.hint'),
           control: _VolumeSlider(
             sliderKey: const ValueKey('audio-music'),
             value: s.musicVolume,
@@ -569,8 +582,8 @@ class _SoundTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'EFECTOS (FX)',
-          hint: 'Golpes, habilidades y loot. Suena una muestra al moverlo.',
+          label: t.t('ui.settings.sound.sfx.label'),
+          hint: t.t('ui.settings.sound.sfx.hint'),
           control: _VolumeSlider(
             sliderKey: const ValueKey('audio-sfx'),
             value: s.sfxVolume,
@@ -583,13 +596,13 @@ class _SoundTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'SILENCIAR TODO',
+          label: t.t('ui.settings.sound.mute.label'),
           hint: s.muted
-              ? 'Todo el sonido está silenciado.'
-              : 'Apaga música y efectos sin perder los volúmenes.',
+              ? t.t('ui.settings.sound.mute.hint_on')
+              : t.t('ui.settings.sound.mute.hint_off'),
           control: _Choice<bool>(
             keyPrefix: 'audio-mute',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.muted,
             onChanged: (v) {
               if (v != s.muted) c.toggleMute();
@@ -608,74 +621,79 @@ class _DisplayTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(gameSettingsProvider);
     final c = ref.read(gameSettingsProvider.notifier);
+    final t = ref.watch(stringsProvider);
     final window = ref.watch(windowModeProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (window.supported)
           _SettingRow(
-            label: 'MODO',
-            hint: 'Pantalla completa sin bordes en el monitor de la ventana.',
+            label: t.t('ui.settings.display.mode.label'),
+            hint: t.t('ui.settings.display.mode.hint'),
             control: _Choice<bool>(
               keyPrefix: 'display-fullscreen',
-              options: const {false: 'VENTANA', true: 'PANTALLA COMPLETA'},
+              options: {
+                false: t.t('ui.settings.display.mode.window'),
+                true: t.t('ui.settings.display.mode.fullscreen')
+              },
               value: s.fullscreen,
               onChanged: (v) => c.update(s.copyWith(fullscreen: v)),
             ),
           ),
         _SettingRow(
-          label: 'ESCALADO',
+          label: t.t('ui.settings.display.scale.label'),
           hint: s.scale == ScaleMode.pixelPerfect
-              ? 'Píxeles exactos (×2, ×3...) con barras negras.'
-              : 'Llena la ventana; algunos píxeles salen más anchos.',
+              ? t.t('ui.settings.display.scale.hint_pixel', {'times': kTimes})
+              : t.t('ui.settings.display.scale.hint_fit'),
           control: _Choice<ScaleMode>(
             keyPrefix: 'display-scale',
-            options: const {
-              ScaleMode.pixelPerfect: 'PIXEL PERFECT',
-              ScaleMode.fit: 'AJUSTAR',
+            options: {
+              ScaleMode.pixelPerfect:
+                  t.t('ui.settings.display.scale.pixel_perfect'),
+              ScaleMode.fit: t.t('ui.settings.display.scale.fit'),
             },
             value: s.scale,
             onChanged: (v) => c.update(s.copyWith(scale: v)),
           ),
         ),
         _SettingRow(
-          label: 'FILTRO CRT',
-          hint: 'Líneas, brillo y bordes de un televisor viejo.',
+          label: t.t('ui.settings.display.crt.label'),
+          hint: t.t('ui.settings.display.crt.hint'),
           control: _Choice<CrtLevel>(
             keyPrefix: 'display-crt',
-            options: const {
-              CrtLevel.off: 'APAGADO',
-              CrtLevel.soft: 'SUAVE',
-              CrtLevel.normal: 'NORMAL',
-              CrtLevel.strong: 'FUERTE',
+            options: {
+              CrtLevel.off: t.t('ui.settings.display.crt.off'),
+              CrtLevel.soft: t.t('ui.settings.display.crt.soft'),
+              CrtLevel.normal: t.t('ui.settings.display.crt.normal'),
+              CrtLevel.strong: t.t('ui.settings.display.crt.strong'),
             },
             value: s.crt,
             onChanged: (v) => c.update(s.copyWith(crt: v)),
           ),
         ),
         _SettingRow(
-          label: 'PARTÍCULAS',
-          hint: 'Chispas, nieve y destellos. BAJA si la PC sufre.',
+          label: t.t('ui.settings.display.particles.label'),
+          hint: t.t('ui.settings.display.particles.hint'),
           control: _Choice<ParticleLevel>(
             keyPrefix: 'display-particles',
-            options: const {
-              ParticleLevel.low: 'BAJA',
-              ParticleLevel.medium: 'MEDIA',
-              ParticleLevel.high: 'ALTA',
+            options: {
+              ParticleLevel.low: t.t('ui.settings.display.particles.low'),
+              ParticleLevel.medium: t.t('ui.settings.display.particles.medium'),
+              ParticleLevel.high: t.t('ui.settings.display.particles.high'),
             },
             value: s.particles,
             onChanged: (v) => c.update(s.copyWith(particles: v)),
           ),
         ),
         _SettingRow(
-          label: 'LÍMITE DE FPS',
-          hint: 'Cuadros por segundo. Sin límite = lo que dé el monitor.',
+          label: t.t('ui.settings.display.fps.label'),
+          hint: t.t('ui.settings.display.fps.hint'),
           control: _Choice<FpsLimit>(
             keyPrefix: 'display-fps',
-            options: const {
+            options: {
               FpsLimit.fps30: '30',
               FpsLimit.fps60: '60',
-              FpsLimit.none: 'SIN LÍMITE',
+              FpsLimit.none: t.t('ui.settings.display.fps.none'),
             },
             value: s.fpsLimit,
             onChanged: (v) => c.update(s.copyWith(fpsLimit: v)),
@@ -683,28 +701,30 @@ class _DisplayTab extends ConsumerWidget {
         ),
         // FPS Y PING (settings.md § 3.9).
         _SettingRow(
-          label: 'FPS Y PING',
-          hint: 'Muestra en una esquina los cuadros por segundo y, en una '
-              'sala, el ping.',
+          label: t.t('ui.settings.display.perf.label'),
+          hint: t.t('ui.settings.display.perf.hint'),
           control: _Choice<bool>(
             keyPrefix: 'display-perf',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.perfOverlay,
             onChanged: (v) => c.update(s.copyWith(perfOverlay: v)),
           ),
         ),
         _SettingRow(
-          label: 'ESQUINA',
+          label: t.t('ui.settings.display.corner.label'),
           hint: s.perfOverlay
-              ? 'Dónde va el indicador de FPS y ping.'
-              : 'Activá FPS Y PING para elegir la esquina.',
+              ? t.t('ui.settings.display.corner.hint_on')
+              : t.t('ui.settings.display.corner.hint_off'),
           control: _Choice<OverlayCorner>(
             keyPrefix: 'display-perf-corner',
-            options: const {
-              OverlayCorner.topRight: 'ARRIBA DER.',
-              OverlayCorner.topLeft: 'ARRIBA IZQ.',
-              OverlayCorner.bottomRight: 'ABAJO DER.',
-              OverlayCorner.bottomLeft: 'ABAJO IZQ.',
+            options: {
+              OverlayCorner.topRight:
+                  t.t('ui.settings.display.corner.top_right'),
+              OverlayCorner.topLeft: t.t('ui.settings.display.corner.top_left'),
+              OverlayCorner.bottomRight:
+                  t.t('ui.settings.display.corner.bottom_right'),
+              OverlayCorner.bottomLeft:
+                  t.t('ui.settings.display.corner.bottom_left'),
             },
             value: s.perfCorner,
             onChanged: s.perfOverlay
@@ -727,46 +747,45 @@ class _AccessibilityTab extends ConsumerWidget {
     final s = ref.watch(gameSettingsProvider);
     final c = ref.read(gameSettingsProvider.notifier);
     final still = s.reduceMotion;
+    final t = ref.watch(stringsProvider);
     return Column(
       key: const ValueKey('settings-accessibility'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Tema y legibilidad (accessibility.md § 8).
         _SettingRow(
-          label: 'TEMA DE INTERFAZ',
+          label: t.t('ui.settings.a11y.theme.label'),
           hint: switch (s.uiTheme) {
-            InterfaceTheme.blue =>
-              'El de siempre: paneles azul marino y texto de colores.',
-            InterfaceTheme.dark => 'Paneles casi negros y neutros; el '
-                'dorado solo marca la selección y el foco.',
-            InterfaceTheme.highContrast => 'Fondo negro, texto blanco, foco '
-                'amarillo y bordes gruesos. Color solo donde significa algo.',
+            InterfaceTheme.blue => t.t('ui.settings.a11y.theme.hint_blue'),
+            InterfaceTheme.dark => t.t('ui.settings.a11y.theme.hint_dark'),
+            InterfaceTheme.highContrast =>
+              t.t('ui.settings.a11y.theme.hint_high_contrast'),
           },
           control: _Choice<InterfaceTheme>(
             keyPrefix: 'a11y-theme',
-            options: const {
-              InterfaceTheme.blue: 'AZUL',
-              InterfaceTheme.dark: 'OSCURO',
-              InterfaceTheme.highContrast: 'ALTO CONTRASTE',
+            options: {
+              InterfaceTheme.blue: t.t('ui.settings.a11y.theme.blue'),
+              InterfaceTheme.dark: t.t('ui.settings.a11y.theme.dark'),
+              InterfaceTheme.highContrast:
+                  t.t('ui.settings.a11y.theme.high_contrast'),
             },
             value: s.uiTheme,
             onChanged: (v) => c.update(s.copyWith(uiTheme: v)),
           ),
         ),
         _SettingRow(
-          label: 'COLORES DEL TEXTO',
+          label: t.t('ui.settings.a11y.text_colors.label'),
           hint: s.uiTheme == InterfaceTheme.highContrast
-              ? 'ALTO CONTRASTE usa siempre los colores por función.'
+              ? t.t('ui.settings.a11y.text_colors.hint_forced')
               : s.textColors == TextColorMode.reduced
-                  ? 'Por función: nombres en blanco, descripción gris clara, '
-                      'datos atenuados, un acento para valores; verde / rojo, '
-                      'rarezas y estados siguen igual.'
-                  : 'Cada texto con sus colores (como en v0.8.0).',
+                  ? t.t('ui.settings.a11y.text_colors.hint_reduced')
+                  : t.t('ui.settings.a11y.text_colors.hint_full'),
           control: _Choice<TextColorMode>(
             keyPrefix: 'a11y-textcolors',
-            options: const {
-              TextColorMode.full: 'COMPLETO',
-              TextColorMode.reduced: 'REDUCIDO',
+            options: {
+              TextColorMode.full: t.t('ui.settings.a11y.text_colors.full'),
+              TextColorMode.reduced:
+                  t.t('ui.settings.a11y.text_colors.reduced'),
             },
             value: s.uiTheme == InterfaceTheme.highContrast
                 ? TextColorMode.reduced
@@ -777,14 +796,13 @@ class _AccessibilityTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'ESPACIADO',
-          hint: 'AMPLIO: más interlineado, aire entre líneas y filas y '
-              'separadores entre las secciones de las fichas.',
+          label: t.t('ui.settings.a11y.spacing.label'),
+          hint: t.t('ui.settings.a11y.spacing.hint'),
           control: _Choice<UiSpacing>(
             keyPrefix: 'a11y-spacing',
-            options: const {
-              UiSpacing.normal: 'NORMAL',
-              UiSpacing.wide: 'AMPLIO',
+            options: {
+              UiSpacing.normal: t.t('ui.settings.a11y.normal'),
+              UiSpacing.wide: t.t('ui.settings.a11y.wide'),
             },
             value: s.spacing,
             onChanged: (v) => c.update(s.copyWith(spacing: v)),
@@ -792,80 +810,77 @@ class _AccessibilityTab extends ConsumerWidget {
         ),
         const _ThemePreview(),
         // Texto (accessibility.md § 9).
-        const _SectionHeader('TEXTO', key: ValueKey('a11y-section-text')),
+        _SectionHeader(t.t('ui.settings.a11y.section.text'),
+            key: const ValueKey('a11y-section-text')),
         _SettingRow(
-          label: 'TAMAÑO DEL TEXTO',
+          label: t.t('ui.settings.a11y.text_size.label'),
           hint: s.textSize == TextSize.enormous
-              ? 'ENORME: el doble que NORMAL. Los paneles scrollean y las '
-                  'fichas largas pasan a columnas.'
-              : 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
-                  'grilla de la fuente para que se vea nítida.',
+              ? t.t('ui.settings.a11y.text_size.hint_enormous')
+              : t.t('ui.settings.a11y.text_size.hint'),
           control: _Choice<TextSize>(
             keyPrefix: 'display-text',
-            options: const {
-              TextSize.normal: 'NORMAL',
-              TextSize.large: 'GRANDE',
-              TextSize.huge: 'MUY GRANDE',
-              TextSize.enormous: 'ENORME',
+            options: {
+              TextSize.normal: t.t('ui.settings.a11y.normal'),
+              TextSize.large: t.t('ui.settings.a11y.text_size.large'),
+              TextSize.huge: t.t('ui.settings.a11y.text_size.huge'),
+              TextSize.enormous: t.t('ui.settings.a11y.text_size.enormous'),
             },
             value: s.textSize,
             onChanged: (v) => c.update(s.copyWith(textSize: v)),
           ),
         ),
         _SettingRow(
-          label: 'FUENTE DE LECTURA',
+          label: t.t('ui.settings.a11y.font.label'),
           hint: s.readingFont == ReadingFont.atkinson
-              ? 'Atkinson Hyperlegible: diseñada para baja visión, letras '
-                  'que no se confunden (I l 1, O 0). No es pixel.'
-              : 'Fichas, chat, menús y batalla. Los títulos y botones '
-                  'cambian solo con la opción de abajo.',
+              ? t.t('ui.settings.a11y.font.hint_atkinson')
+              : t.t('ui.settings.a11y.font.hint'),
           control: _FontChoice(
             value: s.readingFont,
             onChanged: (v) => c.update(s.copyWith(readingFont: v)),
           ),
         ),
         _SettingRow(
-          label: 'TÍTULOS CON LA FUENTE DE LECTURA',
+          label: t.t('ui.settings.a11y.titles.label'),
           hint: s.readingFont == ReadingFont.classic
-              ? 'Con CLÁSICA los títulos ya usan la misma fuente.'
-              : 'Títulos, botones y pestañas en la fuente de lectura en vez '
-                  'de las mayúsculas pixel.',
+              ? t.t('ui.settings.a11y.titles.hint_classic')
+              : t.t('ui.settings.a11y.titles.hint'),
           control: _Choice<bool>(
             keyPrefix: 'a11y-titles',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.readingTitles,
             onChanged: (v) => c.update(s.copyWith(readingTitles: v)),
           ),
         ),
         _SettingRow(
-          label: 'ESPACIADO ENTRE LETRAS',
-          hint: 'AMPLIO: un poco más de aire entre las letras del texto de '
-              'lectura.',
+          label: t.t('ui.settings.a11y.letters.label'),
+          hint: t.t('ui.settings.a11y.letters.hint'),
           control: _Choice<LetterSpacing>(
             keyPrefix: 'a11y-letters',
-            options: const {
-              LetterSpacing.normal: 'NORMAL',
-              LetterSpacing.wide: 'AMPLIO',
+            options: {
+              LetterSpacing.normal: t.t('ui.settings.a11y.normal'),
+              LetterSpacing.wide: t.t('ui.settings.a11y.wide'),
             },
             value: s.letterSpacing,
             onChanged: (v) => c.update(s.copyWith(letterSpacing: v)),
           ),
         ),
         _SettingRow(
-          label: 'DURACIÓN DE LOS AVISOS',
+          label: t.t('ui.settings.a11y.notices.label'),
           hint: switch (s.noticeDuration) {
             NoticeDuration.normal =>
-              'Avisos de loot, build, chat, puntos y misiones: unos segundos.',
-            NoticeDuration.long => 'Los avisos se ven el doble de tiempo.',
-            NoticeDuration.untilDismissed => 'Quedan hasta cerrarlos con su × '
-                'o con Retroceso (cierra todos).',
+              t.t('ui.settings.a11y.notices.hint_normal'),
+            NoticeDuration.long => t.t('ui.settings.a11y.notices.hint_long'),
+            NoticeDuration.untilDismissed => t.t(
+                'ui.settings.a11y.notices.hint_until_dismissed',
+                {'close': kTimes}),
           },
           control: _Choice<NoticeDuration>(
             keyPrefix: 'a11y-notices',
-            options: const {
-              NoticeDuration.normal: 'NORMAL',
-              NoticeDuration.long: 'LARGA',
-              NoticeDuration.untilDismissed: 'HASTA CERRAR',
+            options: {
+              NoticeDuration.normal: t.t('ui.settings.a11y.normal'),
+              NoticeDuration.long: t.t('ui.settings.a11y.notices.long'),
+              NoticeDuration.untilDismissed:
+                  t.t('ui.settings.a11y.notices.until_dismissed'),
             },
             value: s.noticeDuration,
             onChanged: (v) => c.update(s.copyWith(noticeDuration: v)),
@@ -874,32 +889,31 @@ class _AccessibilityTab extends ConsumerWidget {
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(
-            label: 'FONDO DEL TEXTO EN EL MAPA',
-            hint: 'Detrás de nombres, carteles, avisos y loot del piso, para '
-                'leerlos sobre tiles cargados.',
+            label: t.t('ui.settings.a11y.map_labels.label'),
+            hint: t.t('ui.settings.a11y.map_labels.hint'),
             control: _Choice<MapLabelBackdrop>(
               keyPrefix: 'a11y-maplabels',
-              options: const {
-                MapLabelBackdrop.none: 'NINGUNO',
-                MapLabelBackdrop.shaded: 'SOMBREADO',
-                MapLabelBackdrop.box: 'CAJA OPACA',
+              options: {
+                MapLabelBackdrop.none: t.t('ui.settings.a11y.map_labels.none'),
+                MapLabelBackdrop.shaded:
+                    t.t('ui.settings.a11y.map_labels.shaded'),
+                MapLabelBackdrop.box: t.t('ui.settings.a11y.map_labels.box'),
               },
               value: s.mapLabelBackdrop,
               onChanged: (v) => c.update(s.copyWith(mapLabelBackdrop: v)),
             ),
           ),
         _SettingRow(
-          label: 'REGISTRO DE BATALLA',
+          label: t.t('ui.settings.a11y.battle_log.label'),
           hint: s.battleLog == BattleLogMode.extended
-              ? 'EXTENDIDO: las 3 últimas líneas arriba de la escena; cada '
-                  'una queda más tiempo.'
-              : 'Una línea arriba de la escena que se reemplaza con cada '
-                  'acción.',
+              ? t.t('ui.settings.a11y.battle_log.hint_extended')
+              : t.t('ui.settings.a11y.battle_log.hint'),
           control: _Choice<BattleLogMode>(
             keyPrefix: 'a11y-battlelog',
-            options: const {
-              BattleLogMode.normal: 'NORMAL',
-              BattleLogMode.extended: 'EXTENDIDO',
+            options: {
+              BattleLogMode.normal: t.t('ui.settings.a11y.normal'),
+              BattleLogMode.extended:
+                  t.t('ui.settings.a11y.battle_log.extended'),
             },
             value: s.battleLog,
             onChanged: (v) => c.update(s.copyWith(battleLog: v)),
@@ -908,36 +922,38 @@ class _AccessibilityTab extends ConsumerWidget {
         _TextPreview(settings: s),
         // TEXTOS (ui_minimal.md § 8): descripciones cortas o completas.
         _SettingRow(
-          label: 'TEXTOS',
+          label: t.t('ui.settings.a11y.text_detail.label'),
           hint: s.textDetail == TextDetail.full
-              ? 'DETALLADO: números, escalado y reglas en cada descripción.'
-              : 'Descripciones cortas y simples. En los tooltips, MÁS '
-                  'DETALLE muestra el texto completo.',
+              ? t.t('ui.settings.a11y.text_detail.hint_full')
+              : t.t('ui.settings.a11y.text_detail.hint_summary'),
           control: _Choice<TextDetail>(
             keyPrefix: 'a11y-textdetail',
-            options: const {
-              TextDetail.summary: 'RESUMIDO',
-              TextDetail.full: 'DETALLADO',
+            options: {
+              TextDetail.summary: t.t('ui.settings.a11y.text_detail.summary'),
+              TextDetail.full: t.t('ui.settings.a11y.text_detail.full'),
             },
             value: s.textDetail,
             onChanged: (v) => c.update(s.copyWith(textDetail: v)),
           ),
         ),
         _TextDetailExample(mode: s.textDetail),
-        const _SectionHeader('COLOR Y MOVIMIENTO'),
+        _SectionHeader(t.t('ui.settings.a11y.section.color_motion')),
         _SettingRow(
-          label: 'MODO DALTÓNICO',
-          hint: _visionHint(s.colorVision),
+          label: t.t('ui.settings.a11y.vision.label'),
+          hint: _visionHint(t, s.colorVision),
           control: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Choice<ColorVision>(
                 keyPrefix: 'a11y-vision',
-                options: const {
-                  ColorVision.off: 'NO',
-                  ColorVision.deuteranopia: 'DEUTERANOPÍA',
-                  ColorVision.protanopia: 'PROTANOPÍA',
-                  ColorVision.tritanopia: 'TRITANOPÍA',
+                options: {
+                  ColorVision.off: t.t('ui.settings.a11y.vision.off'),
+                  ColorVision.deuteranopia:
+                      t.t('ui.settings.a11y.vision.deuteranopia'),
+                  ColorVision.protanopia:
+                      t.t('ui.settings.a11y.vision.protanopia'),
+                  ColorVision.tritanopia:
+                      t.t('ui.settings.a11y.vision.tritanopia'),
                 },
                 value: s.colorVision,
                 onChanged: (v) => c.update(s.copyWith(colorVision: v)),
@@ -948,44 +964,40 @@ class _AccessibilityTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'REDUCIR MOVIMIENTO',
+          label: t.t('ui.settings.a11y.motion.label'),
           hint: still
-              ? 'Sin sacudida, sin parpadeos, sin zoom de cámara en las '
-                  'ULT, arena quieta y fundido corto al entrar y salir de '
-                  'la batalla. Destellos a lo sumo SUAVES.'
-              : 'Apaga la sacudida, los parpadeos y el zoom de las ULT, '
-                  'y suaviza los destellos y las transiciones.',
+              ? t.t('ui.settings.a11y.motion.hint_on')
+              : t.t('ui.settings.a11y.motion.hint_off'),
           control: _Choice<bool>(
             keyPrefix: 'a11y-motion',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.reduceMotion,
             onChanged: (v) => c.update(s.copyWith(reduceMotion: v)),
           ),
         ),
         _SettingRow(
-          label: 'SACUDIDA',
+          label: t.t('ui.settings.a11y.shake.label'),
           hint: still
-              ? 'Apagada por REDUCIR MOVIMIENTO.'
-              : 'La escena de batalla tiembla con los golpes fuertes.',
+              ? t.t('ui.settings.a11y.shake.hint_off')
+              : t.t('ui.settings.a11y.shake.hint'),
           control: _Choice<bool>(
             keyPrefix: 'display-shake',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.shakeOn,
             onChanged:
                 still ? null : (v) => c.update(s.copyWith(screenShake: v)),
           ),
         ),
         _SettingRow(
-          label: 'DESTELLOS',
-          hint: 'Destellos de pantalla completa (rojo al recibir un golpe '
-              'fuerte, blanco en golpes brutales, ULT y ascensión). '
-              '${still ? 'Con REDUCIR MOVIMIENTO, a lo sumo SUAVES.' : 'SUAVES o NO si molestan.'}',
+          label: t.t('ui.settings.a11y.flashes.label'),
+          hint: t.t(
+              'ui.settings.a11y.flashes.hint', {'still': still ? 'yes' : 'no'}),
           control: _Choice<FlashLevel>(
             keyPrefix: 'display-flashes',
-            options: const {
-              FlashLevel.normal: 'NORMALES',
-              FlashLevel.reduced: 'SUAVES',
-              FlashLevel.off: 'NO',
+            options: {
+              FlashLevel.normal: t.t('ui.settings.a11y.flashes.normal'),
+              FlashLevel.reduced: t.t('ui.settings.a11y.flashes.reduced'),
+              FlashLevel.off: t.t('ui.settings.a11y.flashes.off'),
             },
             value: still && s.flashes == FlashLevel.normal
                 ? FlashLevel.reduced
@@ -994,15 +1006,14 @@ class _AccessibilityTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'OSCURIDAD',
-          hint: 'Cuánto oscurecen la noche y las mazmorras oscuras. '
-              'SUAVE aclara las sombras; APAGADA deja todo como de día.',
+          label: t.t('ui.settings.a11y.darkness.label'),
+          hint: t.t('ui.settings.a11y.darkness.hint'),
           control: _Choice<DarknessLevel>(
             keyPrefix: 'display-darkness',
-            options: const {
-              DarknessLevel.normal: 'NORMAL',
-              DarknessLevel.soft: 'SUAVE',
-              DarknessLevel.off: 'APAGADA',
+            options: {
+              DarknessLevel.normal: t.t('ui.settings.a11y.normal'),
+              DarknessLevel.soft: t.t('ui.settings.a11y.darkness.soft'),
+              DarknessLevel.off: t.t('ui.settings.a11y.darkness.off'),
             },
             value: s.darkness,
             onChanged: (v) => c.update(s.copyWith(darkness: v)),
@@ -1012,17 +1023,14 @@ class _AccessibilityTab extends ConsumerWidget {
     );
   }
 
-  static String _visionHint(ColorVision v) => switch (v) {
-        ColorVision.off => 'Colores para verde / rojo (deuteranopía, '
-            'protanopía) o azul / amarillo (tritanopía). Las flechas ▲ ▼ y '
-            'las letras de rareza siguen siempre.',
-        ColorVision.deuteranopia => 'Verde / rojo: mejora en azul y '
-            'empeora en ámbar; HP azul y MP amarillo; quiebre celeste.',
-        ColorVision.protanopia => 'Rojo: como deuteranopía, sin rojos '
-            '(se ven oscuros): lo malo en ámbar claro.',
-        ColorVision.tritanopia => 'Azul / amarillo: mejora en turquesa y '
-            'empeora en rojo; HP turquesa y MP magenta; Raro rosado.',
-      };
+  static String _visionHint(Strings t, ColorVision v) => t.t(
+      'ui.settings.a11y.vision.hint_${switch (v) {
+        ColorVision.off => 'off',
+        ColorVision.deuteranopia => 'deuteranopia',
+        ColorVision.protanopia => 'protanopia',
+        ColorVision.tritanopia => 'tritanopia',
+      }}',
+      const {'up': '\u25B2', 'down': '\u25BC'});
 }
 
 /// Encabezado de un grupo de ajustes (`TEXTO`, `COLOR Y MOVIMIENTO`): en
@@ -1052,9 +1060,8 @@ class _TextDetailExample extends StatelessWidget {
   final TextDetail mode;
 
   static const examples = {
-    TextDetail.summary: 'RESUMIDO: +12 % daño de fuego',
-    TextDetail.full: 'DETALLADO: +12 % daño de fuego (tier 3, rango 8-14 %, '
-        'prefijo)',
+    TextDetail.summary: 'ui.settings.a11y.text_detail.example_summary',
+    TextDetail.full: 'ui.settings.a11y.text_detail.example_full',
   };
 
   @override
@@ -1066,7 +1073,7 @@ class _TextDetailExample extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final e in examples.entries)
-              Text(e.value,
+              Text(settingsStrings(context).t(e.value),
                   style: DsText.detail(
                       e.key == mode ? DsColors.text : DsColors.textSecondary)),
           ],
@@ -1082,6 +1089,7 @@ class _TextPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = settings;
+    final t = settingsStrings(context);
     // Como un nombre del mapa a la escala de 1280×720 (16 px).
     const labelSize = 16.0;
     return Padding(
@@ -1111,7 +1119,7 @@ class _TextPreview extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(retroText('ESPADA DEL ALBA'),
+                    Text(retroText(t.t('ui.settings.preview.item_name')),
                         key: const ValueKey('a11y-text-preview-title'),
                         style: RetroType.style(RetroType.label,
                             color: ProtoColors.title)),
@@ -1119,8 +1127,7 @@ class _TextPreview extends StatelessWidget {
                     DefaultTextStyle(
                       style: RetroHoverCard.textStyle,
                       child: RetroTipText(
-                          'Tus curas otorgan <b>Sagrado</b> 2 turnos.<br>'
-                          '<span class="k">Il1 · O0 · rn m</span>',
+                          t.t('ui.settings.preview.tip', {'dot': kDot}),
                           maxWidth: RetroType.width(context, 240)),
                     ),
                   ],
@@ -1133,7 +1140,7 @@ class _TextPreview extends StatelessWidget {
                   ElevatedButton(
                     style: RetroTheme.compactButton(),
                     onPressed: () {},
-                    child: const Text('EQUIPAR'),
+                    child: Text(t.t('ui.settings.preview.equip')),
                   ),
                   const SizedBox(height: 8),
                   // Etiqueta del mapa sobre tiles: el fondo elegido.
@@ -1163,9 +1170,14 @@ class _TextPreview extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(retroText(switch (s.noticeDuration) {
-                          NoticeDuration.normal => '+ Poción · 3 s',
-                          NoticeDuration.long => '+ Poción · 6 s',
-                          NoticeDuration.untilDismissed => '+ Poción',
+                          NoticeDuration.normal => t.t(
+                              'ui.settings.preview.notice_timed',
+                              {'dot': kDot, 'seconds': 3}),
+                          NoticeDuration.long => t.t(
+                              'ui.settings.preview.notice_timed',
+                              {'dot': kDot, 'seconds': 6}),
+                          NoticeDuration.untilDismissed =>
+                            t.t('ui.settings.preview.notice'),
                         })),
                         if (s.noticeDuration.persistent) ...[
                           const SizedBox(width: 8),
@@ -1178,9 +1190,9 @@ class _TextPreview extends StatelessWidget {
                     const SizedBox(height: 8),
                     SizedBox(
                       width: RetroType.width(context, 220),
-                      child: const BattleLogHistory(lines: [
-                        'Ana usa Corte: 24 de daño',
-                        'Slime ataca a Ana: 6',
+                      child: BattleLogHistory(lines: [
+                        t.t('ui.settings.preview.log_hit'),
+                        t.t('ui.settings.preview.log_enemy'),
                       ]),
                     ),
                   ],
@@ -1201,6 +1213,7 @@ class _VisionPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = settingsStrings(context);
     Widget swatch(String text, Color color, {Color? ink}) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
@@ -1221,14 +1234,19 @@ class _VisionPreview extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: [
-        swatch('▲ mejora', ProtoColors.green),
-        swatch('▼ empeora', ProtoColors.red),
+        swatch(t.t('ui.settings.a11y.vision.better', const {'up': '\u25B2'}),
+            ProtoColors.green),
+        swatch(t.t('ui.settings.a11y.vision.worse', const {'down': '\u25BC'}),
+            ProtoColors.red),
         swatch('HP', ProtoColors.hp, ink: ProtoColors.bg),
         swatch('MP', ProtoColors.mp, ink: ProtoColors.bg),
         for (final (l, col) in rarities) swatch(l, col),
-        swatch('VIDA', const VisionColor(VisionSlot.enemyHp),
+        swatch(t.t('ui.settings.a11y.vision.life'),
+            const VisionColor(VisionSlot.enemyHp),
             ink: ProtoColors.bg),
-        swatch('◆ QUIEBRE', const VisionColor(VisionSlot.breakBar),
+        swatch(
+            t.t('ui.settings.a11y.vision.break', const {'diamond': '\u25C6'}),
+            const VisionColor(VisionSlot.breakBar),
             ink: ProtoColors.bg),
       ],
     );
@@ -1240,15 +1258,11 @@ class _VisionPreview extends StatelessWidget {
 class _ThemePreview extends StatelessWidget {
   const _ThemePreview();
 
-  static const tip = '<b>Paladín Creyente</b><br>'
-      '<span class="k">KEYSTONE · Cluster Fe: curación y regeneración</span><br>'
-      'Tus curas también otorgan <span style="color:#fff3b0">Sagrado</span> '
-      '2 turnos; −15% de daño físico.<br>'
-      '<span class="k">Costo:</span> <b>9 puntos</b><br>'
-      '<span style="color:#ff6b81">Necesita un nodo conectado</span>';
-
   @override
   Widget build(BuildContext context) {
+    final t = settingsStrings(context);
+    final tip = t.t(
+        'ui.settings.preview.node_tip', const {'dot': kDot, 'minus': '\u2212'});
     return Padding(
       key: const ValueKey('a11y-theme-preview'),
       padding: EdgeInsets.only(
@@ -1282,14 +1296,13 @@ class _ThemePreview extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     MenuRow(
-                        label: '<b>Reforjar</b>',
-                        value: '<span style="color:#7bed9f">1 Esquirla</span>',
+                        label: t.t('ui.settings.preview.reforge'),
+                        value: t.t('ui.settings.preview.reforge_cost'),
                         selected: true,
                         onTap: () {}),
                     MenuRow(
-                        label: 'Subir rareza',
-                        value:
-                            '<span style="color:#ff6b81">Falta Prisma</span>',
+                        label: t.t('ui.settings.preview.upgrade'),
+                        value: t.t('ui.settings.preview.upgrade_missing'),
                         selected: false,
                         dimmed: true,
                         onTap: () {}),
@@ -1312,6 +1325,7 @@ class _GameTab extends ConsumerWidget {
     final s = ref.watch(gameSettingsProvider);
     final c = ref.read(gameSettingsProvider.notifier);
     final strings = ref.watch(stringsProvider);
+    final t = strings;
     final tables = ref.watch(stringTablesProvider);
     final locales = tables.registry
         .selectable(showHidden: FeatureFlags.instance.showHiddenLocales);
@@ -1337,25 +1351,24 @@ class _GameTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
-          label: 'NÚMEROS FLOTANTES',
-          hint: 'Daño y curas flotando sobre cada personaje.',
+          label: t.t('ui.settings.game.numbers.label'),
+          hint: t.t('ui.settings.game.numbers.hint'),
           control: _Choice<bool>(
             keyPrefix: 'game-numbers',
-            options: _yesNo,
+            options: _yesNo(t),
             value: s.damageNumbers,
             onChanged: (v) => c.update(s.copyWith(damageNumbers: v)),
           ),
         ),
         _SettingRow(
-          label: 'TIEMPO DE TURNO',
-          hint: 'Cuánto espera la batalla a que elijas. En multijugador '
-              'vale el del anfitrión de la sala.',
+          label: t.t('ui.settings.game.turn.label'),
+          hint: t.t('ui.settings.game.turn.hint'),
           control: _Choice<TurnTimer>(
             keyPrefix: 'game-turn',
-            options: const {
-              TurnTimer.normal: 'NORMAL (30 S)',
-              TurnTimer.long: 'LARGO (60 S)',
-              TurnTimer.unlimited: 'SIN LÍMITE',
+            options: {
+              TurnTimer.normal: t.t('ui.settings.game.turn.normal'),
+              TurnTimer.long: t.t('ui.settings.game.turn.long'),
+              TurnTimer.unlimited: t.t('ui.settings.game.turn.unlimited'),
             },
             value: s.turnTimer,
             onChanged: (v) => c.update(s.copyWith(turnTimer: v)),
@@ -1364,12 +1377,11 @@ class _GameTab extends ConsumerWidget {
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(
-            label: 'CONFIRMAR AL TIRAR',
-            hint: 'Pregunta antes de tirar un objeto al piso. Vender y '
-                'desarmar siempre preguntan.',
+            label: t.t('ui.settings.game.confirm_drop.label'),
+            hint: t.t('ui.settings.game.confirm_drop.hint'),
             control: _Choice<bool>(
               keyPrefix: 'game-confirm-drop',
-              options: _yesNo,
+              options: _yesNo(t),
               value: s.confirmDrop,
               onChanged: (v) => c.update(s.copyWith(confirmDrop: v)),
             ),
@@ -1377,12 +1389,11 @@ class _GameTab extends ConsumerWidget {
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(
-            label: 'AVISOS DE BUILD',
-            hint: 'Cartel y línea en el chat cuando avanza una meta de tu '
-                'plan de build (pestaña BUILD del personaje).',
+            label: t.t('ui.settings.game.build_notices.label'),
+            hint: t.t('ui.settings.game.build_notices.hint'),
             control: _Choice<bool>(
               keyPrefix: 'game-build-notices',
-              options: _yesNo,
+              options: _yesNo(t),
               value: s.buildNotices,
               onChanged: (v) => c.update(s.copyWith(buildNotices: v)),
             ),
@@ -1391,14 +1402,13 @@ class _GameTab extends ConsumerWidget {
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(
-            label: 'CHAT',
-            hint: 'OCULTO: una píldora CHAT [ENTER] con los mensajes nuevos; '
-                'Enter o clic lo abre.',
+            label: t.t('ui.settings.game.chat.label'),
+            hint: t.t('ui.settings.game.chat.hint'),
             control: _Choice<ChatVisibility>(
               keyPrefix: 'game-chat',
-              options: const {
-                ChatVisibility.hidden: 'OCULTO',
-                ChatVisibility.always: 'SIEMPRE VISIBLE',
+              options: {
+                ChatVisibility.hidden: t.t('ui.settings.game.chat.hidden'),
+                ChatVisibility.always: t.t('ui.settings.game.chat.always'),
               },
               value: s.chat,
               onChanged: (v) => c.update(s.copyWith(chat: v)),
@@ -1407,12 +1417,11 @@ class _GameTab extends ConsumerWidget {
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(
-            label: 'AVISOS DEL CHAT',
-            hint: 'Con el chat oculto, los avisos importantes (misión '
-                'aceptada, piso despejado, subida de nivel) aparecen 4 s.',
+            label: t.t('ui.settings.game.chat_notices.label'),
+            hint: t.t('ui.settings.game.chat_notices.hint'),
             control: _Choice<bool>(
               keyPrefix: 'game-chat-notices',
-              options: _yesNo,
+              options: _yesNo(t),
               value: s.chatNotices,
               onChanged: s.chat == ChatVisibility.always
                   ? null
@@ -1428,48 +1437,45 @@ class _GameTab extends ConsumerWidget {
 class _ControlsTab extends StatelessWidget {
   const _ControlsTab();
 
-  static const sections = <(String, List<(String, String)>)>[
-    (
-      'MAPA',
-      [
-        ('WASD / Flechas', 'Moverse'),
-        ('E / Espacio', 'Interactuar, levantar loot'),
-        ('Alt (mantener)', 'Ver también el loot oculto por el filtro'),
-        ('Tab / C', 'Personaje (abrir / cerrar)'),
-        ('I', 'Personaje en EQUIPAMIENTO'),
-        ('R / rueda (en la huerta)', 'Cambiar de herramienta de cultivo'),
-        ('J', 'Diario de encargos'),
-        ('L', 'Llama errante (alumbra más; de noche te ven de lejos)'),
-        ('O', 'Plegar / desplegar los objetivos'),
-        ('H / clic en una caja', 'Detalle del grupo (arma, pts, XP, pociones)'),
-        ('Retroceso', 'Cerrar todos los avisos del HUD'),
-        ('M', 'Mapa en grande (flechas / arrastrar: mover; + - / rueda: zoom)'),
-        ('Rueda sobre el minimapa', 'Zoom del minimapa'),
-        ('Y / N', 'Votar la misión propuesta'),
-      ]
-    ),
-    (
-      'BATALLA',
-      [
-        ('1 - 9 / clic', 'Elegir la acción N del menú'),
-        ('Q / Tab / clic', 'Cambiar de objetivo'),
-        ('P', 'Ir a PASAR (otra P: pasar el turno; el próximo llega antes)'),
-        ('Esc', 'Volver del submenú de pociones'),
-      ]
-    ),
-    (
-      'MENÚS',
-      // Mapa de teclas de los menús (lib/app/widgets/menu_focus.dart).
-      kMenuKeys
-    ),
-    (
-      'CHAT',
-      [
-        ('Enter', 'Abrir el chat / mandar (vacío: cerrar)'),
-        ('Esc', 'Cerrar el chat sin mandar'),
-      ]
-    ),
-  ];
+  /// Section key -> binding ids (`ui.settings.controls.<section>.<id>.keys|action`).
+  static const _bindings = <String, List<String>>{
+    'map': [
+      'move',
+      'interact',
+      'hidden_loot',
+      'character',
+      'equipment',
+      'farm_tool',
+      'journal',
+      'flame',
+      'objectives',
+      'party',
+      'dismiss',
+      'big_map',
+      'minimap_zoom',
+      'vote',
+    ],
+    'battle': ['action', 'target', 'pass', 'back'],
+    'menus': [],
+    'chat': ['open', 'close'],
+  };
+
+  static List<(String, List<(String, String)>)> sections(Strings t) => [
+        for (final e in _bindings.entries)
+          (
+            t.t('ui.settings.controls.section.${e.key}'),
+            // Mapa de teclas de los menús (lib/app/widgets/menu_focus.dart).
+            e.key == 'menus'
+                ? kMenuKeys
+                : [
+                    for (final id in e.value)
+                      (
+                        t.t('ui.settings.controls.${e.key}.$id.keys'),
+                        t.t('ui.settings.controls.${e.key}.$id.action'),
+                      ),
+                  ],
+          ),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -1477,7 +1483,7 @@ class _ControlsTab extends StatelessWidget {
       key: const ValueKey('settings-controls'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (title, keys) in sections)
+        for (final (title, keys) in sections(settingsStrings(context)))
           PanelSection(
             title,
             child: Column(

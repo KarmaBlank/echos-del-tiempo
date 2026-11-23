@@ -23,6 +23,7 @@ import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
+import 'character_strings.dart';
 import 'stash_layout.dart';
 
 /// Lo que el tablero del alijo necesita de quien lo abre: fuera de la
@@ -86,7 +87,12 @@ class StashBoard extends StatefulWidget {
   static const cell = 44.0;
   static const gap = 4.0;
 
-  static const tabLabels = ['GENERAL I', 'GENERAL II', 'ECOS'];
+  /// String keys of the stash tabs.
+  static const tabLabels = [
+    'ui.characters.stash.tab_general_1',
+    'ui.characters.stash.tab_general_2',
+    'ui.characters.stash.tab_ecos',
+  ];
 
   /// Ancho de una grilla de 8 columnas a escala 1.
   static const gridWidth = 8 * cell + 7 * gap;
@@ -147,6 +153,7 @@ class StashBoardState extends State<StashBoard> {
   String? _lastTapKey;
 
   StashBoardHost get host => widget.host;
+  Strings get _s => charStrings(context);
   ProgressionRules get _rules => host.rules;
   StashRules get _stashRules => StashRules(inventory: _rules.inventory);
 
@@ -281,7 +288,7 @@ class StashBoardState extends State<StashBoard> {
     InventoryContextMenu.show(context, at, entries: [
       InventoryMenuEntry(
           id: 'stash-put',
-          label: 'Guardar en alijo',
+          label: _s.t('ui.characters.stash.menu_put'),
           color: ProtoColors.sky,
           reason: why,
           onTap: _move),
@@ -294,7 +301,7 @@ class StashBoardState extends State<StashBoard> {
     InventoryContextMenu.show(context, at, entries: [
       InventoryMenuEntry(
           id: 'stash-take',
-          label: 'Sacar al inventario',
+          label: _s.t('ui.characters.stash.menu_take'),
           color: ProtoColors.sky,
           reason: why,
           onTap: _move),
@@ -368,8 +375,8 @@ class StashBoardState extends State<StashBoard> {
     return '$base<br>${_blockedNote(blocked)}';
   }
 
-  static String _blockedNote(String blocked) =>
-      '<b style="color:#ff6b6b">No va al alijo: ${protoEsc(blocked)}</b>';
+  String _blockedNote(String blocked) => '<b style="color:#ff6b6b">'
+      '${_s.t('ui.characters.stash.blocked', {'why': protoEsc(blocked)})}</b>';
 
   /// Zona de los tooltips de cada lado (ui_style.md § "Tooltips cortos"):
   /// desde el borde de arriba de su grilla hasta el pie de las dos
@@ -414,10 +421,11 @@ class StashBoardState extends State<StashBoard> {
         : Rect.fromLTRB(c.right + gap, top, double.maxFinite, bottom);
   }
 
-  static String _stashStackTooltip(CraftMaterial m, int n) =>
+  String _stashStackTooltip(CraftMaterial m, int n) =>
       '<b style="color:#78e6dc">${protoEsc(m.label)}</b> x$n<br>'
-      '<span class="k">Material · en el alijo hasta '
-      '${Stash.maxMaterialStack}</span><br>${protoEsc(m.description)}';
+      '<span class="k">${_s.t('ui.characters.stash.material_note', {
+            'max': Stash.maxMaterialStack
+          })}</span><br>${protoEsc(m.description)}';
 
   /// Ficha de una casilla: la misma del inventario para armas
   /// (characters.md § 3); markup simple para pilas y Ecos.
@@ -494,7 +502,8 @@ class StashBoardState extends State<StashBoard> {
         runSpacing: DsSpace.xs,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(retroText('EQUIPADA'), style: DsText.subtitle()),
+          Text(retroText(_s.t('ui.characters.stash.equipped')),
+              style: DsText.subtitle()),
           _cell(
             key: const ValueKey('stash-char-equipped'),
             content: eqContent,
@@ -504,19 +513,24 @@ class StashBoardState extends State<StashBoard> {
             blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
             onTap: () => _tapCharacter(eq?.uid, null),
           ),
-          Text(retroText('Créditos: ₵${p.credits}'),
+          Text(
+              retroText(_s.t('ui.characters.stash.credits',
+                  {'amount': '₵${p.credits}'})),
               style: DsText.body(DsColors.reward)),
         ]);
   }
 
   Widget _inventoryLabel(PlayerProfile p) => Text(
-      'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
+      _s.t('ui.characters.stash.inventory', {
+        'used': InventoryRules.cellsUsed(p),
+        'total': InventoryRules.cells,
+      }),
       style: DsText.detail());
 
   Widget _searchCharField() => KeyedSubtree(
         key: const ValueKey('stash-search-char'),
         child: DsSearchField(
-          hint: 'BUSCAR EN EL INVENTARIO',
+          hint: _s.t('ui.characters.stash.search_inventory'),
           width: 260,
           controller: _searchChar,
           onChanged: (v) => setState(() => _qChar = v),
@@ -605,7 +619,7 @@ class StashBoardState extends State<StashBoard> {
                       color: on ? DsColors.selected : Colors.transparent,
                       width: 3))),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(retroText(StashBoard.tabLabels[t]),
+            Text(retroText(_s.t(StashBoard.tabLabels[t])),
                 style: DsText.subtitle(on ? DsColors.selected : DsColors.text)),
             SizedBox(width: DsSpace.sm),
             DsBadge('${_tabUsed(s, t)}/${Stash.perTab}'),
@@ -620,7 +634,7 @@ class StashBoardState extends State<StashBoard> {
           spacing: DsSpace.md,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('ALIJO', style: DsText.title()),
+            Text(_s.t('ui.characters.stash.title'), style: DsText.title()),
             Text('${s.used}/${Stash.size}',
                 key: const ValueKey('stash-used'), style: DsText.detail()),
           ]);
@@ -638,7 +652,7 @@ class StashBoardState extends State<StashBoard> {
   Widget _searchStashField() => KeyedSubtree(
         key: const ValueKey('stash-search-stash'),
         child: DsSearchField(
-          hint: 'BUSCAR EN EL ALIJO',
+          hint: _s.t('ui.characters.stash.search_stash'),
           width: 260,
           controller: _searchStash,
           onChanged: (v) => setState(() => _qStash = v),
@@ -687,7 +701,7 @@ class StashBoardState extends State<StashBoard> {
   }
 
   Widget? _ecoNote() => _tab == Stash.ecoTab
-      ? Text('Ecos y materiales del Atlas y del Abismo',
+      ? Text(_s.t('ui.characters.stash.eco_note'),
           style: DsText.detail())
       : null;
 
@@ -708,7 +722,7 @@ class StashBoardState extends State<StashBoard> {
   /// CANCELAR en el de MOVER TODO.
   Widget _transfer() {
     final busy = host.busy;
-    final wait = busy ? 'Esperando...' : null;
+    final wait = busy ? _s.t('ui.characters.stash.waiting') : null;
     if (_picking) {
       final n = _pickedTokens.length + _pickedCells.length;
       final toStash = _pickedCells.isEmpty;
@@ -717,24 +731,29 @@ class StashBoardState extends State<StashBoard> {
           runSpacing: DsSpace.xs,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('$n elegidos',
+            Text(_s.t('ui.characters.stash.picked', {'n': n}),
                 key: const ValueKey('stash-picked'), style: DsText.body()),
-            DsButton(toStash ? 'MOVER ELEGIDOS' : 'SACAR ELEGIDOS',
+            DsButton(
+                _s.t(toStash
+                    ? 'ui.characters.stash.move_picked'
+                    : 'ui.characters.stash.take_picked'),
                 key: const ValueKey('stash-move-picked'),
                 kind: DsButtonKind.primary,
-                tooltip: wait ?? (n == 0 ? 'Elige casillas con clic' : null),
+                tooltip: wait ??
+                    (n == 0 ? _s.t('ui.characters.stash.pick_cells') : null),
                 onPressed: n == 0 || busy ? null : _movePicked),
           ]);
     }
     final dry = _dryRun();
-    final reason = wait ?? (dry == null ? 'Elige un objeto' : dry.error);
+    final reason =
+        wait ?? (dry == null ? _s.t('ui.characters.stash.pick_item') : dry.error);
     return _side == _Side.stash
-        ? DsButton('< AL INVENTARIO',
+        ? DsButton(_s.t('ui.characters.stash.to_inventory'),
             key: const ValueKey('stash-withdraw'),
             kind: DsButtonKind.primary,
             tooltip: reason,
             onPressed: reason == null ? _move : null)
-        : DsButton('AL ALIJO >',
+        : DsButton(_s.t('ui.characters.stash.to_stash'),
             key: const ValueKey('stash-deposit'),
             kind: DsButtonKind.primary,
             tooltip: reason,
@@ -743,28 +762,27 @@ class StashBoardState extends State<StashBoard> {
 
   Widget _moveAllButton(PlayerProfile p) {
     if (_picking) {
-      return DsButton('CANCELAR',
+      return DsButton(_s.t('ui.characters.common.cancel'),
           key: const ValueKey('stash-pick-cancel'),
           onPressed: () => setState(_cancelPick));
     }
     final busy = host.busy;
     final all = _stashRules.movableTokens(p);
-    return DsButton('MOVER TODO AL ALIJO',
+    return DsButton(_s.t('ui.characters.stash.move_all'),
         key: const ValueKey('stash-move-all'),
-        tooltip: busy
-            ? 'Esperando...'
+        tooltip: _s.t(busy
+            ? 'ui.characters.stash.waiting'
             : all.isEmpty
-                ? 'No hay nada movible (la equipada, el arma inicial y las '
-                    'pociones se quedan)'
-                : 'Armas no protegidas, Ecos y materiales',
+                ? 'ui.characters.stash.move_all_none'
+                : 'ui.characters.stash.move_all_hint'),
         onPressed: all.isEmpty || busy ? null : _moveAll);
   }
 
   Widget? _pickButton() => _picking
       ? null
-      : DsButton('ELEGIR',
+      : DsButton(_s.t('ui.characters.stash.pick'),
           key: const ValueKey('stash-pick'),
-          tooltip: 'Marcar varias casillas de un lado y moverlas juntas',
+          tooltip: _s.t('ui.characters.stash.pick_tooltip'),
           onPressed: () => setState(() {
                 _clearSel();
                 _picking = true;
@@ -789,9 +807,7 @@ class StashBoardState extends State<StashBoard> {
                   style: DsText.body(DsColors.success))
               : sel != null
                   ? ProtoText(sel)
-                  : Text(
-                      'Armas, Ecos y materiales se comparten; créditos '
-                      'y pociones no.',
+                  : Text(_s.t('ui.characters.stash.shared_note'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: DsText.detail()),

@@ -13,6 +13,7 @@ import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../domain/skill_tip.dart';
+import 'inventory_strings.dart';
 
 /// Nombre de una habilidad (o ULT) con su ficha: mouse encima o foco de
 /// teclado = tooltip con lo mismo que dice la batalla (tipo, MP, daño con
@@ -83,6 +84,9 @@ class SkillChip extends StatelessWidget {
   }
 }
 
+/// String key of the default [SkillChips.label].
+const kSkillChipsLabel = 'ui.inventory.skill.chips_label';
+
 /// Las habilidades de un arma (base, trasladadas en naranja) y su ULT,
 /// cada una un [SkillChip].
 class SkillChips extends StatelessWidget {
@@ -91,7 +95,7 @@ class SkillChips extends StatelessWidget {
     required this.rules,
     required this.item,
     this.stats,
-    this.label = 'Habilidades',
+    this.label = kSkillChipsLabel,
     this.isNew,
   });
 
@@ -107,6 +111,7 @@ class SkillChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final cat = rules.catalog;
     final w = cat.weapons[item.baseId];
+    final s = invStrings(context);
     // Una sección: Tab salta todas las habilidades de una vez.
     return NavSection(
         child: Wrap(
@@ -116,21 +121,25 @@ class SkillChips extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (label != null)
-          Text(retroText(label!.toUpperCase()), style: DsText.subtitle()),
+          Text(
+              retroText((label == kSkillChipsLabel ? s.t(label!) : label!)
+                  .toUpperCase()),
+              style: DsText.subtitle()),
         for (final id in rules.items.skillsOf(item))
-          if (cat.skills[id] case final s?)
+          if (cat.skills[id] case final sk?)
             SkillChip(
-              skill: s,
+              skill: sk,
               stats: stats,
               color: (isNew?.call(id) ?? false)
                   ? ProtoColors.green
                   : (w?.skillIds.contains(id) ?? false)
                       ? null
                       : ProtoColors.orange,
-              suffix: (isNew?.call(id) ?? false) ? '(nueva)' : null,
+              suffix: (isNew?.call(id) ?? false) ? s.t('ui.inventory.craft.new_f') : null,
               note: (w?.skillIds.contains(id) ?? false)
                   ? null
-                  : protoColor(ProtoColors.orange, 'Trasladada de otra arma'),
+                  : protoColor(
+                      ProtoColors.orange, s.t('ui.inventory.skill.transferred')),
             ),
       ],
     ));

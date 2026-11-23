@@ -19,6 +19,9 @@
     "ui.bestiary",
     "ui.endgame",
     "ui.passive_tree",
-    "ui.tutorial"
+    "ui.tutorial",
+    "ui.lobby",
+    "ui.inventory",
+    "ui.characters"
   ]
 }
