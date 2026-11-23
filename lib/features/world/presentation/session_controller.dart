@@ -2553,9 +2553,8 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
-    // J: DIARIO de encargos en el pueblo (roles.md § 8.1; en el campo J
-    // pliega los objetivos).
-    if (key == LogicalKeyboardKey.keyJ && s.mode == SessionMode.lobby) {
+    // J: DIARIO de encargos, en el pueblo o en el campo (roles.md § 8.1).
+    if (key == LogicalKeyboardKey.keyJ && s.mode != SessionMode.battle) {
       toggleJournal();
       return true;
     }
