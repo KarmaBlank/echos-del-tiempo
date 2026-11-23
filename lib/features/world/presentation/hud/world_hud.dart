@@ -46,6 +46,7 @@ import 'minimap.dart';
 import 'potion_shortcuts.dart';
 import 'day_clock.dart';
 import 'tool_hud.dart';
+import 'tracked_quests_hud.dart';
 import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -335,6 +336,15 @@ class WorldHud extends StatelessWidget {
                                 s.town.sky.started) ...[
                               const SizedBox(height: 4),
                               DayClock(sky: s.town.sky),
+                            ],
+                            // Encargos seguidos (roles.md § 7.2).
+                            if (s.mode == SessionMode.lobby &&
+                                view.me?.profile != null) ...[
+                              const SizedBox(height: 4),
+                              TrackedQuestsHud(
+                                  profile: view.me!.profile,
+                                  town: s.town,
+                                  onOpen: controller.toggleJournal),
                             ],
                           ],
                         );

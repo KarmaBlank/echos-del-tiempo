@@ -63,6 +63,8 @@ class PlayerProfile {
     Set<String> ultNew = const {},
     List<String> ultOrder = const [],
     LifeSkills? life,
+    List<String> tracked = const [],
+    Map<String, String> npcSeen = const {},
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -104,11 +106,15 @@ class PlayerProfile {
       ultNew: Set.unmodifiable(ultNew),
       ultOrder: List.unmodifiable(ultOrder),
       life: life ?? LifeSkills.initial,
+      tracked: List.unmodifiable(tracked),
+      npcSeen: Map.unmodifiable(npcSeen),
     );
   }
 
   const PlayerProfile._({
     required this.life,
+    this.tracked = const [],
+    this.npcSeen = const {},
     this.ultNew = const {},
     this.ultOrder = const [],
     required this.ultLevels,
@@ -147,6 +153,15 @@ class PlayerProfile {
 
   /// Pesca, cañas y bolsa de Pescados (JSON `life`, fishing.md § 3).
   final LifeSkills life;
+
+  /// Encargos seguidos (roles.md § 7): `<tipo>:<habitante>` con tipo
+  /// `encargo`, `pedido` u `orden`; como mucho
+  /// `QuestTrackRules.maxTracked`. JSON `trk` (protocolo 52).
+  final List<String> tracked;
+
+  /// Lo último que vio de cada habitante (`QuestTrackRules.newsKey`):
+  /// marca "!" y revelación del encargo nuevo. JSON `seen`.
+  final Map<String, String> npcSeen;
 
   /// `uid` de armas y Ecos recién levantados, todavía sin mirar (marca
   /// NUEVO del inventario; JSON `nw`, perfil v4; loot.md § 17.4). Se
@@ -409,6 +424,8 @@ class PlayerProfile {
     Set<String>? ultNew,
     List<String>? ultOrder,
     LifeSkills? life,
+    List<String>? tracked,
+    Map<String, String>? npcSeen,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -465,6 +482,8 @@ class PlayerProfile {
       ultOrder: List.unmodifiable(
           _order(ultOrder ?? this.ultOrder, this.ultKnown, ultKnown)),
       life: life ?? this.life,
+      tracked: tracked == null ? this.tracked : List.unmodifiable(tracked),
+      npcSeen: npcSeen == null ? this.npcSeen : Map.unmodifiable(npcSeen),
     );
   }
 
@@ -613,6 +632,8 @@ class PlayerProfile {
         if (ultOrder.isNotEmpty) 'uo': ultOrder,
         // Pesca v0.22.0 (fishing.md § 3).
         'life': life.toJson(),
+        if (tracked.isNotEmpty) 'trk': tracked,
+        if (npcSeen.isNotEmpty) 'seen': npcSeen,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -736,6 +757,13 @@ class PlayerProfile {
       ultNew: {..._strings(json['un'])},
       ultOrder: _strings(json['uo']),
       life: LifeSkills.fromJson(json['life']),
+      tracked: _strings(json['trk']),
+      npcSeen: {
+        if (json['seen'] case final Map m)
+          for (final e in m.entries)
+            if (e.key is String && e.value is String)
+              e.key as String: e.value as String,
+      },
       ultLevels: {
         if (json['ulv'] case final Map m)
           for (final e in m.entries)

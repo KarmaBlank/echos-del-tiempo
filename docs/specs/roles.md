@@ -59,7 +59,39 @@ en una casa:
   la cadena larga.
 - Uno por jugador y día del mundo. Lo valida el anfitrión.
 
-## 5. Pendiente
+## 5. Encargos seguidos, DIARIO y marcas (v0.32.0)
+
+### 5.1 Revelación
+
+Un paso nuevo de la cadena de un habitante no aparece en ENCARGOS ni en
+el DIARIO hasta que él lo pide en el diálogo (con el texto del paso).
+Los pasos futuros nunca se listan. Al abrir el diálogo el cliente manda
+`TownAction(seen, id)`; el anfitrión guarda en el perfil
+`npcSeen[npc] = QuestTrackRules.newsKey(r)` (paso de la cadena, pedido y
+orden). Si hay pedido u orden nuevos, el diálogo los menciona.
+
+### 5.2 SEGUIR y DIARIO
+
+Todo encargo, pedido u orden activo tiene SEGUIR / DEJAR DE SEGUIR
+(`TownAction(track, target: '<tipo>:<npc>')`, validado por el anfitrión;
+como mucho 5; JSON `trk` del perfil). El DIARIO (J en el pueblo, clic en
+el recuadro del HUD o la FUENTE) tiene la subpestaña SEGUIDOS y una por
+habitante, grilla con detalle a la derecha y avance "Tenés 1/2 X".
+
+### 5.3 HUD y avisos
+
+Debajo del reloj, un recuadro compacto con cada seguido (nombre y
+avance). Cuando sube lo que tenés de algo que pide un encargo activo,
+aparece unos segundos "Para: Ilda · encargo 3 (1/2)".
+
+### 5.4 Marcas sobre la cabeza
+
+Por jugador, en el pueblo y en los biomas: "!" dorado
+(`TownPalette.request`, con rebote chico) si tiene algo nuevo que todavía
+no te contó; "?" si tenés listo lo que pide; nada si no. Reemplaza el
+"!" genérico. Las subpestañas del DIARIO llevan la misma marca.
+
+## 6. Pendiente
 
 Ver tech_debt.md v0.30.0 (tamaños en las órdenes, nodos de poder de
 aventurero en los árboles de oficio, rol de Herrería, verificación de la

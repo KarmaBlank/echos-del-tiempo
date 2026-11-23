@@ -247,3 +247,35 @@ implícito en una línea sin tier ni rango y la pasiva en una línea. Todo
 el resto (tiers, prefijos y sufijos, peso, forja, habilidades) va en un
 único plegable `MÁS DETALLE` con la ficha DETALLADA. En Ajustes, debajo
 de TEXTOS, una línea de ejemplo por modo.
+
+## 9. Diálogo de personaje y ventana de menú (v0.32.0)
+
+Componentes en `lib/app/design/ds_dialogue.dart` (visuales, sin lógica
+de juego):
+
+- `DsCursor` (átomo): ▶ dibujado, color `selected`.
+- `DsMeter` (átomo): barra cuadrada valor / máximo con su color.
+- `DsQuantity` (átomo): − N + entre mínimo y máximo.
+- `DsChoiceMenu` (molécula): opciones con cursor ▶. Flechas mueven,
+  Enter / Espacio eligen, el mouse mueve el cursor y elige con clic. Una
+  opción sin acción va gris (`textDisabled`) y su motivo aparece en una
+  línea fija debajo cuando el cursor está encima.
+- `DsStatusStrip` / `DsStatusCell` (molécula): franja de estado, una
+  celda por dato con su etiqueta arriba y su color propio, separadas por
+  borde.
+- `DsGoodsCell` (molécula): mercancía de tienda: ícono, nombre, cuántos
+  tenés y precio alineado a la derecha (gris si no alcanza el oro).
+- `DsDialogueBox` (organismo / plantilla): cuadro abajo de la pantalla
+  con retrato grande (128 px) a la izquierda, placa con nombre y rol, la
+  frase escrita letra a letra (clic, Enter, Espacio o Esc la completan)
+  y, al terminar, el `DsChoiceMenu` a la derecha.
+
+Uso: la pantalla del habitante (`BiomeNpcPanel`). Primero el diálogo con
+COMPRAR, ENCARGOS, PEDIDOS, REGALAR, CASA, INVITAR AL PUEBLO y ADIÓS;
+cada opción abre una ventana `PanelFrame` con título `NOMBRE · ROL ·
+SECCIÓN`, franja de estado (RELACIÓN con barra, ETAPA, BENEFICIO ACTUAL,
+SIGUIENTE y, en la tienda, TU ORO) y el contenido: la tienda es grilla
+de `DsGoodsCell` + detalle a la derecha con cantidad y COMPRAR; el resto
+usa `LifeItemGrid`. VOLVER (o Esc) vuelve al diálogo. Entra en 1280×720.
+Hoy hay una sola categoría (semillas), así que la tienda no lleva
+filtros; cuando haya más, van como subpestañas.

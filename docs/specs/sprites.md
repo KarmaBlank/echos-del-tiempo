@@ -426,3 +426,14 @@ Todo se regula con perillas del generador `item_icon` en el Editor:
 `ult_mark` y `variation`. El aspecto sale de datos del arma que ya
 viajan (perfil y build del snapshot): el compañero se ve igual en todos
 los clientes.
+
+## Habitantes (v0.32.0)
+
+Los habitantes de bioma usan el MISMO cuerpo que los personajes jugables
+(`heroRows` + `makeSprite`) con la paleta de una clase base recoloreada y
+accesorios de su rol (`tool/export_npc_sprites.dart`): Ilda (tiradora,
+morral y hojas), Velda (maga, libro y rollo), Kael (guerrero, bastón de
+práctica), Brann (paladín, delantal y martillo), Oren (maga, capucha y
+orbe). Así no se confunden con los ayudantes. Cada uno exporta
+`items/vida_npc_<id>.png` (14×18) y `vida_npc_<id>_retrato.png` (14×12,
+cabeza y hombros) para el cuadro de diálogo.

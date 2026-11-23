@@ -663,6 +663,12 @@ enum TownOp {
   lock,
   unlock,
 
+  /// v0.30.2 (protocolo 52, roles.md § 7): SEGUIR / dejar de seguir el
+  /// encargo [target] (`<tipo>:<habitante>`) y marcar como visto lo que
+  /// [id] tiene para decir. Solo tocan el perfil de quien lo pide.
+  track,
+  seen,
+
   /// v0.30.0 (protocolo 51): habitantes (overworld_biomes.md § 10), con
   /// [TownAction.id] = habitante. `assign`: [TownAction.target] = casa;
   /// `gift`: [TownAction.target] = producto.
