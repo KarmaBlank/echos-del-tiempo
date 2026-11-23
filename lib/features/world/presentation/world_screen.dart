@@ -1170,9 +1170,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               // Las pestañas de la armería (en `prep` la del lobby no se abre).
               shopTabs: [
                 for (final t in ArmoryTab.values)
-                  t.spec(() => ShopContext(view, controller)),
+                  t.spec(() => ShopContext(view, controller), ref.strings),
                 for (final t in ForgeHallTab.values)
-                  t.spec(() => ShopContext(view, controller)),
+                  t.spec(() => ShopContext(view, controller), ref.strings),
               ],
             ));
     }

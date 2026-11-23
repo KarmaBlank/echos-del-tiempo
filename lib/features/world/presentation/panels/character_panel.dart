@@ -38,6 +38,7 @@ import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../endgame/domain/endgame_text.dart';
 import '../../../inventory/domain/battle_impact.dart';
 import '../../../inventory/presentation/inventory_tab.dart';
+import '../../../../core/i18n/i18n_providers.dart';
 import '../../../inventory/presentation/loot_filter_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
 import '../../../passive_tree/presentation/passive_tree_view.dart';
@@ -112,7 +113,7 @@ enum CharacterTab {
 /// con vista previa del reparto al costado, armas con comparación y
 /// árbol de pasivas. Se abre solo y no se puede cerrar mientras
 /// `mustAllocate`. Ver docs/specs/panels.md § "Personaje".
-class CharacterPanel extends StatefulWidget {
+class CharacterPanel extends ConsumerStatefulWidget {
   const CharacterPanel({
     super.key,
     required this.view,
@@ -143,10 +144,10 @@ class CharacterPanel extends StatefulWidget {
       'Reiniciar puntos o árbol es gratis (salvo en batalla).';
 
   @override
-  State<CharacterPanel> createState() => _CharacterPanelState();
+  ConsumerState<CharacterPanel> createState() => _CharacterPanelState();
 }
 
-class _CharacterPanelState extends State<CharacterPanel> {
+class _CharacterPanelState extends ConsumerState<CharacterPanel> {
   final _alloc = <Attribute, int>{};
   late var _tab = widget.initialTab;
 
@@ -346,11 +347,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
           // La ayuda de la pestaña (antes una línea fija arriba del
           // contenido) vive en el "?" (design_system.md § 2.4).
           help: '${switch (tab) {
-            CharacterTab.filter => kFilterHelp,
-            CharacterTab.ults => UltRepertoireView.help,
-            CharacterTab.build => BuildPlannerView.help,
-            CharacterTab.bestiary => BestiaryView.help,
-            CharacterTab.achievements => AchievementsView.help,
+            CharacterTab.filter => filterHelp(ref.strings),
+            CharacterTab.ults => UltRepertoireView.helpOf(ref.strings),
+            CharacterTab.build => BuildPlannerView.helpOf(ref.strings),
+            CharacterTab.bestiary => ref.t('ui.bestiary.help'),
+            CharacterTab.achievements => ref.t('ui.achievements.help'),
             // combat.md § "Límites": nada se encadena sin fin.
             CharacterTab.tree => '${CharacterPanel.help}<br>Los efectos '
                 'encadenados tienen un límite: como máximo '

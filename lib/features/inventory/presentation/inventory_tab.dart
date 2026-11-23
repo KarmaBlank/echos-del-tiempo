@@ -129,7 +129,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// La línea "★ Tu build — Cumple: ..." de la ficha y, si es de las
   /// recomendadas, "» Recomendada: ...", con salto antes.
   String _fitLine(ItemInstance it) {
-    final m = buildFitMarkup(_fit(it));
+    final m = buildFitMarkup(_fit(it), s: _s);
     final pick = _picks[it.uid];
     return [
       if (m != null) '<br>$m',
@@ -265,7 +265,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           keyboardFocus: focused,
           child: child);
     }
-    final fit = buildFitMarkup(_fit(it));
+    final fit = buildFitMarkup(_fit(it), s: _s);
     return itemHoverTip(
         rules: shop.rules,
         viewer: me.profile,
