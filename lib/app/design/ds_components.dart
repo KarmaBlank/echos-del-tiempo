@@ -376,7 +376,12 @@ class DsListRow extends StatelessWidget {
     this.subtitleWidget,
     this.tapWhenDisabled = false,
     this.shrinkTrailing = false,
+    this.wrap = false,
   });
+
+  /// Título y subtítulo completos (bajan de línea, sin "…"): listas de
+  /// nombres largos en columnas angostas.
+  final bool wrap;
 
   /// El dato de la derecha se achica (nunca desborda) si no entra.
   final bool shrinkTrailing;
@@ -448,8 +453,8 @@ class DsListRow extends StatelessWidget {
               final line = Row(children: [
               Flexible(
                 child: Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: wrap ? null : 1,
+                    overflow: wrap ? null : TextOverflow.ellipsis,
                     style: DsText.body(!enabled
                         ? DsColors.textDisabled
                         : selected
@@ -480,8 +485,8 @@ class DsListRow extends StatelessWidget {
                       subtitleWidget!
                     else
                     Text(subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: wrap ? null : 1,
+                        overflow: wrap ? null : TextOverflow.ellipsis,
                         style: DsText.detail(subtitleColor ??
                             (enabled
                                 ? DsColors.textSecondary
