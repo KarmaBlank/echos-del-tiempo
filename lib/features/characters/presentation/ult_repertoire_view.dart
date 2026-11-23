@@ -16,16 +16,18 @@ import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/ult_browse_rules.dart';
 import '../../../game_engine/rules/ult_rules.dart';
 import '../../../core/audio/sfx_service.dart';
+import '../../../core/text/text_detail.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../combat/domain/skill_text.dart';
 import '../../combat/presentation/game_sprites.dart';
 import 'ult_preview_panel.dart';
 
-/// Pestaña ULT de PERSONAJE (docs/specs/ultimates_v2.md § 2.1.1 y § 2.4):
-/// a la izquierda la ULT EQUIPADA fija arriba y el repertorio con
-/// búsqueda, filtros (arma, origen, estado) y orden; a la derecha la
-/// vista previa animada de la ULT elegida con clic y, abajo, su info
-/// (EQUIPAR, nivel, MEJORAR con confirmación).
+/// Pestaña ULT de PERSONAJE (docs/specs/panels.md § Pestaña ULT,
+/// ultimates_v2.md § 2.1.1 y § 2.4): arriba la ULT EQUIPADA, los
+/// contadores y los filtros a todo el ancho; abajo una tabla de 4
+/// columnas iguales (`DsColumnsTemplate`): LISTA, DESCRIPCIÓN, ACCIONES
+/// (EQUIPAR, MEJORAR con confirmación, qué mejora y costo) y
+/// PREVISUALIZACIÓN (vista previa animada).
 class UltRepertoireView extends StatefulWidget {
   const UltRepertoireView({
     super.key,
@@ -48,8 +50,8 @@ class UltRepertoireView extends StatefulWidget {
   final GameSprites? sprites;
   final SfxService? sfx;
 
-  /// Ancho desde el que la vista previa va al lado de la lista.
-  static const wideFrom = 760.0;
+  /// Alto mínimo de la tabla de columnas.
+  static const minTable = 300.0;
 
   /// Builds de la vista (tests: la vista previa no la reconstruye).
   static int debugBuilds = 0;
@@ -93,14 +95,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
   String _text = '';
   late UltBrowsePrefs _prefs = widget.prefs;
   bool _hoverUpgrade = false;
+  final _topKey = GlobalKey();
+  double _topH = 0;
   bool _confirm = false;
-  final _rightScroll = ScrollController();
-
-  @override
-  void dispose() {
-    _rightScroll.dispose();
-    super.dispose();
-  }
   final _seenSent = <String>{};
 
   void _seen(String id) {
@@ -146,36 +143,83 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final all = UltBrowseRules.entries(p, widget.weapon, widget.item);
     UltRepertoireView.debugBuilds++;
     final sel = all.where((e) => e.id == (_selected ?? equipped)).firstOrNull;
-    final right = sel == null
-        ? null
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-                _preview(sel),
-                SizedBox(height: DsSpace.sm),
-                _info(sel, equipped),
-              ]);
-    final list = _list(p, all, active, equipped, sel?.id);
+    final eq = all.where((e) => e.id == equipped).firstOrNull;
+    final shown = UltBrowseRules.apply(
+        [for (final e in all) if (e.id != equipped) e], _prefs,
+        text: _text);
+    final top = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DsSectionHeader('ULT EQUIPADA',
+            trailing: Text(
+                p.ultSel == null
+                    ? 'Automática'
+                    : active == null
+                        ? 'No disponible: se usa la ULT base'
+                        : 'Elegida',
+                style: DsText.detail())),
+        if (eq != null)
+          _row(eq, equipped, sel?.id, key: ValueKey('ult-equipped-${eq.id}')),
+        const DsSectionHeader('REPERTORIO'),
+        _filters(p, all),
+        SizedBox(height: DsSpace.sm),
+      ],
+    );
+    final table = DsColumnsTemplate(
+      key: const ValueKey('ult-table'),
+      columns: [
+        DsColumn(
+            header: 'LISTA',
+            key: const ValueKey('ult-col-list'),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (shown.isEmpty)
+                    Text('Ninguna ULT con estos filtros.',
+                        style: DsText.detail()),
+                  for (final e in shown) _row(e, equipped, sel?.id),
+                ])),
+        DsColumn(
+            header: 'DESCRIPCIÓN',
+            key: const ValueKey('ult-col-desc'),
+            child: sel == null ? const SizedBox() : _description(sel)),
+        DsColumn(
+            header: 'ACCIONES',
+            key: const ValueKey('ult-col-actions'),
+            child: sel == null ? const SizedBox() : _actions(sel, equipped)),
+        DsColumn(
+            header: 'PREVISUALIZACIÓN',
+            key: const ValueKey('ult-col-preview'),
+            scrollable: false,
+            child: sel == null ? const SizedBox() : _preview(sel)),
+      ],
+    );
     return LayoutBuilder(builder: (context, box) {
-      if (right == null) return SingleChildScrollView(child: list);
-      if (box.maxWidth >= UltRepertoireView.wideFrom) {
-        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: SingleChildScrollView(child: list)),
-          SizedBox(width: DsSpace.md),
-          SizedBox(
-              width: (box.maxWidth * 0.4).clamp(260.0, 420.0),
-              child: Scrollbar(
-                  controller: _rightScroll,
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                      controller: _rightScroll, child: right))),
-        ]);
+      if (!box.hasBoundedHeight) {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [top, SizedBox(height: 560, child: table)]);
       }
-      // Angosta: la vista previa y su info arriba de la lista.
+      // Arriba (equipada, contadores y filtros) con todo su alto, nada
+      // recortado; la tabla toma el resto del panel (mínimo
+      // [minTable]). Si no entra todo, scrollea el panel entero.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final h = (_topKey.currentContext?.findRenderObject() as RenderBox?)
+            ?.size
+            .height;
+        if (mounted && h != null && (h - _topH).abs() > 0.5) {
+          setState(() => _topH = h);
+        }
+      });
+      final tableH = (box.maxHeight - _topH)
+          .clamp(UltRepertoireView.minTable, double.infinity);
       return SingleChildScrollView(
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [right, SizedBox(height: DsSpace.md), list]));
+              children: [
+            KeyedSubtree(key: _topKey, child: top),
+            SizedBox(height: tableH, child: table),
+          ]));
     });
   }
 
@@ -203,12 +247,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     );
   }
 
-  Widget _list(PlayerProfile p, List<UltEntry> all, String? active,
-      String? equipped, String? selected) {
-    final eq = all.where((e) => e.id == equipped).firstOrNull;
-    final shown = UltBrowseRules.apply(
-        [for (final e in all) if (e.id != equipped) e], _prefs,
-        text: _text);
+  /// Contadores y barra de búsqueda y filtros a todo el ancho; lo que no
+  /// entra baja a otra línea (v0.32.5: nada se corta).
+  Widget _filters(PlayerProfile p, List<UltEntry> all) {
     final weapons = UltBrowseRules.weaponTypes(all);
     final origins = UltBrowseRules.origins(all);
     final known = {...p.ultKnown, ...UltRules.earned(p)};
@@ -217,18 +258,6 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('ULT EQUIPADA',
-            trailing: Text(
-                p.ultSel == null
-                    ? 'Automática'
-                    : active == null
-                        ? 'No disponible: se usa la ULT base'
-                        : 'Elegida',
-                style: DsText.detail())),
-        if (eq != null)
-          _row(eq, equipped, selected, key: ValueKey('ult-equipped-${eq.id}')),
-        SizedBox(height: DsSpace.md),
-        const DsSectionHeader('REPERTORIO'),
         Wrap(spacing: DsSpace.sm, children: [
           Text('Las 50: $got/50', style: DsText.detail()),
           Text('Jefes vencidos: ${bossUltsDefeated(p)}/10',
@@ -236,14 +265,12 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               style: DsText.detail()),
         ]),
         SizedBox(height: DsSpace.xs),
-        // Búsqueda y filtros en una sola fila que se desliza de costado:
-        // la lista se queda con el alto (v0.24.4).
-        SingleChildScrollView(
+        Wrap(
           key: const ValueKey('ult-filter-bar'),
-          scrollDirection: Axis.horizontal,
-          child: Row(
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            for (final w in <Widget>[
             DsSearchField(
                 key: const ValueKey('ult-search'),
                 hint: 'BUSCAR POR NOMBRE',
@@ -282,13 +309,8 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 onChanged: (o) => _setPrefs(_prefs.copyWith(sort: o)),
                 buttonKey: const ValueKey('ult-sort'),
                 optionKey: (o) => ValueKey('ult-sort-${o.name}')),
-            ]) ...[w, SizedBox(width: DsSpace.sm)],
           ],
-        )),
-        SizedBox(height: DsSpace.xs),
-        if (shown.isEmpty)
-          Text('Ninguna ULT con estos filtros.', style: DsText.detail()),
-        for (final e in shown) _row(e, equipped, selected),
+        ),
       ],
     );
   }
@@ -333,40 +355,18 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     );
   }
 
-  /// Info de la ULT elegida, abajo de la vista previa: origen, cómo se
-  /// consigue, efecto, nivel y mejora, y EQUIPAR.
-  Widget _info(UltEntry e, String? equipped) {
-    final o = e.option;
+  /// Columna DESCRIPCIÓN: nombre, origen, cómo se consigue y la
+  /// descripción corta; VER DETALLE abre el texto largo.
+  Widget _description(UltEntry e) {
     final def = e.def;
-    final isEq = e.id == equipped;
-    final reason = o?.reason;
+    final reason = e.option?.reason;
+    final lv = _learned(e) ? UltRules.levelOf(widget.profile, e.id) : 1;
+    final skill = UltRules.leveled(e.skill, lv);
     return Column(
       key: ValueKey('ult-info-${e.id}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader(e.name.toUpperCase()),
-        // Acciones juntas arriba (v0.20.25): EQUIPAR y MEJORAR con su
-        // costo al lado, mismo tamaño.
-        if (isEq || e.owned || o != null)
-          Wrap(
-            spacing: DsSpace.sm,
-            runSpacing: DsSpace.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (isEq)
-                const DsBadge('EQUIPADA')
-              else if (e.owned)
-                DsButton('EQUIPAR',
-                    key: const ValueKey('ult-equip'),
-                    kind: DsButtonKind.primary,
-                    size: DsButtonSize.compact,
-                    onPressed: widget.editable && e.available
-                        ? () => widget.onSelect(e.id)
-                        : null),
-              if (o != null) ..._upgrade(o),
-            ],
-          ),
-        if (o != null && _upgradeSummary(o) != null) _upgradeSummary(o)!,
+        Text(e.name.toUpperCase(), style: DsText.subtitle()),
         Text(
             [
               e.origin.label,
@@ -382,78 +382,95 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 style: DsText.detail()),
         ],
         SizedBox(height: DsSpace.xs),
-        if (o != null)
-          _detail(o)
-        else
-          DsCard(
-              child: ProtoText(
-                  describeSkillMarkup(e.skill, null, ultimate: true))),
+        ProtoText(
+            TextDetail.run(TextDetail.summary,
+                () => describeSkillMarkup(skill, null, ultimate: true)),
+            key: const ValueKey('ult-desc-short')),
+        SizedBox(height: DsSpace.xs),
+        DsFold(
+            key: const ValueKey('ult-detail-fold'),
+            label: 'VER DETALLE',
+            openLabel: 'OCULTAR DETALLE',
+            child: ProtoText(TextDetail.run(TextDetail.full,
+                () => describeSkillMarkup(skill, null, ultimate: true)))),
       ],
     );
   }
 
-  Widget _detail(UltOption o) {
-    final p = widget.profile;
-    final learned = o.kind == UltOptionKind.learned;
-    final lv = learned ? UltRules.levelOf(p, o.id) : 1;
-    final cost = learned ? UltRules.upgradeCost(o.id, lv) : null;
-    return DsCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProtoText(describeSkillMarkup(UltRules.leveled(o.skill, lv), null,
-              ultimate: true)),
-          if (learned) ...[
-            SizedBox(height: DsSpace.sm),
-            Text(
-                'Nivel $lv/${UltRules.maxLevel}: poder ×'
-                '${UltRules.levelFactor(lv).toStringAsFixed(2)}',
-                style: DsText.body()),
-            if (cost != null) ...[
-              SizedBox(height: DsSpace.sm),
-              // Diff completo plegado (v0.25.6): el resumen va junto al
-              // botón MEJORAR, siempre a la vista.
-              DsFold(
-                  key: const ValueKey('ult-upgrade-fold'),
-                  label: 'VER DETALLE',
-                  openLabel: 'OCULTAR DETALLE',
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        DsSectionHeader('AL MEJORAR: NIVEL $lv → ${lv + 1}'),
-                        Text('Costo: ${cost.text}', style: DsText.detail()),
-                        SizedBox(height: DsSpace.xs),
-                        ProtoText(describeSkillMarkup(
-                            UltRules.leveled(o.skill, lv + 1), null,
-                            ultimate: true)),
-                      ])),
-            ] else
-              Text('Nivel máximo.', style: DsText.detail()),
+  /// Columna ACCIONES: EQUIPAR y MEJORAR arriba y, abajo, apilado, qué
+  /// mejora (nivel, poder, daño y curación) y el costo.
+  Widget _actions(UltEntry e, String? equipped) {
+    final o = e.option;
+    final isEq = e.id == equipped;
+    final learned = _learned(e);
+    final lv = learned ? UltRules.levelOf(widget.profile, e.id) : 1;
+    final cost = learned ? UltRules.upgradeCost(e.id, lv) : null;
+    return Column(
+      key: ValueKey('ult-actions-${e.id}'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (isEq)
+              const DsBadge('EQUIPADA')
+            else if (e.owned)
+              DsButton('EQUIPAR',
+                  key: const ValueKey('ult-equip'),
+                  kind: DsButtonKind.primary,
+                  size: DsButtonSize.compact,
+                  onPressed: widget.editable && e.available
+                      ? () => widget.onSelect(e.id)
+                      : null),
+            if (o != null) ..._upgrade(o),
           ],
-        ],
-      ),
+        ),
+        if (learned) ...[
+          SizedBox(height: DsSpace.sm),
+          Text(
+              'Nivel $lv/${UltRules.maxLevel}: poder ×'
+              '${UltRules.levelFactor(lv).toStringAsFixed(2)}',
+              style: DsText.body()),
+          if (cost == null)
+            Text('Nivel máximo.', style: DsText.detail())
+          else
+            _upgradeSummary(lv, cost),
+        ] else if (!e.owned)
+          Text('Todavía no la tenés.', style: DsText.detail()),
+      ],
     );
   }
 
-  /// "Al mejorar" corto debajo de MEJORAR (v0.25.6): poder antes →
-  /// después y costo, sin scrollear. `null` si no se puede mejorar.
-  Widget? _upgradeSummary(UltOption o) {
-    if (o.kind != UltOptionKind.learned) return null;
-    final lv = UltRules.levelOf(widget.profile, o.id);
-    final cost = UltRules.upgradeCost(o.id, lv);
-    if (cost == null) return null;
+  /// Qué mejora al subir de nivel, una línea por cosa, y el costo.
+  Widget _upgradeSummary(int lv, UltUpgradeCost cost) {
+    final p = widget.profile;
     final a = UltRules.levelFactor(lv), b = UltRules.levelFactor(lv + 1);
     final pct = ((b / a - 1) * 100).round();
     return Column(
       key: const ValueKey('ult-upgrade-diff'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-            'Al mejorar (Nv $lv → ${lv + 1}): poder ×${a.toStringAsFixed(2)}'
-            ' → ×${b.toStringAsFixed(2)}',
+        SizedBox(height: DsSpace.xs),
+        Text('AL MEJORAR: NIVEL $lv → ${lv + 1}', style: DsText.subtitle()),
+        Text('Poder ×${a.toStringAsFixed(2)} → ×${b.toStringAsFixed(2)}',
             style: DsText.body(DsColors.success)),
-        Text('Daño y curación +$pct % · costo ${cost.text}',
+        Text('Daño y curación +$pct %', style: DsText.body(DsColors.success)),
+        Text('Escudos, trampas y golpes diferidos +$pct %',
             style: DsText.detail()),
+        SizedBox(height: DsSpace.xs),
+        Text('COSTO', style: DsText.subtitle()),
+        Text('Créditos: ₵${cost.credits} (tenés ₵${p.credits})',
+            key: const ValueKey('ult-upgrade-cost'),
+            style: DsText.detail(p.credits >= cost.credits
+                ? DsColors.textSecondary
+                : DsColors.danger)),
+        for (final m in cost.materials.entries)
+          Text('${m.key.label}: ${m.value} (tenés ${p.material(m.key)})',
+              style: DsText.detail(p.material(m.key) >= m.value
+                  ? DsColors.textSecondary
+                  : DsColors.danger)),
       ],
     );
   }
@@ -497,10 +514,6 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 ? () => setState(() => _confirm = true)
                 : null),
       ),
-      Text(cost.text,
-          key: const ValueKey('ult-upgrade-cost'),
-          style: DsText.detail(
-              affordable ? DsColors.textSecondary : DsColors.danger)),
     ];
   }
 }

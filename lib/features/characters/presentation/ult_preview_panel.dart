@@ -205,11 +205,6 @@ class _UltPreviewPanelState extends State<UltPreviewPanel>
           ),
         ),
         SizedBox(height: DsSpace.xs),
-        Text(
-            '${w.skill.name} · Nv ${w.level}'
-            '${w.nextLevel ? ' (próximo nivel)' : ''} · ejemplo con tus stats',
-            style: DsText.detail()),
-        SizedBox(height: DsSpace.xs),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           DsButton(_playing ? 'PAUSA' : 'REPRODUCIR',
               key: const ValueKey('ult-preview-play'),

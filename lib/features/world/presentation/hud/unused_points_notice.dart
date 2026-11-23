@@ -10,7 +10,7 @@ import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/points_badge.dart';
 import '../../../characters/domain/unused_points.dart';
 
-/// Botón `PERSONAJE [C]` del HUD con la insignia `+N` de puntos sin usar
+/// Botón `PERSONAJE [TAB]` del HUD con la insignia `+N` de puntos sin usar
 /// (passive_tree_v4.md § 7). Solo aparece si hay puntos: no ocupa lugar
 /// en el HUD mientras no haga falta. El tooltip dice de qué son.
 class UnusedPointsButton extends StatelessWidget {
@@ -34,7 +34,7 @@ class UnusedPointsButton extends StatelessWidget {
       // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
       // suma al ancho y nunca lo tapa.
       child: DsButton(
-        'PERSONAJE [C]',
+        'PERSONAJE [TAB]',
         key: const ValueKey('hud-points-button'),
         size: DsButtonSize.compact,
         onPressed: onPressed,
@@ -52,7 +52,7 @@ class UnusedPointsButton extends StatelessWidget {
 
 /// Aviso suave al subir de nivel (o al ganar puntos de ascensión) si
 /// quedan puntos de árbol / ascensión sin usar: `Tenés 2 puntos de árbol
-/// sin usar · [C]`. Uno por subida, 6 s, sin bloquear nada. Mientras
+/// sin usar · [TAB]`. Uno por subida, 6 s, sin bloquear nada. Mientras
 /// [blocked] (reparto de la subida de nivel, un panel abierto) espera; si
 /// al terminar ya no quedan puntos, no dice nada.
 class UnusedPointsToast extends StatefulWidget {

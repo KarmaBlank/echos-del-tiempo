@@ -98,7 +98,7 @@ void main() {
     expect(c.farmHand, FarmHand.hoe);
     expect(find.text('Ya está arada'), findsOneWidget);
     // Regadera sobre arada vacía: primero plantá.
-    c.cycleFarmHand(); // Tab: azada → semilla
+    c.cycleFarmHand(); // R: azada → semilla
     expect(c.farmHand, FarmHand.seed);
     await h.frames(2);
     expect(find.textContaining('[E o clic] Plantar'), findsOneWidget);
@@ -108,14 +108,20 @@ void main() {
     expect(find.textContaining('[E o clic] Regar'), findsOneWidget);
     await press();
     expect(c.plotAt(tx, ty)!.watered, isTrue);
-    // Tab con el teclado también cambia de herramienta.
+    // R con el teclado también cambia de herramienta (Tab abre PERSONAJE).
     // Regadera → ABONO (v0.24.4); sin abono, dice por qué.
-    expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
+    expect(c.handleKey(LogicalKeyboardKey.keyR), isTrue);
     expect(c.farmHand, FarmHand.fert);
     await h.frames(2);
     expect(find.byKey(const ValueKey('hud-tool-fert')), findsOneWidget);
     expect(find.text('Sin abono: comprá en el agropecuario'), findsOneWidget);
+    expect(c.handleKey(LogicalKeyboardKey.keyR), isTrue);
+    expect(c.farmHand, FarmHand.hoe);
+    // Tab: abre y cierra PERSONAJE, también al lado de la huerta.
     expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
+    expect(c.view!.panel, WorldPanel.character);
+    expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
+    expect(c.view!.panel, isNull);
     expect(c.farmHand, FarmHand.hoe);
     // Lejos de la huerta se olvida la elección manual.
     // ignore: invalid_use_of_visible_for_testing_member
@@ -137,7 +143,7 @@ void main() {
     expect(find.byKey(const ValueKey('hud-tool')), findsNothing);
   });
 
-  testWidgets('PESCA Y CULTIVO: EQUIPAR otra azada', (tester) async {
+  testWidgets('OFICIOS → INVENTARIO → CULTIVO: EQUIPAR otra azada', (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -145,7 +151,11 @@ void main() {
     final c = h.c;
     c.openPanel(WorldPanel.character);
     await h.frames(2);
-    await tester.tap(find.text('PESCA Y CULTIVO'));
+    await tester.tap(find.text('OFICIOS').first);
+    await h.frames(2);
+    await tester.tap(find.byKey(const ValueKey('oficios-sub-inventario')));
+    await h.frames(2);
+    await tester.tap(find.byKey(const ValueKey('oficio-bag-cultivo')));
     await h.frames(2);
     expect(find.byKey(const ValueKey('life-tool-azada_rama')), findsOneWidget);
     // Grilla (v0.24.4): EQUIPAR va en el detalle de la casilla elegida.

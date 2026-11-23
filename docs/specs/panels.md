@@ -1075,6 +1075,11 @@ coincide) y, si el filtro lo oculta, `(oculto por tu filtro)` en dim.
 
 ## Personaje (`char`, 1298-1335)
 
+**v0.32.4.** INVENTARIO pasa a llamarse EQUIPAMIENTO; PESCA Y CULTIVO
+desaparece y todo lo de oficios vive en OFICIOS (subpestañas HABILIDADES
+e INVENTARIO). `Tab` / `C` abren y cierran PERSONAJE, `I` lo abre en
+EQUIPAMIENTO. Ver oficio_storage.md.
+
 **v0.11 (sistema de diseño, design_system.md § 10).** Pestañas `DsTabBar`
 (`tab-N`) con la insignia de puntos adentro (`tab-badge-N`); la línea
 fija de ayuda de cada pestaña pasó al "?" del título. La línea del título
@@ -1385,3 +1390,31 @@ Tests: `test/app/menu_keyboard_test.dart`,
 Tienda ambulante (`merchant`): el mapa nunca genera mercader
 (world.md); el panel existiría con consumibles y herrería. Rama de
 Paladín (`branch`): código muerto en el prototipo.
+
+## Pestaña ULT (v0.32.5)
+
+Pedido del dueño: que nada se corte y no haya que scrollear para leer
+la descripción. `UltRepertoireView`:
+
+- **Arriba**: `ULT EQUIPADA` (estado: Automática / Elegida / No
+  disponible) y la fila compacta de la equipada.
+- **REPERTORIO**: contadores (`Las 50: x/50`, `Jefes vencidos: x/10`) y
+  la barra BUSCAR · ARMA · ORIGEN · ESTADO · ORDEN a **todo el ancho**,
+  en un `Wrap`: lo que no entra baja de línea, nunca se recorta.
+- **Tabla** `DsColumnsTemplate` (ui_minimal.md § 9.3), 4 columnas de
+  25 % con encabezado y línea entre columnas; cada una scrollea sola:
+  1. **LISTA**: nombre y `Nv n · Origen` (o `Falta · cómo`), el texto
+     baja de línea; la elegida resaltada; NUEVA / EQUIPADA a la derecha.
+  2. **DESCRIPCIÓN**: nombre, origen y armas, motivo si no está
+     disponible, cómo conseguirla si falta, descripción corta (RESUMIDO)
+     y `VER DETALLE` / `OCULTAR DETALLE` con el texto largo (DETALLADO).
+  3. **ACCIONES**: EQUIPAR (o la insignia EQUIPADA) y MEJORAR →
+     CONFIRMAR / CANCELAR (gris si no alcanza o en combate); abajo,
+     apilado: `Nivel n/5: poder ×f`, `AL MEJORAR: NIVEL n → n+1`, poder
+     antes → después, daño y curación +%, escudos/trampas/golpes
+     diferidos +%, y `COSTO` con créditos y cada material (rojo si no
+     alcanza, con lo que tenés).
+  4. **PREVISUALIZACIÓN**: la mini escena (ultimates_v2.md § 2.5) con
+     solo PAUSA/REPRODUCIR y SONIDO; sin leyenda. No scrollea.
+- La tabla toma el alto que queda (mínimo 300 px); si el panel es muy
+  bajo, scrollea la pestaña entera.
