@@ -316,6 +316,12 @@ String itemTooltipMarkup(
   DerivedStats? stats,
   bool equipped = false,
 }) {
+  // TEXTOS en RESUMIDO (ui_minimal.md § 8.4): ficha corta de verdad y
+  // todo lo demás en MÁS DETALLE.
+  if (TextDetail.isSummary) {
+    return itemTipSummaryParts(rules, it,
+        level: level, attributes: attributes, stats: stats, equipped: equipped);
+  }
   final items = rules.items;
   final w = items.baseOf(it);
   final base = w?.name ?? it.baseId;
@@ -370,6 +376,73 @@ String itemTooltipMarkup(
         ('Historia', _c(_dim, _esc(flavor))),
     ],
   );
+}
+
+/// Título del plegable con la ficha completa en RESUMIDO.
+const kMoreDetailTitle = 'MÁS DETALLE';
+
+/// Rol del arma en una línea: `Espada pesada · daño físico`.
+String weaponRoleLine(WeaponDef w, ItemInstance it) {
+  final el = weaponElementOf(it);
+  final kind = w.mag != null && w.mag!.base > w.atk.base
+      ? 'daño mágico'
+      : 'daño ${(el ?? GameElement.fisico).label.toLowerCase()}';
+  final t = w.type.isEmpty ? '?' : w.type[0].toUpperCase() + w.type.substring(1);
+  return '$t ${weightClassOf(w).label.toLowerCase()} · $kind';
+}
+
+/// Ficha RESUMIDA de un arma (TEXTOS, ui_minimal.md § 8.4): nombre,
+/// rareza y tipo, rol en una línea, stat principal, cada mod en una línea
+/// corta, implícito y pasiva cortos. La ficha DETALLADA entera va en el
+/// único plegable [kMoreDetailTitle].
+({String summary, List<(String, String)> sections}) itemTipSummaryParts(
+  ProgressionRules rules,
+  ItemInstance it, {
+  required int level,
+  required PlayerAttributes attributes,
+  DerivedStats? stats,
+  bool equipped = false,
+}) {
+  final items = rules.items;
+  final w = items.baseOf(it);
+  String short(String t) => _esc(plainShort(t, sentence: false));
+  final l = <String>[
+    itemNameMarkup(rules, it),
+    '<span class="k">${it.rarity.label}</span>'
+        '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
+    if (w != null) _c(_sky, _esc(weaponRoleLine(w, it))),
+    if (stats != null)
+      'ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
+    else if (w != null)
+      (w.mag != null && w.mag!.base > w.atk.base)
+          ? 'MAG base <b>${w.mag!.base.round()}</b>'
+          : 'ATQ base <b>${w.atk.base.round()}</b>',
+    if (w != null && !rules.ignoreRequirements &&
+        missingRequirements(w, attributes).isNotEmpty)
+      requirementsLineMarkup(w, level, attributes),
+  ];
+  final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
+  for (final m in implicit) {
+    l.add(_c(_dim, '• ${short(m.text)}'));
+  }
+  for (final a in it.affixes) {
+    l.add(_c(a.fixed ? _orange : kModHex,
+        '• ${short(items.affixText(a, on: it))}'));
+  }
+  final passive = items.passiveText(it);
+  if (passive != null) {
+    l.add(_c(kPassiveHex,
+        'Pasiva: ${_esc(plainShort(passive, maxChars: 40, sentence: false))}'));
+  }
+  final full = TextDetail.run(
+      TextDetail.full,
+      () => itemTooltipMarkup(rules, it,
+          level: level,
+          attributes: attributes,
+          stats: stats,
+          equipped: equipped,
+          skillDetails: true));
+  return (summary: l.join('<br>'), sections: [(kMoreDetailTitle, full)]);
 }
 
 // ---------------------------------------------------------------------

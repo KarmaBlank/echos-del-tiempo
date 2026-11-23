@@ -14,7 +14,16 @@ class LifeItemDetail {
     this.lines = const [],
     this.description,
     this.actions = const [],
+    this.compare,
+    this.hoverTip = false,
   });
+
+  /// Cambios contra la equipada del mismo tipo (texto, mejora); `null` =
+  /// no aplica, vacío = es la equipada o igual.
+  final List<(String, bool)>? compare;
+
+  /// También como tooltip al pasar el mouse por la casilla.
+  final bool hoverTip;
 
   final String name;
   final Color nameColor;
@@ -206,6 +215,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           ),
       ]),
     );
+    final tipped = c.detail.hoverTip ? DsTooltip(card: _tip(c), child: box) : box;
     return GestureDetector(
       key: ValueKey(c.id),
       onTap: () => setState(() => _sel = c.id),
@@ -214,7 +224,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
         child: SizedBox(
           width: s + DsSpace.md,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            box,
+            tipped,
             if (c.caption != null)
               Text(c.caption!,
                   maxLines: 2,
@@ -223,6 +233,31 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           ]),
         ),
       ),
+    );
+  }
+
+  List<Widget> _compare(LifeItemDetail d) {
+    final cmp = d.compare;
+    if (cmp == null || cmp.isEmpty) return const [];
+    return [
+      SizedBox(height: DsSpace.xs),
+      Text('VS EQUIPADA', style: DsText.detail()),
+      for (final (t, better) in cmp)
+        Text(t,
+            style: DsText.body(better ? DsColors.success : DsColors.danger)),
+    ];
+  }
+
+  Widget _tip(LifeItemCellData c) {
+    final d = c.detail;
+    return DsTooltipCard(
+      title: d.name,
+      titleColor: d.nameColor,
+      tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
+      children: [
+        for (final l in d.lines) Text(l, style: DsText.body()),
+        ..._compare(d),
+      ],
     );
   }
 
@@ -251,6 +286,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           ],
           SizedBox(height: DsSpace.xs),
           for (final l in d.lines) Text(l, style: DsText.body()),
+          ..._compare(d),
           if (d.description != null) ...[
             SizedBox(height: DsSpace.xs),
             Text(d.description!, style: DsText.detail()),
