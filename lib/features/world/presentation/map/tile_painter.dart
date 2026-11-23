@@ -631,6 +631,14 @@ class TilePainter {
     }
   }
 
+  /// Faro del pueblo (day_night_weather.md § 5): el brasero de las
+  /// misiones sobre un poste de piedra; [lit] de noche.
+  void faro(Canvas c, double px, double py, double t, {required bool lit}) {
+    _rect(c, SkyPalette.faroPost, px + 7, py + 6, 2, 9);
+    _rect(c, SkyPalette.faroHead, px + 5, py + 13, 6, 2);
+    _brazier(c, px, py - 6, t, lit: lit);
+  }
+
   /// Brasero de piedra; encendido, con llama animada.
   void _brazier(Canvas c, double px, double py, double t, {required bool lit}) {
     _rect(c, const Color(0x55000000), px + 3, py + 13, ts - 6, 2);

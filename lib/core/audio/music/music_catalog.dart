@@ -8,6 +8,7 @@ import 'tracks/fishing_theme.dart';
 import 'tracks/jingles.dart';
 import 'tracks/overworld_theme.dart';
 import 'tracks/title_theme.dart';
+import 'tracks/town_night_theme.dart';
 import 'tracks/town_theme.dart';
 import 'tracks/zone10_corazon.dart';
 import 'tracks/zone1_pradera.dart';
@@ -27,6 +28,9 @@ abstract final class Music {
 
   /// Pueblo mientras el jugador local pesca (variante de ocarina).
   static const fishing = 'fishing';
+
+  /// Pueblo de noche (variante calma, music.md § 5.3).
+  static const townNight = 'townNight';
   static const overworld = 'overworld';
   static const battle = 'battle';
   static const boss = 'boss';
@@ -63,6 +67,7 @@ final Map<String, Song> kMusicCatalog = {
     titleTheme(),
     townTheme(),
     fishingTheme(),
+    townNightTheme(),
     overworldTheme(),
     zone1Pradera(),
     zone2Bosque(),

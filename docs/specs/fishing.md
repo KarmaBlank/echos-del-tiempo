@@ -168,6 +168,12 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   haya.
 - "Cobrar en" (ORO / MATERIALES) y VENDER TODO solo en VENDER.
 
+### 5.4 Tormenta (v0.27.0)
+
+Con tormenta (day_night_weather.md § 3.3) cada lance pica con chance
+`stormBite` (0.3, Pueblo en Editor → Balance); si no, se pierde al llegar
+la hora de la picada con "Con la tormenta no pica nada".
+
 ## 6. Auto-pesca (se fue en v0.25.5)
 
 Ya no hay botón AUTO-PESCA ni tecla R: la reemplaza el PESCADOR de cada

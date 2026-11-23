@@ -8,6 +8,7 @@ import '../models/player_profile.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import 'battle_engine.dart' show RandomSource;
+import 'life_craft_rules.dart';
 import 'inventory_rules.dart';
 import 'item_rules.dart';
 import 'js_math.dart';
@@ -849,6 +850,8 @@ class CraftRules {
               .where((m) => m.name == targetUid)
               .firstOrNull) {
             final m? => condense(p, m, index),
+            null when targetUid.startsWith(LifeCraftRules.prefix) =>
+              _condenseLife(p, targetUid.substring(LifeCraftRules.prefix.length), index),
             null => const CraftResult.fail('Elige un material'),
           },
         CraftOp.restoreQuebrar =>
@@ -872,6 +875,17 @@ class CraftRules {
             tuning(TuningId.condense).i('prismaCredits')),
         _ => null,
       };
+
+  /// Materiales de oficio (v0.27.0; materials_economy.md § 4.4).
+  CraftResult _condenseLife(PlayerProfile p, String id, int times) {
+    if (LifeCraftRules.recipe(id) == null) {
+      return const CraftResult.fail('Ese material no se condensa');
+    }
+    if (times < 1) return const CraftResult.fail('Elige cuántos');
+    final next = LifeCraftRules.condense(p, id, times);
+    if (next == null) return const CraftResult.fail('No alcanza');
+    return CraftResult(profile: next);
+  }
 
   /// Materiales que se obtienen condensando.
   static const condensable = [CraftMaterial.cristal, CraftMaterial.prisma];

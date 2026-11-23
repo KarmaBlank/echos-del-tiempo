@@ -38,10 +38,18 @@ enum FishPhase {
 /// town_loop.md). La UI llama [press] / [release] y [tick]; lee las
 /// posiciones para dibujar. El pez lo tira el anfitrión: llega por [hook].
 class FishingMinigame {
-  FishingMinigame(this._rand, {this.biteBonus = 0, this.zoneBonus = 0});
+  FishingMinigame(this._rand,
+      {this.biteBonus = 0, this.zoneBonus = 0, this.biteChance = 1});
 
   final double Function() _rand;
   final double biteBonus, zoneBonus;
+
+  /// Chance de que pique este lance (con tormenta, `stormBite`;
+  /// day_night_weather.md § 3.3). Si no pica, se pierde al llegar la hora.
+  final double biteChance;
+
+  /// Este lance no va a picar.
+  bool dud = false;
 
   static TuningDef get _t => tuning(TuningId.fishing);
 
@@ -142,7 +150,9 @@ class FishingMinigame {
       case FishPhase.flying:
         if (phaseTime >= flySec) _land();
       case FishPhase.waiting:
-        if (phaseTime >= biteAt) _go(FishPhase.bite);
+        if (phaseTime >= biteAt) {
+          dud ? _lose('Con la tormenta no pica nada.') : _go(FishPhase.bite);
+        }
       case FishPhase.bite:
         if (phaseTime >= _t.d('biteWindowSec')) _lose('Se fue sin picar.');
       case FishPhase.reel:
@@ -155,6 +165,7 @@ class FishingMinigame {
   void _land() {
     _go(FishPhase.waiting);
     biteAt = FishingRules.biteDelay(_rand(), biteBonus);
+    dud = biteChance < 1 && _rand() >= biteChance;
     nibbles.clear();
     final n = (_rand() * (_t.i('nibblesMax') + 1)).floor();
     for (var i = 0; i < n; i++) {

@@ -5,6 +5,7 @@ import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/town_plan.dart';
+import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
@@ -130,9 +131,22 @@ class TownEditOverlay extends StatelessWidget {
           children: [
             DsSectionHeader(b.kind.label),
             Text(TownRules.helperLine(b), style: DsText.detail()),
-            Text(why ?? '${TownRules.helperCost} de oro. Clic para contratar.',
+            Text(
+                why ??
+                    '${HelperRules.costText(HelperRules.hireCost(b.kind))}. '
+                        'Clic para contratar.',
                 key: const ValueKey('town-hire-info'),
                 style: DsText.detail(why == null ? null : DsColors.textDisabled)),
+          ]);
+    }
+    if (TownState.parseLightId(e.hoverBuild) != null) {
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DsSectionHeader('FARO'),
+            Text(_faroText, style: DsText.detail()),
+            Text('Clic para ver opciones.', style: DsText.detail()),
           ]);
     }
     if (b == null) {
@@ -162,6 +176,10 @@ class TownEditOverlay extends StatelessWidget {
           Text('Clic para ver opciones.', style: DsText.detail()),
         ]);
   }
+
+  static const _faroText =
+      'Alumbra alrededor de noche. No es sólido: se puede pasar por '
+      'encima.';
 
   static const _landmarkText =
       'Lugar fijo del pueblo: se puede mover, no borrar. Los caminos se '
@@ -227,10 +245,46 @@ class TownEditOverlay extends StatelessWidget {
               detail: '${d.w}×${d.h} · ${d.detail}',
               onTap: () => c.editChoose(d.id),
             ),
+          Builder(builder: (_) {
+            final p = c.view?.me?.profile;
+            final cost = TownRules.faroCost;
+            final why = p == null
+                ? 'Sin personaje'
+                : p.credits < cost
+                    ? 'Falta oro (${p.credits}/$cost)'
+                    : null;
+            return DsListRow(
+              key: const ValueKey('town-edit-build-faro'),
+              compact: true,
+              title: 'FARO',
+              detail: '1×1 · $cost de oro · alumbra de noche',
+              enabled: why == null,
+              onTap: why == null ? () => c.editChoose(kFaroId) : null,
+            );
+          }),
           SizedBox(height: DsSpace.xs),
           Align(alignment: Alignment.centerLeft, child: cancel()),
         ]);
       case TownEditStep.options:
+        if (TownState.parseLightId(e.selected) != null) {
+          return col([
+            const DsSectionHeader('FARO'),
+            Text(_faroText,
+                key: const ValueKey('town-edit-info'), style: DsText.detail()),
+            SizedBox(height: DsSpace.xs),
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              DsButton('MOVER',
+                  key: const ValueKey('town-edit-move'),
+                  size: DsButtonSize.compact,
+                  onPressed: c.editStartMove),
+              DsButton('BORRAR',
+                  key: const ValueKey('town-edit-delete-ok'),
+                  size: DsButtonSize.compact,
+                  onPressed: c.editRemove),
+              cancel(),
+            ]),
+          ]);
+        }
         if (c.editLandmark case final l? when b == null) {
           return col([
             DsSectionHeader(l.name),
@@ -272,7 +326,8 @@ class TownEditOverlay extends StatelessWidget {
                   key: const ValueKey('town-edit-hire'),
                   size: DsButtonSize.compact,
                   kind: DsButtonKind.primary,
-                  tooltip: why ?? '${TownRules.helperCost} de oro',
+                  tooltip: why ??
+                      HelperRules.costText(HelperRules.hireCost(b.kind)),
                   onPressed: why == null ? () => c.hireHelper(b.id) : null),
               DsButton('DESPEDIR',
                   key: const ValueKey('town-edit-fire'),
@@ -399,7 +454,9 @@ class TownEditOverlay extends StatelessWidget {
         return col([
           DsSectionHeader(e.step == TownEditStep.moving
               ? 'MOVER'
-              : construction(e.placeDef ?? '')?.name ?? ''),
+              : e.placeDef == kFaroId
+                  ? 'FARO'
+                  : construction(e.placeDef ?? '')?.name ?? ''),
           Text(c.editGhostError ?? 'Clic en el mapa para dejarlo.',
               key: const ValueKey('town-edit-ghost'), style: DsText.detail()),
           if (e.step == TownEditStep.moving &&

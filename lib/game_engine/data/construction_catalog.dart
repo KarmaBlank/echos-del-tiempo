@@ -28,3 +28,8 @@ const kConstructions = <ConstructionDef>[
 
 ConstructionDef? construction(String id) =>
     kConstructions.where((c) => c.id == id).firstOrNull;
+
+/// El faro de EDITAR PUEBLO (day_night_weather.md § 5): no es una
+/// construcción con huella grande; se compra con oro y va en
+/// `TownState.lights`.
+const kFaroId = 'faro';

@@ -24,6 +24,9 @@ import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
+import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
+import '../../../game_engine/rules/helper_rules.dart';
+import '../../../game_engine/rules/sky_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
 
@@ -1122,6 +1125,15 @@ class SessionController extends StateNotifier<SessionView?> {
     if (step != null) _s = step.state;
   }
 
+  /// Cambia el pueblo del anfitrión (capturas: cielo, faros).
+  @visibleForTesting
+  void debugTown(TownState Function(TownState) f) {
+    final s = _s;
+    if (s == null || isClient) return;
+    s.town = f(s.town);
+    _emit();
+  }
+
   /// Pone al jugador local en (x, y) y se lo informa al host.
   @visibleForTesting
   void teleport(double x, double y) {
@@ -1586,16 +1598,24 @@ class SessionController extends StateNotifier<SessionView?> {
     openPanel(WorldPanel.helper);
   }
 
+  /// Mejora [u] del ayudante [i] de [buildId] (farming.md § 8.5).
+  bool upgradeHelper(String buildId, int i, HelperUpgrade u) =>
+      _apply(TownAction(TownOp.helperUpgrade, target: buildId, x: i, id: u.name));
+
+  /// El cielo del mundo (day_night_weather.md).
+  SkyState get sky => town.sky;
+
   /// Tooltip del ayudante [i] de [b]: título y líneas.
   (String, List<String>) helperInfo(TownBuild b, int i) {
     final farm = b.kind == BuildKind.huerta;
     final secs = helperRoundIn.ceil();
     if (!farm) {
       return (
-        'PESCADOR ${i + 1}',
+        'PESCADOR ${i + 1} · NIVEL ${HelperRules.level(b.stat(i))}',
         [
           'Pesca en la orilla del lago y guarda en el cofre.',
-          '${TownRules.t.i('fisherCatch')} peces por vuelta · sin legendarios',
+          '${TownRules.t.i('fisherCatch') + HelperRules.extraFish(b, i)} peces '
+              'por vuelta · sin legendarios',
           'Cofre ${b.chestTotal} · próxima vuelta en $secs s',
         ]
       );
@@ -1607,7 +1627,7 @@ class SessionController extends StateNotifier<SessionView?> {
         if (mask & t.bit != 0) t.label
     ];
     return (
-      'GRANJERO ${i + 1}',
+      'GRANJERO ${i + 1} · NIVEL ${HelperRules.level(b.stat(i))}',
       [
         'Atiende ${TownRules.helperArea(b, i).length} parcelas (resaltadas).',
         'Semillas de la huerta: ${b.seedTotal}',
@@ -1731,12 +1751,15 @@ class SessionController extends StateNotifier<SessionView?> {
     if (e == null) return;
     if (e.step != TownEditStep.moving && e.step != TownEditStep.placing) {
       final side = editSideAt(tx, ty);
+      final light = TownRules.lightAt(town, tx, ty);
       final b = side != null
           ? null
-          : (TownRules.buildAt(town, tx, ty) ??
-                      TownRules.buildAtSign(town, tx, ty))
-                  ?.id ??
-              TownRules.landmarkAt(town, tx, ty)?.id;
+          : light != null
+              ? TownState.lightId(light)
+              : (TownRules.buildAt(town, tx, ty) ??
+                          TownRules.buildAtSign(town, tx, ty))
+                      ?.id ??
+                  TownRules.landmarkAt(town, tx, ty)?.id;
       if (side == e.hoverSide && b == e.hoverBuild) return;
       e
         ..hoverSide = side
@@ -1754,8 +1777,20 @@ class SessionController extends StateNotifier<SessionView?> {
     final e = _edit;
     final g = e?.ghost;
     if (e == null || g == null) return null;
+    final (ox, oy) = town.origin;
+    if (e.step == TownEditStep.placing && e.placeDef == kFaroId) {
+      final p = _s?.players[localId]?.profile;
+      if (p != null && p.credits < TownRules.faroCost) {
+        return 'Falta oro (${p.credits}/${TownRules.faroCost})';
+      }
+      return TownRules.lightError(town, g.$1 - ox, g.$2 - oy);
+    }
     if (e.step == TownEditStep.placing) {
       return TownRules.place(town, e.placeDef!, g.$1, g.$2).error;
+    }
+    final from = TownState.parseLightId(e.selected);
+    if (e.step == TownEditStep.moving && from != null) {
+      return TownRules.lightError(town, g.$1 - ox, g.$2 - oy, ignore: from);
     }
     if (e.step == TownEditStep.moving) {
       return TownRules.move(town, e.selected!, g.$1, g.$2).error;
@@ -1787,12 +1822,21 @@ class SessionController extends StateNotifier<SessionView?> {
         }
       default:
         final side = editSideAt(tx, ty);
-        final b = TownRules.buildAt(town, tx, ty) ??
-            TownRules.buildAtSign(town, tx, ty);
-        final l = b == null ? TownRules.landmarkAt(town, tx, ty) : null;
+        final light = TownRules.lightAt(town, tx, ty);
+        final b = light != null
+            ? null
+            : TownRules.buildAt(town, tx, ty) ??
+                TownRules.buildAtSign(town, tx, ty);
+        final l = b == null && light == null
+            ? TownRules.landmarkAt(town, tx, ty)
+            : null;
         e.reset();
         // Franja de un lado al tope: gris, no se elige (town_editor.md § 1.3).
-        if (side != null && TownRules.sideFull(town, side) != null) {
+        if (light != null) {
+          e
+            ..step = TownEditStep.options
+            ..selected = TownState.lightId(light);
+        } else if (side != null && TownRules.sideFull(town, side) != null) {
           // nada
         } else if (side != null) {
           e
@@ -1837,9 +1881,10 @@ class SessionController extends StateNotifier<SessionView?> {
     final e = _edit;
     final b = e?.selected == null ? null : town.build(e!.selected!);
     final l = editLandmark;
-    if (e == null || (b == null && l == null)) return;
+    final f = TownState.parseLightId(e?.selected);
+    if (e == null || (b == null && l == null && f == null)) return;
     final (ox, oy) = town.origin;
-    final (ax, ay) = b?.anchor ?? (l!.x, l.y);
+    final (ax, ay) = f ?? b?.anchor ?? (l!.x, l.y);
     e
       ..step = TownEditStep.moving
       ..ghost = (ax + ox, ay + oy);
@@ -1936,7 +1981,10 @@ class SessionController extends StateNotifier<SessionView?> {
     final b = FishingRules.rodBonus(p);
     final f = MapFishing.start(
         engine.mapFor(s), local.x, local.y, local.fx, local.fy,
-        rand: _fishRand.nextDouble, biteBonus: b.bite, zoneBonus: b.zone);
+        rand: _fishRand.nextDouble,
+        biteBonus: b.bite,
+        zoneBonus: b.zone,
+        biteChance: SkyRules.biteChance(s.town.sky));
     if (f == null) return false;
     _fishing = f;
     _fishPrev = f.phase;
@@ -3227,6 +3275,8 @@ class SessionController extends StateNotifier<SessionView?> {
             when playerId == localId:
           _messages.add('Pescaste $label');
           if (_messages.length > maxMessages) _messages.removeAt(0);
+        case LightningEvent():
+          fishSfx?.call(Sfx.impactBolt);
         case FishCaughtEvent(:final playerId, :final species, :final sizeCm)
             when playerId == localId:
           final name = kFish[species]?.name ?? species;

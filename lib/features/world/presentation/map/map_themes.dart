@@ -431,3 +431,38 @@ abstract final class LifeLevelPalette {
   static const fish = Color(0xFF7FC8FF);
   static const farm = Color(0xFF7BE07B);
 }
+
+/// Colores del cielo (day_night_weather.md § 4): la noche, la luz de los
+/// faros y luciérnagas, la lluvia y el rayo.
+abstract final class SkyPalette {
+  /// Tinte de la noche cerrada (el alfa lo pone la oscuridad).
+  static const night = Color(0xFF0A1030);
+
+  /// Cielo encapotado de día (lluvia y tormenta).
+  static const overcast = Color(0xFF1C2333);
+
+  /// Luz cálida de un faro o brasero.
+  static const warm = Color(0xFFFFC46B);
+  static const warmEdge = Color(0x00FFC46B);
+
+  /// Luciérnaga: el punto y su halo.
+  static const firefly = Color(0xFFE8FF8A);
+  static const fireflyGlow = Color(0x66C8FF5A);
+
+  static const rain = Color(0x99A8C8FF);
+  static const bolt = Color(0xFFF4F7FF);
+  static const boltGlow = Color(0x88B5C8FF);
+  static const flash = Color(0xFFFFFFFF);
+
+  /// Máscara de las luces (lo que "come" la noche).
+  static const cut = Color(0xFF000000);
+  static const cutClear = Color(0x00000000);
+
+  /// Cartel del pronóstico.
+  static const forecast = Color(0xFFDDE6FF);
+  static const forecastBack = Color(0xB30A1030);
+
+  /// Faro del pueblo: poste y cabeza.
+  static const faroPost = Color(0xFF4A4F5C);
+  static const faroHead = Color(0xFF6B7080);
+}

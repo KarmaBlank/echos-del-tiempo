@@ -207,6 +207,14 @@ abstract final class FarmingRules {
         waterer: who.name);
   }
 
+  /// La lluvia (day_night_weather.md § 3.2): mientras llueve lo plantado
+  /// sin madurar queda regado a ritmo pleno, sin tocar la calidad de los
+  /// riegos de la gente.
+  static FarmPlot rain(FarmPlot p) {
+    if (!p.planted || ripe(p) || p.wet >= 3) return p;
+    return p.copyWith(wet: 5, waterRate: 1, waterer: 'Lluvia');
+  }
+
   static FarmPlot? fertilize(FarmPlot p, String fert, PlayerProfile who) =>
       p.seed == null || p.fert != null || !kFertilizers.containsKey(fert)
           ? null

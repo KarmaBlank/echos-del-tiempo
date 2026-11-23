@@ -1,5 +1,16 @@
 # Deuda técnica
 
+## v0.27.0
+
+- test/game_engine/sky_session_test.dart: en la sala (anfitrión) el reloj avanza con `farmTick`, el día nuevo toma el pronóstico, la lluvia riega las parcelas de `s.town` y la tormenta tira `LightningEvent` (JSON `bolt` ida y vuelta).
+- test/game_engine/helpers_session_test.dart: `helperUpgrade` valida dueño, oficio, nivel y pago; vuelta con RITMO / RED / RAREZA / HALLAZGO; pescadores con tormenta sacan `stormFisher`; hire cobra fibra / cebo.
+- test/features/world/helper_panel_test.dart: pestaña MEJORAS (MEJORAR gris con el motivo, sube el rango) en granjero y pescador.
+- test/features/inventory/condense_life_test.dart: sección OFICIOS de CONDENSAR (×1 / ×5 / MÁX, gris sin materiales, "Solo en el Mundo" en la Travesía).
+- test/features/world/town_edit_faro_test.dart: CONSTRUIR → FARO (gris sin oro), fantasma 1×1, MOVER y BORRAR un faro; hover con la info.
+- test/features/world/sky_layer_test.dart: noche y luces no se dibujan en mazmorras ni en EDITAR PUEBLO; destello del rayo 0 con destellos apagados; cartel del pronóstico.
+- test/features/world/session_music_test.dart: crossfade real a `townNight` al cruzar el atardecer con `SessionMusic` (solo está el de `trackFor`).
+- El cielo arranca en el día 1 en mundos viejos; no hay forma de ver la hora fuera del tinte (un reloj en el HUD queda pendiente).
+
 ## v0.25.7
 
 - test/features/world/farming_world_test.dart: CONTRATAR GRANJERO desde la fuente con nivel y oro: clic en la huerta contrata (helper +1, se cobra) y sale del modo elegir; no dueño ve los botones grises con el motivo.

@@ -19,6 +19,21 @@ import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
 
 void main() {
+  test('de noche suena la variante calma del pueblo; la pesca gana', () {
+    expect(
+        MusicSelector.trackFor(
+            mode: SessionMode.lobby, inTown: true, night: true),
+        Music.townNight);
+    expect(
+        MusicSelector.trackFor(
+            mode: SessionMode.lobby, inTown: true, night: true, fishing: true),
+        Music.fishing);
+    expect(
+        MusicSelector.trackFor(
+            mode: SessionMode.lobby, inTown: false, night: true),
+        Music.overworld);
+  });
+
   group('MusicSelector.trackFor', () {
     test('pueblo, mapa del mundo, preparación y resultado', () {
       expect(MusicSelector.trackFor(mode: SessionMode.lobby, inTown: true),

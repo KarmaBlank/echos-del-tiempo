@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/town_build.dart';
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../map/map_game.dart';
 import '../map/town_edit_layer.dart';
@@ -140,7 +141,9 @@ class _TownStripCardsState extends State<TownStripCards>
               '${b.helper} / ${TownRules.helperCap(b)}',
               style: DsText.title(ok ? null : DsColors.textDisabled)),
           SizedBox(height: DsSpace.xs),
-          Text(why ?? '${TownRules.helperCost} de oro · clic para contratar',
+          Text(
+              why ??
+                  '${HelperRules.costText(HelperRules.hireCost(b.kind))} · clic para contratar',
               key: ValueKey('town-hire-${b.id}-line'),
               softWrap: true,
               style: DsText.subtitle(ok ? DsColors.reward : DsColors.textDisabled)),

@@ -3,6 +3,10 @@ import 'farm_skills.dart';
 
 export 'farm_skills.dart';
 
+/// Materiales de oficio (v0.27.0): fibra vegetal, cebo prensado y tabla
+/// tratada. Se hacen en CONDENSAR y pagan contratar y mejorar ayudantes.
+const kLifeMaterialIds = ['fibra', 'cebo', 'tabla'];
+
 /// Habilidades de vida del personaje (town_loop.md § 11c, fishing.md § 3):
 /// Pesca (XP total; el nivel sale de la curva), cañas, la bolsa de
 /// Pescados y el pity de legendarios. JSON `life` del perfil.
@@ -16,7 +20,12 @@ class LifeSkills {
     this.dry = 0,
     FarmSkills? farm,
     List<String> fishTree = const [],
+    Map<String, int> crafts = const {},
   })  : farm = farm ?? FarmSkills.initial,
+        crafts = Map.unmodifiable({
+          for (final e in crafts.entries)
+            if (e.value > 0 && kLifeMaterialIds.contains(e.key)) e.key: e.value,
+        }),
         fishTree = List.unmodifiable(fishTree.toSet()),
         rods = List.unmodifiable(
             {kStarterRod, ...rods.where(kRods.containsKey)}),
@@ -58,6 +67,12 @@ class LifeSkills {
   /// Nodos tomados del árbol de Pesca (life_skill_trees.md).
   final List<String> fishTree;
 
+  /// Materiales de oficio condensados (v0.27.0, farming.md § 8.5): id de
+  /// [kLifeMaterialIds] → cantidad.
+  final Map<String, int> crafts;
+
+  int craft(String id) => crafts[id] ?? 0;
+
   int count(String species) => bag[species] ?? 0;
   int get bagTotal => bag.values.fold(0, (a, b) => a + b);
 
@@ -70,6 +85,7 @@ class LifeSkills {
     int? dry,
     FarmSkills? farm,
     List<String>? fishTree,
+    Map<String, int>? crafts,
   }) =>
       LifeSkills(
           fishXp: fishXp ?? this.fishXp,
@@ -79,7 +95,8 @@ class LifeSkills {
           pity: pity ?? this.pity,
           dry: dry ?? this.dry,
           farm: farm ?? this.farm,
-          fishTree: fishTree ?? this.fishTree);
+          fishTree: fishTree ?? this.fishTree,
+          crafts: crafts ?? this.crafts);
 
   LifeSkills addFish(String species, [int n = 1]) =>
       copyWith(bag: {...bag, species: count(species) + n});
@@ -93,6 +110,7 @@ class LifeSkills {
         if (dry > 0) 'dry': dry,
         'farm': farm.toJson(),
         if (fishTree.isNotEmpty) 'ft': fishTree,
+        if (crafts.isNotEmpty) 'cf': crafts,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -115,6 +133,12 @@ class LifeSkills {
       fishTree: raw['ft'] is List
           ? [for (final x in raw['ft'] as List) if (x is String) x]
           : const [],
+      crafts: raw['cf'] is Map
+          ? {
+              for (final e in (raw['cf'] as Map).entries)
+                '${e.key}': n(e.value)
+            }
+          : const {},
     );
   }
 
@@ -129,7 +153,9 @@ class LifeSkills {
       other.fishTree.join(',') == fishTree.join(',') &&
       other.rods.join(',') == rods.join(',') &&
       other.bag.length == bag.length &&
-      bag.entries.every((e) => other.bag[e.key] == e.value);
+      bag.entries.every((e) => other.bag[e.key] == e.value) &&
+      other.crafts.length == crafts.length &&
+      crafts.entries.every((e) => other.crafts[e.key] == e.value);
 
   @override
   int get hashCode => Object.hash(fishXp, rod, pity, rods.length, bag.length);

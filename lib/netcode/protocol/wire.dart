@@ -109,7 +109,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// el pueblo con los lugares en su sitio de siempre.
 /// 47 (v0.25.5): granjeros y pescadores con cofre por construcción
 /// (farming.md § 8); se va la auto-pesca.
-const kProtocolVersion = 47;
+/// 48 (v0.27.0): día, noche y clima (`town.sky`), faros (`town.lt`),
+/// nivel y mejoras de cada ayudante (`cr`), `helperUpgrade`, evento
+/// `bolt` y materiales de oficio en el perfil (`life.cf`).
+const kProtocolVersion = 48;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

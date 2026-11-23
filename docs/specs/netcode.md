@@ -761,6 +761,19 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 48 (v0.27.0: día, noche y clima)
+
+- `town` suma `sky` (`d` día, `c` reloj, `w` / `f` / `t` clima de hoy y su
+  tramo, `m` pronóstico) y `lt` (faros). Cada construcción suma `cr`
+  (XP y mejoras de cada ayudante). El perfil suma `life.cf` (materiales
+  de oficio).
+- `town` suma `helperUpgrade` (`tg`, `x` = ayudante, `id` = mejora);
+  `place` con `id = faro`, `move` / `remove` con `tg = faro@x,y`.
+  `craft` `condense` acepta `w = life:<id>`.
+- Evento nuevo `bolt` (`x`, `y`, `l`): rayo en una parcela.
+- Un cliente 47 no vería el cielo, los faros ni las mejoras: la sala no
+  mezcla versiones.
+
 ## Mundo, protocolo 47 (v0.25.5: granjeros y pescadores)
 
 - Cada construcción de `town.builds` suma `hp` (ayudantes), `ch`

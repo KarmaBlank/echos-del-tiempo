@@ -639,7 +639,10 @@ enum TownOp {
   helperTasks,
   giveSeeds,
   takeSeeds,
-  collectChest
+  collectChest,
+
+  /// v0.27.0: mejora [id] (`HelperUpgrade`) del ayudante [x] de [target].
+  helperUpgrade
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

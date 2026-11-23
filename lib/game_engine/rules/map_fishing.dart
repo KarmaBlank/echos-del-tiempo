@@ -103,11 +103,13 @@ class MapFishing {
   static MapFishing? start(GameMap map, double x, double y, int fx, int fy,
       {required double Function() rand,
       double biteBonus = 0,
-      double zoneBonus = 0}) {
+      double zoneBonus = 0,
+      double biteChance = 1}) {
     final d = FishingCast.castDir(map, x, y, fx, fy);
     if (d == null) return null;
     return MapFishing._(map, x, y, d,
-        FishingMinigame(rand, biteBonus: biteBonus, zoneBonus: zoneBonus));
+        FishingMinigame(rand,
+            biteBonus: biteBonus, zoneBonus: zoneBonus, biteChance: biteChance));
   }
 
   final GameMap map;

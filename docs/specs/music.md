@@ -405,6 +405,14 @@ pesca; no cambia el protocolo). Entra y sale con el crossfade normal
 (`crossfadeSeconds`); `SessionMusic` solo pide la pieza cuando cambia,
 nunca la reinicia en cada vista. Al guardar la caña vuelve `town`.
 
+### 5.3 Pueblo de noche (v0.27.0)
+
+De noche (day_night_weather.md § 1) en el pueblo suena `townNight`: la
+armonía del pueblo a 72 bpm, la ocarina suave con la melodía raleada,
+colchón bajo y bajo punteado apenas audible. Entra y sale con el
+crossfade normal al atardecer y al amanecer. Con la caña afuera sigue
+ganando `fishing` (§ 5.2). `MusicSelector.trackFor(night:)`.
+
 ## 6. `MusicService`
 
 - `MusicPlayer` (interfaz): `play(deck, source, loop, volume)`,

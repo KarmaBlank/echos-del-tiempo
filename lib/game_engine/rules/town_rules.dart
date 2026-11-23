@@ -4,10 +4,12 @@ import '../data/construction_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
+import '../models/game_map.dart' show Tile;
 import '../models/item.dart' show CraftMaterial;
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'farming_rules.dart';
+import 'helper_rules.dart';
 import 'fishing_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_plan.dart';
@@ -139,7 +141,15 @@ abstract final class TownRules {
         stock: _sum(a.stock, b.stock),
         helper: a.helper + b.helper,
         chest: _sum(a.chest, b.chest),
-        seeds: _sum(a.seeds, b.seeds));
+        seeds: _sum(a.seeds, b.seeds),
+        tasks: [
+          for (var k = 0; k < a.helper; k++) a.taskMask(k),
+          for (var k = 0; k < b.helper; k++) b.taskMask(k),
+        ],
+        crew: [
+          for (var k = 0; k < a.helper; k++) a.stat(k),
+          for (var k = 0; k < b.helper; k++) b.stat(k),
+        ]);
     if (a.kind == BuildKind.huerta) {
       final (nx, ny) = out.anchor;
       final plots = <String, FarmPlot>{};
@@ -257,6 +267,81 @@ abstract final class TownRules {
     return err == null
         ? (town: next, id: nid, error: null)
         : (town: null, id: null, error: err);
+  }
+
+  /// Un rayo en la parcela [key] (tile del mapa): vuelve a pasto sin arar
+  /// y se pierde lo plantado (day_night_weather.md § 3.3).
+  static TownState strike(TownState s, String key) {
+    if (!s.plots.containsKey(key)) return s;
+    return s.copyWith(plots: {...s.plots}..remove(key));
+  }
+
+  // ---------------- faros (day_night_weather.md § 5) ----------------
+
+  static int get faroCost => t.i('faroCost');
+
+  /// El faro en el tile del mapa ([mx], [my]), o `null`.
+  static (int, int)? lightAt(TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    final l = (mx - ox, my - oy);
+    return s.lights.contains(l) ? l : null;
+  }
+
+  /// Por qué no entra un faro en el tile del pueblo base ([x], [y])
+  /// (o `null`). Va en pasto o camino: no pisa lugares, construcciones,
+  /// carteles, cofres ni otro faro; no es sólido, así que no corta nada.
+  static String? lightError(TownState s, int x, int y, {(int, int)? ignore}) {
+    final w = TownPlan.widthOf(s), h = TownPlan.heightOf(s);
+    final (ox, oy) = s.origin;
+    if (x + ox < 2 || y + oy < 2 || x + ox >= w - 2 || y + oy >= h - 2) {
+      return 'Fuera del pueblo';
+    }
+    for (final l in TownPlan.landmarksOf(s)) {
+      if (TownRect(l.x, l.y, l.w, l.h).contains(x, y)) {
+        return 'Ahí hay un lugar del pueblo';
+      }
+    }
+    for (final b in s.builds) {
+      if (b.contains(x, y)) return 'Se pisa con una construcción';
+      if (TownPlan.signOf(s, b) == (x, y) || chestOf(s, b) == (x, y)) {
+        return 'Se pisa con un cartel o un cofre';
+      }
+    }
+    if (s.lights.any((l) => l != ignore && l == (x, y))) {
+      return 'Ya hay un faro';
+    }
+    final tile = TownPlan.of(s).at(x + ox, y + oy);
+    if (tile != Tile.grass && tile != Tile.path) return 'Ahí no entra';
+    return null;
+  }
+
+  /// Comprar y poner un faro en el tile del mapa ([mx], [my]).
+  static (PlayerProfile, TownState)? placeLight(
+      PlayerProfile p, TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    if (lightError(s, mx - ox, my - oy) != null) return null;
+    if (p.credits < faroCost) return null;
+    return (
+      p.copyWith(credits: p.credits - faroCost),
+      s.copyWith(lights: [...s.lights, (mx - ox, my - oy)]),
+    );
+  }
+
+  static TownState? moveLight(TownState s, String id, int mx, int my) {
+    final from = TownState.parseLightId(id);
+    if (from == null || !s.lights.contains(from)) return null;
+    final (ox, oy) = s.origin;
+    final to = (mx - ox, my - oy);
+    if (lightError(s, to.$1, to.$2, ignore: from) != null) return null;
+    return s.copyWith(
+        lights: [for (final l in s.lights) l == from ? to : l]);
+  }
+
+  /// Borrar un faro (sin devolver el oro).
+  static TownState? removeLight(TownState s, String id) {
+    final l = TownState.parseLightId(id);
+    if (l == null || !s.lights.contains(l)) return null;
+    return s.copyWith(lights: [...s.lights.where((o) => o != l)]);
   }
 
   // ---------------- lugares fijos ----------------
@@ -509,11 +594,16 @@ abstract final class TownRules {
 
   /// El área del granjero [i] de [b]: `helperPlots` tiles seguidos (fila
   /// por fila), sin pisarse con los demás. Relativos a la esquina.
+  /// Con la mejora Parcelas (§ 8.5) cada uno atiende más: las áreas
+  /// siguen una detrás de la otra.
   static List<(int, int)> helperArea(TownBuild b, int i) {
     final all = farmTiles(b);
-    final n = math.max(1, t.i('helperPlots'));
-    final a = (i * n).clamp(0, all.length);
-    final z = ((i + 1) * n).clamp(0, all.length);
+    var a = 0;
+    for (var k = 0; k < i; k++) {
+      a += HelperRules.plotsOf(b, k);
+    }
+    a = a.clamp(0, all.length);
+    final z = (a + HelperRules.plotsOf(b, i)).clamp(0, all.length);
     return all.sublist(a, z);
   }
 
@@ -627,19 +717,24 @@ abstract final class TownRules {
       return 'No hay más lugar: agrandá ${farm ? 'la huerta' : 'el lago'}';
     }
     final lvl = farm ? FarmingRules.level(p) : FishingRules.level(p);
-    final need = t.i('helperLevel');
-    if (lvl < need) return 'Necesitás ${farm ? 'Cultivo' : 'Pesca'} nivel $need';
-    if (p.credits < helperCost) return 'Falta oro (${p.credits}/$helperCost)';
-    return null;
+    final c = HelperRules.hireCost(b.kind);
+    if (lvl < c.level) {
+      return 'Necesitás ${farm ? 'Cultivo' : 'Pesca'} nivel ${c.level}';
+    }
+    return HelperRules.cannotPay(p, c);
   }
 
   static (PlayerProfile, TownState)? hire(
       PlayerProfile p, TownState s, String id) {
     if (cannotHire(p, s, id) != null) return null;
     final b = s.build(id)!;
+    final paid = HelperRules.pay(p, HelperRules.hireCost(b.kind));
+    if (paid == null) return null;
     return (
-      p.copyWith(credits: p.credits - helperCost),
-      s.withBuild(b.copyWith(helper: b.helper + 1)),
+      paid,
+      s.withBuild(b.copyWith(
+          helper: b.helper + 1,
+          crew: b.crewWith(b.helper, const HelperStat()))),
     );
   }
 
@@ -652,7 +747,10 @@ abstract final class TownRules {
         helper: b.helper - 1,
         tasks: b.tasks.length >= b.helper
             ? b.tasks.sublist(0, b.helper - 1)
-            : b.tasks));
+            : b.tasks,
+        crew: b.crew.length >= b.helper
+            ? b.crew.sublist(0, b.helper - 1)
+            : b.crew));
   }
 
   /// Prende o apaga tareas del granjero [i] de [id] ([mask]: bits de
@@ -697,8 +795,12 @@ abstract final class TownRules {
   /// [farmerNext] en todas las parcelas de su área. Planta de sus
   /// semillas, riega con `waterRateMin` y cosecha al cofre con [harvest].
   /// Devuelve la huerta y las cosechas (tile relativo, cosecha).
+  /// Gana 1 de XP por parcela atendida; con las mejoras (§ 8.5) la
+  /// cosecha puede subir de calidad ([rand]) y aparecer una semilla rara
+  /// ([rareSeed]) para la huerta.
   static (TownBuild, List<(int, int, Harvest)>) farmerCycle(
-      TownBuild b0, int i, Harvest Function(FarmPlot) harvest) {
+      TownBuild b0, int i, Harvest Function(FarmPlot) harvest,
+      {double Function()? rand, String Function()? rareSeed}) {
     final task = farmerNext(b0, i);
     var b = b0;
     final out = <(int, int, Harvest)>[];
@@ -706,6 +808,9 @@ abstract final class TownRules {
     final plots = {...b.plots};
     final seeds = {...b.seeds};
     final ft = FarmingRules.t;
+    var worked = 0;
+    final qChance = HelperRules.qualityChance(b0, i);
+    final sChance = HelperRules.rareSeedChance(b0, i);
     for (final (x, y) in helperArea(b0, i)) {
       final key = plotKey(x, y);
       final pl = plots[key];
@@ -719,6 +824,7 @@ abstract final class TownRules {
           final base = pl ?? FarmingRules.till();
           plots[key] = FarmPlot(
               seed: sd, wet: base.wet, waterRate: base.waterRate);
+          worked++;
         case HelperTask.regar:
           if (pl == null || !pl.planted || pl.watered || FarmingRules.ripe(pl)) {
             continue;
@@ -727,16 +833,29 @@ abstract final class TownRules {
               wet: ft.d('waterSec'),
               waterRate: ft.d('waterRateMin'),
               waterer: 'Granjero');
+          worked++;
         case HelperTask.cosechar:
           if (pl == null || !pl.planted || !FarmingRules.ripe(pl)) continue;
           if (chestFull(b)) break;
           final h = harvest(pl);
-          b = addToChest(b, cropKey(h.crop.id, h.quality), h.count);
+          var q = h.quality;
+          if (rand != null && qChance > 0 && rand() < qChance &&
+              q.index < CropQuality.values.length - 1) {
+            q = CropQuality.values[q.index + 1];
+          }
+          b = addToChest(b, cropKey(h.crop.id, q), h.count);
           plots[key] = FarmPlot(wet: pl.wet, waterRate: pl.waterRate);
           out.add((x, y, h));
+          worked++;
+          if (rand != null && rareSeed != null && sChance > 0 &&
+              rand() < sChance) {
+            final id = rareSeed();
+            seeds[id] = (seeds[id] ?? 0) + 1;
+          }
       }
     }
-    return (b.copyWith(plots: plots, seeds: seeds), out);
+    b = b.copyWith(plots: plots, seeds: seeds);
+    return (HelperRules.gainXp(b, i, worked), out);
   }
 
   /// Pasa [n] semillas de [seed] de [p] a los granjeros de [id] (`n <= 0`

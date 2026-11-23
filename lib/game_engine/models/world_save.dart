@@ -3,9 +3,11 @@
 library;
 
 import 'farm_plot.dart';
+import 'sky.dart';
 import 'town_build.dart';
 
 export 'farm_plot.dart';
+export 'sky.dart';
 export 'town_build.dart';
 
 /// Etiqueta del mundo: solo valor por defecto y agrupamiento de la lista.
@@ -37,7 +39,27 @@ class TownState {
       this.lake,
       this.sides = const {},
       this.builds = kDefaultBuilds,
-      this.marks = const {}});
+      this.marks = const {},
+      this.lights = const [],
+      this.sky = const SkyState()});
+
+  /// Faros puestos en EDITAR PUEBLO (day_night_weather.md § 5): tiles de
+  /// 1×1 en coordenadas del pueblo base. No son sólidos ni cortan caminos.
+  final List<(int, int)> lights;
+
+  /// Reloj y clima del mundo (day_night_weather.md § 1).
+  final SkyState sky;
+
+  /// Id estable del faro en ([x], [y]) (coordenadas del pueblo base).
+  static String lightId((int, int) l) => 'faro@${l.$1},${l.$2}';
+
+  static (int, int)? parseLightId(String? id) {
+    if (id == null || !id.startsWith('faro@')) return null;
+    final p = id.substring(5).split(',');
+    if (p.length != 2) return null;
+    final x = int.tryParse(p[0]), y = int.tryParse(p[1]);
+    return x == null || y == null ? null : (x, y);
+  }
 
   /// Lugares fijos movidos (town_editor.md § 3.3): id del lugar (`@forge`,
   /// …) → esquina en coordenadas del pueblo base. Los que no están, en su
@@ -138,6 +160,8 @@ class TownState {
     List<TownBuild>? builds,
     Map<String, FarmPlot>? plots,
     Map<String, (int, int)>? marks,
+    List<(int, int)>? lights,
+    SkyState? sky,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -146,7 +170,9 @@ class TownState {
         lake: lake ?? this.lake,
         sides: sides ?? this.sides,
         builds: builds ?? this.builds,
-        marks: marks ?? this.marks);
+        marks: marks ?? this.marks,
+        lights: lights ?? this.lights,
+        sky: sky ?? this.sky);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -166,6 +192,8 @@ class TownState {
           'marks': {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
           },
+        if (lights.isNotEmpty) 'lt': [for (final l in lights) [l.$1, l.$2]],
+        if (sky.started) 'sky': sky.toJson(),
       };
 
   /// Una construcción cambiada (por id).
@@ -235,6 +263,13 @@ class TownState {
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
       marks: _marks(raw['marks']),
+      lights: raw['lt'] is List
+          ? {
+              for (final v in raw['lt'] as List)
+                if (v case [final num x, final num y, ...]) (x.round(), y.round()),
+            }.toList()
+          : const [],
+      sky: SkyState.fromJson(raw['sky']),
     );
     final bs = raw['builds'];
     if (bs is List) {

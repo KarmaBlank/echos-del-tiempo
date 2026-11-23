@@ -16,6 +16,7 @@ void main() {
       Music.title,
       Music.town,
       Music.fishing,
+      Music.townNight,
       Music.overworld,
       for (final z in Music.zones) Music.zone(z),
       Music.battle,

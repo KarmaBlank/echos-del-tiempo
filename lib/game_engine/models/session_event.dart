@@ -358,6 +358,14 @@ class FarmLootEvent extends SessionEvent {
   const FarmLootEvent(this.playerId, this.label, this.rarity, this.tx, this.ty);
 }
 
+/// Cayó un rayo en la parcela ([tx], [ty]) del mapa (day_night_weather.md
+/// § 3.3); [lost]: había algo plantado.
+class LightningEvent extends SessionEvent {
+  final int tx, ty;
+  final bool lost;
+  const LightningEvent(this.tx, this.ty, {this.lost = false});
+}
+
 /// [playerId] sacó [species] ([sizeCm] cm); [auto]: por auto-pesca.
 class FishCaughtEvent extends SessionEvent {
   final String playerId;
