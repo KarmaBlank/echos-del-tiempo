@@ -2970,6 +2970,9 @@ class _Op {
             ? (0, 0)
             : ExplorationRules.questProgress(q, m, f);
         say('${p.name} encendió un brasero ($a/$b).');
+      case PoiKind.lantern:
+        m.poiUsed.add(poi.id);
+        say('${p.name} encendió un farol.');
       case PoiKind.shrine:
         m.poiUsed.add(poi.id);
         _bless(BlessingKind.values[poi.variant % BlessingKind.values.length],
