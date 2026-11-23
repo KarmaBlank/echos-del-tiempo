@@ -32,7 +32,10 @@ void _expectShort(String text, {int maxLines = 2}) {
   final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
   expect(lines.length, lessThanOrEqualTo(maxLines), reason: text);
   for (final l in lines) {
-    expect(l.length, lessThanOrEqualTo(kShortMaxChars + 10), reason: l);
+    // Whole sentences (v0.36.1): never cut with an ellipsis, at most
+    // two short lines.
+    expect(l.contains('…'), isFalse, reason: l);
+    expect(l.length, lessThanOrEqualTo(kShortMaxChars * 2), reason: l);
     for (final tok in kFormulaTokens) {
       expect(l.contains(tok), isFalse, reason: '"$tok" en "$l"');
     }

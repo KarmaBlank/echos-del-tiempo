@@ -61,6 +61,32 @@ void main() {
         isNull);
   });
 
+  testWidgets('armería v0.36.1: ficha, VER DETALLE y franja de cambios',
+      (tester) async {
+    await pumpPanel(tester,
+        profile: richWarrior(),
+        build: (v, c) => ArmoryPanel(view: v, controller: c));
+    // COMPRAR: detalle con la ficha entera y el plegable VER DETALLE.
+    await tapVisible(
+        tester, find.byKey(const ValueKey('armory-buy-cell-espada_ignea')));
+    final detail = find.byKey(const ValueKey('armory-buy-detail'));
+    expect(find.descendant(of: detail, matching: find.byKey(const ValueKey('armory-sheet'))),
+        findsOneWidget);
+    expect(find.descendant(of: detail, matching: find.textContaining('VER DETALLE', findRichText: true)),
+        findsWidgets);
+    // Izquierda: la franja del inventario, con CAMBIOS contra la equipada.
+    final side = find.byKey(const ValueKey('armory-buy-side'));
+    expect(find.descendant(of: side, matching: find.byKey(const ValueKey('inv-strip'))),
+        findsOneWidget);
+    expect(find.descendant(of: side, matching: find.text('CAMBIOS')),
+        findsOneWidget);
+    // VENDER: la equipada muestra ACTUAL (no hay cambios).
+    await tapVisible(tester, find.byKey(const ValueKey('tab-1')));
+    final sell = find.byKey(const ValueKey('armory-sell-side'));
+    expect(find.descendant(of: sell, matching: find.text('ACTUAL')),
+        findsOneWidget);
+  });
+
   testWidgets('forja: forjar la equipada', (tester) async {
     final c = await pumpPanel(tester,
         profile: richWarrior(),

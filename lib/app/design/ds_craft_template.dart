@@ -23,7 +23,16 @@ class DsCraftItem {
     this.description,
     this.lines = const [],
     this.actions = const [],
+    this.cellWrap,
+    this.body,
   });
+
+  /// Wraps the grid cell (e.g. a hover tooltip); the template stays
+  /// agnostic of what the tooltip shows.
+  final Widget Function(Widget cell)? cellWrap;
+
+  /// Rich detail content, drawn under [description] and above [lines].
+  final Widget? body;
 
   /// Clave estable: la casilla es `<prefijo>-cell-<id>`.
   final String id;
@@ -67,6 +76,10 @@ class DsCraftDetail extends StatelessWidget {
               SizedBox(height: DsSpace.xs),
               Text(item.description!, style: DsText.detail()),
             ],
+            if (item.body != null) ...[
+              SizedBox(height: DsSpace.xs),
+              item.body!,
+            ],
             SizedBox(height: DsSpace.xs),
             for (final l in item.lines) Text(l, style: DsText.body()),
             if (item.actions.isNotEmpty) ...[
@@ -90,7 +103,12 @@ class DsCraftGridTemplate extends StatefulWidget {
     this.filters = const [],
     this.empty = 'Nada para hacer.',
     this.searchHint,
+    this.side,
   });
+
+  /// Optional left column (`<p>-side`), rebuilt with the item under the
+  /// mouse, or the selected one when nothing is hovered.
+  final Widget Function(DsCraftItem? focus)? side;
 
   /// Con texto, buscador arriba de los chips (`<p>-search`).
   final String? searchHint;
@@ -114,7 +132,29 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
   String? _id;
   String _query = '';
 
+  String? _hoverId;
+
   String _p(String s) => '${widget.keyPrefix}-$s';
+
+  Widget _cell(DsCraftItem i, DsCraftItem? sel) {
+    Widget cell = DsItemCell(
+      key: ValueKey(_p('cell-${i.id}')),
+      icon: i.icon,
+      border: i.border,
+      count: i.count,
+      selected: i.id == sel?.id,
+      onTap: () => setState(() => _id = i.id),
+    );
+    if (i.cellWrap != null) cell = i.cellWrap!(cell);
+    if (widget.side == null) return cell;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverId = i.id),
+      onExit: (_) {
+        if (_hoverId == i.id) setState(() => _hoverId = null);
+      },
+      child: cell,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,21 +175,17 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
             spacing: DsSpace.xs,
             runSpacing: DsSpace.xs,
             children: [
-              for (final i in shown)
-                DsItemCell(
-                  key: ValueKey(_p('cell-${i.id}')),
-                  icon: i.icon,
-                  border: i.border,
-                  count: i.count,
-                  selected: i.id == sel?.id,
-                  onTap: () => setState(() => _id = i.id),
-                ),
+              for (final i in shown) _cell(i, sel),
             ],
           );
     final detail = sel == null
         ? null
         : KeyedSubtree(
             key: ValueKey(_p('detail')), child: DsCraftDetail(sel));
+    final focus = shown.where((i) => i.id == _hoverId).firstOrNull ?? sel;
+    final side = widget.side == null
+        ? null
+        : KeyedSubtree(key: ValueKey(_p('side')), child: widget.side!(focus));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -182,6 +218,10 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
               return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (side != null) ...[
+                      SingleChildScrollView(child: side),
+                      SizedBox(width: DsSpace.sm),
+                    ],
                     Expanded(child: SingleChildScrollView(child: grid)),
                     if (detail != null) ...[
                       SizedBox(width: DsSpace.sm),
@@ -198,6 +238,10 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
                     if (detail != null) ...[
                       detail,
                       SizedBox(height: DsSpace.sm)
+                    ],
+                    if (side != null) ...[
+                      Align(alignment: Alignment.topLeft, child: side),
+                      SizedBox(height: DsSpace.sm),
                     ],
                     grid,
                   ]),
