@@ -7,6 +7,9 @@ Código: `data/life_tree_catalog.dart`, `rules/life_tree_rules.dart`,
 árboles (`kTuning['lifeTree']`).
 
 ## 1. Pestaña OFICIOS (PERSONAJE)
+Desde v0.24.4 en tres columnas: tarjetas de oficio | árbol | detalle del
+nodo. Cada tarjeta, entera: nombre y puntos libres, "Nivel N" grande,
+"cur / need XP · faltan n", la barra y las herramientas.
 Entre ATRIBUTOS e INVENTARIO. A la izquierda una fila por oficio (Pesca,
 Cultivo) con nivel, XP actual / XP para el siguiente y barra; abajo el
 detalle del nodo elegido (texto con los números del Balance, costo,
@@ -53,7 +56,7 @@ excluyentes: Capataz (ayudante +50 % parcelas) o Manos propias
 | legend | rareza de la tirada del pez |
 | loot | chance del botín del agua |
 | auto | peces por auto-pesca |
-| sell | precio del pescado / la cosecha en el comerciante |
+| sell | precio del pescado / la cosecha en el agropecuario |
 | xp | XP de Pesca / Cultivo |
 | grow | velocidad del cultivo (se guarda al plantar en `b`) |
 | quality | puntaje de quien planta, riega y cosecha (farming.md § 2.4) |

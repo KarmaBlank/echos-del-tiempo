@@ -66,7 +66,7 @@ restos del pasado magitec:
 | **Fuente rúnica** (centro) | Punto de reunión, partida al tablero, curación | Mecanismo antiguo que todavía funciona; guarda ecos del pasado |
 | **Lago** | Pesca | Sus aguas reflejan ecos del pasado y del futuro |
 | **Huerta** | Cultivo | Tierra cerca de raíces de ruinas antiguas |
-| **Comerciante** | Compra/venta | Viajero del presente; único que compra pescado y cosecha |
+| **Agropecuario** | Compra/venta | Viajero del presente; único que compra pescado y cosecha |
 | **Torre de loot perdido** | Revelar botín, pool de objetos sin recoger (`loot.md` § 4b.2) | Ruina magitec que atrae ecos de objetos perdidos |
 | **Forja / Posada** | Crafteo y mejora de equipo, descanso | Edificios mejorables (§ 4) |
 | **Caminos de tierra** | Navegación; uno lleva a la salida de expedición | — |
@@ -84,10 +84,10 @@ se quedan, o todos alternan).
 | Fuente | Produce SOLO ahí | Por qué lo necesita el que va a la mazmorra |
 |---|---|---|
 | **Mazmorra** | Armas, oro, materiales base, **semillas raras** | — (es la fuente de equipo) |
-| **Pesca** | Pescado (por bioma y calidad) | Se **vende** a comerciantes por oro o materiales para mejoras del pueblo y de armas/equipo |
+| **Pesca** | Pescado (por bioma y calidad) | Se **vende** a agropecuarios por oro o materiales para mejoras del pueblo y de armas/equipo |
 | **Huerta** | Cosechas (por bioma y calidad) | Igual: **comercio** por oro o materiales de mejora |
 | **Mejoras del pueblo** | Ventajas permanentes | Más espacio, mejor forja, posada, automatización |
-| **Comercio** | Oro y materiales a cambio de pescado/cosecha (solo los comerciantes del pueblo compran eso) | Financia mejoras de pueblo y de equipo |
+| **Comercio** | Oro y materiales a cambio de pescado/cosecha (solo los agropecuarios del pueblo compran eso) | Financia mejoras de pueblo y de equipo |
 
 **Sin sistema de cocina** (decisión del dueño). Opcional más adelante:
 unos pocos peces/cultivos **especiales** como insumo raro (p. ej. forja
@@ -115,7 +115,7 @@ de mods de tier alto o descuento de mejora de ULT), sin recetas.
 - Arte: sprites pixel **mínimos pero lindos**, vía `sprite_manifest.yaml`.
 
 ### 3.3 Comercio
-- Los comerciantes compran pescado y cosecha por **oro o materiales**
+- Los agropecuarios compran pescado y cosecha por **oro o materiales**
   (mejoras del pueblo, mejora de armas/equipo). Venden cebos, semillas
   comunes y ofertas rotativas por ciclo.
 - Tunables: `trade.prices`, `trade.qualityMult`, `trade.materialRates`.
@@ -181,7 +181,7 @@ mezcla de ambas fuentes). Tabla en `assets/balance` / YAML de datos.
 
 Cada `cycle.missionsPerEvent` misiones (propuesta: 5) llega un evento:
 
-- **Caravana**: comerciante con ofertas raras por 1 ciclo.
+- **Caravana**: agropecuario con ofertas raras por 1 ciclo.
 - **Visitante con encargo**: pide productos del pueblo + algo de
   mazmorra; recompensa única.
 - **Evento de temporada**: zona temporal con **jefe especial** (eco del
@@ -239,7 +239,7 @@ Los eventos son estado de sala (§ 9). No hay temporizadores reales.
 1. **Solo progresa bien.** Las actividades del pueblo son
    **aceleradores opcionales, nunca puertas obligatorias**. Todo lo que
    en § 3 es "solo del pueblo" también se consigue **lento** por
-   misiones (drop raro) o por el comerciante (precio alto), con tasa
+   misiones (drop raro) o por el agropecuario (precio alto), con tasa
    peor: `town.fallbackRateMult` (propuesta 0.35).
 2. **Producción pasiva.** La huerta es manual y satisfactoria (§ 3.2),
    con atajos "plantar todo" / "cosechar todo". La automatización viene
@@ -299,7 +299,7 @@ Pueblo (`MapGenerator.town()`, datos en
 | Fuente rúnica | `F` (nuevo) | x 16–17, y 10–11 | abre el tablero |
 | Cartel del lago | `Y` (nuevo) | (12, 15) | aviso del lago (v0.22.0); desde v0.24.0 cada lago y huerta tiene el suyo (`town_editor.md` § 4.3) |
 | Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | pesca en el mapa desde cualquier orilla (v0.22.2; muelles con bonus) |
-| Comerciante (puesto) | `M` | x 12–13, y 17 | COMERCIANTE (v0.22.0) |
+| Agropecuario (puesto) | `M` | x 12–13, y 17 | AGROPECUARIO (v0.22.0) |
 | Torre del Loot perdido | `L` | x 24–26, y 15 | pozo Loot perdido |
 
 - Lago `~` en x 3–10, y 14–19 (esquinas de pasto). Desde v0.24.0 el
@@ -309,7 +309,7 @@ Pueblo (`MapGenerator.town()`, datos en
 - Arte: procedural en `TilePainter` (colores en `TownPalette` y el tema
   `pueblo` de `map_themes.dart`), registrado en `sprite_manifest.yaml`
   (`tiles: fuente_runica, punto_pesca, cartel_lago,
-  puesto_comerciante`, `procedural: true`) para reemplazarlo por PNG
+  puesto_agropecuario`, `procedural: true`) para reemplazarlo por PNG
   desde el Editor sin tocar Dart.
 - El layout queda en Dart puro (const) y no en YAML: el motor no lee
   assets. Pasarlo a YAML queda pendiente para cuando el Editor lo edite.
@@ -357,13 +357,13 @@ Mundos por cuenta (§ 11c):
   ganó, `cycle + 1`), al volver al pueblo y al salir, el anfitrión guarda
   el pueblo en su mundo. El cliente no guarda nada del pueblo.
 
-### Fase 3 — Pesca + comerciante (hecha en v0.22.0)
+### Fase 3 — Pesca + agropecuario (hecha en v0.22.0)
 - Ver **docs/specs/fishing.md** (manda sobre el detalle). Peces por
   bioma y lago del pueblo por mundo (`TownState.lake`), Pesca por
-  personaje, cañas, minijuego local, comerciante (oro o materiales,
+  personaje, cañas, minijuego local, agropecuario (oro o materiales,
   canje de legendarios, cañas) y auto-pesca sin legendarios.
 - Tunables: Editor → Balance → Pesca (`fishing.*` + precios/canje).
-- Pendiente: cebos y ofertas rotativas del comerciante; "Cría de <pez>"
+- Pendiente: cebos y ofertas rotativas del agropecuario; "Cría de <pez>"
   para sumar especies de otros biomas al lago.
 
 ### Fase 4 — Mejoras del pueblo
@@ -511,7 +511,7 @@ el pueblo también hace progresar. Esta sección precisa § 5 (Oficios).
 
 1. ¿Se elimina el overworld del todo o queda alguna zona caminable
    (p. ej. la Torre del Tiempo / Prueba del Tiempo)?
-2. Nombres del pueblo, del comerciante y de los lugares (§ 2.1).
+2. Nombres del pueblo, del agropecuario y de los lugares (§ 2.1).
 3. ¿El botín se revela automáticamente al volver o hay que llevarlo a
    la torre? ¿Qué se puede "ajustar" (reroll, elegir afijo)?
 4. Peso inicial por jugador ausente (`room.absentDifficultyWeight`):

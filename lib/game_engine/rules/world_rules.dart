@@ -101,7 +101,7 @@ abstract final class WorldRules {
       return math.sqrt(dx * dx + dy * dy);
     }
 
-    for (final l in TownLayout.landmarks) {
+    for (final l in map?.townMarks ?? TownLayout.landmarks) {
       final d = rectDist(l.x + ox, l.y + oy, l.w, l.h);
       if (d < bd) (bd, best) = (d, l.spot);
     }

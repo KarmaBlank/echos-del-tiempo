@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../data/town_layout.dart';
 import '../models/game_map.dart' show Tile;
 import '../models/world_save.dart';
@@ -29,21 +31,57 @@ class TownPlan {
       TownLayout.height +
       kTownStrip * (s.side(TownSide.norte) + s.side(TownSide.sur));
 
-  /// Caminos fijos del pueblo base (coordenadas del pueblo base; el eje
-  /// norte-sur sigue hasta el borde sur del mapa).
+  /// Los lugares del pueblo en su posición de este mundo (coordenadas del
+  /// pueblo base; town_editor.md § 3.3): los movidos donde los dejó el
+  /// dueño, el resto en su lugar de siempre. Mismo orden que
+  /// `TownLayout.landmarks` (la prioridad de las etiquetas).
+  static List<TownLandmark> landmarksOf(TownState s) => s.marks.isEmpty
+      ? TownLayout.landmarks
+      : [
+          for (final l in TownLayout.landmarks)
+            if (s.marks[l.id] case (final x, final y)) l.at(x, y) else l,
+        ];
+
+  /// El lugar [spot] en este mundo.
+  static TownLandmark landmarkOf(TownState s, TownSpot spot) =>
+      landmarksOf(s).firstWhere((l) => l.spot == spot);
+
+  /// ¿Algún lugar quedó fuera de su posición de siempre? Con todo en su
+  /// lugar el plano es el de siempre (caminos fijos completos); si no,
+  /// solo queda fijo el anillo de la fuente con su eje al sur y cada lugar
+  /// se conecta por un camino procedural (§ 4.1).
+  static bool rearranged(TownState s) {
+    for (final l in TownLayout.landmarks) {
+      final m = s.marks[l.id];
+      if (m != null && m != (l.x, l.y)) return true;
+    }
+    return false;
+  }
+
+  /// Caminos fijos (coordenadas del pueblo base; el eje norte-sur sigue
+  /// hasta el borde sur del mapa). Sin lugares movidos, los de siempre;
+  /// con alguno movido, el anillo de la fuente (la plaza, el centro de la
+  /// red) y su eje al sur, donde esté la fuente.
   static List<TownRect> fixedPaths(TownState s) {
     final south = heightOf(s) - s.origin.$2;
+    if (!rearranged(s)) {
+      return [
+        const TownRect(3, 5, 28, 1),
+        TownRect(16, 5, 2, south - 5),
+        const TownRect(14, 8, 6, 6),
+        const TownRect(11, 16, 16, 1),
+      ];
+    }
+    final f = landmarkOf(s, TownSpot.fountain);
     return [
-      const TownRect(3, 5, 28, 1),
-      TownRect(16, 5, 2, south - 5),
-      const TownRect(14, 8, 6, 6),
-      const TownRect(11, 16, 16, 1),
+      TownRect(f.x - 2, f.y - 2, 6, 6),
+      TownRect(f.x, f.y + 4, 2, math.max(0, south - f.y - 4)),
     ];
   }
 
-  /// Lugares fijos (con un tile de margen) donde no se construye.
+  /// Lugares (con un tile de margen) y caminos fijos: ahí no se construye.
   static List<TownRect> reserved(TownState s) => [
-        for (final l in TownLayout.landmarks)
+        for (final l in landmarksOf(s))
           TownRect(l.x, l.y, l.w, l.h).inflate(1),
         ...fixedPaths(s),
       ];
@@ -66,6 +104,7 @@ class TownPlan {
   /// Lo que cambia el plano (no las parcelas ni los peces).
   static String keyOf(TownState s) => [
         for (final v in TownSide.values) s.side(v),
+        for (final l in landmarksOf(s)) '${l.id}:${l.x}.${l.y}',
         for (final b in s.builds)
           '${b.id}:${b.kind.name}:${b.parts.map((p) => p.toJson().join('.')).join('/')}',
       ].join(',');
@@ -162,31 +201,43 @@ class TownPlan {
       final (sx, sy) = signOf(s, b);
       put(TownRect(sx, sy, 1, 1), Tile.sign);
     }
-    for (final l in TownLayout.landmarks) {
+    final marks = landmarksOf(s);
+    for (final l in marks) {
       put(TownRect(l.x, l.y, l.w, l.h), l.tile);
     }
-    // Caminos procedurales: de cada construcción al camino más cercano.
+    // Caminos procedurales: con lugares movidos, primero cada lugar (en
+    // orden) hasta la red que sale de la fuente; después cada
+    // construcción al camino más cercano.
     final unreached = <String>{};
+    if (rearranged(s)) {
+      for (final l in marks) {
+        if (l.spot == TownSpot.fountain) continue;
+        final r = TownRect(l.x, l.y, l.w, l.h);
+        if (!_connect(t, w, h, r, r.contains, ox, oy)) unreached.add(l.id);
+      }
+    }
     for (final b in s.builds) {
-      if (!_connect(t, w, h, b, ox, oy)) unreached.add(b.id);
+      if (!_connect(t, w, h, b.bounds, b.contains, ox, oy)) {
+        unreached.add(b.id);
+      }
     }
     return TownPlan._(w, h, ox, oy, t, unreached);
   }
 
-  /// Dijkstra desde los tiles al lado de [b] hasta cualquier camino; pinta
-  /// el recorrido. `false` si no hay forma de llegar.
-  static bool _connect(
-      List<List<String>> t, int w, int h, TownBuild b, int ox, int oy) {
+  /// Dijkstra desde los tiles al lado de lo que ocupa [bb] ([inside])
+  /// hasta cualquier camino; pinta el recorrido. `false` si no hay forma
+  /// de llegar.
+  static bool _connect(List<List<String>> t, int w, int h, TownRect bb,
+      bool Function(int, int) inside, int ox, int oy) {
     bool open(int x, int y) =>
         x >= 0 && y >= 0 && x < w && y < h &&
         (t[y][x] == Tile.grass || t[y][x] == Tile.path);
     final starts = <int>[];
-    final bb = b.bounds;
     for (var y = bb.y - 1; y <= bb.bottom; y++) {
       for (var x = bb.x - 1; x <= bb.right; x++) {
-        if (b.contains(x, y)) continue;
-        final near = b.contains(x - 1, y) || b.contains(x + 1, y) ||
-            b.contains(x, y - 1) || b.contains(x, y + 1);
+        if (inside(x, y)) continue;
+        final near = inside(x - 1, y) || inside(x + 1, y) ||
+            inside(x, y - 1) || inside(x, y + 1);
         final mx = x + ox, my = y + oy;
         if (!near || !open(mx, my)) continue;
         if (t[my][mx] == Tile.path) return true;

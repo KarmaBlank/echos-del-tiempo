@@ -334,15 +334,19 @@ abstract final class MapGenerator {
 
   static GameMap _buildTown(TownState s) {
     final p = TownPlan.of(s);
+    final marks = TownPlan.landmarksOf(s);
+    // Aparición: al sur de la fuente, donde esté (town_editor.md § 3.3).
+    final f = marks.firstWhere((l) => l.spot == TownSpot.fountain);
+    final sp = TownLayout.spawnFor(f.x, f.y);
     return GameMap(
       width: p.width,
       height: p.height,
       rows: [for (final row in p.tiles) row.join()],
       theme: TownLayout.theme,
-      spawn: WorldPoint(TownLayout.spawn.x + p.ox * tileSize,
-          TownLayout.spawn.y + p.oy * tileSize),
+      spawn: WorldPoint(sp.x + p.ox * tileSize, sp.y + p.oy * tileSize),
       lobby: true,
       townOrigin: (p.ox, p.oy),
+      townMarks: marks,
     );
   }
 

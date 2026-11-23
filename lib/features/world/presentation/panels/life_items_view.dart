@@ -9,13 +9,15 @@ import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
+import 'life_item_grid.dart';
 
 /// Pestaña PESCA Y CULTIVO de PERSONAJE (farming.md § 11, fishing.md
 /// § 5.1): herramientas de oficio, pescados, basura del agua, semillas,
 /// abonos y cosechas. Nunca ocupan casilleros del inventario. Solo en el
 /// pueblo (en una misión se ve el aviso). Desde v0.24.2 una categoría
 /// por vez (pestañas con la cantidad) y un buscador, en vez de secciones
-/// apiladas; cada fila con su ícono.
+/// apiladas; cada fila con su ícono. Desde v0.24.4 una grilla de casillas con el
+/// detalle de la elegida a la derecha ([LifeItemGrid]).
 class LifeItemsView extends StatefulWidget {
   const LifeItemsView(
       {super.key,
@@ -50,12 +52,6 @@ Color cropQualityColor(CropQuality q) => fishRarityColor(switch (q) {
       CropQuality.legendario => FishRarity.legendario,
     });
 
-class _Row {
-  const _Row(this.search, this.widget);
-  final String search;
-  final Widget widget;
-}
-
 class _LifeItemsViewState extends State<LifeItemsView> {
   var _cat = LifeItemsCategory.herramientas;
   var _query = '';
@@ -68,13 +64,13 @@ class _LifeItemsViewState extends State<LifeItemsView> {
             key: const ValueKey('life-items-away'), style: DsText.detail()),
       );
     }
-    final rows = {
-      for (final c in LifeItemsCategory.values) c: _rows(c),
+    final cells = {
+      for (final c in LifeItemsCategory.values) c: _cells(c),
     };
     final q = _query.trim().toLowerCase();
     final shown = [
-      for (final r in rows[_cat]!)
-        if (q.isEmpty || r.search.toLowerCase().contains(q)) r.widget
+      for (final c in cells[_cat]!)
+        if (q.isEmpty || c.search.toLowerCase().contains(q)) c
     ];
     return Column(
       key: const ValueKey('life-items'),
@@ -86,7 +82,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
               tabs: [
                 for (final c in LifeItemsCategory.values)
                   DsTab(c.label,
-                      badge: '${rows[c]!.length}',
+                      badge: '${cells[c]!.length}',
                       key: ValueKey('life-cat-${c.name}')),
               ],
               index: _cat.index,
@@ -102,64 +98,60 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         ]),
         SizedBox(height: DsSpace.xs),
         Expanded(
-          child: shown.isEmpty
-              ? Padding(
-                  padding: EdgeInsets.all(DsSpace.sm),
-                  child: Text(
-                      q.isEmpty ? 'No hay nada acá.' : 'Sin resultados.',
-                      key: const ValueKey('life-items-empty'),
-                      style: DsText.detail()))
-              : ListView(
-                  key: ValueKey('life-list-${_cat.name}'), children: shown),
+          child: LifeItemGrid(
+            key: ValueKey('life-list-${_cat.name}'),
+            groups: [LifeItemGroup(null, shown)],
+            empty: q.isEmpty ? 'No hay nada acá.' : 'Sin resultados.',
+            emptyKey: const ValueKey('life-items-empty'),
+          ),
         ),
       ],
     );
   }
 
-  /// A la derecha: un tag (tipo, rareza, calidad) y la acción.
-  static Widget _trail(List<Widget> parts) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        for (var i = 0; i < parts.length; i++) ...[
-          if (i > 0) SizedBox(width: DsSpace.xs),
-          parts[i],
-        ]
-      ]);
+  static const _icon = LifeItemGrid.iconSize;
 
-  List<_Row> _rows(LifeItemsCategory cat) {
+  List<LifeItemCellData> _cells(LifeItemsCategory cat) {
     final c = widget.controller;
     final life = widget.profile.life;
     final f = life.farm;
     switch (cat) {
       case LifeItemsCategory.herramientas:
-        _Row tool(String id, String name, FishRarity r, String kind,
-                bool equipped, VoidCallback onEquip) =>
-            _Row(
-                '$name $kind',
-                DsListRow(
-                  key: ValueKey('life-tool-$id'),
-                  compact: true,
-                  leading: LifeIcon(id, LifeIconKind.herramienta),
-                  title: name,
-                  titleColor: fishRarityColor(r),
-                  detail: r.label,
-                  trailing: _trail([
-                    DsTag(kind.toUpperCase(), color: DsColors.textSecondary),
-                    equipped
-                        ? const DsTag('EQUIPADA', color: DsColors.reward)
-                        : DsButton('EQUIPAR',
-                            key: ValueKey('life-tool-eq-$id'),
-                            size: DsButtonSize.compact,
-                            onPressed: onEquip),
-                  ]),
-                ));
+        LifeItemCellData tool(String id, String name, FishRarity r, String kind,
+                int reqLevel, bool equipped, VoidCallback onEquip) =>
+            LifeItemCellData(
+              id: 'life-tool-$id',
+              icon: LifeIcon(id, LifeIconKind.herramienta, size: _icon),
+              border: fishRarityColor(r),
+              search: '$name $kind',
+              equipped: equipped,
+              caption: 'Nv $reqLevel',
+              detail: LifeItemDetail(
+                name: name,
+                nameColor: fishRarityColor(r),
+                tags: [
+                  (kind.toUpperCase(), DsColors.textSecondary),
+                  (r.label.toUpperCase(), fishRarityColor(r)),
+                ],
+                lines: ['Nivel requerido: $reqLevel'],
+                actions: [
+                  equipped
+                      ? const DsTag('EQUIPADA', color: DsColors.reward)
+                      : DsButton('EQUIPAR',
+                          key: ValueKey('life-tool-eq-$id'),
+                          size: DsButtonSize.compact,
+                          onPressed: onEquip),
+                ],
+              ),
+            );
         return [
           for (final id in life.rods)
             if (kRods[id] case final r?)
-              tool(id, r.name, r.rarity, 'Caña', life.rod == id,
+              tool(id, r.name, r.rarity, 'Caña', r.reqLevel, life.rod == id,
                   () => c.equipRod(id)),
           for (final id in [...f.hoes, ...f.cans])
             if (kFarmTools[id] case final d?)
-              tool(id, d.name, d.rarity, d.kind.label,
+              tool(id, d.name, d.rarity, d.kind.label, d.reqLevel,
                   f.hoe == id || f.can == id, () => c.equipFarmTool(id)),
         ];
       case LifeItemsCategory.pescados:
@@ -169,93 +161,134 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         return [
           for (final d in kFish.values)
             if (life.count(d.id) > 0 && d.biome != kWaterJunkBiome)
-              _Row(
-                  d.name,
-                  DsListRow(
-                    key: ValueKey('life-fish-${d.id}'),
-                    compact: true,
-                    leading: LifeIcon(d.id, LifeIconKind.pescado),
-                    title: '${d.name} ×${life.count(d.id)}',
-                    titleColor: fishRarityColor(d.rarity),
-                    detail: '${d.price} de oro',
-                    trailing: _trail([
-                      DsTag(d.rarity.label.toUpperCase(),
-                          color: fishRarityColor(d.rarity)),
-                      DsButton('SOLTAR EN EL LAGO',
-                          key: ValueKey('life-fish-stock-${d.id}'),
-                          size: DsButtonSize.compact,
-                          tooltip: lake == null
-                              ? 'Acercate a un lago'
-                              : (lakeFull ? 'El lago está lleno' : null),
-                          onPressed: lakeFull
-                              ? null
-                              : () => c.stockFish(d.id, lake.id)),
-                    ]),
-                  )),
+              LifeItemCellData(
+                id: 'life-fish-${d.id}',
+                icon: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
+                border: fishRarityColor(d.rarity),
+                search: d.name,
+                count: life.count(d.id),
+                caption: '${d.price} oro',
+                detail: LifeItemDetail(
+                  name: d.name,
+                  nameColor: fishRarityColor(d.rarity),
+                  tags: [
+                    ('PESCADO', DsColors.textSecondary),
+                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                  ],
+                  lines: [
+                    'Tenés ${life.count(d.id)}',
+                    'Vale ${d.price} de oro c/u',
+                  ],
+                  actions: [
+                    DsButton('SOLTAR EN EL LAGO',
+                        key: ValueKey('life-fish-stock-${d.id}'),
+                        size: DsButtonSize.compact,
+                        tooltip: lake == null
+                            ? 'Acercate a un lago'
+                            : (lakeFull ? 'El lago está lleno' : null),
+                        onPressed:
+                            lakeFull ? null : () => c.stockFish(d.id, lake.id)),
+                  ],
+                ),
+              ),
           for (final d in kFish.values)
             if (life.count(d.id) > 0 && d.biome == kWaterJunkBiome)
-              _Row(
-                  d.name,
-                  DsListRow(
-                    key: ValueKey('life-junk-${d.id}'),
-                    compact: true,
-                    leading: LifeIcon(d.id, LifeIconKind.basura),
-                    title: '${d.name} ×${life.count(d.id)}',
-                    detail: '${d.price} de oro',
-                    trailing: const DsTag('BASURA DEL AGUA',
-                        color: DsColors.textSecondary),
-                  )),
+              LifeItemCellData(
+                id: 'life-junk-${d.id}',
+                icon: LifeIcon(d.id, LifeIconKind.basura, size: _icon),
+                border: DsColors.textSecondary,
+                search: d.name,
+                count: life.count(d.id),
+                caption: '${d.price} oro',
+                detail: LifeItemDetail(
+                  name: d.name,
+                  nameColor: DsColors.text,
+                  tags: const [('BASURA DEL AGUA', DsColors.textSecondary)],
+                  lines: [
+                    'Tenés ${life.count(d.id)}',
+                    'Vale ${d.price} de oro c/u',
+                  ],
+                ),
+              ),
         ];
       case LifeItemsCategory.semillas:
         return [
           for (final e in f.seeds.entries)
             if (kCrops[e.key] case final d?)
-              _Row(
-                  d.seedName,
-                  DsListRow(
-                    key: ValueKey('life-seed-${d.id}'),
-                    compact: true,
-                    leading: LifeIcon('semilla_${d.id}', LifeIconKind.semilla),
-                    title: '${d.seedName} ×${e.value}',
-                    titleColor: fishRarityColor(d.rarity),
-                    detail: 'Crece en ${(d.growSec / 60).round()} min',
-                    trailing: f.activeSeed == d.id
+              LifeItemCellData(
+                id: 'life-seed-${d.id}',
+                icon: LifeIcon('semilla_${d.id}', LifeIconKind.semilla,
+                    size: _icon),
+                border: fishRarityColor(d.rarity),
+                search: d.seedName,
+                count: e.value,
+                equipped: f.activeSeed == d.id,
+                caption: '${(d.growSec / 60).round()} min',
+                detail: LifeItemDetail(
+                  name: d.seedName,
+                  nameColor: fishRarityColor(d.rarity),
+                  tags: [
+                    ('SEMILLA', DsColors.textSecondary),
+                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                  ],
+                  lines: [
+                    'Tenés ${e.value}',
+                    'Crece en ${(d.growSec / 60).round()} min',
+                  ],
+                  actions: [
+                    f.activeSeed == d.id
                         ? const DsTag('PARA PLANTAR', color: DsColors.reward)
                         : DsButton('ELEGIR',
                             key: ValueKey('life-seed-pick-${d.id}'),
                             size: DsButtonSize.compact,
                             onPressed: () => c.selectSeed(d.id)),
-                  )),
+                  ],
+                ),
+              ),
           for (final e in f.ferts.entries)
             if (kFertilizers[e.key] case final d?)
-              _Row(
-                  d.name,
-                  DsListRow(
-                    key: ValueKey('life-fert-${d.id}'),
-                    compact: true,
-                    leading: LifeIcon(d.id, LifeIconKind.semilla),
-                    title: '${d.name} ×${e.value}',
-                    titleColor: fishRarityColor(d.rarity),
-                    detail: 'Mejora la calidad de la cosecha',
-                    trailing:
-                        const DsTag('ABONO', color: DsColors.textSecondary),
-                  )),
+              LifeItemCellData(
+                id: 'life-fert-${d.id}',
+                icon: LifeIcon(d.id, LifeIconKind.semilla, size: _icon),
+                border: fishRarityColor(d.rarity),
+                search: d.name,
+                count: e.value,
+                detail: LifeItemDetail(
+                  name: d.name,
+                  nameColor: fishRarityColor(d.rarity),
+                  tags: const [('ABONO', DsColors.textSecondary)],
+                  lines: ['Tenés ${e.value}'],
+                  description: 'Mejora la calidad de la cosecha. Se usa con F '
+                      'sobre un cultivo.',
+                ),
+              ),
         ];
       case LifeItemsCategory.cosechas:
         return [
           for (final e in f.crops.entries)
             if (parseCropKey(e.key) case (final d, final q)?)
-              _Row(
-                  '${d.name} ${q.label}',
-                  DsListRow(
-                    key: ValueKey('life-crop-${d.id}-${q.index}'),
-                    compact: true,
-                    leading: LifeIcon('cosecha_${d.id}', LifeIconKind.cosecha),
-                    title: '${d.name} ×${e.value}',
-                    detail: '${d.price} de oro c/u',
-                    trailing: DsTag(q.label.toUpperCase(),
-                        color: cropQualityColor(q)),
-                  )),
+              LifeItemCellData(
+                id: 'life-crop-${d.id}-${q.index}',
+                icon: LifeIcon('cosecha_${d.id}', LifeIconKind.cosecha,
+                    size: _icon),
+                border: cropQualityColor(q),
+                search: '${d.name} ${q.label}',
+                count: e.value,
+                caption: '${d.price} oro',
+                detail: LifeItemDetail(
+                  name: d.name,
+                  nameColor: cropQualityColor(q),
+                  tags: [
+                    ('COSECHA', DsColors.textSecondary),
+                    (q.label.toUpperCase(), cropQualityColor(q)),
+                  ],
+                  lines: [
+                    'Tenés ${e.value}',
+                    'Calidad ${q.label}',
+                    'Vale ${d.price} de oro c/u',
+                  ],
+                ),
+              ),
         ];
     }
   }

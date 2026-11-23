@@ -38,7 +38,13 @@ class TownState {
       this.sides = const {},
       this.builds = kDefaultBuilds,
       this.helper = 0,
-      this.silo = const {}});
+      this.silo = const {},
+      this.marks = const {}});
+
+  /// Lugares fijos movidos (town_editor.md § 3.3): id del lugar (`@forge`,
+  /// …) → esquina en coordenadas del pueblo base. Los que no están, en su
+  /// lugar de siempre (`TownLayout.landmarks`).
+  final Map<String, (int, int)> marks;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -140,6 +146,7 @@ class TownState {
     Map<String, FarmPlot>? plots,
     int? helper,
     Map<String, int>? silo,
+    Map<String, (int, int)>? marks,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -149,13 +156,14 @@ class TownState {
         sides: sides ?? this.sides,
         builds: builds ?? this.builds,
         helper: helper ?? this.helper,
-        silo: silo ?? this.silo);
+        silo: silo ?? this.silo,
+        marks: marks ?? this.marks);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
   }
 
-  /// Lo del pueblo que ven todos en la sala (protocolo 45, `town` del
+  /// Lo del pueblo que ven todos en la sala (protocolo 46, `town` del
   /// estado): sin el pozo (viaja aparte) ni las mejoras sin efecto.
   Map<String, Object?> farmJson() => {
         if (lake != null) 'lake': lake,
@@ -167,6 +175,10 @@ class TownState {
         'builds': [for (final b in builds) b.toJson()],
         if (helper > 0) 'helper': helper,
         if (silo.isNotEmpty) 'silo': silo,
+        if (marks.isNotEmpty)
+          'marks': {
+            for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
+          },
       };
 
   Map<String, Object?> toJson() => {
@@ -181,6 +193,14 @@ class TownState {
           for (final e in v.entries)
             if (e.value is num && (e.value as num) > 0)
               '${e.key}': (e.value as num).round(),
+        }
+      : const {};
+
+  static Map<String, (int, int)> _marks(Object? v) => v is Map
+      ? {
+          for (final e in v.entries)
+            if (e.value case [final num x, final num y, ...])
+              '${e.key}': (x.round(), y.round()),
         }
       : const {};
 
@@ -211,6 +231,7 @@ class TownState {
           : null,
       helper: raw['helper'] is num ? (raw['helper'] as num).round() : 0,
       silo: _ints(raw['silo']),
+      marks: _marks(raw['marks']),
     );
     final bs = raw['builds'];
     if (bs is List) {

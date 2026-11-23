@@ -181,7 +181,13 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            // Etiquetas en una sola fila que se desliza de costado: la
+            // lista se queda con el alto (v0.24.4).
+            SingleChildScrollView(
+              key: const ValueKey('tpl-tag-bar'),
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+              for (final w in <Widget>[
               DsButton('TODAS',
                   key: const ValueKey('tpl-tag-all'),
                   size: DsButtonSize.compact,
@@ -195,7 +201,8 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
                     kind: DsButtonKind.ghost,
                     selected: _tag == t,
                     onPressed: () => setState(() => _tag = t)),
-            ]),
+              ]) ...[w, SizedBox(width: DsSpace.xs)],
+            ])),
             SizedBox(height: DsSpace.xs),
             for (final t in list)
               DsListRow(
@@ -203,8 +210,10 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
                 leading: t.id == widget.plan.templateId
                     ? Text('★', style: DsText.body(DsColors.reward))
                     : null,
+                // Nombre completo en su línea; dificultad y marcas abajo.
+                wrap: true,
                 title: retroText(t.name),
-                detail: retroText('${'♦' * t.difficulty}'
+                subtitle: retroText('${'♦' * t.difficulty}'
                     '${t.imported ? ' · importada' : ''}'
                     '${t.isGroup ? ' · grupo' : ''}'),
                 selected: t.id == _id,

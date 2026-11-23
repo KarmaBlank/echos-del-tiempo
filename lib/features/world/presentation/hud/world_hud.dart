@@ -143,7 +143,14 @@ class WorldHud extends StatelessWidget {
       final chatMin = RetroType.width(context, expanded ? 240 : 200);
       final perRow = perRowFor(expanded);
       final partyWidth = perRow * (boxW + 6);
-      final chatWidth = (box.maxWidth - partyWidth - _gap * 3)
+      // Con una herramienta en la mano el chat cede lugar a la barra de
+      // abajo al centro (v0.24.4).
+      // A la derecha, lo más ancho entre el grupo y las pociones.
+      final rightWidth = partyWidth < RetroType.width(context, 280)
+          ? RetroType.width(context, 280)
+          : partyWidth;
+      final toolRoom = controller.activeTool == null ? 0.0 : ToolHud.width + _gap;
+      final chatWidth = (box.maxWidth - rightWidth - _gap * 3 - toolRoom)
           .clamp(chatMin, RetroType.width(context, 520));
       return DefaultTextStyle.merge(
         style: small,
@@ -398,6 +405,22 @@ class WorldHud extends StatelessWidget {
                 right: 0,
                 child: Center(child: vote),
               ),
+            // Herramienta en la mano y su aviso (solo en el pueblo): barra
+            // abajo al centro, entre el chat y el grupo (v0.24.4).
+            if (s.players[view.localId] case final me?
+                when controller.activeTool != null)
+              Positioned(
+                left: _gap * 2 + chatWidth,
+                right: _gap * 2 + rightWidth,
+                bottom: _gap,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: ToolHud(controller: controller, profile: me.profile),
+                  ),
+                ),
+              ),
             // `#party`: una fila de `.pbox` (compactas por defecto).
             Positioned(
               right: _gap,
@@ -406,14 +429,6 @@ class WorldHud extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Herramienta en la mano y su aviso (solo en el pueblo).
-                  if (s.players[view.localId] case final me?
-                      when controller.activeTool != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child:
-                          ToolHud(controller: controller, profile: me.profile),
-                    ),
                   // Pociones fuera de batalla (loot.md § 17.5).
                   if (s.mode != SessionMode.battle)
                     if (s.players[view.localId] case final me?)

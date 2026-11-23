@@ -44,7 +44,7 @@ import 'life_level_layer.dart';
 import '../../../../core/audio/sfx_catalog.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
-    show kCrops, CropQuality;
+    show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../../../../game_engine/data/fishing_catalog.dart';
@@ -742,7 +742,7 @@ class MapGame extends Game {
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
-      for (final l in TownLayout.landmarks) {
+      for (final l in map.townMarks ?? TownLayout.landmarks) {
         _rankedText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }
@@ -854,6 +854,11 @@ class MapGame extends Game {
                 farm.drawCan(c, px, py, face);
               case FarmHand.seed:
                 final d = kCrops[p.profile.life.farm.activeSeed];
+                farm.drawSeedBag(
+                    c, px, py, face, FarmPalette.fruit[d?.rarity.index ?? 0]);
+              case FarmHand.fert:
+                // El abono, como bolsa del color de su rareza.
+                final d = kFertilizers[controller.farmFert];
                 farm.drawSeedBag(
                     c, px, py, face, FarmPalette.fruit[d?.rarity.index ?? 0]);
             }

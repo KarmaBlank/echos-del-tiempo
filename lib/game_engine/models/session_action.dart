@@ -550,7 +550,7 @@ class RunBuyUltAction extends SessionAction {
   const RunBuyUltAction(this.ultId);
 }
 
-// ---- Pesca y comerciante (v0.22.0, docs/specs/fishing.md § 6) ----
+// ---- Pesca y agropecuario (v0.22.0, docs/specs/fishing.md § 6) ----
 
 /// `fBite`: picada clavada en un punto de pesca. El host tira el pez
 /// (con [power], la carga del lance 0..1) y lo manda en `FishBiteEvent`.
@@ -577,7 +577,7 @@ class AutoFishAction extends SessionAction {
   const AutoFishAction();
 }
 
-/// `fSell`: vender en el comerciante. [species] `null` = Vender todo
+/// `fSell`: vender en el agropecuario. [species] `null` = Vender todo
 /// (menos legendarios). [materials]: cobrar en Esquirlas.
 class SellFishAction extends SessionAction {
   final String? species;
@@ -610,7 +610,7 @@ class FarmTileAction extends SessionAction {
   const FarmTileAction(this.op, this.tx, this.ty, {this.seed});
 }
 
-/// Compra, venta y equipo de la huerta en el comerciante.
+/// Compra, venta y equipo de la huerta en el agropecuario.
 enum FarmShopOp {
   buySeed,
   buyTool,
