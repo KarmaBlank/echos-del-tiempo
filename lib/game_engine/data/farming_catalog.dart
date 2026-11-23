@@ -186,6 +186,25 @@ const kCrops = <String, CropDef>{
       FishRarity.legendario,
       biome: 'zona1', growSec: 1800, price: 1100, xp: 175,
       lore: 'Creció cuando el pasado era más avanzado que el presente.'),
+  // Semillas exclusivas del Bosque (overworld_biomes.md § 3.3): salen de
+  // recolectar y se plantan en la huerta del pueblo; no se venden.
+  'helecho_dulce': CropDef('helecho_dulce', 'Helecho dulce', FishRarity.comun,
+      biome: 'bosque', growSec: 260, price: 24, xp: 9),
+  'arandano_sombra': CropDef('arandano_sombra', 'Arándano de sombra',
+      FishRarity.raro,
+      biome: 'bosque', growSec: 520, price: 60, xp: 19),
+  'seta_reloj': CropDef('seta_reloj', 'Seta del reloj', FishRarity.epico,
+      biome: 'bosque', growSec: 960, price: 175, xp: 45,
+      lore: 'Crece en anillos, como si contara horas que ya pasaron.'),
+  // Productos silvestres del Bosque (se recolectan; nunca dan semilla).
+  'moras_bosque': CropDef('moras_bosque', 'Moras del bosque',
+      FishRarity.comun,
+      biome: 'silvestre', growSec: 1e9, price: 9, xp: 5),
+  'hierba_rocio': CropDef('hierba_rocio', 'Hierba de rocío', FishRarity.comun,
+      biome: 'silvestre', growSec: 1e9, price: 12, xp: 6),
+  'hongo_ambar': CropDef('hongo_ambar', 'Hongo ámbar', FishRarity.raro,
+      biome: 'silvestre', growSec: 1e9, price: 32, xp: 12,
+      lore: 'Brilla de noche con la misma luz que las runas viejas.'),
 };
 
 /// Clave de la bolsa de cosechas: `<cultivo>@<calidad>`.

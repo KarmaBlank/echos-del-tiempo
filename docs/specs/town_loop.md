@@ -390,6 +390,10 @@ Mundos por cuenta (§ 11c):
 ## 11b. Exteriores de bioma y refuerzos
 
 ### Exteriores de bioma
+- **v0.26.0, primera pasada:** mapa de viaje (camino del borde sur o la
+  fuente) y el exterior del Bosque con lago, matas y dos entradas; todos
+  viajan juntos. Detalle en `docs/specs/overworld_biomes.md` (manda sobre
+  esta sección en lo implementado).
 - Se pesca **en el pueblo y en cada bioma**. Cada bioma tiene una
   **zona exterior** (antes de sus mazmorras) con recolectables:
   semillas, puntos de pesca, recursos. Sin combate obligatorio.
@@ -399,6 +403,8 @@ Mundos por cuenta (§ 11c):
 - Tunables: `biome.gatherNodes`, `biome.nodeRespawnMissions`.
 
 ### Refuerzos (unirse a una misión en curso)
+- v0.26.0: el refuerzo entra a la batalla en curso con
+  `reinforceDelay` intervalos de espera (overworld_biomes.md § 5).
 - Quien no está en la misión (pueblo o bioma) puede **unirse a mitad**:
   prepararse → viajar al bioma → entrar a la mazmorra.
 - **Si la party está en batalla:** el refuerzo entra a esa batalla con

@@ -44,6 +44,13 @@ Rarezas: común, raro, épico, legendario.
   "Cría de <pez>", un objeto que suma esa especie a `TownState.lake`.
   No hace falta tocar reglas: solo agregar la especie a la lista.
 
+### 2.1b Lago del Bosque (v0.26.0)
+
+El exterior del Bosque tiene su lago con tabla propia (`kForestFish`):
+Mojarra de sombra, Bagre de raíz, Trucha musgosa, Lucio rúnico y el
+legendario Salmón del Eco Quieto; basura propia (Hojarasca mojada). Sin
+bonus de lago del pueblo. Ver `overworld_biomes.md` § 3.1.
+
 ### 2.2 Tirada (anfitrión)
 - Rareza por pesos `weightComun/Raro/Epico/Legendario` (70/22/7/1). Los
   no comunes × (1 + bonus de rareza), con bonus = rareza efectiva de la

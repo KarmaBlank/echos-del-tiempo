@@ -94,6 +94,22 @@ const Map<String, MapTheme> kMapThemes = {
     tree: Color(0xFF1C5A2A),
     tree2: Color(0xFF2E7A38),
   ),
+  // Exterior del Bosque (overworld_biomes.md § 3, v0.26.0): pasto más
+  // oscuro que el pueblo, árboles densos y agua verdosa.
+  'bosque_ext': MapTheme(
+    ground: Color(0xFF3A7A3C),
+    ground2: Color(0xFF4A8E46),
+    wall: Color(0xFF154520),
+    wall2: Color(0xFF235F2C),
+    path: Color(0xFF8C6E45),
+    path2: Color(0xFF76603C),
+    water: Color(0xFF256B7A),
+    grass: Color(0xFF3A7A3C),
+    grass2: Color(0xFF4A8E46),
+    tree: Color(0xFF14421E),
+    tree2: Color(0xFF22602C),
+    trunk: Color(0xFF3A2414),
+  ),
   // Mapa del mundo fuera del pueblo (el pueblo usa `lobby`).
   'mundo': MapTheme(
     ground: Color(0xFF4FA046),
@@ -328,4 +344,13 @@ abstract final class FishingPalette {
   static const barBack = Color(0xFF26303F);
   static const zoneIn = Color(0xAA4CD07D);
   static const zoneOut = Color(0xAAE0A040);
+}
+
+/// Colores de los recolectables de los exteriores (overworld_biomes.md
+/// § 3.2): la mata y el fruto de cada tipo (índice de `kForageKinds`).
+abstract final class ForagePalette {
+  static const bush = Color(0xFF2E6B30);
+  static const bushLight = Color(0xFF3F8A3E);
+  static const picked = Color(0xFF4F5E3A);
+  static const fruit = [Color(0xFF8E3FD1), Color(0xFF9BE36A), Color(0xFFE0A040)];
 }

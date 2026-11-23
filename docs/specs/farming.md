@@ -160,6 +160,15 @@ Los legendarios son ecos (futuro inmutable, reloj quieto, pasado
 magitec): nombres y textos esperan el OK del dueño. Todo personaje
 arranca con 6 semillas de nabo, azada de rama y regadera de lata.
 
+### 3.1b Bosque (v0.26.0)
+
+Tres semillas exclusivas que salen solo de recolectar en el exterior del
+Bosque (`forageSeedChance`): Helecho dulce, Arándano de sombra y Seta del
+reloj. Se plantan en la huerta del pueblo; no se venden. Los productos
+silvestres (Moras del bosque, Hierba de rocío, Hongo ámbar) son cosechas
+de calidad normal que no se plantan. Recolectar da XP de Cultivo. Ver
+`overworld_biomes.md` § 3.2 y § 3.3.
+
 ### 3.2 Abonos
 | Abono | Precio | Sesgo (`fert<K>Bias`) | Crecimiento (`fert<K>Speed`) |
 |---|---|---|---|

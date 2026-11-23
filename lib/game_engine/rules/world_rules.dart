@@ -101,9 +101,21 @@ abstract final class WorldRules {
       return math.sqrt(dx * dx + dy * dy);
     }
 
-    for (final l in TownLayout.landmarks) {
-      final d = rectDist(l.x + ox, l.y + oy, l.w, l.h);
-      if (d < bd) (bd, best) = (d, l.spot);
+    // Exterior de bioma: sin los lugares del pueblo.
+    if (map?.place == null) {
+      for (final l in TownLayout.landmarks) {
+        final d = rectDist(l.x + ox, l.y + oy, l.w, l.h);
+        if (d < bd) (bd, best) = (d, l.spot);
+      }
+    }
+    // Camino del borde sur: mapa de viaje (overworld_biomes.md § 1).
+    if (map != null && map.lobby) {
+      final tx = (x / tileSize).floor(), ty = (y / tileSize).floor();
+      if (ty >= map.height - 2 &&
+          map.contains(tx, ty) &&
+          map.tileAt(tx, ty) == Tile.path) {
+        return TownSpot.travel;
+      }
     }
     if (map == null) {
       for (final (fx, fy) in TownLayout.fishingSpots) {
@@ -122,6 +134,7 @@ abstract final class WorldRules {
         final spot = switch (map.tileAt(tx, ty)) {
           Tile.fishing => TownSpot.fishing,
           Tile.sign => TownSpot.sign,
+          Tile.forage || Tile.forageUsed => TownSpot.forage,
           _ => null,
         };
         if (spot == null) continue;

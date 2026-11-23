@@ -42,6 +42,9 @@ enum WorldPanel {
 
   /// Fuente rúnica: mejoras del pueblo, lago y ayudante (farming.md § 6).
   fountain,
+
+  /// Mapa de viaje: pueblo y biomas (overworld_biomes.md § 1).
+  travel,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).

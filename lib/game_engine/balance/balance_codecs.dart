@@ -1427,6 +1427,11 @@ const _townLabels = {
   'helperPlots': 'Ayudante: parcelas por nivel',
   'helperEverySec': 'Ayudante: segundos entre rondas',
   'helperXpShare': 'Granero: parte de la XP',
+  'forageRespawnSec': 'Bosque: segundos de rebrote de una mata',
+  'forageSeedChance': 'Bosque: chance de semilla al recolectar',
+  'forageXp': 'Bosque: XP de Cultivo por recolectar',
+  'reinforceDelay': 'Refuerzo: turnos de espera al entrar a una pelea',
+  'absentWeight': 'Dificultad: peso de cada ausente de la sala',
 };
 
 Map<String, String> _lifeTreeLabels() => {

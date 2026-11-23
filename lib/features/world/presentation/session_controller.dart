@@ -22,6 +22,8 @@ import '../../../game_engine/models/game_mode.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
+import '../../../game_engine/data/biomes_catalog.dart';
+import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/models/world_save.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
@@ -1188,6 +1190,61 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente a la fuente rúnica: mejoras del pueblo y el tablero.
   bool get nearFountain => townSpot == TownSpot.fountain;
 
+  // ---- Mapa de viaje y exteriores (overworld_biomes.md) ----
+
+  /// En el camino del borde sur: E abre el mapa de viaje.
+  bool get nearTravel => townSpot == TownSpot.travel;
+
+  /// Dónde está el grupo: `pueblo` o el id del bioma.
+  String get place => _s?.place ?? kPueblo;
+
+  /// Viajar (solo el dueño del mundo; los demás van con él).
+  String? get cannotTravel {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby) return 'Solo fuera de misión';
+    if (!isWorldOwner) return 'Decide el anfitrión';
+    if (s.vote != null) return 'Hay una votación en curso';
+    return null;
+  }
+
+  bool travelPlace(String id) {
+    if (cannotTravel != null || id == place) return false;
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(id));
+  }
+
+  /// La mata del exterior frente al jugador local (índice), o `null`.
+  int? get nearForage {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby || s.place != kBosque) {
+      return null;
+    }
+    for (var i = 0; i < BosqueLayout.forage.length; i++) {
+      final f = BosqueLayout.forage[i];
+      if (WorldRules.distance(local.x, local.y, (f.x + 0.5) * 16,
+              (f.y + 0.5) * 16) <
+          24) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  String forageHint(int i) {
+    final k = kForageKinds[BosqueLayout.forage[i].kind];
+    final left =
+        BiomeRules.regrowIn(town, kBosque, i, _s?.time ?? 0).ceil();
+    return left > 0
+        ? '${k.name}: vuelven a crecer en ${left}s'
+        : '[E] Recolectar ${k.name.toLowerCase()}';
+  }
+
+  bool forage() {
+    final i = nearForage;
+    return i != null && _apply(ForageAction(i));
+  }
+
   /// El pueblo de la sala (huerta, ampliaciones, lago).
   TownState get town => _s?.town ?? const TownState();
 
@@ -2006,6 +2063,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.lostLoot);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
+      } else if (nearTravel) {
+        openPanel(WorldPanel.travel);
+      } else if (nearForage != null) {
+        forage();
       } else if (farmTile != null) {
         farmWork();
       } else if (facingWater) {
@@ -3254,7 +3315,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
             _panel == WorldPanel.trader ||
-            _panel == WorldPanel.fountain) &&
+            _panel == WorldPanel.fountain ||
+            _panel == WorldPanel.travel) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -3324,6 +3386,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
+    if (nearTravel) return (WorldPrompt.poi, '[E] Mapa de viaje');
+    if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
     if (farmHint() case final h?) return (WorldPrompt.farm, h);
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
     if (facingWater) return (WorldPrompt.fishing, null);

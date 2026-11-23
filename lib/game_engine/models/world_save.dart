@@ -38,7 +38,13 @@ class TownState {
       this.sides = const {},
       this.builds = kDefaultBuilds,
       this.helper = 0,
-      this.silo = const {}});
+      this.silo = const {},
+      this.wild = const {}});
+
+  /// Recolectables de los exteriores ya usados (overworld_biomes.md § 3.2):
+  /// `<bioma>:<índice>` → segundo de la sala en que vuelve a crecer.
+  /// Al cargar el mundo se recorta al tiempo de rebrote (`setWorld`).
+  final Map<String, int> wild;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -140,6 +146,7 @@ class TownState {
     Map<String, FarmPlot>? plots,
     int? helper,
     Map<String, int>? silo,
+    Map<String, int>? wild,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -149,7 +156,8 @@ class TownState {
         sides: sides ?? this.sides,
         builds: builds ?? this.builds,
         helper: helper ?? this.helper,
-        silo: silo ?? this.silo);
+        silo: silo ?? this.silo,
+        wild: wild ?? this.wild);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -167,6 +175,7 @@ class TownState {
         'builds': [for (final b in builds) b.toJson()],
         if (helper > 0) 'helper': helper,
         if (silo.isNotEmpty) 'silo': silo,
+        if (wild.isNotEmpty) 'wild': wild,
       };
 
   Map<String, Object?> toJson() => {
@@ -211,6 +220,7 @@ class TownState {
           : null,
       helper: raw['helper'] is num ? (raw['helper'] as num).round() : 0,
       silo: _ints(raw['silo']),
+      wild: _ints(raw['wild']),
     );
     final bs = raw['builds'];
     if (bs is List) {

@@ -28,6 +28,13 @@ enum TownSpot {
 
   /// Punto de pesca del lago: abre la pesca (fishing.md § 4).
   fishing,
+
+  /// Camino del borde sur: abre el mapa de viaje (overworld_biomes.md
+  /// § 1). En el pueblo y en cada exterior.
+  travel,
+
+  /// Mata recolectable de un exterior de bioma (overworld_biomes.md § 3.2).
+  forage,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su

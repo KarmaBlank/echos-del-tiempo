@@ -689,6 +689,7 @@ class GameSession {
     this.worldId,
     this.worldName,
     this.town = const TownState(),
+    this.place,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         leaveReady = leaveReady ?? {},
@@ -797,6 +798,11 @@ class GameSession {
   /// host lo reemplaza.
   TownState town;
 
+  /// Dónde está el grupo fuera de las mazmorras (overworld_biomes.md § 4,
+  /// protocolo 46): `null` = el pueblo, si no el id del bioma (`bosque`).
+  /// Lo decide el anfitrión; todos viajan juntos.
+  String? place;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -893,5 +899,6 @@ class GameSession {
         worldId: worldId,
         worldName: worldName,
         town: town,
+        place: place,
       );
 }

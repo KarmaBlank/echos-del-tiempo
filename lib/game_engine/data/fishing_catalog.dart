@@ -125,6 +125,22 @@ const kFish = <String, FishDef>{
       FishRarity.legendario,
       biome: 'zona1', minCm: 40, maxCm: 70, price: 1000, xp: 160,
       lore: 'Las escamas marcan una hora que no avanza.'),
+  // Lago del Bosque (overworld_biomes.md § 3.1, v0.26.0).
+  'mojarra_sombra': FishDef('mojarra_sombra', 'Mojarra de sombra',
+      FishRarity.comun,
+      biome: 'bosque', minCm: 9, maxCm: 18, price: 14, xp: 7),
+  'bagre_raiz': FishDef('bagre_raiz', 'Bagre de raíz', FishRarity.comun,
+      biome: 'bosque', minCm: 20, maxCm: 48, price: 19, xp: 8),
+  'trucha_musgo': FishDef('trucha_musgo', 'Trucha musgosa', FishRarity.raro,
+      biome: 'bosque', minCm: 25, maxCm: 55, price: 50, xp: 17),
+  'lucio_runico': FishDef('lucio_runico', 'Lucio rúnico', FishRarity.epico,
+      biome: 'bosque', minCm: 55, maxCm: 120, price: 150, xp: 42,
+      lore: 'Muerde los anzuelos como si fueran engranajes sueltos.'),
+  'salmon_eco': FishDef('salmon_eco', 'Salmón del Eco Quieto',
+      FishRarity.legendario,
+      biome: 'bosque', minCm: 70, maxCm: 130, price: 1100, xp: 170,
+      lore: 'Remonta un río que todavía no existe: viene del futuro a '
+          'desovar en el pasado, y siempre llega.'),
   // Botín del agua (fishing.md § 8, v0.22.2): la basura va a la bolsa y
   // se vende por poco; el bulto es lo que se ve en la línea antes de saber
   // qué es (nunca entra a la bolsa).
@@ -133,6 +149,9 @@ const kFish = <String, FishDef>{
   'rama_empapada': FishDef('rama_empapada', 'Rama empapada',
       FishRarity.comun,
       biome: kWaterJunkBiome, minCm: 30, maxCm: 80, price: 1, xp: 1),
+  'hojarasca_mojada': FishDef('hojarasca_mojada', 'Hojarasca mojada',
+      FishRarity.comun,
+      biome: kWaterJunkBiome, minCm: 10, maxCm: 30, price: 1, xp: 1),
   kWaterBundle: FishDef(kWaterBundle, 'Algo pesado', FishRarity.raro,
       biome: kWaterJunkBiome, minCm: 0, maxCm: 0, price: 0, xp: 0),
 };
