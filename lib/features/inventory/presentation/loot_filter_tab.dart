@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
@@ -24,7 +25,20 @@ import '../domain/shop_guards.dart';
 import 'item_widgets.dart';
 import 'shop_sections.dart';
 
+/// Ayuda `[?]` de la pestaña, con la gramática corta del filtro (loot.md
+/// § 13). The filter keywords (Mostrar, Rareza…) are the parser's own
+/// words, so every language keeps them as is.
+String filterHelp(Strings s) => '${s.t('ui.inventory.filter.help', {
+      'star': '★',
+      'cross': '✕'
+    })}<br><br>${s.t('ui.inventory.filter.grammar', {
+      'star': '★',
+      'dash': '–',
+      'ellipsis': '…'
+    })}';
+
 /// Gramática corta del filtro (loot.md § 13), para la ayuda.
+/// es-AR only: kept for callers outside this feature; use [filterHelp].
 const kFilterGrammar = '<b>Mostrar</b> u <b>Ocultar</b> [# nombre] y debajo, '
     'con sangría, condiciones y acciones.<br>'
     '<span class="k">Condiciones</span>: Rareza [op] Común/Mágico/Raro/Épico/'
@@ -41,7 +55,8 @@ const kFilterGrammar = '<b>Mostrar</b> u <b>Ocultar</b> [# nombre] y debajo, '
     'suave · Icono circulo/estrella/triangulo/cuadrado/diamante [color].<br>'
     'Gana la primera regla que coincide. # empieza un comentario.';
 
-/// Ayuda `[?]` de la pestaña.
+/// Ayuda `[?]` de la pestaña (es-AR only, for callers outside this
+/// feature that have no [Strings] yet; use [filterHelp]).
 const kFilterHelp = '<b>Filtro de loot</b><br>'
     '<span class="k">CASILLAS</span>: OCULTAR RÁPIDO marca lo que no querés '
     'ver en el mapa (por tipo, peso, uso y nivel nunca se ocultan Épicas ni '
@@ -179,9 +194,12 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
 
     // Barra de herramientas (design_system.md § 4): vista, estado y
     // acciones en una fila; GUARDAR es la principal.
+    final s = ref.strings;
     final status = parsed.ok
-        ? 'Sin errores · ${f.rules.length} regla${f.rules.length == 1 ? '' : 's'}'
-            '${p.lootFilter == null ? ' · por defecto' : ''}'
+        ? s.t('ui.inventory.filter.status_ok', {
+            'n': f.rules.length,
+            'default': p.lootFilter == null ? 'yes' : 'no'
+          })
         : '${parsed.errors.first}'
             '${parsed.errors.length > 1 ? ' (+${parsed.errors.length - 1})' : ''}';
     final statusText = KeyedSubtree(
@@ -198,12 +216,12 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         runSpacing: DsSpace.xs,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          DsButton('CASILLAS',
+          DsButton(s.t('ui.inventory.filter.view_checks'),
               key: const ValueKey('filter-view-checks'),
               size: DsButtonSize.compact,
               selected: !_textView,
               onPressed: () => setState(() => _textView = false)),
-          DsButton('TEXTO',
+          DsButton(s.t('ui.inventory.filter.view_text'),
               key: const ValueKey('filter-view-text'),
               size: DsButtonSize.compact,
               selected: _textView,
@@ -213,20 +231,20 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
               ? statusText
               : Tooltip(message: parsed.errors.join('\n'), child: statusText),
           SizedBox(width: DsSpace.md),
-          DsButton('RESTAURAR POR DEFECTO',
+          DsButton(s.t('ui.inventory.filter.restore_default'),
               key: const ValueKey('filter-default'),
               kind: DsButtonKind.ghost,
               size: DsButtonSize.compact,
               onPressed: _text.text == LootFilterRules.defaultText
                   ? null
                   : () => _text.text = LootFilterRules.defaultText),
-          DsButton('DESHACER',
+          DsButton(s.t('ui.inventory.filter.revert'),
               key: const ValueKey('filter-revert'),
               size: DsButtonSize.compact,
               onPressed: _text.text == _savedText
                   ? null
                   : () => _text.text = _savedText),
-          DsButton('GUARDAR',
+          DsButton(s.t('ui.inventory.filter.save'),
               key: const ValueKey('filter-save'),
               kind: DsButtonKind.primary,
               size: DsButtonSize.compact,
@@ -289,7 +307,8 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ..._buildSection(wants),
-          DsSectionHeader('VISTA PREVIA · NV ${p.level}'),
+          DsSectionHeader(
+              s.t('ui.inventory.filter.preview_title', {'level': p.level})),
           for (final (i, d) in filterSamples(p.level).indexed)
             _sample(rules, fr, f, d, ctx, i),
         ],
@@ -328,6 +347,7 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   /// La explicación está en el "?" ([kFilterHelp]).
   Widget _checksView(FilterDoc doc) {
     final checked = doc.checked;
+    final s = ref.read(stringsProvider);
     Widget group(QuickGroup g) {
       final opts = [
         for (final o in _options)
@@ -373,14 +393,16 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const DsSectionHeader('OCULTAR RÁPIDO'),
+          DsSectionHeader(s.t('ui.inventory.filter.quick_hide')),
           for (final g in QuickGroup.values) group(g),
-          DsSectionHeader('TUS REGLAS (${doc.blocks.length})',
+          DsSectionHeader(
+              s.t('ui.inventory.filter.your_rules', {'n': doc.blocks.length}),
               key: const ValueKey('filter-rules-title')),
           if (doc.blocks.isEmpty)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
-              child: Text(retroText('Sin reglas'), style: DsText.detail()),
+              child: Text(retroText(s.t('ui.inventory.filter.no_rules')),
+                  style: DsText.detail()),
             ),
           for (final (i, b) in doc.blocks.indexed) _ruleRow(doc, i, b),
         ],
@@ -394,6 +416,7 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
     final on = b.enabled;
     final name = FilterDoc.summary(b);
     final conds = FilterDoc.conditionsText(b);
+    final s = ref.read(stringsProvider);
     // El verbo da el color de la fila: verde Mostrar, rojo Ocultar.
     return DsListRow(
       key: ValueKey('filter-rule-$i'),
@@ -402,11 +425,12 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         value: on,
         onChanged: (v) => _setText((doc.setEnabled(i, v), 0)),
       ),
-      title: retroText('${b.show ? 'Mostrar' : 'Ocultar'} · $name'),
+      title: retroText(s.t('ui.inventory.filter.rule_title',
+          {'verb': b.show ? 'show' : 'hide', 'name': name})),
       titleColor: b.show ? DsColors.success : DsColors.danger,
       enabled: on,
       detail: b.errors.isNotEmpty
-          ? retroText('con errores')
+          ? retroText(s.t('ui.inventory.filter.rule_errors'))
           : name != conds
               ? retroText(conds)
               : null,
@@ -424,7 +448,7 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
           kind: DsButtonKind.ghost,
           size: DsButtonSize.compact,
           accent: DsColors.danger,
-          tooltip: 'Borrar la regla',
+          tooltip: s.t('ui.inventory.filter.delete_rule'),
           onPressed: () => _setText((doc.remove(i), 0))),
     );
   }
@@ -433,19 +457,22 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   /// parte del plan y agregarla a la regla del cursor o como una regla
   /// nueva que resalta / oculta.
   List<Widget> _buildSection(BuildWants wants) {
-    String count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+    final s = ref.read(stringsProvider);
+    final bases = wants.weaponTypes.length + wants.weaponBases.length;
     final summary = wants.isEmpty
-        ? 'No tenés plan de build (pestaña BUILD).'
-        : 'Tu plan busca: ${[
-            if (wants.weaponTypes.length + wants.weaponBases.length > 0)
-              count(wants.weaponTypes.length + wants.weaponBases.length,
-                  'base o tipo', 'bases o tipos'),
-            if (wants.mods.isNotEmpty) count(wants.mods.length, 'mod', 'mods'),
-            if (wants.weaponPassive != null) 'una pasiva',
-            if (wants.skills.isNotEmpty)
-              count(wants.skills.length, 'habilidad', 'habilidades'),
-            if (wants.target != null) 'arma objetivo (${wants.best}%)',
-          ].join(' · ')}.';
+        ? s.t('ui.inventory.filter.wants.no_plan')
+        : s.t('ui.inventory.filter.wants.summary', {
+            'parts': [
+              if (bases > 0) s.t('ui.inventory.filter.wants.bases', {'n': bases}),
+              if (wants.mods.isNotEmpty)
+                s.t('ui.inventory.filter.wants.mods', {'n': wants.mods.length}),
+              if (wants.weaponPassive != null) s.t('ui.inventory.filter.wants.passive'),
+              if (wants.skills.isNotEmpty)
+                s.t('ui.inventory.filter.wants.skills', {'n': wants.skills.length}),
+              if (wants.target != null)
+                s.t('ui.inventory.filter.wants.target', {'pct': wants.best}),
+            ].join(' · ')
+          });
     Widget kind(String label, BuildMatch? k) {
       final on = k == null ? _buildKinds.isEmpty : _buildKinds.contains(k);
       return DsButton(label,
@@ -465,52 +492,54 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
     final cond =
         FilterBuildSnippets.line(_buildKinds, upgrade: _buildUpgrade);
     return [
-      const DsSectionHeader('★ MI BUILD', key: ValueKey('filter-build-title')),
+      DsSectionHeader(
+          s.t('ui.inventory.filter.build.title', {'star': '★'}),
+          key: const ValueKey('filter-build-title')),
       Text(retroText(summary),
           key: const ValueKey('filter-build-plan'),
           style: DsText.detail(wants.isEmpty ? null : kPlanColor)),
       SizedBox(height: DsSpace.xs),
       Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-        kind('CUALQUIERA', null),
-        kind('BASE O TIPO', BuildMatch.base),
-        kind('MOD', BuildMatch.mod),
-        kind('PASIVA', BuildMatch.pasiva),
-        kind('HABILIDAD', BuildMatch.habilidad),
-        DsButton('SOLO SI MEJORA',
+        kind(s.t('ui.inventory.filter.build.any'), null),
+        kind(s.t('ui.inventory.filter.build.base'), BuildMatch.base),
+        kind(s.t('ui.inventory.filter.build.mod'), BuildMatch.mod),
+        kind(s.t('ui.inventory.filter.build.passive'), BuildMatch.pasiva),
+        kind(s.t('ui.inventory.filter.build.skill'), BuildMatch.habilidad),
+        DsButton(s.t('ui.inventory.filter.build.upgrade_only'),
             key: const ValueKey('filter-build-kind-upgrade'),
             size: DsButtonSize.compact,
             selected: _buildUpgrade,
             tooltip: wants.target == null
-                ? 'Armá un arma objetivo en BUILD'
-                : 'BuildMejora: sube el % de tu mejor candidata',
+                ? s.t('ui.inventory.filter.build.upgrade_no_target')
+                : s.t('ui.inventory.filter.build.upgrade_tip'),
             onPressed: () => setState(() => _buildUpgrade = !_buildUpgrade)),
       ]),
       SizedBox(height: DsSpace.xs),
-      Text(retroText('Línea: $cond'),
+      Text(retroText(s.t('ui.inventory.filter.build.line', {'cond': cond})),
           key: const ValueKey('filter-build-line'),
           style: DsText.body(DsColors.textPrimary)),
       SizedBox(height: DsSpace.xs),
       Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-        DsButton('+ AL CURSOR',
+        DsButton(s.t('ui.inventory.filter.build.insert'),
             key: const ValueKey('filter-build-insert'),
             size: DsButtonSize.compact,
-            tooltip: 'Agrega la condición a la regla donde está el cursor',
+            tooltip: s.t('ui.inventory.filter.build.insert_tip'),
             onPressed: () => _setText(FilterBuildSnippets.insertCondition(
                 _text.text, _text.selection.baseOffset, _buildKinds,
                 upgrade: _buildUpgrade))),
-        DsButton('+ RESALTAR',
+        DsButton(s.t('ui.inventory.filter.build.highlight'),
             key: const ValueKey('filter-build-highlight'),
             size: DsButtonSize.compact,
             accent: kPlanColor,
-            tooltip: 'Regla nueva arriba: resalta lo de tu build',
+            tooltip: s.t('ui.inventory.filter.build.highlight_tip'),
             onPressed: () => _setText(FilterBuildSnippets.prependRule(
                 _text.text,
                 FilterBuildSnippets.highlightRule(_buildKinds,
                     upgrade: _buildUpgrade)))),
-        DsButton('+ OCULTAR FUERA',
+        DsButton(s.t('ui.inventory.filter.build.hide'),
             key: const ValueKey('filter-build-hide'),
             size: DsButtonSize.compact,
-            tooltip: 'Regla nueva arriba: oculta comunes fuera del plan',
+            tooltip: s.t('ui.inventory.filter.build.hide_tip'),
             onPressed: () => _setText(FilterBuildSnippets.prependRule(
                 _text.text, FilterBuildSnippets.hideRule))),
       ]),
@@ -522,16 +551,23 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   Widget _sample(ProgressionRules rules, LootFilterRules fr, LootFilter f,
       LootDrop d, FilterContext ctx, int i) {
     final v = fr.evaluate(f, d, ctx);
+    final s = ref.read(stringsProvider);
     final rule = v.ruleIndex == null
-        ? 'sin regla'
-        : f.rules[v.ruleIndex!].name ?? 'regla ${v.ruleIndex! + 1}';
+        ? s.t('ui.inventory.filter.sample.no_rule')
+        : f.rules[v.ruleIndex!].name ??
+            s.t('ui.inventory.filter.sample.rule_n', {'n': v.ruleIndex! + 1});
     final st = v.style;
     final extra = [
       if (v.buildMatch)
-        '★ tu build: ${[for (final k in v.build) k.label].join(', ')}',
-      if (v.visible && st.sound != null) 'sonido ${st.sound}',
+        s.t('ui.inventory.filter.sample.build', {
+          'star': '★',
+          'what': [for (final b in v.build) b.label].join(', ')
+        }),
+      if (v.visible && st.sound != null)
+        s.t('ui.inventory.filter.sample.sound', {'sound': st.sound}),
       if (v.visible && st.icon != null)
-        'ícono ${st.icon!.shape.name} ${st.icon!.color.name}',
+        s.t('ui.inventory.filter.sample.icon',
+            {'shape': st.icon!.shape.name, 'color': st.icon!.color.name}),
     ];
     final it = d.item;
     return Padding(

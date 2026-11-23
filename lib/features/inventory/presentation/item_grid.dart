@@ -8,6 +8,7 @@ import '../../../app/theme/retro_type.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import 'clean_selection.dart' show CleanCellMark;
+import 'inventory_strings.dart';
 import 'item_widgets.dart' hide PixelIcon;
 
 // Sistema de diseño atómico (docs/specs/design_system.md § "Estructura
@@ -25,13 +26,13 @@ class NewItemTag extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         // Siempre en una línea dentro de la casilla (44 px).
-        child: const FittedBox(
+        child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text('NUEVO',
+          child: Text(invStrings(context).t('ui.inventory.item.new_tag'),
               maxLines: 1,
               softWrap: false,
               textScaler: TextScaler.noScaling,
-              style: TextStyle(
+              style: const TextStyle(
                   fontFamily: RetroType.pixelFamily,
                   fontSize: 8,
                   height: 1,
@@ -143,7 +144,8 @@ class PinnedEquippedRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(retroText('EQUIPADA'), style: DsText.subtitle()),
+                Text(retroText(invStrings(context).t('ui.inventory.bag.equipped')),
+                    style: DsText.subtitle()),
                 if (note case final n?)
                   Text(n, style: DsText.detail()),
               ],
@@ -159,14 +161,15 @@ class ItemGridSearch {
   const ItemGridSearch({
     required this.controller,
     required this.onChanged,
-    this.hint = 'BUSCAR',
+    this.hint,
     this.fieldKey,
     this.width = 320,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final String hint;
+  /// `null` = the generic search hint.
+  final String? hint;
   final Key? fieldKey;
   final double width;
 }
@@ -336,7 +339,7 @@ class DsItemGrid extends StatelessWidget {
           },
           child: DsSearchField(
             key: s.fieldKey,
-            hint: s.hint,
+            hint: s.hint ?? invStrings(context).t('ui.inventory.item.search'),
             width: s.width,
             controller: s.controller,
             onChanged: s.onChanged,

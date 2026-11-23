@@ -13,6 +13,8 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
+import 'inventory_clean_button.dart' show rarityPluralKey;
+import 'inventory_strings.dart';
 
 // LIMPIAR INVENTARIO → ELEGIR A MANO (v0.5.1, loot.md § 21.5,
 // panels.md § "Inventario"). Las reglas son las del motor
@@ -174,22 +176,26 @@ class CleanSelectionPanel extends StatelessWidget {
       for (final u in picked)
         if (p.itemByUid(u) case final it?) it,
     ];
-    final verb = sell ? 'vender' : 'desarmar';
+    final s = invStrings(context);
     final summary = n == 0
-        ? protoColor(ProtoColors.dim,
-            'Toca armas de la grilla (o Espacio) para elegirlas.')
-        : 'Vas a $verb ${protoColor(ProtoColors.gold, '$n arma${n == 1 ? '' : 's'}')} → '
-            '${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}';
-    final block = n == 0 ? 'Elegí armas' : guards.craft(p, a);
+        ? protoColor(ProtoColors.dim, s.t('ui.inventory.clean.hint_tap'))
+        : s.t(sell ? 'ui.inventory.clean.summary_sell' : 'ui.inventory.clean.summary_salvage', {
+            'to': '→',
+            'weapons': protoColor(ProtoColors.gold,
+                s.t('ui.inventory.clean.weapons_count', {'n': n})),
+            'gains': protoColor(ProtoColors.green,
+                protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes))),
+          });
+    final block = n == 0 ? s.t('ui.inventory.clean.pick_some') : guards.craft(p, a);
     return PanelDetail(
       footer: [
-        DsButton('CANCELAR',
+        DsButton(s.t('ui.inventory.common.cancel'),
             key: const ValueKey('inv-clean-cancel'),
             size: DsButtonSize.compact,
             onPressed: onCancel),
         DsButton(
-            '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
-            'SELECCIONADA${n == 1 ? '' : 'S'}',
+            s.t(sell ? 'ui.inventory.clean.confirm_sell' : 'ui.inventory.clean.confirm_salvage',
+                {'n': n}),
             key: const ValueKey('inv-clean-confirm'),
             size: DsButtonSize.compact,
             accent: DsColors.danger,
@@ -197,21 +203,21 @@ class CleanSelectionPanel extends StatelessWidget {
             onPressed: block != null ? null : () => onConfirm(a)),
       ],
       children: [
-        const DsSectionHeader('LIMPIAR INVENTARIO'),
+        DsSectionHeader(s.t('ui.inventory.clean.title')),
         // Una línea; la regla del candado vive en el tooltip de la casilla.
-        Text('Marcá armas en la grilla.', style: DsText.detail()),
+        Text(s.t('ui.inventory.clean.hint_mark'), style: DsText.detail()),
         SizedBox(height: DsSpace.sm),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          DsButton('DESARMAR',
+          DsButton(s.t('ui.inventory.clean.salvage'),
               key: const ValueKey('inv-clean-salvage'),
               size: DsButtonSize.compact,
-              tooltip: 'Recibís materiales',
+              tooltip: s.t('ui.inventory.clean.salvage_tip'),
               selected: !sell,
               onPressed: () => onSell(false)),
-          DsButton('VENDER',
+          DsButton(s.t('ui.inventory.clean.sell'),
               key: const ValueKey('inv-clean-sell'),
               size: DsButtonSize.compact,
-              tooltip: 'Recibís créditos',
+              tooltip: s.t('ui.inventory.clean.sell_tip'),
               selected: sell,
               onPressed: () => onSell(true)),
         ]),
@@ -219,32 +225,35 @@ class CleanSelectionPanel extends StatelessWidget {
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           for (final rr in kCleanAddRarities)
             DsButton(
-                '+ ${rarityPlural(rr).toUpperCase()} '
-                '(${addableCount(rules, p, picked, rr)})',
+                s.t('ui.inventory.clean.add_rarity', {
+                  'rarity': s.t(rarityPluralKey(rr)).toUpperCase(),
+                  'n': addableCount(rules, p, picked, rr),
+                }),
                 key: ValueKey('inv-clean-add-${rr.name}'),
                 size: DsButtonSize.compact,
                 onPressed: addableCount(rules, p, picked, rr) == 0
                     ? null
                     : () => onAdd(rr)),
-          DsButton('NINGUNA',
+          DsButton(s.t('ui.inventory.clean.none'),
               key: const ValueKey('inv-clean-none'),
               size: DsButtonSize.compact,
               onPressed: n == 0 ? null : onClear),
         ]),
         SizedBox(height: DsSpace.sm),
-        Text(retroText('Elegidas: $n'),
+        Text(retroText(s.t('ui.inventory.clean.picked_count', {'n': n})),
             key: const ValueKey('inv-clean-count'),
             style: const TextStyle(color: ProtoColors.sky)),
         const SizedBox(height: 4),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)
           ProtoText(protoColor(
-              ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')),
+              ProtoColors.orange,
+              s.t('ui.inventory.clean.lost', {'what': protoEsc(r.lost.join(', '))}))),
         if (items.isNotEmpty) ...[
           const SizedBox(height: 6),
           ProtoText(
               key: const ValueKey('inv-clean-list'),
-              '${protoColor(ProtoColors.red, 'Se destruyen:')}<br>'
+              '${protoColor(ProtoColors.red, s.t('ui.inventory.clean.destroyed'))}<br>'
               '${[
                 for (final it in items)
                   '• ${itemNameMarkup(rules, it)}'

@@ -66,25 +66,14 @@ class TitleScreen extends ConsumerStatefulWidget {
   ConsumerState<TitleScreen> createState() => _TitleScreenState();
 }
 
-/// Los atajos del título (en el "?").
-const _keysHelpMundo =
-    'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por turnos: '
-    '1-9 o clic · Cambiar objetivo: Q o clic en enemigo · Chat: Enter\n'
-    'Menús: flechas mueven · Enter elige (otra vez sobre tu personaje: '
-    'jugar) · 1-9 eligen · Esc vuelve';
-
-/// Travesía: sin campo ni chat; personaje e inventario con C / I.
-const _keysHelpTravesia =
-    'Combate por turnos: 1-9 o clic · Cambiar objetivo: Q o clic en '
-    'enemigo · Personaje: C · Inventario: I\n'
-    'Menús: flechas mueven · Enter elige (otra vez sobre tu personaje: '
-    'jugar) · 1-9 eligen · Esc vuelve';
-
 bool get _travesia => GameEdition.current.mode == GameModeKind.travesia;
 
-String get _keysHelp => _travesia ? _keysHelpTravesia : _keysHelpMundo;
-
 class _TitleScreenState extends ConsumerState<TitleScreen> {
+  /// Title shortcuts (the "?"). Travesía: no field or chat; character
+  /// and inventory with C / I.
+  String get _keysHelp => ref.t(
+      _travesia ? 'ui.lobby.keys_help.travesia' : 'ui.lobby.keys_help.world');
+
   final _name = TextEditingController();
   final _code = TextEditingController();
   Account? _account;
@@ -141,7 +130,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (newest == null) return null;
     final seen = ref.watch(gameSettingsProvider).seenPatchNotes;
     return hasUnseenPatchNotes([PatchNoteEntry(newest, '')], seen)
-        ? 'NUEVO'
+        ? ref.t('ui.lobby.badge_new')
         : null;
   }
 
@@ -251,7 +240,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _netStatus = 'No se pudo guardar la cuenta: $e';
+          _netStatus = ref.t('ui.lobby.status.save_failed', {'error': e});
           _netError = true;
         });
       }
@@ -269,7 +258,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (a == null || _busy) return;
     if (a.isFull) {
       setState(() {
-        _netStatus = 'Máximo ${Account.maxCharacters} personajes.';
+        _netStatus = ref.t(
+            'ui.lobby.status.max_characters', {'max': Account.maxCharacters});
         _netError = true;
       });
       return;
@@ -311,7 +301,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final a = await _update((a) => a.remove(c.id));
     if (!mounted) return;
     setState(() {
-      _netStatus = '${c.displayName} fue borrado.';
+      _netStatus = ref.t('ui.lobby.status.deleted', {'name': c.displayName});
       _netError = false;
       if (a != null && a.characters.isEmpty) _openCreator();
     });
@@ -409,7 +399,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (_busy) return;
     if (code != null && code.trim().length < 4) {
       setState(() {
-        _netStatus = 'Escribí el código de la sala.';
+        _netStatus = ref.t('ui.lobby.status.enter_code');
         _netError = true;
       });
       return;
@@ -417,8 +407,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final p = await _prepare();
     if (p == null) return;
     setState(() {
-      _netStatus =
-          code == null ? 'Creando sala...' : 'Conectando a ${code.trim()}...';
+      _netStatus = code == null
+          ? ref.t('ui.lobby.status.creating_room')
+          : ref.t('ui.lobby.status.connecting', {'code': code.trim()});
       _netError = false;
     });
     final net = factory.create();
@@ -434,7 +425,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _netStatus = e is NetException ? e.message : 'Error de red: $e';
+        _netStatus = e is NetException
+            ? e.message
+            : ref.t('ui.lobby.status.net_error', {'error': e});
         _netError = true;
       });
       return;
@@ -522,7 +515,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   void _joinNext() {
     if (_code.text.trim().length < 4) {
       setState(() {
-        _netStatus = 'Escribí el código de la sala.';
+        _netStatus = ref.t('ui.lobby.status.enter_code');
         _netError = true;
       });
       return;
@@ -559,8 +552,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('PERSONAJES (${chars.length}/${Account.maxCharacters})',
-            textAlign: TextAlign.center, style: DsText.subtitle()),
+        Text(
+            ref.t('ui.lobby.characters.header',
+                {'count': chars.length, 'max': Account.maxCharacters}),
+            textAlign: TextAlign.center,
+            style: DsText.subtitle()),
         SizedBox(height: DsSpace.md),
         DsCarousel(
           itemCount: chars.length + (a.isFull ? 0 : 1),
@@ -592,41 +588,43 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            DsButton('NUEVO PERSONAJE',
+            DsButton(ref.t('ui.lobby.characters.new'),
                 key: const ValueKey('char-create'),
-                tooltip:
-                    a.isFull ? 'Máximo ${Account.maxCharacters} personajes' : null,
+                tooltip: a.isFull
+                    ? ref.t('ui.lobby.characters.max_tooltip',
+                        {'max': Account.maxCharacters})
+                    : null,
                 onPressed:
                     _busy || a.isFull ? null : () => setState(_openCreator)),
-            DsButton('CAMBIAR NOMBRE',
+            DsButton(ref.t('ui.lobby.characters.rename'),
                 key: const ValueKey('char-rename'),
                 onPressed: has ? _rename : null),
-            DsButton('BORRAR',
+            DsButton(ref.t('ui.lobby.characters.delete'),
                 key: const ValueKey('char-delete'),
                 accent: DsColors.danger,
                 onPressed: has ? _delete : null),
             // Travesía (roguelike.md § 12.2): sin alijo, plan de build,
             // bestiario ni hazañas (son del Mundo).
             if (!_travesia) ...[
-              DsButton('ALIJO',
+              DsButton(ref.t('ui.lobby.characters.stash'),
                   key: const ValueKey('char-stash'),
                   onPressed: has ? _openStash : null),
-              DsButton('BUILD',
+              DsButton(ref.t('ui.lobby.characters.build'),
                   key: const ValueKey('char-build'),
                   onPressed: has ? _openBuild : null),
               // Bestiario de la cuenta, solo lectura (bestiary.md § 4).
-              DsButton('BESTIARIO',
+              DsButton(ref.t('ui.lobby.characters.bestiary'),
                   key: const ValueKey('title-bestiary'),
                   onPressed: _busy ? null : _openBestiary),
               // Hazañas de la cuenta, solo lectura (achievements.md § 7).
-              DsButton('HAZAÑAS',
+              DsButton(ref.t('ui.lobby.characters.achievements'),
                   key: const ValueKey('title-achievements'),
                   onPressed: _busy ? null : _openAchievements),
             ],
             // Galería del sistema de diseño, solo en la versión de
             // desarrollo (design_system.md § 8).
             if (FeatureFlags.instance.devTools)
-              DsButton('GALERÍA',
+              DsButton(ref.t('ui.lobby.characters.gallery'),
                   key: const ValueKey('title-gallery'),
                   kind: DsButtonKind.ghost,
                   onPressed: _busy
@@ -637,7 +635,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             // Recarga en caliente del arte de prueba del Editor
             // (game_editor.md § 3.1): relee overrides/ y los sprites.
             if (FeatureFlags.instance.useLocalOverrides)
-              DsButton('RECARGAR ARTE',
+              DsButton(ref.t('ui.lobby.characters.reload_art'),
                   key: const ValueKey('title-reload-art'),
                   kind: DsButtonKind.ghost,
                   onPressed: _busy
@@ -694,7 +692,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(first ? 'CREÁ TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
+        Text(
+            ref.t(first
+                ? 'ui.lobby.creator.title_first'
+                : 'ui.lobby.creator.title'),
             key: const ValueKey('char-creator'),
             textAlign: TextAlign.center,
             style: DsText.subtitle()),
@@ -706,8 +707,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               flex: 5,
               child: SectionPanel(
                 icon: PixelIconKind.sword,
-                title: '1 · CLASE',
-                subtitle: 'cualquier clase equipa cualquier arma',
+                title: ref.t('ui.lobby.creator.class_title'),
+                subtitle: ref.t('ui.lobby.creator.class_subtitle'),
                 children: [
                   Wrap(
                     spacing: 8,
@@ -739,7 +740,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   if (sel != null)
                     SectionPanel(
                       icon: PixelIconKind.star,
-                      title: 'DETALLE',
+                      title: ref.t('ui.lobby.creator.detail'),
                       children: [
                         ClassDetail(
                           def: sel,
@@ -755,7 +756,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                     ),
                   SectionPanel(
                     icon: PixelIconKind.check,
-                    title: '2 · NOMBRE',
+                    title: ref.t('ui.lobby.creator.name_title'),
                     children: [
                       RetroTextField(
                         key: const ValueKey('title-name'),
@@ -772,11 +773,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           if (!first)
-                            DsButton('CANCELAR',
+                            DsButton(ref.t('ui.lobby.creator.cancel'),
                                 key: const ValueKey('char-create-cancel'),
                                 onPressed: () =>
                                     setState(() => _creating = false)),
-                          DsButton('> CREAR',
+                          DsButton(ref.t('ui.lobby.creator.create'),
                               key: const ValueKey('char-create-confirm'),
                               kind: DsButtonKind.primary,
                               onPressed: _busy ? null : _create),
@@ -942,7 +943,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('ECOS DEL TIEMPO',
+                    Text(ref.t('ui.lobby.game_title'),
                         textAlign: TextAlign.center, style: DsText.display()),
                     SizedBox(height: DsSpace.xl * 2),
                     // JUGAR es la acción principal (borde y texto dorados).
@@ -1008,8 +1009,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   /// Un paso del flujo: título arriba, contenido centrado (se desplaza si
   /// no entra), VOLVER abajo a la izquierda y la acción para seguir abajo
   /// a la derecha.
-  Widget _frame(
-      {required String title, required Widget body, Widget? action}) {
+  Widget _frame({required String title, required Widget body, Widget? action}) {
     final notice = _noticeText(), status = _netStatusText();
     final gap = DsSpace.lg;
     return Padding(
@@ -1030,8 +1030,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             child: Center(
               child: SingleChildScrollView(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                      maxWidth: RetroType.width(context, 1232)),
+                  constraints:
+                      BoxConstraints(maxWidth: RetroType.width(context, 1232)),
                   child: body,
                 ),
               ),
@@ -1084,29 +1084,32 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           title: ref.t('ui.title.step.mode'),
           body: Column(mainAxisSize: MainAxisSize.min, children: [
             _option('title-solo', ref.t('ui.title.solo.label'),
-                ref.t('ui.title.solo.detail'),
-                () => _choose(_Path.solo),
+                ref.t('ui.title.solo.detail'), () => _choose(_Path.solo),
                 autofocus: true),
             _option('title-coop', ref.t('ui.title.coop.label'),
-                ref.t('ui.title.coop.detail'),
-                () => _go(_Step.coop)),
+                ref.t('ui.title.coop.detail'), () => _go(_Step.coop)),
           ]),
         );
       case _Step.coop:
         return _frame(
           title: ref.t('ui.title.step.coop'),
           body: Column(mainAxisSize: MainAxisSize.min, children: [
-            _option('title-host', ref.t('ui.title.host.label'),
+            _option(
+                'title-host',
+                ref.t('ui.title.host.label'),
                 ref.t('ui.title.host.detail'),
                 netOk ? () => _choose(_Path.host) : null,
                 autofocus: true),
-            _option('title-join-step', ref.t('ui.title.join.label'),
+            _option(
+                'title-join-step',
+                ref.t('ui.title.join.label'),
                 ref.t('ui.title.join.detail'),
                 netOk ? () => _choose(_Path.join) : null),
             Text(
                 retroText(factory == null
-                    ? 'P2P: próximamente'
-                    : factory.unavailableReason ?? 'Red: ${factory.label}'),
+                    ? ref.t('ui.lobby.net.p2p_soon')
+                    : factory.unavailableReason ??
+                        ref.t('ui.lobby.net.label', {'label': factory.label})),
                 key: const ValueKey('title-p2p'),
                 textAlign: TextAlign.center,
                 style: DsText.detail()),
@@ -1134,7 +1137,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 onSubmitted: (_) => _joinNext(),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: factory?.codeHint ?? 'CODIGO',
+                  hintText:
+                      factory?.codeHint ?? ref.t('ui.lobby.net.code_hint'),
                   hintStyle: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.label,
@@ -1165,9 +1169,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         final a = _account;
         final sprites = ref.watch(gameSpritesProvider).valueOrNull;
         final creating = _creating || (a != null && a.characters.isEmpty);
-        final canPlay = a?.selected != null &&
-            !_busy &&
-            (_path == _Path.solo || netOk);
+        final canPlay =
+            a?.selected != null && !_busy && (_path == _Path.solo || netOk);
         return _frame(
           title: ref.t('ui.title.step.character'),
           body: a == null

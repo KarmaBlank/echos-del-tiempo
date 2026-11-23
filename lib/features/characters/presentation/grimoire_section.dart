@@ -11,6 +11,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/rules/summon_rules.dart';
 import '../../combat/domain/summon_text.dart';
 import '../../combat/presentation/scene/summon_sprite.dart';
+import 'character_strings.dart';
 
 /// GRIMORIO (docs/specs/summoner.md § 8): las invocaciones que podés
 /// invocar con tu arma equipada (y las trasladadas), con sus stats con
@@ -35,20 +36,23 @@ class GrimoireSection extends StatelessWidget {
     final w = rules.equippedWeapon(profile);
     final extra = rules.equippedItem(profile)?.extraSkills ?? const <String>[];
     final ids = {...d.mechanics, ...d.keystones};
+    final s = charStrings(context);
     return SectionPanel(
       key: const ValueKey('grimoire'),
       icon: PixelIconKind.gem,
-      title: 'GRIMORIO',
+      title: s.t('ui.characters.grimoire.title'),
       subtitle: has.isEmpty
-          ? 'Sin invocaciones: equipá un tomo del Invocador'
-          : '${has.length} invocaciones · máx. ${SummonRules.maxActive(ids)} a la vez',
+          ? s.t('ui.characters.grimoire.none')
+          : s.t('ui.characters.grimoire.subtitle',
+              {'n': has.length, 'max': SummonRules.maxActive(ids)}),
       children: [
-        for (final k in SummonKind.values) _row(k, has[k], b, d, w.name, extra),
+        for (final k in SummonKind.values)
+          _row(s, k, has[k], b, d, w.name, extra),
       ],
     );
   }
 
-  Widget _row(SummonKind k, String? skillId, PlayerBuild b, DerivedStats d,
+  Widget _row(Strings s, SummonKind k, String? skillId, PlayerBuild b, DerivedStats d,
       String weapon,
       List<String> extra) {
     final def = kSummons[k]!;
@@ -63,15 +67,27 @@ class GrimoireSection extends StatelessWidget {
           level: b.level,
           build: b,
           ids: {...d.mechanics, ...d.keystones});
+      final duration = st.turns >= kSummonForever
+          ? s.t('ui.characters.grimoire.forever')
+          : s.t('ui.characters.grimoire.turns', {'n': st.turns});
+      final origin = s.t(
+          extra.contains(skillId)
+              ? 'ui.characters.grimoire.moved_to'
+              : 'ui.characters.grimoire.from',
+          {'weapon': protoEsc(weapon)});
       text = '<b>${def.name}</b> <span class="k">${def.element.label}</span>'
-          '<br>Vida ${st.hp} · poder ${st.attack} · '
-          '${st.turns >= kSummonForever ? 'dura hasta caer' : '${st.turns} turnos'}'
-          '<br><span class="k">${extra.contains(skillId) ? 'trasladada a' : 'del'} '
-          '${protoEsc(weapon)} · ${summonRoleText(def)}</span>';
+          '<br>${s.t('ui.characters.grimoire.stats', {
+            'hp': st.hp,
+            'attack': st.attack,
+            'duration': duration,
+          })}'
+          '<br><span class="k">$origin · ${summonRoleText(def)}</span>';
     } else {
       final inv = kSummonSkillKind.entries.firstWhere((e) => e.value == k).key;
-      text = '<span class="k">${def.name} (${def.element.label}) — no la '
-          'tenés</span><br><span class="k">${summonSourcesText(inv, rules.catalog)}</span>';
+      text = '<span class="k">${s.t('ui.characters.grimoire.missing', {
+            'name': def.name,
+            'element': def.element.label,
+          })}</span><br><span class="k">${summonSourcesText(inv, rules.catalog)}</span>';
     }
     return Padding(
       key: ValueKey('grimoire-${k.name}'),

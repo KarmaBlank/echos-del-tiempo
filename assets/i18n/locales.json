@@ -7,6 +7,9 @@
   },
   "domains": [
     "ui.title",
-    "ui.settings"
+    "ui.settings",
+    "ui.lobby",
+    "ui.inventory",
+    "ui.characters"
   ]
 }

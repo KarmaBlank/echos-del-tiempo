@@ -6,6 +6,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/stash.dart';
+import 'character_strings.dart';
 import 'stash_board.dart';
 import 'stash_screen.dart' show stashHelp;
 import 'unclaimed_box.dart';
@@ -28,26 +29,29 @@ class StashPanel extends StatelessWidget {
     final p = me?.profile;
     final cls =
         p == null ? '' : rules.catalog.classes[p.classId]?.name ?? p.classId;
+    final s = charStrings(context);
     return PanelFrame(
       key: const ValueKey('panel-stash'),
-      title: 'ALIJO',
+      title: s.t('ui.characters.stash.title'),
       width: 1000,
       onClose: controller.closePanel,
-      help: stashHelp,
+      help: stashHelp(s),
       actions: [
-        PanelButton('CERRAR [B]',
+        PanelButton(s.t('ui.characters.stash.close'),
             key: const ValueKey('stash-close'), onPressed: controller.closePanel),
       ],
       child: p == null || stash == null
-          ? const Text('Sin alijo')
+          ? Text(s.t('ui.characters.stash.empty'))
           : Column(mainAxisSize: MainAxisSize.min, children: [
               StashBoard(
                   key: const ValueKey('stash-board'),
                   host: _SessionStashHost(controller, rules, p, stash),
-                  title: '${p.name} · $cls · Nv ${p.level}'),
+                  title: s.t('ui.characters.common.name_class_level',
+                      {'name': p.name, 'cls': cls, 'level': p.level})),
               UnclaimedBox(
                 entries: stash.unclaimed,
-                nameOf: (e) => stashEntryName(e, rules.items.displayName),
+                nameOf: (e) =>
+                    stashEntryName(e, rules.items.displayName, strings: s),
                 busy: controller.stashBusy,
                 onTake: controller.unclaimedTake,
                 onDiscard: controller.unclaimedDiscard,

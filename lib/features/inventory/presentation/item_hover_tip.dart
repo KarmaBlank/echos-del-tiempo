@@ -8,10 +8,12 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../domain/item_text.dart';
+import 'inventory_strings.dart';
 import 'weapon_compare_view.dart';
 
 /// Ayuda al pie de la ficha del mouse (ui_style.md § "Tooltips cortos").
-const itemTipHint = 'Alt: detalle · Shift: comparar · clic: fijar';
+String itemTipHint(BuildContext context) =>
+    invStrings(context).t('ui.inventory.item.tip_hint');
 
 /// Ficha del mouse de un arma, la MISMA en el inventario y en el alijo
 /// (ui_style.md § "Tooltips cortos"; characters.md § 3): la que usás
@@ -36,12 +38,13 @@ Widget itemHoverTip({
   if (ownerName == null && item.uid == using) {
     final parts = itemTipParts(rules, item,
         level: viewer.level, attributes: attributes, equipped: equipped);
-    return RetroHoverCard(
+    return Builder(
+      builder: (context) => RetroHoverCard(
       placement: RetroTipPlacement.below,
       gap: 4,
       interactive: true,
       pinOnClick: true,
-      hint: itemTipHint,
+      hint: itemTipHint(context),
       keyboardFocus: focused,
       builder: (ctx) => RetroTipFolds(
           key: const ValueKey('inv-tip-folds'),
@@ -51,7 +54,7 @@ Widget itemHoverTip({
           sections: parts.sections,
           maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
       child: child,
-    );
+    ));
   }
   final foot = footer ??
       (note == null
@@ -69,12 +72,14 @@ Widget itemHoverTip({
       attributes: attributes,
       ownerName: ownerName,
       footer: foot);
-  return RetroHoverCard(
-    interactive: true,
-    pinOnClick: true,
-    hint: itemTipHint,
-    keyboardFocus: focused,
-    builder: (_) => card,
-    child: child,
+  return Builder(
+    builder: (context) => RetroHoverCard(
+      interactive: true,
+      pinOnClick: true,
+      hint: itemTipHint(context),
+      keyboardFocus: focused,
+      builder: (_) => card,
+      child: child,
+    ),
   );
 }

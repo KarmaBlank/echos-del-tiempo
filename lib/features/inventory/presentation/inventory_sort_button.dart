@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../game_engine/models/inventory_sort.dart';
+import 'inventory_strings.dart';
 
 /// `ORDENAR ▼` del inventario (v0.5.1, loot.md § 17.2, panels.md §
 /// "Inventario"): un [DsMenuButton] con las claves de [InventorySortKey]
@@ -25,10 +26,12 @@ class InventorySortButton extends StatelessWidget {
   final bool initiallyOpen;
 
   @override
-  Widget build(BuildContext context) => DsMenuButton<InventorySortKey>(
-        label: 'ORDENAR',
+  Widget build(BuildContext context) {
+    final s = invStrings(context);
+    return DsMenuButton<InventorySortKey>(
+        label: s.t('ui.inventory.sort.button'),
         options: InventorySortKey.values,
-        optionLabel: (k) => k.label,
+        optionLabel: (k) => s.t(sortKeyLabelKey(k)),
         onChanged: onSort,
         current: current,
         reason: reason,
@@ -37,4 +40,14 @@ class InventorySortButton extends StatelessWidget {
         menuKey: const ValueKey('inv-sort-menu'),
         optionKey: (k) => ValueKey('inv-sort-${k.name}'),
       );
+  }
 }
+
+/// String key of a sort criterion's label.
+String sortKeyLabelKey(InventorySortKey k) => switch (k) {
+      InventorySortKey.rarity => 'ui.inventory.sort.rarity',
+      InventorySortKey.itemLevel => 'ui.inventory.sort.item_level',
+      InventorySortKey.weaponType => 'ui.inventory.sort.weapon_type',
+      InventorySortKey.name => 'ui.inventory.sort.name',
+      InventorySortKey.recent => 'ui.inventory.sort.recent',
+    };

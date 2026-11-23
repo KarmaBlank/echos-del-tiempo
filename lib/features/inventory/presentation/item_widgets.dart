@@ -14,6 +14,7 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import 'inventory_strings.dart';
 
 /// Piezas visuales de objetos (loot v2): colores de rareza, ícono pixel,
 /// casilla de inventario y etiqueta de loot con el estilo del filtro.
@@ -282,13 +283,14 @@ class LootLabel extends StatelessWidget {
     super.key,
     required this.text,
     required this.verdict,
-    this.hiddenNote = '(oculto)',
+    this.hiddenNote,
     this.tooltip,
   });
 
   final String text;
   final FilterVerdict verdict;
-  final String hiddenNote;
+  /// `null` = the generic `(oculto)` note.
+  final String? hiddenNote;
 
   /// Ficha al pasar el mouse (markup).
   final String? tooltip;
@@ -306,7 +308,9 @@ class LootLabel extends StatelessWidget {
     final text = verdict.buildMatch ? '★ ${this.text}' : this.text;
     Widget label;
     if (!verdict.visible) {
-      label = Text(retroText('$text $hiddenNote'),
+      final note =
+          hiddenNote ?? invStrings(context).t('ui.inventory.item.hidden');
+      label = Text(retroText('$text $note'),
           style: const TextStyle(
               color: ProtoColors.dim, decoration: TextDecoration.lineThrough));
     } else {

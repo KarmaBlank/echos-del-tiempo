@@ -7,6 +7,7 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../core/procedural/item_icons.dart' show procKeyForType;
 import '../domain/item_text.dart';
 import '../domain/weapon_compare.dart' show stripStats;
+import 'inventory_strings.dart';
 import 'item_hover_tip.dart';
 import 'item_widgets.dart';
 import 'shop_sections.dart';
@@ -19,8 +20,8 @@ import 'weapon_compare_view.dart' show ChangeStrip;
 /// stats con los cambios contra la equipada. Mejorar, condensar y
 /// fusionar están en la FORJA.
 
-/// Title of the long-text fold in the armory detail.
-const kArmoryMoreDetail = 'VER DETALLE';
+/// Key of the title of the long-text fold in the armory detail.
+const kArmoryMoreDetail = 'ui.inventory.armory.more_detail';
 
 /// Full weapon sheet for the armory detail panel: the same summary as
 /// the inventory tooltip (name, rarity, base stats, mods, passive) with
@@ -41,7 +42,7 @@ class ArmoryItemSheet extends StatelessWidget {
     return RetroTipFolds(
         key: const ValueKey('armory-sheet'),
         summary: parts.summary,
-        sections: [for (final (_, body) in parts.sections) (kArmoryMoreDetail, body)],
+        sections: [for (final (_, body) in parts.sections) (invStrings(context).t(kArmoryMoreDetail), body)],
         maxWidth: DsCraftGridTemplate.detailWidth);
   }
 }
@@ -90,14 +91,15 @@ class ArmoryBuyGrid extends StatelessWidget {
     final classes = rules.catalog.classes;
     final list = shop.forSale()..sort((a, b) => a.level.compareTo(b.level));
     final weapons = _ArmoryWeapons(shop);
+    final s = invStrings(context);
     return DsCraftGridTemplate(
       key: const ValueKey('armory-buy'),
       keyPrefix: 'armory-buy',
-      searchHint: 'BUSCAR ARMA',
-      empty: 'No hay armas a la venta.',
+      searchHint: s.t('ui.inventory.armory.search_hint'),
+      empty: s.t('ui.inventory.shop.buy.none_for_sale'),
       side: weapons.side,
       filters: [
-        const DsTransferFilter('TODAS', null),
+        DsTransferFilter(s.t('ui.inventory.craft.all'), null),
         for (final c in classes.values)
           if (list.any((w) => w.classId == c.id))
             DsTransferFilter(c.name.toUpperCase(), c.id),
@@ -106,7 +108,7 @@ class ArmoryBuyGrid extends StatelessWidget {
         for (final w in list)
           () {
             final owned = p.items.any((i) => i.baseId == w.id);
-            final why = owned ? 'Ya la tenés' : shop.guards.buyWeapon(p, w.id);
+            final why = owned ? s.t('ui.inventory.armory.owned') : shop.guards.buyWeapon(p, w.id);
             final sample =
                 ItemInstance.common('_shop-${w.id}', w.id, itemLevel: w.level);
             return DsCraftItem(
@@ -123,12 +125,14 @@ class ArmoryBuyGrid extends StatelessWidget {
               cellWrap: weapons.tip(w.id, sample),
               body: ArmoryItemSheet(shop: shop, item: sample),
               lines: [
-                if (!rules.ignoreRequirements) 'Nivel ${w.level}',
-                'Precio ₵${w.price} · tenés ₵${p.credits}',
-                if (owned) 'Ya la tenés',
+                if (!rules.ignoreRequirements)
+                  s.t('ui.inventory.armory.level', {'n': w.level}),
+                s.t('ui.inventory.armory.price_have',
+                    {'price': '₵${w.price}', 'credits': '₵${p.credits}'}),
+                if (owned) s.t('ui.inventory.armory.owned'),
               ],
               actions: [
-                DsButton('COMPRAR ₵${w.price}',
+                DsButton(s.t('ui.inventory.shop.items.buy', {'price': '₵${w.price}'}),
                     key: ValueKey('buy-${w.id}'),
                     kind: DsButtonKind.primary,
                     size: DsButtonSize.compact,
@@ -155,14 +159,15 @@ class ArmorySellGrid extends StatelessWidget {
     final p = shop.profile;
     final rules = shop.rules;
     final weapons = _ArmoryWeapons(shop);
+    final s = invStrings(context);
     return DsCraftGridTemplate(
       key: const ValueKey('armory-sell'),
       keyPrefix: 'armory-sell',
-      searchHint: 'BUSCAR ARMA',
-      empty: 'No tenés armas para vender.',
+      searchHint: s.t('ui.inventory.armory.search_hint'),
+      empty: s.t('ui.inventory.armory.none_to_sell'),
       side: weapons.side,
       filters: [
-        const DsTransferFilter('TODAS', null),
+        DsTransferFilter(s.t('ui.inventory.craft.all'), null),
         for (final r in Rarity.values)
           if (p.items.any((i) => i.rarity == r))
             DsTransferFilter(r.label.toUpperCase(), r.name),
@@ -173,7 +178,7 @@ class ArmorySellGrid extends StatelessWidget {
             final w = rules.catalog.weapons[it.baseId];
             final a = CraftAction(CraftOp.sell, it.uid);
             final why = it.uid == p.equippedUid
-                ? 'Es la equipada'
+                ? s.t('ui.inventory.armory.is_equipped')
                 : shop.guards.craft(p, a);
             final price = rules.crafting.sellPrice(it);
             final name = shop.itemName(it);
@@ -187,15 +192,15 @@ class ArmorySellGrid extends StatelessWidget {
               tag: it.rarity.name,
               search: '$name ${w?.type ?? ''}',
               description: '${w?.type ?? ''} · ${it.rarity.label} · '
-                  'Nv ${it.itemLevel}',
+                  '${s.t('ui.inventory.craft.level_short', {'n': it.itemLevel})}',
               cellWrap: weapons.tip(it.uid, it),
               body: ArmoryItemSheet(shop: shop, item: it),
               lines: [
-                if (it.uid == p.equippedUid) 'EQUIPADA',
-                'Se vende por ₵$price',
+                if (it.uid == p.equippedUid) s.t('ui.inventory.bag.equipped'),
+                s.t('ui.inventory.armory.sells_for', {'price': '₵$price'}),
               ],
               actions: [
-                DsButton('VENDER ₵$price',
+                DsButton(s.t('ui.inventory.bag.sell_for', {'price': '₵$price'}),
                     key: ValueKey('sell-${it.uid}'),
                     kind: DsButtonKind.primary,
                     size: DsButtonSize.compact,

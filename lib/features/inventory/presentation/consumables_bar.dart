@@ -10,6 +10,7 @@ import '../../../game_engine/rules/inventory_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../domain/item_text.dart';
 import 'item_widgets.dart' show CellContent, ItemCell;
+import 'inventory_strings.dart';
 
 /// Secciones fijas de pilas del inventario (v0.5.1, loot.md § 17.1,
 /// panels.md § "Inventario"): `CONSUMIBLES` (poción de vida y de maná) y
@@ -78,12 +79,16 @@ class InventoryStacksBar extends StatelessWidget {
     );
   }
 
-  Widget _group(String title, String id, List<StackKind> kinds) => Column(
+  Widget _group(BuildContext context, String id, List<StackKind> kinds) =>
+      Column(
         key: ValueKey('inv-stacks-$id'),
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(retroText(title), style: DsText.subtitle()),
+          Text(
+              retroText(
+                  invStrings(context).t('ui.inventory.consumables.group.$id')),
+              style: DsText.subtitle()),
           SizedBox(height: gap),
           // Responsivo (v0.12.0): tantas columnas como entren en el
           // ancho; las demás pilas bajan de línea (nunca se cortan).
@@ -120,16 +125,16 @@ class InventoryStacksBar extends StatelessWidget {
         runSpacing: DsSpace.xs,
         children: [
           if (consumables)
-            _group('CONSUMIBLES', 'consumables', InventoryRules.consumables),
+            _group(context, 'consumables', InventoryRules.consumables),
           if (materials)
-            _group('MATERIALES', 'materials', [
+            _group(context, 'materials', [
               for (final k in InventoryRules.materials)
                 if (!_abyss.contains(k)) k,
             ]),
           // Jefes del Abismo (v0.8): Fragmentos y Esencia, solo cuando
           // hay alguno (no ocupan lugar antes del endgame).
           if (materials && _abyss.any((k) => _count(k) > 0))
-            _group('ABISMO', 'abyss', _abyss),
+            _group(context, 'abyss', _abyss),
         ],
       );
 
