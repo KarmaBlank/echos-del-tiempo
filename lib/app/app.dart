@@ -6,6 +6,7 @@ import '../core/settings/game_settings.dart';
 import '../core/settings/settings_providers.dart';
 import '../features/lobby/presentation/title_screen.dart';
 import 'theme/retro_theme.dart';
+import 'theme/text_detail_scope.dart';
 import 'theme/ui_theme.dart';
 import 'theme/vision_palette.dart';
 import 'widgets/perf_overlay.dart';
@@ -45,29 +46,33 @@ class EcosApp extends StatelessWidget {
             // Fuente de lectura (settings.md § 3.7).
             font: ref.watch(gameSettingsProvider.select((s) => s.readingFont)),
             // Títulos y espaciado entre letras (accessibility.md § 9).
-            readingTitles: ref
-                .watch(gameSettingsProvider.select((s) => s.readingTitles)),
+            readingTitles:
+                ref.watch(gameSettingsProvider.select((s) => s.readingTitles)),
             wideLetters: ref.watch(gameSettingsProvider
                 .select((s) => s.letterSpacing == LetterSpacing.wide)),
             // Modo daltónico (accessibility.md § 3).
-            child: ColorVisionScope(
-              mode:
-                  ref.watch(gameSettingsProvider.select((s) => s.colorVision)),
-              // FPS y ping (§ 3.9): encima del CRT (no se curva) y sin
-              // recibir clics.
-              // Tema, colores del texto y espaciado (accessibility.md § 8).
-              child: UiThemeScope(
-                theme:
-                    ref.watch(gameSettingsProvider.select((s) => s.uiTheme)),
-                textColors: ref
-                    .watch(gameSettingsProvider.select((s) => s.textColors)),
-                spacing:
-                    ref.watch(gameSettingsProvider.select((s) => s.spacing)),
-                child: PerfOverlay(
-                  child: CrtFilter(
-                    level:
-                        ref.watch(gameSettingsProvider.select((s) => s.crt)),
-                    child: child ?? const SizedBox.shrink(),
+            // TEXTOS: RESUMIDO / DETALLADO (ui_minimal.md § 8).
+            child: TextDetailScope(
+              mode: ref.watch(gameSettingsProvider.select((s) => s.textDetail)),
+              child: ColorVisionScope(
+                mode: ref
+                    .watch(gameSettingsProvider.select((s) => s.colorVision)),
+                // FPS y ping (§ 3.9): encima del CRT (no se curva) y sin
+                // recibir clics.
+                // Tema, colores del texto y espaciado (accessibility.md § 8).
+                child: UiThemeScope(
+                  theme:
+                      ref.watch(gameSettingsProvider.select((s) => s.uiTheme)),
+                  textColors: ref
+                      .watch(gameSettingsProvider.select((s) => s.textColors)),
+                  spacing:
+                      ref.watch(gameSettingsProvider.select((s) => s.spacing)),
+                  child: PerfOverlay(
+                    child: CrtFilter(
+                      level:
+                          ref.watch(gameSettingsProvider.select((s) => s.crt)),
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),

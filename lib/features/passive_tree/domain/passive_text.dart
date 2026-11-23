@@ -1,3 +1,5 @@
+import '../../../core/text/plain_text.dart';
+import '../../../core/text/text_detail.dart';
 import '../../../game_engine/data/passive_mechanics.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
@@ -74,6 +76,7 @@ List<String> passiveEffectsText(PassiveNode node) {
     return v == null || v == 0 ? null : v;
   }
 
+  if (TextDetail.isSummary) return _passiveShort(node, f);
   return [
     if (f('hp') case final v?) '+${_pct(v)} vida máx.',
     if (f('mp') case final v?) '+${_pct(v)} maná máx.',
@@ -92,6 +95,36 @@ List<String> passiveEffectsText(PassiveNode node) {
       kKeystoneText[k] ?? _mechanicLine(node) ?? k
     else if (node.mechanicId case final m?)
       kMechanics[m]?.description ?? m,
+  ];
+}
+
+/// RESUMIDO (ui_minimal.md § 8): las mismas cifras en palabras, y las
+/// mecánicas y keystones en su primera oración, sin fórmulas.
+List<String> _passiveShort(PassiveNode node, num? Function(String) f) {
+  String mech(String text) {
+    // "Nombre: efecto" -> el nombre queda; el efecto se acorta.
+    final i = text.indexOf(': ');
+    if (i < 0 || i > 40) return plainShort(text);
+    return '${text.substring(0, i)}: ${plainShort(text.substring(i + 2))}';
+  }
+
+  return [
+    if (f('hp') case final v?) '+${_pct(v)} de vida',
+    if (f('mp') case final v?) '+${_pct(v)} de maná',
+    if (f('atk') case final v?) '+${_pct(v)} de ataque',
+    if (f('mag') case final v?) '+${_pct(v)} de magia',
+    if (f('crit') case final v?) '+${_pct(v)} de crítico',
+    if (f('spd') case final v?) '+$v de velocidad',
+    if (f('def') case final v?) '+$v de defensa',
+    if (f('ult') case final v?) '+${_pct(v)} de carga de ULT',
+    if (f('heal') case final v?) '+${_pct(v)} de curación',
+    if (f('burn') case final v?) '+$v de Quemadura al aplicarla',
+    if (f('poi') case final v?) '+$v de Veneno al aplicarlo',
+    if (f('frz') case final v?) '+$v de Congelación al aplicarla',
+    if (node.keystoneId case final k?)
+      mech(kKeystoneText[k] ?? _mechanicLine(node) ?? k)
+    else if (node.mechanicId case final m?)
+      plainShort(kMechanics[m]?.description ?? m),
   ];
 }
 

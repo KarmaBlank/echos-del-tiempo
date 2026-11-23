@@ -398,6 +398,15 @@ con un valor inválido) carga VT323.
   guardado). Las fuentes reales en tests: `loadRealFonts()`
   (`test/real_fonts.dart`, también en `pumpPanel`).
 
+### 3.10 TEXTOS (`TextDetail`, v0.25.0)
+
+`RESUMIDO` (por defecto) / `DETALLADO`, en la sección de texto de
+PANTALLA y ACCESIBILIDAD, debajo de REGISTRO DE BATALLA. RESUMIDO:
+descripciones de una o dos líneas, en palabras simples; los tooltips
+traen `MÁS DETALLE` con el texto completo. DETALLADO: el texto de
+siempre. Reglas y alcance: ui_minimal.md § 8. Es local: no cambia el
+protocolo ni lo que ve el resto de la sala.
+
 ## 4. JUEGO
 
 | Ajuste | Opciones | Efecto |
@@ -539,6 +548,10 @@ está abierto:
   que los turnos de la sala). Un `game.json` viejo con `battleSpeed` carga
   igual (la clave se ignora) y al guardar ya no se escribe. Los ajustes
   gráficos nuevos toman su valor por defecto (CRT NORMAL incluido).
+- **v0.25.0**: `textDetail` (`summary` / `full`). Por defecto
+  `summary` también para quien ya tenía `game.json` (la clave no existía:
+  ausente o inválida = RESUMIDO). Es la migración: todos arrancan en
+  RESUMIDO y se cambia en TEXTOS.
 - `GameSettingsController` (`lib/core/settings/game_settings.dart`):
   carga al arrancar (el título lo pide) y aplica pantalla completa y el
   límite de FPS (`FrameLimiter.fps`); cada cambio se aplica y se guarda.
@@ -562,6 +575,8 @@ está abierto:
   `Retroceso` en `WorldScreen` → `noticeDismissProvider`. Registro de
   batalla: `SceneOptions.extendedLog`.
 - CRT: `EcosApp` (`MaterialApp.builder`) → `CrtFilter(level)`.
+- TEXTOS (v0.25.0): `EcosApp` → `TextDetailScope(textDetail)` →
+  `TextDetail.current`, que leen los armadores de descripciones.
 - Tamaño del texto: `EcosApp` (`MaterialApp.builder`) →
   `RetroTextScale(textSize.factor)` → `MediaQuery.textScaler`.
 - FPS: `GameSettingsController` → `FrameLimiter.shared.fps` →

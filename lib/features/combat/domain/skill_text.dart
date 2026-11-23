@@ -5,7 +5,9 @@ import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/revive_rules.dart';
+import '../../../core/text/text_detail.dart';
 import 'element_text.dart';
+import 'skill_short_text.dart';
 import 'summon_text.dart';
 
 /// Textos de estados y habilidades en el markup del prototipo (el HTML
@@ -39,7 +41,11 @@ String statusLetterOf(StatusKind k) => switch (k) {
     };
 
 /// `STATUS[k].desc`.
-String statusDescriptionOf(StatusKind k) => switch (k) {
+String statusDescriptionOf(StatusKind k) =>
+    TextDetail.isSummary ? statusShortOf(k) : statusFullDescriptionOf(k);
+
+/// `STATUS[k].desc` en DETALLADO (las reglas completas).
+String statusFullDescriptionOf(StatusKind k) => switch (k) {
       StatusKind.burn =>
         'Stacks sin límite. Al inicio de su turno: 4% vida máx. por stack '
             '(máx 8 por stack). Luego los stacks se reducen a la mitad.',
@@ -101,6 +107,7 @@ String statusBadgeMarkup(StatusKind k, int n) =>
 /// N Estado (desc)", con el nombre en el color del estado.
 String statusApplicationMarkup(StatusApplication? st, {int bonus = 0}) {
   if (st == null) return '';
+  if (TextDetail.isSummary) return statusApplicationShort(st, bonus: bonus);
   final head = st.chance != null
       ? '${jsRound(st.chance! * 100)}% de aplicar '
       : 'Aplica +';
@@ -137,6 +144,11 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
         '${ultimate ? '<span class="k">(barra ULT llena)</span>' : skillCostLongMarkup(tk)}',
     if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
+  // RESUMIDO (ui_minimal.md § 8): la cabecera y una o dos líneas
+  // cortas generadas de los datos; el elemento va solo en DETALLADO.
+  if (TextDetail.isSummary) {
+    return [l.first, ...skillShortLines(tk, p)].join('<br>');
+  }
   final mag = tk.kind == SkillKind.magical;
   switch (tk.kind) {
     case SkillKind.physical || SkillKind.magical when tk.charge > 0:

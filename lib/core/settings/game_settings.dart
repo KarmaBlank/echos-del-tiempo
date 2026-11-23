@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game_engine/models/turn_timer.dart';
 import '../../game_engine/rules/ult_browse_rules.dart';
+import '../text/text_detail.dart';
 import 'frame_limiter.dart';
 import 'graphics.dart';
 import 'window_mode.dart';
 
 export '../../game_engine/models/turn_timer.dart';
+export '../text/text_detail.dart' show TextDetail;
 export 'graphics.dart';
 
 /// Destellos de pantalla completa en batalla (accesibilidad): el rojo de
@@ -249,6 +251,7 @@ class GameSettings {
     this.mapLabelBackdrop = MapLabelBackdrop.none,
     this.battleLog = BattleLogMode.normal,
     this.ultBrowse = const UltBrowsePrefs(),
+    this.textDetail = TextDetail.summary,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -362,6 +365,10 @@ class GameSettings {
   /// equipo.
   final UltBrowsePrefs ultBrowse;
 
+  /// TEXTOS (ui_minimal.md § 8, settings.md § 3.10): RESUMIDO (por
+  /// defecto, también para quien ya tenía `game.json`) o DETALLADO.
+  final TextDetail textDetail;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -406,6 +413,7 @@ class GameSettings {
     MapLabelBackdrop? mapLabelBackdrop,
     BattleLogMode? battleLog,
     UltBrowsePrefs? ultBrowse,
+    TextDetail? textDetail,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -440,6 +448,7 @@ class GameSettings {
         mapLabelBackdrop: mapLabelBackdrop ?? this.mapLabelBackdrop,
         battleLog: battleLog ?? this.battleLog,
         ultBrowse: ultBrowse ?? this.ultBrowse,
+        textDetail: textDetail ?? this.textDetail,
       );
 
   /// Versión del formato guardado. v2 (v0.13.1): `readingTitles` pasó a SÍ
@@ -481,6 +490,7 @@ class GameSettings {
         'mapLabelBackdrop': mapLabelBackdrop.name,
         'battleLog': battleLog.name,
         'ultBrowse': ultBrowse.toJson(),
+        'textDetail': textDetail.name,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -501,8 +511,7 @@ class GameSettings {
       particles: ParticleLevel.fromName(json['particles'], d.particles),
       fpsLimit: FpsLimit.fromJson(json['fpsLimit'], d.fpsLimit),
       textSize: TextSize.fromName(json['textSize'], d.textSize),
-      readingFont:
-          ReadingFont.fromName(json['readingFont'], d.readingFont),
+      readingFont: ReadingFont.fromName(json['readingFont'], d.readingFont),
       buildNotices: flag(json['buildNotices'], d.buildNotices),
       colorVision: ColorVision.fromName(json['colorVision'], d.colorVision),
       reduceMotion: flag(json['reduceMotion'], d.reduceMotion),
@@ -529,12 +538,13 @@ class GameSettings {
           : flag(json['readingTitles'], d.readingTitles),
       letterSpacing:
           LetterSpacing.fromName(json['letterSpacing'], d.letterSpacing),
-      noticeDuration: NoticeDuration.fromName(
-          json['noticeDuration'], d.noticeDuration),
+      noticeDuration:
+          NoticeDuration.fromName(json['noticeDuration'], d.noticeDuration),
       mapLabelBackdrop: MapLabelBackdrop.fromName(
           json['mapLabelBackdrop'], d.mapLabelBackdrop),
       battleLog: BattleLogMode.fromName(json['battleLog'], d.battleLog),
       ultBrowse: UltBrowsePrefs.fromJson(json['ultBrowse']),
+      textDetail: TextDetail.fromName(json['textDetail'], d.textDetail),
     );
   }
 
@@ -572,7 +582,8 @@ class GameSettings {
       other.noticeDuration == noticeDuration &&
       other.mapLabelBackdrop == mapLabelBackdrop &&
       other.battleLog == battleLog &&
-      other.ultBrowse == ultBrowse;
+      other.ultBrowse == ultBrowse &&
+      other.textDetail == textDetail;
 
   @override
   int get hashCode => Object.hash(
@@ -597,7 +608,7 @@ class GameSettings {
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
-          mapLabelBackdrop, battleLog, partyExpanded, ultBrowse));
+          mapLabelBackdrop, battleLog, partyExpanded, ultBrowse, textDetail));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

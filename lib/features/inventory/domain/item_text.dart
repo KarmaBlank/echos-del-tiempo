@@ -1,3 +1,5 @@
+import '../../../core/text/plain_text.dart';
+import '../../../core/text/text_detail.dart';
 import '../../../game_engine/data/eco_catalog.dart';
 import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/atlas.dart';
@@ -73,7 +75,14 @@ String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
 
 /// Texto de un mod con su tier, en azul (los fijos de un único, naranja).
 String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
-    _c(a.fixed ? _orange : kModHex, _esc(rules.items.affixText(a, on: on)));
+    _c(a.fixed ? _orange : kModHex,
+        _esc(modShort(rules.items.affixText(a, on: on))));
+
+/// Texto de un mod (afijo, implícito, pasiva del arma) según TEXTOS:
+/// en RESUMIDO sin abreviaturas ni fórmulas (ui_minimal.md § 8).
+String modShort(String text) => TextDetail.isSummary
+    ? plainShort(text, sentence: text.trimRight().endsWith('.'))
+    : text;
 
 /// Nombre visible del lado de un mod (loot.md § "Prefijos y sufijos").
 String affixSideLabel(AffixSlot s) =>
@@ -108,7 +117,8 @@ String affixSidesHelp([Rarity? r]) {
 List<String> affixGroupsMarkup(ProgressionRules rules, ItemInstance it,
     {String Function(AffixRoll a)? line}) {
   final items = rules.items;
-  String mod(AffixRoll a) => line?.call(a) ?? '• ${affixMarkup(rules, a, on: it)}';
+  String mod(AffixRoll a) =>
+      line?.call(a) ?? '• ${affixMarkup(rules, a, on: it)}';
   final cap = it.rarity.affixSideCap;
   final out = <String>[];
   for (final side in AffixSlot.values) {
@@ -263,7 +273,7 @@ String itemTooltipMarkup(
   final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
   if (implicit.isNotEmpty) {
     l.add('<span class="k">Implícito:</span> '
-        '${implicit.map((m) => _esc(m.text)).join(', ')}');
+        '${implicit.map((m) => _esc(modShort(m.text))).join(', ')}');
   }
   if (it.rarity.maxMods > 0 || it.affixes.isNotEmpty) {
     l.add('<span class="k">Mods ${it.modCount}/${it.rarity.maxMods}</span>');
@@ -275,7 +285,7 @@ String itemTooltipMarkup(
   final passive = items.passiveText(it);
   if (passive != null) {
     l.add('${_c(kPassiveHex, '<b style="color:$kPassiveHex">Pasiva</b>')} '
-        '${_c(kPassiveHex, _esc(passive))}');
+        '${_c(kPassiveHex, _esc(modShort(passive)))}');
   }
   if (it.forgeLevel > 0 || ItemRules.forgeCapOf(it) > 0) l.add(forgeText(it));
   // [skillDetails]: qué hace cada una (el texto de la batalla, en una
@@ -327,7 +337,7 @@ String itemTooltipMarkup(
   final mods = <String>[
     if (implicit.isNotEmpty)
       '<span class="k">Implícito:</span> '
-          '${implicit.map((m) => _esc(m.text)).join(', ')}',
+          '${implicit.map((m) => _esc(modShort(m.text))).join(', ')}',
     ...affixGroupsMarkup(rules, it),
   ];
   final passive = items.passiveText(it);
@@ -353,7 +363,7 @@ String itemTooltipMarkup(
     sections: [
       ('Mods', mods.join('<br>')),
       if (element != null) ('Elemento', element),
-      if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(passive))),
+      if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(modShort(passive)))),
       ('Habilidades', _skillFolds(rules, it, stats).join('<br>')),
       ('Peso y forja', weight.join('<br>')),
       if (flavor != null && flavor.isNotEmpty)
@@ -383,12 +393,18 @@ String weightTagMarkup(WeaponDef w) {
 /// Qué cambia por la categoría (sin el nombre): `sin penalización de
 /// velocidad` / `−0.5 vel. · algo más lenta a cambio de poder` /
 /// `−1.3 vel. · suele dar más ATQ`.
-String weightTradeoffText(WeaponDef w) => switch (weightClassOf(w)) {
-      WeightClass.ligera => 'sin penalización de velocidad',
-      WeightClass.media =>
-        '−${fmtNum(w.weight)} vel. · algo más lenta a cambio de poder',
-      WeightClass.pesada => '−${fmtNum(w.weight)} vel. · suele dar más ATQ',
-    };
+String weightTradeoffText(WeaponDef w) => TextDetail.isSummary
+    ? switch (weightClassOf(w)) {
+        WeightClass.ligera => 'no te frena',
+        WeightClass.media => 'un poco más lenta, más poder',
+        WeightClass.pesada => 'más lenta, más ataque',
+      }
+    : switch (weightClassOf(w)) {
+        WeightClass.ligera => 'sin penalización de velocidad',
+        WeightClass.media =>
+          '−${fmtNum(w.weight)} vel. · algo más lenta a cambio de poder',
+        WeightClass.pesada => '−${fmtNum(w.weight)} vel. · suele dar más ATQ',
+      };
 
 /// Líneas del peso de la ficha: `Ligera · sin penalización de velocidad`
 /// o `Pesada: −1.3 vel. · suele dar más ATQ`, y con [stats] (los de quien
@@ -416,7 +432,7 @@ String stackTooltipMarkup(StackKind k, int count) {
   };
   return '<b style="color:#78e6dc">${_esc(k.label)}</b> x$count<br>'
       '${_c(_sky, m == null ? 'Consumible' : 'Material de fusión')} · '
-      'máx. ${k.maxStack}<br>${_esc(desc)}';
+      'máx. ${k.maxStack}<br>${_esc(modShort(desc))}';
 }
 
 /// Una línea para listas: nombre en su color + `Nv · tipo`.

@@ -161,3 +161,79 @@ una línea; nada se corta con "…" (`DsInfoRow` baja de línea). Piezas en
 Tests: `test/game_engine/build_coach_where_test.dart`,
 `test/features/build_planner/build_coach_ui_test.dart` (APLICAR,
 pasos, controles escondidos, siglas, goldens `build_simple_*`).
+
+## 8. TEXTOS: RESUMIDO y DETALLADO (v0.25.0)
+
+Pedido del dueño: un ajuste global `TEXTOS` (settings.md § 3.10) con
+dos modos para todas las descripciones del juego. Es local (no viaja
+por la red ni cambia el protocolo).
+
+| Modo | Qué se ve |
+|---|---|
+| RESUMIDO (por defecto) | una o dos líneas cortas, en palabras simples, con el número principal de cada efecto |
+| DETALLADO | el texto de siempre: números, escalado, fórmulas y reglas finas |
+
+### 8.1 Dónde aplica
+
+Habilidades y ULT (`describeSkillMarkup` y lo que lo usa: menú de
+batalla, fichas, ULT, Travesía), estados (`statusDescriptionOf`), mods
+y afijos, implícitos y pasivas de arma (`modShort`), peso del arma,
+nodos del árbol de pasivas (`passiveEffectsText`, keystones y
+mecánicas), nodos de los árboles de oficios (`lifeNodeText`), pilas
+(pociones, éteres, materiales) y los abonos del comerciante.
+
+### 8.2 Reglas del RESUMIDO
+
+- Como mucho 2 líneas cortas (≈ 90 letras cada una; `kShortMaxChars`).
+- Empieza con el verbo: `Pega…`, `Cura…`, `Aplica…`, `Revive…`.
+- Un número por efecto, el que importa (daño o cura con tus stats, o el
+  % de tu ataque / magia si no hay stats; capas de un estado; turnos).
+- Sin fórmulas ni jerga: nada de `×`, `=`, `ATQ`, `MAG`, `DEF`,
+  `stack`, `máx.`, `c/u` (`kFormulaTokens`). Se dice `ataque`, `magia`,
+  `defensa`, `capas`.
+- Sin paréntesis con reglas: la regla va al DETALLADO.
+- Mismas palabras para lo mismo en todo el juego (`a 1 enemigo`, `a
+  todos los enemigos`, `al grupo`, `al aliado más herido`).
+- La cabecera (nombre y costo) no cambia.
+
+Cómo se arma: se genera desde los datos (efecto + valor principal,
+`lib/features/combat/domain/skill_short_text.dart`), no se escribe a
+mano habilidad por habilidad. Los textos que ya vienen escritos (mods,
+mecánicas, keystones, oficios) pasan por `plainShort`
+(`lib/core/text/plain_text.dart`): saca paréntesis y fórmulas, cambia
+abreviaturas por palabras y se queda con la primera oración. Donde eso
+lee mal se escribe a mano (estados, invocaciones, peso, abonos).
+
+### 8.3 MÁS DETALLE en RESUMIDO
+
+Un tooltip en RESUMIDO puede traer el texto DETALLADO de ese mismo
+objeto plegado al pie: `▸ MÁS DETALLE` (`RetroTooltip.detail`,
+`DsTooltipCard.detail`). Se abre con clic sobre el tooltip fijado o
+manteniendo Alt (como los demás plegables). En DETALLADO no aparece.
+
+### 8.4 Implementación
+
+- `TextDetail` (`lib/core/text/text_detail.dart`, Dart puro):
+  `summary` / `full`, `TextDetail.current` (el modo vigente),
+  `TextDetail.run(modo, f)` y `fullIfSummary(f)` para el MÁS DETALLE.
+- `TextDetailScope` (arriba de la app, en `EcosApp`) pone el ajuste en
+  `TextDetail.current`; al cambiar, la app se vuelve a armar entera.
+- Fuera de la app (tests de dominio) el modo es DETALLADO: los textos
+  de siempre.
+
+### 8.5 Quedan solo en DETALLADO (por ahora)
+
+- Textos escritos en el menú de batalla que no salen de un armador
+  (Defender, Atacar, Liberar, dúos, Éter, Pasar turno).
+- Plan de build y asistente (build_planner.md): ya usan palabras
+  completas.
+- Bestiario, misiones, ascensión (kit y requisitos), XP, logros, la
+  ayuda de prefijos y sufijos y los textos de la Travesía fuera de las
+  habilidades y pasivas.
+- El panel de detalle del menú de batalla no tiene MÁS DETALLE (no es
+  un tooltip): en RESUMIDO muestra el texto corto.
+
+Tests: `test/features/settings/text_detail_test.dart` (todas las
+habilidades y ULT del catálogo, estados, pasivas, mecánicas y mods
+cumplen § 8.2; el tooltip de una habilidad cambia al cambiar el
+ajuste; `game.json` viejo carga RESUMIDO y se guarda).
