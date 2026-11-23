@@ -41,16 +41,44 @@ abstract final class TownEditLayer {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final w = map.width * ts, h = map.height * ts;
+    // Elegir dónde contratar (farming.md § 8): solo las huertas o los
+    // lagos, dorados si se puede contratar, grises si no.
+    if (e.hire case final kind?) {
+      for (final b in town.builds) {
+        if (b.kind != kind) continue;
+        final ok = ctl.hireWhy(b) == null;
+        final hot = ok && b.id == e.hoverBuild;
+        for (final p in b.parts) {
+          final r = Rect.fromLTWH(
+              (p.x + ox) * ts, (p.y + oy) * ts, p.w * ts, p.h * ts);
+          c.drawRect(
+              r, fill..color = ok ? TownEditPalette.valid : TownEditPalette.sideFull);
+          c.drawRect(
+              r.deflate(0.5),
+              line
+                ..color = hot
+                    ? TownEditPalette.selected
+                    : ok
+                        ? TownEditPalette.validBorder
+                        : TownEditPalette.sideLocked);
+        }
+      }
+      return;
+    }
     for (final side in TownSide.values) {
-      if (TownRules.sideFull(town, side) != null) continue;
+      final full = TownRules.sideFull(town, side) != null;
       final r = stripRect(side, w, h);
       final picked = e.side == side;
-      c.drawRect(r, fill..color = TownEditPalette.side);
+      c.drawRect(
+          r, fill..color = full ? TownEditPalette.sideFull : TownEditPalette.side);
       c.drawRect(
           r.deflate(0.5),
           line
-            ..color =
-                picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
+            ..color = full
+                ? TownEditPalette.sideLocked
+                : picked
+                    ? TownEditPalette.selected
+                    : TownEditPalette.sideBorder);
       // El texto (AMPLIAR y el costo) va en px de pantalla, en
       // `TownStripCards` (town_editor.md § 1.3).
     }

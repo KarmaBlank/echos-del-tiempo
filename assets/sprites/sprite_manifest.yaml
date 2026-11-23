@@ -302,6 +302,11 @@ items:
   vida_cat_semilla: { idle: items/vida_cat_semilla.png, size: [16, 16] }
   vida_cat_cosecha: { idle: items/vida_cat_cosecha.png, size: [16, 16] }
   vida_cat_basura: { idle: items/vida_cat_basura.png, size: [16, 16] }
+  vida_npc_granjero: { idle: items/vida_npc_granjero.png, size: [16, 16] }
+  vida_npc_granjero_trabajo: { idle: items/vida_npc_granjero_trabajo.png, size: [16, 16] }
+  vida_npc_pescador: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_pescador_trabajo: { idle: items/vida_npc_pescador_trabajo.png, size: [16, 16] }
+  vida_cofre_oficio: { idle: items/vida_cofre_oficio.png, size: [16, 16] }
   # vida:fin
 tiles:
   suelo: { procedural: true, size: [16, 16] }

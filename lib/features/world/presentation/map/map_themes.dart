@@ -260,6 +260,9 @@ abstract final class TownEditPalette {
   static const sideText = Color(0xFFDDF2FF);
   static const sideLocked = Color(0xFF9AA0AC);
 
+  /// Franja de un lado al tope (gris, no se elige).
+  static const sideFull = Color(0x339AA0AC);
+
   /// Contorno de cada construcción y el de la elegida.
   static const outline = Color(0x99FFF3C4);
   static const selected = Color(0xFFFFD166);

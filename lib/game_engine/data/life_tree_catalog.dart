@@ -98,7 +98,7 @@ const _pesca = <LifeTreeNode>[
       x: 1, y: 3, cost: 2, major: true, links: ['p_b2', 'p_b3', 'p_k2'],
       effects: {LifeFx.legend: 'p_b4'}),
   LifeTreeNode('p_k1', 'Red de pescador',
-      'Auto-pesca: +{v} peces por uso.',
+      'Pescadores: +{v} peces por vuelta.',
       x: -1, y: 4, cost: 2, links: ['p_a4', 'p_f'], exclusive: 'p_k',
       effects: {LifeFx.auto: 'p_k1'}),
   LifeTreeNode('p_k2', 'Lance del Mañana', 'Rareza de los peces +{v} % más.',

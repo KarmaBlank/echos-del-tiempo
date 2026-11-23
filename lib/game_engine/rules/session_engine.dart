@@ -67,7 +67,7 @@ import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_rules.dart';
-import '../models/world_save.dart' show TownState, TownSide, BuildKind;
+import '../models/world_save.dart' show TownState, TownSide, BuildKind, TownBuild;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
@@ -1102,7 +1102,6 @@ class _Op {
 
       case FishBiteAction() ||
             FishResultAction() ||
-            AutoFishAction() ||
             FishLineAction() ||
             SellFishAction() ||
             ExchangeFishAction() ||

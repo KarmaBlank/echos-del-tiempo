@@ -10,8 +10,13 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 ## 1. Modo edición
 
 ### 1.1 Entrar y salir
-- FUENTE RÚNICA → EDITAR PUEBLO. Solo el dueño del mundo (el primer
-  humano de la sala); para el resto el botón sale gris con el motivo.
+- FUENTE RÚNICA (v0.25.7): panel chico con una grilla de acciones
+  grandes (`DsButton` con una línea de detalle cada una; bloqueada = gris
+  con el motivo en esa línea): EDITAR PUEBLO, CONTRATAR GRANJERO,
+  CONTRATAR PESCADOR (farming.md § 8.1), TABLERO DE ENCARGOS, y CERRAR
+  abajo. Sin contador de ampliaciones.
+- EDITAR PUEBLO: solo el dueño del mundo (el primer humano de la sala);
+  para el resto el botón sale gris con el motivo.
 - El personaje se queda donde está (no camina, no pesca, E no hace
   nada). La cámara queda libre: WASD / flechas, arrastrar con el mouse,
   rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
@@ -48,6 +53,11 @@ esquina superior izquierda del fantasma va en el tile del mouse.
   60000)", verde si alcanza y rojo si no (`TownRules.costLines`). Se
   achica para entrar en la franja; si la parte visible es muy chica no
   se muestra. Borde dorado con el mouse encima o elegida.
+- Lado al tope (v0.25.7, `TownRules.sideFull`): la franja sale gris y su
+  tarjeta dice AMPLIAR en gris con "Límite de ampliación alcanzado" (tope
+  total) o "Límite de este lado" (tope por lado), sin costo; el clic no
+  hace nada. Ningún contador "n/6" (ni en la fuente ni en AMPLIAR AL
+  <LADO>).
 - Contorno de cada construcción (dorado la elegida) y fantasma verde /
   rojo. Colores en `TownEditPalette`.
 - Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
@@ -182,11 +192,20 @@ la izquierda son el eje de caminos).
   va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
   peces); construir, mover, borrar y ampliar, solo el dueño.
 
+- Huertas pegadas también se funden (v0.25.5): una huerta más grande con
+  las parcelas, semillas, ayudantes y cofre de las dos.
+- Opciones de una huerta o un lago: GRANJEROS / PESCADORES con CONTRATAR
+  AYUDANTE y DESPEDIR (farming.md § 8.1). Cada construcción tiene un cofre
+  al lado del cartel. AGREGAR ESPECIES es una grilla: elegís el pez, ves
+  el detalle y SOLTAR EN EL LAGO.
+
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip
 de tamaño fijo: LAGO con cada especie una vez y "N/M soltados"; HUERTA
 con cada cultivo plantado una vez y "6 de 12 parcelas" (plantadas /
-tiles de la huerta). Las parcelas y el agua no tienen tooltip.
+tiles de la huerta). Los dos suman la línea de ayudantes ("Granjeros 1 /
+2 · cada uno atiende 8 parcelas", con las semillas del granjero) y el
+cofre. Las parcelas y el agua no tienen tooltip.
 
 ## 7. Datos
 ### 7.1 `TownState`

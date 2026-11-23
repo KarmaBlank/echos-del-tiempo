@@ -271,16 +271,74 @@ herramienta de área trabaja menos tiles.
   donde se pesca: `lakeZoneRare` por cada 36 tiles por encima de 48 +
   `breedRare` por especie criando (tope `breedRareCap`).
 
-## 8. Ayudante de la huerta
-- Se contrata y mejora en la fuente: nivel 1..`helperMax` (3), costo
-  `helperCost × nivel` de oro, pide Cultivo `helperLevel × nivel`.
-- Cada `helperEverySec` (45 s) de sala abierta riega las secas y
-  cosecha las maduras (calidad normal, sin hallazgos) de hasta
-  `helperPlots × nivel` parcelas (+ «Capataz» del árbol), y replanta la
-  misma semilla. Lo cosechado va al granero (`town.silo`).
-- Cualquiera recoge el granero en el agropecuario (CULTIVO → VENDER →
-  RECOGER) con `helperXpShare` (10 %) de la XP.
-- Se dibuja al costado de la huerta del pueblo.
+## 8. Ayudantes: granjeros y pescadores (v0.25.5)
+### 8.1 Contratar
+- En EDITAR PUEBLO (solo el dueño): clic en una huerta o un lago →
+  GRANJEROS / PESCADORES "1 / 3" → CONTRATAR AYUDANTE (`helperCost`, 800
+  de oro; pide Cultivo o Pesca `helperLevel`, 5) o DESPEDIR (el último;
+  sin devolver oro).
+- Atajo desde la FUENTE RÚNICA (v0.25.7): CONTRATAR GRANJERO / CONTRATAR
+  PESCADOR cierra el panel y entra a la cámara libre de la edición en
+  modo elegir (`TownEdit.hire`): barra "Elegí una huerta para contratar
+  un granjero" / "¿En qué lago querés el pescador?" con CANCELAR [ESC];
+  solo se resaltan las huertas (o los lagos), verdes si se puede y grises
+  si no, cada una con su tarjeta "Granjeros n / max" y el costo o el
+  motivo (lleno, falta oro, falta nivel de Cultivo o Pesca). Clic en una
+  habilitada = la misma acción `TownOp.hireHelper` y sale. Solo el dueño;
+  sin huertas (o lagos) el botón sale gris con el motivo. Sin cambio de
+  protocolo.
+- Tope por tamaño: huerta `ceil(parcelas / helperPlots)` (8), lago
+  `ceil(tiles / fisherTiles)` (18). Huertas pegadas se funden en una
+  (como los lagos): suman parcelas, ayudantes, semillas y cofre, y crece
+  el tope. El cartel y las opciones dicen "Granjeros 1 / 2 · cada uno
+  atiende 8 parcelas".
+- Áreas automáticas sin pisarse: el granjero i atiende las parcelas
+  i·8 … i·8+7 de la huerta, fila por fila. El pescador i, un lugar de la
+  orilla repartido por el borde.
+- NPC visibles con sprite propio (`items.vida_npc_granjero[_trabajo]`,
+  `vida_npc_pescador[_trabajo]`, `tool/export_life_icons.dart`). El
+  granjero va de parcela en parcela de su área (trabaja 60 % del paso,
+  camina el resto); el pescador tira la línea en su lugar. La posición
+  sale del reloj de la sala (igual en todos). No son sólidos y nunca
+  tapan la huerta: E / clic en una parcela sigue siendo del jugador.
+- Mouse encima de un ayudante (jugando o editando): contorno de su área
+  y tooltip fijo (nombre, parcelas, semillas, tareas, "Próximo ciclo:
+  regar · 12 s").
+- G al lado de un ayudante ("[G] Ayudante" en el aviso): su pantalla.
+
+### 8.2 Vuelta del granjero
+- Cada `helperEverySec` (45 s, ÷ (1 + «Capataz»)), alineado al reloj de
+  la sala, cada granjero hace UNA sola tarea en toda su área: la
+  primera prendida que tenga algo para hacer, en orden fijo: (1) PLANTAR
+  tiles vacíos si tiene semillas, (2) REGAR las plantadas secas, (3)
+  COSECHAR las maduras al cofre. Si ninguna aplica, descansa.
+- Las tareas se prenden y apagan por granjero (pestaña TAREAS); se
+  guardan en `tk`. Con una sola prendida, solo hace esa.
+- Solo planta de SU inventario de semillas (el de la huerta, compartido
+  por sus granjeros): sin semillas solo riega y cosecha. Cosecha
+  calidad normal, sin hallazgos; deja la parcela arada para la próxima
+  vuelta de plantar. Los jugadores trabajan cualquier parcela cuando
+  quieren con sus propias stats; el granjero sigue con lo que encuentra.
+- Pantalla del granjero (G): SEMILLAS (grilla tipo inventario: tus
+  semillas y las de la huerta, filtro por rareza y buscador, detalle con
+  PASAR 1 / 10 / TODO → o ← DEVOLVER), TAREAS y COFRE.
+
+### 8.3 Cofre
+- Cada huerta y cada lago tiene un cofre al lado del cartel (se mueve
+  con la construcción, no es sólido) con el número de cosas encima. E al
+  lado: RECOGER todo a la bolsa PESCA Y CULTIVO, con `helperXpShare`
+  (10 %) de la XP. Tope `chestMax` (200): lleno, no cosechan ni pescan.
+- Pescador: cada vuelta saca `fisherCatch` (2) peces de la tabla de su
+  lago (+ «Red de pescador») al cofre; nunca legendarios; XP como la
+  vieja red (× `autoMult`) para quien recoge.
+- Borrar la construcción: el cofre va a quien borra y las semillas de
+  los granjeros vuelven.
+
+### 8.4 Datos y migración
+`TownBuild` suma `hp` (ayudantes), `ch` (cofre), `sd` (semillas), `tk`
+(tareas por granjero). Saves viejos: `town.helper > 0` → un granjero en
+la primera huerta; `town.silo` → el cofre de esa huerta. El granero del
+agropecuario (RECOGER) ya no existe.
 
 ## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →

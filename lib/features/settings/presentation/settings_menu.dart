@@ -912,6 +912,7 @@ class _AccessibilityTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(textDetail: v)),
           ),
         ),
+        _TextDetailExample(mode: s.textDetail),
         const _SectionHeader('COLOR Y MOVIMIENTO'),
         _SettingRow(
           label: 'MODO DALTÓNICO',
@@ -1017,6 +1018,36 @@ class _SectionHeader extends StatelessWidget {
 /// botón, una etiqueta del mapa sobre tiles cargados con su fondo, un
 /// aviso (con su × en HASTA CERRAR) y, en EXTENDIDO, el registro de
 /// batalla. Sin foco ni clics.
+/// Ejemplo de una línea por modo de TEXTOS (v0.25.6): el elegido
+/// resaltado, el otro en gris.
+class _TextDetailExample extends StatelessWidget {
+  const _TextDetailExample({required this.mode});
+
+  final TextDetail mode;
+
+  static const examples = {
+    TextDetail.summary: 'RESUMIDO: +12 % daño de fuego',
+    TextDetail.full: 'DETALLADO: +12 % daño de fuego (tier 3, rango 8-14 %, '
+        'prefijo)',
+  };
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        key: const ValueKey('a11y-textdetail-example'),
+        padding: EdgeInsets.only(
+            left: RetroType.width(context, 200), bottom: UiTheme.space(8)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final e in examples.entries)
+              Text(e.value,
+                  style: DsText.detail(
+                      e.key == mode ? DsColors.text : DsColors.textSecondary)),
+          ],
+        ),
+      );
+}
+
 class _TextPreview extends StatelessWidget {
   const _TextPreview({required this.settings});
 

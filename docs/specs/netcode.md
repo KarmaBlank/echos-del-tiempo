@@ -761,6 +761,20 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 47 (v0.25.5: granjeros y pescadores)
+
+- Cada construcción de `town.builds` suma `hp` (ayudantes), `ch`
+  (cofre), `sd` (semillas de los granjeros) y `tk` (tareas por granjero,
+  bits plantar / regar / cosechar). Se van `town.helper` y `town.silo`
+  (el mundo guardado los migra; farming.md § 8.4).
+- `town` suma las operaciones `hireHelper` / `fireHelper` /
+  `collectChest` (`tg`), `giveSeeds` / `takeSeeds` (`tg`, `id`, `n`; 0 =
+  todas) y `helperTasks` (`tg`, `x` = granjero, `n` = bits). Las vuelve a
+  validar el anfitrión.
+- Se va `fAuto` (la auto-pesca) y `farmShop` pierde `collectSilo`.
+- Un cliente 46 no sabría dibujar a los ayudantes ni los cofres: la sala
+  no mezcla versiones.
+
 ## Mundo, protocolo 44 (v0.23.0: huerta, pueblo y oficios)
 
 - Snapshot: `town` (farming.md § 10): lago (`lake`), ampliaciones
