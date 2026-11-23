@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/game_engine/data/trials_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/zones_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/models/zone_def.dart';
+import 'package:echos_del_tiempo/game_engine/rules/light_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/trial_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/world_rules.dart';
@@ -124,6 +125,10 @@ void main() {
                   expect(f.quests.any((q) => q.id == p.quest), isTrue);
                 case PoiKind.relic:
                   expect(reach.containsKey((p.tx, p.ty)), isTrue, reason: why);
+                case PoiKind.lantern:
+                  expect(c, Tile.lantern, reason: why);
+                  expect(LightRules.isDark(z.theme, floor: f.index), isTrue,
+                      reason: why);
               }
               if (p.kind != PoiKind.relic && p.kind != PoiKind.secret &&
                   p.kind != PoiKind.shortcut) {

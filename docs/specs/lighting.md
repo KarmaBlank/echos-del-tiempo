@@ -39,6 +39,8 @@ llega ninguna luz queda el ambiente (de día, blanco: no cambia nada).
   pero cuesta `kAttenuationCost` (2.5) tiles extra.
 - Las luces se suman; cada canal se recorta a 1 al combinar con el
   ambiente; luz que sigue la posición exacta (sin estela) y caída redonda.
+`test/game_engine/lantern_test.dart`: faroles solo en pisos oscuros,
+sin cortar el paso ni pisar otros PdI, y [E] los enciende.
 `test/game_engine/fog_of_war_test.dart`: explorado que se recuerda,
 visible solo en el cuadro, reinicio por misión.
 `test/features/world/light_layer_test.dart`: la malla cubre los bordes
@@ -63,12 +65,19 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 | pesca | puntos de pesca | 2 | 0.3 | no |
 | botín | objetos legendarios en el piso | 2.5 | 0.5 | no |
 | jugador_pueblo | cada jugador vivo, de noche al aire libre | 3.5 | 0.5 | no |
-| jugador_oscuro | cada jugador vivo en mazmorra oscura | 6 | 1 | 4 % |
+| jugador_oscuro | cada jugador vivo en mazmorra oscura | 9 | 1 | 4 % |
+| farol | faroles encendidos de las mazmorras oscuras (§ 5.5) | 11 | 1 | 4 % |
 
 ### 3.1 Luz que lleva el jugador
 
 `LightRules.carried(dark:, bonus:)`. `bonus` (tiles extra de radio) es el
 gancho para linternas, pasivas o beneficios de habitantes: hoy siempre 0.
+
+En la oscuridad el radio es 9 (v0.32.2; antes 6). Con la caída de § 2 y
+el umbral de § 5.3 (0.12) se ve a un enemigo hasta ~5.9 tiles
+(`r × (1 − √0.12)`) y la luz se apaga del todo a los 9: alcanza para
+leer la sala en la que estás sin ver la siguiente. Antes era ~3.9: se
+chocaba con los enemigos antes de verlos.
 
 ### 3.2 Titileo
 
@@ -138,7 +147,43 @@ la red ni se guarda.
   vacío (máscara de 1 px por tile, rehecha solo cuando se descubre algo).
   Rejas, cofres, objetivos, PdI e íconos de loot solo se marcan en lo
   explorado. Los enemigos (jefes incluidos) solo mientras están a la
-  vista en ese cuadro: nunca en lo recordado. Los aliados se ven siempre.
+  vista en ese cuadro: nunca en lo recordado. Los jefes no: se ven
+  siempre, como en el mapa. Los aliados también, siempre.
+- Los objetivos de la misión (fragmentos y sellos) se marcan siempre,
+  aunque estén en la niebla: la niebla tapa el camino, no la meta.
+- Vida de la niebla: toda la misión en curso (§ 5.6).
+
+### 5.5 Faroles
+
+- `PoiKind.lantern`, tiles `l` (apagado) y `n` (encendido), sólidos. Se
+  dibujan como el faro del pueblo (poste y brasero).
+- Solo en los pisos oscuros (§ 5.3) de los atlas de zona (también Ecos y
+  Abismo). Los pone `MapGenerator.zone` después de armar el piso, con su
+  propia tirada (`mulberry32(semilla_f ^ 0x1A7E)`): el resto del piso
+  sale igual que antes.
+- Lugar: un tile de piso con los 8 vecinos caminables (nunca corta un
+  pasillo), fuera de la arena del jefe, de las salas secretas y a 3+
+  tiles de la llegada, las escaleras y los otros PdI. Entre faroles,
+  12+ tiles. Uno cada `kLanternArea` = 160 tiles caminables del piso
+  (al menos 2, como mucho 12). El tile deja de ser lugar de enemigos.
+- Ids: `piso × 100 + 99 − k` (los otros PdI usan los primeros números).
+- [E] Encender el farol (`InteractPoiAction`, el host decide, como los
+  braseros): pasa a `poiUsed`, el tile pasa a `n` y emite la luz `farol`
+  (radio 11) para siempre en la misión. Con todos los faroles de una
+  zona prendidos, la zona queda casi a la luz.
+- En el minimapa: como los braseros (apagado / encendido), detrás de la
+  niebla.
+
+### 5.6 Persistencia
+
+- Faroles: en `MissionRun.poiUsed`, que ya viaja en el snapshot y se
+  guarda con la run: compartidos por el grupo y del host.
+- Niebla: del cliente, toda la misión (§ 5.4).
+- Cada vez que se entra a una mazmorra se genera con una semilla nueva
+  (worldgen.md § 6.6): salir y volver a entrar es otra mazmorra, así que
+  hoy faroles y niebla duran la misión, no la zona. Que persistan "por
+  mazmorra" pide decidir si una zona mantiene su mapa entre entradas
+  (pendiente del dueño).
 
 ## 6. Colores
 
@@ -158,9 +203,10 @@ juego ni de la red.
 
 ## 8. Red
 
-Sin cambios: todo se deduce del tema, el piso, el reloj y las
-posiciones que ya viajan; la niebla es solo del cliente. Protocolo igual
-(53).
+Todo se deduce del tema, el piso, el reloj y las posiciones que ya
+viajan; la niebla es solo del cliente. Los faroles cambian el mapa que
+sale de la semilla y agregan `PoiKind.lantern` a los eventos: protocolo
+54.
 
 ## 9. Tests
 

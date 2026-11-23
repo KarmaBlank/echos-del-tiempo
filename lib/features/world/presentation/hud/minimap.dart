@@ -73,6 +73,7 @@ Color? poiMinimapColor(MapPoi p, MissionRun m) {
     PoiKind.shortcut => used ? spent : mk(MapMark.shortcut),
     PoiKind.brazier => used ? mk(MapMark.brazierLit) : mk(MapMark.brazier),
     PoiKind.relic => used ? null : mk(MapMark.relic),
+    PoiKind.lantern => used ? mk(MapMark.brazierLit) : mk(MapMark.brazier),
   };
 }
 
@@ -264,8 +265,8 @@ class _MinimapPainter extends CustomPainter {
     }
     canvas.restore();
 
-    // Con niebla: lo no explorado no se marca y los enemigos solo se ven
-    // si están a la vista en este cuadro (nunca en lo recordado).
+    // Con niebla: lo no explorado no se marca y los enemigos (no los
+    // jefes) solo se ven si están a la vista en este cuadro.
     int tile(double px) => (px / _ts).floor();
     bool known(double px, double py) =>
         fog == null || fog.explored(tile(px), tile(py));
@@ -321,7 +322,11 @@ class _MinimapPainter extends CustomPainter {
         }
       }
       for (final it in m.items) {
-        if (it.floor != m.floor || !known(it.x, it.y)) continue;
+        if (it.floor != m.floor) continue;
+        // Los objetivos se ven siempre, aunque estén en la niebla.
+        final goal = it.kind == MissionItemKind.fragment ||
+            it.kind == MissionItemKind.seal;
+        if (!goal && !known(it.x, it.y)) continue;
         switch (it.kind) {
           case MissionItemKind.fragment when !it.done:
             dot(it.x, it.y, MapPalette.mark(MapMark.fragment), 3);
@@ -344,7 +349,6 @@ class _MinimapPainter extends CustomPainter {
       }
       for (final e in m.enemies) {
         if (!e.boss || !e.alive || e.floor != m.floor) continue;
-        if (!inSight(e.x, e.y)) continue;
         final blink = (w.time * 1000 / 300).floor() % 2 == 1;
         final tp = _bossStar.putIfAbsent(
             (blink, 8 * dk),

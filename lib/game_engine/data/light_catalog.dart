@@ -36,6 +36,7 @@ abstract final class LightId {
   static const portal = 'portal';
   static const ventana = 'ventana';
   static const brasero = 'brasero';
+  static const farol = 'farol';
   static const antorcha = 'antorcha';
   static const luciernaga = 'luciernaga';
   static const flora = 'flora';
@@ -54,18 +55,20 @@ const Map<String, LightDef> kLightDefs = {
   LightId.portal: LightDef(radius: 5, intensity: 0.75, tint: 'eco'),
   LightId.ventana: LightDef(radius: 3, intensity: 0.55, tint: 'calida', flicker: 0.03),
   LightId.brasero: LightDef(radius: 6, intensity: 1, tint: 'brasa', flicker: 0.12),
+  LightId.farol: LightDef(radius: 11, intensity: 1, tint: 'calida', flicker: 0.04),
   LightId.antorcha: LightDef(radius: 4.5, intensity: 0.85, tint: 'brasa', flicker: 0.14),
   LightId.luciernaga: LightDef(radius: 1.6, intensity: 0.35, tint: 'luciernaga'),
   LightId.flora: LightDef(radius: 2.2, intensity: 0.35, tint: 'flora'),
   LightId.pesca: LightDef(radius: 2, intensity: 0.3, tint: 'agua'),
   LightId.botin: LightDef(radius: 2.5, intensity: 0.5, tint: 'botin'),
   LightId.jugadorPueblo: LightDef(radius: 3.5, intensity: 0.5, tint: 'calida'),
-  LightId.jugadorOscuro: LightDef(radius: 6, intensity: 1, tint: 'calida', flicker: 0.04),
+  LightId.jugadorOscuro: LightDef(radius: 9, intensity: 1, tint: 'calida', flicker: 0.04),
 };
 
 /// Tile que emite luz → clave del catálogo.
 const Map<String, String> kTileLights = {
   Tile.brazierLit: LightId.brasero,
+  Tile.lanternLit: LightId.farol,
   Tile.fountain: LightId.fuente,
   Tile.portal: LightId.portal,
   Tile.house: LightId.ventana,

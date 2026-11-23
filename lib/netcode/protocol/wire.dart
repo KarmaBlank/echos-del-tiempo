@@ -124,7 +124,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`life.sx` / `life.st` / `life.lg`).
 /// 53 (v0.32.0): encargos seguidos y vistos en el perfil (`trk`, `seen`)
 /// y `town` con `track` / `seen` (roles.md § 8).
-const kProtocolVersion = 53;
+/// 54 (v0.32.2): faroles de las mazmorras oscuras (`PoiKind.lantern`,
+/// tiles `l` / `n`): el mapa que sale de la semilla cambia.
+const kProtocolVersion = 54;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
