@@ -129,7 +129,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// 55 (v0.32.3): TALLER DE OFICIOS en el pueblo (landmark `@workshop`,
 /// tile `O`) y ARMERÍA aparte de la FORJA (`@armory`, tile `R`): cambia
 /// el plano del pueblo que arma cada par.
-/// 56 (v0.32.5): lazos con los habitantes (`town.nat`) y `town` con
+/// 56 (v0.32.6): lazos con los habitantes (`town.nat`) y `town` con
 /// `talk` / `nativeInvite` / `nativeTrade` (overworld_biomes.md § 12).
 const kProtocolVersion = 56;
 

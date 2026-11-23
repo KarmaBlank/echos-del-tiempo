@@ -289,7 +289,7 @@ los enemigos fuera de la luz no se dibujan (los jefes sí). Los
 recolectables de los exteriores brillan un poco de noche. Detalle y
 números en lighting.md § 3 y § 5.3.
 
-## 12. Charla, arraigados y su puesto (v0.32.5)
+## 12. Charla, arraigados y su puesto (v0.32.6)
 
 Todos los habitantes (los cinco que se mudan y los cinco pescadores
 nativos) usan el mismo cuadro de diálogo (`DsDialogueBox` +

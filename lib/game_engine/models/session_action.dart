@@ -687,7 +687,7 @@ enum TownOp {
   /// bioma (fishing.md § 12), [TownAction.id] = bioma.
   fisherReq,
 
-  /// v0.32.5 (protocolo 56, overworld_biomes.md § 12): `talk` cuenta una
+  /// v0.32.6 (protocolo 56, overworld_biomes.md § 12): `talk` cuenta una
   /// charla con [TownAction.id] (habitante o `pesc_<bioma>`), una por día;
   /// `nativeInvite` invita al arraigado del bioma [TownAction.id] (dice
   /// que no y da su regalo); `nativeTrade` le compra ([TownAction.x] = 1)
