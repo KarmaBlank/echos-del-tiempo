@@ -8,39 +8,62 @@ título por defecto. El layout es dato (`assets/layouts/title.screen.json`,
 docs/specs/screen_editor.md); la pantalla armada en código (fallback,
 sin archivo) sigue la misma disposición.
 
-## 1. Disposición (menú principal de RPG, minimalista)
+## 1. Disposición (v0.37.4: menú mínimo + flujo por pasos)
 
+Pedido del dueño (sobre v0.37.2): el título tiene que ser minimalista y
+JUGAR tiene que ser la primera acción obvia (a la izquierda confundía).
 Lienzo de diseño 1280×720 (todo escala igual hasta 2560×1440):
 
 ```
- ECOS DEL TIEMPO                 ┌ MUNDO ─────────────────────────┐
-                                 │ selector de mundo              │
- > JUGAR            (principal)  │ PERSONAJES (n/8)               │
-   NUEVO PERSONAJE               │ [tarjeta] [tarjeta] [tarjeta]  │
-   VER NOTAS DEL PARCHE [NUEVO]  │ [tarjeta] [+ NUEVO]            │
-   CONFIGURACIÓN                 │ RENOMBRAR BORRAR ALIJO ...     │
-   SALIR DEL JUEGO               │ ABRIR SALA o [código] UNIRSE   │
-                                 └────────────────────────────────┘
- [ACTUALIZAR] (solo si hay)      avisos de la cuenta     red ·  [?]
+                         ECOS DEL TIEMPO
+
+                          > JUGAR          (principal)
+                          VER NOTAS DEL PARCHE [NUEVO]
+                          OPCIONES
+                          SALIR
+
+ v0.37.4 [BUSCAR]                       avisos / red      [?]
 ```
 
-- Solo el nombre del juego, sin subtítulo.
-- Columna de acciones a la izquierda, una debajo de otra, del mismo
-  ancho, con aire entre botones. JUGAR es la única principal (dorada);
-  SALIR DEL JUEGO va en tono peligro.
-- A la derecha, el hueco `personajes` (mundo + grilla de tarjetas +
-  acciones del elegido + sala) sin panel con borde alrededor: las
-  tarjetas ya son superficies. Si no entra, se desplaza (rueda / teclado).
-- Abajo a la izquierda, el hueco `version` (v0.37.1): vacío (sin
-  versión ni "buscando…" ni BUSCAR) salvo que haya una versión nueva;
-  ahí solo el botón ACTUALIZAR (la misma acción del actualizador; después
-  el progreso de la descarga o REINTENTAR si falla). Nunca se pisa con
-  otra caja.
+- Solo el nombre del juego, centrado, sin subtítulo.
+- Menú principal centrado: JUGAR (principal, arriba), VER NOTAS DEL
+  PARCHE (con la insignia NUEVO, § 4.1), OPCIONES (los ajustes) y SALIR
+  (tono peligro, confirma). Nada más: personajes, mundos, alijo, build,
+  bestiario y hazañas viven dentro del flujo de JUGAR (§ 1.1).
+- Abajo a la izquierda, el hueco `version`: la versión instalada y
+  BUSCAR (buscar actualizaciones; mientras busca, "buscando"; si falla,
+  el motivo y REINTENTAR). Si hay una versión nueva, en su lugar solo el
+  botón compacto ACTUALIZAR; después, el porcentaje de la descarga o
+  REINTENTAR si falla. Nunca el panel grande de actualización (no entra
+  en la esquina).
 - Abajo a la derecha, el hueco `estadoRed` en texto Detalle, y el "?" de
-  los atajos en la esquina.
-- El creador de personaje (cuenta vacía o NUEVO PERSONAJE) ocupa el
-  hueco `personajes`; la columna de la izquierda queda.
+  los atajos en la esquina. Arriba a la derecha, `avisos` (cuenta).
 
+### 1.1 Flujo de JUGAR (un paso por pantalla)
+
+Cada paso es una pantalla propia, con su título, VOLVER (abajo a la
+izquierda, también Esc) y la acción para seguir (abajo a la derecha).
+
+1. Modo: SOLITARIO o COOPERATIVO.
+2. SOLITARIO → Mundo → Personaje → entra al juego.
+3. COOPERATIVO → CREAR SALA o UNIRSE (deshabilitados con el motivo en
+   texto si la red no está disponible).
+   - CREAR SALA → Mundo → Personaje → abre la sala como anfitrión.
+   - UNIRSE → Código (un solo campo; menos de 4 caracteres: "Escribí el
+     código de la sala.") → Personaje → se une.
+- Mundo: la lista de mundos agrupada por etiqueta con CREAR, CAMBIAR
+  NOMBRE y BORRAR (con confirmación); CONTINUAR sigue con el elegido.
+  La Travesía no tiene mundos: se saltea el paso.
+- Personaje: carrusel de tarjetas (flechas anterior / siguiente, el
+  elegido centrado; la tarjeta "+ NUEVO" al final si hay lugar). Debajo,
+  NUEVO PERSONAJE, CAMBIAR NOMBRE, BORRAR, ALIJO, BUILD, BESTIARIO y
+  HAZAÑAS (las del Mundo; la Travesía solo las tres primeras). La
+  acción principal dice JUGAR, CREAR SALA o UNIRSE según el camino;
+  doble clic o Enter sobre el elegido hace lo mismo. Con la cuenta vacía
+  (o NUEVO PERSONAJE) se ve el creador en el mismo paso.
+- Al volver de una partida se vuelve al menú principal (con el motivo
+  de la desconexión en `estadoRed`, si lo hubo). Un error al conectar
+  deja al jugador en el paso Personaje con el motivo.
 ## 2. Sin recortes
 
 - `DsScreenView` dibuja cada elemento a tamaño de diseño y lo escala por
@@ -55,7 +78,7 @@ Lienzo de diseño 1280×720 (todo escala igual hasta 2560×1440):
 
 ## 3. Tarjetas de personaje
 
-Grilla (3 por fila en el hueco por defecto). Ningún dato se corta con
+En el carrusel del paso Personaje (§ 1.1). Ningún dato se corta con
 "…": si no entra, baja de renglón. La fecha va corta: `Jugado: 19/11/26`.
 
 ## 4. Notas del parche

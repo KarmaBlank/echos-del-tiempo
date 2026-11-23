@@ -3,6 +3,7 @@ library;
 
 export 'ds_action_row.dart';
 export 'ds_button.dart';
+export 'ds_carousel.dart';
 export 'ds_columns_template.dart';
 export 'ds_components.dart';
 export 'ds_craft_template.dart';

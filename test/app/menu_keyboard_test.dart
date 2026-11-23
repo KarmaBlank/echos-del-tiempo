@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
+import '../features/lobby/title_flow.dart';
 
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
@@ -274,6 +275,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump();
+    await goToSoloCharacters(tester);
     // 2 = el segundo personaje.
     await _key(tester, LogicalKeyboardKey.digit2);
     await tester.pump();

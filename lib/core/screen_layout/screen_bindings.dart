@@ -76,7 +76,7 @@ const titleBindings = ScreenBindingSpec(
   screen: 'title',
   label: 'TÍTULO',
   actions: [
-    ScreenActionSpec('nuevaPartida', 'Jugar con el personaje elegido'),
+    ScreenActionSpec('nuevaPartida', 'Jugar (elegir modo, mundo y personaje)'),
     ScreenActionSpec('crearPersonaje', 'Crear personaje'),
     ScreenActionSpec('configuracion', 'Abrir configuración'),
     ScreenActionSpec('salirDelJuego', 'Salir del juego'),

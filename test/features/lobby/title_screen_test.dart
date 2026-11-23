@@ -22,6 +22,7 @@ import '../../game_engine/session_test_helpers.dart';
 import '../inventory/loot_fixtures.dart';
 import '../../app/button_look.dart';
 import '../../app/square_ui_audit.dart';
+import 'title_flow.dart';
 
 final _rules = CharacterRules(progression);
 
@@ -114,11 +115,13 @@ void main() {
         repo: repo, store: store, onStart: () => started++);
     expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
     expect(find.text('ECOS DEL TIEMPO'), findsOneWidget);
-    expect(find.text('CREA TU PRIMER PERSONAJE'), findsOneWidget);
-    expect(find.byKey(const ValueKey('char-create-cancel')), findsNothing);
     expect(find.byKey(const ValueKey('title-settings')), findsOneWidget);
-    expectButtonLook(tester, find.byKey(const ValueKey('char-create-confirm')));
     expectButtonLook(tester, find.byKey(const ValueKey('title-settings')));
+    await goToSoloCharacters(tester);
+    expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
+    expect(find.text('CREÁ TU PRIMER PERSONAJE'), findsOneWidget);
+    expect(find.byKey(const ValueKey('char-create-cancel')), findsNothing);
+    expectButtonLook(tester, find.byKey(const ValueKey('char-create-confirm')));
 
     await tester.enterText(
         find.byKey(const ValueKey('title-name')), 'Anastasia Larga');
@@ -137,7 +140,7 @@ void main() {
     expect(saved.equipped, 'baculo_aprendiz');
     expect(progression.normalize(saved).classId, 'maga');
 
-    await _tap(tester, 'title-start');
+    await _tap(tester, 'char-play');
     expect(started, 1);
     // La sesión recibe el personaje elegido.
     expect((await store.load())!.name, 'Anastasia');
@@ -150,6 +153,7 @@ void main() {
     final repo = AccountRepository(mem);
     var started = 0;
     await _pumpTitle(tester, repo: repo, onStart: () => started++);
+    await goToSoloCharacters(tester);
     expect(find.text('PERSONAJES (3/8)'), findsOneWidget);
     for (final n in ['Ana', 'Bo', 'Cid']) {
       expect(find.text(n), findsOneWidget, reason: n);
@@ -173,8 +177,11 @@ void main() {
     expect(find.text('PERSONAJES (4/8)'), findsOneWidget);
     expect((await mem.load()).account.selected!.profile.name, 'Dana');
 
-    // Renombrar al elegido.
-    await _tap(tester, 'char-slot-c1');
+    // Renombrar al elegido (Ana quedó fuera del carrusel: flechas).
+    for (var i = 0; i < 3; i++) {
+      await _tap(tester, 'carousel-prev');
+    }
+    expect((await mem.load()).account.selectedId, 'c1');
     await _tap(tester, 'char-rename');
     expect(find.byKey(const ValueKey('char-rename-dialog')), findsOneWidget);
     await tester.enterText(
@@ -201,6 +208,7 @@ void main() {
     final mem = InMemoryAccountStore(threeCharacters());
     final repo = AccountRepository(mem);
     await _pumpTitle(tester, repo: repo);
+    await goToSoloCharacters(tester);
 
     await _tap(tester, 'char-delete');
     expect(find.byKey(const ValueKey('char-delete-dialog')), findsOneWidget);
@@ -232,13 +240,14 @@ void main() {
   testWidgets('borrar el último abre el creador', (tester) async {
     final mem = InMemoryAccountStore(_rules.create(Account(), 'Solo', 'maga'));
     await _pumpTitle(tester, repo: AccountRepository(mem));
+    await goToSoloCharacters(tester);
     await _tap(tester, 'char-delete');
     await tester.enterText(
         find.byKey(const ValueKey('char-delete-field')), 'solo');
     await tester.pump();
     await _tap(tester, 'char-delete-ok');
     await tester.pumpAndSettle();
-    expect(find.text('CREA TU PRIMER PERSONAJE'), findsOneWidget);
+    expect(find.text('CREÁ TU PRIMER PERSONAJE'), findsOneWidget);
     expect((await mem.load()).account.characters, isEmpty);
   });
 
@@ -249,6 +258,7 @@ void main() {
       a = _rules.create(a, 'P$i', 'guerrero')!;
     }
     await _pumpTitle(tester, repo: AccountRepository(InMemoryAccountStore(a)));
+    await goToSoloCharacters(tester);
     expect(find.text('PERSONAJES (8/8)'), findsOneWidget);
     expect(find.byKey(const ValueKey('char-new')), findsNothing);
     // El motivo va al tooltip del botón (design_system.md § 2).
@@ -283,6 +293,7 @@ void main() {
     final mem = InMemoryAccountStore(a);
     final repo = AccountRepository(mem);
     await _pumpTitle(tester, repo: repo);
+    await goToSoloCharacters(tester);
 
     await _tap(tester, 'char-stash');
     await tester.pumpAndSettle();

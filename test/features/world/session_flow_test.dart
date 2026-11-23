@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import '../lobby/title_flow.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
@@ -51,7 +52,8 @@ void main() {
 
     // ---- título → lobby ----
     await tester.pump(); // carga la cuenta
-    await tester.tap(find.text('> JUGAR SOLO'));
+    await goToSoloCharacters(tester);
+    await tester.tap(find.byKey(const ValueKey('char-play')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     // "Cargando el mundo…" (v0.35.1): unos cuadros hasta mostrarlo.
@@ -172,10 +174,11 @@ void main() {
     await tester.tap(find.text('< TITULO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('> JUGAR SOLO'), findsOneWidget);
+    expect(find.byKey(const ValueKey('title-start')), findsOneWidget);
     final saved = await store.load();
     expect(saved!.level, greaterThan(1));
     // La lista del título se refrescó con el progreso guardado.
+    await goToSoloCharacters(tester);
     expect(find.text('Guerrero · Nv ${saved.level}'), findsOneWidget);
   });
 }

@@ -24,9 +24,9 @@ class UpdateBanner extends StatefulWidget {
   const UpdateBanner(
       {super.key, this.service, this.autoCheck, this.compact = false});
 
-  /// Esquina del título (title_screen.md § 1, v0.37.1): sin versión ni
-  /// estado; nada salvo que haya versión nueva, y ahí solo `ACTUALIZAR`
-  /// (y, después, el progreso o `REINTENTAR`).
+  /// Esquina del título (title_screen.md § 1, v0.37.4): la versión y
+  /// `BUSCAR`; con versión nueva, solo el botón `ACTUALIZAR` (y, después,
+  /// el porcentaje o `REINTENTAR`). Nunca el panel grande.
   final bool compact;
 
   /// `null`: GitHub Releases del repo con la versión y el canal del juego
@@ -108,15 +108,45 @@ class _UpdateBannerState extends State<UpdateBanner> {
       case UpdatePhase.failed when rel != null:
         return _updateButton('REINTENTAR');
       case UpdatePhase.downloading:
+        return _compactLine(
+            'Descargando ${(_c.progress * 100).floor()}%',
+            const ValueKey('update-progress'));
       case UpdatePhase.installing:
-        return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _footer());
-      default:
-        return const SizedBox.shrink(key: ValueKey('update-hidden'));
+        return _compactLine(
+            'Instalando', const ValueKey('update-installing'));
+      case UpdatePhase.checking:
+        return _compactCheck('buscando', busy: true);
+      case UpdatePhase.upToDate:
+        return _compactCheck(_c.message ?? 'al día');
+      case UpdatePhase.failed:
+        return _compactCheck(_c.message ?? 'error', retry: true);
+      case UpdatePhase.idle:
+        return _compactCheck(null);
     }
   }
+
+  /// Versión instalada + BUSCAR (o REINTENTAR), sin cortar con "…".
+  Widget _compactCheck(String? status,
+      {bool busy = false, bool retry = false}) {
+    final current = 'v${_c.service.currentVersion}';
+    return Wrap(
+      key: const ValueKey('update-line'),
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ProtoText(
+            '$current${status == null ? '' : ' · ${protoEsc(status)}'}',
+            style: const TextStyle(color: ProtoColors.dim)),
+        PanelButton(retry ? 'REINTENTAR' : 'BUSCAR',
+            key: const ValueKey('update-check'),
+            onPressed: busy ? null : _c.check),
+      ],
+    );
+  }
+
+  Widget _compactLine(String text, Key key) => ProtoText(protoEsc(text),
+      key: key, style: const TextStyle(color: ProtoColors.dim));
 
   Widget _line(String markup, Widget button) => Row(
         key: const ValueKey('update-line'),

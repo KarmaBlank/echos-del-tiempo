@@ -1,5 +1,6 @@
 import '../../support/legacy_solo_mode.dart';
 import 'dart:async';
+import '../lobby/title_flow.dart';
 
 import 'package:echos_del_tiempo/app/feature_flags.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
@@ -113,6 +114,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump();
+    await goToSoloCharacters(tester);
     expect(find.text('PARTY: tú + 0'), findsOneWidget);
     // El líder no aparece como candidato.
     expect(find.byKey(const ValueKey('party-pick-c1')), findsNothing);
@@ -121,7 +123,6 @@ void main() {
     await tester.pump();
     expect(repo.current!.companions, ['c2']);
     expect(find.text('PARTY: tú + 1'), findsOneWidget);
-    expect(find.byKey(const ValueKey('party-solo-note')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('party-pick-c3')));
     await tester.pump();
     await tester.pump();
