@@ -97,7 +97,10 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 
 ## Protocolo (versión 15)
 
-`kProtocolVersion` (`wire.dart`) = 24 desde v0.14.0 (Hazañas,
+`kProtocolVersion` (`wire.dart`) = 46 desde v0.25.2 (lugares fijos del
+pueblo movibles, town_editor.md § 3.3 y § 8: `town.marks` en el estado y
+`town {o: move, tg: "@forge", x, y}`; 45 era la edición del pueblo de
+v0.24.0; el resto del historial está en `wire.dart`). 24 desde v0.14.0 (Hazañas,
 achievements.md § 5.3: `ach` en el perfil del `hello` y del estado, acción
 `ach` `{id}` para las que detecta el cliente y evento `ach` `{p, id}`).
 23 desde v0.12.2 (acción `useItem`:
