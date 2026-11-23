@@ -40,6 +40,9 @@ import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
 import 'farm_layer.dart';
+import 'life_level_layer.dart';
+import '../../../../core/audio/sfx_catalog.dart';
+import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
@@ -129,6 +132,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
+
+  /// Carteles de subida de nivel de oficio (farming.md § 2.6).
+  final lifeLevels = MapLifeLevelLayer();
   final _lastBobber = <String, (double, double)>{};
 
   /// Lo último dibujado: en [update] se graba de antemano un bloque de la
@@ -384,6 +390,23 @@ class MapGame extends Game {
     if (playerId == controller.localId) _myFallT0 = t;
   }
 
+  /// Compara los niveles de Pesca y Cultivo de cada jugador con los
+  /// últimos vistos; una subida muestra el cartel y suena.
+  void _watchLifeLevels() {
+    final players = controller.session?.players;
+    if (players == null) return;
+    for (final p in players.values) {
+      final pr = p.profile;
+      final ups = lifeLevels.observe(
+          p.id,
+          pr.name,
+          LifeTreeRules.level(pr, LifeSkillKind.pesca),
+          LifeTreeRules.level(pr, LifeSkillKind.cultivo),
+          t);
+      if (ups.isNotEmpty) controller.fishSfx?.call(Sfx.levelUp);
+    }
+  }
+
   void _onEvent(SessionEvent e) {
     if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
@@ -516,6 +539,7 @@ class MapGame extends Game {
   @override
   void update(double dt) {
     t += dt * 1000;
+    _watchLifeLevels();
     _frameDt = dt;
     final (ix, iy) = _input();
     final editing = controller.editingTown;
@@ -744,7 +768,14 @@ class MapGame extends Game {
     if (map.lobby) {
       fishing.drawShadows(c);
       farm.drawPlots(c, s.town, worldView, t);
-      farm.drawHelper(c, s.town, t);
+      farm.drawHelpers(
+          c,
+          s.town,
+          s.time,
+          t,
+          (id) => sprites.lifeIcon(id, 'herramienta'),
+          (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
+          hover: controller.hoverHelper);
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);
@@ -916,6 +947,8 @@ class MapGame extends Game {
       farm.drawPops(c, t, (id) => _lastDrawn[id],
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
     }
+    lifeLevels.draw(c, t, controller.localId, (id) => _lastDrawn[id],
+        (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
     if (map.lobby) {
       TownEditLayer.draw(c, controller, map,

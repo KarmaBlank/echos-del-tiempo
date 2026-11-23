@@ -8,6 +8,8 @@ import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
+import 'life_icon.dart';
+import 'life_item_grid.dart';
 
 /// Interfaz de la edición del pueblo (town_editor.md § 1): barra de
 /// arriba con LISTO, y a la derecha el menú del paso en curso (ampliar,
@@ -233,6 +235,30 @@ class TownEditOverlay extends StatelessWidget {
               key: const ValueKey('town-edit-info'),
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
+          // Ayudantes (farming.md § 8): uno por área, tope por tamaño.
+          DsSectionHeader(lake ? 'PESCADORES' : 'GRANJEROS',
+              trailing: DsBadge('${b.helper} / ${TownRules.helperCap(b)}',
+                  key: const ValueKey('town-edit-helpers'))),
+          Text(TownRules.helperLine(b), style: DsText.detail()),
+          Builder(builder: (_) {
+            final p = c.view?.me?.profile;
+            final why = p == null
+                ? 'Sin personaje'
+                : TownRules.cannotHire(p, town, b.id);
+            return Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              DsButton('CONTRATAR AYUDANTE',
+                  key: const ValueKey('town-edit-hire'),
+                  size: DsButtonSize.compact,
+                  kind: DsButtonKind.primary,
+                  tooltip: why ?? '${TownRules.helperCost} de oro',
+                  onPressed: why == null ? () => c.hireHelper(b.id) : null),
+              DsButton('DESPEDIR',
+                  key: const ValueKey('town-edit-fire'),
+                  size: DsButtonSize.compact,
+                  onPressed: b.helper > 0 ? () => c.fireHelper(b.id) : null),
+            ]);
+          }),
+          SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
             if (lake)
               DsButton('AGREGAR ESPECIES',
@@ -266,30 +292,51 @@ class TownEditOverlay extends StatelessWidget {
               'Soltá peces de tu bolsa en este lago: esa especie sale más '
               'seguido y, con dos o más, cría al ganar misiones.',
               style: DsText.detail()),
-          for (final en in b.stock.entries)
-            if (kFish[en.key] case final f?)
-              DsListRow(
-                compact: true,
-                title: '${f.name} ×${en.value}',
-                titleColor: fishRarityColor(f.rarity),
-                detail: en.value >= 2 ? 'Cría' : 'Sola',
-              ),
-          if (fish.isEmpty)
-            Text('No tenés peces en la bolsa.', style: DsText.detail()),
-          for (final f in fish)
-            DsListRow(
-              key: ValueKey('town-edit-release-${f.id}'),
-              compact: true,
-              title: '${f.name} (tenés ${p?.life.count(f.id) ?? 0})',
-              titleColor: fishRarityColor(f.rarity),
-              trailing: DsButton('SOLTAR',
-                  key: ValueKey('town-edit-release-btn-${f.id}'),
-                  size: DsButtonSize.compact,
-                  tooltip: b.stockTotal >= cap ? 'El lago está lleno' : null,
-                  onPressed: b.stockTotal < cap
-                      ? () => c.stockFish(f.id, b.id)
-                      : null),
+          if (b.stock.isNotEmpty)
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              for (final en in b.stock.entries)
+                if (kFish[en.key] case final f?)
+                  DsTag('${f.name} ×${en.value}${en.value >= 2 ? ' · cría' : ''}',
+                      color: fishRarityColor(f.rarity)),
+            ]),
+          SizedBox(height: DsSpace.xs),
+          // Grilla (como el inventario): elegir el pez, detalle y SOLTAR.
+          SizedBox(
+            height: 320,
+            child: LifeItemGrid(
+              key: const ValueKey('town-edit-release-grid'),
+              groups: [
+                LifeItemGroup(null, [
+                  for (final f in fish)
+                    LifeItemCellData(
+                      id: 'town-edit-release-${f.id}',
+                      icon: LifeIcon(f.id, LifeIconKind.pescado,
+                          size: LifeItemGrid.iconSize),
+                      border: fishRarityColor(f.rarity),
+                      search: f.name,
+                      count: p?.life.count(f.id) ?? 0,
+                      detail: LifeItemDetail(
+                        name: f.name,
+                        nameColor: fishRarityColor(f.rarity),
+                        tags: [(f.rarity.label.toUpperCase(), fishRarityColor(f.rarity))],
+                        lines: ['Tenés ${p?.life.count(f.id) ?? 0}',
+                          'En este lago: ${b.stock[f.id] ?? 0}'],
+                        actions: [
+                          DsButton('SOLTAR EN EL LAGO',
+                              key: ValueKey('town-edit-release-btn-${f.id}'),
+                              size: DsButtonSize.compact,
+                              tooltip: b.stockTotal >= cap ? 'El lago está lleno' : null,
+                              onPressed: b.stockTotal < cap
+                                  ? () => c.stockFish(f.id, b.id)
+                                  : null),
+                        ],
+                      ),
+                    ),
+                ]),
+              ],
+              empty: 'No tenés peces en la bolsa.',
             ),
+          ),
           SizedBox(height: DsSpace.xs),
           Align(
               alignment: Alignment.centerLeft,

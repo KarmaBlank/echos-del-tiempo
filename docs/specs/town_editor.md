@@ -182,11 +182,20 @@ la izquierda son el eje de caminos).
   va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
   peces); construir, mover, borrar y ampliar, solo el dueño.
 
+- Huertas pegadas también se funden (v0.25.5): una huerta más grande con
+  las parcelas, semillas, ayudantes y cofre de las dos.
+- Opciones de una huerta o un lago: GRANJEROS / PESCADORES con CONTRATAR
+  AYUDANTE y DESPEDIR (farming.md § 8.1). Cada construcción tiene un cofre
+  al lado del cartel. AGREGAR ESPECIES es una grilla: elegís el pez, ves
+  el detalle y SOLTAR EN EL LAGO.
+
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip
 de tamaño fijo: LAGO con cada especie una vez y "N/M soltados"; HUERTA
 con cada cultivo plantado una vez y "6 de 12 parcelas" (plantadas /
-tiles de la huerta). Las parcelas y el agua no tienen tooltip.
+tiles de la huerta). Los dos suman la línea de ayudantes ("Granjeros 1 /
+2 · cada uno atiende 8 parcelas", con las semillas del granjero) y el
+cofre. Las parcelas y el agua no tienen tooltip.
 
 ## 7. Datos
 ### 7.1 `TownState`

@@ -1177,7 +1177,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool fishBite(double power) => _apply(FishBiteAction(power));
   bool fishResult(bool ok) => _apply(FishResultAction(ok));
-  bool autoFish() => _apply(const AutoFishAction());
+
   bool sellFish({String? species, bool materials = false}) =>
       _apply(SellFishAction(species: species, materials: materials));
   bool exchangeFish(String species) => _apply(ExchangeFishAction(species));
@@ -1534,12 +1534,88 @@ class SessionController extends StateNotifier<SessionView?> {
           id: key, materials: materials));
   bool exchangeCrop(String key) =>
       _apply(FarmShopAction(FarmShopOp.exchange, id: key));
-  bool collectSilo() => _apply(const FarmShopAction(FarmShopOp.collectSilo));
+
   bool selectSeed(String id) =>
       _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
   bool stockFish(String species, [String? lakeId]) =>
       _apply(TownAction(TownOp.stock, id: species, target: lakeId));
-  bool hireHelper() => _apply(const TownAction(TownOp.hireHelper));
+  // ---- Ayudantes (farming.md § 8, v0.25.5) ----
+
+  bool hireHelper(String buildId) =>
+      _apply(TownAction(TownOp.hireHelper, target: buildId));
+  bool fireHelper(String buildId) =>
+      _apply(TownAction(TownOp.fireHelper, target: buildId));
+  bool giveSeeds(String buildId, String seed, int n) =>
+      _apply(TownAction(TownOp.giveSeeds, target: buildId, id: seed, n: n));
+  bool takeSeeds(String buildId, String seed, int n) =>
+      _apply(TownAction(TownOp.takeSeeds, target: buildId, id: seed, n: n));
+  bool collectChest(String buildId) =>
+      _apply(TownAction(TownOp.collectChest, target: buildId));
+  bool setHelperTasks(String buildId, int index, int mask) => _apply(
+      TownAction(TownOp.helperTasks, target: buildId, x: index, n: mask));
+
+  double get sessionTime => _s?.time ?? 0;
+
+  /// Segundos hasta la próxima vuelta de los ayudantes.
+  double get helperRoundIn => TownRules.nextRoundIn(
+      sessionTime, _s?.playerList.where((p) => !p.isCompanion).map((p) => p.profile) ?? const []);
+
+  /// El ayudante al lado del jugador local (tecla G).
+  ({TownBuild build, int index})? get nearHelper =>
+      _s?.mode == SessionMode.lobby && !isRun
+          ? TownRules.helperNear(town, local.x, local.y, sessionTime, r: 18)
+          : null;
+
+  /// El cofre al lado del jugador local (E: recoger).
+  TownBuild? get nearChest => _s?.mode == SessionMode.lobby && !isRun
+      ? TownRules.chestNear(town, local.x, local.y)
+      : null;
+
+  /// El ayudante bajo el mouse (tile del mapa): resalta su área.
+  ({TownBuild build, int index})? hoverHelper;
+
+  ({TownBuild build, int index})? helperAt(int tx, int ty) =>
+      TownRules.helperNear(town, tx * 16 + 8.0, ty * 16 + 8.0, sessionTime,
+          r: 12);
+
+  /// La pantalla del ayudante abierta (construcción, índice).
+  (String, int)? helperPanel;
+
+  void openHelper(String buildId, int index) {
+    helperPanel = (buildId, index);
+    openPanel(WorldPanel.helper);
+  }
+
+  /// Tooltip del ayudante [i] de [b]: título y líneas.
+  (String, List<String>) helperInfo(TownBuild b, int i) {
+    final farm = b.kind == BuildKind.huerta;
+    final secs = helperRoundIn.ceil();
+    if (!farm) {
+      return (
+        'PESCADOR ${i + 1}',
+        [
+          'Pesca en la orilla del lago y guarda en el cofre.',
+          '${TownRules.t.i('fisherCatch')} peces por vuelta · sin legendarios',
+          'Cofre ${b.chestTotal} · próxima vuelta en $secs s',
+        ]
+      );
+    }
+    final next = TownRules.farmerNext(b, i);
+    final mask = b.taskMask(i);
+    final on = [
+      for (final t in HelperTask.values)
+        if (mask & t.bit != 0) t.label
+    ];
+    return (
+      'GRANJERO ${i + 1}',
+      [
+        'Atiende ${TownRules.helperArea(b, i).length} parcelas (resaltadas).',
+        'Semillas de la huerta: ${b.seedTotal}',
+        'Tareas: ${on.isEmpty ? 'ninguna' : on.join(', ')}',
+        'Próximo ciclo: ${next?.label.toLowerCase() ?? 'descansa'} · $secs s',
+      ]
+    );
+  }
 
   // ---- Edición del pueblo (town_editor.md § 1) ----
 
@@ -1924,7 +2000,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Texto del aviso de abajo mientras pesca.
   String fishingHint(MapFishing f) => switch (f.phase) {
         FishPhase.idle =>
-          '[E o clic] mantené para cargar y soltá para tirar · [R] auto-pesca · Esc guarda',
+          '[E o clic] mantené para cargar y soltá para tirar · Esc guarda',
         FishPhase.charging => 'Cargando… soltá para tirar',
         FishPhase.flying => 'La boya vuela…',
         FishPhase.waiting => f.game.nibbling
@@ -2069,14 +2145,14 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.lostLoot);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
+      } else if (nearChest case final b? when b.chest.isNotEmpty) {
+        collectChest(b.id);
       } else if (farmTile != null) {
         farmWork();
       } else if (facingWater) {
         startFishing();
       } else if (nearTrader) {
         openPanel(WorldPanel.trader);
-      } else if (nearSign) {
-        addLocalNotice(signText);
       } else if (canFish) {
         startFishing();
       } else if (nearEntrance case final e?) {
@@ -2127,7 +2203,7 @@ class SessionController extends StateNotifier<SessionView?> {
       return false;
     }
     // Pesca en el mapa (fishing.md § 4): E / Espacio mantenido, Esc
-    // guarda la caña, R auto-pesca.
+    // guarda la caña.
     if (_fishing != null) {
       if (key == LogicalKeyboardKey.keyE || key == LogicalKeyboardKey.space) {
         fishPress();
@@ -2137,8 +2213,11 @@ class SessionController extends StateNotifier<SessionView?> {
         stopFishing();
         return true;
       }
-      if (key == LogicalKeyboardKey.keyR) {
-        autoFish();
+    }
+    // G: hablar con el ayudante de al lado (E queda para la huerta).
+    if (key == LogicalKeyboardKey.keyG && _panel == null) {
+      if (nearHelper case final h?) {
+        openHelper(h.build.id, h.index);
         return true;
       }
     }
@@ -3317,7 +3396,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
             _panel == WorldPanel.trader ||
-            _panel == WorldPanel.fountain) &&
+            _panel == WorldPanel.fountain ||
+            _panel == WorldPanel.helper) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -3387,11 +3467,18 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
-    if (farmHint() case final h?) return (WorldPrompt.farm, h);
+    final helperTip = nearHelper == null ? '' : ' · ${WorldPrompt.helper.label}';
+    if (farmHint() case final h?) return (WorldPrompt.farm, '$h$helperTip');
+    if (nearHelper != null) return (WorldPrompt.helper, null);
+    if (nearChest case final b?) {
+      return (
+        WorldPrompt.chest,
+        b.chest.isEmpty ? 'Cofre vacío' : '[E] Recoger cofre (${b.chestTotal})'
+      );
+    }
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
     if (facingWater) return (WorldPrompt.fishing, null);
     if (nearTrader) return (WorldPrompt.trader, null);
-    if (nearSign) return (WorldPrompt.sign, null);
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {

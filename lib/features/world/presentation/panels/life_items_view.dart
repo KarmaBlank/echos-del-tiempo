@@ -57,6 +57,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   var _cat = LifeItemsCategory.herramientas;
   var _query = '';
 
+  /// Sub-filtro de HERRAMIENTAS: `null` todas, `pesca` o `cultivo`.
+  String? _toolKind;
+
   @override
   Widget build(BuildContext context) {
     if (!widget.inTown) {
@@ -71,7 +74,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
     final q = _query.trim().toLowerCase();
     final shown = [
       for (final c in cells[_cat]!)
-        if (q.isEmpty || c.search.toLowerCase().contains(q)) c
+        if ((q.isEmpty || c.search.toLowerCase().contains(q)) &&
+            (_cat != LifeItemsCategory.herramientas ||
+                _toolKind == null ||
+                c.id.startsWith('life-tool-cana') == (_toolKind == 'pesca')))
+          c
     ];
     return Column(
       key: const ValueKey('life-items'),
@@ -97,6 +104,17 @@ class _LifeItemsViewState extends State<LifeItemsView> {
               width: 180,
               onChanged: (v) => setState(() => _query = v)),
         ]),
+        if (_cat == LifeItemsCategory.herramientas) ...[
+          SizedBox(height: DsSpace.xs),
+          Wrap(spacing: DsSpace.xs, children: [
+            for (final k in const [null, 'pesca', 'cultivo'])
+              DsButton((k ?? 'todas').toUpperCase(),
+                  key: ValueKey('life-tool-filter-${k ?? 'todas'}'),
+                  size: DsButtonSize.compact,
+                  selected: _toolKind == k,
+                  onPressed: () => setState(() => _toolKind = k)),
+          ]),
+        ],
         SizedBox(height: DsSpace.xs),
         Expanded(
           child: LifeItemGrid(
@@ -202,6 +220,19 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                             : (lakeFull ? 'El lago está lleno' : null),
                         onPressed:
                             lakeFull ? null : () => c.stockFish(d.id, lake.id)),
+                    // Con varios lagos: elegir en cuál.
+                    if (c.town.lakes.length > 1)
+                      for (final (i, l) in c.town.lakes.indexed)
+                        if (l.id != lake?.id)
+                          DsButton('LAGO ${i + 1}',
+                              key: ValueKey('life-fish-stock-${d.id}-${l.id}'),
+                              size: DsButtonSize.compact,
+                              tooltip: l.stockTotal >= TownRules.lakeCapacity(l)
+                                  ? 'El lago está lleno'
+                                  : '${l.stockTotal}/${TownRules.lakeCapacity(l)} soltados',
+                              onPressed: l.stockTotal >= TownRules.lakeCapacity(l)
+                                  ? null
+                                  : () => c.stockFish(d.id, l.id)),
                   ],
                 ),
               ),

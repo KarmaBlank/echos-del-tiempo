@@ -96,8 +96,14 @@ class CrtShaders {
           }
         }
 
-        final filter = shaderFilterSupported ? await one('shaders/crt.frag') : null;
-        final overlay = filter == null ? await one('shaders/crt_overlay.frag') : null;
+        // El overlay primero: funciona con Skia y con Impeller. Desde el
+        // SDK 3.50, `ImageFilter.shader` sobre la app entera en Windows
+        // podía dibujar sin efecto (el CRT parecía APAGADO en todo nivel);
+        // el filtro queda solo de respaldo si el overlay no carga.
+        final overlay = await one('shaders/crt_overlay.frag');
+        final filter = overlay == null && shaderFilterSupported
+            ? await one('shaders/crt.frag')
+            : null;
         return loaded = CrtShaders(filter, overlay);
       }();
 
@@ -131,8 +137,8 @@ class CrtFilterState extends State<CrtFilter> {
   String get mode {
     final p = CrtParams.of(widget.level);
     if (p == null) return 'off';
-    if (_shaders?.filter != null) return 'filter';
     if (_shaders?.overlay != null) return 'overlay';
+    if (_shaders?.filter != null) return 'filter';
     return 'none';
   }
 
@@ -192,7 +198,9 @@ class CrtFilterState extends State<CrtFilter> {
     final h = (mq?.size.height ?? 720) * dpr;
     final line = CrtParams.lineFor(h);
     final maskW = CrtParams.maskWidthFor(dpr);
-    final filter = p == null ? null : _filterFor(p, line, maskW);
+    final filter = p == null || _shaders?.overlay != null
+        ? null
+        : _filterFor(p, line, maskW);
     final overlay = p == null || filter != null ? null : _shaders?.overlay;
     return _CrtHitWarp(
       curve: filter == null ? 0 : p!.curve,

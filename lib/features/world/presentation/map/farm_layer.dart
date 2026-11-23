@@ -1,10 +1,13 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
+import '../../../../game_engine/rules/town_rules.dart';
+import '../../../combat/presentation/sprite_catalog.dart';
 import 'map_themes.dart';
 
 class _Pop {
@@ -44,7 +47,7 @@ class MapFarmLayer {
       final px = xy.$1 * ts, py = xy.$2 * ts;
       if (px + ts < view.left || px > view.right) continue;
       if (py + ts < view.top || py > view.bottom) continue;
-      _plot(c, e.value, px, py, t);
+      _plot(c, e.value, xy.$1, xy.$2, t);
     }
   }
 
@@ -97,8 +100,164 @@ class MapFarmLayer {
           ..strokeWidth = 1);
   }
 
-  void _plot(Canvas c, FarmPlot p, double px, double py, double t) {
+  /// Una parcela en el tile ([tx], [ty]) (tests y capturas).
+  void drawPlot(Canvas c, FarmPlot p, int tx, int ty, double t) =>
+      _plot(c, p, tx, ty, t);
+
+  /// Punto (relativo al tile) donde cae la semilla: al azar pero
+  /// determinista por parcela, cultivo y quien plantó, así todos los
+  /// clientes lo ven igual y no salta entre cuadros (farming.md § 2.3).
+  static Offset seedOffset(int tx, int ty, String seed, String? planter) {
+    var h = 0x811C9DC5;
+    for (final u in '$tx,$ty|$seed|${planter ?? ''}'.codeUnits) {
+      h = ((h ^ u) * 0x01000193) & 0xFFFFFFFF;
+    }
+    final dx = 4 + (h & 0xFF) % 9; // 4..12
+    final dy = 9 + ((h >> 8) & 0xFF) % 5; // 9..13
+    return Offset(dx.toDouble(), dy.toDouble());
+  }
+
+  /// La planta crecida ([ripe] = false) o madura con su fruto. [r] pinta
+  /// un rectángulo relativo a la base de la planta.
+  void _plant(void Function(double, double, double, double, Color) r,
+      CropLook l, bool ripe, double t) {
+    final g = l.plant, f = l.fruit, a = l.accent;
+    switch (l.shape) {
+      case CropShape.root:
+        r(-3, -6, 2, 3, g);
+        r(1, -7, 2, 4, g);
+        r(-1, -5, 1, 3, g);
+        if (ripe) {
+          r(-2, -2, 5, 3, f);
+          r(-2, -3, 5, 1, a);
+          r(0, 1, 1, 1, f);
+        }
+      case CropShape.grain:
+        for (final (dx, hgt) in const [(-2.0, 9.0), (0.0, 11.0), (2.0, 10.0)]) {
+          r(dx, -hgt, 1, hgt, g);
+          if (ripe) {
+            r(dx - 1, -hgt - 1, 1, 3, f);
+            r(dx + 1, -hgt, 1, 3, f);
+            r(dx, -hgt - 2, 1, 1, a);
+          }
+        }
+      case CropShape.tuber:
+        r(-4, -5, 8, 2, g);
+        r(-2, -7, 4, 2, g);
+        r(0, -3, 1, 3, g);
+        if (ripe) {
+          r(-5, -1, 3, 2, f);
+          r(-1, 0, 3, 2, f);
+          r(3, -1, 2, 2, f);
+          r(-4, 0, 1, 1, a);
+          r(0, 1, 1, 1, a);
+        }
+      case CropShape.pumpkin:
+        r(-5, -3, 3, 2, g);
+        r(3, -4, 3, 2, g);
+        r(0, -6, 1, 3, g);
+        if (ripe) {
+          r(-3, -3, 7, 4, f);
+          r(-2, -4, 5, 1, f);
+          r(-1, -3, 1, 4, a);
+          r(1, -3, 1, 4, a);
+          r(0, -6, 1, 2, g);
+        } else {
+          r(-1, -2, 3, 2, a);
+        }
+      case CropShape.berries:
+        r(-4, -6, 8, 3, g);
+        r(-2, -8, 4, 2, g);
+        r(0, -3, 1, 3, g);
+        if (ripe) {
+          for (final (dx, dy) in const [
+            (-4.0, -3.0),
+            (-1.0, -2.0),
+            (2.0, -3.0),
+            (0.0, -6.0)
+          ]) {
+            r(dx, dy, 2, 2, f);
+            r(dx, dy, 1, 1, a);
+          }
+        }
+      case CropShape.bulb:
+        r(-2, -8, 1, 6, g);
+        r(0, -10, 1, 8, g);
+        r(2, -7, 1, 5, g);
+        if (ripe) {
+          r(-2, -3, 5, 3, f);
+          r(-1, -4, 3, 1, f);
+          r(-1, -2, 1, 1, a);
+          r(0, 0, 1, 1, f);
+        }
+      case CropShape.flower:
+        r(0, -9, 1, 9, g);
+        r(-3, -5, 3, 1, g);
+        r(1, -6, 3, 1, g);
+        if (ripe) {
+          r(-1, -12, 3, 1, f);
+          r(-2, -11, 5, 1, f);
+          r(-1, -10, 3, 1, f);
+          r(-2, -13, 1, 1, f);
+          r(2, -13, 1, 1, f);
+          r(0, -11, 1, 1, a);
+        } else {
+          r(-1, -10, 2, 2, a);
+        }
+      case CropShape.melon:
+        r(-6, -4, 4, 2, g);
+        r(3, -5, 4, 2, g);
+        r(-1, -7, 2, 2, g);
+        if (ripe) {
+          r(-4, -4, 8, 5, f);
+          r(-3, -5, 6, 1, f);
+          r(-2, -4, 1, 5, a);
+          r(1, -4, 1, 5, a);
+          r(-5, -2, 1, 1, a);
+          r(4, -2, 1, 1, a);
+        }
+      case CropShape.rose:
+        r(0, -10, 1, 10, g);
+        r(-3, -6, 3, 2, g);
+        r(1, -4, 3, 2, g);
+        r(1, -8, 1, 1, g);
+        if (ripe) {
+          r(-1, -13, 3, 3, f);
+          r(-2, -12, 1, 2, f);
+          r(2, -12, 1, 2, f);
+          r(0, -12, 1, 1, a);
+        } else {
+          r(0, -12, 1, 2, f);
+        }
+      case CropShape.crystal:
+        r(-3, -4, 2, 4, g);
+        r(2, -3, 2, 3, g);
+        if (ripe) {
+          r(-1, -9, 3, 9, f);
+          r(0, -11, 1, 2, f);
+          r(-3, -6, 2, 5, f);
+          r(2, -5, 2, 4, f);
+          r(0, -8, 1, 4, a);
+        } else {
+          r(-1, -5, 2, 5, g);
+        }
+    }
+    if (ripe && l.glow) {
+      // Destellos que se alternan (legendarios).
+      final on = (t ~/ 300) % 2 == 0;
+      final sp = on
+          ? const [(-5.0, -10.0), (4.0, -7.0)]
+          : const [(5.0, -12.0), (-4.0, -4.0)];
+      for (final (dx, dy) in sp) {
+        r(dx, dy, 1, 1, a);
+      }
+    }
+  }
+
+  void _plot(Canvas c, FarmPlot p, int tx, int ty, double t) {
+    final px = tx * ts, py = ty * ts;
     final paint = Paint();
+
     c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2),
         paint..color = p.watered ? FarmPalette.wet : FarmPalette.tilled);
     paint.color = FarmPalette.furrow;
@@ -113,27 +272,23 @@ class MapFarmLayer {
     }
     final seed = p.seed;
     if (seed == null) return;
-    final rar = kCrops[seed]?.rarity.index ?? 0;
-    final cx = px + ts / 2, by = py + ts - 3;
+    final look = CropPalette.of(seed);
+    final o = seedOffset(tx, ty, seed, p.planter);
+    final x = px + o.dx, y = py + o.dy;
+    void r(double dx, double dy, double w, double h, Color col) =>
+        c.drawRect(Rect.fromLTWH(x + dx, y + dy, w, h), paint..color = col);
     switch (FarmingRules.stage(p)) {
       case CropStage.arada:
         break;
       case CropStage.semilla:
-        c.drawRect(Rect.fromLTWH(cx - 1, by - 2, 2, 2),
-            paint..color = FarmPalette.fert);
+        r(-1, -1, 2, 2, look.seed);
       case CropStage.brote:
-        paint.color = FarmPalette.sprout;
-        c.drawRect(Rect.fromLTWH(cx, by - 5, 1, 5), paint);
-        c.drawRect(Rect.fromLTWH(cx - 2, by - 5, 2, 1), paint);
-        c.drawRect(Rect.fromLTWH(cx + 1, by - 6, 2, 1), paint);
+        r(0, -4, 1, 4, look.plant);
+        r(-2, -4, 2, 1, look.plant);
+        r(1, -5, 2, 1, look.plant);
+        r(-1, 0, 2, 1, look.seed);
       case CropStage.crecido:
-        paint.color = FarmPalette.stem;
-        c.drawRect(Rect.fromLTWH(cx, by - 9, 1, 9), paint);
-        paint.color = FarmPalette.leaf;
-        c.drawRect(Rect.fromLTWH(cx - 4, by - 7, 4, 2), paint);
-        c.drawRect(Rect.fromLTWH(cx + 1, by - 9, 4, 2), paint);
-        paint.color = FarmPalette.leafDark;
-        c.drawRect(Rect.fromLTWH(cx - 3, by - 4, 3, 2), paint);
+        _plant(r, look, false, t);
       case CropStage.maduro:
         final glow = 0.5 + 0.5 * math.sin(t / 260);
         c.drawRect(
@@ -141,14 +296,7 @@ class MapFarmLayer {
             paint
               ..color = FarmPalette.ripeGlow
                   .withValues(alpha: FarmPalette.ripeGlow.a * glow));
-        paint.color = FarmPalette.stem;
-        c.drawRect(Rect.fromLTWH(cx, by - 11, 1, 11), paint);
-        paint.color = FarmPalette.leaf;
-        c.drawRect(Rect.fromLTWH(cx - 5, by - 7, 5, 2), paint);
-        c.drawRect(Rect.fromLTWH(cx + 1, by - 9, 5, 2), paint);
-        paint.color = FarmPalette.fruit[rar.clamp(0, 3)];
-        c.drawRect(Rect.fromLTWH(cx - 3, by - 13, 3, 3), paint);
-        c.drawRect(Rect.fromLTWH(cx + 2, by - 11, 3, 3), paint);
+        _plant(r, look, true, t);
     }
     if (p.watered && !FarmingRules.ripe(p)) {
       c.drawRect(Rect.fromLTWH(px + 12, py + 2, 1, 2),
@@ -167,20 +315,62 @@ class MapFarmLayer {
     }
   }
 
-  /// El ayudante de la huerta (si está contratado), al costado de la
-  /// primera huerta.
-  void drawHelper(Canvas c, TownState town, double t) {
-    final f = town.farms.firstOrNull;
-    if (town.helper <= 0 || f == null) return;
+  /// Los ayudantes (farming.md § 8, v0.25.5): granjeros caminando por
+  /// su área y pescadores en su lugar de la orilla, con sus sprites
+  /// (`items.vida_npc_*` del manifest; [sprite] los resuelve), el cofre
+  /// de cada construcción con lo que tiene y, con el mouse encima de un
+  /// ayudante ([hover]), el contorno de su área. [time]: reloj de la sala
+  /// (igual en todos); [t]: ms de animación.
+  void drawHelpers(Canvas c, TownState town, double time, double t,
+      ui.Image? Function(String id) sprite, MapText text,
+      {({TownBuild build, int index})? hover}) {
     final (ox, oy) = town.origin;
-    final bf = f.bounds;
-    final x = (bf.right + ox) * ts + 6, y = (bf.y + oy + 1) * ts + 6;
-    final bob = math.sin(t / 300) * 1;
-    final p = Paint()..color = FarmPalette.helper;
-    c.drawRect(Rect.fromLTWH(x - 3, y - 6 + bob, 6, 8), p);
-    c.drawRect(Rect.fromLTWH(x - 2, y - 11 + bob, 4, 4), p);
-    c.drawRect(Rect.fromLTWH(x - 4, y - 12 + bob, 8, 2),
-        p..color = FarmPalette.helperHat);
+    final paint = SpriteCatalog.pixelPaint();
+    void img(String id, double cx, double bottom) {
+      final im = sprite(id);
+      if (im == null) return;
+      final w = im.width.toDouble(), h = im.height.toDouble();
+      c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+          Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h), paint);
+    }
+
+    for (final b in town.builds) {
+      // Cofre al lado del cartel, con cuántas cosas tiene.
+      final (cx, cy) = TownRules.chestOf(town, b);
+      final px = (cx + ox + 0.5) * ts, py = (cy + oy + 1) * ts;
+      img('cofre_oficio', px, py);
+      if (b.chestTotal > 0) {
+        text('${b.chestTotal}', px, py - ts - 2, TownPalette.label, 6);
+      }
+      for (var i = 0; i < b.helper; i++) {
+        final pos = TownRules.helperPos(town, b, i, time);
+        final farm = b.kind == BuildKind.huerta;
+        final work = pos.work && (t ~/ 400) % 2 == 0;
+        final id = farm
+            ? (work ? 'npc_granjero_trabajo' : 'npc_granjero')
+            : (work ? 'npc_pescador_trabajo' : 'npc_pescador');
+        final bob = pos.work ? 0.0 : (math.sin(t / 120) * 1).roundToDouble();
+        img(id, pos.x, pos.y + 6 + bob);
+      }
+    }
+    final h = hover;
+    if (h == null) return;
+    final b = town.build(h.build.id) ?? h.build;
+    final line = Paint()
+      ..color = FarmPalette.targetOk
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final tiles = b.kind == BuildKind.huerta
+        ? [
+            for (final (x, y) in TownRules.helperArea(b, h.index))
+              (x + b.anchor.$1, y + b.anchor.$2)
+          ]
+        : [TownRules.fisherSpot(b, h.index)];
+    for (final (x, y) in tiles) {
+      c.drawRect(
+          Rect.fromLTWH((x + ox) * ts + 0.5, (y + oy) * ts + 0.5, ts - 1, ts - 1),
+          line);
+    }
   }
 
   /// Cosecha: el fruto salta del tile hacia quien cosechó.

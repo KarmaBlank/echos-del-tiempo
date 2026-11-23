@@ -37,8 +37,6 @@ class TownState {
       this.lake,
       this.sides = const {},
       this.builds = kDefaultBuilds,
-      this.helper = 0,
-      this.silo = const {},
       this.marks = const {}});
 
   /// Lugares fijos movidos (town_editor.md § 3.3): id del lugar (`@forge`,
@@ -67,11 +65,6 @@ class TownState {
   /// coordenadas del pueblo base.
   final List<TownBuild> builds;
 
-  /// Nivel del ayudante de la huerta (0 = sin contratar).
-  final int helper;
-
-  /// Granero del ayudante: `cropKey` → cantidad (lo recoge cualquiera).
-  final Map<String, int> silo;
 
   int side(TownSide s) => sides[s] ?? 0;
 
@@ -144,8 +137,6 @@ class TownState {
     Map<TownSide, int>? sides,
     List<TownBuild>? builds,
     Map<String, FarmPlot>? plots,
-    int? helper,
-    Map<String, int>? silo,
     Map<String, (int, int)>? marks,
   }) {
     final next = TownState(
@@ -155,8 +146,6 @@ class TownState {
         lake: lake ?? this.lake,
         sides: sides ?? this.sides,
         builds: builds ?? this.builds,
-        helper: helper ?? this.helper,
-        silo: silo ?? this.silo,
         marks: marks ?? this.marks);
     return plots == null
         ? next
@@ -173,13 +162,15 @@ class TownState {
               if (e.value > 0) e.key.code: e.value
           },
         'builds': [for (final b in builds) b.toJson()],
-        if (helper > 0) 'helper': helper,
-        if (silo.isNotEmpty) 'silo': silo,
         if (marks.isNotEmpty)
           'marks': {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
           },
       };
+
+  /// Una construcción cambiada (por id).
+  TownState withBuild(TownBuild b) =>
+      copyWith(builds: [for (final o in builds) o.id == b.id ? b : o]);
 
   Map<String, Object?> toJson() => {
         if (upgrades.isNotEmpty) 'up': upgrades,
@@ -188,13 +179,23 @@ class TownState {
         ...farmJson(),
       };
 
-  static Map<String, int> _ints(Object? v) => v is Map
-      ? {
-          for (final e in v.entries)
-            if (e.value is num && (e.value as num) > 0)
-              '${e.key}': (e.value as num).round(),
-        }
-      : const {};
+  static Map<String, int> _ints(Object? v) => TownBuild.ints(v);
+
+  /// Saves de antes de v0.25.5 (farming.md § 8.4): el ayudante del pueblo
+  /// (`helper`) pasa a ser un granjero de la primera huerta y el granero
+  /// (`silo`), el cofre de esa huerta.
+  static TownState _legacyHelper(TownState s, Map<dynamic, dynamic> raw) {
+    final lvl = raw['helper'] is num ? (raw['helper'] as num).round() : 0;
+    final silo = _ints(raw['silo']);
+    final f = s.farms.firstOrNull;
+    if (f == null || (lvl <= 0 && silo.isEmpty)) return s;
+    final chest = {...f.chest};
+    for (final e in silo.entries) {
+      chest[e.key] = (chest[e.key] ?? 0) + e.value;
+    }
+    return s.withBuild(f.copyWith(
+        helper: f.helper > 0 ? f.helper : (lvl > 0 ? 1 : 0), chest: chest));
+  }
 
   static Map<String, (int, int)> _marks(Object? v) => v is Map
       ? {
@@ -210,6 +211,10 @@ class TownState {
   /// peces soltados al primer lago (town_editor.md § 7.2).
   static TownState fromJson(Object? raw) {
     if (raw is! Map) return const TownState();
+    return _legacyHelper(_fromJson(raw), raw);
+  }
+
+  static TownState _fromJson(Map<dynamic, dynamic> raw) {
     final up = raw['up'];
     final lost = raw['lost'];
     final base = TownState(
@@ -229,8 +234,6 @@ class TownState {
       lake: raw['lake'] is List
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
-      helper: raw['helper'] is num ? (raw['helper'] as num).round() : 0,
-      silo: _ints(raw['silo']),
       marks: _marks(raw['marks']),
     );
     final bs = raw['builds'];
