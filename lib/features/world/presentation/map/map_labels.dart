@@ -55,7 +55,7 @@ class MapTextLabel extends MapLabel {
 /// bajar uno; si todas chocan con una ya ubicada, se oculta (`null`).
 /// Devuelve el corrimiento vertical de cada una. Pura: sin dibujo.
 List<double?> placeLabels(List<Rect> boxes, List<int> priority,
-    {double gap = 2}) {
+    {double gap = 2, Rect? bounds}) {
   final order = List.generate(boxes.length, (i) => i)
     ..sort((a, b) {
       final c = priority[a].compareTo(priority[b]);
@@ -68,6 +68,11 @@ List<double?> placeLabels(List<Rect> boxes, List<int> priority,
     final step = b.height + gap;
     for (final dy in [0.0, -step, -2 * step, step]) {
       final r = b.shift(Offset(0, dy));
+      // Fuera de [bounds] (arriba o abajo) se cortaría: otra posición.
+      if (bounds != null &&
+          (r.top < bounds.top - 0.5 || r.bottom > bounds.bottom + 0.5)) {
+        continue;
+      }
       if (placed.any((p) => p.overlaps(r))) continue;
       placed.add(r);
       out[i] = dy;
@@ -124,7 +129,7 @@ void paintMapLabels(Canvas canvas, List<MapLabel> labels, Rect dst,
   // Las que tienen prioridad no se pisan entre sí.
   final ranked = <int>[];
   final boxes = <Rect>[];
-  final clampX = <int, double>{};
+  final clampX = <int, Offset>{};
   for (var i = 0; i < labels.length; i++) {
     final l = labels[i];
     if (l is! MapTextLabel || l.priority == null) continue;
@@ -135,14 +140,19 @@ void paintMapLabels(Canvas canvas, List<MapLabel> labels, Rect dst,
     // Adentro de la pantalla: no se corta en los bordes.
     if (b.left < dst.left) b = b.shift(Offset(dst.left - b.left, 0));
     if (b.right > dst.right) b = b.shift(Offset(dst.right - b.right, 0));
-    clampX[i] = (b.center.dx - p.dx).roundToDouble();
+    if (b.top < dst.top) b = b.shift(Offset(0, dst.top - b.top));
+    if (b.bottom > dst.bottom) b = b.shift(Offset(0, dst.bottom - b.bottom));
+    clampX[i] = Offset((b.center.dx - p.dx).roundToDouble(),
+        (b.center.dy - mapLabelBackdropRect(p.dx, p.dy, 0, size, u).center.dy)
+            .roundToDouble());
     // Un margen a los costados: dos nombres pegados se leen como uno.
     boxes.add(Rect.fromLTRB(b.left - 6 * u, b.top, b.right + 6 * u, b.bottom));
   }
   final shifts = <int, double?>{};
   if (ranked.isNotEmpty) {
     final dy = placeLabels(
-        boxes, [for (final i in ranked) (labels[i] as MapTextLabel).priority!]);
+        boxes, [for (final i in ranked) (labels[i] as MapTextLabel).priority!],
+        bounds: dst);
     for (var j = 0; j < ranked.length; j++) {
       shifts[ranked[j]] = dy[j];
     }
@@ -155,7 +165,8 @@ void paintMapLabels(Canvas canvas, List<MapLabel> labels, Rect dst,
         if (shifts.containsKey(i)) {
           final dy = shifts[i];
           if (dy == null) continue;
-          p = p.translate(clampX[i] ?? 0, dy);
+          final c = clampX[i] ?? Offset.zero;
+          p = p.translate(c.dx, c.dy + dy);
         }
         final size = PixelLabelPen.screenSize(l.worldSize, k);
         if (backdrop != MapLabelBackdrop.none) {

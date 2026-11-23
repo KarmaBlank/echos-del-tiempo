@@ -65,6 +65,7 @@ import 'session_sfx.dart';
 import 'session_view.dart';
 import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
+import 'hud/map_hover_tip.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
 /// HUD + paneles, batalla o resultado) y reparte el teclado. Ver
@@ -452,7 +453,18 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           if (view.mode == SessionMode.lobby && view.panel == null)
             Positioned.fill(
               key: const ValueKey('farm-hover'),
-              child: MouseRegion(
+              // Clic sobre un ayudante: abre su pantalla (como [G]).
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (e) {
+                  if (e.buttons != kPrimaryMouseButton) return;
+                  final tile = game.tileAtScreen(e.localPosition);
+                  if (tile == null) return;
+                  if (controller.helperAt(tile.$1, tile.$2) case final h?) {
+                    controller.openHelper(h.build.id, h.index);
+                  }
+                },
+                child: MouseRegion(
                 opaque: false,
                 hitTestBehavior: HitTestBehavior.translucent,
                 onExit: (_) => setState(() => _hover = null),
@@ -470,48 +482,6 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (next?.$1 != _hover?.$1) setState(() => _hover = next);
                 },
               ),
-            ),
-          if (_hover case final h?
-              when view.mode == SessionMode.lobby &&
-                  view.panel == null &&
-                  controller.hoverHelper != null)
-            Positioned(
-              key: const ValueKey('helper-tooltip'),
-              left: h.$2.dx + 16,
-              top: h.$2.dy + 16,
-              child: IgnorePointer(
-                child: switch (controller.hoverHelper) {
-                  (:final build, :final index)? => () {
-                      final (title, lines) =
-                          controller.helperInfo(build, index);
-                      return DsTooltipCard(
-                        title: title,
-                        children: [
-                          for (final l in lines) Text(l, style: DsText.detail())
-                        ],
-                      );
-                    }(),
-                  null => const SizedBox.shrink(),
-                },
-              ),
-            )
-          else if (_hover case final h?
-              when view.mode == SessionMode.lobby &&
-                  view.panel == null &&
-                  !controller.editingTown)
-            Positioned(
-              key: const ValueKey('farm-tooltip'),
-              left: h.$2.dx + 16,
-              top: h.$2.dy + 16,
-              child: IgnorePointer(
-                child: switch (controller.signAt(h.$1.$1, h.$1.$2)) {
-                  (final title, final text)? => DsTooltipCard(
-                      key: const ValueKey('sign-tooltip'),
-                      title: title,
-                      children: [Text(text, style: DsText.detail())],
-                    ),
-                  null => const SizedBox.shrink(),
-                },
               ),
             ),
           if (controller.editingTown)
@@ -548,6 +518,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (e) {
                   if (e.buttons != kPrimaryMouseButton) return;
+                  // El clic sobre un ayudante abre su pantalla, no trabaja.
+                  if (controller.hoverHelper != null) return;
                   if (controller.activeTool == ActiveTool.rod) {
                     controller.startFishing();
                   } else {
@@ -563,6 +535,53 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ),
             ),
           ..._overlays(view, controller, sprites.requireValue),
+          // Tooltips del mapa (ayudantes, carteles): siempre al frente,
+          // encima del HUD y de sus avisos.
+          if (_hover case final h?
+              when view.mode == SessionMode.lobby &&
+                  view.panel == null &&
+                  controller.hoverHelper != null)
+            Positioned.fill(
+              key: const ValueKey('helper-tooltip'),
+              child: MapHoverTip(
+                cursor: h.$2,
+                child: IgnorePointer(
+                child: switch (controller.hoverHelper) {
+                  (:final build, :final index)? => () {
+                      final (title, lines) =
+                          controller.helperInfo(build, index);
+                      return DsTooltipCard(
+                        title: title,
+                        children: [
+                          for (final l in lines) Text(l, style: DsText.detail())
+                        ],
+                      );
+                    }(),
+                  null => const SizedBox.shrink(),
+                },
+              ),
+              ),
+            )
+          else if (_hover case final h?
+              when view.mode == SessionMode.lobby &&
+                  view.panel == null &&
+                  !controller.editingTown)
+            Positioned.fill(
+              key: const ValueKey('farm-tooltip'),
+              child: MapHoverTip(
+                cursor: h.$2,
+                child: IgnorePointer(
+                child: switch (controller.signAt(h.$1.$1, h.$1.$2)) {
+                  (final title, final text)? => DsTooltipCard(
+                      key: const ValueKey('sign-tooltip'),
+                      title: title,
+                      children: [Text(text, style: DsText.detail())],
+                    ),
+                  null => const SizedBox.shrink(),
+                },
+              ),
+              ),
+            ),
           // Hazaña lograda: arriba a la derecha, sobre el mapa y la batalla.
           Positioned(
             top: 56,
