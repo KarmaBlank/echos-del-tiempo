@@ -100,6 +100,10 @@ abstract final class Tile {
   /// dibuja pasto y el sprite de la casa va encima.
   static const house = 'z';
 
+  /// TALLER DE OFICIOS (sólido; town_loop.md § 2.1, v0.32.3): se dibuja
+  /// pasto y el sprite del taller va encima (`items.vida_taller_oficios`).
+  static const workshop = 'O';
+
   /// Tierra de la huerta (caminable; farming.md § 2, v0.23.0). Las
   /// parcelas aradas y los cultivos se dibujan encima, desde el estado.
   static const soil = 'u';
@@ -156,6 +160,7 @@ abstract final class Tile {
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit, forage, forageUsed, house,
+    workshop,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).

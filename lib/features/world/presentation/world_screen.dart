@@ -34,6 +34,7 @@ import '../../endgame/domain/endgame_text.dart';
 import '../../endgame/presentation/eco_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
+import '../../inventory/presentation/workshop_panel.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/domain/mission_text.dart';
@@ -1033,6 +1034,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             view: view,
             controller: controller,
             initialTab: forge ? ArmoryTab.forge : ArmoryTab.buy);
+      case WorldPanel.workshop:
+        return WorkshopPanel(view: view, controller: controller);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.lostLoot:

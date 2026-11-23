@@ -1,0 +1,186 @@
+import 'package:material_ui/material_ui.dart';
+
+import 'ds_button.dart';
+import 'ds_components.dart';
+import 'ds_tokens.dart';
+import 'ds_transfer_template.dart' show DsItemCell, DsTransferFilter;
+
+/// Plantilla TALLER (docs/specs/ui_minimal.md § 4.1, v0.32.3): chips de
+/// filtro arriba, grilla de casillas estilo INVENTARIO y el detalle de la
+/// elegida a la derecha (arriba si la columna es angosta). Solo dibuja:
+/// recetas, textos y botones llegan por parámetros.
+
+/// Una receta de la grilla.
+class DsCraftItem {
+  const DsCraftItem({
+    required this.id,
+    required this.icon,
+    required this.border,
+    required this.name,
+    this.tag,
+    this.count,
+    this.description,
+    this.lines = const [],
+    this.actions = const [],
+  });
+
+  /// Clave estable: la casilla es `<prefijo>-cell-<id>`.
+  final String id;
+
+  /// Ícono de 32 px.
+  final Widget icon;
+  final Color border;
+  final String name;
+
+  /// Valor que miran los filtros (el oficio).
+  final String? tag;
+
+  /// Cuántos tenés (abajo a la derecha de la casilla).
+  final int? count;
+  final String? description;
+
+  /// Datos del detalle, uno por línea (receta, cuántos alcanzan).
+  final List<String> lines;
+
+  /// Botones del detalle (abajo).
+  final List<Widget> actions;
+}
+
+/// Detalle de una receta (organismo): nombre, descripción, datos y botones.
+class DsCraftDetail extends StatelessWidget {
+  const DsCraftDetail(this.item, {super.key});
+
+  final DsCraftItem item;
+
+  @override
+  Widget build(BuildContext context) => DsCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(item.name, style: DsText.subtitle(DsColors.textTitle)),
+            if (item.description != null) ...[
+              SizedBox(height: DsSpace.xs),
+              Text(item.description!, style: DsText.detail()),
+            ],
+            SizedBox(height: DsSpace.xs),
+            for (final l in item.lines) Text(l, style: DsText.body()),
+            if (item.actions.isNotEmpty) ...[
+              SizedBox(height: DsSpace.sm),
+              Wrap(
+                  spacing: DsSpace.xs,
+                  runSpacing: DsSpace.xs,
+                  children: item.actions),
+            ],
+          ],
+        ),
+      );
+}
+
+/// Plantilla TALLER: filtros + grilla + detalle.
+class DsCraftGridTemplate extends StatefulWidget {
+  const DsCraftGridTemplate({
+    super.key,
+    required this.keyPrefix,
+    required this.items,
+    this.filters = const [],
+    this.empty = 'Nada para hacer.',
+  });
+
+  /// Prefijo de las claves: `<p>-filter-<i>`, `<p>-cell-<id>`,
+  /// `<p>-detail`, `<p>-empty`.
+  final String keyPrefix;
+  final List<DsCraftItem> items;
+  final List<DsTransferFilter> filters;
+  final String empty;
+
+  /// Ancho del detalle y desde qué ancho va al costado.
+  static const detailWidth = 300.0, wideFrom = 560.0;
+
+  @override
+  State<DsCraftGridTemplate> createState() => _DsCraftGridTemplateState();
+}
+
+class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
+  int _filter = 0;
+  String? _id;
+
+  String _p(String s) => '${widget.keyPrefix}-$s';
+
+  @override
+  Widget build(BuildContext context) {
+    final tag = widget.filters.isEmpty ? null : widget.filters[_filter].tag;
+    final shown = [
+      for (final i in widget.items)
+        if (tag == null || i.tag == tag) i
+    ];
+    final sel = shown.where((i) => i.id == _id).firstOrNull ??
+        shown.firstOrNull;
+    final grid = shown.isEmpty
+        ? Text(widget.empty,
+            key: ValueKey(_p('empty')), style: DsText.detail())
+        : Wrap(
+            spacing: DsSpace.xs,
+            runSpacing: DsSpace.xs,
+            children: [
+              for (final i in shown)
+                DsItemCell(
+                  key: ValueKey(_p('cell-${i.id}')),
+                  icon: i.icon,
+                  border: i.border,
+                  count: i.count,
+                  selected: i.id == sel?.id,
+                  onTap: () => setState(() => _id = i.id),
+                ),
+            ],
+          );
+    final detail = sel == null
+        ? null
+        : KeyedSubtree(
+            key: ValueKey(_p('detail')), child: DsCraftDetail(sel));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.filters.length > 1) ...[
+          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            for (var i = 0; i < widget.filters.length; i++)
+              DsButton(widget.filters[i].label,
+                  key: ValueKey(_p('filter-$i')),
+                  size: DsButtonSize.compact,
+                  selected: _filter == i,
+                  onPressed: () => setState(() => _filter = i)),
+          ]),
+          SizedBox(height: DsSpace.sm),
+        ],
+        Expanded(
+          child: LayoutBuilder(builder: (context, box) {
+            if (box.maxWidth >= DsCraftGridTemplate.wideFrom) {
+              return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: SingleChildScrollView(child: grid)),
+                    if (detail != null) ...[
+                      SizedBox(width: DsSpace.sm),
+                      SizedBox(
+                          width: DsCraftGridTemplate.detailWidth,
+                          child: SingleChildScrollView(child: detail)),
+                    ],
+                  ]);
+            }
+            return SingleChildScrollView(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (detail != null) ...[
+                      detail,
+                      SizedBox(height: DsSpace.sm)
+                    ],
+                    grid,
+                  ]),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}

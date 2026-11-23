@@ -254,7 +254,7 @@ class TilePainter {
       case Tile.sign:
         _grass(c, th, px, py, h);
         _sign(c, px, py);
-      case Tile.house:
+      case Tile.house || Tile.workshop:
         _grass(c, th, px, py, h);
       case Tile.spikes:
         // Púas de la Prueba: placa de metal y púas que suben y bajan.
@@ -440,6 +440,7 @@ class TilePainter {
             Tile.rock ||
             Tile.sign ||
             Tile.house ||
+            Tile.workshop ||
             Tile.forage ||
             Tile.forageUsed:
         return false;
@@ -502,7 +503,7 @@ class TilePainter {
         Tile.lava =>
           (0, 0, 0, 0),
         Tile.tree => (0, 1, 0, 0),
-        Tile.sign || Tile.house => (0, 0, 0, 0),
+        Tile.sign || Tile.house || Tile.workshop => (0, 0, 0, 0),
         _ when Tile.entranceZone(ch) != null => (0, 0, 0, 0),
         _ when !handles(ch) => (0, 0, 0, 0),
         // Suelo y todo lo que se apoya en él (muros, PdI, mostradores...).
@@ -532,6 +533,7 @@ class TilePainter {
         Tile.fishing,
         Tile.sign,
         Tile.house,
+        Tile.workshop,
         Tile.spikes,
         Tile.pulse,
         Tile.grass,

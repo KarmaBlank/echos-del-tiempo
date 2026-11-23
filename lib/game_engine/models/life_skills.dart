@@ -4,7 +4,7 @@ import 'farm_skills.dart';
 export 'farm_skills.dart';
 
 /// Materiales de oficio (v0.27.0): fibra vegetal, cebo prensado y tabla
-/// tratada. Se hacen en CONDENSAR y pagan contratar y mejorar ayudantes.
+/// tratada. Se hacen en el TALLER DE OFICIOS y pagan contratar y mejorar ayudantes.
 const kLifeMaterialIds = ['fibra', 'cebo', 'tabla'];
 
 /// Habilidades de vida del personaje (town_loop.md § 11c, fishing.md § 3):

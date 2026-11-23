@@ -33,6 +33,10 @@ enum TownSpot {
   /// § 1). En el pueblo y en cada exterior.
   travel,
 
+  /// TALLER DE OFICIOS: condensar y fabricar lo de los oficios (cultivo,
+  /// pesca); town_loop.md § 2.1, v0.32.3.
+  workshop,
+
   /// Mata recolectable de un exterior de bioma (overworld_biomes.md § 3.2).
   forage,
 }
@@ -92,6 +96,8 @@ abstract final class TownLayout {
     TownLandmark(TownSpot.trader, 'AGROPECUARIO', Tile.merchant, 12, 17, w: 2),
     TownLandmark(TownSpot.lostLoot, 'LOOT PERDIDO', Tile.lostTower, 24, 15,
         w: 3),
+    TownLandmark(TownSpot.workshop, 'TALLER DE OFICIOS', Tile.workshop, 6, 6,
+        w: 3, h: 3),
   ];
 
   /// Muelles del lago base sin mover (los arma `TownPlan`).

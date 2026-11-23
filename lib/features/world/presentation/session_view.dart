@@ -18,6 +18,9 @@ import '../../../game_engine/rules/atlas_rules.dart';
 enum WorldPanel {
   missionBoard,
   armory,
+
+  /// TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3).
+  workshop,
   character,
   prep,
   inventory,
@@ -75,6 +78,7 @@ class ChatLine {
 enum WorldPrompt {
   missionBoard('[E] Ver misiones'),
   armory('[E] Armería'),
+  workshop('[E] Taller de oficios'),
   seal('[E] Activar sello'),
   merchant('[E] Tienda y herrería'),
 
