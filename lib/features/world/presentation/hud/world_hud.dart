@@ -150,8 +150,13 @@ class WorldHud extends StatelessWidget {
           ? RetroType.width(context, 280)
           : partyWidth;
       final toolRoom = controller.activeTool == null ? 0.0 : ToolHud.width + _gap;
-      final chatWidth = (box.maxWidth - rightWidth - _gap * 3 - toolRoom)
+      var chatWidth = (box.maxWidth - rightWidth - _gap * 3 - toolRoom)
           .clamp(chatMin, RetroType.width(context, 520));
+      // Con herramienta, el chat termina antes de la barra centrada.
+      if (toolRoom > 0) {
+        final free = (box.maxWidth - ToolHud.width) / 2 - _gap * 2;
+        if (free < chatWidth) chatWidth = free < chatMin ? chatMin : free;
+      }
       return DefaultTextStyle.merge(
         style: small,
         child: Stack(
@@ -406,14 +411,14 @@ class WorldHud extends StatelessWidget {
                 child: Center(child: vote),
               ),
             // Herramienta en la mano y su aviso (solo en el pueblo): barra
-            // centrada en la PANTALLA (v0.25.4); solo se corre si pisaría
-            // el chat o la columna derecha.
+            // centrada en la PANTALLA (v0.25.9): el chat se angosta para no
+            // correrla; solo la columna derecha en pantallas chicas.
             if (s.players[view.localId] case final me?
                 when controller.activeTool != null)
               Positioned(
-                left: _toolSide(box.maxWidth, _gap * 2 + chatWidth,
+                left: toolSide(box.maxWidth, _gap * 2 + chatWidth,
                     _gap * 2 + rightWidth).$1,
-                right: _toolSide(box.maxWidth, _gap * 2 + chatWidth,
+                right: toolSide(box.maxWidth, _gap * 2 + chatWidth,
                     _gap * 2 + rightWidth).$2,
                 bottom: _gap,
                 child: Align(
@@ -1522,8 +1527,10 @@ class _LevelUpBanner extends StatelessWidget {
 }
 
 /// Márgenes (izq, der) de la barra de herramienta: centrada en la
-/// pantalla de ancho [w]; si así pisaría [minL] o [minR], la franja libre.
-(double, double) _toolSide(double w, double minL, double minR) {
+/// pantalla de ancho [w]. Solo si la columna de la derecha ([minR]) no
+/// deja lugar se corre lo justo; el chat ([minL]) ya se angosta para no
+/// empujarla (v0.25.9).
+(double, double) toolSide(double w, double minL, double minR) {
   final c = (w - ToolHud.width) / 2;
   if (c >= minL && c >= minR) return (c, c);
   return (minL, minR);
