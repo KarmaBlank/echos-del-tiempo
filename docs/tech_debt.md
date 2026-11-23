@@ -1,5 +1,19 @@
 ﻿# Deuda técnica
 
+## Monorepo: nombres en inglés y formato (docs/specs/monorepo.md § 0.1)
+
+- Convención: todo el monorepo se nombra en inglés (carpetas, paquetes,
+  identificadores, tags). Los identificadores en español que ya existen
+  (`mundo`, `travesia`, `TravesiaMeta`, `session_engine_run`,
+  `-Juego Mundo|Travesia` de `release.ps1`, `GameModeKind`/`WireGame`
+  con ids `mundo`/`travesia`, archivos como `hazanas_*`) se migran de a
+  poco al tocar el código. El texto que ve el jugador sigue en español.
+  Ojo: ids que viajan por red o quedan en guardados (`WireGame.id`,
+  claves de JSON) solo se cambian con migración/versión de protocolo.
+- `dart format` no está aplicado: 650 de 1015 archivos de `lib test tool`
+  cambiarían, así que `melos run format` falla. Formatear todo en un PR
+  propio, sin ramas abiertas.
+
 ## v0.33.0 (movimiento libre por jugador)
 
 Tests salteados (prioridad: salir rápido). Solo tests de reglas en

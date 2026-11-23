@@ -7,7 +7,11 @@ publish_to: "none"
 version: 0.34.0+117
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.6.0 <4.0.0"
+
+# Pub workspace (docs/specs/monorepo.md § 9, PR 1). La app sigue en la raíz
+# hasta el PR 10; los paquetes se suman acá a medida que se crean.
+workspace: []
 
 dependencies:
   flutter:
@@ -48,6 +52,7 @@ dev_dependencies:
   freezed: ^2.5.7
   json_serializable: ^6.8.0
   injectable_generator: ^2.6.2
+  melos: ^8.10.1
 
 flutter:
   uses-material-design: true
@@ -166,3 +171,47 @@ flutter:
         - asset: assets/fonts/AtkinsonHyperlegible-Regular.ttf
         - asset: assets/fonts/AtkinsonHyperlegible-Regular.ttf
           weight: 700
+
+# --- Melos (docs/specs/monorepo.md § 6) -------------------------------------
+# Melos 8 lee la configuración de acá (no hay melos.yaml). Correr con
+# `dart run melos <cmd>` o `melos <cmd>` si está activado globalmente.
+melos:
+  repository: https://github.com/KarmaBlank/echos-del-tiempo
+  # PR 1: la app sigue en la raíz, así que la raíz es un paquete más.
+  useRootAsPackage: true
+  scripts:
+    analyze:
+      description: flutter analyze en cada paquete del workspace.
+      exec:
+        command: flutter analyze
+        concurrency: 1
+    format:
+      description: Falla si algún archivo no está formateado.
+      exec:
+        command: dart format --output=none --set-exit-if-changed lib test tool
+        concurrency: 1
+    format:fix:
+      exec:
+        command: dart format lib test tool
+        concurrency: 1
+    test:
+      description: Tests de todo el workspace (excluye tool/*_measure_test).
+      exec:
+        command: flutter test
+        concurrency: 1
+        failFast: true
+      packageFilters: { dirExists: test }
+    goldens:update:
+      exec:
+        command: flutter test --update-goldens --tags golden
+        concurrency: 1
+      packageFilters: { dirExists: test }
+    measure:
+      description: Mediciones de economía/progresión (no son tests de CI).
+      exec:
+        command: flutter test tool/hazanas_economia_measure_test.dart tool/materiales_economia_measure_test.dart tool/progression_v2_measure_test.dart
+        concurrency: 1
+      packageFilters: { dirExists: tool }
+    arch:
+      description: Grafo de dependencias (monorepo.md § 3). Stub hasta el PR 2.
+      run: dart run tool/check_deps.dart
