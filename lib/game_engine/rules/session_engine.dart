@@ -62,7 +62,7 @@ import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
 import '../data/tuning_catalog.dart';
 import '../data/fishing_catalog.dart';
-import '../data/town_layout.dart' show TownSpot;
+import '../data/town_layout.dart' show TownLayout, TownSpot;
 import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';

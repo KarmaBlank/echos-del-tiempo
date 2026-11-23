@@ -718,7 +718,7 @@ class MapGame extends Game {
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
-      for (final l in TownLayout.landmarks) {
+      for (final l in map.townMarks ?? TownLayout.landmarks) {
         _rankedText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }

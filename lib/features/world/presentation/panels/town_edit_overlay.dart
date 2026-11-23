@@ -4,6 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
@@ -113,7 +114,20 @@ class TownEditOverlay extends StatelessWidget {
     final town = c.town;
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
-    if (b == null) return null;
+    if (b == null) {
+      final l = TownPlan.landmarksOf(town)
+          .where((l) => l.id == e.hoverBuild)
+          .firstOrNull;
+      if (l == null) return null;
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSectionHeader(l.name),
+            Text(_landmarkText, style: DsText.detail()),
+            Text('Clic para moverlo.', style: DsText.detail()),
+          ]);
+    }
     return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -127,6 +141,10 @@ class TownEditOverlay extends StatelessWidget {
           Text('Clic para ver opciones.', style: DsText.detail()),
         ]);
   }
+
+  static const _landmarkText =
+      'Lugar fijo del pueblo: se puede mover, no borrar. Los caminos se '
+      'rearman solos hasta la fuente.';
 
   static String _hint(SessionController c, TownEdit e) => switch (e.step) {
         TownEditStep.moving ||
@@ -191,6 +209,21 @@ class TownEditOverlay extends StatelessWidget {
           Align(alignment: Alignment.centerLeft, child: cancel()),
         ]);
       case TownEditStep.options:
+        if (c.editLandmark case final l? when b == null) {
+          return col([
+            DsSectionHeader(l.name),
+            Text(_landmarkText,
+                key: const ValueKey('town-edit-info'), style: DsText.detail()),
+            SizedBox(height: DsSpace.xs),
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              DsButton('MOVER',
+                  key: const ValueKey('town-edit-move'),
+                  size: DsButtonSize.compact,
+                  onPressed: c.editStartMove),
+              cancel(),
+            ]),
+          ]);
+        }
         if (b == null) return null;
         final lake = b.kind == BuildKind.lago;
         return col([

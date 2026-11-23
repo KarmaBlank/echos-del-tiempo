@@ -36,7 +36,13 @@ class TownState {
       this.cycle = 0,
       this.lake,
       this.sides = const {},
-      this.builds = kDefaultBuilds});
+      this.builds = kDefaultBuilds,
+      this.marks = const {}});
+
+  /// Lugares fijos movidos (town_editor.md § 3.3): id del lugar (`@forge`,
+  /// …) → esquina en coordenadas del pueblo base. Los que no están, en su
+  /// lugar de siempre (`TownLayout.landmarks`).
+  final Map<String, (int, int)> marks;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -131,6 +137,7 @@ class TownState {
     Map<TownSide, int>? sides,
     List<TownBuild>? builds,
     Map<String, FarmPlot>? plots,
+    Map<String, (int, int)>? marks,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -138,13 +145,14 @@ class TownState {
         cycle: cycle ?? this.cycle,
         lake: lake ?? this.lake,
         sides: sides ?? this.sides,
-        builds: builds ?? this.builds);
+        builds: builds ?? this.builds,
+        marks: marks ?? this.marks);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
   }
 
-  /// Lo del pueblo que ven todos en la sala (protocolo 45, `town` del
+  /// Lo del pueblo que ven todos en la sala (protocolo 46, `town` del
   /// estado): sin el pozo (viaja aparte) ni las mejoras sin efecto.
   Map<String, Object?> farmJson() => {
         if (lake != null) 'lake': lake,
@@ -154,6 +162,10 @@ class TownState {
               if (e.value > 0) e.key.code: e.value
           },
         'builds': [for (final b in builds) b.toJson()],
+        if (marks.isNotEmpty)
+          'marks': {
+            for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
+          },
       };
 
   /// Una construcción cambiada (por id).
@@ -185,6 +197,14 @@ class TownState {
         helper: f.helper > 0 ? f.helper : (lvl > 0 ? 1 : 0), chest: chest));
   }
 
+  static Map<String, (int, int)> _marks(Object? v) => v is Map
+      ? {
+          for (final e in v.entries)
+            if (e.value case [final num x, final num y, ...])
+              '${e.key}': (x.round(), y.round()),
+        }
+      : const {};
+
   /// Tolerante. Saves de v0.23 (`exp`, `zones`, `plots`, `stock`): las
   /// franjas al este pasan a ser ampliaciones al ESTE, cada zona una
   /// construcción en el mismo lugar, las parcelas van a su huerta y los
@@ -214,6 +234,7 @@ class TownState {
       lake: raw['lake'] is List
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
+      marks: _marks(raw['marks']),
     );
     final bs = raw['builds'];
     if (bs is List) {

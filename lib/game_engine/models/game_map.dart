@@ -1,3 +1,5 @@
+import '../data/town_layout.dart' show TownLandmark;
+
 /// Un punto del mundo en px (no en tiles).
 class WorldPoint {
   final double x;
@@ -392,6 +394,7 @@ class GameMap {
     List<ZoneEntrance> entrances = const [],
     this.zone = 0,
     this.townOrigin = (0, 0),
+    this.townMarks,
   })  : rows = List.unmodifiable(rows),
         floors = List.unmodifiable(floors),
         entrances = List.unmodifiable(entrances);
@@ -402,6 +405,10 @@ class GameMap {
   /// Pueblo: dónde cae el tile (0, 0) del pueblo base (town_editor.md
   /// § 2; las ampliaciones al norte y al oeste lo corren).
   final (int, int) townOrigin;
+
+  /// Pueblo: los lugares en su posición de este mundo (coordenadas del
+  /// pueblo base; town_editor.md § 3.3). `null` = los de siempre.
+  final List<TownLandmark>? townMarks;
 
   /// Una fila por `y`, un carácter por `x` (ver [Tile]).
   final List<String> rows;

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../data/construction_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import '../models/item.dart' show CraftMaterial;
 import '../models/player_profile.dart';
@@ -247,6 +248,7 @@ abstract final class TownRules {
   /// [my]); las parcelas viajan con la huerta.
   static ({TownState? town, String? id, String? error}) move(
       TownState s, String id, int mx, int my) {
+    if (TownLayout.byId(id) != null) return moveLandmark(s, id, mx, my);
     final b = s.build(id);
     if (b == null) return (town: null, id: null, error: 'No existe');
     final (ox, oy) = s.origin;
@@ -255,6 +257,83 @@ abstract final class TownRules {
     return err == null
         ? (town: next, id: nid, error: null)
         : (town: null, id: null, error: err);
+  }
+
+  // ---------------- lugares fijos ----------------
+
+  /// El lugar del pueblo que ocupa el tile del mapa ([mx], [my]).
+  static TownLandmark? landmarkAt(TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    final tx = mx - ox, ty = my - oy;
+    return TownPlan.landmarksOf(s)
+        .where((l) => tx >= l.x && ty >= l.y && tx < l.x + l.w && ty < l.y + l.h)
+        .firstOrNull;
+  }
+
+  /// Mover el lugar [id] (`@forge`, …) con su esquina en el tile del mapa
+  /// ([mx], [my]) (town_editor.md § 3.3). Los lugares no se borran.
+  static ({TownState? town, String? id, String? error}) moveLandmark(
+      TownState s, String id, int mx, int my) {
+    final def = TownLayout.byId(id);
+    if (def == null) return (town: null, id: null, error: 'No existe');
+    final (ox, oy) = s.origin;
+    final x = mx - ox, y = my - oy;
+    final marks = {...s.marks}..remove(id);
+    if ((x, y) != (def.x, def.y)) marks[id] = (x, y);
+    final next = s.copyWith(marks: marks);
+    final err = _invalidLandmarks(next, id);
+    return err == null
+        ? (town: next, id: id, error: null)
+        : (town: null, id: null, error: err);
+  }
+
+  /// Por qué [next] no es válido tras mover el lugar [id] (o `null`).
+  /// Revisa todo el pueblo: al mover un lugar cambian los caminos fijos.
+  static String? _invalidLandmarks(TownState next, String id) {
+    final w = TownPlan.widthOf(next), h = TownPlan.heightOf(next);
+    final (ox, oy) = next.origin;
+    bool inside(TownRect r) =>
+        r.x + ox >= 1 &&
+        r.y + oy >= 1 &&
+        r.right + ox <= w - 1 &&
+        r.bottom + oy <= h - 1;
+    final marks = TownPlan.landmarksOf(next);
+    final l = marks.firstWhere((m) => m.id == id);
+    final lr = TownRect(l.x, l.y, l.w, l.h);
+    if (!inside(lr)) return 'Fuera del pueblo: ampliá hacia ese lado';
+    final fixed = TownPlan.fixedPaths(next);
+    if (l.spot == TownSpot.fountain) {
+      // El anillo y el tile de aparición al sur tienen que entrar.
+      if (!inside(fixed.first) ||
+          !inside(TownRect(l.x, l.y + 4, 2, 1))) {
+        return 'La plaza de la fuente no entra ahí';
+      }
+    }
+    for (final o in marks) {
+      final or = TownRect(o.x, o.y, o.w, o.h);
+      if (o.id != id && or.inflate(1).overlaps(lr)) {
+        return 'Se pisa con otro lugar del pueblo';
+      }
+      if (o.spot != TownSpot.fountain && fixed.any(or.overlaps)) {
+        return o.id == id
+            ? 'Ahí está la plaza de la fuente'
+            : 'La plaza de la fuente pisa otro lugar';
+      }
+    }
+    final res = TownPlan.reserved(next);
+    for (final b in next.builds) {
+      final (sx, sy) = TownPlan.signOf(next, b);
+      final sign = TownRect(sx, sy, 1, 1);
+      for (final r in res) {
+        if (b.parts.any((p) => p.overlaps(r)) || sign.overlaps(r)) {
+          return 'Se pisa con una construcción o su cartel';
+        }
+      }
+    }
+    if (TownPlan.of(next).unreached.isNotEmpty) {
+      return 'Así queda algo sin camino';
+    }
+    return null;
   }
 
   /// Borrar [id]. Lago: se pierden sus peces. Huerta: cada parcela
