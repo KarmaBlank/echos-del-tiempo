@@ -15,12 +15,14 @@ final gameSpritesProvider = FutureProvider<GameSprites>(
 /// frame). Se arma una sola vez con [load] a partir de [SpriteCatalog],
 /// que sigue siendo el único que sabe dónde están los archivos.
 class GameSprites {
-  GameSprites._(this._heroes, this._enemies, this._scales, this._floats);
+  GameSprites._(this._heroes, this._enemies, this._scales, this._floats,
+      [this._life = const {}]);
 
   final Map<String, Sprite> _heroes;
   final Map<String, Sprite> _enemies;
   final Map<String, double> _scales;
   final Set<String> _floats;
+  final Map<String, ui.Image> _life;
 
   static Future<GameSprites> load(SpriteCatalog catalog) async {
     final heroes = <String, Sprite>{};
@@ -46,7 +48,17 @@ class GameSprites {
       scales[e] = catalog.enemyScale(e);
       if (catalog.enemyFloats(e)) floats.add(e);
     }
-    return GameSprites._(heroes, enemies, scales, floats);
+    // Íconos de oficio (`items.vida_*`): opcionales, si uno falla se usa
+    // el de su categoría.
+    final life = <String, ui.Image>{};
+    await Future.wait([
+      for (final e in catalog.entries)
+        if (e.section == 'items' && e.key.startsWith('vida_'))
+          catalog.image(e).then((img) {
+            if (img != null) life[e.key.substring(5)] = img;
+          }),
+    ]);
+    return GameSprites._(heroes, enemies, scales, floats, life);
   }
 
   /// Frame `idle` de una clase, o `null` si el manifest no la tiene.
@@ -67,6 +79,11 @@ class GameSprites {
   /// (quien dibuja usa entonces el aura pintada).
   ui.Image? aura(String? ascensionId) =>
       ascensionId == null ? null : _heroes['aura_$ascensionId']?.image;
+
+  /// Ícono de oficio de [id] (`items.vida_<id>` del manifest), o el de
+  /// [category] (`vida_cat_<categoría>`), o `null`.
+  ui.Image? lifeIcon(String id, String category) =>
+      _life[id] ?? _life['cat_$category'];
 
   /// Frame `idle` de un tipo de enemigo, o `null`.
   ui.Image? enemy(String enemyType) => _enemies[enemyType]?.image;

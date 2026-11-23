@@ -5,15 +5,13 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
-import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
-import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
-import 'package:echos_del_tiempo/game_engine/rules/town_plan.dart';
+import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -23,10 +21,10 @@ import '../../test/real_fonts.dart';
 const _out = 'docs/release_shots/v0.24.2';
 
 
-Future<void> _shot(WidgetTester tester, String name, Size _size) async {
+Future<void> _shot(WidgetTester tester, String name, Size size) async {
   final layer = tester.binding.renderViews.first.debugLayer! as OffsetLayer;
   await tester.runAsync(() async {
-    final img = await layer.toImage(Offset.zero & _size);
+    final img = await layer.toImage(Offset.zero & size);
     final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
     final f = File('$_out/$name.png');
     await f.parent.create(recursive: true);
@@ -65,6 +63,28 @@ Future<void> _run(WidgetTester tester, Size size, String sfx) async {
     return null;
   }
 
+  // Fuente rúnica: filas completas, sin "…".
+  // ignore: invalid_use_of_visible_for_testing_member
+  c.teleport(17.0 * 16, 12.4 * 16);
+  await h.frames(6);
+  c.handleKey(LogicalKeyboardKey.keyE);
+  await h.frames(3);
+  await _shot(tester, 'fuente_$sfx', size);
+  c.closePanel();
+  await h.frames(2);
+
+  // PESCA Y CULTIVO: pestañas con íconos.
+  c.openPanel(WorldPanel.character);
+  await h.frames(2);
+  await tester.tap(find.text('PESCA Y CULTIVO'));
+  await h.frames(3);
+  await _shot(tester, 'pesca_cultivo_$sfx', size);
+  await tester.tap(find.byKey(const ValueKey('life-cat-pescados')));
+  await h.frames(3);
+  await _shot(tester, 'pesca_cultivo_pescados_$sfx', size);
+  c.closePanel();
+  await h.frames(2);
+
   // Juego normal: carteles de los lugares (fila de arriba).
   // ignore: invalid_use_of_visible_for_testing_member
   c.teleport(17.0 * 16, 6.0 * 16);
@@ -84,8 +104,8 @@ Future<void> _run(WidgetTester tester, Size size, String sfx) async {
   addTearDown(mouse.removePointer);
   await mouse.moveTo(screenOf((10, -3))!);
   await h.frames(3);
-  expect(find.byKey(const ValueKey('town-edit-hover-cost')), findsOneWidget);
-  await _shot(tester, 'edicion_franja_costo_$sfx', size);
+  // expect strip
+  await _shot(tester, 'edicion_franja_hover_$sfx', size);
 
   game.editZoom = 1;
   game.camX = 0;
@@ -93,6 +113,18 @@ Future<void> _run(WidgetTester tester, Size size, String sfx) async {
   await mouse.moveTo(Offset.zero);
   await h.frames(4);
   await _shot(tester, 'edicion_zoom1_$sfx', size);
+
+  // MOVER la huerta un tile: pisa su lugar viejo y es válido.
+  game.editZoom = 1.5;
+  game.camX = 6 * 16;
+  game.camY = 6 * 16;
+  c.editClick(20, 19);
+  c.editStartMove();
+  await h.frames(2);
+  await mouse.moveTo(screenOf((20, 18))!);
+  await h.frames(3);
+  expect(c.editGhostError, isNull);
+  await _shot(tester, 'edicion_mover_$sfx', size);
 }
 
 void main() {

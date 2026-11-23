@@ -18,6 +18,20 @@ class TownEditOverlay extends StatelessWidget {
 
   final SessionController controller;
 
+  /// Alto reservado para la barra de arriba (las tarjetas de las franjas
+  /// van debajo).
+  static const barHeight = 56.0;
+
+  /// Ancho de la columna de la derecha para una pantalla de [w] px.
+  static double sideWidth(double w) => (w * 0.3).clamp(240.0, 320.0);
+
+  /// Hay algo en la columna de la derecha (menú o info).
+  static bool sideOpen(SessionController c) {
+    final e = c.townEdit;
+    return e != null &&
+        (e.step != TownEditStep.browse || e.hoverBuild != null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = controller;
@@ -29,7 +43,7 @@ class TownEditOverlay extends StatelessWidget {
     // columna: el menú del paso y el panel de info de lo que está bajo
     // el mouse (town_editor.md § 1.3). Nada se superpone.
     return LayoutBuilder(builder: (context, box) {
-      final side = (box.maxWidth * 0.3).clamp(240.0, 320.0);
+      final side = sideWidth(box.maxWidth);
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(
           key: const ValueKey('town-edit-bar'),
@@ -42,9 +56,9 @@ class TownEditOverlay extends StatelessWidget {
             Expanded(
                 child: Text(_hint(c, e),
                     key: const ValueKey('town-edit-hint'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: DsText.detail())),
+                    maxLines: 2,
+                    softWrap: true,
+                    style: DsText.subtitle())),
             SizedBox(width: DsSpace.md),
             DsButton('LISTO [ESC]',
                 key: const ValueKey('town-edit-done'),
@@ -91,27 +105,10 @@ class TownEditOverlay extends StatelessWidget {
     });
   }
 
-  /// Info de lo que está bajo el mouse: franja (con su costo) o
-  /// construcción. `null` si no hay nada o si ya lo muestra el menú.
+  /// Info de la construcción bajo el mouse (las franjas muestran su
+  /// costo en su tarjeta). `null` si no hay nada o si ya hay un menú.
   static Widget? _info(SessionController c, TownEdit e) {
-    if (e.step != TownEditStep.browse && e.step != TownEditStep.side) {
-      return null;
-    }
     final town = c.town;
-    if (e.hoverSide case final side?) {
-      if (e.step == TownEditStep.side && e.side == side) return null;
-      final why = c.cannotExpandTown(side);
-      return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DsSectionHeader('AMPLIAR AL ${side.label}'),
-            Text(TownRules.costText(TownRules.cost(town.expansions + 1)),
-                key: const ValueKey('town-edit-hover-cost'),
-                style: DsText.detail()),
-            Text(why ?? 'Clic para ampliar.', style: DsText.detail()),
-          ]);
-    }
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
     if (b == null) return null;
@@ -133,7 +130,7 @@ class TownEditOverlay extends StatelessWidget {
         TownEditStep.moving ||
         TownEditStep.placing =>
           c.editGhostError ?? 'Clic para dejarlo acá',
-        _ => 'WASD o arrastrar: cámara · rueda: zoom · clic: elegir',
+        _ => 'WASD/arrastrar: mover · rueda: zoom · clic: elegir',
       };
 
   Widget? _menu(SessionController c, TownEdit e) {

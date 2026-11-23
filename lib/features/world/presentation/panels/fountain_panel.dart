@@ -54,8 +54,12 @@ class FountainPanel extends StatelessWidget {
                 key: const ValueKey('fountain-edit'),
                 compact: true,
                 title: 'Edición del pueblo',
-                detail: '${t.lakes.length} lagos · ${t.farms.length} huertas '
+                // Segunda línea que se parte: nunca "…" (v0.24.2).
+                subtitleWidget: Text(
+                    '${t.lakes.length} lagos · ${t.farms.length} huertas '
                     '· ${t.stockTotal} peces soltados',
+                    softWrap: true,
+                    style: DsText.detail()),
                 trailing: DsButton('EDITAR PUEBLO',
                     key: const ValueKey('fountain-edit-btn'),
                     size: DsButtonSize.compact,
@@ -72,9 +76,23 @@ class FountainPanel extends StatelessWidget {
                 key: const ValueKey('fountain-helper'),
                 compact: true,
                 title: t.helper == 0 ? 'Contratar' : 'Mejorar',
-                detail: '${TownRules.helperCost(t.helper + 1)} de oro · '
-                    'hasta ${TownRules.t.i('helperPlots') * (t.helper + 1)} '
-                    'parcelas · cosecha al granero del comerciante',
+                subtitleWidget: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                          '${TownRules.helperCost(t.helper + 1)} de oro · '
+                          'hasta ${TownRules.t.i('helperPlots') * (t.helper + 1)} '
+                          'parcelas · cosecha al granero del comerciante',
+                          softWrap: true,
+                          style: DsText.detail()),
+                      // El motivo del botón gris, a la vista.
+                      if (hireWhy != null)
+                        Text(hireWhy,
+                            key: const ValueKey('fountain-helper-why'),
+                            softWrap: true,
+                            style: DsText.detail(DsColors.danger)),
+                    ]),
                 trailing: DsButton(t.helper == 0 ? 'CONTRATAR' : 'MEJORAR',
                     key: const ValueKey('fountain-helper-btn'),
                     size: DsButtonSize.compact,

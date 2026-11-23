@@ -158,4 +158,21 @@ void main() {
       expect(near, isTrue, reason: 'sin camino a ${b.id}');
     }
   });
+
+  test('mover una construcción sobre su propio lugar es válido', () {
+    const s = TownState();
+    final (ox, oy) = s.origin;
+    for (final b in s.builds) {
+      final bb = b.bounds;
+      final x = bb.x + ox, y = bb.y + oy;
+      final back = TownRules.move(s, b.id, x, y);
+      expect(back.error, isNull, reason: '${b.id} en su lugar');
+      final ok = [
+        for (final (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)])
+          TownRules.move(s, b.id, x + dx, y + dy).error
+      ];
+      expect(ok.contains(null), isTrue,
+          reason: '${b.id} a un tile pisando su lugar viejo: $ok');
+    }
+  });
 }

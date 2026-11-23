@@ -40,17 +40,22 @@ esquina superior izquierda del fantasma va en el tile del mouse.
   tooltips flotantes de los carteles). Solo queda la barra de edición
   arriba, a todo el ancho y con fondo opaco: EDICIÓN DEL PUEBLO, una
   ayuda corta de una línea (se corta con "…") y LISTO [ESC].
-- Franjas fantasma celestes con una etiqueta chica en px de pantalla
-  ("+ NORTE"), centrada en la parte visible de la franja (gris si no se
-  puede ampliar, dorada con el mouse encima o elegida). El costo no se
-  dibuja en el mapa.
+- Franjas fantasma celestes. Encima, en px de pantalla
+  (`TownStripCards`), una tarjeta centrada en la parte visible de cada
+  franja (debajo de la barra y a la izquierda de la columna derecha):
+  AMPLIAR y el costo de a un recurso por renglón, "Oro 1500 (tenés
+  60000)", verde si alcanza y rojo si no (`TownRules.costLines`). Se
+  achica para entrar en la franja; si la parte visible es muy chica no
+  se muestra. Borde dorado con el mouse encima o elegida.
 - Contorno de cada construcción (dorado la elegida) y fantasma verde /
   rojo. Colores en `TownEditPalette`.
 - Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
   entre 240 y 320 px): el menú del paso y, debajo, el panel de info de
-  lo que está bajo el mouse: una franja (AMPLIAR AL <LADO>, costo y
-  motivo si no se puede) o una construcción (su cartel). Si el menú ya
-  muestra lo mismo, el panel no aparece.
+  la construcción bajo el mouse (su cartel). Con un menú abierto no
+  aparece. La barra: ayuda corta en hasta dos renglones, sin "…".
+- Validación de MOVER (§ 3.2): el borde del pueblo es de un tile (la
+  fila de árboles), así cada construcción puede volver a su propio lugar
+  o correrse pisando el que deja.
 
 ### 1.4 Etiquetas del mapa
 - Con zoom las etiquetas se achican con el mapa (la unidad de letra sale

@@ -15,8 +15,17 @@ import 'map_themes.dart';
 abstract final class TownEditLayer {
   static const ts = 16.0;
 
-  /// Etiqueta corta de la franja de [side] ("+ NORTE").
-  static String sideTag(TownSide side) => '+ ${side.label}';
+  /// La franja fantasma de [side] en px del mundo para un mapa de
+  /// [w] × [h] px.
+  static Rect stripRect(TownSide side, double w, double h) {
+    const s = kTownStrip * ts;
+    return switch (side) {
+      TownSide.norte => Rect.fromLTWH(0, -s, w, s),
+      TownSide.sur => Rect.fromLTWH(0, h, w, s),
+      TownSide.oeste => Rect.fromLTWH(-s, 0, s, h),
+      TownSide.este => Rect.fromLTWH(w, 0, s, h),
+    };
+  }
 
   /// [view]: lo visible del mundo (px); la etiqueta de cada franja va en
   /// el centro de su parte visible.
@@ -31,15 +40,9 @@ abstract final class TownEditLayer {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final w = map.width * ts, h = map.height * ts;
-    const s = kTownStrip * ts;
     for (final side in TownSide.values) {
       if (TownRules.sideFull(town, side) != null) continue;
-      final r = switch (side) {
-        TownSide.norte => Rect.fromLTWH(0, -s, w, s),
-        TownSide.sur => Rect.fromLTWH(0, h, w, s),
-        TownSide.oeste => Rect.fromLTWH(-s, 0, s, h),
-        TownSide.este => Rect.fromLTWH(w, 0, s, h),
-      };
+      final r = stripRect(side, w, h);
       final picked = e.side == side;
       c.drawRect(r, fill..color = TownEditPalette.side);
       c.drawRect(
@@ -47,16 +50,8 @@ abstract final class TownEditLayer {
           line
             ..color =
                 picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
-      final why = ctl.cannotExpandTown(side);
-      final col =
-          why == null ? TownEditPalette.sideText : TownEditPalette.sideLocked;
-      // Solo una etiqueta corta y chica; el costo va en el panel de la
-      // derecha al pasar el mouse (town_editor.md § 1.3).
-      final vis = view == null ? r : r.intersect(view);
-      if (vis.width <= 0 || vis.height <= 0) continue;
-      final hot = picked || e.hoverSide == side;
-      text(sideTag(side), vis.center.dx, vis.center.dy + 3,
-          hot ? TownEditPalette.selected : col, 6);
+      // El texto (AMPLIAR y el costo) va en px de pantalla, en
+      // `TownStripCards` (town_editor.md § 1.3).
     }
     for (final b in town.builds) {
       final sel = b.id == e.selected;

@@ -209,6 +209,63 @@ items:
   tomo: { procedural: true, size: [16, 16] }
   pocion: { procedural: true, size: [16, 16] }
   cofre: { procedural: true, size: [16, 16] }
+  # vida:inicio — íconos de oficio (tool/export_life_icons.dart)
+  vida_cana_rama: { idle: items/vida_cana_rama.png, size: [16, 16] }
+  vida_cana_roble: { idle: items/vida_cana_roble.png, size: [16, 16] }
+  vida_cana_runica: { idle: items/vida_cana_runica.png, size: [16, 16] }
+  vida_cana_eco: { idle: items/vida_cana_eco.png, size: [16, 16] }
+  vida_azada_rama: { idle: items/vida_azada_rama.png, size: [16, 16] }
+  vida_azada_hierro: { idle: items/vida_azada_hierro.png, size: [16, 16] }
+  vida_azada_runica: { idle: items/vida_azada_runica.png, size: [16, 16] }
+  vida_azada_eco: { idle: items/vida_azada_eco.png, size: [16, 16] }
+  vida_regadera_lata: { idle: items/vida_regadera_lata.png, size: [16, 16] }
+  vida_regadera_cobre: { idle: items/vida_regadera_cobre.png, size: [16, 16] }
+  vida_regadera_runica: { idle: items/vida_regadera_runica.png, size: [16, 16] }
+  vida_regadera_eco: { idle: items/vida_regadera_eco.png, size: [16, 16] }
+  vida_abono: { idle: items/vida_abono.png, size: [16, 16] }
+  vida_abono_runico: { idle: items/vida_abono_runico.png, size: [16, 16] }
+  vida_abono_eco: { idle: items/vida_abono_eco.png, size: [16, 16] }
+  vida_mojarra_claro: { idle: items/vida_mojarra_claro.png, size: [16, 16] }
+  vida_perca_rayada: { idle: items/vida_perca_rayada.png, size: [16, 16] }
+  vida_carpa_musgo: { idle: items/vida_carpa_musgo.png, size: [16, 16] }
+  vida_trucha_cobre: { idle: items/vida_trucha_cobre.png, size: [16, 16] }
+  vida_bagre_ruinas: { idle: items/vida_bagre_ruinas.png, size: [16, 16] }
+  vida_anguila_runica: { idle: items/vida_anguila_runica.png, size: [16, 16] }
+  vida_pez_engranaje: { idle: items/vida_pez_engranaje.png, size: [16, 16] }
+  vida_carpa_manana: { idle: items/vida_carpa_manana.png, size: [16, 16] }
+  vida_esturion_era: { idle: items/vida_esturion_era.png, size: [16, 16] }
+  vida_pez_reloj: { idle: items/vida_pez_reloj.png, size: [16, 16] }
+  vida_botas_viejas: { idle: items/vida_botas_viejas.png, size: [16, 16] }
+  vida_rama_empapada: { idle: items/vida_rama_empapada.png, size: [16, 16] }
+  vida_bulto_hundido: { idle: items/vida_bulto_hundido.png, size: [16, 16] }
+  vida_semilla_nabo_claro: { idle: items/vida_semilla_nabo_claro.png, size: [16, 16] }
+  vida_cosecha_nabo_claro: { idle: items/vida_cosecha_nabo_claro.png, size: [16, 16] }
+  vida_semilla_trigo_dorado: { idle: items/vida_semilla_trigo_dorado.png, size: [16, 16] }
+  vida_cosecha_trigo_dorado: { idle: items/vida_cosecha_trigo_dorado.png, size: [16, 16] }
+  vida_semilla_papa_piedra: { idle: items/vida_semilla_papa_piedra.png, size: [16, 16] }
+  vida_cosecha_papa_piedra: { idle: items/vida_cosecha_papa_piedra.png, size: [16, 16] }
+  vida_semilla_calabaza_sendero: { idle: items/vida_semilla_calabaza_sendero.png, size: [16, 16] }
+  vida_cosecha_calabaza_sendero: { idle: items/vida_cosecha_calabaza_sendero.png, size: [16, 16] }
+  vida_semilla_frutilla_rocio: { idle: items/vida_semilla_frutilla_rocio.png, size: [16, 16] }
+  vida_cosecha_frutilla_rocio: { idle: items/vida_cosecha_frutilla_rocio.png, size: [16, 16] }
+  vida_semilla_cebolla_cobre: { idle: items/vida_semilla_cebolla_cobre.png, size: [16, 16] }
+  vida_cosecha_cebolla_cobre: { idle: items/vida_cosecha_cebolla_cobre.png, size: [16, 16] }
+  vida_semilla_flor_runica: { idle: items/vida_semilla_flor_runica.png, size: [16, 16] }
+  vida_cosecha_flor_runica: { idle: items/vida_cosecha_flor_runica.png, size: [16, 16] }
+  vida_semilla_melon_engranaje: { idle: items/vida_semilla_melon_engranaje.png, size: [16, 16] }
+  vida_cosecha_melon_engranaje: { idle: items/vida_cosecha_melon_engranaje.png, size: [16, 16] }
+  vida_semilla_trigo_manana: { idle: items/vida_semilla_trigo_manana.png, size: [16, 16] }
+  vida_cosecha_trigo_manana: { idle: items/vida_cosecha_trigo_manana.png, size: [16, 16] }
+  vida_semilla_rosa_reloj: { idle: items/vida_semilla_rosa_reloj.png, size: [16, 16] }
+  vida_cosecha_rosa_reloj: { idle: items/vida_cosecha_rosa_reloj.png, size: [16, 16] }
+  vida_semilla_raiz_era: { idle: items/vida_semilla_raiz_era.png, size: [16, 16] }
+  vida_cosecha_raiz_era: { idle: items/vida_cosecha_raiz_era.png, size: [16, 16] }
+  vida_cat_herramienta: { idle: items/vida_cat_herramienta.png, size: [16, 16] }
+  vida_cat_pescado: { idle: items/vida_cat_pescado.png, size: [16, 16] }
+  vida_cat_semilla: { idle: items/vida_cat_semilla.png, size: [16, 16] }
+  vida_cat_cosecha: { idle: items/vida_cat_cosecha.png, size: [16, 16] }
+  vida_cat_basura: { idle: items/vida_cat_basura.png, size: [16, 16] }
+  # vida:fin
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }

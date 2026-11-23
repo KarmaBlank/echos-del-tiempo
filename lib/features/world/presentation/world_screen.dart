@@ -48,6 +48,7 @@ import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/town_edit_overlay.dart';
+import 'panels/town_strip_cards.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/lost_loot_panel.dart';
@@ -478,6 +479,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     ),
                   null => const SizedBox.shrink(),
                 },
+              ),
+            ),
+          if (controller.editingTown)
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, box) => TownStripCards(
+                  game: game,
+                  controller: controller,
+                  top: TownEditOverlay.barHeight,
+                  right: TownEditOverlay.sideOpen(controller)
+                      ? TownEditOverlay.sideWidth(box.maxWidth) + 16
+                      : 0,
+                ),
               ),
             ),
           if (controller.editingTown)

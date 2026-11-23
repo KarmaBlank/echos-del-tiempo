@@ -174,6 +174,18 @@ class MapGame extends Game {
   Rect viewRect(Size screen) =>
       mapViewRect(screen, Size(vw.toDouble(), vh.toDouble()), scaleMode);
 
+  /// Un rectángulo del mundo (px) en px de pantalla (con cámara y zoom).
+  Rect worldToScreen(Rect w) {
+    final r = viewRect(Size(size.x, size.y));
+    final k = r.width / vw / zoom;
+    Offset p(Offset o) => Offset(r.left + (o.dx - camX.roundToDouble()) * k,
+        r.top + (o.dy - camY.roundToDouble()) * k);
+    return Rect.fromPoints(p(w.topLeft), p(w.bottomRight));
+  }
+
+  /// Lo que ocupa el mapa en la pantalla.
+  Rect get screenView => viewRect(Size(size.x, size.y));
+
   /// El tile del mundo bajo el punto [p] de la pantalla (para el tooltip
   /// de las parcelas; farming.md § 2.4).
   (int, int)? tileAtScreen(Offset p) {
