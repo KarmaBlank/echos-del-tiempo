@@ -9,8 +9,8 @@ extension _BiomeOp on _Op {
 
   bool biomeAction(SessionPlayer p, SessionAction a) {
     switch (a) {
-      case TravelAction(:final place):
-        return _travel(p, place);
+      case TravelAction(:final place, :final ecoZone):
+        return _travel(p, place, ecoZone);
       case ForageAction(:final spot):
         return _forage(p, spot);
       default:
@@ -18,7 +18,9 @@ extension _BiomeOp on _Op {
     }
   }
 
-  bool _travel(SessionPlayer p, String place) {
+  bool _travel(SessionPlayer p, String place, [int? ecoZone]) {
+    final portal = ecoZone == null ? null : EcoPortalRules.of(ecoZone);
+    if (ecoZone != null && portal?.biome != place) return false;
     if (s.mode != SessionMode.lobby ||
         s.run != null ||
         s.vote != null ||
@@ -30,19 +32,26 @@ extension _BiomeOp on _Op {
       return false;
     }
     final next = place == kPueblo ? null : place;
-    if (next == s.place) return false;
+    if (next == s.place && portal == null) return false;
+    final moved = next != s.place;
     s.place = next;
     e.fishing.pending.clear();
     var i = 0;
     for (final q in players) {
-      final pos = spawnPos(i++);
+      var pos = spawnPos(i);
+      // ECOS: frente al portal de esa zona (ecos_zone.md § 5).
+      if (portal != null) {
+        final f = portal.front;
+        pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+      }
+      i++;
       q
         ..x = pos.x
         ..y = pos.y
         ..fishLine = null
         ..epoch += 1;
     }
-    say('El grupo viajó a ${biomeDef(place)!.name}.');
+    if (moved) say('El grupo viajó a ${biomeDef(place)!.name}.');
     return true;
   }
 

@@ -221,7 +221,11 @@ abstract final class ActionJson {
             if (a.node != null) 'n': a.node,
           },
         // Protocolo 46 (v0.26.0): mapa de viaje y recolección.
-        TravelAction() => {'t': 'travel', 'p': a.place},
+        TravelAction() => {
+            't': 'travel',
+            'p': a.place,
+            if (a.ecoZone != null) 'ez': a.ecoZone,
+          },
         ForageAction() => {'t': 'forage', 'i': a.spot},
         // Protocolo 57 (v0.33.0): salir solo de la mazmorra.
         LeaveDungeonAction() => {
@@ -459,7 +463,8 @@ abstract final class ActionJson {
       case 'lifeTree':
         return LifeTreeAction(j.str('k'), j.strOrNull('n'));
       case 'travel':
-        return TravelAction(j.str('p'));
+        return TravelAction(j.str('p'),
+            ecoZone: j['ez'] is num ? (j['ez'] as num).toInt() : null);
       case 'forage':
         return ForageAction(j.integer('i'));
       case 'leaveD':

@@ -19,11 +19,15 @@ import '../../combat/presentation/game_sprites.dart';
 import '../domain/endgame_text.dart';
 import 'abyss_view.dart';
 import 'atlas_view.dart';
+import 'eco_zone_hub.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
+  zonas('ZONAS',
+      'Los Ecos se abren en el portal de su zona. Elegí una zona y IR te '
+      'lleva hasta él.'),
   ecos('ECOS',
-      'Elegí un Eco: ABRIR lo propone al grupo; los materiales lo mejoran.'),
+      'Tus Ecos: mejoralos con materiales. Se abren en el portal de su zona.'),
   atlas('ATLAS',
       'Árbol de la cuenta: ganás puntos al completar algo por primera vez.'),
   abismo('ABISMO',
@@ -41,7 +45,7 @@ class EcoPortalPanel extends StatefulWidget {
     super.key,
     required this.view,
     required this.controller,
-    this.initialTab = EcoPortalTab.ecos,
+    this.initialTab = EcoPortalTab.zonas,
     this.sprites,
   });
 
@@ -102,14 +106,16 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!p.ecosUnlocked)
-                PanelHint(protoColor(
-                    ProtoColors.orange,
-                    'Portal apagado: vencé al Devorador de Eras (Corazón del '
-                    'Tiempo) para activarlo. Los Ecos que caigan se guardan.')),
               PanelHint(_tab.hint),
               Expanded(
                 child: switch (_tab) {
+                  EcoPortalTab.zonas => EcoZoneHub(
+                      key: const ValueKey('eco-hub'),
+                      profile: p,
+                      zoneName: (z) =>
+                          c.engine.catalog.zone(z)?.name ?? 'Zona $z',
+                      goBlocked: c.ecoTravelBlocked,
+                      onGo: (z, t) => c.travelToEcoPortal(z, tier: t)),
                   EcoPortalTab.ecos => _ecos(p),
                   EcoPortalTab.atlas => _atlas(atlas),
                   EcoPortalTab.abismo => AbyssView(
@@ -220,14 +226,13 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
             ? const []
             : [
                 const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
-                PanelButton('ABRIR ECO',
-                    key: const ValueKey('eco-open'),
+                // Los Ecos se abren en el portal de su zona (ecos_zone.md
+                // § 4): acá solo se viaja hasta él.
+                PanelButton('IR AL PORTAL',
+                    key: const ValueKey('eco-go'),
                     accent: ProtoColors.green,
-                    reason: view.actingCompanion
-                        ? 'Los Ecos los abre el líder'
-                        : ecoOpenBlocked(s, p, e), onPressed: () {
-                  if (c.proposeEco(e.uid)) c.closePanel();
-                }),
+                    reason: c.ecoTravelBlocked(e.zone),
+                    onPressed: () => c.travelToEcoPortal(e.zone, tier: e.tier)),
               ],
         children: e == null
             ? [

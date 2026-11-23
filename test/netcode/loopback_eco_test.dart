@@ -33,7 +33,7 @@ PlayerProfile _endgamer(String name, {List<EcoItem> ecos = const []}) {
   final p = zoneProgression
       .normalize(PlayerProfile(name: name, classId: 'guerrero', level: 50));
   var q = zoneProgression.allocate(p, {Attribute.vit: p.points})!.copyWith(
-      ecosUnlocked: true, unlockedZone: 10);
+      ecosUnlocked: true, unlockedZone: 10, ecoTiers: {2: 2});
   for (final e in ecos) {
     q = InventoryRules.addEco(q, e).$1;
   }
@@ -98,6 +98,10 @@ void main() {
     expect(ana.view!.session.atlas, ['gratis'],
         reason: 'el cliente ve el Atlas de la sala');
     final uid = host.session!.players['h']!.profile.ecos.single.uid;
+    // Los Ecos se abren en el portal de su zona (ecos_zone.md § 4).
+    expect(host.proposeEco(uid), isFalse, reason: 'desde el pueblo no');
+    expect(host.travelToEcoPortal(2), isTrue);
+    await net();
     expect(host.proposeEco(uid), isTrue);
     await net();
     ana.vote(true);

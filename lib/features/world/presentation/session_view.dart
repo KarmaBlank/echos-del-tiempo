@@ -30,6 +30,10 @@ enum WorldPanel {
   prep,
   inventory,
   ecoPortal,
+
+  /// Portal de Ecos de una zona, en el exterior de su bioma
+  /// (ecos_zone.md § 4).
+  ecoZone,
   ascension,
 
   /// Mapa del piso en grande (tecla M, v0.8.1; exploration.md § "HUD").
@@ -93,6 +97,9 @@ enum WorldPrompt {
 
   /// Frente al Portal del Eco del pueblo.
   ecoPortal('[E] Portal del Eco'),
+
+  /// Frente al portal de Ecos de una zona (ecos_zone.md § 4).
+  ecoZone('[E] Portal de Ecos'),
 
   /// Frente a la Estatua del Tiempo (ascension.md § 1).
   statue('[E] Estatua del Tiempo'),

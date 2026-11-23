@@ -9,6 +9,7 @@ import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
+import 'package:echos_del_tiempo/game_engine/rules/eco_portal_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/eco_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
@@ -42,7 +43,11 @@ PlayerProfile endgamer(String name,
   var q = zoneProgression.allocate(p, {
     Attribute.vit: half,
     Attribute.fue: p.points - half
-  })!.copyWith(unlockedZone: 10, ecosUnlocked: unlocked, xp: xp);
+  })!.copyWith(
+      unlockedZone: 10,
+      ecosUnlocked: unlocked,
+      xp: xp,
+      ecoTiers: {for (var z = 1; z <= 10; z++) z: 15});
   for (final e in ecos) {
     q = InventoryRules.addEco(q, e).$1;
   }
@@ -58,10 +63,25 @@ GameSession lobby(SessionEngine e, List<PlayerProfile> profiles) {
   return s;
 }
 
+/// Lleva a todos al exterior del portal de la zona del Eco [uid] de [id],
+/// frente a él (ecos_zone.md § 4).
+GameSession atPortal(GameSession s, String id, String uid) {
+  final eco = s.players[id]!.profile.ecoByUid(uid);
+  if (eco == null) return s;
+  final spot = EcoPortalRules.of(eco.zone)!;
+  s.place = spot.biome;
+  for (final p in s.players.values) {
+    p
+      ..x = spot.front.x
+      ..y = spot.front.y;
+  }
+  return s;
+}
+
 /// p0 abre su primer Eco, todos votan y se preparan → campo.
 GameSession openEco(SessionEngine e, GameSession s, {List<SessionEvent>? log}) {
   final uid = s.players['p0']!.profile.ecos.first.uid;
-  s = act(e, s, 'p0', ProposeEcoAction(uid));
+  s = act(e, atPortal(s, 'p0', uid), 'p0', ProposeEcoAction(uid));
   for (final id in s.players.keys.skip(1)) {
     s = act(e, s, id, const VoteMissionAction(true));
   }
@@ -142,7 +162,7 @@ void main() {
         endgamer('Bo')
       ]);
       final uid = s.players['p0']!.profile.ecos.single.uid;
-      s = act(e, s, 'p0', ProposeEcoAction(uid));
+      s = act(e, atPortal(s, 'p0', uid), 'p0', ProposeEcoAction(uid));
       expect(s.vote!.missionId, EcoRules.missionId);
       expect(s.eco!.uid, uid);
       expect(s.ecoOwner, 'p0');
@@ -191,12 +211,12 @@ void main() {
         endgamer('Bo')
       ]);
       final uid = s.players['p0']!.profile.ecos.single.uid;
-      s = act(e, s, 'p0', ProposeEcoAction(uid));
+      s = act(e, atPortal(s, 'p0', uid), 'p0', ProposeEcoAction(uid));
       s = act(e, s, 'p1', const VoteMissionAction(false));
       expect(s.vote, isNull);
       expect(s.eco, isNull);
       expect(s.players['p0']!.profile.ecos, hasLength(1));
-      s = act(e, s, 'p0', ProposeEcoAction(uid));
+      s = act(e, atPortal(s, 'p0', uid), 'p0', ProposeEcoAction(uid));
       s = act(e, s, 'p1', const VoteMissionAction(true));
       s = e.tick(s, 0.05).state;
       expect(s.mode, SessionMode.prep);
@@ -370,7 +390,7 @@ void main() {
       final uid = s.players['p0']!.profile.ecos.single.uid;
       s = act(e, s, 'p0', EcoCraftAction(uid, EcoCraftOp.tier));
       expect(s.players['p0']!.profile.ecos.single.tier, 3);
-      s = act(e, s, 'p0', ProposeEcoAction(uid));
+      s = act(e, atPortal(s, 'p0', uid), 'p0', ProposeEcoAction(uid));
       expect(e.apply(s, 'p0', EcoCraftAction(uid, EcoCraftOp.tier)), isNull);
     });
   });

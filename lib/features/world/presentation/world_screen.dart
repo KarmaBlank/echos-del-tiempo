@@ -32,6 +32,7 @@ import '../../combat/presentation/scene/arena/arena_transition.dart';
 import '../../combat/presentation/scene/battle_scene.dart';
 import '../../endgame/domain/endgame_text.dart';
 import '../../endgame/presentation/eco_portal_panel.dart';
+import '../../endgame/presentation/eco_zone_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/workshop_panel.dart';
@@ -1071,6 +1072,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             view: view,
             controller: controller,
             sprites: ref.read(gameSpritesProvider).valueOrNull);
+      case WorldPanel.ecoZone:
+        return EcoZonePortalPanel(view: view, controller: controller);
       case WorldPanel.ascension:
         return AscensionPanel(
             view: view,
