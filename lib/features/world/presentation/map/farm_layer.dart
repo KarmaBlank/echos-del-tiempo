@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
-import '../../../../game_engine/data/town_layout.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/town_plan.dart';
 import 'map_themes.dart';
 
 class _Pop {
@@ -156,30 +156,25 @@ class MapFarmLayer {
     }
   }
 
-  /// Nombres de las zonas del pueblo (arriba de cada una, sobre pasto:
-  /// nunca tapan cultivos ni la pesca).
+  /// El nombre de cada construcción sobre su cartel (LAGO / HUERTA;
+  /// town_editor.md § 4.3).
   void drawZoneLabels(Canvas c, TownState town, MapText text) {
-    const bf = TownLayout.baseFarm;
-    text('HUERTA', (bf.x + bf.w / 2) * ts, bf.y * ts - 6, TownPalette.label, 6);
-    final slots = town.expansions * 2;
-    for (var i = 0; i < slots; i++) {
-      final r = TownLayout.slotRect(i);
-      final kind = i < town.zones.length ? town.zones[i] : null;
-      final label = switch (kind) {
-        TownZoneKind.lago => 'LAGO',
-        TownZoneKind.huerta => 'HUERTA',
-        null => 'TERRENO LIBRE',
-      };
-      text(label, (r.x + r.w / 2) * ts, r.y * ts - 6, TownPalette.label, 6);
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      final (sx, sy) = TownPlan.signOf(town, b);
+      text(b.kind.label, (sx + ox + 0.5) * ts, (sy + oy) * ts - 4,
+          TownPalette.label, 6);
     }
   }
 
   /// El ayudante de la huerta (si está contratado), al costado de la
-  /// huerta del pueblo.
+  /// primera huerta.
   void drawHelper(Canvas c, TownState town, double t) {
-    if (town.helper <= 0) return;
-    const bf = TownLayout.baseFarm;
-    final x = (bf.x + bf.w) * ts + 6, y = (bf.y + 1) * ts + 6;
+    final f = town.farms.firstOrNull;
+    if (town.helper <= 0 || f == null) return;
+    final (ox, oy) = town.origin;
+    final bf = f.bounds;
+    final x = (bf.right + ox) * ts + 6, y = (bf.y + oy + 1) * ts + 6;
     final bob = math.sin(t / 300) * 1;
     final p = Paint()..color = FarmPalette.helper;
     c.drawRect(Rect.fromLTWH(x - 3, y - 6 + bob, 6, 8), p);

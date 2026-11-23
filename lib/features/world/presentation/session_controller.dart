@@ -23,6 +23,10 @@ import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/models/world_save.dart';
+import '../../../game_engine/rules/town_rules.dart';
+import 'town_edit.dart';
+
+export 'town_edit.dart';
 import '../../../game_engine/serialization/json_read.dart';
 import '../../../game_engine/serialization/session_json.dart';
 import '../../lobby/presentation/worlds_providers.dart';
@@ -1136,7 +1140,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// El lugar del pueblo frente al jugador local (town_loop.md § 2.1).
   TownSpot? get townSpot => _s?.mode == SessionMode.lobby
-      ? WorldRules.townSpot(local.x, local.y)
+      ? WorldRules.townSpot(local.x, local.y, map: engine.mapFor(_s!))
       : null;
 
   /// Frente al tablero de encargos (la fuente rúnica tiene su panel, que
@@ -1162,10 +1166,10 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
     final p = _s?.players[localId]?.profile;
-    final lake = town.lake ?? kTownLakeDefault;
-    return 'Lago: ${lake.length} especies, ${town.stockTotal} peces soltados. Pesca nivel '
-        '${p == null ? 1 : FishingRules.level(p)}. Acercate a un muelle y '
-        'tocá E.';
+    final lake = TownRules.lakeNear(town, local.x, local.y);
+    return '${lake == null ? 'Sin lago' : TownRules.lakeSignText(town, lake)}. '
+        'Pesca nivel ${p == null ? 1 : FishingRules.level(p)}. Acercate a '
+        'la orilla o a un muelle y tocá E.';
   }
 
   // ---- Pesca y comerciante (fishing.md § 6): el host valida ----
@@ -1481,12 +1485,211 @@ class SessionController extends StateNotifier<SessionView?> {
   bool collectSilo() => _apply(const FarmShopAction(FarmShopOp.collectSilo));
   bool selectSeed(String id) =>
       _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
-  bool expandTown() => _apply(const TownAction(TownOp.expand));
-  bool assignZone(TownZoneKind k) => _apply(
-      TownAction(k == TownZoneKind.lago ? TownOp.zoneLago : TownOp.zoneHuerta));
-  bool stockFish(String species) =>
-      _apply(TownAction(TownOp.stock, id: species));
+  bool stockFish(String species, [String? lakeId]) =>
+      _apply(TownAction(TownOp.stock, id: species, target: lakeId));
   bool hireHelper() => _apply(const TownAction(TownOp.hireHelper));
+
+  // ---- Edición del pueblo (town_editor.md § 1) ----
+
+  TownEdit? _edit;
+
+  /// La edición en curso (`null` = jugando). Solo del dueño del mundo y
+  /// solo en el pueblo; el resto de la sala sigue jugando.
+  TownEdit? get townEdit =>
+      _edit != null && _s?.mode == SessionMode.lobby && isWorldOwner
+          ? _edit
+          : null;
+  bool get editingTown => townEdit != null;
+
+  /// Por qué no se puede entrar a EDITAR PUEBLO (o `null`).
+  String? get cannotEditTown =>
+      isWorldOwner ? null : 'Solo el dueño del mundo edita el pueblo';
+
+  bool enterTownEdit() {
+    if (cannotEditTown != null || _s?.mode != SessionMode.lobby) return false;
+    _panel = null;
+    _edit = TownEdit();
+    stopFishing();
+    _emit();
+    return true;
+  }
+
+  void exitTownEdit() {
+    if (_edit == null) return;
+    _edit = null;
+    _emit();
+  }
+
+  /// Esc en la edición: primero cierra el menú o cancela el paso.
+  void editBack() {
+    final e = _edit;
+    if (e == null) return;
+    if (e.step == TownEditStep.browse) return exitTownEdit();
+    e.reset();
+    _emit();
+  }
+
+  /// El lado del pueblo cuya franja fantasma ocupa el tile ([tx], [ty]).
+  TownSide? editSideAt(int tx, int ty) {
+    final m = _s == null ? null : engine.mapFor(_s!);
+    if (m == null) return null;
+    final inX = tx >= 0 && tx < m.width, inY = ty >= 0 && ty < m.height;
+    if (inX && ty < 0 && ty >= -kTownStrip) return TownSide.norte;
+    if (inX && ty >= m.height && ty < m.height + kTownStrip) {
+      return TownSide.sur;
+    }
+    if (inY && tx < 0 && tx >= -kTownStrip) return TownSide.oeste;
+    if (inY && tx >= m.width && tx < m.width + kTownStrip) {
+      return TownSide.este;
+    }
+    return null;
+  }
+
+  /// Por qué no se puede ampliar hacia [side] ahora (o `null`).
+  String? cannotExpandTown(TownSide side) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return 'Sin personaje';
+    return TownRules.cannotExpand(p, town, side);
+  }
+
+  bool expandTown(TownSide side) {
+    final before = town.origin;
+    if (!_apply(TownAction(TownOp.expand, id: side.code))) return false;
+    // La cámara de la edición acompaña al pueblo si se corrió el origen.
+    final after = town.origin;
+    _edit?.shift = ((after.$1 - before.$1) * 16.0, (after.$2 - before.$2) * 16.0);
+    _emit();
+    return true;
+  }
+
+  /// Mouse sobre el tile ([tx], [ty]) en la edición: el fantasma de lo
+  /// que se mueve o se pone lo sigue.
+  void editHover(int tx, int ty) {
+    final e = _edit;
+    if (e == null) return;
+    if (e.step != TownEditStep.moving && e.step != TownEditStep.placing) {
+      return;
+    }
+    if (e.ghost == (tx, ty)) return;
+    e.ghost = (tx, ty);
+    _emit();
+  }
+
+  /// Por qué el fantasma no se puede dejar donde está (o `null`).
+  String? get editGhostError {
+    final e = _edit;
+    final g = e?.ghost;
+    if (e == null || g == null) return null;
+    if (e.step == TownEditStep.placing) {
+      return TownRules.place(town, e.placeDef!, g.$1, g.$2).error;
+    }
+    if (e.step == TownEditStep.moving) {
+      return TownRules.move(town, e.selected!, g.$1, g.$2).error;
+    }
+    return null;
+  }
+
+  /// Clic en el tile ([tx], [ty]) en la edición (town_editor.md § 1.2).
+  void editClick(int tx, int ty) {
+    final e = _edit;
+    if (e == null) return;
+    switch (e.step) {
+      case TownEditStep.moving || TownEditStep.placing:
+        e.ghost = (tx, ty);
+        if (editGhostError == null) {
+          final ok = e.step == TownEditStep.placing
+              ? _apply(TownAction(TownOp.place,
+                  id: e.placeDef, x: tx, y: ty))
+              : _apply(TownAction(TownOp.move,
+                  target: e.selected, x: tx, y: ty));
+          if (ok) e.reset();
+        }
+      default:
+        final side = editSideAt(tx, ty);
+        final b = TownRules.buildAt(town, tx, ty) ??
+            TownRules.buildAtSign(town, tx, ty);
+        e.reset();
+        if (side != null) {
+          e
+            ..step = TownEditStep.side
+            ..side = side;
+        } else if (b != null) {
+          e
+            ..step = TownEditStep.options
+            ..selected = b.id;
+        } else if (_freeTile(tx, ty)) {
+          e
+            ..step = TownEditStep.choose
+            ..tile = (tx, ty);
+        }
+    }
+    _emit();
+  }
+
+  bool _freeTile(int tx, int ty) {
+    final s = _s;
+    if (s == null) return false;
+    final m = engine.mapFor(s);
+    if (tx < 2 || ty < 2 || tx >= m.width - 2 || ty >= m.height - 2) {
+      return false;
+    }
+    final c = m.tileAt(tx, ty);
+    return c == Tile.grass || c == Tile.tree;
+  }
+
+  /// Elegir qué construir en el tile libre (paso `choose`).
+  void editChoose(String defId) {
+    final e = _edit;
+    if (e == null || e.tile == null) return;
+    e
+      ..step = TownEditStep.placing
+      ..placeDef = defId
+      ..ghost = e.tile;
+    _emit();
+  }
+
+  void editStartMove() {
+    final e = _edit;
+    final b = e?.selected == null ? null : town.build(e!.selected!);
+    if (e == null || b == null) return;
+    final (ox, oy) = town.origin;
+    e
+      ..step = TownEditStep.moving
+      ..ghost = (b.anchor.$1 + ox, b.anchor.$2 + oy);
+    _emit();
+  }
+
+  void editStep(TownEditStep step) {
+    final e = _edit;
+    if (e == null) return;
+    e.step = step;
+    _emit();
+  }
+
+  bool editRemove() {
+    final e = _edit;
+    final id = e?.selected;
+    if (e == null || id == null) return false;
+    final ok = _apply(TownAction(TownOp.remove, target: id));
+    if (ok) e.reset();
+    _emit();
+    return ok;
+  }
+
+  /// La construcción elegida en la edición.
+  TownBuild? get editSelected {
+    final id = _edit?.selected;
+    return id == null ? null : town.build(id);
+  }
+
+  /// Cartel bajo el tile ([tx], [ty]) del mapa: título y texto (§ 6).
+  (String, String)? signAt(int tx, int ty) {
+    final b = TownRules.buildAtSign(town, tx, ty);
+    if (b == null) return null;
+    return b.kind == BuildKind.lago
+        ? ('LAGO', TownRules.lakeSignText(town, b))
+        : ('HUERTA', TownRules.farmSignText(b));
+  }
   bool takeLifeNode(LifeSkillKind k, String node) =>
       _apply(LifeTreeAction(k.name, node));
   bool resetLifeTree(LifeSkillKind k) => _apply(LifeTreeAction(k.name, null));
@@ -1825,6 +2028,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool handleKey(LogicalKeyboardKey key) {
     final s = _s;
     if (s == null) return false;
+    // Edición del pueblo: Esc vuelve un paso o sale; el resto no juega.
+    if (editingTown) {
+      if (key == LogicalKeyboardKey.escape) editBack();
+      return key == LogicalKeyboardKey.escape;
+    }
     // Travesía: no hay pueblo ni campo; solo cerrar y abrir el personaje.
     if (isRun) {
       if (key == LogicalKeyboardKey.escape) {
@@ -3096,7 +3304,7 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   (WorldPrompt?, String?) _prompt() {
-    if (_panel != null) return (null, null);
+    if (_panel != null || editingTown) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearStatue) return (WorldPrompt.statue, null);

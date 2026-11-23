@@ -13,6 +13,7 @@ import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
 import '../../../../game_engine/models/game_map.dart';
+import '../../../../game_engine/models/town_build.dart' show kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
@@ -33,6 +34,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_labels.dart';
 import 'map_themes.dart';
+import 'town_edit_layer.dart';
 import 'tile_cache.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
@@ -177,7 +179,7 @@ class MapGame extends Game {
   (int, int)? tileAtScreen(Offset p) {
     final r = viewRect(Size(size.x, size.y));
     if (!r.contains(p) || r.width <= 0) return null;
-    final k = vw / r.width;
+    final k = vw / r.width * zoom;
     final wx = (p.dx - r.left) * k + camX.roundToDouble();
     final wy = (p.dy - r.top) * k + camY.roundToDouble();
     return ((wx / ts).floor(), (wy / ts).floor());
@@ -185,6 +187,52 @@ class MapGame extends Game {
 
   /// Cámara (`cam`), esquina superior izquierda en px del mundo.
   double camX = 0, camY = 0;
+
+  /// Zoom de la edición del pueblo (1 = normal; más = se ve más mapa).
+  double editZoom = 1;
+  static const editZooms = [1.0, 1.5, 2.0];
+
+  /// El zoom en uso (solo en la edición del pueblo).
+  double get zoom => controller.editingTown ? editZoom : 1;
+
+  /// Rueda del mouse en la edición: [dir] > 0 aleja.
+  void zoomBy(int dir) {
+    final i = editZooms.indexOf(editZoom);
+    final n = (i + dir).clamp(0, editZooms.length - 1);
+    final cx = camX + vw * editZoom / 2, cy = camY + vh * editZoom / 2;
+    editZoom = editZooms[n];
+    camX = cx - vw * editZoom / 2;
+    camY = cy - vh * editZoom / 2;
+  }
+
+  /// Arrastre con el mouse en la edición: [d] en px de pantalla.
+  void panBy(Offset d) {
+    final r = viewRect(Size(size.x, size.y));
+    if (r.width <= 0) return;
+    final k = vw / r.width * zoom;
+    camX -= d.dx * k;
+    camY -= d.dy * k;
+  }
+
+  /// Cámara libre de la edición (town_editor.md § 1.1): WASD / flechas,
+  /// hasta las franjas fantasma de cada lado.
+  void _updateEditCamera(SessionView view, double dt, double ix, double iy) {
+    final e = controller.townEdit!;
+    if (e.shift case (final dx, final dy)?) {
+      camX += dx;
+      camY += dy;
+      e.shift = null;
+    }
+    camX += ix * 260 * zoom * dt;
+    camY += iy * 260 * zoom * dt;
+    const m = (kTownStrip + 1) * ts;
+    final vwz = vw * zoom, vhz = vh * zoom;
+    final mw = view.map.width * ts, mh = view.map.height * ts;
+    double clamp(double v, double lo, double hi) =>
+        hi < lo ? (lo + hi) / 2 : v.clamp(lo, hi);
+    camX = clamp(camX, -m, mw + m - vwz);
+    camY = clamp(camY, -m, mh + m - vhz);
+  }
 
   final _disp = <String, _Disp>{};
   double _frameDt = 1 / 60;
@@ -458,10 +506,18 @@ class MapGame extends Game {
     t += dt * 1000;
     _frameDt = dt;
     final (ix, iy) = _input();
-    controller.updateLocal(math.min(0.05, dt), ix, iy);
-    if (_pickEdge.poll(_pickKey())) tryPickUp();
+    final editing = controller.editingTown;
+    // Edición del pueblo: el personaje se queda quieto y WASD mueve la
+    // cámara.
+    controller.updateLocal(
+        math.min(0.05, dt), editing ? 0 : ix, editing ? 0 : iy);
+    if (!editing && _pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
-    if (view != null) _updateCamera(view, dt);
+    if (view != null) {
+      editing
+          ? _updateEditCamera(view, math.min(0.05, dt), ix, iy)
+          : _updateCamera(view, dt);
+    }
     if (view != null && view.map.lobby) {
       final f = controller.mapFishing;
       fishing.update(view.map, math.min(0.05, dt),
@@ -593,6 +649,8 @@ class MapGame extends Game {
           camX: camX, camY: camY, t: t, density: particleDensity);
     }
     c.save();
+    final z = zoom;
+    if (z != 1) c.scale(1 / z);
     c.translate(-camX.roundToDouble(), -camY.roundToDouble());
 
     // Estado de las zonas para el jugador local (entradas del mundo).
@@ -604,14 +662,14 @@ class MapGame extends Game {
     // Tiles visibles.
     final x0 = math.max(0, (camX / ts).floor());
     final y0 = math.max(0, (camY / ts).floor());
-    final x1 = math.min(map.width - 1, x0 + vw ~/ ts + 1);
-    final y1 = math.min(map.height - 1, y0 + vh ~/ ts + 1);
+    final x1 = math.min(map.width - 1, x0 + (vw * z) ~/ ts + 1);
+    final y1 = math.min(map.height - 1, y0 + (vh * z) ~/ ts + 1);
     // Pulso del Tiempo: con el reloj de la sala (el mismo que usa el host).
     final pulse = TrialRules.pulseCharge(s.time);
     // Capa estática por bloques + tiles animados encima (exploration.md §
     // "Rendimiento").
     final worldView = Rect.fromLTWH(camX.roundToDouble(), camY.roundToDouble(),
-        vw.toDouble(), vh.toDouble());
+        vw * z, vh * z);
     tileLayer.draw(c, map, worldView,
         theme: map.theme,
         backdrop: abyss,
@@ -636,8 +694,10 @@ class MapGame extends Game {
     }
     if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
+      final (ox, oy) = map.townOrigin;
       for (final l in TownLayout.landmarks) {
-        actors.text(c, l.name, l.center.x, l.y * ts - 8, TownPalette.label, 6);
+        actors.text(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
+            TownPalette.label, 6);
       }
       farm.drawZoneLabels(c, s.town,
           (txt, x, y, col, size) => actors.text(c, txt, x, y, col, size));
@@ -823,6 +883,11 @@ class MapGame extends Game {
       fishing.drawPops(c, t, (id) => _lastDrawn[id],
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
       farm.drawPops(c, t, (id) => _lastDrawn[id],
+          (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
+    }
+
+    if (map.lobby) {
+      TownEditLayer.draw(c, controller, map,
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
     }
 

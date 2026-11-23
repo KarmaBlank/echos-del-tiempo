@@ -156,9 +156,10 @@ mezcla de ambas fuentes). Tabla en `assets/balance` / YAML de datos.
 - **Nadie queda encerrado en un rol**: cualquier jugador hace cualquier
   oficio, sin elegir clase de oficio ni exclusividades.
 - Desde v0.23.0: árboles de talentos por oficio en PERSONAJE → OFICIOS
-  (`life_skill_trees.md`); la huerta, las ampliaciones en la fuente
-  rúnica (LAGO / HUERTA), los peces en el lago y el ayudante están en
-  `farming.md`.
+  (`life_skill_trees.md`); la huerta y el ayudante están en
+  `farming.md`; desde v0.24.0 las ampliaciones por lado, los lagos y
+  huertas que se ponen y mueven y los peces de cada lago, en
+  `town_editor.md` (EDITAR PUEBLO en la fuente rúnica).
 
 ---
 
@@ -296,12 +297,14 @@ Pueblo (`MapGenerator.town()`, datos en
 | Forja | `A` | x 19–23, y 3 | armería |
 | Estatua del Tiempo | `S` | x 28–30, y 3 | ASCENSIÓN |
 | Fuente rúnica | `F` (nuevo) | x 16–17, y 10–11 | abre el tablero |
-| Cartel del lago | `Y` (nuevo) | (12, 15) | aviso del lago (v0.22.0) |
+| Cartel del lago | `Y` (nuevo) | (12, 15) | aviso del lago (v0.22.0); desde v0.24.0 cada lago y huerta tiene el suyo (`town_editor.md` § 4.3) |
 | Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | pesca en el mapa desde cualquier orilla (v0.22.2; muelles con bonus) |
 | Comerciante (puesto) | `M` | x 12–13, y 17 | COMERCIANTE (v0.22.0) |
 | Torre del Loot perdido | `L` | x 24–26, y 15 | pozo Loot perdido |
 
-- Lago `~` en x 3–10, y 14–19 (esquinas de pasto). Pesca y comercio
+- Lago `~` en x 3–10, y 14–19 (esquinas de pasto). Desde v0.24.0 el
+  lago y la huerta base son construcciones movibles y todo se corre con
+  el origen si se amplía al norte o al oeste (`town_editor.md` § 2.2). Pesca y comercio
   son de la fase 3: el aviso es solo local (no viaja por red).
 - Arte: procedural en `TilePainter` (colores en `TownPalette` y el tema
   `pueblo` de `map_themes.dart`), registrado en `sprite_manifest.yaml`

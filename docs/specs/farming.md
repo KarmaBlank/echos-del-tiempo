@@ -34,13 +34,14 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 
 ### 2.1 Dónde
 - Tile nuevo `u` (tierra, caminable). Huerta del pueblo base: x 19–22,
-  y 18–20 (12 parcelas, al sur del camino de la torre). Cada zona de
-  HUERTA de una ampliación suma 6 × 4 = 24 (§ 6).
+  y 18–20 (12 parcelas, al sur del camino de la torre). Desde v0.24.0
+  cada huerta es una construcción que se pone, mueve y borra en la
+  edición del pueblo (`town_editor.md`): HUERTA 6 × 4 o 4 × 3.
 - Se trabaja el tile de enfrente (a 10 px en la dirección que mira) o
   el que se pisa. El host acepta labores a ≤ `reachPx` (30 px) del centro
   del tile y como mucho una cada `minWorkSec`.
 
-### 2.2 Labores (tecla E, según la herramienta en la mano, v0.23.3)
+### 2.2 Labores (tecla E, según la herramienta en la mano, v0.24.1)
 | Herramienta en la mano | Sirve en | Si no sirve, el aviso dice |
 |---|---|---|
 | Azada | Tierra sin arar (área según azada, § 4) | "Ya está arada" |
@@ -55,7 +56,7 @@ hay que cambiar de mano para levantar lo maduro.
 F abona la parcela de enfrente con el mejor abono que tengas. E o el
 clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 
-### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.23.3)
+### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.24.1)
 - A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   también las que suma ampliar el pueblo, porque se mira el tile `soil`
   del mapa) aparece el HUD de herramienta arriba de las pociones ([1]
@@ -134,10 +135,9 @@ Calidad (normal / rara / épica / legendaria): pesos `wQNormal`,
 abono del Eco y buenos nodos la legendaria sube muchísimo (el test de
 reglas compara cosechador bajo y alto sobre la misma parcela).
 
-Desde v0.23.3 no hay tooltip al pasar el mouse por una parcela (molestaba
-al apuntar). Lo clave va en el aviso de una línea (crecimiento al regar,
-"% legendaria si la cosechás vos" al cosechar). El detalle de la huerta
-pasa a un cartel del pueblo (fuera de esta spec).
+Desde v0.24.0 las parcelas no tienen tooltip: el cartel de cada huerta
+dice qué hay plantado (`town_editor.md` § 6). El aviso de abajo sigue
+mostrando las chances de la parcela de enfrente.
 
 ## 3. Semillas, cultivos y calidad
 
@@ -205,32 +205,31 @@ herramienta de área trabaja menos tiles.
   rareza.
 
 ## 6. Ampliaciones del pueblo (fuente rúnica)
-- E en la fuente abre FUENTE RÚNICA (antes abría el tablero; ahora el
-  tablero es un botón del panel).
-- Cada ampliación agrega una franja de 8 columnas al este (el borde de
-  árboles se corre) con un camino norte-sur y dos espacios (norte y
-  sur, 6 × 6). Tope `maxExpansions` (3).
-- Costo de la n-ésima: oro `expGoldBase × expGoldMult^(n−1)`
-  (1500, 3750, 9375), Esquirlas `expEsquirlas × n`, Cristales de Era
-  `expCristales × (n − 1)` desde la segunda.
-- Solo el dueño del mundo (el anfitrión) amplía y elige. No se puede
-  ampliar con un espacio sin elegir.
-- Cada espacio: LAGO (agua 6 × 6 con esquinas de pasto; se pesca de
-  cualquier orilla) o HUERTA (24 parcelas). Etiquetas LAGO / HUERTA /
-  TERRENO LIBRE arriba de cada espacio, sobre el pasto.
-- El mapa del pueblo sale de `MapGenerator.townOf(TownState)`
-  (determinístico por ampliaciones y zonas): todos lo ven igual.
+- E en la fuente abre FUENTE RÚNICA (el tablero es un botón del panel)
+  con EDITAR PUEBLO para el dueño del mundo.
+- Desde v0.24.0 se amplía por lado (norte, sur, este, oeste) en la
+  edición del pueblo y lo que se construye se elige tile a tile:
+  `town_editor.md` § 2 y § 3. Ya no hay espacios LAGO / HUERTA por
+  franja ni la regla de solo al este.
+- Costo de la n-ésima (en total): oro `expGoldBase × expGoldMult^(n−1)`
+  (1500, 3750, 9375...), Esquirlas `expEsquirlas × n`, Cristales de Era
+  `expCristales × (n − 1)` desde la segunda. Topes `maxExpansions` (6)
+  y `maxPerSide` (3).
+- El mapa del pueblo sale de `MapGenerator.townOf(TownState)` vía
+  `TownPlan` (determinístico): todos lo ven igual.
 
 ## 7. Peces en el lago
-- Desde la fuente o la pestaña PESCA Y CULTIVO se suelta un pez de la
-  bolsa en el lago (no la basura). Capacidad `lakeBase` (6) +
-  `lakePerZone` (8) por zona de LAGO.
+- Cada lago tiene sus peces (v0.24.0, `town_editor.md` § 5): se
+  sueltan desde AGREGAR ESPECIES en la edición del pueblo o desde la
+  pestaña PESCA Y CULTIVO (al lago más cercano); no la basura.
+  Capacidad por lago `max(lakeMin, tiles × lakePerTile)`.
 - Sesgo: cada pez soltado agrega su especie `stockWeight` veces más a la
   tirada (tope `stockWeightCap` por especie). Una especie que no era del
   lago pasa a estar (así se traen especies de otros biomas).
 - Cría: al ganar una misión, cada especie con 2 o más cría (+1) con
-  `breedChance`, hasta la capacidad. Rareza extra: `lakeZoneRare` por
-  zona de LAGO + `breedRare` por especie criando (tope `breedRareCap`).
+  `breedChance`, hasta la capacidad de su lago. Rareza extra del lago
+  donde se pesca: `lakeZoneRare` por cada 36 tiles por encima de 48 +
+  `breedRare` por especie criando (tope `breedRareCap`).
 
 ## 8. Ayudante de la huerta
 - Se contrata y mejora en la fuente: nivel 1..`helperMax` (3), costo
@@ -253,14 +252,14 @@ categoría).
   `legendPrismas` Prisma Roto). VENDER TODO no incluye las legendarias.
   Cobrar en oro o materiales (`matRate`, `matValue`), igual que la pesca.
 
-## 10. Red y persistencia (protocolo 44)
-- `GameSession.town` viaja en el estado (`town`: `lake`, `exp`,
-  `zones`, `plots`, `stock`, `helper`, `silo`); el cliente arma el mapa
-  con eso. El host lo guarda en el mundo (`accounts/worlds/<id>.json`,
+## 10. Red y persistencia (protocolo 44; 45 desde v0.24.0)
+- `GameSession.town` viaja en el estado (`town`: `lake`, `sides`,
+  `builds` con sus parcelas y peces, `helper`, `silo`;
+  `town_editor.md` § 7); el cliente arma el mapa con eso. El host lo guarda en el mundo (`accounts/worlds/<id>.json`,
   `town`) al volver de misión y al salir.
 - Acciones: `farm {o: till|plant|water|fert|harvest, x, y, sd?}`,
-  `farmShop {o, id?, n?, mat?}`, `town {o: expand|zoneLago|zoneHuerta|
-  stock|hireHelper, id?}`, `lifeTree {k, n?}`. Eventos: `cHarv {id, c, q,
+  `farmShop {o, id?, n?, mat?}`, `town {o: expand|place|move|remove|
+  stock|hireHelper, id?, tg?, x?, y?}` (`town_editor.md` § 8), `lifeTree {k, n?}`. Eventos: `cHarv {id, c, q,
   n, x, y, h?}`, `cLoot {id, l, r, x, y}`.
 - Todo lo valida el host (pueblo, tile de tierra, alcance, cadencia,
   semillas y abonos propios, dueño para ampliar).
@@ -273,7 +272,7 @@ categoría).
 Solo en el pueblo (en una misión dice "Disponible en el pueblo."). No
 usa casilleros del inventario. Secciones: HERRAMIENTAS (cañas, azadas y
 regaderas, la equipada con EQUIPADA y las otras con EQUIPAR), PESCADOS
-(con SOLTAR EN EL LAGO), basura del agua, SEMILLAS (ELEGIR / PARA
+(con SOLTAR EN EL LAGO, al lago más cercano), basura del agua, SEMILLAS (ELEGIR / PARA
 PLANTAR), abonos y COSECHAS por calidad.
 
 ## 12. Pendiente

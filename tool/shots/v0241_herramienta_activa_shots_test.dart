@@ -1,7 +1,7 @@
 // Capturas del HUD de herramienta, PESCA Y CULTIVO y el comerciante
-// (v0.23.3: herramienta activa de la huerta). NO es parte de
+// (v0.24.1: herramienta activa de la huerta). NO es parte de
 // la suite. Correr con
-//   flutter test tool/shots/v0233_herramienta_activa_shots_test.dart
+//   flutter test tool/shots/v0241_herramienta_activa_shots_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -19,7 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../test/features/world/fishing_map_harness.dart';
 import '../../test/real_fonts.dart';
 
-const _out = 'docs/release_shots/v0.23.3';
+const _out = 'docs/release_shots/v0.24.1';
 const _size = Size(1280, 720);
 
 Future<void> _shot(WidgetTester tester, String name) async {

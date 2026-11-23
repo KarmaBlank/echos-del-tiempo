@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
+import '../data/construction_catalog.dart';
 import '../data/exploration_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
@@ -66,7 +67,7 @@ import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_rules.dart';
-import '../models/world_save.dart' show TownState, TownZoneKind;
+import '../models/world_save.dart' show TownState, TownSide, BuildKind;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
