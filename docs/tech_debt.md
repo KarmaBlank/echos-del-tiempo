@@ -261,3 +261,13 @@ Funcionalidad pendiente:
 - El altar usa el dibujo del relicario: falta un sprite propio de altar
   (sprite_manifest) y una marca en el minimapa.
 - Sin test de widget del panel OFRENDA ni captura de la galería.
+
+## Llama errante (v0.37.0)
+
+- Sin test del motor que verifique que un enemigo detecta antes al
+  jugador con la llama prendida en lo oscuro (`_enemyAi`); solo hay tests
+  de `LightRules.aggroFactor` / `wispBonusFor` y del ida y vuelta de la
+  acción `wisp`. Falta el ida y vuelta de `wi` en el snapshot.
+- Sin test visual / captura del dibujo de la llama (`_drawWisp`).
+- La predicción local no la prende al instante: se ve cuando vuelve el
+  snapshot del host.

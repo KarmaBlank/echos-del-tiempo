@@ -183,6 +183,8 @@ abstract final class ActionJson {
             't': 'fLn',
             if (a.line case final l?) 'l': l.toJson(),
           },
+        // Protocolo 60 (v0.37.0): Llama errante.
+        WispAction() => {'t': 'wisp', if (a.on) 'on': true},
         SellFishAction() => {
             't': 'fSell',
             if (a.species != null) 'sp': a.species,
@@ -435,6 +437,8 @@ abstract final class ActionJson {
       case 'fLn':
         return FishLineAction(FishLine.fromJson(j['l']));
 
+      case 'wisp':
+        return WispAction(j['on'] == true);
       case 'fSell':
         return SellFishAction(
             species: j.strOrNull('sp'), materials: j['mat'] == true);

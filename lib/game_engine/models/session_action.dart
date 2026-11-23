@@ -605,6 +605,11 @@ class FishLineAction extends SessionAction {
   const FishLineAction(this.line);
 }
 
+/// `wisp`: prender / apagar la Llama errante (lighting.md § 3.1.1).
+class WispAction extends SessionAction {
+  final bool on;
+  const WispAction(this.on);
+}
 
 /// `fSell`: vender en el agropecuario. [species] `null` = Vender todo
 /// (menos legendarios). [materials]: cobrar en Esquirlas.

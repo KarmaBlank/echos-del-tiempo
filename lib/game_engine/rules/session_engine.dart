@@ -76,6 +76,7 @@ import 'life_tree_rules.dart';
 import 'biome_fisher_rules.dart';
 import 'life_time_rules.dart';
 import 'helper_rules.dart';
+import 'light_rules.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
@@ -1287,6 +1288,10 @@ class _Op {
         refresh(p);
         say('${p.name} mejoró ${kWeaponUltSkills[ultId]?.name ?? ultId} a nivel '
             '${UltRules.levelOf(next, ultId)}.');
+        return true;
+
+      case WispAction(:final on):
+        p.wisp = on;
         return true;
 
       case SetBuildWantsAction(:final wants):
@@ -3547,11 +3552,17 @@ class _Op {
   void _enemyAi(FieldEnemy en, GameMap map, double dt) {
     final calm = s.time < s.graceUntil;
     final dh = _dist(en.x, en.y, en.homeX, en.homeY);
+    // Llama errante (lighting.md § 3.1.1): en lo oscuro se la ve de lejos.
+    final dark = LightRules.isDark(map.theme, floor: s.mission?.floor ?? 0) ||
+        (SkyRules.outdoor(map.theme, town: map.lobby) &&
+            SkyRules.isNight(s.town.sky));
     SessionPlayer? near;
     var nd = double.infinity;
     for (final p in players) {
       if (!p.alive) continue;
-      final d = _dist(p.x, p.y, en.x, en.y);
+      // Distancia relativa a su radio: el que más llama la atención gana.
+      final d = _dist(p.x, p.y, en.x, en.y) /
+          LightRules.aggroFactor(wisp: p.wisp, dark: dark);
       if (d < nd) {
         nd = d;
         near = p;

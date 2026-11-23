@@ -2745,6 +2745,11 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
+    // L: Llama errante (lighting.md § 3.1.1).
+    if (key == LogicalKeyboardKey.keyL && s.mode != SessionMode.battle) {
+      _apply(WispAction(!(s.players[localId]?.wisp ?? false)));
+      return true;
+    }
     // J: DIARIO de encargos, en el pueblo o en el campo (roles.md § 8.1).
     if (key == LogicalKeyboardKey.keyJ && s.mode != SessionMode.battle) {
       toggleJournal();

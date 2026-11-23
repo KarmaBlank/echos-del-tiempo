@@ -1406,6 +1406,7 @@ class _ControlsTab extends StatelessWidget {
         ('I', 'Personaje en EQUIPAMIENTO'),
         ('R / rueda (en la huerta)', 'Cambiar de herramienta de cultivo'),
         ('J', 'Diario de encargos'),
+        ('L', 'Llama errante (alumbra más; de noche te ven de lejos)'),
         ('O', 'Plegar / desplegar los objetivos'),
         ('H / clic en una caja', 'Detalle del grupo (arma, pts, XP, pociones)'),
         ('Retroceso', 'Cerrar todos los avisos del HUD'),

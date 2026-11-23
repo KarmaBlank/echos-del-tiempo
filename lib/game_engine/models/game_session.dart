@@ -77,6 +77,7 @@ class SessionPlayer {
     this.tutorialVersion = 0,
     Map<String, StashAck>? stashAcks,
     this.fishLine,
+    this.wisp = false,
   })  : trail = trail ?? const [],
         stashAcks = stashAcks ?? {};
 
@@ -90,6 +91,10 @@ class SessionPlayer {
   /// = no está pescando. Lo manda el propio jugador (`fLn`) y el host lo
   /// valida y lo borra si camina.
   FishLine? fishLine;
+
+  /// Llama errante prendida (`wi`, lighting.md § 3.1.1): lo manda el
+  /// propio jugador (`wisp`) y viaja en el snapshot para que la vean todos.
+  bool wisp;
 
   /// Anota [ack] como [opId] (descarta las más viejas).
   void addStashAck(String opId, StashAck ack) {
@@ -181,6 +186,7 @@ class SessionPlayer {
         tutorialVersion: tutorialVersion,
         stashAcks: {...stashAcks},
         fishLine: fishLine,
+        wisp: wisp,
       );
 }
 

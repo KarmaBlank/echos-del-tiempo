@@ -111,6 +111,23 @@ sala en la que estás con comodidad sin ver la siguiente (y con las
 sombras de § 2.1 lo de atrás de las esquinas sigue oculto). De noche al
 aire libre: radio 4.5, intensidad 0.6.
 
+### 3.1.1 Llama errante (v0.37.0)
+
+Una llamita que orbita al jugador; se prende y se apaga con L (fuera de
+batalla). Es el eco de una luz que todavía no se encendió: alumbra más,
+pero también se deja ver.
+
+- Prendida, la luz que lleva suma `LightRules.wispBonus` (3 tiles) al
+  radio: `carried(dark:, bonus: LightRules.wispBonusFor(on))`.
+- Contra: si el lugar está oscuro (mazmorra oscura según `isDark`, o de
+  noche al aire libre, `SkyRules.isNight`), los enemigos lo detectan desde
+  `SessionEngine.aggroRange × LightRules.aggroFactor(wisp:, dark:)`
+  (× 1.5 prendida y en lo oscuro; × 1 en cualquier otro caso). Lo calcula
+  el host por jugador.
+- Dibujo: procedural (un punto de luz con halo que gira alrededor del
+  personaje, color `calida` del tema). Sin sprite.
+- Los demás la ven: el estado viaja en el snapshot (§ 8).
+
 ### 3.2 Titileo
 
 Las luces con `flicker > 0` (llamas) van a una capa aparte que se
@@ -272,6 +289,10 @@ Todo se deduce del tema, el piso, el reloj y las posiciones que ya
 viajan; la niebla es solo del cliente. Los faroles cambian el mapa que
 sale de la semilla y agregan `PoiKind.lantern` a los eventos: protocolo
 54.
+
+Llama errante (§ 3.1.1): acción `wisp` (`on`) del jugador y campo `wi`
+del jugador en el snapshot (solo si está prendida): protocolo 60
+(v0.37.0). No se guarda en el perfil: al entrar arranca apagada.
 
 ## 9. Tests
 
