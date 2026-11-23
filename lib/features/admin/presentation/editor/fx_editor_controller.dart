@@ -8,6 +8,7 @@ import '../../../../core/audio/sfx_files.dart';
 import '../../../../core/audio/sfx_service.dart';
 import '../../../../core/fx/fx_catalog.dart';
 import '../../../combat/domain/sprite_entry.dart';
+import 'fx_editor_selection.dart';
 import 'sprite_editor_controller.dart';
 
 /// Categoría de la lista de animaciones (game_editor.md § 3.2).
@@ -107,6 +108,22 @@ class FxEditorController extends ChangeNotifier {
 
   int? selectedTrack;
   FxKeyRef? selectedKey;
+
+  /// Property row picked on the timeline (game_editor.md § 7.7); null =
+  /// the whole key / the fires row.
+  String? selectedField;
+
+  /// Onion skin: the preview also draws the previous and next key of the
+  /// selected track, faint (§ 7.7).
+  bool onion = false;
+
+  void setOnion(bool v) {
+    onion = v;
+    notifyListeners();
+  }
+
+  /// "Key en 0.40 s · Sprite · Escala": where the last added key landed.
+  String? addedLabel;
   EditorNotice? notice;
 
   bool get canWrite => overrides != null;
@@ -161,6 +178,8 @@ class FxEditorController extends ChangeNotifier {
     playing = false;
     selectedTrack = null;
     selectedKey = null;
+    selectedField = null;
+    addedLabel = null;
     notifyListeners();
   }
 
@@ -376,14 +395,16 @@ class FxEditorController extends ChangeNotifier {
 
   // ------------------------------------------------------------ edición
 
-  void selectTrack(int? i) {
+  void selectTrack(int? i, {String? field}) {
     selectedTrack = i;
+    selectedField = field;
     selectedKey = null;
     notifyListeners();
   }
 
-  void selectKey(FxKeyRef? k) {
+  void selectKey(FxKeyRef? k, {String? field}) {
     selectedKey = k;
+    selectedField = field;
     if (k != null) selectedTrack = k.track;
     notifyListeners();
   }
@@ -541,7 +562,8 @@ class FxEditorController extends ChangeNotifier {
 
   /// Agrega un key (o disparo) a la pista [track] en [ms]: copia los
   /// valores del key anterior (o una plantilla del tipo) y lo elige.
-  void addKey(int track, double ms) {
+  void addKey(int track, double ms, {String? field}) {
+    selectedField = field;
     final t = edit;
     if (t == null || readOnly || track >= t.tracks.length) return;
     final tr = t.tracks[track];
@@ -563,7 +585,25 @@ class FxEditorController extends ChangeNotifier {
     selectedTrack = track;
     selectedKey =
         (track: track, fire: fire, index: l.indexWhere((x) => identical(x, nk)));
+    if (field != null && !nk.data.containsKey(field)) selectedField = null;
+    addedLabel = fxKeyPlaceLabel(edit!, selectedKey!,
+        field: fire ? null : selectedField);
     notifyListeners();
+  }
+
+  /// Moves the selected key's element by ([dx], [dy]) world px (drag on
+  /// the preview's move handle). [record] = first step of the drag.
+  void moveSelected(double dx, double dy, {bool record = true}) {
+    final r = selectedKey;
+    final k = r == null ? null : keyOf(r);
+    if (r == null || k == null) return;
+    double round(double v) => (v * 2).round() / 2;
+    _setKey(
+        r,
+        (k) => k
+            .withField('dx', round(k.d('dx', 0) + dx))
+            .withField('dy', round(k.d('dy', 0) + dy)),
+        record: record);
   }
 
   /// Borra el key [r].

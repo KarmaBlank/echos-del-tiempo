@@ -41,7 +41,7 @@ import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/sprite_catalog.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
-import '../../world/presentation/world_screen.dart';
+import '../../world/presentation/world_loading.dart';
 import 'world_picker.dart';
 import 'worlds_providers.dart';
 
@@ -409,7 +409,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   Future<void> _enter(NetSession? net) async {
     ref.read(activeNetSessionProvider.notifier).state = net;
     final reason = await Navigator.of(context).push(
-      MaterialPageRoute<String>(builder: (_) => const WorldScreen()),
+      MaterialPageRoute<String>(builder: (_) => const WorldLoadingScreen()),
     );
     // El controlador la cierra al descartarse; por las dudas (idempotente).
     if (net != null) await net.disconnect();
