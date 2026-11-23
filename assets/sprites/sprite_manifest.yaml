@@ -313,6 +313,10 @@ items:
   vida_npc_brann: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_oren: { idle: items/vida_npc_granjero.png, size: [16, 16] }
   vida_cofre_oficio: { idle: items/vida_cofre_oficio.png, size: [16, 16] }
+  # Casas de habitantes por nivel (town_editor.md § 3.4): arte provisorio.
+  vida_casa_1: { idle: items/vida_casa_1.png, size: [48, 48] }
+  vida_casa_2: { idle: items/vida_casa_2.png, size: [48, 48] }
+  vida_casa_3: { idle: items/vida_casa_3.png, size: [48, 48] }
   # vida:fin
 tiles:
   suelo: { procedural: true, size: [16, 16] }

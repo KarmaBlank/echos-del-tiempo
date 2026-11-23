@@ -1,5 +1,36 @@
 ﻿# Deuda técnica
 
+## v0.30.0 (habitantes en el pueblo y roles)
+
+Tests salteados (prioridad: salir rápido). Hay tests de reglas en
+`test/game_engine/residents_v030_test.dart` y `biomes_v029_test.dart`.
+
+- Sin test de sesión de las acciones `town` nuevas (invite / assign /
+  gift / turnIn / fulfil / invest / order / commission), de la CASA con
+  candado y cobro, ni de los beneficios aplicados (poción, XP, forja,
+  PdI revelados, vida máxima y vida llena al volver).
+- Sin test de widget de la pantalla del habitante (pestañas), del
+  REGISTRO DE ENCARGOS, de las opciones de la CASA en EDITAR PUEBLO ni
+  del resumen de la FUENTE. Sin capturas de los habitantes caminando.
+- La forja muestra y valida en el cliente el costo sin el descuento de
+  Brann (el anfitrión cobra con descuento); la tienda no sabe del pueblo.
+- Brann descuenta solo la forja de estadísticas (no reforja, afijos ni
+  "tiradas").
+- Velda revela los primeros N PdI de cada piso (no salas del mapa).
+- Los habitantes del pueblo se hablan con E; el clic sobre ellos no abre
+  su pantalla todavía.
+- Las órdenes piden especie y calidad, todavía no tamaño de pez.
+- El tope diario de XP por órdenes y el encargo de forja de "uno por día"
+  viven en memoria del anfitrión (se reinician al reabrir la sala).
+- Paridad de XP pueblo / mazmorras (roles.md § 1): los números
+  (`orderXpPerValue`, `orderXpDayCap`, `lifeLevelCharXp`) son una primera
+  pasada sin medir; falta una simulación por hito de zona.
+- Árboles de oficio sin nodos de poder de aventurero; sin oficio de
+  Herrería (roles.md § 5).
+- Sprites: casas por nivel y habitantes son arte provisorio (los
+  habitantes reusan granjero y pescador).
+- El habitante sigue también en su bioma después de mudarse.
+
 ## v0.27.0
 
 - test/game_engine/sky_session_test.dart: en la sala (anfitrión) el reloj avanza con `farmTick`, el día nuevo toma el pronóstico, la lluvia riega las parcelas de `s.town` y la tormenta tira `LightningEvent` (JSON `bolt` ida y vuelta).
@@ -92,8 +123,8 @@ Funcionalidad pendiente:
 
 ## v0.29.0
 
-- Habitantes en el pueblo (overworld_biomes.md § 10, town_editor.md
-  § 3.4): solo están las reglas puras y el modelo (`ResidentRules`,
+- (Hecho en v0.30.0.) Habitantes en el pueblo (overworld_biomes.md § 10, town_editor.md
+  § 3.4): solo estaban las reglas puras y el modelo (`ResidentRules`,
   `ResidentState`, cadena de encargos de Ilda) con test. Falta: guardar
   `ResidentState` en `TownState` / mundo, acciones de red (invitar,
   asignar casa, entregar encargo; subiría el protocolo a 51), la

@@ -36,6 +36,7 @@ import 'achievement_rules.dart';
 import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
+import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
 import 'inventory_rules.dart';
@@ -771,12 +772,15 @@ class _Op {
     learnEarnedUlts(p);
     final oh = p.maxHp, om = p.maxMp;
     final d = rules.derivedStats(p.profile);
-    p.maxHp = d.maxHp;
+    // Oren (overworld_biomes.md § 10.6): +% de vida máxima.
+    p.maxHp = (d.maxHp *
+            (1 + ResidentRules.frac(s.town, NpcRole.vidente)))
+        .round();
     p.maxMp = d.maxMp;
-    p.hp = math.min(p.hp, d.maxHp.toDouble());
+    p.hp = math.min(p.hp, p.maxHp.toDouble());
     p.mp = math.min(p.mp, d.maxMp.toDouble());
     if (gain) {
-      p.hp += math.max(0, d.maxHp - oh);
+      p.hp += math.max(0, p.maxHp - oh);
       p.mp += math.max(0, d.maxMp - om);
     }
   }
@@ -1042,7 +1046,10 @@ class _Op {
 
       case UpgradeAction():
         if (!s.canShop) return false;
-        if (!_profileChange(p, rules.upgrade(p.profile, a.weaponId, a.stat))) {
+        if (!_profileChange(
+            p,
+            rules.upgrade(p.profile, a.weaponId, a.stat,
+                discount: ResidentRules.frac(s.town, NpcRole.forjador)))) {
           return false;
         }
         say('${p.name} mejoró ${a.stat.label} de '
@@ -1144,7 +1151,8 @@ class _Op {
 
       case UseItemAction(:final item):
         if (ConsumableRules.blockReason(s, p, item) != null) return false;
-        ConsumableRules.apply(p, item);
+        ConsumableRules.apply(p, item,
+            bonus: ResidentRules.frac(s.town, NpcRole.herbolaria));
         return true;
 
       case BuyWeaponAction():
@@ -3039,6 +3047,15 @@ class _Op {
           _touching(c.x, c.y, ExplorationRules.discoverRange) != null) {
         m.poiSeen.add(poi.id);
       }
+    }
+    // Velda (overworld_biomes.md § 10.6): los primeros N PdI de cada piso
+    // se ven en el mapa desde que se entra.
+    final reveal = ResidentRules.bonus(s.town, NpcRole.archivista).round();
+    for (final poi in f.pois.take(reveal)) {
+      m.poiSeen.add(poi.id);
+    }
+    for (final poi in f.pois) {
+      final c = poi.center;
       if (poi.kind == PoiKind.relic && !m.poiUsed.contains(poi.id)) {
         final pl = _touching(c.x, c.y, ExplorationRules.relicRange);
         if (pl != null) {
@@ -3388,6 +3405,9 @@ class _Op {
 
   void startBattle(FieldEnemy en, SessionPlayer trigger) {
     s.seq++;
+    e.battles
+      ..townPotion = ResidentRules.frac(s.town, NpcRole.herbolaria)
+      ..townHp = ResidentRules.frac(s.town, NpcRole.vidente);
     final step = e.battles.start(
       party: [for (final p in players) e.partyMember(p, blessing: s.mission?.blessing)],
       enemyTypes: en.group,
@@ -3516,14 +3536,19 @@ class _Op {
     // reemplazan; roguelike.md § 4).
     if (s.run != null) return;
     final m = s.mission;
+    // Kael (overworld_biomes.md § 10.6): +% de XP para toda la sala.
+    final xp = (outcome.xp *
+            (1 + ResidentRules.frac(s.town, NpcRole.instructor)))
+        .round();
     if (m != null) {
-      m.xp += outcome.xp;
+      m.xp += xp;
       m.credits += outcome.credits;
+      if (b.state.elite && m.zone > 0) residentWin(m.zone, elite: true);
     }
     for (final p in players) {
       final g = rules.gainXp(
           p.profile.copyWith(credits: p.profile.credits + outcome.credits),
-          outcome.xp);
+          xp);
       final oldLevel = p.profile.level;
       p.profile = g.profile;
       if (g.levelsGained > 0) {
@@ -3715,6 +3740,10 @@ class _Op {
     for (final p in players) {
       p.profile = p.profile.copyWith(credits: p.profile.credits + bonus);
       if (p.hp <= 0) p.hp = 1;
+      // Oren: vida llena al volver de la misión.
+      if (ResidentRules.bonus(s.town, NpcRole.vidente) > 0) {
+        p.hp = p.maxHp.toDouble();
+      }
     }
     final eco = _eco;
     final trial = _trial;
@@ -3738,6 +3767,7 @@ class _Op {
       if (abyss != null) _abyssCompleted(abyss);
       // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
       if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
+      if (zone != null) residentWin(zone.index);
       for (final d in firsts.entries) {
         drops[d.key] = d.value.item!.baseId;
         events.add(WeaponDropEvent(d.key, d.value.item!.baseId, 'mission'));

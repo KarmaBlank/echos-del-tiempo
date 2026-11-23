@@ -69,3 +69,12 @@ excluyentes: Capataz (ayudante +50 % parcelas) o Manos propias
 Acción `lifeTree {k: pesca|cultivo, n?}` (sin `n` = reiniciar).
 Perfil: `life.ft` (Pesca) y `life.farm.tree` (Cultivo); sin las claves
 (saves viejos) = árboles vacíos.
+
+## 7. Los oficios como progresión del personaje (v0.30.0)
+Visión completa en roles.md.
+- Subir de nivel Pesca o Cultivo da XP de personaje (`lifeLevelCharXp`
+  × nivel nuevo, tablero Pueblo), sin el tope por estadía. Las órdenes de
+  los habitantes suman XP de personaje y puntos de árbol (roles.md § 3).
+- Pendiente (tech_debt.md v0.30.0): nodos de poder de aventurero
+  (estadísticas, % de daño o vida) en los árboles de oficio y un oficio
+  de Herrería propio.

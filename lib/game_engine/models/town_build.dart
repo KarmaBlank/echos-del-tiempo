@@ -29,7 +29,11 @@ enum TownSide {
 /// cada tipo nuevo suma su entrada en `kConstructions`.
 enum BuildKind {
   lago('LAGO'),
-  huerta('HUERTA');
+  huerta('HUERTA'),
+
+  /// Casa de un habitante (town_editor.md § 3.4, v0.30.0): 3 × 3, con
+  /// nivel (1 a `resMaxHouse`) y el habitante que vive ahí.
+  casa('CASA');
 
   const BuildKind(this.label);
   final String label;
@@ -182,7 +186,15 @@ class TownBuild {
       this.chest = const {},
       this.seeds = const {},
       this.tasks = const [],
-      this.crew = const []});
+      this.crew = const [],
+      this.level = 1,
+      this.resident});
+
+  /// Nivel de la casa (solo casas; 1 a `resMaxHouse`).
+  final int level;
+
+  /// Habitante que vive en la casa (solo casas; `null` = vacía).
+  final String? resident;
 
   final String id;
   final BuildKind kind;
@@ -286,8 +298,13 @@ class TownBuild {
           Map<String, int>? chest,
           Map<String, int>? seeds,
           List<int>? tasks,
-          List<HelperStat>? crew}) =>
+          List<HelperStat>? crew,
+          int? level,
+          String? resident,
+          bool clearResident = false}) =>
       TownBuild(id, kind, parts ?? this.parts,
+          level: level ?? this.level,
+          resident: clearResident ? null : (resident ?? this.resident),
           stock: stock ?? this.stock,
           plots: plots ?? this.plots,
           helper: helper ?? this.helper,
@@ -315,6 +332,8 @@ class TownBuild {
         if (tasks.any((m) => m != kAllHelperTasks)) 'tk': tasks,
         if (crew.any((c) => c.xp > 0 || c.ups.isNotEmpty))
           'cr': [for (final c in crew) c.toJson()],
+        if (level > 1) 'lv': level,
+        if (resident != null) 'rs': resident,
       };
 
   static Map<String, int> ints(Object? v) => v is Map
@@ -339,6 +358,8 @@ class TownBuild {
     final st = raw['st'];
     final pl = raw['pl'];
     return TownBuild(id, kind, parts,
+        level: raw['lv'] is num ? (raw['lv'] as num).round().clamp(1, 9) : 1,
+        resident: raw['rs'] is String ? raw['rs'] as String : null,
         stock: ints(st),
         helper: raw['hp'] is num ? (raw['hp'] as num).round().clamp(0, 99) : 0,
         chest: ints(raw['ch']),

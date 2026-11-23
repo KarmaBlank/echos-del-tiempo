@@ -761,6 +761,17 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 51 (v0.30.0: habitantes en el pueblo)
+
+- `town` del snapshot suma `res` (lista de `ResidentState`: relación,
+  cadena, pedido, orden, si vive en el pueblo) y las casas (`k: casa`,
+  `lv` nivel, `rs` habitante).
+- `town {o: invite|assign|gift|turnIn|fulfil|invest|order, id: npc, tg?}`:
+  `assign` con `tg` = casa; `gift` con `tg` = producto. `place` con
+  `id: casa` cobra oro y tablas y respeta el candado. Todo lo valida el
+  anfitrión (overworld_biomes.md § 10).
+- Un cliente 50 descartaría las casas: la sala no mezcla versiones.
+
 ## Mundo, protocolo 50 (v0.28.0: candado de la edición del pueblo)
 
 - Snapshot: `ted` (opcional) = id de quien edita el pueblo.

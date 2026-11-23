@@ -25,10 +25,11 @@ abstract final class ConsumableRules {
   }
 
   /// Aplica [item] a [p] (ya validado). Devuelve lo que restauró.
-  static int apply(SessionPlayer p, BattleItem item) {
+  /// [bonus]: lo que suma Ilda (0,1 = +10 %; overworld_biomes.md § 10.6).
+  static int apply(SessionPlayer p, BattleItem item, {double bonus = 0}) {
     if (item == BattleItem.aether) return 0;
     if (item == BattleItem.potion) {
-      final a = jsRound(p.maxHp * 0.45);
+      final a = jsRound(p.maxHp * 0.45 * (1 + bonus));
       p
         ..hp = math.min(p.maxHp.toDouble(), p.hp + a)
         ..profile = p.profile.copyWith(potions: p.profile.potions - 1);

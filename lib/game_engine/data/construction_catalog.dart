@@ -24,7 +24,13 @@ const kConstructions = <ConstructionDef>[
       detail: 'Agua para pescar y soltar peces'),
   ConstructionDef('lago_chico', BuildKind.lago, 'LAGO CHICO', 4, 4,
       detail: 'Pegalo a otro lago para agrandarlo'),
+  ConstructionDef(kCasaId, BuildKind.casa, 'CASA', 3, 3,
+      detail: 'Hogar para un habitante invitado'),
 ];
+
+/// La casa de un habitante (town_editor.md § 3.4): cuesta oro y tablas
+/// (`ResidentRules.placeCost`).
+const kCasaId = 'casa';
 
 ConstructionDef? construction(String id) =>
     kConstructions.where((c) => c.id == id).firstOrNull;

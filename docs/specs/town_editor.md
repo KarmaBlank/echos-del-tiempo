@@ -156,13 +156,17 @@ verde / rojo; la esquina va en el tile del mouse.
 - Volver un lugar a su posición de siempre lo saca de `marks`; con
   todos en su lugar el plano vuelve a ser el de siempre.
 
-### 3.4 Casas de habitantes (diseño v0.29.0, pendiente)
+### 3.4 Casas de habitantes (v0.30.0)
 
-- Construcción CASA (oro + botín del bioma del habitante), 3 × 3, con 3
-  niveles (el sprite cambia por nivel). Se pone, mueve y borra como
-  lagos y huertas, con el candado de § 1.3. Se le asigna un habitante
-  invitado (overworld_biomes.md § 10). Subir de nivel la casa es el
+- Construcción CASA (`resHouseGold` de oro + `resHouseMat` tablas;
+  gris con el motivo si no alcanza), 3 × 3 de tile sólido (`Tile.house`,
+  pasto debajo y el sprite encima), con 3 niveles (el sprite cambia por
+  nivel). Se pone, mueve y borra como lagos y huertas, con el candado de
+  § 1.3; no se funde con otras ni tiene cofre. Sus opciones: ASIGNAR A
+  <habitante> (los invitados), MOVER, BORRAR (quien vivía queda sin
+  casa). Subir de nivel la casa (desde la pantalla del habitante) es el
   pedido más común del habitante y abre mejores servicios.
+  JSON de la construcción: `k: casa`, `lv`, `rs` (habitante).
 - Los pedidos de camino, faro, huerta o muelle se cumplen construyendo
   eso a menos de 6 tiles de su casa.
 

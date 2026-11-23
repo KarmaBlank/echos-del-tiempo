@@ -116,6 +116,12 @@ class BattleEngine {
   /// pueden apagarlas.
   final bool familiesEnabled;
 
+  /// Beneficios permanentes del pueblo (overworld_biomes.md § 10.6): Ilda
+  /// (+% de curación de pociones) y Oren (+% de vida máxima). Los pone el
+  /// anfitrión antes de cada batalla.
+  double townPotion = 0;
+  double townHp = 0;
+
   // ---- quiebre (combo_balance.md § 5) ----
   // Los puntos por acción, el umbral del élite y el del grupo están en
   // `ComboRulesDef` (catálogo, editable en el admin de balance).
@@ -633,7 +639,7 @@ class BattleEngine {
     if (build == null) return;
     final d = stats.calculate(build.withBonusDefense(c.bonusDefense));
     c
-      ..maxHp = d.maxHp
+      ..maxHp = c.isPlayer ? jsRound(d.maxHp * (1 + townHp)) : d.maxHp
       ..maxMp = d.maxMp
       ..speed = d.speed
       ..attack = d.attack
@@ -5476,7 +5482,7 @@ class _Turn {
     if (t == null) return false;
     events.add(ActionEvent(p.id, BattleActionKind.potion, targetId: t.id));
     p.potions--;
-    final a = jsRound(t.maxHp * 0.45);
+    final a = jsRound(t.maxHp * 0.45 * (1 + engine.townPotion));
     final was = t.hp;
     _heal(t, a);
     t.statuses[StatusKind.burn] = 0;

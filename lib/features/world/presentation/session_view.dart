@@ -48,6 +48,9 @@ enum WorldPanel {
 
   /// Habitante de un bioma (overworld_biomes.md § 9).
   biomeNpc,
+
+  /// Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
+  questLog,
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
   /// (farming.md § 8, v0.25.5).
   helper,

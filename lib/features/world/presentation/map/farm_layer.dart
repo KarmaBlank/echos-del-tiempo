@@ -4,7 +4,10 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/resident_rules.dart';
+import '../../../../game_engine/rules/sky_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
@@ -335,6 +338,13 @@ class MapFarmLayer {
     }
 
     for (final b in town.builds) {
+      if (b.kind == BuildKind.casa) {
+        // Casa de habitante (town_editor.md § 3.4): sprite por nivel.
+        final bb = b.bounds;
+        img('casa_${b.level.clamp(1, 3)}', (bb.x + ox + bb.w / 2) * ts,
+            (bb.bottom + oy) * ts);
+        continue;
+      }
       // Cofre al lado del cartel, con cuántas cosas tiene.
       final (cx, cy) = TownRules.chestOf(town, b);
       final px = (cx + ox + 0.5) * ts, py = (cy + oy + 1) * ts;
@@ -351,6 +361,21 @@ class MapFarmLayer {
             : (work ? 'npc_pescador_trabajo' : 'npc_pescador');
         final bob = pos.work ? 0.0 : (math.sin(t / 120) * 1).roundToDouble();
         img(id, pos.x, pos.y + 6 + bob);
+      }
+    }
+    // Habitantes (overworld_biomes.md § 10.1): caminan frente a su casa
+    // de día; "!" si tienen pedido u orden.
+    final night = SkyRules.isNight(town.sky);
+    for (final n in kBiomeNpcs) {
+      final r = town.resident(n.id);
+      if (!r.invited) continue;
+      final pos = ResidentRules.position(town, n.id, time, night: night);
+      if (pos == null) continue;
+      final bob = (math.sin(t / 140) * 1).roundToDouble();
+      img(n.sprite, pos.$1, pos.$2 + 6 + bob);
+      text(n.name, pos.$1, pos.$2 - 14, TownPalette.label, 6);
+      if (r.request != null || r.order != null) {
+        text('!', pos.$1, pos.$2 - 22, TownPalette.request, 8);
       }
     }
     final h = hover;

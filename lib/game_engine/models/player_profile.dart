@@ -32,6 +32,7 @@ class PlayerProfile {
     int credits = 0,
     PlayerAttributes? attributes,
     int points = 0,
+    int treeBonus = 0,
     List<String> inventory = const [],
     String? equipped,
     int potions = defaultPotions,
@@ -72,6 +73,7 @@ class PlayerProfile {
       credits: credits,
       attributes: attributes ?? const PlayerAttributes({}),
       points: points,
+      treeBonus: treeBonus,
       items: List.unmodifiable(list),
       equippedUid: _resolve(list, equipped),
       potions: potions,
@@ -128,6 +130,7 @@ class PlayerProfile {
     required this.credits,
     required this.attributes,
     required this.points,
+    this.treeBonus = 0,
     required this.items,
     required this.equippedUid,
     required this.potions,
@@ -184,10 +187,16 @@ class PlayerProfile {
   final List<String> ultOrder;
 
   /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
-  int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
-      trials: ascension.trials.length,
-      ms10: milestone10 != null,
-      ms20: milestone20 != null);
+  int get treePoints =>
+      PassiveTreeRules.pointsEarned(treeLevel,
+          trials: ascension.trials.length,
+          ms10: milestone10 != null,
+          ms20: milestone20 != null) +
+      treeBonus;
+
+  /// Puntos de árbol extra ganados en el pueblo (órdenes de habitantes,
+  /// overworld_biomes.md § 10.5; JSON `tb`).
+  final int treeBonus;
 
   /// Hitos alcanzados sin elegir (10 y/o 20).
   List<int> get pendingMilestones => [
@@ -369,6 +378,7 @@ class PlayerProfile {
     int? credits,
     PlayerAttributes? attributes,
     int? points,
+    int? treeBonus,
     List<String>? inventory,
     String? equipped,
     int? potions,
@@ -419,6 +429,7 @@ class PlayerProfile {
       credits: credits ?? this.credits,
       attributes: attributes ?? this.attributes,
       points: points ?? this.points,
+      treeBonus: treeBonus ?? this.treeBonus,
       items: List.unmodifiable(list),
       equippedUid: eq,
       potions: potions ?? this.potions,
@@ -565,6 +576,7 @@ class PlayerProfile {
           for (final a in Attribute.values) attributeKey(a): attributes[a],
         },
         'pts': points,
+        if (treeBonus > 0) 'tb': treeBonus,
         'items': [for (final i in items) i.toJson()],
         'eq': equippedUid,
         'pot': potions,
@@ -675,6 +687,7 @@ class PlayerProfile {
       credits: _int(json['cr']),
       attributes: st is Map ? PlayerAttributes(Map.unmodifiable(attrs)) : null,
       points: _int(json['pts']),
+      treeBonus: _int(json['tb']),
       inventory: inventory,
       items: items,
       equipped: json['eq'] is String ? json['eq'] as String : null,

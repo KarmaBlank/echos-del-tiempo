@@ -116,7 +116,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// `bolt` y materiales de oficio en el perfil (`life.cf`).
 /// 50 (v0.28.0): candado de la edición del pueblo (town_editor.md § 1.3):
 /// `ted` en el snapshot y `town` con `lock` / `unlock`.
-const kProtocolVersion = 50;
+/// 51 (v0.30.0): habitantes en el pueblo (overworld_biomes.md § 10):
+/// `town.res`, casas (`k: casa`, `lv`, `rs`) y `town` con `invite` /
+/// `assign` / `gift` / `turnIn` / `fulfil` / `invest` / `order`.
+const kProtocolVersion = 51;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

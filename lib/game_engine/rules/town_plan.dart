@@ -155,7 +155,13 @@ class TownPlan {
     for (final b in s.builds) {
       final water = b.kind == BuildKind.lago;
       for (final p in b.parts) {
-        put(p, water ? Tile.water : Tile.soil);
+        put(
+            p,
+            water
+                ? Tile.water
+                : b.kind == BuildKind.casa
+                    ? Tile.house
+                    : Tile.soil);
       }
       if (!water) continue;
       bool inLake(int x, int y) => b.contains(x, y);
