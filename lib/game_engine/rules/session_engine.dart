@@ -36,6 +36,7 @@ import 'achievement_rules.dart';
 import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
+import 'quest_track_rules.dart' show QuestTrackRules;
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'eco_rules.dart';
 import 'exploration_rules.dart';

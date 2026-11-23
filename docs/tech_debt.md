@@ -160,12 +160,20 @@ Funcionalidad pendiente:
   cadenas de Velda, Kael, Brann y Oren. Ningún habitante está completo
   de punta a punta en el juego todavía.
 - La relación con el habitante todavía no sube con nada.
-- Sprites de los habitantes: reusan los de granjero y pescador.
 - Exteriores nuevos: mismo esqueleto que el Bosque; sin capturas ni test
   de UI de la pantalla del habitante ni del botón "ZONA N" del mapa de
   viaje.
 - Peces y semillas nuevos usan el ícono genérico de su tipo.
 
+## v0.32.0 (diálogo de habitantes y encargos seguidos)
+
+- Marca de encargo en las casillas de inventario / baúl ("Lo pide Ilda
+  (encargo 3)") y la marca de habitantes en el minimapa: sin hacer.
+- DIARIO desde PERSONAJE: sin botón todavía (J, HUD y FUENTE sí).
+- El avance "Tenés" cuenta la bolsa de oficios, no el baúl.
+- Sin test de UI de la pantalla del habitante ni del DIARIO ni del HUD
+  de seguidos; sin capturas nuevas.
+- La tienda del habitante no tiene filtros (una sola categoría).
 ## v0.32.0
 
 - Iluminación (lighting.md): la batalla no tiene oscuridad (una pelea en

@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
@@ -326,7 +327,8 @@ class MapFarmLayer {
   /// (igual en todos); [t]: ms de animación.
   void drawHelpers(Canvas c, TownState town, double time, double t,
       ui.Image? Function(String id) sprite, MapText text,
-      {({TownBuild build, int index})? hover}) {
+      {({TownBuild build, int index})? hover,
+      NpcMark Function(BiomeNpcDef n)? markOf}) {
     final (ox, oy) = town.origin;
     final paint = SpriteCatalog.pixelPaint();
     void img(String id, double cx, double bottom) {
@@ -374,9 +376,10 @@ class MapFarmLayer {
       final bob = (math.sin(t / 140) * 1).roundToDouble();
       img(n.sprite, pos.$1, pos.$2 + 6 + bob);
       text(n.name, pos.$1, pos.$2 - 14, TownPalette.label, 6);
-      if (r.request != null || r.order != null) {
-        text('!', pos.$1, pos.$2 - 22, TownPalette.request, 8);
-      }
+      // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo
+      // para entregar.
+      drawNpcMark(text, markOf?.call(n) ?? NpcMark.none, pos.$1,
+          pos.$2 - 22, t);
     }
     final h = hover;
     if (h == null) return;
@@ -432,4 +435,13 @@ class MapFarmLayer {
       text(p.label, to.$1, to.$2 - 34 - k * 4, p.color, 6);
     }
   }
+}
+
+/// Marca de habitante sobre la cabeza (roles.md § 8.4): "!" dorado si
+/// tiene algo nuevo para contarte, "?" si tenés listo lo que pide; con un
+/// rebote chico. [t]: ms de animación.
+void drawNpcMark(MapText text, NpcMark mark, double x, double y, double t) {
+  if (mark == NpcMark.none) return;
+  final bob = (math.sin(t / 150) * 1.5).roundToDouble();
+  text(mark == NpcMark.news ? '!' : '?', x, y + bob, TownPalette.request, 10);
 }

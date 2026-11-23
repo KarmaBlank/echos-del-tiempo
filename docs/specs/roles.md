@@ -113,7 +113,39 @@ Tercer oficio con árbol chico (8 nodos), en la pestaña OFICIOS.
 - Pendiente: que el pescador se quede afuera mientras el grupo baja a la
   mazmorra (party dividida, town_loop.md § 11b).
 
-## 8. Pendiente
+## 8. Encargos seguidos, DIARIO y marcas (v0.32.0)
+
+### 8.1 Revelación
+
+Un paso nuevo de la cadena de un habitante no aparece en ENCARGOS ni en
+el DIARIO hasta que él lo pide en el diálogo (con el texto del paso).
+Los pasos futuros nunca se listan. Al abrir el diálogo el cliente manda
+`TownAction(seen, id)`; el anfitrión guarda en el perfil
+`npcSeen[npc] = QuestTrackRules.newsKey(r)` (paso de la cadena, pedido y
+orden). Si hay pedido u orden nuevos, el diálogo los menciona.
+
+### 8.2 SEGUIR y DIARIO
+
+Todo encargo, pedido u orden activo tiene SEGUIR / DEJAR DE SEGUIR
+(`TownAction(track, target: '<tipo>:<npc>')`, validado por el anfitrión;
+como mucho 5; JSON `trk` del perfil). El DIARIO (J en el pueblo, clic en
+el recuadro del HUD o la FUENTE) tiene la subpestaña SEGUIDOS y una por
+habitante, grilla con detalle a la derecha y avance "Tenés 1/2 X".
+
+### 8.3 HUD y avisos
+
+Debajo del reloj, un recuadro compacto con cada seguido (nombre y
+avance). Cuando sube lo que tenés de algo que pide un encargo activo,
+aparece unos segundos "Para: Ilda · encargo 3 (1/2)".
+
+### 8.4 Marcas sobre la cabeza
+
+Por jugador, en el pueblo y en los biomas: "!" dorado
+(`TownPalette.request`, con rebote chico) si tiene algo nuevo que todavía
+no te contó; "?" si tenés listo lo que pide; nada si no. Reemplaza el
+"!" genérico. Las subpestañas del DIARIO llevan la misma marca.
+
+## 9. Pendiente
 
 Ver tech_debt.md v0.31.0 (paridad de XP sin simular, animales, party
 dividida).

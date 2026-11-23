@@ -15,7 +15,9 @@ import '../../../../core/procedural/weapon_look.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
-import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout;
+import '../../../../game_engine/data/biomes_catalog.dart'
+    show BiomeNpcDef, biomeLayout;
+import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart' show kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
@@ -709,6 +711,14 @@ class MapGame extends Game {
   final labelPen = PixelLabelPen();
 
   /// Etiqueta con [priority] (no se pisa con las otras con prioridad).
+  /// Marca del habitante [n] para el jugador local (roles.md § 8.4).
+  NpcMark _npcMark(BiomeNpcDef n) {
+    final v = controller.view;
+    final p = v?.me?.profile;
+    if (v == null || p == null) return NpcMark.none;
+    return QuestTrackRules.mark(p, controller.town, n);
+  }
+
   void _rankedText(Canvas c, String s, double x, double y, Color color,
       double size, int priority) {
     if (!screenLabels) return actors.text(c, s, x, y, color, size);
@@ -826,7 +836,8 @@ class MapGame extends Game {
           t,
           (id) => sprites.lifeIcon(id, 'herramienta'),
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
-          hover: controller.hoverHelper);
+          hover: controller.hoverHelper,
+          markOf: _npcMark);
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
@@ -842,6 +853,12 @@ class MapGame extends Game {
         }
         _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts,
             ny * ts - 4, TownPalette.label, 6, 899);
+        drawNpcMark(
+            (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 901),
+            _npcMark(lay.npc),
+            (nx + 0.5) * ts,
+            ny * ts - 14,
+            t);
       }
       // Pescador nativo del bioma (fishing.md § 12): camina por la orilla.
       if (biomeLayout(map.place) case final lay?) {

@@ -2553,6 +2553,12 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
+    // J: DIARIO de encargos en el pueblo (roles.md § 8.1; en el campo J
+    // pliega los objetivos).
+    if (key == LogicalKeyboardKey.keyJ && s.mode == SessionMode.lobby) {
+      toggleJournal();
+      return true;
+    }
     if (key == LogicalKeyboardKey.keyB && s.mode != SessionMode.battle) {
       toggleStash();
       return true;
@@ -3088,6 +3094,22 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   /// Tecla B / botón ALIJO [B].
+  /// Abre / cierra el DIARIO de encargos (roles.md § 8.1).
+  void toggleJournal() {
+    if (_panel == WorldPanel.questLog) {
+      closePanel();
+    } else {
+      openPanel(WorldPanel.questLog);
+    }
+  }
+
+  /// SEGUIR / dejar de seguir un encargo (`QuestTrackRules.trackKey`).
+  bool trackQuest(String npc, String key) =>
+      residentOp(TownOp.track, npc, target: key);
+
+  /// Marca como visto lo que [npc] tiene para decir (diálogo).
+  bool markNpcSeen(String npc) => residentOp(TownOp.seen, npc);
+
   void toggleStash() {
     if (isRun) return; // la Travesía no tiene alijo
     if (_panel == WorldPanel.stash) {

@@ -761,6 +761,18 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 53 (v0.32.0: encargos seguidos y vistos)
+
+- `town {o: track, id: habitante, t: '<tipo>:<habitante>'}`: SEGUIR /
+  dejar de seguir un encargo, pedido u orden activo (como mucho 5).
+- `town {o: seen, id: habitante}`: marca como visto lo que el habitante
+  tiene para decir (paso de su cadena, pedido y orden).
+- El perfil suma `trk` (seguidos) y `seen` (habitante → huella de lo
+  visto). Los dos los valida el anfitrión y solo tocan el perfil de quien
+  los pide (roles.md § 8).
+- Un cliente 52 no conocería `track` / `seen`: la sala no mezcla
+  versiones.
+
 ## Mundo, protocolo 52 (v0.31.0: roles de exploración)
 
 - `town {o: fisherReq, id: bioma}`: entregar el pedido del pescador

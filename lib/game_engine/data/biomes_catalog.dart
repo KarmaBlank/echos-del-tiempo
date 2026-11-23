@@ -148,6 +148,9 @@ class BiomeNpcDef {
 
   /// Sprite (`items.vida_npc_<id>` del manifest).
   String get sprite => 'npc_$id';
+
+  /// Retrato del cuadro de diálogo (`items.vida_npc_<id>_retrato`).
+  String get portrait => 'npc_${id}_retrato';
 }
 
 /// Un exterior de bioma: 34 × 22, borde sólido, camino al sur (vuelta al

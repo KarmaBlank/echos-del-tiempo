@@ -701,6 +701,16 @@ extension _FarmingOp on _Op {
           BuildKind.casa => 'una casa',
         }}.');
         return true;
+      case TownOp.track:
+        final k = a.target;
+        if (k == null) return false;
+        final r = QuestTrackRules.toggle(p.profile, s.town, k);
+        return r != null && _profileChange(p, r);
+      case TownOp.seen:
+        final id = a.id;
+        if (id == null) return false;
+        final r = QuestTrackRules.markSeen(p.profile, s.town, id);
+        return r != null && _profileChange(p, r);
       case TownOp.invite ||
             TownOp.assign ||
             TownOp.gift ||
