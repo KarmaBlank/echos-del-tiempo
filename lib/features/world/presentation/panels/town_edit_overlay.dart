@@ -425,50 +425,53 @@ class TownEditOverlay extends StatelessWidget {
               'Soltá peces de tu bolsa en este lago: esa especie sale más '
               'seguido y, con dos o más, cría al ganar misiones.',
               style: DsText.detail()),
-          if (b.stock.isNotEmpty)
-            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          SizedBox(height: DsSpace.xs),
+          // Plantilla TRASPASO: tu bolsa a la izquierda, el lago a la derecha.
+          DsTransferTemplate(
+            key: const ValueKey('town-edit-release-grid'),
+            keyPrefix: 'town-edit-release',
+            leftTitle: 'TU BOLSA',
+            rightTitle: 'EN ESTE LAGO',
+            left: [
+              for (final f in fish)
+                DsTransferItem(
+                  id: f.id,
+                  icon: LifeIcon(f.id, LifeIconKind.pescado,
+                      size: LifeItemGrid.iconSize),
+                  name: f.name,
+                  border: fishRarityColor(f.rarity),
+                  count: p?.life.count(f.id) ?? 0,
+                  tag: f.rarity.name,
+                  info: '${f.rarity.label} · en este lago: ${b.stock[f.id] ?? 0}',
+                ),
+            ],
+            right: [
               for (final en in b.stock.entries)
                 if (kFish[en.key] case final f?)
-                  DsTag('${f.name} ×${en.value}${en.value >= 2 ? ' · cría' : ''}',
-                      color: fishRarityColor(f.rarity)),
-            ]),
-          SizedBox(height: DsSpace.xs),
-          // Grilla (como el inventario): elegir el pez, detalle y SOLTAR.
-          SizedBox(
-            height: 320,
-            child: LifeItemGrid(
-              key: const ValueKey('town-edit-release-grid'),
-              groups: [
-                LifeItemGroup(null, [
-                  for (final f in fish)
-                    LifeItemCellData(
-                      id: 'town-edit-release-${f.id}',
-                      icon: LifeIcon(f.id, LifeIconKind.pescado,
-                          size: LifeItemGrid.iconSize),
-                      border: fishRarityColor(f.rarity),
-                      search: f.name,
-                      count: p?.life.count(f.id) ?? 0,
-                      detail: LifeItemDetail(
-                        name: f.name,
-                        nameColor: fishRarityColor(f.rarity),
-                        tags: [(f.rarity.label.toUpperCase(), fishRarityColor(f.rarity))],
-                        lines: ['Tenés ${p?.life.count(f.id) ?? 0}',
-                          'En este lago: ${b.stock[f.id] ?? 0}'],
-                        actions: [
-                          DsButton('SOLTAR EN EL LAGO',
-                              key: ValueKey('town-edit-release-btn-${f.id}'),
-                              size: DsButtonSize.compact,
-                              tooltip: b.stockTotal >= cap ? 'El lago está lleno' : null,
-                              onPressed: b.stockTotal < cap
-                                  ? () => c.stockFish(f.id, b.id)
-                                  : null),
-                        ],
-                      ),
-                    ),
-                ]),
-              ],
-              empty: 'No tenés peces en la bolsa.',
-            ),
+                  DsTransferItem(
+                    id: f.id,
+                    icon: LifeIcon(f.id, LifeIconKind.pescado,
+                        size: LifeItemGrid.iconSize),
+                    name: f.name,
+                    border: fishRarityColor(f.rarity),
+                    count: en.value,
+                    tag: f.rarity.name,
+                    info: en.value >= 2 ? 'cría al ganar misiones' : 'soltá otro para que críe',
+                  ),
+            ],
+            filters: [
+              const DsTransferFilter('TODAS', null),
+              for (final r in FishRarity.values)
+                DsTransferFilter(r.label.toUpperCase(), r.name),
+            ],
+            searchHint: 'BUSCAR PEZ',
+            quantities: const [1],
+            allowRightToLeft: false,
+            leftEmpty: 'No tenés peces en la bolsa.',
+            rightEmpty: 'El lago todavía no tiene especies.',
+            canMove: (s, id) =>
+                b.stockTotal >= cap ? 'El lago está lleno' : null,
+            onMove: (s, id, n) => c.stockFish(id, b.id),
           ),
           SizedBox(height: DsSpace.xs),
           Align(
