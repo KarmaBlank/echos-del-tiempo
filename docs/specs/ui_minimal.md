@@ -316,3 +316,15 @@ jugador; no mezclar.
   `<prefijo>-give-1|TODO`, `<prefijo>-take-1|TODO`, `<prefijo>-search`,
   `<prefijo>-filter-<i>`, `<prefijo>-info`.
 - Galería: página TRASPASO.
+
+### 9.3 Columnas (v0.32.5)
+
+- Implementación: `DsColumnsTemplate` (`lib/app/design/ds_columns_template.dart`),
+  cada columna es un `DsColumn` (encabezado, contenido, `scrollable`).
+- N columnas del **mismo ancho** (100 % / N), con encabezado arriba de
+  cada una, borde alrededor y línea vertical entre columnas.
+- Cada columna scrollea sola (barra visible); una columna con
+  `scrollable: false` queda fija (p. ej. una vista previa animada).
+- Solo dibuja: el contenido de cada columna llega por parámetro. La
+  plantilla necesita alto acotado (va en un `Expanded`).
+- Casos: pestaña ULT de PERSONAJE (panels.md § Pestaña ULT).
