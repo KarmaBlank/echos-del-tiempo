@@ -94,6 +94,19 @@ Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
   recetas son las de materials_economy.md § 4.4; las recetas nuevas de
   oficio van acá, nunca en la armería.
 
+#### Carteles en el mundo (v0.37.3)
+
+- Todas las etiquetas del mundo en el pueblo y los exteriores (lugares,
+  carteles, zonas de la huerta, cofres, entradas de zona, nombres de NPC
+  y de jugadores) van un paso más chicas (7 → 6, 6 → 5; piso 5).
+- Sobre cada jugador se ve solo su nombre (sin ascensión ni título).
+- Los carteles de lugares (edificios, lago, carteles, hitos, zonas de la
+  huerta, entradas de zona, TIENDA) solo se ven cerca del jugador local:
+  opacidad plena hasta `MapGame.placeLabelRange` (4,5 tiles) y fundido
+  hasta apagarse en `MapGame.placeLabelFade` (1 tile) más. Así no se
+  amontonan cuando el pueblo crece. Los nombres de NPC y jugadores se
+  ven siempre.
+
 ---
 
 ## 3. Actividades y qué produce cada una (solo ella)
