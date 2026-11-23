@@ -435,6 +435,18 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
+            // Salir solo de la mazmorra (free_movement.md § 2.4).
+            if (controller.canLeaveDungeon)
+              Positioned(
+                top: _gap + 48,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: DsButton('SALIR DE LA MAZMORRA',
+                      key: const ValueKey('hud-leave-dungeon'),
+                      onPressed: controller.leaveDungeon),
+                ),
+              ),
             if (_voteBox(s) case final vote?)
               Positioned(
                 top: _gap + 48,
@@ -477,6 +489,21 @@ class WorldHud extends StatelessWidget {
                         child:
                             PotionShortcuts(controller: controller, player: me),
                       ),
+                  // Los que están en otro lugar (free_movement.md § 4).
+                  if (s.away.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        key: const ValueKey('hud-away'),
+                        width: rightWidth,
+                        child: Text(
+                          'En otro lugar: ${s.away.map((a) => '${a.name} (${a.where})').join(', ')}',
+                          textAlign: TextAlign.end,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
                   SizedBox(
                     key: const ValueKey('hud-party-boxes'),
                     width: partyWidth,

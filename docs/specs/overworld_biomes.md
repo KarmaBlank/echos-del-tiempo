@@ -19,15 +19,15 @@ Bosque, peces y semillas), `lib/game_engine/rules/biome_rules.dart`
 - Lista los lugares de `kBiomes`, en orden: PUEBLO, BOSQUE, RUINAS,
   CAVERNAS, GRIETA y ABISMO (v0.29.0). Un bioma todavía cerrado muestra el
   botón gris "ZONA N" con el tooltip "Se abre al llegar a la zona N".
-- El lugar actual muestra ACÁ. VIAJAR solo lo puede tocar el dueño del
-  mundo (el anfitrión o quien juega solo); al resto el botón le queda gris
-  con el tooltip "Decide el anfitrión".
+- El lugar actual muestra ACÁ. VIAJAR lo toca cualquiera y mueve solo a
+  quien lo toca (v0.33.0, free_movement.md).
 - Viaje instantáneo (sin cinemática en esta pasada).
 
 ### 1.1 Desbloqueo (v0.29.0)
 - Cada bioma tiene dos zonas (`BiomeDef.zones`); se puede viajar cuando el
-  dueño del mundo tiene desbloqueada la primera (`unlockedZone >=
-  zones.first`). Lo valida el anfitrión con su perfil (`canTravelTo`).
+  jugador que viaja tiene desbloqueada la primera (`unlockedZone >=
+  zones.first`). Lo valida el anfitrión con el perfil de quien viaja
+  (`canTravelTo`, v0.33.0).
 - BOSQUE 1-2, RUINAS 3-5, CAVERNAS 4-6, GRIETA 7-8, ABISMO 9-10. Las
   familias de enemigos y su escala por nivel son las de cada zona.
 
@@ -85,16 +85,15 @@ muelles, ocho matas y dos entradas de mazmorra.
 
 ### 3.4 Entradas de mazmorra
 - Pradera Esmeralda (zona 1) y Bosque Hondo (zona 2), con el arco de
-  siempre (`ZoneEntrance`): E propone la misión de la zona o vota que sí,
+  siempre (`ZoneEntrance`): E entra directo (v0.33.0: sin votación; se suma a amigos que ya estén),
   con el desbloqueo de siempre. El tablero del pueblo sigue andando igual.
 
 ## 4. Party
 
-- Primera pasada: **todos viajan juntos**, lo decide el anfitrión
-  (`TravelAction`). Al viajar, todos aparecen alrededor de la llegada del
-  lugar.
-- Futuro (deuda): party dividida, `ubicación` por jugador
-  (`pueblo | bioma:<id> | mazmorra:<id>:<piso>`, town_loop.md § 11b).
+- Desde v0.33.0 (free_movement.md): **cada jugador va por su cuenta**.
+  `TravelAction` mueve solo a quien la manda (y a sus compañeros de
+  solitario). Pueblo, cada exterior y cada mazmorra son instancias
+  separadas; `GameSession.place` es el lugar de la instancia.
 
 ## 5. Refuerzos
 

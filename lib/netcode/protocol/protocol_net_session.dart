@@ -267,8 +267,10 @@ abstract class ProtocolNetSession
       _inFlight[pid]?.removeWhere((q) => q <= seq);
 
   @override
-  void broadcast(GameSession state, List<SessionEvent> events) {
+  void broadcast(GameSession state, List<SessionEvent> events,
+      {Set<String>? only}) {
     if (!_isHost || _closed || _clients.isEmpty) return;
+    if (only != null && !only.any(_clients.containsKey)) return;
     // Perfiles: solo se recodifica el que cambió de objeto, y solo sube
     // de versión si además cambió su JSON.
     final ids = <String>{};
@@ -283,7 +285,8 @@ abstract class ProtocolNetSession
         ver: cur != null && cur.json == json ? cur.ver : ++_profileSeq,
       );
     }
-    _profiles.removeWhere((id, _) => !ids.contains(id));
+    // Con instancias (only) los demás perfiles siguen en otra.
+    if (only == null) _profiles.removeWhere((id, _) => !ids.contains(id));
 
     final body = codec.stateBody(state);
     final evParts = [for (final e in events) jsonEncode(codec.events.toJson(e))];
@@ -291,6 +294,7 @@ abstract class ProtocolNetSession
     final now = _clock();
     var biggest = 0;
     for (final MapEntry(key: pid, value: link) in _clients.entries) {
+      if (only != null && !only.contains(pid)) continue;
       final flying = _inFlight.putIfAbsent(pid, () => []);
       final pending = _pendingEvents.putIfAbsent(pid, () => []);
       if (flying.length >= maxInFlight) {
@@ -312,7 +316,7 @@ abstract class ProtocolNetSession
       if (refresh) _clientRefreshed[pid] = now;
       final send = <String, String>{
         for (final MapEntry(key: id, value: p) in _profiles.entries)
-          if (refresh || has[id] != p.ver) id: p.json,
+          if (ids.contains(id) && (refresh || has[id] != p.ver)) id: p.json,
       };
       for (final id in send.keys) {
         has[id] = _profiles[id]!.ver;

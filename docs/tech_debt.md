@@ -1,5 +1,35 @@
 ﻿# Deuda técnica
 
+## v0.33.0 (movimiento libre por jugador)
+
+Tests salteados (prioridad: salir rápido). Solo tests de reglas en
+`test/game_engine/free_movement_test.dart` (viajar solo, entrar solo,
+sumarse a amigos, dos mazmorras a la vez, `aw` en el snapshot).
+
+- Sin test del controlador ni de red: difusión por instancia
+  (`broadcast(only:)`), eventos por jugador, vista del anfitrión cuando él
+  mismo cambia de instancia.
+- Sin test de: vuelta al pueblo al cerrar una mazmorra con varios
+  jugadores, refuerzo que entra a una pelea en curso por ENTRAR, compañeros
+  de solitario que siguen al líder entre instancias, Eco / Prueba / Jefe
+  del Abismo / TUTORIAL en instancia propia, pausa compartida.
+- Sin widget test de la línea "En otro lugar" del HUD ni del mapa de viaje
+  sin "Decide el anfitrión". Sin capturas nuevas en docs/release_shots.
+- `SessionEngine.freeMovement` lo prende solo el composition root
+  (`service_locator.dart`). Los tests viejos de flujo de grupo (votación,
+  preparación, loopback) siguen con el flag apagado: prueban el camino
+  de una sola sala, no el del juego. Falta migrarlos.
+- Salir solo (`leaveD`): sin test de la piedra de paso ni del botón del
+  HUD; el loot propio que quedó en el piso no se recupera al salir; sin
+  cinemática ni confirmación.
+- No hay unirse a un Eco ni a un TUTORIAL ajeno (solo misión / Prueba /
+  Jefe del Abismo iguales).
+- La UI de votación / preparación (VotePanel, PrepPanel) queda en el código
+  pero el Mundo ya no la muestra (la votación se resuelve sola). El modo de
+  combate se elige desde los ajustes.
+- `lastStateBytes` del registro de rendimiento queda con el último envío,
+  no el más grande del tick.
+
 ## v0.31.0 (roles de exploración)
 
 Tests salteados (prioridad: salir rápido). Solo tests de reglas en

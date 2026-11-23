@@ -131,7 +131,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// el plano del pueblo que arma cada par.
 /// 56 (v0.32.6): lazos con los habitantes (`town.nat`) y `town` con
 /// `talk` / `nativeInvite` / `nativeTrade` (overworld_biomes.md § 12).
-const kProtocolVersion = 56;
+
+/// 57 (v0.33.0): movimiento libre por jugador (free_movement.md): cada
+/// cliente recibe solo su instancia, `aw` con los que están en otro lugar.
+const kProtocolVersion = 57;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
