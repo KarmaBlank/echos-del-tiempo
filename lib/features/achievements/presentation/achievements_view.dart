@@ -1,26 +1,28 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
 
 /// Filtro de la pestaña.
 enum AchievementFilter {
-  all('Todas'),
-  pending('Pendientes'),
-  done('Logradas');
+  all,
+  pending,
+  done;
 
-  const AchievementFilter(this.label);
-  final String label;
+  /// Key of the tab label (`ui.achievements.filter.<name>`).
+  String get labelKey => 'ui.achievements.filter.$name';
 }
 
 /// La pestaña HAZAÑAS (docs/specs/achievements.md § 7): `logradas/33`,
 /// filtro, secciones por categoría (pendientes primero) y una fila de una
 /// línea por hazaña; el cómo se consigue va en el tooltip. Solo lectura.
-class AchievementsView extends StatefulWidget {
+class AchievementsView extends ConsumerStatefulWidget {
   const AchievementsView({super.key, required this.progress});
 
   final AchievementProgress progress;
@@ -33,10 +35,10 @@ class AchievementsView extends StatefulWidget {
       'Las de contador (II, III) cuentan desde que existen las hazañas.';
 
   @override
-  State<AchievementsView> createState() => _AchievementsViewState();
+  ConsumerState<AchievementsView> createState() => _AchievementsViewState();
 }
 
-class _AchievementsViewState extends State<AchievementsView> {
+class _AchievementsViewState extends ConsumerState<AchievementsView> {
   var _filter = AchievementFilter.all;
 
   AchievementProgress get _p => widget.progress;
@@ -82,7 +84,7 @@ class _AchievementsViewState extends State<AchievementsView> {
             Text.rich(
               key: const ValueKey('ach-count'),
               TextSpan(children: [
-                TextSpan(text: 'Logradas ', style: DsText.detail()),
+                TextSpan(text: ref.t('ui.achievements.done_count'), style: DsText.detail()),
                 TextSpan(text: '$done', style: DsText.body(DsColors.reward)),
                 TextSpan(
                     text: '/${kAchievements.length}',
@@ -93,7 +95,7 @@ class _AchievementsViewState extends State<AchievementsView> {
               key: const ValueKey('ach-filter'),
               tabs: [
                 for (final f in AchievementFilter.values)
-                  DsTab(f.label, key: ValueKey('ach-filter-${f.name}')),
+                  DsTab(ref.t(f.labelKey), key: ValueKey('ach-filter-${f.name}')),
               ],
               index: _filter.index,
               onChanged: (i) =>
@@ -106,7 +108,7 @@ class _AchievementsViewState extends State<AchievementsView> {
           child: rows.isEmpty
               ? Padding(
                   padding: EdgeInsets.all(DsSpace.md),
-                  child: Text('Nada por acá todavía.',
+                  child: Text(ref.t('ui.achievements.empty'),
                       key: const ValueKey('ach-empty'),
                       style: DsText.detail()),
                 )
@@ -122,7 +124,7 @@ class _AchievementsViewState extends State<AchievementsView> {
 
 /// Fila de una línea (§ 7): marca, nombre, progreso de las de contador y
 /// recompensa a la derecha. El detalle va en el tooltip.
-class AchievementRow extends StatelessWidget {
+class AchievementRow extends ConsumerWidget {
   const AchievementRow({super.key, required this.def, required this.progress});
 
   final AchievementDef def;
@@ -131,7 +133,7 @@ class AchievementRow extends StatelessWidget {
   static const minHeight = 32.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final done = progress.isDone(def.id);
     final c = def.counter;
     final count = c == null ? null : progress.count(c);
@@ -149,7 +151,7 @@ class AchievementRow extends StatelessWidget {
                 border: Border.all(color: DsColors.textDisabled, width: 2)),
           );
     return Semantics(
-      label: '${def.name}, ${done ? 'Lograda' : 'Pendiente'}',
+      label: '${def.name}, ${ref.t(done ? 'ui.achievements.state.done' : 'ui.achievements.state.pending')}',
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: minHeight),
         child: DsListRow(
@@ -177,16 +179,22 @@ class AchievementRow extends StatelessWidget {
             children: [
               Text(retroText(def.how), style: DsText.detail(DsColors.text)),
               SizedBox(height: DsSpace.xs),
-              Text(retroText('Recompensa: ${def.reward.text}'),
+              Text(
+                  retroText(ref.t('ui.achievements.reward',
+                      {'reward': def.reward.text})),
                   style: DsText.detail(DsColors.reward)),
               if (progressText != null)
-                Text('Progreso: $progressText', style: DsText.detail()),
+                Text(
+                    ref.t('ui.achievements.progress',
+                        {'progress': progressText}),
+                    style: DsText.detail()),
               Text(
                   done
                       ? (when != null && when > 0
-                          ? 'Lograda el ${_date(when)}'
-                          : 'Lograda')
-                      : 'Pendiente',
+                          ? ref.t('ui.achievements.done_on',
+                              {'date': _date(when)})
+                          : ref.t('ui.achievements.state.done'))
+                      : ref.t('ui.achievements.state.pending'),
                   style: DsText.detail()),
             ],
           ),

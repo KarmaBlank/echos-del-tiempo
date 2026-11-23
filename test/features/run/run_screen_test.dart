@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
 import 'package:echos_del_tiempo/game_engine/rules/run_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../game_engine/session_test_helpers.dart';
@@ -42,9 +43,9 @@ void main() {
     addTearDown(c.dispose);
     await c.start();
     Future<void> show() async {
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
           home: Scaffold(
-              body: RunScreen(view: c.view!, controller: c, onExit: () {}))));
+              body: RunScreen(view: c.view!, controller: c, onExit: () {})))));
       await tester.pump();
       expect(tester.takeException(), isNull);
     }
@@ -70,7 +71,7 @@ void main() {
     expect(c.session!.run!.phase, RunPhase.reward);
     await show();
     expect(find.byKey(const ValueKey('run-reward-confirm')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('run-offer-OBJETOS-0')));
+    await tester.tap(find.byKey(const ValueKey('run-offer-items-0')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('run-reward-confirm')));
     await tester.pump();

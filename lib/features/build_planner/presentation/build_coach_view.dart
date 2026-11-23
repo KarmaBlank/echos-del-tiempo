@@ -14,6 +14,7 @@ import '../../../game_engine/rules/build_coach_rules.dart';
 import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import 'build_fit_badge.dart' show kPlanColor;
+import 'build_text.dart';
 
 /// Vista simple de BUILD (build_planner.md § 10): elegir plantilla, "Qué
 /// hacer ahora" y progreso por área plegable. Sin controles de edición:
@@ -61,10 +62,11 @@ class BuildCoachView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.buildStrings;
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: _empty ? _chooser() : _withPlan(),
+        children: _empty ? _chooser(s) : _withPlan(s),
       ),
     );
   }
@@ -79,42 +81,42 @@ class BuildCoachView extends StatelessWidget {
   // 1. Sin plan: elegí una plantilla
   // ------------------------------------------------------------------
 
-  List<Widget> _chooser() {
+  List<Widget> _chooser(Strings s) {
     final list = buildTemplatesFor(profile.classId);
     return [
-      const DsSectionHeader('Elegí una plantilla',
-          key: ValueKey('build-choose')),
+      DsSectionHeader(s.t('ui.build.coach.choose'),
+          key: const ValueKey('build-choose')),
       if (list.isEmpty)
         Padding(
           padding: EdgeInsets.all(DsSpace.md),
-          child: Text(retroText('No hay plantillas para tu clase'),
+          child: Text(retroText(s.t('ui.build.coach.no_templates')),
               style: DsText.detail()),
         ),
-      for (final t in list) _templateRow(t),
+      for (final t in list) _templateRow(t, s),
       Padding(
         padding:
             EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.sm),
         child: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           if (editable && onChangeTemplate != null)
-            DsButton('COMPARAR PLANTILLAS',
+            DsButton(s.t('ui.build.coach.compare'),
                 key: const ValueKey('build-template'),
                 kind: DsButtonKind.ghost,
                 size: DsButtonSize.compact,
-                tooltip: 'Ver cada plantilla en detalle, importar o exportar',
+                tooltip: s.t('ui.build.coach.compare_tip'),
                 onPressed: onChangeTemplate),
           if (onEdit != null)
-            DsButton('ARMAR A MANO',
+            DsButton(s.t('ui.build.coach.by_hand'),
                 key: const ValueKey('build-edit'),
                 kind: DsButtonKind.ghost,
                 size: DsButtonSize.compact,
-                tooltip: 'Editar plan: agregar metas una por una',
+                tooltip: s.t('ui.build.coach.by_hand_tip'),
                 onPressed: onEdit),
         ]),
       ),
     ];
   }
 
-  Widget _templateRow(BuildTemplate t) {
+  Widget _templateRow(BuildTemplate t, Strings s) {
     final type = _coach.templateWeaponType(t);
     final line = t.description.split('\n').first.trim();
     return KeyedSubtree(
@@ -133,11 +135,12 @@ class BuildCoachView extends StatelessWidget {
         ],
         subtitle: [
           if (line.isNotEmpty) line,
-          if (type != null) 'Arma: ${BuildCoach.typeName(type)}',
+          if (type != null)
+            s.t('ui.build.coach.weapon', {'type': BuildCoach.typeName(type)}),
         ].join('\n'),
         actions: [
           if (onApply != null)
-            DsButton('APLICAR',
+            DsButton(s.t('ui.build.coach.apply'),
                 key: ValueKey('build-apply-${t.id}'),
                 kind: DsButtonKind.primary,
                 size: DsButtonSize.compact,
@@ -151,34 +154,36 @@ class BuildCoachView extends StatelessWidget {
   // 2. Con plan
   // ------------------------------------------------------------------
 
-  List<Widget> _withPlan() {
+  List<Widget> _withPlan(Strings s) {
     final areas = _coach.areas(plan, profile, progress, stash: stash);
     return [
-      _summary(),
-      const DsSectionHeader('Qué hacer ahora', key: ValueKey('build-now')),
-      ..._steps(),
+      _summary(s),
+      DsSectionHeader(s.t('ui.build.coach.now'),
+          key: const ValueKey('build-now')),
+      ..._steps(s),
       Padding(
         padding:
             EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.xs),
         child: const DsLegend(key: ValueKey('build-legend')),
       ),
-      const DsSectionHeader('Tu progreso'),
+      DsSectionHeader(s.t('ui.build.coach.progress')),
       for (final a in areas)
         DsProgressFold(
           key: ValueKey('build-area-${a.area.name}'),
           title: a.area.label,
           done: a.done,
           total: a.total,
-          child: _areaBody(a.area),
+          child: _areaBody(a.area, s),
         ),
     ];
   }
 
-  Widget _summary() {
+  Widget _summary(Strings s) {
     final name = plan.name.isEmpty
         ? (plan.templateId == null
-            ? 'Plan propio'
-            : buildTemplate(plan.templateId!)?.name ?? 'Plan propio')
+            ? s.t('ui.build.coach.own_plan')
+            : buildTemplate(plan.templateId!)?.name ??
+                s.t('ui.build.coach.own_plan'))
         : plan.name;
     final pct = (progress.ratio * 100).round();
     return Padding(
@@ -193,21 +198,23 @@ class BuildCoachView extends StatelessWidget {
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text(retroText('Tu plan: $name  ·  $pct%'),
+              Text(
+                  retroText(s
+                      .t('ui.build.coach.summary', {'name': name, 'pct': pct})),
                   key: const ValueKey('build-summary-name'),
                   style: DsText.body(kPlanColor)),
               Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
                 if (editable)
-                  DsButton('CAMBIAR PLANTILLA',
+                  DsButton(s.t('ui.build.coach.change_template'),
                       key: const ValueKey('build-template'),
                       size: DsButtonSize.compact,
                       onPressed: onChangeTemplate),
                 if (onEdit != null)
-                  DsButton('EDITAR PLAN',
+                  DsButton(s.t('ui.build.coach.edit_plan'),
                       key: const ValueKey('build-edit'),
                       kind: DsButtonKind.ghost,
                       size: DsButtonSize.compact,
-                      tooltip: 'Avanzado: agregar y quitar metas a mano',
+                      tooltip: s.t('ui.build.coach.edit_plan_tip'),
                       onPressed: onEdit),
               ]),
             ],
@@ -219,20 +226,20 @@ class BuildCoachView extends StatelessWidget {
     );
   }
 
-  List<Widget> _steps() {
+  List<Widget> _steps(Strings s) {
     final steps =
         _coach.nextSteps(plan, profile, stash: stash, progress: progress);
     if (steps.isEmpty) {
       return [
-        const DsInfoRow(
-          key: ValueKey('build-step-none'),
-          leading: DsStatusMark(true),
-          title: 'Estás al día con tu plan',
+        DsInfoRow(
+          key: const ValueKey('build-step-none'),
+          leading: const DsStatusMark(true),
+          title: s.t('ui.build.coach.up_to_date'),
         ),
       ];
     }
     return [
-      for (final (i, s) in steps.indexed)
+      for (final (i, st) in steps.indexed)
         KeyedSubtree(
           key: ValueKey('build-step-$i'),
           child: Column(
@@ -241,10 +248,10 @@ class BuildCoachView extends StatelessWidget {
             children: [
               DsInfoRow(
                 leading: Text('${i + 1}.', style: DsText.body(DsColors.reward)),
-                title: s.text,
-                actions: [if (_stepButton(s, i) case final b?) b],
+                title: st.text,
+                actions: [if (_stepButton(st, i, s) case final b?) b],
               ),
-              if (s.where.isNotEmpty) _where(s, i),
+              if (st.where.isNotEmpty) _where(st, i, s),
             ],
           ),
         ),
@@ -252,21 +259,20 @@ class BuildCoachView extends StatelessWidget {
   }
 
   /// "Dónde la conseguís": sub-lista plegable bajo el paso (§ 10.2).
-  Widget _where(BuildStep s, int i) => Padding(
+  Widget _where(BuildStep st, int i, Strings s) => Padding(
         key: ValueKey('build-step-where-$i'),
         padding: EdgeInsets.fromLTRB(DsSpace.lg, 0, DsSpace.md, DsSpace.xs),
         child: Align(
           alignment: Alignment.centerLeft,
           child: DsFold(
-            label: s.text.contains(' el mod ')
-                ? 'DÓNDE LO CONSEGUÍS'
-                : 'DÓNDE LA CONSEGUÍS',
-            tooltip: 'De dónde sacarlo',
+            label: s.t('ui.build.coach.where',
+                {'kind': st.text.contains(' el mod ') ? 'mod' : 'other'}),
+            tooltip: s.t('ui.build.coach.where_tip'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                for (final (j, w) in s.where.indexed)
+                for (final (j, w) in st.where.indexed)
                   Text(retroText('- ${_x(w)}'),
                       key: ValueKey('build-step-where-$i-$j'),
                       style: DsText.detail()),
@@ -276,24 +282,26 @@ class BuildCoachView extends StatelessWidget {
         ),
       );
 
-  Widget? _stepButton(BuildStep s, int i) {
+  Widget? _stepButton(BuildStep st, int i, Strings s) {
     DsButton b(String label, VoidCallback? on, {String? tooltip}) =>
         DsButton(label,
             key: ValueKey('build-step-go-$i'),
             size: DsButtonSize.compact,
             tooltip: tooltip,
             onPressed: on);
-    return switch (s.action) {
+    return switch (st.action) {
       BuildStepAction.attributes when onOpenAttributes != null =>
-        b('IR A ATRIBUTOS', onOpenAttributes),
+        b(s.t('ui.build.action.go_attributes'), onOpenAttributes),
       BuildStepAction.tree when onOpenTree != null =>
-        b('IR AL ÁRBOL', onOpenTree),
-      BuildStepAction.ult when onOpenUlt != null => b('IR A ULT', onOpenUlt),
+        b(s.t('ui.build.action.go_tree'), onOpenTree),
+      BuildStepAction.ult when onOpenUlt != null =>
+        b(s.t('ui.build.action.go_ult'), onOpenUlt),
       BuildStepAction.armory when onOpenShop != null =>
-        b('IR A LA ARMERÍA', onOpenShop),
-      BuildStepAction.equip when onEquip != null && s.ref != null => () {
-          final why = equipBlocked?.call(s.ref!);
-          return b('EQUIPAR', why == null ? () => onEquip!(s.ref!) : null,
+        b(s.t('ui.build.action.go_shop'), onOpenShop),
+      BuildStepAction.equip when onEquip != null && st.ref != null => () {
+          final why = equipBlocked?.call(st.ref!);
+          return b(s.t('ui.build.action.equip'),
+              why == null ? () => onEquip!(st.ref!) : null,
               tooltip: why);
         }(),
       _ => null,
@@ -304,12 +312,12 @@ class BuildCoachView extends StatelessWidget {
   // 3. Detalle por área (plegado por defecto)
   // ------------------------------------------------------------------
 
-  Widget _areaBody(BuildArea a) {
+  Widget _areaBody(BuildArea a, Strings s) {
     final rows = switch (a) {
-      BuildArea.attributes => _attrRows(),
-      BuildArea.tree => _treeRows(),
-      BuildArea.weapon => _weaponRows(),
-      BuildArea.mods => _modRows(),
+      BuildArea.attributes => _attrRows(s),
+      BuildArea.tree => _treeRows(s),
+      BuildArea.weapon => _weaponRows(s),
+      BuildArea.mods => _modRows(s),
       BuildArea.skills => _goalRows({BuildGoalKind.skill}),
       BuildArea.ult => _goalRows({
           BuildGoalKind.ultActive,
@@ -321,7 +329,7 @@ class BuildCoachView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: rows.isEmpty
           ? [
-              const DsInfoRow(title: 'Tu plan no pide nada en esta área'),
+              DsInfoRow(title: s.t('ui.build.coach.area_empty')),
             ]
           : rows,
     );
@@ -337,17 +345,21 @@ class BuildCoachView extends StatelessWidget {
         ),
       );
 
-  List<Widget> _attrRows() => [
+  List<Widget> _attrRows(Strings s) => [
         for (final g in progress.goals)
           if (g.kind == BuildGoalKind.attribute)
             _status(
                 'build-simple-${g.key}',
                 g.done,
-                '${BuildCoach.attributeLabel(Attribute.values.byName(g.ref))}: '
-                    '${g.current} de ${g.total}'),
+                s.t('ui.build.coach.attr_progress', {
+                  'attr':
+                      BuildCoach.attributeLabel(Attribute.values.byName(g.ref)),
+                  'current': g.current,
+                  'total': g.total,
+                })),
       ];
 
-  List<Widget> _treeRows() {
+  List<Widget> _treeRows(Strings s) {
     final goals = [
       for (final g in progress.goals)
         if (g.kind == BuildGoalKind.treeNode ||
@@ -369,15 +381,18 @@ class BuildCoachView extends StatelessWidget {
         _status('build-simple-${g.key}', g.done, _x(g.label),
             sub: g.done || g.hint == null ? null : _x(g.hint!)),
       if (small.isNotEmpty)
-        _status('build-simple-tree-small', smallDone == small.length,
-            'Nodos de camino: $smallDone de ${small.length}'),
+        _status(
+            'build-simple-tree-small',
+            smallDone == small.length,
+            s.t('ui.build.coach.path_nodes',
+                {'done': smallDone, 'total': small.length})),
       if (onOpenTree != null)
         Padding(
           padding: EdgeInsets.symmetric(
               horizontal: DsSpace.md, vertical: DsSpace.xs),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: DsButton('VER EN EL ÁRBOL',
+            child: DsButton(s.t('ui.build.action.view_tree'),
                 key: const ValueKey('build-simple-tree'),
                 size: DsButtonSize.compact,
                 onPressed: onOpenTree),
@@ -388,7 +403,7 @@ class BuildCoachView extends StatelessWidget {
 
   /// "Armas recomendadas" (§ 10.4): el mejor tipo con su motivo y tus
   /// armas con Ideal / Sirve / De paso; el % va al tooltip.
-  List<Widget> _weaponRows() {
+  List<Widget> _weaponRows(Strings s) {
     final advice = _guide.advice(plan, profile, stash: stash);
     final picks = _guide
         .rankItems(plan, profile, stash: stash)
@@ -400,7 +415,7 @@ class BuildCoachView extends StatelessWidget {
     return [
       Padding(
         padding: EdgeInsets.fromLTRB(DsSpace.md, DsSpace.xs, DsSpace.md, 0),
-        child: Text(retroText('Armas recomendadas'),
+        child: Text(retroText(s.t('ui.build.coach.weapons')),
             key: const ValueKey('build-weapons'),
             style: DsText.detail(kPlanColor)),
       ),
@@ -409,7 +424,8 @@ class BuildCoachView extends StatelessWidget {
           key: const ValueKey('build-weapon-type'),
           child: DsInfoRow(
             leading: _icon(kPlanColor),
-            title: 'Mejor tipo: ${BuildCoach.typeName(type)}',
+            title: s.t('ui.build.coach.best_type',
+                {'type': BuildCoach.typeName(type)}),
             subtitle:
                 advice.idealReason.isEmpty ? null : _x(advice.idealReason),
           ),
@@ -428,7 +444,9 @@ class BuildCoachView extends StatelessWidget {
             key: ValueKey('build-weapon-$i'),
             card: DsTooltipCard(title: retroText(name), children: [
               if (r != null)
-                Text(retroText('${(r * 100).round()}% del arma objetivo'),
+                Text(
+                    retroText(s.t('ui.build.coach.target_pct',
+                        {'pct': (r * 100).round()})),
                     style: DsText.detail(kPlanColor)),
               for (final x in w.reasons)
                 Text(retroText(_x(x)), style: DsText.detail()),
@@ -437,12 +455,15 @@ class BuildCoachView extends StatelessWidget {
               leading: _icon(DsColors.textSecondary),
               subtitle: moves.isEmpty
                   ? null
-                  : ['Podés traerle en FUSIÓN:', for (final m in moves) '- $m']
-                      .join('\n'),
+                  : [
+                      s.t('ui.build.coach.fusion_moves'),
+                      for (final m in moves) '- $m'
+                    ].join('\n'),
               title: [
                 name,
-                if (w.equipped) '(equipada)',
-                if (stashUids.contains(w.item?.uid)) '(alijo)',
+                if (w.equipped) s.t('ui.build.weapon.equipped'),
+                if (stashUids.contains(w.item?.uid))
+                  s.t('ui.build.weapon.in_stash'),
               ].join(' '),
               tags: [
                 DsTag(fit.label.toUpperCase(),
@@ -461,13 +482,13 @@ class BuildCoachView extends StatelessWidget {
 
   /// "Mods buscados" (§ 10.5): uno por línea, nombre completo y nivel en
   /// palabras.
-  List<Widget> _modRows() {
+  List<Widget> _modRows(Strings s) {
     final mods = _coach.modsWanted(plan, profile, stash: stash);
     if (mods.isEmpty) return const [];
     return [
       Padding(
         padding: EdgeInsets.fromLTRB(DsSpace.md, DsSpace.xs, DsSpace.md, 0),
-        child: Text(retroText('Mods buscados'),
+        child: Text(retroText(s.t('ui.build.coach.mods')),
             key: const ValueKey('build-mods'),
             style: DsText.detail(kPlanColor)),
       ),

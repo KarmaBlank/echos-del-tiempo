@@ -15,6 +15,7 @@ import 'proc_fx.dart';
 import 'reaction_fx.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
+import '../combat_strings.dart';
 
 /// Lo que la escena dibuja en este frame (datos del widget). Inmutable.
 class SceneFrame {
@@ -168,6 +169,13 @@ class BattleSceneController extends ChangeNotifier {
   /// partículas).
   SceneOptions options = const SceneOptions();
 
+  /// Active language for the scene's labels; the battle sets it on every
+  /// build (docs/specs/i18n.md § 3).
+  Strings? strings;
+
+  /// [strings], or the default tables when nothing set them (tests).
+  Strings get text => strings ?? fallbackCombatStrings();
+
   /// Reloj de animación en ms (`performance.now()`); se detiene durante
   /// el hit-stop.
   double t = 0;
@@ -242,13 +250,13 @@ class BattleSceneController extends ChangeNotifier {
       if (state.boss && boss != null) {
         final d = kEnemies[boss.enemyType];
         intro =
-            BossIntro(boss.enemyType ?? '', boss.name, d?.title ?? 'Jefe', t);
+            BossIntro(boss.enemyType ?? '', boss.name, d?.title ?? text.t('ui.combat.scene.boss'), t);
       }
       return;
     }
     if (_seenSeq == eventSeq) return;
     _seenSeq = eventSeq;
-    addEffects(mapBattleEvents(events, state, layout.of));
+    addEffects(mapBattleEvents(events, state, layout.of, strings: text));
   }
 
   /// La cinemática ocupa la escena (preparación o descarga, o está por

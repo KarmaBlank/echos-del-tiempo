@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -13,12 +14,13 @@ import '../../world/presentation/session_view.dart';
 import '../../inventory/domain/item_text.dart';
 import '../domain/endgame_text.dart';
 import 'eco_zone_hub.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Portal de Ecos de una zona, en el exterior de su bioma
 /// (docs/specs/ecos_zone.md § 4): arriba los tiers (cerrados en gris con
 /// el motivo), abajo los Ecos de esta zona y del tier elegido con su ficha
 /// y ABRIR (consume el Eco, como siempre).
-class EcoZonePortalPanel extends StatefulWidget {
+class EcoZonePortalPanel extends ConsumerStatefulWidget {
   const EcoZonePortalPanel(
       {super.key, required this.view, required this.controller});
 
@@ -26,10 +28,10 @@ class EcoZonePortalPanel extends StatefulWidget {
   final SessionController controller;
 
   @override
-  State<EcoZonePortalPanel> createState() => _EcoZonePortalPanelState();
+  ConsumerState<EcoZonePortalPanel> createState() => _EcoZonePortalPanelState();
 }
 
-class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
+class _EcoZonePortalPanelState extends ConsumerState<EcoZonePortalPanel> {
   int? _tier;
   String? _sel;
 
@@ -41,7 +43,8 @@ class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
     final zone = c.ecoZone ?? 1;
     final p = view.actor!.profile;
     final rules = c.engine.progression;
-    final name = c.engine.catalog.zone(zone)?.name ?? 'Zona $zone';
+    final name = c.engine.catalog.zone(zone)?.name ??
+        ref.t('ui.endgame.zone_n', {'zone': zone});
     final open = EcoPortalRules.unlockedTier(p, zone);
     var tier = _tier ?? c.ecoTier;
     if (tier == null) {
@@ -65,16 +68,17 @@ class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
     final lock = EcoPortalRules.lockReason(p, zone, tier, zoneName: name);
     return PanelFrame(
       key: const ValueKey('panel-eco-zone'),
-      title: 'PORTAL DE ECOS · ZONA $zone',
+      title: ref.t('ui.endgame.zone_portal.title', {'zone': zone}),
       width: 960,
       fill: true,
       onClose: c.closePanel,
-      actions: [PanelButton('CERRAR [ESC]', onPressed: c.closePanel)],
+      actions: [
+        PanelButton(ref.t('ui.endgame.close'), onPressed: c.closePanel)
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          PanelHint('$name: elegí un tier y un Eco tuyo de esta zona. ABRIR '
-              'lo gasta y te lleva a una mazmorra nueva.'),
+          PanelHint(ref.t('ui.endgame.zone_portal.hint', {'name': name})),
           EcoTierGrid(
             keyPrefix: 'eco-zone-tier',
             profile: p,
@@ -98,8 +102,8 @@ class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
                       key: const ValueKey('eco-zone-empty'),
                       protoColor(
                           ProtoColors.dim,
-                          'No tenés Ecos T$tier de esta zona. Los Ecos caen '
-                          'como botín; este portal no abre nada sin uno.')),
+                          ref.t('ui.endgame.zone_portal.empty',
+                              {'tier': tier}))),
                 for (final x in ecos)
                   MenuRow(
                     wrap: true,
@@ -111,12 +115,14 @@ class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
               ],
               detail: PanelDetail(
                 footer: [
-                  const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
-                  PanelButton('ABRIR',
+                  KeyHints(
+                      confirm: ref.t('ui.endgame.hint.choose'),
+                      back: ref.t('ui.endgame.hint.close')),
+                  PanelButton(ref.t('ui.endgame.open'),
                       key: const ValueKey('eco-zone-open'),
                       accent: ProtoColors.green,
                       reason: view.actingCompanion
-                          ? 'Los Ecos los abre el líder'
+                          ? ref.t('ui.endgame.zone_portal.leader_opens')
                           : ecoZoneOpenBlocked(s, p, e, zone, tier,
                               near: c.nearEcoPortal == zone, zoneName: name),
                       onPressed: () {
@@ -126,7 +132,7 @@ class _EcoZonePortalPanelState extends State<EcoZonePortalPanel> {
                 children: [
                   if (e == null)
                     ProtoText(protoColor(ProtoColors.dim,
-                        'Sin un Eco de este tier y zona el portal no abre.'))
+                        ref.t('ui.endgame.zone_portal.no_eco')))
                   else
                     ProtoText(
                         key: const ValueKey('eco-zone-detail'),

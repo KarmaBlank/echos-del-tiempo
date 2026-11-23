@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -9,12 +10,13 @@ import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../app/widgets/menu_focus.dart';
 import 'mission_card.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Mostrador de misiones (`board` del prototipo) en lista + detalle: una
 /// fila por zona / misión (rango, nombre y, a la derecha, el nivel o
 /// "Bloqueada") y, a la derecha, la tarjeta de la elegida con objetivo,
 /// recompensas y `PROPONER`. Ver docs/specs/panels.md § "Mostrador".
-class MissionBoardPanel extends StatefulWidget {
+class MissionBoardPanel extends ConsumerStatefulWidget {
   const MissionBoardPanel({
     super.key,
     required this.missions,
@@ -63,24 +65,11 @@ class MissionBoardPanel extends StatefulWidget {
   /// misiones salen desactivadas con este motivo (§ 2).
   final String? lockText;
 
-  static const help = '<b>Mostrador</b><br>'
-      'Propón una zona o misión: cuando todos votan SÍ, a prepararse.<br>'
-      'Elige una misión y pulsa PROPONER: se abre una votación para todo el '
-      'grupo.<br>'
-      'Cuando <b>todos</b> votan SÍ pasan a la preparación (tienda, forja, '
-      'equipo) y la misión empieza cuando todos marcan ¡LISTO!.<br>'
-      'Es también el mapa de viaje: las zonas desbloqueadas se eligen '
-      'acá (no hay mundo para caminar).<br>'
-      '<span class="k">Rango</span>: S si terminas a tiempo sin K.O.; más '
-      'rango = más créditos y más chance de arma.<br>'
-      '<span class="k">Flechas / 1-9</span> eligen · '
-      '<span class="k">Enter</span> elige · <span class="k">Esc</span> cierra.';
-
   @override
-  State<MissionBoardPanel> createState() => _MissionBoardPanelState();
+  ConsumerState<MissionBoardPanel> createState() => _MissionBoardPanelState();
 }
 
-class _MissionBoardPanelState extends State<MissionBoardPanel> {
+class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
   String? _sel;
 
   static const _tutorialId = 'tutorial';
@@ -101,12 +90,15 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         id: _tutorialId,
         row: DsListRow(
           key: const ValueKey('mission-tutorial'),
-          title: 'TUTORIAL: Ecos de práctica',
+          title: ref.t('ui.missions.board.tutorial'),
           titleColor: DsColors.reward,
           selected: selected,
           autofocus: selected,
           onTap: () => setState(() => _sel = _tutorialId),
-          trailing: Text(widget.tutorialDone ? 'Hecho' : 'Pendiente',
+          trailing: Text(
+              ref.t(widget.tutorialDone
+                  ? 'ui.missions.board.done'
+                  : 'ui.missions.board.pending'),
               style: DsText.detail(widget.tutorialDone
                   ? DsColors.success
                   : DsColors.warning)),
@@ -169,17 +161,17 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         index: idx < 0 ? 0 : idx,
         onChanged: (i) => setState(() => _sel = entries[i].$1.id),
         child: PanelFrame(
-          title: 'TABLERO DE ENCARGOS',
+          title: ref.t('ui.missions.board.title'),
           width: 1000,
           fill: true,
-          help: MissionBoardPanel.help,
+          help: ref.t('ui.missions.board.help'),
           onClose: w.onClose,
           actions: [
             if (w.onCharacter != null)
-              DsButton('PERSONAJE [TAB]',
+              DsButton(ref.t('ui.missions.character'),
                   key: const ValueKey('board-character'),
                   onPressed: w.onCharacter),
-            DsButton('CERRAR [ESC]',
+            DsButton(ref.t('ui.missions.close'),
                 key: const ValueKey('board-close'), onPressed: w.onClose),
           ],
           child: Column(
@@ -226,7 +218,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         onTap: () => setState(() => _sel = m.id),
         leading: Text(m.rank, style: DsText.subtitle(DsColors.warning)),
         trailing: Text(
-            locked ? 'Bloqueada' : 'Lv ${m.recommendedLevel}',
+            locked
+                ? ref.t('ui.missions.locked')
+                : ref.t('ui.missions.level_short', {'level': m.recommendedLevel}),
             style: DsText.detail(locked
                 ? DsColors.textSecondary
                 : low
@@ -242,9 +236,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     // TUTORIAL pendiente en la sala (combat_tutorial.md § 2).
     final reason = w.lockText ??
         (locked
-            ? 'Bloqueada'
+            ? ref.t('ui.missions.locked')
             : w.voteOpen
-                ? 'Ya hay una votación'
+                ? ref.t('ui.missions.vote_open')
                 : null);
     return PanelDetail(
       footer: [
@@ -260,7 +254,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 textAlign: TextAlign.right,
                 style: DsText.detail(DsColors.danger)),
           ),
-        DsButton('PROPONER',
+        DsButton(ref.t('ui.missions.propose'),
             key: ValueKey('propose-${m.id}'),
             kind: DsButtonKind.primary,
             tooltip: reason,

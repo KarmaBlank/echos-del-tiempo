@@ -21,6 +21,7 @@ import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -311,7 +312,7 @@ void main() {
       })
         ..brittle = true
         ..freezeResist = 0;
-      final chips = combatantChips(c);
+      final chips = combatantChips(fallbackCombatStrings(), c);
       final wet = chips.firstWhere((x) => x.short == 'M2');
       expect(wet.icon, 'status_wet');
       expect(wet.tip, contains('2 turnos'));
@@ -323,7 +324,7 @@ void main() {
         ..brittle = false
         ..statuses[StatusKind.freeze] = 0
         ..freezeResist = 2;
-      expect(combatantChips(c).map((x) => x.long), contains('Resiste hielo 2'));
+      expect(combatantChips(fallbackCombatStrings(), c).map((x) => x.long), contains('Resiste hielo 2'));
     });
 
     testWidgets('StatusChipView dibuja el ícono delante de la letra',

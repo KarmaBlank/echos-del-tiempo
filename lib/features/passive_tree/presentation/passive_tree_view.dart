@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:flutter/services.dart';
@@ -18,13 +19,14 @@ import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../build_planner/presentation/build_planner_view.dart'
     show PickOption, showBuildPicker;
 import '../domain/passive_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// El árbol de pasivas v3 (docs/specs/passive_tree_v3.md § 13): lienzo con
 /// arrastre, rueda y botones de zoom, buscador que resalta nodos, camino
 /// hasta el nodo bajo el mouse con su costo, tooltip con el efecto
 /// completo, info del nodo elegido y botones de tomar y reiniciar. Ver
 /// también docs/specs/panels.md § "Árbol".
-class PassiveTreeView extends StatefulWidget {
+class PassiveTreeView extends ConsumerStatefulWidget {
   const PassiveTreeView({
     super.key,
     required this.rules,
@@ -34,7 +36,7 @@ class PassiveTreeView extends StatefulWidget {
     this.resetReason,
     this.onReset,
     this.showReset = true,
-    this.resetLabel = 'REINICIAR ÁRBOL',
+    this.resetLabel,
     this.height = PassiveTreeView.viewportHeight,
     this.showHelp = true,
     this.planned = const {},
@@ -72,7 +74,7 @@ class PassiveTreeView extends StatefulWidget {
   final String? resetReason;
   final VoidCallback? onReset;
   final bool showReset;
-  final String resetLabel;
+  final String? resetLabel;
 
   /// Alto del visor; `null` = ocupa lo que queda debajo de la fila de
   /// arriba (el padre debe dar un alto acotado, como el panel de
@@ -132,10 +134,10 @@ class PassiveTreeView extends StatefulWidget {
       };
 
   @override
-  State<PassiveTreeView> createState() => _PassiveTreeViewState();
+  ConsumerState<PassiveTreeView> createState() => _PassiveTreeViewState();
 }
 
-class _PassiveTreeViewState extends State<PassiveTreeView> {
+class _PassiveTreeViewState extends ConsumerState<PassiveTreeView> {
   final _transform = TransformationController();
   final _search = TextEditingController();
   String? _hover;
@@ -158,7 +160,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       widget.profile.pendingMilestones.isNotEmpty;
 
   /// Aviso del árbol bloqueado por un hito pendiente.
-  static const lockedText = 'Primero elegí tu hito';
+  String get lockedText => ref.t('ui.passive_tree.locked');
 
   void _take(String id) {
     if (_locked) return;
@@ -328,18 +330,26 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final names = [for (final r in route) _cat.nodes[r]!.name].join(' · ');
     final can = math.min(n, have);
     final choice = await showBuildPicker<String>(
-        context, can >= n ? 'Tomar $n nodos por $n puntos' : 'Faltan puntos', [
+        context,
+        can >= n
+            ? ref.t('ui.passive_tree.path.take_all', {'n': n})
+            : ref.t('ui.passive_tree.path.missing_points'),
+        [
       if (can > 0)
         PickOption(
             'take',
             can >= n
-                ? 'Tomar $n nodos por $n puntos'
-                : 'Tomar los primeros $can de $n (te faltan ${n - can})',
+                ? ref.t('ui.passive_tree.path.take_all', {'n': n})
+                : ref.t('ui.passive_tree.path.take_some',
+                    {'can': can, 'n': n, 'missing': n - can}),
             names,
             key: 'path-take'),
       if (widget.onMark != null)
         PickOption('mark',
-            widget.planned.contains(id) ? 'Quitar marca' : 'Marcar', null,
+            ref.t(widget.planned.contains(id)
+                ? 'ui.passive_tree.path.unmark'
+                : 'ui.passive_tree.path.mark'),
+            null,
             key: 'path-mark'),
     ]);
     if (!mounted) return;
@@ -507,14 +517,14 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     return DsToolbar(
       title: '',
       center: Row(children: [
-        Text(retroText('$points ${points == 1 ? 'punto' : 'puntos'}'),
+        Text(retroText(ref.t('ui.passive_tree.points', {'n': points})),
             key: const ValueKey('tree-points'),
             style: DsText.body(
                 points > 0 ? DsColors.reward : DsColors.textSecondary)),
         if (pts > 0) ...[
           SizedBox(width: DsSpace.sm),
-          const DsTag('HITO PENDIENTE',
-              key: ValueKey('tree-milestone-points'),
+          DsTag(ref.t('ui.passive_tree.milestone_pending'),
+              key: const ValueKey('tree-milestone-points'),
               color: milestoneColor),
         ],
         SizedBox(width: DsSpace.md),
@@ -565,14 +575,14 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Align(
+            Align(
                 alignment: Alignment.centerLeft,
-                child: DsTag('PENDIENTE',
-                    key: ValueKey('milestone-pending'),
+                child: DsTag(ref.t('ui.passive_tree.pending'),
+                    key: const ValueKey('milestone-pending'),
                     color: DsColors.actionPrimary)),
             SizedBox(height: DsSpace.xs),
             // Jerarquía por color: título > instrucción (secundario).
-            Text(retroText('HITO DEL NIVEL $m'),
+            Text(retroText(ref.t('ui.passive_tree.milestone_title', {'level': m})),
                 style: DsText.subtitle(DsColors.textTitle)),
             SizedBox(height: DsSpace.xs),
             Text(retroText(lockedText),
@@ -580,8 +590,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 style: DsText.body(DsColors.textPrimary)),
             SizedBox(height: DsSpace.xs),
             Text(
-                retroText('Elegí una keystone. El camino hasta ella '
-                    'se toma solo y es gratis.'),
+                retroText(ref.t('ui.passive_tree.milestone_hint')),
                 key: const ValueKey('milestone-points'),
                 style: DsText.detail(DsColors.textSecondary)),
             for (final id in options) ...[
@@ -627,8 +636,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         (widget.rules.pathTo(p.classId, p.passiveProgress, id)?.length ?? 1);
     final free = math.min(steps, PassiveTreeRules.milestonePoints[m]!);
     final pathText = free >= steps
-        ? 'Camino: $steps ${steps == 1 ? 'nodo' : 'nodos'} gratis'
-        : 'Camino: $steps nodos, $free gratis';
+        ? ref.t('ui.passive_tree.milestone_path_free', {'steps': steps})
+        : ref.t('ui.passive_tree.milestone_path',
+            {'steps': steps, 'free': free});
     void enter() => setState(() {
           _cardHover = id;
           _lookAtPath(id);
@@ -656,7 +666,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
               e.startsWith('${node.name}: ')
                   ? e.substring(node.name.length + 2)
                   : e,
-            chosen ? 'Clic de nuevo para confirmar' : pathText,
+            chosen ? ref.t('ui.passive_tree.click_to_confirm') : pathText,
           ],
           onPressed: widget.inBattle
               ? null
@@ -679,8 +689,12 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   /// "Hito del nivel N" si [id] es la keystone elegida en un hito.
   String? _milestoneOf(String id) {
     final p = widget.profile;
-    if (p.milestone10 == id) return 'Hito del nivel 10';
-    if (p.milestone20 == id) return 'Hito del nivel 20';
+    if (p.milestone10 == id) {
+      return ref.t('ui.passive_tree.milestone_of', {'level': 10});
+    }
+    if (p.milestone20 == id) {
+      return ref.t('ui.passive_tree.milestone_of', {'level': 20});
+    }
     return null;
   }
 
@@ -702,9 +716,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         children: [
           if (_query.trim().length >= 2) ...[
             Text(
-                retroText(hitCount == 0
-                    ? 'Sin coincidencias'
-                    : '$hitCount coincidencia${hitCount == 1 ? '' : 's'}'),
+                retroText(ref.t('ui.passive_tree.search_hits', {'n': hitCount})),
                 key: const ValueKey('tree-search-count'),
                 style: DsText.detail(
                     hitCount == 0 ? DsColors.textSecondary : DsColors.mp)),
@@ -712,35 +724,41 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           ],
           DsSearchField(
             key: const ValueKey('tree-search'),
-            hint: 'Buscar nodo...',
+            hint: ref.t('ui.passive_tree.search'),
             width: 180,
             controller: _search,
             onChanged: (v) => setState(() => _query = v),
             onSubmitted: (_) => _goToFirstHit(),
           ),
           SizedBox(width: DsSpace.sm),
-          _iconButton('tree-zoom-out', PixelIconKind.minus, 'Alejar',
+          _iconButton('tree-zoom-out', PixelIconKind.minus,
+              ref.t('ui.passive_tree.zoom_out'),
               () => _zoomBy(1 / 1.25)),
           SizedBox(width: DsSpace.xs),
           _iconButton(
-              'tree-zoom-in', PixelIconKind.plus, 'Acercar', () => _zoomBy(1.25)),
+              'tree-zoom-in', PixelIconKind.plus, ref.t('ui.passive_tree.zoom_in'),
+              () => _zoomBy(1.25)),
           SizedBox(width: DsSpace.xs),
-          _iconButton('tree-fit', PixelIconKind.fit, 'Ver todo', _fitAll),
+          _iconButton('tree-fit', PixelIconKind.fit,
+              ref.t('ui.passive_tree.fit'), _fitAll),
           SizedBox(width: DsSpace.xs),
-          _iconButton('tree-home', PixelIconKind.target, 'Mi clase', _home),
+          _iconButton('tree-home', PixelIconKind.target,
+              ref.t('ui.passive_tree.home'), _home),
           if (widget.onUntake != null && _last != null) ...[
             SizedBox(width: DsSpace.sm),
-            DsButton('DESHACER',
+            DsButton(ref.t('ui.passive_tree.undo'),
                 key: const ValueKey('tree-undo'),
                 kind: DsButtonKind.ghost,
                 size: DsButtonSize.compact,
-                tooltip: _undo == null ? 'Ya no se puede deshacer' : null,
+                tooltip: _undo == null
+                    ? ref.t('ui.passive_tree.undo_gone')
+                    : null,
                 onPressed: _undo),
           ],
           if (widget.showReset) ...[
             SizedBox(width: DsSpace.sm),
             // El motivo (p. ej. "No hay nodos tomados") va en el tooltip.
-            DsButton(widget.resetLabel,
+            DsButton(widget.resetLabel ?? ref.t('ui.passive_tree.reset'),
                 key: const ValueKey('tree-reset'),
                 kind: DsButtonKind.ghost,
                 size: DsButtonSize.compact,
@@ -852,6 +870,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                           order: widget.planOrder,
                           transform: _transform.value.clone(),
                           textScaler: MediaQuery.textScalerOf(context),
+                          nextLabel: ref.t('ui.passive_tree.plan.next_short'),
                         ),
                       ),
                     ),
@@ -883,18 +902,20 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   String? focusOf() => _hover ?? _pinned ?? _cardHover ?? _selected;
 
   String _kindText(PassiveNode n) => switch (n.kind) {
-        'k' => 'KEYSTONE',
-        'n' => n.isMinor ? 'NOTABLE MENOR' : 'NOTABLE',
-        'st' => 'INICIO DE CLASE',
+        'k' => ref.t('ui.passive_tree.kind.keystone'),
+        'n' => ref.t(n.isMinor
+            ? 'ui.passive_tree.kind.minor_notable'
+            : 'ui.passive_tree.kind.notable'),
+        'st' => ref.t('ui.passive_tree.kind.class_start'),
         _ => '',
       };
 
   String? _pathText(PassivePath? path) => path == null
       ? null
       : '${switch (path.kind) {
-          'puente' => 'Puente',
-          'grupo' => 'Grupo',
-          _ => 'Cluster',
+          'puente' => ref.t('ui.passive_tree.path_kind.bridge'),
+          'grupo' => ref.t('ui.passive_tree.path_kind.group'),
+          _ => ref.t('ui.passive_tree.path_kind.cluster'),
         }} ${path.name}: ${path.theme}';
 
   /// Cuántos puntos cuesta llegar (y tomar) el nodo, si todavía no lo tiene.
@@ -904,7 +925,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final route = widget.rules.pathTo(p.classId, p.passiveProgress, id);
     if (route == null) return null;
     final n = route.length;
-    return 'Costo: $n punto${n == 1 ? '' : 's'}';
+    return ref.t('ui.passive_tree.cost', {'n': n});
   }
 
   /// Si [id] toca un nodo tomado (o el inicio): TOMAR NODO tiene sentido.
@@ -950,16 +971,22 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 key: pinned ? const ValueKey('tree-milestone-mark') : null,
                 color: milestoneColor),
           if (widget.planned.contains(id))
-            const DsTag('★ EN TU BUILD', color: PassiveTreePainter.planColor),
+            DsTag(ref.t('ui.passive_tree.in_build'),
+                color: PassiveTreePainter.planColor),
           if (widget.planOrder.of(id) case final s?)
-            DsTag(s.step == 1 ? 'SIGUIENTE' : 'PASO ${s.step}',
+            DsTag(
+                s.step == 1
+                    ? ref.t('ui.passive_tree.plan.next')
+                    : ref.t('ui.passive_tree.plan.step', {'step': s.step}),
                 color: s.step == 1
                     ? DsColors.reward
                     : PassiveTreePainter.planColor),
         ],
         children: [
           if (widget.planOrder.of(id) case final s?)
-            Text(retroText('Paso ${s.step} del plan: ${s.reason}'),
+            Text(
+                retroText(ref.t('ui.passive_tree.plan.step_reason',
+                    {'step': s.step, 'reason': s.reason})),
                 key: const ValueKey('tree-plan-step'),
                 style: DsText.detail(s.step == 1
                     ? DsColors.reward
@@ -997,7 +1024,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       return [
         gap(),
         DsButton(
-            widget.planned.contains(node.id) ? 'QUITAR DEL PLAN' : 'PLANIFICAR',
+            ref.t(widget.planned.contains(node.id)
+                ? 'ui.passive_tree.plan.remove'
+                : 'ui.passive_tree.plan.add'),
             key: const ValueKey('tree-plan'),
             size: DsButtonSize.compact,
             accent: PassiveTreePainter.planColor,
@@ -1013,7 +1042,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     if (_connected(node.id)) {
       return [
         gap(),
-        DsButton('TOMAR NODO',
+        DsButton(ref.t('ui.passive_tree.take_node'),
             key: const ValueKey('tree-take'),
             kind: DsButtonKind.primary,
             size: DsButtonSize.compact,
@@ -1026,7 +1055,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     if (widget.onTakePath == null || route.length < 2) return const [];
     return [
       gap(),
-      DsButton('TOMAR CAMINO (${route.length})',
+      DsButton(ref.t('ui.passive_tree.take_path', {'n': route.length}),
           key: const ValueKey('tree-take-path'),
           size: DsButtonSize.compact,
           tooltip: _locked ? lockedText : null,
@@ -1040,7 +1069,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   List<Widget> _untakeBox(PassiveNode node) {
     final p = widget.profile;
     final reason = widget.inBattle
-        ? 'No en batalla'
+        ? ref.t('ui.passive_tree.not_in_battle')
         : widget.untakeReason?.call(node.id);
     final ms = p.milestone10 == node.id
         ? 10
@@ -1048,26 +1077,28 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             ? 20
             : null;
     final what = ms == null
-        ? 'Te devuelve 1 punto'
-        : 'Deja pendiente el hito del nivel $ms';
+        ? ref.t('ui.passive_tree.untake.refund')
+        : ref.t('ui.passive_tree.untake.milestone', {'level': ms});
     return [
       SizedBox(height: DsSpace.sm),
       Text(
-          retroText(reason ?? '¿Quitar ${node.name}? $what'),
+          retroText(reason ??
+              ref.t('ui.passive_tree.untake.ask',
+                  {'name': node.name, 'what': what})),
           key: const ValueKey('tree-untake-text'),
           style: DsText.body(
               reason == null ? DsColors.textPrimary : RetroPalette.red)),
       SizedBox(height: DsSpace.xs),
       Row(mainAxisSize: MainAxisSize.min, children: [
         if (reason == null) ...[
-          DsButton('QUITAR',
+          DsButton(ref.t('ui.passive_tree.untake.remove'),
               key: const ValueKey('tree-untake'),
               kind: DsButtonKind.primary,
               size: DsButtonSize.compact,
               onPressed: () => _untake(node.id)),
           SizedBox(width: DsSpace.sm),
         ],
-        DsButton('Cancelar',
+        DsButton(ref.t('ui.passive_tree.untake.cancel'),
             key: const ValueKey('tree-untake-cancel'),
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _pinned = null)),
@@ -1076,13 +1107,22 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   }
 
   (String, Color) _stateText(TreeNodeStatus st) => switch (st.state) {
-        TreeNodeState.start => ('Nodo inicial', RetroPalette.muted),
-        TreeNodeState.taken => ('Tomado', RetroPalette.green),
+        TreeNodeState.start => (
+            ref.t('ui.passive_tree.state.start'),
+            RetroPalette.muted
+          ),
+        TreeNodeState.taken => (
+            ref.t('ui.passive_tree.state.taken'),
+            RetroPalette.green
+          ),
         TreeNodeState.available => (
-            'Disponible: clic para tomar',
+            ref.t('ui.passive_tree.state.available'),
             ProtoColors.sky
           ),
-        TreeNodeState.locked => (st.reason ?? 'Bloqueado', RetroPalette.red),
+        TreeNodeState.locked => (
+            st.reason ?? ref.t('ui.passive_tree.state.locked'),
+            RetroPalette.red
+          ),
       };
 
   /// Leyenda en una sola fila, abajo del árbol (Detalle, marca de color).
@@ -1094,16 +1134,28 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             ? BoxDecoration(border: Border.all(color: c, width: 2))
             : BoxDecoration(color: c));
     final items = <(String, Widget)>[
-      ('Inicio', dot(RetroPalette.gold)),
-      ('Tomado', dot(RetroPalette.green)),
-      ('Keystone', dot(PassiveTreePainter.keyTaken)),
-      ('Disponible', dot(ProtoColors.sky)),
-      ('Bloqueado', dot(PassiveTreePainter.locked)),
-      ('Búsqueda', dot(PassiveTreePainter.searchColor, ring: true)),
+      (ref.t('ui.passive_tree.legend.start'), dot(RetroPalette.gold)),
+      (ref.t('ui.passive_tree.legend.taken'), dot(RetroPalette.green)),
+      (
+        ref.t('ui.passive_tree.legend.keystone'),
+        dot(PassiveTreePainter.keyTaken)
+      ),
+      (ref.t('ui.passive_tree.legend.available'), dot(ProtoColors.sky)),
+      (
+        ref.t('ui.passive_tree.legend.locked'),
+        dot(PassiveTreePainter.locked)
+      ),
+      (
+        ref.t('ui.passive_tree.legend.search'),
+        dot(PassiveTreePainter.searchColor, ring: true)
+      ),
       if (widget.planned.isNotEmpty || widget.planning)
-        ('Plan', dot(PassiveTreePainter.planColor, ring: true)),
+        (
+          ref.t('ui.passive_tree.legend.plan'),
+          dot(PassiveTreePainter.planColor, ring: true)
+        ),
       if (widget.planOrder.steps.isNotEmpty)
-        ('Orden (SIG = siguiente)', dot(DsColors.reward)),
+        (ref.t('ui.passive_tree.legend.order'), dot(DsColors.reward)),
     ];
     return FittedBox(
       key: const ValueKey('tree-legend'),
@@ -1611,12 +1663,16 @@ class PlanOrderPainter extends CustomPainter {
     required this.order,
     required this.transform,
     required this.textScaler,
+    this.nextLabel = 'SIG',
   });
 
   final PassiveTreeCatalog catalog;
   final TreeOrder order;
   final Matrix4 transform;
   final TextScaler textScaler;
+
+  /// Mark of the next step (`ui.passive_tree.plan.next_short`).
+  final String nextLabel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1630,7 +1686,7 @@ class PlanOrderPainter extends CustomPainter {
       final color = next ? DsColors.reward : PassiveTreePainter.planColor;
       final tp = TextPainter(
         text: TextSpan(
-          text: next ? 'SIG' : '${s.step}',
+          text: next ? nextLabel : '${s.step}',
           style: RetroType.smallStyle.copyWith(color: ProtoColors.shadow),
         ),
         textScaler: textScaler,
@@ -1665,5 +1721,6 @@ class PlanOrderPainter extends CustomPainter {
   bool shouldRepaint(PlanOrderPainter old) =>
       old.transform != transform ||
       old.order != order ||
-      old.textScaler != textScaler;
+      old.textScaler != textScaler ||
+      old.nextLabel != nextLabel;
 }

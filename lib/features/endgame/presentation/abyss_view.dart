@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
@@ -21,12 +22,13 @@ import '../../combat/presentation/pixel_sprite.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/endgame_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pestaña ABISMO del Portal del Eco (docs/specs/abyss_bosses.md § 4):
 /// tus Fragmentos, una tarjeta por Jefe del Abismo (silueta hasta
 /// vencerlo; el secreto, oculto hasta vencer a los 4) y la ficha con
 /// ABRIR → confirmar el costo.
-class AbyssView extends StatefulWidget {
+class AbyssView extends ConsumerStatefulWidget {
   const AbyssView({
     super.key,
     required this.view,
@@ -39,10 +41,10 @@ class AbyssView extends StatefulWidget {
   final GameSprites? sprites;
 
   @override
-  State<AbyssView> createState() => _AbyssViewState();
+  ConsumerState<AbyssView> createState() => _AbyssViewState();
 }
 
-class _AbyssViewState extends State<AbyssView> {
+class _AbyssViewState extends ConsumerState<AbyssView> {
   int _sel = 1;
   bool _confirm = false;
 
@@ -63,7 +65,8 @@ class _AbyssViewState extends State<AbyssView> {
       list: [
         ProtoText(
             key: const ValueKey('abyss-fragments'),
-            '<span class="k">Fragmentos:</span> ${abyssFragmentsMarkup(p)}'),
+            ref.t('ui.endgame.abyss.fragments',
+                {'list': abyssFragmentsMarkup(p)})),
         const SizedBox(height: 8),
         CardGrid(
           minWidth: 250,
@@ -91,12 +94,12 @@ class _AbyssViewState extends State<AbyssView> {
                 ProtoText(
                     key: const ValueKey('abyss-confirm-text'),
                     protoColor(ProtoColors.orange,
-                        'Se consume: ${protoEsc(rules.costText(d))} al '
-                        'entrar. ¿Abrir?')),
-                PanelButton('CANCELAR',
+                        ref.t('ui.endgame.abyss.confirm',
+                            {'cost': protoEsc(rules.costText(d))}))),
+                PanelButton(ref.t('ui.endgame.cancel'),
                     key: const ValueKey('abyss-cancel'),
                     onPressed: () => setState(() => _confirm = false)),
-                PanelButton('CONFIRMAR',
+                PanelButton(ref.t('ui.endgame.confirm'),
                     key: const ValueKey('abyss-confirm'),
                     accent: ProtoColors.green,
                     reason: blocked, onPressed: () {
@@ -105,8 +108,10 @@ class _AbyssViewState extends State<AbyssView> {
                 }),
               ]
             : [
-                const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
-                PanelButton('ABRIR',
+                KeyHints(
+                    confirm: ref.t('ui.endgame.hint.choose'),
+                    back: ref.t('ui.endgame.hint.close')),
+                PanelButton(ref.t('ui.endgame.open'),
                     key: const ValueKey('abyss-open'),
                     accent: ProtoColors.green,
                     reason: blocked,
@@ -124,7 +129,7 @@ class _AbyssViewState extends State<AbyssView> {
 
   Widget _card(PlayerProfile p, AbyssBossDef b, AbyssRules rules) {
     final hidden = b.secret && !AbyssRules.visible(p, b);
-    final reason = hidden ? 'Vencé a los 4 Jefes del Abismo' : null;
+    final reason = hidden ? ref.t('ui.endgame.abyss.beat_four') : null;
     final cost = rules.cost(b);
     return ActionCard(
       key: ValueKey('abyss-card-${b.number}'),
@@ -132,9 +137,12 @@ class _AbyssViewState extends State<AbyssView> {
       icon: _sprite(p, b),
       selected: b.number == _sel,
       description: hidden
-          ? 'Requisito: los 4 Jefes del Abismo'
-          : 'Nivel ${b.level} · ${b.phases.length} fases'
-              '${AbyssRules.known(p, b) ? ' · vencido' : ''}',
+          ? ref.t('ui.endgame.abyss.requirement')
+          : ref.t('ui.endgame.abyss.card', {
+              'level': b.level,
+              'phases': b.phases.length,
+              'beaten': AbyssRules.known(p, b) ? 'yes' : 'no',
+            }),
       reason: reason,
       footer: reason != null
           ? null

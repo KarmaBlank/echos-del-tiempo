@@ -1,4 +1,5 @@
 import '../../../game_engine/data/run_boons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -14,14 +15,15 @@ import '../../inventory/presentation/shop_sections.dart';
 import '../../passive_tree/domain/passive_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pestañas del personaje de la Travesía.
 enum RunCharacterTab {
-  resumen('LO QUE LLEVO'),
-  inventory('EQUIPAMIENTO');
+  resumen,
+  inventory;
 
-  const RunCharacterTab(this.label);
-  final String label;
+  /// Key of the tab label (`ui.run.character.tab.<name>`).
+  String get labelKey => 'ui.run.character.tab.$name';
 }
 
 /// Atributos de la Travesía (roguelike.md § 5): sin Agilidad.
@@ -32,28 +34,18 @@ const kRunAttributes = [
   Attribute.des,
 ];
 
-String runAttributeName(Attribute a) => switch (a) {
-      Attribute.vit => 'Vitalidad',
-      Attribute.fue => 'Fuerza',
-      Attribute.esp => 'Espíritu',
-      Attribute.des => 'Destreza',
-      Attribute.agi => 'Agilidad',
-    };
+String runAttributeName(Strings s, Attribute a) =>
+    s.t('ui.run.attr.${a.name}.name');
 
 /// Qué hace cada atributo en la Travesía (tooltip).
-String runAttributeHelp(Attribute a) => switch (a) {
-      Attribute.vit => 'Más vida máxima.',
-      Attribute.fue => 'Más ATQ con armas que escalan con Fuerza.',
-      Attribute.esp => 'Más maná máximo y MAG con armas mágicas.',
-      Attribute.des => 'Más ATQ con armas de Destreza y más crítico.',
-      Attribute.agi => 'No se usa en la Travesía.',
-    };
+String runAttributeHelp(Strings s, Attribute a) =>
+    s.t('ui.run.attr.${a.name}.help');
 
 /// Personaje de la Travesía (organismo, roguelike.md § 12): solo lo que
 /// el jugador consiguió en esta run (atributos, arma y sus habilidades,
 /// nodos tomados por rama, consumibles y ULT ganadas). Sin árbol, sin
 /// reparto de puntos ni pestañas del Mundo.
-class RunCharacterPanel extends StatefulWidget {
+class RunCharacterPanel extends ConsumerStatefulWidget {
   const RunCharacterPanel({
     super.key,
     required this.view,
@@ -66,10 +58,10 @@ class RunCharacterPanel extends StatefulWidget {
   final RunCharacterTab initialTab;
 
   @override
-  State<RunCharacterPanel> createState() => _RunCharacterPanelState();
+  ConsumerState<RunCharacterPanel> createState() => _RunCharacterPanelState();
 }
 
-class _RunCharacterPanelState extends State<RunCharacterPanel> {
+class _RunCharacterPanelState extends ConsumerState<RunCharacterPanel> {
   late var _tab = widget.initialTab;
 
   @override
@@ -79,7 +71,7 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
     final prof = view.actor!.profile;
     final cls = c.engine.catalog.classes[prof.classId]?.name ?? prof.classId;
     return PanelFrame(
-      title: 'PERSONAJE',
+      title: ref.t('ui.run.character.title'),
       width: 1000,
       fill: true,
       onClose: c.closePanel,
@@ -93,10 +85,12 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
         onChanged: (i) => setState(() => _tab = RunCharacterTab.values[i]),
         tabs: [
           for (final t in RunCharacterTab.values)
-            DsTab(t.label, key: ValueKey('run-tab-${t.index}')),
+            DsTab(ref.t(t.labelKey), key: ValueKey('run-tab-${t.index}')),
         ],
       ),
-      actions: [DsButton('CERRAR [ESC]', onPressed: c.closePanel)],
+      actions: [
+        DsButton(ref.t('ui.run.close'), onPressed: c.closePanel)
+      ],
       child: switch (_tab) {
         RunCharacterTab.resumen => SingleChildScrollView(
             key: const ValueKey('run-character-summary'),
@@ -151,27 +145,26 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        section('ATRIBUTOS', [
+        section(ref.t('ui.run.character.attributes'), [
           for (final a in kRunAttributes)
             DsTooltip(
               card: DsTooltipCard(
-                title: runAttributeName(a),
+                title: runAttributeName(ref.strings, a),
                 children: [
-                  Text(runAttributeHelp(a)),
+                  Text(runAttributeHelp(ref.strings, a)),
                   Text(
-                      'Base de la clase ${base[a]}. Sube solo con '
-                      'recompensas de atributo.',
+                      ref.t('ui.run.character.attr_base', {'n': base[a]}),
                       style: DsText.detail()),
                 ],
               ),
               child: Text(
-                  '${runAttributeName(a)} ${prof.attributes[a]}'
-                  '${prof.attributes[a] > base[a] ? '  (+${prof.attributes[a] - base[a]} en la run)' : ''}',
+                  '${runAttributeName(ref.strings, a)} ${prof.attributes[a]}'
+                  '${prof.attributes[a] > base[a] ? ref.t('ui.run.character.attr_gain', {'n': prof.attributes[a] - base[a]}) : ''}',
                   key: ValueKey('run-attr-${a.name}'),
                   style: DsText.body()),
             ),
         ]),
-        section('ARMA', [
+        section(ref.t('ui.run.character.weapon'), [
           Text(
               item == null
                   ? weapon.name
@@ -181,7 +174,7 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
             key: const ValueKey('run-weapon-skills'),
             spacing: DsSpace.xs,
             children: [
-              Text('trae:', style: DsText.detail()),
+              Text(ref.t('ui.run.character.brings'), style: DsText.detail()),
               for (final (i, id) in rules.weaponSkills(prof).indexed)
                 if (catalog.skills[id] case final sk?)
                   RetroTooltip(
@@ -193,19 +186,22 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                   ),
             ],
           ),
-          Text('Se mejora en la armería (FORJA), junto con sus habilidades.',
+          Text(ref.t('ui.run.character.weapon_hint'),
               style: DsText.detail()),
         ]),
         section(
-            'HABILIDADES (${equipped.length}/${RunTuning.freeSkillSlots})',
+            ref.t('ui.run.character.skills', {
+              'n': equipped.length,
+              'max': RunTuning.freeSkillSlots,
+            }),
             [
               Text(
-                  'Aparte de ATACAR, DEFENDER y las del arma. Tope '
-                  '${RunTuning.freeSkillSlots + 2} contando ATACAR y '
-                  'DEFENDER.',
+                  ref.t('ui.run.character.skills_hint',
+                      {'max': RunTuning.freeSkillSlots + 2}),
                   style: DsText.detail()),
               if (equipped.isEmpty && stored.isEmpty)
-                Text('Todavía no tenés ninguna.', style: DsText.detail()),
+                Text(ref.t('ui.run.character.no_skills'),
+                    style: DsText.detail()),
               for (final id in [...equipped, ...stored])
                 if (catalog.skills[id] case final sk?)
                   Padding(
@@ -224,21 +220,23 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                         ),
                       ),
                       if (equipped.contains(id))
-                        DsButton('GUARDAR',
+                        DsButton(ref.t('ui.run.character.store'),
                             key: ValueKey('run-skill-off-$id'),
                             size: DsButtonSize.compact,
-                            tooltip: canSwitch ? null : 'Fuera de combate',
+                            tooltip: canSwitch
+                                ? null
+                                : ref.t('ui.run.character.out_of_combat'),
                             onPressed: canSwitch
                                 ? () => c.setRunSkill(id, equip: false)
                                 : null)
                       else
-                        DsButton('EQUIPAR',
+                        DsButton(ref.t('ui.run.character.equip'),
                             key: ValueKey('run-skill-on-$id'),
                             size: DsButtonSize.compact,
                             tooltip: !canSwitch
-                                ? 'Fuera de combate'
+                                ? ref.t('ui.run.character.out_of_combat')
                                 : equipped.length >= RunTuning.freeSkillSlots
-                                    ? 'Sin lugar: guardá otra primero'
+                                    ? ref.t('ui.run.character.no_room')
                                     : null,
                             onPressed: canSwitch &&
                                     equipped.length < RunTuning.freeSkillSlots
@@ -247,13 +245,16 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                     ]),
                   ),
             ]),
-        section('BOLSO', [
+        section(ref.t('ui.run.character.bag'), [
           Text(
-              '${prof.items.length} arma${prof.items.length == 1 ? '' : 's'} '
-              '· Pociones ${prof.potions} · Éter ${prof.ethers} · '
-              'Oro ${prof.credits}',
+              ref.t('ui.run.character.bag_line', {
+                'weapons': prof.items.length,
+                'potions': prof.potions,
+                'ethers': prof.ethers,
+                'gold': prof.credits,
+              }),
               style: DsText.body()),
-          Text('Equipar y ordenar: EQUIPAMIENTO [I].', style: DsText.detail()),
+          Text(ref.t('ui.run.character.bag_hint'), style: DsText.detail()),
         ]),
         section('ULT', [
           for (final o in ults)
@@ -271,12 +272,14 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                                 : DsColors.textDisabled)),
                   ),
                   DsButton(
-                      o.id == (active ?? ults.first.id) ? 'ACTIVA' : 'USAR',
+                      ref.t(o.id == (active ?? ults.first.id)
+                          ? 'ui.run.character.ult_active'
+                          : 'ui.run.character.ult_use'),
                       key: ValueKey('run-ult-${o.id}'),
                       size: DsButtonSize.compact,
                       selected: o.id == (active ?? ults.first.id),
                       tooltip: !canSwitch
-                          ? 'Fuera de combate'
+                          ? ref.t('ui.run.character.out_of_combat')
                           : o.reason,
                       onPressed: !canSwitch ||
                               !o.available ||
@@ -286,18 +289,19 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                 ],
               ),
             ),
-          if (ults.isEmpty) Text('Sin ULT todavía.', style: DsText.detail()),
+          if (ults.isEmpty)
+            Text(ref.t('ui.run.character.no_ult'), style: DsText.detail()),
         ]),
-        section('MEJORAS', [
+        section(ref.t('ui.run.character.boons'), [
           if (boons.isEmpty)
-            Text('Todavía no tomaste ninguna.', style: DsText.detail()),
+            Text(ref.t('ui.run.character.no_boons'), style: DsText.detail()),
           for (final e in boons.entries)
             DsTooltip(
               card: DsTooltipCard(
-                title: 'Mejora directa',
+                title: ref.t('ui.run.boon'),
                 children: [
                   Text(RunBoon.byName(e.key)?.text ?? e.key),
-                  Text('Dura toda la run; se apila si la repetís.',
+                  Text(ref.t('ui.run.character.boon_hint'),
                       style: DsText.detail()),
                 ],
               ),
@@ -307,9 +311,9 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                   style: DsText.body()),
             ),
         ]),
-        section('OBJETOS DE LA RUN', [
+        section(ref.t('ui.run.character.items'), [
           if (byPath.isEmpty)
-            Text('Todavía no tomaste ninguno.', style: DsText.detail()),
+            Text(ref.t('ui.run.character.no_items'), style: DsText.detail()),
           for (final e in byPath.entries) ...[
             // La rama solo agrupa (sutil); cada objeto: nombre y efecto.
             Text(tree.paths[e.key]?.name ?? e.key, style: DsText.detail()),

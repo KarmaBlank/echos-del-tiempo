@@ -17,6 +17,7 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -63,7 +64,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final key = GlobalKey<BattleViewState>();
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: BattleView(
@@ -75,7 +76,7 @@ void main() {
             enemyLevel: 3,
             onCommand: (_) => true),
       ),
-    ));
+    )));
     await tester.pump();
     return key;
   }
@@ -147,10 +148,10 @@ void main() {
       tester.view.physicalSize = const Size(1280, 720);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         theme: RetroTheme.build(),
         home: Scaffold(body: BestiaryView(bestiary: b)),
-      ));
+      )));
       await tester.pump();
     }
 

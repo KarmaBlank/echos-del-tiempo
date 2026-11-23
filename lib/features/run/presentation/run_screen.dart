@@ -1,4 +1,5 @@
 import '../../../game_engine/data/run_boons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -22,11 +23,12 @@ import '../../inventory/presentation/item_hover_tip.dart';
 import 'run_character_panel.dart';
 import 'run_map_view.dart';
 import 'run_prep_view.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pantallas de la Travesía (docs/specs/roguelike.md), sobre la sesión:
 /// sala previa, mapa con votación, recompensa, tienda / armería /
 /// descanso y fin. Solo arma la vista; todo lo decide el host.
-class RunScreen extends StatelessWidget {
+class RunScreen extends ConsumerWidget {
   const RunScreen({
     super.key,
     required this.view,
@@ -46,17 +48,18 @@ class RunScreen extends StatelessWidget {
       [for (final p in s.playerList) if (!p.isCompanion) p.id];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = ref.strings;
     final r = s.run;
     final Widget body;
     if (s.mode == SessionMode.lobby || r == null) {
-      body = _lobby();
+      body = _lobby(t);
     } else {
       body = switch (r.phase) {
-        RunPhase.map || RunPhase.battle => _map(r),
-        RunPhase.reward => _reward(r),
-        RunPhase.stop => _stop(r),
-        RunPhase.over => _over(r),
+        RunPhase.map || RunPhase.battle => _map(t, r),
+        RunPhase.reward => _reward(t, r),
+        RunPhase.stop => _stop(t, r),
+        RunPhase.over => _over(t, r),
       };
     }
     return ColoredBox(
@@ -83,14 +86,20 @@ class RunScreen extends StatelessWidget {
         ],
       );
 
-  Widget _party() => Wrap(
+  Widget _party(Strings t) => Wrap(
         spacing: DsSpace.md,
         runSpacing: DsSpace.xs,
         children: [
           for (final p in s.playerList)
             Text(
-              '${p.name} · Vida ${p.hp.ceil()}/${p.maxHp} · '
-              'Maná ${p.mp.ceil()}/${p.maxMp} · Oro ${p.profile.credits}',
+              t.t('ui.run.party_line', {
+                'name': p.name,
+                'hp': p.hp.ceil(),
+                'maxHp': p.maxHp,
+                'mp': p.mp.ceil(),
+                'maxMp': p.maxMp,
+                'gold': p.profile.credits,
+              }),
               style: DsText.body(p.id == view.localId
                   ? DsColors.selected
                   : DsColors.text),
@@ -99,34 +108,34 @@ class RunScreen extends StatelessWidget {
       );
 
   /// PERSONAJE [TAB] y EQUIPAMIENTO [I] (las mismas teclas que en el Mundo).
-  Widget _character() => Wrap(spacing: DsSpace.sm, children: [
-        DsButton('PERSONAJE [TAB]',
+  Widget _character(Strings t) => Wrap(spacing: DsSpace.sm, children: [
+        DsButton(t.t('ui.run.open_character'),
             key: const ValueKey('run-open-character'),
-            tooltip: 'Atributos, arma, ULT, mejoras y objetos de la run',
+            tooltip: t.t('ui.run.open_character_tip'),
             onPressed: () => controller.openPanel(WorldPanel.character)),
-        DsButton('EQUIPAMIENTO [I]',
+        DsButton(t.t('ui.run.open_inventory'),
             key: const ValueKey('run-open-inventory'),
-            tooltip: 'Equipar armas, usar pociones y ordenar el bolso',
+            tooltip: t.t('ui.run.open_inventory_tip'),
             onPressed: () => controller.openPanel(WorldPanel.inventory)),
       ]);
 
-  Widget _lobby() => Center(
+  Widget _lobby(Strings t) => Center(
         child: PanelFrame(
-          title: 'TRAVESÍA',
+          title: t.t('ui.run.lobby.title'),
           width: 760,
           actions: [
-            DsButton('VOLVER AL TÍTULO', onPressed: onExit),
-            _character(),
+            DsButton(t.t('ui.run.back_to_title'), onPressed: onExit),
+            _character(t),
             if (controller.hasRunSave) ...[
-              DsButton('ABANDONAR',
+              DsButton(t.t('ui.run.lobby.abandon'),
                   key: const ValueKey('run-abandon'),
                   onPressed: controller.abandonRun),
-              DsButton('CONTINUAR TRAVESÍA',
+              DsButton(t.t('ui.run.lobby.continue'),
                   key: const ValueKey('run-continue'),
                   kind: DsButtonKind.primary,
                   onPressed: controller.continueRun),
             ] else
-              DsButton('EMPEZAR TRAVESÍA',
+              DsButton(t.t('ui.run.lobby.start'),
                   key: const ValueKey('run-start'),
                   kind: DsButtonKind.primary,
                   onPressed: controller.startRun),
@@ -135,22 +144,18 @@ class RunScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                  'Tres pisos, un camino ramificado y un guardián al final '
-                  'de cada uno. Cada uno arranca con un personaje nuevo de '
-                  'su clase: lo que se gana en la run se pierde al terminar. '
-                  'En PERSONAJE podés equipar tu arma y elegir tu ULT antes '
-                  'de salir.',
+                  t.t('ui.run.lobby.about'),
                   style: DsText.body()),
               if (controller.hasRunSave) ...[
                 SizedBox(height: DsSpace.sm),
                 Text(
-                    'Hay una Travesía a medias. Podés seguirla donde la '
-                    'dejaste o abandonarla para empezar otra.',
+                    t.t('ui.run.lobby.has_save'),
                     style: DsText.subtitle()),
               ],
               SizedBox(height: DsSpace.md),
               if (view.roomCode case final code?)
-                Text('Código de sala: $code', style: DsText.subtitle()),
+                Text(t.t('ui.run.lobby.room_code', {'code': code}),
+                    style: DsText.subtitle()),
               SizedBox(height: DsSpace.sm),
               for (final p in s.playerList)
                 Text(
@@ -158,19 +163,19 @@ class RunScreen extends StatelessWidget {
                     '${controller.engine.catalog.classes[p.profile.classId]?.name ?? p.profile.classId}',
                     style: DsText.body()),
               SizedBox(height: DsSpace.md),
-              _prep(),
+              _prep(t),
             ],
           ),
         ),
       );
 
-  Widget _prep() => ConstrainedBox(
+  Widget _prep(Strings t) => ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 380),
         child: SingleChildScrollView(
             child: RunPrepView(controller: controller)),
       );
 
-  Widget _map(RunState r) {
+  Widget _map(Strings t, RunState r) {
     final floor = RunRules.floorOf(r);
     final reachable = r.phase == RunPhase.map
         ? RunRules.reachable(r).toSet()
@@ -190,20 +195,26 @@ class RunScreen extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('PISO ${r.floor + 1}/${RunTuning.floors} · $zone',
+            Text(
+                t.t('ui.run.map.floor', {
+                  'floor': r.floor + 1,
+                  'floors': RunTuning.floors,
+                  'zone': zone,
+                }),
                 style: DsText.title()),
             const Spacer(),
-            _character(),
+            _character(t),
           ],
         ),
         SizedBox(height: DsSpace.xs),
-        _party(),
+        _party(t),
         SizedBox(height: DsSpace.xs),
         Text(
             r.phase == RunPhase.map
-                ? 'Marcá el próximo nodo. Esperando a: '
-                    '${missing.isEmpty ? '-' : missing.join(', ')}'
-                : 'Entrando...',
+                ? t.t('ui.run.map.pick_next', {
+                    'names': missing.isEmpty ? '-' : missing.join(', '),
+                  })
+                : t.t('ui.run.map.entering'),
             style: DsText.detail()),
         Expanded(
           child: RunMapView(
@@ -218,11 +229,11 @@ class RunScreen extends StatelessWidget {
         Wrap(
           spacing: DsSpace.md,
           children: [
-            for (final t in RunNodeType.values)
+            for (final n in RunNodeType.values)
               DsTooltip(
-                card: runNodeTip(t),
-                child: Text('${runNodeLetter(t)} ${t.label}',
-                    style: DsText.detail(runNodeColor(t))),
+                card: runNodeTip(t, n),
+                child: Text('${runNodeLetter(t, n)} ${runNodeLabel(t, n)}',
+                    style: DsText.detail(runNodeColor(n))),
               ),
           ],
         ),
@@ -230,12 +241,12 @@ class RunScreen extends StatelessWidget {
     );
   }
 
-  Widget _reward(RunState r) {
+  Widget _reward(Strings t, RunState r) {
     final offer = r.offers[view.localId];
     if (offer == null) {
       final missing = [for (final id in r.offers.keys) _name(id)];
       return Center(
-        child: Text('Esperando a: ${missing.join(', ')}',
+        child: Text(t.t('ui.run.waiting_for', {'names': missing.join(', ')}),
             style: DsText.subtitle()),
       );
     }
@@ -246,7 +257,7 @@ class RunScreen extends StatelessWidget {
     );
   }
 
-  Widget _stop(RunState r) {
+  Widget _stop(Strings t, RunState r) {
     final type = RunRules.floorOf(r).node(r.node!).type;
     final ready = r.ready.contains(view.localId);
     final missing = [
@@ -254,29 +265,25 @@ class RunScreen extends StatelessWidget {
         if (!r.ready.contains(id)) _name(id)
     ];
     final text = switch (type) {
-      RunNodeType.tienda =>
-        'Armas de tu clase, ULT, pociones y Éter a cambio de oro. Lo que '
-            'no uses lo vendés desde la misma tienda.',
-      RunNodeType.armeria =>
-        'Mejorá tus armas con oro (FORJA: poder, crítico, velocidad) o '
-            'pasá una habilidad de un arma a otra (FUSIÓN).',
-      _ => 'El grupo descansa y recupera vida y maná.',
+      RunNodeType.tienda => t.t('ui.run.stop.shop'),
+      RunNodeType.armeria => t.t('ui.run.stop.armory'),
+      _ => t.t('ui.run.stop.rest'),
     };
     return Center(
       child: PanelFrame(
-        title: type.label,
+        title: runNodeLabel(t, type),
         width: 760,
         actions: [
-          _character(),
+          _character(t),
           if (type == RunNodeType.tienda)
-            DsButton('ABRIR TIENDA',
+            DsButton(t.t('ui.run.stop.open_shop'),
                 key: const ValueKey('run-open-shop'),
                 onPressed: () => controller.openPanel(WorldPanel.armory)),
           if (type == RunNodeType.armeria)
-            DsButton('ABRIR FORJA',
+            DsButton(t.t('ui.run.stop.open_forge'),
                 key: const ValueKey('run-open-armory'),
                 onPressed: () => controller.openPanel(WorldPanel.forge)),
-          DsButton('LISTO',
+          DsButton(t.t('ui.run.stop.ready'),
               key: const ValueKey('run-ready'),
               kind: DsButtonKind.primary,
               onPressed: ready ? null : controller.runReady),
@@ -285,12 +292,15 @@ class RunScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(text, style: DsText.body()),
-            if (type == RunNodeType.tienda) ..._ultShop(r),
-            if (type == RunNodeType.armeria) ..._skillForge(r),
+            if (type == RunNodeType.tienda) ..._ultShop(t, r),
+            if (type == RunNodeType.armeria) ..._skillForge(t, r),
             SizedBox(height: DsSpace.sm),
-            _party(),
+            _party(t),
             SizedBox(height: DsSpace.sm),
-            Text('Esperando a: ${missing.isEmpty ? '-' : missing.join(', ')}',
+            Text(
+                t.t('ui.run.waiting_for', {
+                  'names': missing.isEmpty ? '-' : missing.join(', '),
+                }),
                 style: DsText.detail()),
           ],
         ),
@@ -300,7 +310,7 @@ class RunScreen extends StatelessWidget {
 
   /// Mejora de habilidades libres en la armería (§ 12.2): cuánto cuesta y
   /// cuánto poder suma cada nivel.
-  List<Widget> _skillForge(RunState r) {
+  List<Widget> _skillForge(Strings t, RunState r) {
     final me = view.me;
     if (me == null) return const [];
     final c = controller;
@@ -308,15 +318,13 @@ class RunScreen extends StatelessWidget {
     final pct = (RunTuning.skillUpPower * 100).round();
     return [
       SizedBox(height: DsSpace.md),
-      const DsSectionHeader('MEJORAR HABILIDADES'),
+      DsSectionHeader(t.t('ui.run.forge.title')),
       Text(
-          'El arma (y lo que trae) se mejora en ABRIR FORJA → MEJORAR. Acá, '
-          'cada nivel suma +$pct % de poder a una habilidad libre (hasta '
-          '+${RunTuning.skillUpMax}).',
+          t.t('ui.run.forge.hint', {'pct': pct, 'max': RunTuning.skillUpMax}),
           style: DsText.detail()),
       SizedBox(height: DsSpace.xs),
       if (owned.isEmpty)
-        Text('No tenés habilidades libres para mejorar.',
+        Text(t.t('ui.run.forge.none'),
             style: DsText.detail()),
       for (final id in owned)
         if (c.engine.catalog.skills[id] case final sk?)
@@ -333,18 +341,21 @@ class RunScreen extends StatelessWidget {
                     message: describeSkillMarkup(sk, null),
                     child: Text(
                         '${sk.name}  +$lv'
-                        '${max ? '' : '  →  +${lv + 1} (poder ${100 + pct * lv} % → ${100 + pct * (lv + 1)} %)'}',
+                        '${max ? '' : t.t('ui.run.forge.next', {'next': lv + 1, 'from': 100 + pct * lv, 'to': 100 + pct * (lv + 1)})}',
                         style: DsText.body()),
                   ),
                 ),
-                DsButton(max ? 'MÁXIMO' : '$cost DE ORO',
+                DsButton(
+                    max
+                        ? t.t('ui.run.forge.max')
+                        : t.t('ui.run.gold_price', {'n': cost}),
                     key: ValueKey('run-skill-up-$id'),
                     size: DsButtonSize.compact,
                     tooltip: max
                         ? null
                         : poor
-                            ? 'Te falta oro'
-                            : 'Mejorar a +${lv + 1}',
+                            ? t.t('ui.run.not_enough_gold')
+                            : t.t('ui.run.forge.upgrade_to', {'n': lv + 1}),
                     onPressed:
                         max || poor ? null : () => c.upgradeRunSkill(id)),
               ]);
@@ -354,7 +365,7 @@ class RunScreen extends StatelessWidget {
   }
 
   /// ULT a la venta en esta tienda (§ 12.2): caras y valiosas.
-  List<Widget> _ultShop(RunState r) {
+  List<Widget> _ultShop(Strings t, RunState r) {
     final me = view.me;
     if (me == null || r.node == null) return const [];
     final c = controller;
@@ -367,7 +378,7 @@ class RunScreen extends StatelessWidget {
     final gold = me.profile.credits;
     return [
       SizedBox(height: DsSpace.md),
-      const DsSectionHeader('ULT A LA VENTA'),
+      DsSectionHeader(t.t('ui.run.ult_shop.title')),
       SizedBox(height: DsSpace.xs),
       for (final id in stock)
         if (kWeaponUltSkills[id] case final sk?)
@@ -378,19 +389,24 @@ class RunScreen extends StatelessWidget {
                 child: RetroTooltip(
                   message: describeSkillMarkup(sk, null, ultimate: true),
                   child: Text(
-                      '${sk.name}  ·  Con ${UltRules.weaponsOf(id).join(', ')}',
+                      t.t('ui.run.ult_shop.row', {
+                        'name': sk.name,
+                        'weapons': UltRules.weaponsOf(id).join(', '),
+                      }),
                       style: DsText.body()),
                 ),
               ),
               DsButton(
-                  me.profile.ultKnown.contains(id) ? 'TENÉS' : '$price DE ORO',
+                  me.profile.ultKnown.contains(id)
+                      ? t.t('ui.run.ult_shop.owned')
+                      : t.t('ui.run.gold_price', {'n': price}),
                   key: ValueKey('run-buy-ult-$id'),
                   size: DsButtonSize.compact,
                   tooltip: me.profile.ultKnown.contains(id)
                       ? null
                       : gold < price
-                          ? 'Te falta oro'
-                          : 'Queda aprendida y activa',
+                          ? t.t('ui.run.not_enough_gold')
+                          : t.t('ui.run.ult_shop.learned'),
                   onPressed: me.profile.ultKnown.contains(id) || gold < price
                       ? null
                       : () => c.buyRunUlt(id)),
@@ -399,16 +415,16 @@ class RunScreen extends StatelessWidget {
     ];
   }
 
-  Widget _over(RunState r) => Center(
+  Widget _over(Strings t, RunState r) => Center(
         child: PanelFrame(
           title: r.victory == true
-              ? 'TRAVESÍA COMPLETADA'
-              : 'FIN DE LA TRAVESÍA',
+              ? t.t('ui.run.over.victory')
+              : t.t('ui.run.over.defeat'),
           width: 760,
           actions: [
-            DsButton('VOLVER AL TÍTULO',
+            DsButton(t.t('ui.run.back_to_title'),
                 key: const ValueKey('run-exit'), onPressed: onExit),
-            DsButton('NUEVA TRAVESÍA',
+            DsButton(t.t('ui.run.over.new_run'),
                 kind: DsButtonKind.primary, onPressed: controller.startRun),
           ],
           child: Column(
@@ -416,12 +432,15 @@ class RunScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                  'Piso alcanzado: ${r.floor + 1}/${RunTuning.floors} · '
-                  'Peleas ganadas: ${r.wins} · '
-                  'Ecos ganados: ${MetaProgressRules.coinsOf(r)}',
+                  t.t('ui.run.over.summary', {
+                    'floor': r.floor + 1,
+                    'floors': RunTuning.floors,
+                    'wins': r.wins,
+                    'coins': MetaProgressRules.coinsOf(r),
+                  }),
                   style: DsText.body()),
               SizedBox(height: DsSpace.md),
-              _prep(),
+              _prep(t),
             ],
           ),
         ),
@@ -431,7 +450,7 @@ class RunScreen extends StatelessWidget {
 /// Recompensa de un jugador (organismo): filas Objetos / Arma / (ULT) /
 /// Extra, una opción por fila o SALTAR, y CONFIRMAR. Cada tarjeta tiene
 /// su tooltip con el detalle.
-class RunRewardView extends StatefulWidget {
+class RunRewardView extends ConsumerStatefulWidget {
   const RunRewardView(
       {super.key, required this.offer, required this.controller});
 
@@ -439,13 +458,13 @@ class RunRewardView extends StatefulWidget {
   final SessionController controller;
 
   @override
-  State<RunRewardView> createState() => _RunRewardViewState();
+  ConsumerState<RunRewardView> createState() => _RunRewardViewState();
 }
 
-class _RunRewardViewState extends State<RunRewardView> {
+class _RunRewardViewState extends ConsumerState<RunRewardView> {
   int? _tree, _weapon, _extra, _ult;
 
-  static String attrName(Attribute a) => runAttributeName(a);
+  String attrName(Attribute a) => runAttributeName(ref.strings, a);
 
   /// Pide sacrificar una habilidad libre (la nueva no entra).
   bool _askDrop = false;
@@ -454,37 +473,31 @@ class _RunRewardViewState extends State<RunRewardView> {
       widget.controller.engine.catalog.skills[id]?.name ?? id ?? '?';
 
   String extraText(RunExtra x) => switch (x.kind) {
-        RunExtraKind.habilidad => 'Habilidad: ${_skillName(x.skill)}',
-        _ => extraTextOf(x),
-      };
-
-  static String extraTextOf(RunExtra x) => switch (x.kind) {
-        RunExtraKind.habilidad => 'Habilidad nueva',
-        RunExtraKind.oro => '+${x.amount} de oro',
-        RunExtraKind.pocion => '+${x.amount} pociones',
-        RunExtraKind.eter => '+${x.amount} Éter',
-        RunExtraKind.atributo =>
-          '+${x.amount} ${attrName(x.attribute ?? Attribute.vit)}',
-        RunExtraKind.mejora => RunBoon.byName(x.boon)?.text ?? 'Mejora',
+        RunExtraKind.habilidad =>
+          ref.t('ui.run.reward.extra.skill', {'name': _skillName(x.skill)}),
+        RunExtraKind.oro => ref.t('ui.run.reward.extra.gold', {'n': x.amount}),
+        RunExtraKind.pocion =>
+          ref.t('ui.run.reward.extra.potions', {'n': x.amount}),
+        RunExtraKind.eter => ref.t('ui.run.reward.extra.ether', {'n': x.amount}),
+        RunExtraKind.atributo => ref.t('ui.run.reward.extra.attr', {
+            'n': x.amount,
+            'attr': attrName(x.attribute ?? Attribute.vit),
+          }),
+        RunExtraKind.mejora =>
+          RunBoon.byName(x.boon)?.text ?? ref.t('ui.run.boon_short'),
       };
 
   /// Qué hace cada extra (tooltip).
-  static String extraHelp(RunExtra x) => switch (x.kind) {
-        RunExtraKind.habilidad =>
-          'Habilidad libre: se equipa aparte de las del arma. Si no hay '
-              'lugar, tenés que sacrificar una.',
-        RunExtraKind.oro => 'Para la tienda y la forja de la armería.',
-        RunExtraKind.pocion => 'Cada poción cura vida en combate o fuera.',
-        RunExtraKind.eter => 'Cada Éter recupera maná en combate.',
-        RunExtraKind.atributo =>
-          'Sube ${attrName(x.attribute ?? Attribute.vit)} para el resto de '
-              'la run. ${runAttributeHelp(x.attribute ?? Attribute.vit)}',
-        RunExtraKind.mejora =>
-          'Mejora directa: dura toda la run y se apila si la repetís. '
-              'Se ve en MEJORAS, en PERSONAJE.',
+  String extraHelp(RunExtra x) => switch (x.kind) {
+        RunExtraKind.atributo => ref.t('ui.run.reward.help.atributo', {
+            'attr': attrName(x.attribute ?? Attribute.vit),
+            'help': runAttributeHelp(ref.strings, x.attribute ?? Attribute.vit),
+          }),
+        _ => ref.t('ui.run.reward.help.${x.kind.name}'),
       };
 
-  Widget _row(String label, int count, int? picked, ValueChanged<int?> onPick,
+  Widget _row(String id, String label, int count, int? picked,
+      ValueChanged<int?> onPick,
       Widget Function(int i) card,
       {String? help, Widget Function(int i, Widget child)? tip}) {
     return Padding(
@@ -504,7 +517,7 @@ class _RunRewardViewState extends State<RunRewardView> {
                     padding: EdgeInsets.only(right: DsSpace.sm),
                     child: () {
                       final w = DsCard(
-                        key: ValueKey('run-offer-$label-$i'),
+                        key: ValueKey('run-offer-$id-$i'),
                         selected: picked == i,
                         onTap: () => onPick(picked == i ? null : i),
                         child: card(i),
@@ -515,9 +528,10 @@ class _RunRewardViewState extends State<RunRewardView> {
                 ),
               if (count == 0)
                 Expanded(
-                    child: Text('Nada para ofrecer.', style: DsText.detail())),
-              DsButton('SALTAR',
-                  tooltip: 'No tomar nada de esta fila',
+                    child: Text(ref.t('ui.run.reward.nothing'),
+                        style: DsText.detail())),
+              DsButton(ref.t('ui.run.reward.skip'),
+                  tooltip: ref.t('ui.run.reward.skip_tip'),
                   selected: picked == null, onPressed: () => onPick(null)),
             ],
           ),
@@ -551,11 +565,11 @@ class _RunRewardViewState extends State<RunRewardView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const DsSectionHeader('TENÉS QUE SACRIFICAR UNA HABILIDAD'),
+            DsSectionHeader(ref.t('ui.run.reward.drop.title')),
             Text(
-                'No hay lugar para '
-                '${_skillName(widget.offer.extras[_extra!].skill)}. Elegí '
-                'cuál dejar (las del arma no se tocan).',
+                ref.t('ui.run.reward.drop.text', {
+                  'name': _skillName(widget.offer.extras[_extra!].skill),
+                }),
                 style: DsText.detail()),
             SizedBox(height: DsSpace.sm),
             Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
@@ -564,12 +578,13 @@ class _RunRewardViewState extends State<RunRewardView> {
                     case final sk?)
                   RetroTooltip(
                     message: describeSkillMarkup(sk, null),
-                    child: DsButton('SACRIFICAR ${sk.name}',
+                    child: DsButton(
+                        ref.t('ui.run.reward.drop.button', {'name': sk.name}),
                         key: ValueKey('run-drop-$id'),
                         size: DsButtonSize.compact,
                         onPressed: () => _confirm(drop: id)),
                   ),
-              DsButton('CANCELAR',
+              DsButton(ref.t('ui.run.reward.drop.cancel'),
                   key: const ValueKey('run-drop-cancel'),
                   onPressed: () => setState(() => _askDrop = false)),
             ]),
@@ -586,14 +601,14 @@ class _RunRewardViewState extends State<RunRewardView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('ELEGÍ TU RECOMPENSA', style: DsText.title()),
+        Text(ref.t('ui.run.reward.title'), style: DsText.title()),
         SizedBox(height: DsSpace.md),
         Expanded(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _row('OBJETOS', o.nodes.length, _tree,
+                _row('items', ref.t('ui.run.reward.row.items'), o.nodes.length, _tree,
                     (i) => setState(() => _tree = i), (i) {
                   final n = tree.nodes[o.nodes[i]];
                   return Column(
@@ -606,8 +621,7 @@ class _RunRewardViewState extends State<RunRewardView> {
                     ],
                   );
                 },
-                    help: 'Objetos de la run: un efecto pasivo que dura '
-                        'hasta el final de la Travesía.',
+                    help: ref.t('ui.run.reward.row.items_help'),
                     tip: (i, child) {
                       final n = tree.nodes[o.nodes[i]];
                       if (n == null) return child;
@@ -620,14 +634,15 @@ class _RunRewardViewState extends State<RunRewardView> {
                           ],
                           children: [
                             for (final l in passiveEffectsClean(n)) Text(l),
-                            Text('Se suma a OBJETOS DE LA RUN en PERSONAJE.',
+                            Text(ref.t('ui.run.reward.row.items_tip'),
                                 style: DsText.detail()),
                           ],
                         ),
                         child: child,
                       );
                     }),
-                _row('ARMA', o.weapons.length, _weapon,
+                _row('weapon', ref.t('ui.run.reward.row.weapon'), o.weapons.length,
+                    _weapon,
                     (i) => setState(() => _weapon = i), (i) {
                   final w = weapons[o.weapons[i]];
                   return Column(
@@ -638,8 +653,7 @@ class _RunRewardViewState extends State<RunRewardView> {
                     ],
                   );
                 },
-                    help: 'Va al bolso; se equipa sin nivel ni atributos '
-                        'mínimos.',
+                    help: ref.t('ui.run.reward.row.weapon_help'),
                     tip: (i, child) {
                       final w = weapons[o.weapons[i]];
                       final me = c.view?.actor;
@@ -654,7 +668,7 @@ class _RunRewardViewState extends State<RunRewardView> {
                       );
                     }),
                 if (o.ults.isNotEmpty)
-                  _row('ULT', o.ults.length, _ult,
+                  _row('ult', ref.t('ui.run.reward.row.ult'), o.ults.length, _ult,
                       (i) => setState(() => _ult = i), (i) {
                     final sk = kWeaponUltSkills[o.ults[i]];
                     final types = UltRules.weaponsOf(o.ults[i]);
@@ -663,13 +677,12 @@ class _RunRewardViewState extends State<RunRewardView> {
                       children: [
                         Text(sk?.name ?? o.ults[i], style: DsText.subtitle()),
                         if (types.isNotEmpty)
-                          Text('Con ${types.join(', ')}',
+                          Text(ref.t('ui.run.reward.with', {'weapons': types.join(', ')}),
                               style: DsText.detail()),
                       ],
                     );
                   },
-                      help: 'Rara y valiosa: queda aprendida y activa; se '
-                          'cambia en PERSONAJE.',
+                      help: ref.t('ui.run.reward.row.ult_help'),
                       tip: (i, child) {
                         final sk = kWeaponUltSkills[o.ults[i]];
                         if (sk == null) return child;
@@ -678,12 +691,12 @@ class _RunRewardViewState extends State<RunRewardView> {
                                 describeSkillMarkup(sk, null, ultimate: true),
                             child: child);
                       }),
-                _row('EXTRA', o.extras.length, _extra,
+                _row('extra', ref.t('ui.run.reward.row.extra'), o.extras.length,
+                    _extra,
                     (i) => setState(() => _extra = i),
                     (i) => Text(extraText(o.extras[i]),
                         style: DsText.subtitle()),
-                    help: 'Oro, consumibles, atributos, una mejora directa o '
-                        'una habilidad.',
+                    help: ref.t('ui.run.reward.row.extra_help'),
                     tip: (i, child) {
                       final x = o.extras[i];
                       final sk = c.engine.catalog.skills[x.skill];
@@ -710,7 +723,7 @@ class _RunRewardViewState extends State<RunRewardView> {
         else
           Align(
             alignment: Alignment.centerRight,
-            child: DsButton('CONFIRMAR',
+            child: DsButton(ref.t('ui.run.reward.confirm'),
                 key: const ValueKey('run-reward-confirm'),
                 kind: DsButtonKind.primary,
                 onPressed: _confirm),

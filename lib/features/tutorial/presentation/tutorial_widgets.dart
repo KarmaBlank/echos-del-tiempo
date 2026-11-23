@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -10,6 +11,7 @@ import '../../../app/theme/retro_type.dart';
 import '../../combat/presentation/battle_hud.dart' show HudHighlight;
 import '../../../game_engine/models/session_action.dart' show TutorialControl;
 import '../../../game_engine/rules/tutorial_rules.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 // TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md): el detalle
 // del sello, el cartel del paso, el cartel de efecto, el menú del
@@ -68,7 +70,7 @@ class GlossaryView extends StatelessWidget {
 }
 
 /// Detalle de TUTORIAL: Ecos de práctica en el sello (§ 1).
-class TutorialSealDetail extends StatefulWidget {
+class TutorialSealDetail extends ConsumerStatefulWidget {
   const TutorialSealDetail({
     super.key,
     required this.rules,
@@ -99,18 +101,19 @@ class TutorialSealDetail extends StatefulWidget {
   final String? lockText;
 
   @override
-  State<TutorialSealDetail> createState() => _TutorialSealDetailState();
+  ConsumerState<TutorialSealDetail> createState() => _TutorialSealDetailState();
 }
 
-class _TutorialSealDetailState extends State<TutorialSealDetail> {
+class _TutorialSealDetailState extends ConsumerState<TutorialSealDetail> {
   bool _glossary = false;
 
   @override
   Widget build(BuildContext context) {
     final w = widget;
     final group = w.humans > 1;
-    final hostOnly = group && !w.isHost ? 'Lo inicia el host' : null;
-    final verb = w.done ? 'REPETIR' : 'EMPEZAR';
+    final hostOnly =
+        group && !w.isHost ? ref.t('ui.tutorial.host_starts') : null;
+    final verb = w.done ? 'repeat' : 'start';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -125,9 +128,8 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
                       const SizedBox(height: 6),
                       Text(
                           w.done
-                              ? 'Completado. Podés repetirlo cuando quieras.'
-                              : 'Obligatorio antes de la primera misión (uno '
-                                  'por cuenta).',
+                              ? ref.t('ui.tutorial.seal.done')
+                              : ref.t('ui.tutorial.seal.required'),
                           style: _body(
                               w.done ? ProtoColors.green : ProtoColors.orange)),
                       if (w.lockText case final l?) ...[
@@ -136,17 +138,14 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
                       ],
                       const SizedBox(height: 8),
                       Text(
-                          'Una pelea de práctica contra un autómata de '
-                          'entrenamiento: no da XP ni loot, no gasta pociones '
-                          'y la vida y el MP vuelven a como estaban.',
+                          ref.t('ui.tutorial.seal.about'),
                           style: _body(ProtoColors.ink)),
                       const SizedBox(height: 8),
                       for (final s in w.rules.stages)
                         Text('${s.number}. ${s.title}: ${s.teaches}',
                             style: _body(ProtoColors.dim)),
                       Text(
-                          'Después: repetir el tutorial o ENTRENAR '
-                          '(libre, con un kit para probar todo).',
+                          ref.t('ui.tutorial.seal.after'),
                           style: _body(ProtoColors.dim)),
                     ],
                   ),
@@ -159,23 +158,27 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
           runSpacing: 4,
           children: [
             if (group)
-              PanelButton('$verb EN GRUPO',
+              PanelButton(ref.t('ui.tutorial.start_group', {'verb': verb}),
                   key: const ValueKey('tutorial-group'),
                   accent: ProtoColors.green,
                   reason: hostOnly,
                   onPressed: () => w.onStart(false))
             else ...[
-              PanelButton('$verb SOLO',
+              PanelButton(ref.t('ui.tutorial.start_solo', {'verb': verb}),
                   key: const ValueKey('tutorial-solo'),
                   accent: ProtoColors.green,
                   onPressed: () => w.onStart(false)),
               if (w.companions > 0)
-                PanelButton('$verb CON COMPAÑEROS',
+                PanelButton(
+                    ref.t('ui.tutorial.start_party', {'verb': verb}),
                     key: const ValueKey('tutorial-party'),
                     accent: ProtoColors.green,
                     onPressed: () => w.onStart(true)),
             ],
-            PanelButton(_glossary ? 'VOLVER' : 'GLOSARIO',
+            PanelButton(
+                ref.t(_glossary
+                    ? 'ui.tutorial.back'
+                    : 'ui.tutorial.glossary'),
                 key: const ValueKey('tutorial-glossary-toggle'),
                 onPressed: () => setState(() => _glossary = !_glossary)),
           ],
@@ -187,16 +190,8 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
 
 /// Lo que el cartel de efecto señala (§ 4.1), dicho en palabras: la
 /// flecha apunta a la barra o al estado que cambió.
-String tutorialArrowText(TutorialArrow? a) => switch (a) {
-      TutorialArrow.timeline => '↑ barra de turnos',
-      TutorialArrow.hp => '→ vida',
-      TutorialArrow.mp => '↓ MP',
-      TutorialArrow.pulse => '↓ Pulso',
-      TutorialArrow.status => '→ estados del objetivo',
-      TutorialArrow.breakBar => '→ barra de quiebre',
-      TutorialArrow.ult => '→ ULT',
-      null => '',
-    };
+String tutorialArrowText(Strings t, TutorialArrow? a) =>
+    a == null ? '' : t.t('ui.tutorial.arrow.${a.name}');
 
 /// La pelea del TUTORIAL con su panel lateral fijo (§ 4.1): la arena se
 /// achica y el panel ocupa una columna a la derecha, así nunca tapa
@@ -204,7 +199,7 @@ String tutorialArrowText(TutorialArrow? a) => switch (a) {
 /// etapa, quién actúa, lo que pasó en la última acción y la votación
 /// SIGUIENTE. El menú del tutorial (Repetir etapa, Repetir, Glosario,
 /// Salir) se abre encima de todo.
-class TutorialOverlay extends StatefulWidget {
+class TutorialOverlay extends ConsumerStatefulWidget {
   const TutorialOverlay({
     super.key,
     required this.battle,
@@ -271,10 +266,10 @@ class TutorialOverlay extends StatefulWidget {
       (width * 0.24).clamp(180.0, 320.0).roundToDouble();
 
   @override
-  State<TutorialOverlay> createState() => _TutorialOverlayState();
+  ConsumerState<TutorialOverlay> createState() => _TutorialOverlayState();
 }
 
-class _TutorialOverlayState extends State<TutorialOverlay> {
+class _TutorialOverlayState extends ConsumerState<TutorialOverlay> {
   bool _menu = false;
   bool _glossary = false;
 
@@ -307,14 +302,17 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           Row(
             children: [
               Expanded(
-                child: Text(head.isEmpty ? 'TUTORIAL' : retroText(head),
+                child: Text(
+                    head.isEmpty
+                        ? ref.t('ui.tutorial.title')
+                        : retroText(head),
                     style: DsText.subtitle(DsColors.textTitle)),
               ),
               // ≡ como ícono (la fuente pixel no tiene el glifo).
               DsButton.icon(const Icon(Icons.menu, size: 16),
                   key: const ValueKey('tutorial-menu'),
                   size: DsButtonSize.compact,
-                  tooltip: 'Menú del tutorial',
+                  tooltip: ref.t('ui.tutorial.menu'),
                   onPressed: () => setState(() {
                         _menu = !_menu;
                         _glossary = false;
@@ -327,7 +325,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (w.options.isNotEmpty)
-                    _section('VOTACIÓN', [
+                    _section(ref.t('ui.tutorial.section.vote'), [
                       if (b != null && b.text.isNotEmpty)
                         _line(b.text, DsColors.textTitle),
                       for (final (id, label) in w.options)
@@ -344,13 +342,13 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                             l.startsWith('Hay ') || l.startsWith('Falta ')
                                 ? DsColors.warning
                                 : DsColors.textPrimary),
-                      _line('Hace falta que voten todos.',
+                      _line(ref.t('ui.tutorial.all_must_vote'),
                           DsColors.textSecondary,
                           detail: true),
                     ])
                   else if (w.narration.isNotEmpty && card == null) ...[
                     if (b != null && b.text.isNotEmpty)
-                      _section('AHORA', [
+                      _section(ref.t('ui.tutorial.section.now'), [
                         _line(
                             b.text,
                             b.yourTurn
@@ -358,7 +356,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                                 : DsColors.textSubtitle,
                             key: const ValueKey('tutorial-now')),
                       ]),
-                    _section('LO QUE PASA', [
+                    _section(ref.t('ui.tutorial.section.happening'), [
                       for (final (i, l) in w.narration.indexed)
                         _line(
                             l,
@@ -370,18 +368,20 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                   ] else if (card != null)
                     _section(
                         card.heading ??
-                            (card.effect ? 'LO QUE PASÓ' : 'EN ESTA ETAPA'),
+                            ref.t(card.effect
+                                ? 'ui.tutorial.section.happened'
+                                : 'ui.tutorial.section.stage'),
                         [
                           for (final l in card.lines)
                             _line(l, DsColors.textPrimary,
                                 key: const ValueKey('tutorial-card-line')),
-                          if (tutorialArrowText(card.arrow) case final a
+                          if (tutorialArrowText(ref.strings, card.arrow) case final a
                               when a.isNotEmpty)
                             _line(a, DsColors.warning),
                         ])
                   else ...[
                     if (b != null && b.text.isNotEmpty)
-                      _section('AHORA', [
+                      _section(ref.t('ui.tutorial.section.now'), [
                         _line(
                             b.text,
                             b.yourTurn
@@ -390,7 +390,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                             key: const ValueKey('tutorial-now')),
                       ]),
                     if (last != null)
-                      _section('ÚLTIMA ACCIÓN', [
+                      _section(ref.t('ui.tutorial.section.last_action'), [
                         for (final l in last.lines)
                           _line(l, DsColors.textSecondary),
                       ]),
@@ -405,15 +405,15 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
               _line(t, DsColors.warning,
                   key: const ValueKey('tutorial-waiting')),
             if (w.voted)
-              _line('Ya votaste SIGUIENTE.', DsColors.success,
+              _line(ref.t('ui.tutorial.voted_next'), DsColors.success,
                   key: const ValueKey('tutorial-voted'))
             else
-              DsButton('SIGUIENTE',
+              DsButton(ref.t('ui.tutorial.next'),
                   key: const ValueKey('tutorial-next'),
                   kind: DsButtonKind.primary,
                   onPressed: w.onNext),
             SizedBox(height: DsSpace.xs),
-            Text('ESPACIO o Enter: leí y entendí', style: DsText.detail()),
+            Text(ref.t('ui.tutorial.next_hint'), style: DsText.detail()),
           ],
         ],
       ),
@@ -472,25 +472,28 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                             runSpacing: 4,
                             alignment: WrapAlignment.center,
                             children: [
-                              PanelButton('SEGUIR',
+                              PanelButton(ref.t('ui.tutorial.resume'),
                                   accent: ProtoColors.green,
                                   onPressed: () =>
                                       setState(() => _menu = false)),
                               PanelButton(
-                                  _glossary ? 'OCULTAR GLOSARIO' : 'GLOSARIO',
+                                  ref.t(_glossary
+                                      ? 'ui.tutorial.hide_glossary'
+                                      : 'ui.tutorial.glossary'),
                                   key: const ValueKey('tutorial-menu-glossary'),
                                   onPressed: () =>
                                       setState(() => _glossary = !_glossary)),
-                              for (final (op, label) in const [
-                                (TutorialControl.repeatStage, 'REPETIR ETAPA'),
-                                (TutorialControl.repeat, 'REPETIR'),
-                                (TutorialControl.exit, 'SALIR'),
+                              for (final op in const [
+                                TutorialControl.repeatStage,
+                                TutorialControl.repeat,
+                                TutorialControl.exit,
                               ])
-                                PanelButton(label,
+                                PanelButton(ref.t('ui.tutorial.control.${op.name}'),
                                     key: ValueKey('tutorial-${op.name}'),
                                     reason: w.canControl
                                         ? null
-                                        : 'Lo decide el host', onPressed: () {
+                                        : ref.t('ui.tutorial.host_decides'),
+                                    onPressed: () {
                                   setState(() => _menu = false);
                                   w.onControl(op);
                                 }),

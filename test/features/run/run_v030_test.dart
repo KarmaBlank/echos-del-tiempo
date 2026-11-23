@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/rules/run_tuning.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -212,9 +213,9 @@ void main() {
               .firstWhere((n) => n.kind != 'st' && n.pathId != null)
               .id]);
     c.advance(0.05);
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
         home: Scaffold(
-            body: RunScreen(view: c.view!, controller: c, onExit: () {}))));
+            body: RunScreen(view: c.view!, controller: c, onExit: () {})))));
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.text('OBJETOS'), findsOneWidget);

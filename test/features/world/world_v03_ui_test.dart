@@ -21,6 +21,7 @@ import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/zone_rules.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -274,10 +275,10 @@ void main() {
       tester.view.physicalSize = const Size(1280, 720);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         theme: RetroTheme.build(),
         home: Scaffold(body: child),
-      ));
+      )));
       await tester.pump();
     }
 
@@ -376,7 +377,7 @@ void main() {
           ));
       expect(find.byKey(const ValueKey('results-final')), findsOneWidget);
       expect(find.text('¡Venciste al Devorador de Eras!'), findsOneWidget);
-      expect(find.text(ResultsPanel.finalSubtitle), findsOneWidget);
+      expect(find.text('El tiempo vuelve a fluir. Gracias por jugar.'), findsOneWidget);
     });
   });
 }

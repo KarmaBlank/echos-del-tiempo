@@ -24,6 +24,7 @@ import '../../passive_tree/presentation/passive_tree_view.dart';
 import '../data/template_files.dart';
 import 'build_coach_view.dart';
 import 'build_fit_badge.dart';
+import 'build_text.dart';
 import 'template_view.dart';
 import 'weapon_advice_block.dart';
 import 'weapon_target_view.dart';
@@ -111,6 +112,9 @@ class BuildPlannerView extends StatefulWidget {
       'hazañas que buscás.<br>'
       'Pasá el mouse por una meta para ver qué falta.';
 
+  /// [help] in the active language.
+  static String helpOf(Strings s) => s.t('ui.build.help', {'star': '★'});
+
   @override
   State<BuildPlannerView> createState() => _BuildPlannerViewState();
 }
@@ -147,6 +151,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   }
 
   void _set(BuildPlan p) => widget.onChanged?.call(p);
+
+  Strings get _s => context.buildStrings;
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +222,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
 
   Widget _header(BuildProgress progress) {
     final pct = (progress.ratio * 100).round();
-    final name = _plan.name.isEmpty ? 'Plan sin nombre' : _plan.name;
+    final name =
+        _plan.name.isEmpty ? _s.t('ui.build.edit.unnamed') : _plan.name;
     final counted = progress.counted.length;
     return Column(
       key: const ValueKey('build-header'),
@@ -235,7 +242,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                   TextSpan(
                       text: retroText(name), style: DsText.body(kPlanColor)),
                   TextSpan(
-                      text: retroText('  ${progress.doneCount}/$counted metas'),
+                      text: retroText(_s.t('ui.build.edit.goal_count',
+                          {'done': progress.doneCount, 'total': counted})),
                       style: DsText.detail()),
                 ]),
               ),
@@ -246,23 +254,23 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 style: DsText.body(kPlanColor)),
           ]),
           actions: [
-            DsButton('LISTO',
+            DsButton(_s.t('ui.build.edit.done'),
                 key: const ValueKey('build-edit-done'),
                 kind: DsButtonKind.primary,
                 size: DsButtonSize.compact,
-                tooltip: 'Volver a la vista simple',
+                tooltip: _s.t('ui.build.edit.done_tip'),
                 onPressed: () => setState(() => _editing = false)),
             if (_editable) ...[
-              DsButton('PLANTILLA',
+              DsButton(_s.t('ui.build.edit.template'),
                   key: const ValueKey('build-template'),
                   size: DsButtonSize.compact,
                   onPressed: _chooseTemplate),
-              DsButton('RENOMBRAR',
+              DsButton(_s.t('ui.build.edit.rename'),
                   key: const ValueKey('build-rename'),
                   kind: DsButtonKind.ghost,
                   size: DsButtonSize.compact,
                   onPressed: _rename),
-              DsButton('BORRAR PLAN',
+              DsButton(_s.t('ui.build.edit.clear'),
                   key: const ValueKey('build-clear'),
                   kind: DsButtonKind.ghost,
                   size: DsButtonSize.compact,
@@ -283,7 +291,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 key: const ValueKey('build-next'),
                 TextSpan(children: [
                   TextSpan(
-                      text: retroText('Siguiente paso: '),
+                      text: retroText(_s.t('ui.build.edit.next_step')),
                       style: DsText.detail()),
                   TextSpan(
                       text: retroText(progress.next),
@@ -312,7 +320,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         DsSectionHeader(
           goals.isEmpty ? s.label : '${s.label}  $done/${goals.length}',
           trailing: _editable && onAdd != null
-              ? DsButton('+ AGREGAR',
+              ? DsButton(_s.t('ui.build.edit.add'),
                   key: ValueKey('build-add-${s.name}'),
                   kind: DsButtonKind.ghost,
                   size: DsButtonSize.compact,
@@ -323,7 +331,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           Padding(
             padding: EdgeInsets.symmetric(
                 horizontal: DsSpace.md, vertical: DsSpace.xs),
-            child: Text(retroText('Sin metas'), style: DsText.detail()),
+            child: Text(retroText(_s.t('ui.build.edit.no_goals')),
+                style: DsText.detail()),
           )
         else
           ...rows,
@@ -368,7 +377,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           SizedBox(width: DsSpace.xs),
           DsButton.icon(Text('×', style: DsText.body(DsColors.danger)),
               key: ValueKey('build-remove-${g.key}'),
-              tooltip: 'Quitar meta',
+              tooltip: _s.t('ui.build.edit.remove_goal'),
               size: DsButtonSize.compact,
               onPressed: onRemove),
         ],
@@ -414,16 +423,16 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
-              retroText('Atributos sugeridos ($pts puntos: libres y '
-                  'próximos niveles): ${AttributeAdvisor.split(s)}'),
+              retroText(_s.t('ui.build.edit.attr_advice',
+                  {'points': pts, 'split': AttributeAdvisor.split(s)})),
               key: const ValueKey('build-attr-advice-split'),
               style: DsText.body(DsColors.reward)),
           if (_editable)
-            DsButton('APLICAR SUGERENCIA',
+            DsButton(_s.t('ui.build.edit.apply_advice'),
                 key: const ValueKey('build-advice-goals'),
                 kind: DsButtonKind.primary,
                 size: DsButtonSize.compact,
-                tooltip: same ? 'Ya están en tus metas' : why,
+                tooltip: same ? _s.t('ui.build.edit.advice_same') : why,
                 onPressed: same ? null : () => _set(goals)),
         ],
       ),
@@ -440,13 +449,13 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       DsButton.icon(Text('-5', style: DsText.body(DsColors.mp)),
           key: ValueKey('build-dec-${g.ref}'),
-          tooltip: 'Bajar el objetivo 5',
+          tooltip: _s.t('ui.build.edit.dec5'),
           size: DsButtonSize.compact,
           onPressed: () => bump(-5)),
       SizedBox(width: DsSpace.xs),
       DsButton.icon(Text('+5', style: DsText.body(DsColors.mp)),
           key: ValueKey('build-inc-${g.ref}'),
-          tooltip: 'Subir el objetivo 5',
+          tooltip: _s.t('ui.build.edit.inc5'),
           size: DsButtonSize.compact,
           onPressed: () => bump(5)),
     ]);
@@ -466,7 +475,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         if (small.isNotEmpty)
           DsListRow(
             key: const ValueKey('build-tree-small'),
-            title: retroText('Nodos de camino'),
+            title: retroText(_s.t('ui.build.edit.path_nodes')),
             detail: '$smallDone/${small.length}',
             detailColor:
                 smallDone == small.length ? DsColors.success : DsColors.mp,
@@ -479,7 +488,9 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: DsButton(
-                _editable ? 'PLANIFICAR EN EL ÁRBOL' : 'VER EN EL ÁRBOL',
+                _editable
+                    ? _s.t('ui.build.edit.plan_tree')
+                    : _s.t('ui.build.action.view_tree'),
                 key: const ValueKey('build-open-tree'),
                 size: DsButtonSize.compact,
                 accent: kPlanColor,
@@ -520,11 +531,14 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     return [
       DsListRow(
         key: const ValueKey('build-tree-next'),
-        leading: Text('SIG', style: DsText.detail(DsColors.reward)),
-        title: retroText('Siguiente nodo: ${name(next.node)}'),
+        leading: Text(_s.t('ui.build.edit.next_short'),
+            style: DsText.detail(DsColors.reward)),
+        title: retroText(
+            _s.t('ui.build.edit.next_node', {'name': name(next.node)})),
         titleColor: DsColors.reward,
         detail: retroText(next.alternatives > 1
-            ? '${next.reason} (entre ${next.alternatives} opciones)'
+            ? _s.t('ui.build.edit.next_reason',
+                {'reason': next.reason, 'n': next.alternatives})
             : next.reason),
         detailColor: DsColors.textSecondary,
       ),
@@ -534,9 +548,11 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           padding: EdgeInsets.symmetric(
               horizontal: DsSpace.md, vertical: DsSpace.xs),
           child: Text(
-              retroText('Después: ${[
-                for (final s in rest) '${s.step}. ${name(s.node)}'
-              ].join(' · ')}${order.steps.length > orderPreview ? ' · ...' : ''}'),
+              retroText(_s.t('ui.build.edit.after', {
+                'steps': '${[
+                  for (final s in rest) '${s.step}. ${name(s.node)}'
+                ].join(' · ')}${order.steps.length > orderPreview ? ' · ...' : ''}'
+              })),
               style: DsText.detail(kPlanColor)),
         ),
     ];
@@ -554,7 +570,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     return [
       Padding(
         padding: EdgeInsets.fromLTRB(DsSpace.md, DsSpace.xs, DsSpace.md, 0),
-        child: Text(retroText('Armas que te sirven'),
+        child: Text(retroText(_s.t('ui.build.edit.weapon_picks')),
             key: const ValueKey('build-weapon-picks'),
             style: DsText.detail(kPlanColor)),
       ),
@@ -566,8 +582,9 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             w.item == null
                 ? w.base.name
                 : _rules.progression.items.displayName(w.item!),
-            if (w.equipped) '(equipada)',
-            if (stashUids.contains(w.item?.uid)) '(alijo)',
+            if (w.equipped) _s.t('ui.build.weapon.equipped'),
+            if (stashUids.contains(w.item?.uid))
+              _s.t('ui.build.weapon.in_stash'),
           ].join(' ')),
           titleColor: w.meets ? null : DsColors.textSecondary,
           detail: retroText(w.reasons.first),
@@ -604,7 +621,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.xs),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: DsButton(retroText('TOMAR SIGUIENTE DEL PLAN'),
+        child: DsButton(retroText(_s.t('ui.build.edit.take_next')),
             key: const ValueKey('build-take-next'),
             kind: DsButtonKind.primary,
             size: DsButtonSize.compact,
@@ -640,7 +657,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 horizontal: DsSpace.md, vertical: DsSpace.xs),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: DsButton('+ ARMA OBJETIVO',
+              child: DsButton(_s.t('ui.build.edit.add_target'),
                   key: const ValueKey('build-add-target'),
                   size: DsButtonSize.compact,
                   accent: kPlanColor,
@@ -720,15 +737,20 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       );
 
   Future<void> _addUlt() async {
-    final what = await _pick<String>('AGREGAR', const [
-      PickOption('ult', 'ULT activa', 'la que usás en batalla',
+    final what = await _pick<String>(_s.t('ui.build.pick.add'), [
+      PickOption('ult', _s.t('ui.build.pick.ult_active'),
+          _s.t('ui.build.pick.ult_active_sub'),
           key: 'what-ult'),
-      PickOption('up', 'Mejora de ULT', 'nivel 2 a 5', key: 'what-ultup'),
-      PickOption('feat', 'Hazaña', 'de HAZAÑAS', key: 'what-feat'),
+      PickOption(
+          'up', _s.t('ui.build.pick.ult_up'), _s.t('ui.build.pick.ult_up_sub'),
+          key: 'what-ultup'),
+      PickOption(
+          'feat', _s.t('ui.build.pick.feat'), _s.t('ui.build.pick.feat_sub'),
+          key: 'what-feat'),
     ]);
     if (what == null) return;
     if (what == 'feat') {
-      final id = await _pick<String>('HAZAÑA', [
+      final id = await _pick<String>(_s.t('ui.build.pick.feat_title'), [
         for (final a in kAchievements)
           if (!_plan.feats.contains(a.id))
             PickOption(a.id, a.name, a.how, key: 'feat-${a.id}'),
@@ -740,17 +762,23 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       for (final u in kUltV2List)
         if (u.classes.isEmpty || u.classes.contains(_p.classId)) u
     ];
-    final id = await _pick<String>(what == 'ult' ? 'ULT ACTIVA' : 'ULT', [
-      for (final u in list) PickOption(u.id, u.name, u.how, key: 'ult-${u.id}'),
-    ]);
+    final id = await _pick<String>(
+        what == 'ult'
+            ? _s.t('ui.build.pick.ult_active_title')
+            : _s.t('ui.build.pick.ult_title'),
+        [
+          for (final u in list)
+            PickOption(u.id, u.name, u.how, key: 'ult-${u.id}'),
+        ]);
     if (id == null) return;
     if (what == 'ult') {
       _set(_plan.copyWith(ultActive: () => id));
       return;
     }
-    final lv = await _pick<int>('NIVEL BUSCADO', [
+    final lv = await _pick<int>(_s.t('ui.build.pick.wanted_level'), [
       for (var l = 2; l <= 5; l++)
-        PickOption(l, 'Nivel $l', null, key: 'ulv-$l'),
+        PickOption(l, _s.t('ui.build.pick.level', {'n': l}), null,
+            key: 'ulv-$l'),
     ]);
     if (lv != null) {
       _set(_plan.copyWith(ultUpgrades: {..._plan.ultUpgrades, id: lv}));
@@ -845,11 +873,11 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
               minLines: 2,
               maxLength: BuildPlan.maxNotes,
               style: RetroType.smallStyle,
-              decoration: const InputDecoration(
-                  hintText: 'Notas libres...',
+              decoration: InputDecoration(
+                  hintText: _s.t('ui.build.edit.notes_hint'),
                   isDense: true,
                   counterText: '',
-                  contentPadding: EdgeInsets.all(6)),
+                  contentPadding: const EdgeInsets.all(6)),
               onChanged: (_) {
                 if (!_notesDirty) setState(() => _notesDirty = true);
               },
@@ -859,7 +887,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           if (_notesDirty)
             Align(
               alignment: Alignment.centerRight,
-              child: DsButton('GUARDAR NOTAS',
+              child: DsButton(_s.t('ui.build.edit.save_notes'),
                   key: const ValueKey('build-notes-save'),
                   kind: DsButtonKind.primary,
                   size: DsButtonSize.compact, onPressed: () {
@@ -885,7 +913,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         DsToolbar(
           title: '',
           center: Row(mainAxisSize: MainAxisSize.min, children: [
-            DsButton('< VOLVER AL PLAN',
+            DsButton(_s.t('ui.build.edit.back_to_plan'),
                 key: const ValueKey('build-tree-back'),
                 kind: DsButtonKind.ghost,
                 size: DsButtonSize.compact,
@@ -894,19 +922,21 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             Flexible(
               child: Text(
                   retroText(_editable
-                      ? 'PLANIFICAR · ${planned.length} nodos en el plan'
-                      : '${planned.length} nodos en el plan'),
+                      ? _s.t(
+                          'ui.build.edit.tree_planning', {'n': planned.length})
+                      : _s.t(
+                          'ui.build.edit.tree_nodes', {'n': planned.length})),
                   style: DsText.body(kPlanColor)),
             ),
           ]),
           actions: [
             if (_editable)
-              DsButton('+ CAMINOS',
+              DsButton(_s.t('ui.build.edit.paths'),
                   key: const ValueKey('build-tree-paths'),
                   size: DsButtonSize.compact,
                   tooltip: planned.isEmpty
-                      ? 'Marcá un nodo primero'
-                      : 'Agrega los nodos que conectan lo marcado',
+                      ? _s.t('ui.build.edit.paths_none')
+                      : _s.t('ui.build.edit.paths_tip'),
                   onPressed: planned.isEmpty
                       ? null
                       : () => _set(_rules.withTreePaths(_plan, _p.classId,
@@ -957,36 +987,41 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   }
 
   Future<void> _rename() async {
-    final name = await showBuildTextDialog(context, 'NOMBRE DEL PLAN',
+    final name = await showBuildTextDialog(
+        context, _s.t('ui.build.edit.name_title'),
         initial: _plan.name, maxLength: BuildPlan.maxName);
     if (name == null) return;
     _set(_plan.copyWith(name: name));
   }
 
   Future<void> _clear() async {
-    final ok = await _pick<bool>('¿BORRAR EL PLAN?', const [
-      PickOption(true, 'Sí, borrar', 'Se borran metas, notas y checklist.',
+    final ok = await _pick<bool>(_s.t('ui.build.edit.clear_title'), [
+      PickOption(true, _s.t('ui.build.edit.clear_yes'),
+          _s.t('ui.build.edit.clear_note'),
           key: 'clear-yes'),
-      PickOption(false, 'No', null, key: 'clear-no'),
+      PickOption(false, _s.t('ui.build.pick.no'), null, key: 'clear-no'),
     ]);
     if (ok == true) _set(BuildPlan.empty);
   }
 
   Future<void> _addAttribute() async {
-    final a = await _pick<Attribute>('ATRIBUTO', [
+    final a = await _pick<Attribute>(_s.t('ui.build.pick.attribute'), [
       for (final a in Attribute.values)
-        PickOption(
-            a, BuildPlanRules.attributeShort(a), 'tenés ${_p.attributes[a]}',
+        PickOption(a, BuildPlanRules.attributeShort(a),
+            _s.t('ui.build.pick.you_have', {'n': _p.attributes[a]}),
             key: 'attr-${a.name}'),
     ]);
     if (a == null) return;
     final cur = _p.attributes[a];
     final base = ((cur + 5) / 5).ceil() * 5;
-    final target =
-        await _pick<int>('OBJETIVO DE ${BuildPlanRules.attributeShort(a)}', [
-      for (var v = base; v <= base + 50; v += 5)
-        PickOption(v, '$v', '+${v - cur} puntos', key: 'target-$v'),
-    ]);
+    final target = await _pick<int>(
+        _s.t('ui.build.pick.attr_target',
+            {'attr': BuildPlanRules.attributeShort(a)}),
+        [
+          for (var v = base; v <= base + 50; v += 5)
+            PickOption(v, '$v', _s.t('ui.build.pick.points', {'n': v - cur}),
+                key: 'target-$v'),
+        ]);
     if (target == null) return;
     _set(_plan.copyWith(attributes: {..._plan.attributes, a: target}));
   }
@@ -995,12 +1030,14 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     final defs = ascensionsOf(_p.classId);
     final what = _plan.ascensionId == null
         ? 'asc'
-        : await _pick<String>('AGREGAR', const [
-            PickOption('asc', 'Cambiar ascensión', null, key: 'what-asc'),
-            PickOption('node', 'Nodo del mini-árbol', null, key: 'what-node'),
+        : await _pick<String>(_s.t('ui.build.pick.add'), [
+            PickOption('asc', _s.t('ui.build.pick.change_asc'), null,
+                key: 'what-asc'),
+            PickOption('node', _s.t('ui.build.pick.asc_node'), null,
+                key: 'what-node'),
           ]);
     if (what == 'asc') {
-      final id = await _pick<String>('ASCENSIÓN', [
+      final id = await _pick<String>(_s.t('ui.build.pick.ascension'), [
         for (final d in defs)
           PickOption(d.id, d.name, d.theme, key: 'asc-${d.id}'),
       ]);
@@ -1009,12 +1046,15 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     } else if (what == 'node') {
       final def = kAscensions[_plan.ascensionId];
       if (def == null) return;
-      final id = await _pick<String>('NODO DE ${def.name.toUpperCase()}', [
-        for (final n in def.nodes)
-          if (!n.root && !_plan.ascensionNodes.contains(n.id))
-            PickOption(n.id, '${n.name} (${n.cost})', n.text,
-                key: 'ascn-${n.id}'),
-      ]);
+      final id = await _pick<String>(
+          _s.t(
+              'ui.build.pick.asc_node_title', {'name': def.name.toUpperCase()}),
+          [
+            for (final n in def.nodes)
+              if (!n.root && !_plan.ascensionNodes.contains(n.id))
+                PickOption(n.id, '${n.name} (${n.cost})', n.text,
+                    key: 'ascn-${n.id}'),
+          ]);
       if (id == null) return;
       _set(_plan.copyWith(ascensionNodes: [..._plan.ascensionNodes, id]));
     }
@@ -1022,12 +1062,18 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
 
   Future<void> _addWeapon() async {
     final cat = _rules.progression.catalog;
-    final what = await _pick<String>('AGREGAR AL ARMA', const [
-      PickOption('type', 'Tipo de arma', 'hacha, báculo, rifle...',
+    final what = await _pick<String>(_s.t('ui.build.pick.add_weapon'), [
+      PickOption(
+          'type', _s.t('ui.build.pick.type'), _s.t('ui.build.pick.type_sub'),
           key: 'what-type'),
-      PickOption('base', 'Base de arma', 'una base concreta', key: 'what-base'),
-      PickOption('mod', 'Mod (afijo)', 'con tier mínimo', key: 'what-mod'),
-      PickOption('wp', 'Pasiva de arma', 'Épicas y Legendarias',
+      PickOption(
+          'base', _s.t('ui.build.pick.base'), _s.t('ui.build.pick.base_sub'),
+          key: 'what-base'),
+      PickOption(
+          'mod', _s.t('ui.build.pick.mod'), _s.t('ui.build.pick.mod_sub'),
+          key: 'what-mod'),
+      PickOption('wp', _s.t('ui.build.pick.passive'),
+          _s.t('ui.build.pick.passive_sub'),
           key: 'what-wp'),
     ]);
     switch (what) {
@@ -1036,7 +1082,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             .where((t) => !_plan.weaponTypes.contains(t))
             .toList()
           ..sort();
-        final t = await _pick<String>('TIPO DE ARMA', [
+        final t = await _pick<String>(_s.t('ui.build.pick.type_title'), [
           for (final t in types) PickOption(t, t, null, key: 'type-$t'),
         ]);
         if (t != null) {
@@ -1047,32 +1093,47 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             .where((w) => !_plan.weaponBases.contains(w.id))
             .toList()
           ..sort((a, b) => a.level.compareTo(b.level));
-        final b = await _pick<String>('BASE DE ARMA', [
+        final b = await _pick<String>(_s.t('ui.build.pick.base_title'), [
           for (final w in bases)
-            PickOption(w.id, w.name,
-                '${w.type} · Nv ${w.level}${w.price > 0 ? ' · ₵${w.price}' : ' · loot'}',
+            PickOption(
+                w.id,
+                w.name,
+                w.price > 0
+                    ? _s.t('ui.build.pick.base_price', {
+                        'type': w.type,
+                        'level': w.level,
+                        'price': '₵${w.price}'
+                      })
+                    : _s.t('ui.build.pick.base_loot',
+                        {'type': w.type, 'level': w.level}),
                 key: 'base-${w.id}'),
         ]);
         if (b != null) {
           _set(_plan.copyWith(weaponBases: [..._plan.weaponBases, b]));
         }
       case 'mod':
-        final id = await _pick<String>('MOD', [
+        final id = await _pick<String>(_s.t('ui.build.pick.mod_title'), [
           for (final a in kAffixes.values)
             if (!_plan.mods.any((m) => m.affixId == a.id))
               PickOption(
                   a.id,
                   BuildPlanRules.affixLabel(a.id),
-                  '${a.slot.name == 'prefix' ? 'prefijo' : 'sufijo'}'
+                  '${_s.t('ui.build.pick.slot', {'slot': a.slot.name})}'
                   '${a.types == null ? '' : ' · ${a.types!.join(', ')}'}',
                   key: 'mod-${a.id}'),
         ]);
         if (id == null) return;
         final def = kAffixes[id]!;
-        final tier = await _pick<int>('TIER MÍNIMO (T1 es el mejor)', [
+        final tier = await _pick<int>(_s.t('ui.build.pick.min_tier'), [
           for (final t in def.tiers.reversed)
-            PickOption(t.tier, 'T${t.tier} o mejor',
-                '${def.stat.format(t.min)}–${t.max} · objeto Nv ${t.minLevel}+',
+            PickOption(
+                t.tier,
+                _s.t('ui.build.pick.tier', {'tier': t.tier}),
+                _s.t('ui.build.pick.tier_range', {
+                  'min': def.stat.format(t.min),
+                  'max': t.max,
+                  'level': t.minLevel,
+                }),
                 key: 'tier-${t.tier}'),
         ]);
         if (tier != null) {
@@ -1081,10 +1142,10 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       case 'wp':
         final list = kWeaponPassives.values.toList()
           ..sort((a, b) => a.name.compareTo(b.name));
-        final id = await _pick<String>('PASIVA DE ARMA', [
+        final id = await _pick<String>(_s.t('ui.build.pick.passive_title'), [
           for (final w in list)
             PickOption(w.id, w.name,
-                '${w.unique ? 'única · ' : ''}${w.descriptionAt(1)}',
+                '${w.unique ? _s.t('ui.build.pick.unique') : ''}${w.descriptionAt(1)}',
                 key: 'wp-${w.id}'),
         ]);
         if (id != null) _set(_plan.copyWith(weaponPassive: () => id));
@@ -1101,48 +1162,55 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     }
     for (final a in kAscensions.values) {
       for (final s in a.skillIds) {
-        (givers[s] ??= []).add('kit de ${a.name}');
+        (givers[s] ??= []).add(_s.t('ui.build.pick.kit_of', {'name': a.name}));
       }
     }
     final list = cat.skills.values
         .where((s) => !_plan.skills.contains(s.id))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
-    final id = await _pick<String>('HABILIDAD', [
+    final id = await _pick<String>(_s.t('ui.build.pick.skill'), [
       for (final s in list)
         PickOption(
             s.id,
             s.name,
             givers[s.id] == null
                 ? null
-                : 'la da ${givers[s.id]!.take(2).join(', ')}',
+                : _s.t('ui.build.pick.given_by',
+                    {'names': givers[s.id]!.take(2).join(', ')}),
             key: 'skill-${s.id}'),
     ]);
     if (id != null) _set(_plan.copyWith(skills: [..._plan.skills, id]));
   }
 
   Future<void> _addLevel() async {
-    final what = await _pick<String>('AGREGAR', const [
-      PickOption('lvl', 'Nivel objetivo', null, key: 'what-lvl'),
-      PickOption('ms', 'Maestría objetivo', 'con nivel 50', key: 'what-ms'),
+    final what = await _pick<String>(_s.t('ui.build.pick.add'), [
+      PickOption('lvl', _s.t('ui.build.pick.target_level'), null,
+          key: 'what-lvl'),
+      PickOption('ms', _s.t('ui.build.pick.target_mastery'),
+          _s.t('ui.build.pick.target_mastery_sub'),
+          key: 'what-ms'),
     ]);
     if (what == 'lvl') {
-      final l = await _pick<int>('NIVEL', [
+      final l = await _pick<int>(_s.t('ui.build.pick.level_title'), [
         for (final v in const [10, 20, 30, 40, 50])
-          PickOption(v, 'Nivel $v', null, key: 'lvl-$v'),
+          PickOption(v, _s.t('ui.build.pick.level', {'n': v}), null,
+              key: 'lvl-$v'),
       ]);
       if (l != null) _set(_plan.copyWith(targetLevel: () => l));
     } else if (what == 'ms') {
-      final m = await _pick<int>('MAESTRÍA', [
+      final m = await _pick<int>(_s.t('ui.build.pick.mastery_title'), [
         for (final v in const [5, 10, 15, 20])
-          PickOption(v, 'Maestría $v', null, key: 'ms-$v'),
+          PickOption(v, _s.t('ui.build.pick.mastery', {'n': v}), null,
+              key: 'ms-$v'),
       ]);
       if (m != null) _set(_plan.copyWith(targetMastery: () => m));
     }
   }
 
   Future<void> _addCheck() async {
-    final text = await showBuildTextDialog(context, 'ÍTEM DEL CHECKLIST',
+    final text = await showBuildTextDialog(
+        context, _s.t('ui.build.edit.check_title'),
         maxLength: BuildPlan.maxText);
     if (text == null || text.isEmpty) return;
     _set(_plan.copyWith(checklist: [..._plan.checklist, ChecklistItem(text)]));
@@ -1233,7 +1301,7 @@ class _PickerState<T> extends State<_Picker<T>> {
                     : DsButtonKind.secondary,
                 onPressed: () => pick(o))
         else
-          DsButton('CANCELAR',
+          DsButton(context.bt('ui.build.dialog.cancel'),
               key: const ValueKey('build-picker-cancel'),
               onPressed: () => Navigator.of(context).pop()),
       ],
@@ -1247,7 +1315,7 @@ class _PickerState<T> extends State<_Picker<T>> {
             if (searchable) ...[
               DsSearchField(
                 key: const ValueKey('build-picker-search'),
-                hint: 'Buscar...',
+                hint: context.bt('ui.build.dialog.search'),
                 width: 520,
                 controller: _q,
                 onChanged: (_) => setState(() {}),
@@ -1255,7 +1323,8 @@ class _PickerState<T> extends State<_Picker<T>> {
               SizedBox(height: DsSpace.sm),
             ],
             if (list.isEmpty)
-              Text(retroText('Nada para agregar'), style: DsText.detail()),
+              Text(retroText(context.bt('ui.build.dialog.nothing')),
+                  style: DsText.detail()),
             for (final o in list)
               DsListRow(
                 key: ValueKey('pick-${o.key}'),
@@ -1307,8 +1376,9 @@ class _TextDialogState extends State<_TextDialog> {
         width: 480,
         onClose: () => Navigator.of(context).pop(),
         actions: [
-          DsButton('CANCELAR', onPressed: () => Navigator.of(context).pop()),
-          DsButton('GUARDAR',
+          DsButton(context.bt('ui.build.dialog.cancel'),
+              onPressed: () => Navigator.of(context).pop()),
+          DsButton(context.bt('ui.build.dialog.save'),
               key: const ValueKey('build-text-ok'),
               kind: DsButtonKind.primary,
               onPressed: _ok),

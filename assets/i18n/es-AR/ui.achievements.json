@@ -1,0 +1,17 @@
+{
+  "ui.achievements.filter.all": "Todas",
+  "ui.achievements.filter.pending": "Pendientes",
+  "ui.achievements.filter.done": "Logradas",
+  "ui.achievements.done_count": "Logradas ",
+  "ui.achievements.empty": "Nada por acá todavía.",
+  "ui.achievements.state.done": "Lograda",
+  "ui.achievements.state.pending": "Pendiente",
+  "ui.achievements.reward": "Recompensa: {reward}",
+  "ui.achievements.progress": "Progreso: {progress}",
+  "ui.achievements.done_on": "Lograda el {date}",
+  "ui.achievements.title": "HAZAÑAS",
+  "ui.achievements.back": "VOLVER",
+  "ui.achievements.loading": "Cargando...",
+  "ui.achievements.toast_head": "HAZAÑA LOGRADA",
+  "ui.achievements.help": "<b>Hazañas</b><br>Una vez por cuenta: cada una paga créditos, materiales o pociones al personaje con el que la lográs. Funcionan como guía: pasá el mouse por una fila (o mantenela apretada) para ver cómo se consigue.<br>Las de contador (II, III) cuentan desde que existen las hazañas."
+}

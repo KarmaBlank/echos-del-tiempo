@@ -14,6 +14,7 @@ import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -129,7 +130,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: AscensionCinematic(
@@ -140,7 +141,7 @@ void main() {
             at: at,
             onDone: done),
       ),
-    ));
+    )));
   }
 
   testWidgets('cinemática: congela, transforma y muestra el cartel',
@@ -178,13 +179,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     String? chosen;
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: AscensionChoiceView(
             classId: 'paladin', sprites: null, onChoose: (id) => chosen = id),
       ),
-    ));
+    )));
     expect(find.byKey(const ValueKey('asc-card-templario')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('asc-choose-guardian')));
     expect(chosen, 'guardian');

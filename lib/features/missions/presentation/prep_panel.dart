@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -15,6 +16,7 @@ import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
 import 'mission_card.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Un jugador en la lista de preparación.
 class PrepEntry {
@@ -31,7 +33,7 @@ class PrepEntry {
 /// pestañas: MISIÓN (tarjeta, quién está listo, tu equipo) y las de la
 /// tienda ([shopTabs]). `¡LISTO!` es el primario, abajo a la derecha en
 /// todas las pestañas. Ver docs/specs/panels.md § "Preparación".
-class PrepPanel extends StatefulWidget {
+class PrepPanel extends ConsumerStatefulWidget {
   const PrepPanel({
     super.key,
     required this.mission,
@@ -85,31 +87,25 @@ class PrepPanel extends StatefulWidget {
   /// Pestañas de tienda (COMPRAR, FORJA, FUSIÓN, CONSUMIBLES).
   final List<PanelTabSpec> shopTabs;
 
-  static const help = '<b>Preparación</b><br>'
-      'Último paso antes de salir: compra, mejora y equípate. Dentro de la '
-      'misión no hay tienda ni cambio de arma.<br>'
-      'La misión empieza cuando <b>todos</b> marcan ¡LISTO!. CANCELAR MISIÓN '
-      'vuelve al lobby a todo el grupo.';
-
   @override
-  State<PrepPanel> createState() => _PrepPanelState();
+  ConsumerState<PrepPanel> createState() => _PrepPanelState();
 }
 
-class _PrepPanelState extends State<PrepPanel> {
+class _PrepPanelState extends ConsumerState<PrepPanel> {
   /// Modo de combate: selector para el anfitrión, texto para el resto;
   /// el tooltip explica el modo en una línea.
   Widget _combatModeLine() {
     final w = widget;
     final on = w.onCombatMode;
     final child = on == null
-        ? InfoLine('Combate',
-            '${w.combatMode.label} <span class="k">· lo elige el anfitrión</span>',
+        ? InfoLine(ref.t('ui.missions.prep.combat'),
+            ref.t('ui.missions.prep.host_picks', {'value': w.combatMode.label}),
             labelEms: 13)
         : Padding(
             padding: EdgeInsets.symmetric(
                 horizontal: DsSpace.md, vertical: DsSpace.xs),
             child: ChoiceCycler<CombatMode>(
-              label: 'Combate',
+              label: ref.t('ui.missions.prep.combat'),
               options: CombatMode.values,
               value: w.combatMode,
               display: (m) => m.label,
@@ -141,9 +137,8 @@ class _PrepPanelState extends State<PrepPanel> {
     final w = widget;
     final tabs = [
       PanelTabSpec(
-          'MISIÓN',
-          'Revisa la misión y tu equipo. Cuando estés, '
-              'marca ¡LISTO!.',
+          ref.t('ui.missions.prep.tab'),
+          ref.t('ui.missions.prep.tab_hint'),
           (_) => _missionTab()),
       ...w.shopTabs,
     ];
@@ -155,29 +150,39 @@ class _PrepPanelState extends State<PrepPanel> {
         index: _tab.clamp(0, tabs.length - 1),
         onChanged: (i) => setState(() => _tab = i),
         child: PanelFrame(
-          title: 'PREPARACIÓN · ${w.mission.name}',
+          title: ref.t('ui.missions.prep.title', {'name': w.mission.name}),
           width: 1000,
           fill: true,
-          help: PrepPanel.help,
-          titleTrailing: ProtoText('Créditos <b>₵${w.credits}</b> · '
-              '${protoColor(nReady == w.players.length ? ProtoColors.green : ProtoColors.dim, '$nReady/${w.players.length} listos')}'),
+          help: ref.t('ui.missions.prep.help'),
+          titleTrailing: ProtoText(ref.t('ui.missions.prep.credits_ready', {
+            'credits': w.credits,
+            'ready': protoColor(
+                nReady == w.players.length
+                    ? ProtoColors.green
+                    : ProtoColors.dim,
+                ref.t('ui.missions.prep.ready_count',
+                    {'ready': nReady, 'total': w.players.length})),
+          })),
           header: _header(PanelTabs(
             labels: [for (final t in tabs) t.label],
             index: _tab,
             onChanged: (i) => setState(() => _tab = i),
           )),
           leading: [
-            DsButton('CANCELAR MISIÓN',
+            DsButton(ref.t('ui.missions.prep.cancel'),
                 key: const ValueKey('prep-cancel'),
                 kind: DsButtonKind.ghost,
                 onPressed: w.onCancel),
           ],
           actions: [
-            DsButton('PERSONAJE [TAB]',
+            DsButton(ref.t('ui.missions.character'),
                 key: const ValueKey('prep-character'),
                 onPressed: w.onCharacter),
             // ¡LISTO! es la acción principal (borde y texto dorados).
-            DsButton(w.ready ? 'YA NO ESTOY LISTO' : '¡LISTO!',
+            DsButton(
+                ref.t(w.ready
+                    ? 'ui.missions.prep.unready'
+                    : 'ui.missions.prep.ready'),
                 key: const ValueKey('prep-ready'),
                 kind: w.ready ? DsButtonKind.secondary : DsButtonKind.primary,
                 onPressed: () => w.onReady(!w.ready)),
@@ -214,9 +219,11 @@ class _PrepPanelState extends State<PrepPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                DsSectionHeader('GRUPO',
+                DsSectionHeader(ref.t('ui.missions.prep.group'),
                     key: const ValueKey('prep-group'),
-                    trailing: Text('$nReady/${w.players.length} listos',
+                    trailing: Text(
+                        ref.t('ui.missions.prep.ready_count',
+                            {'ready': nReady, 'total': w.players.length}),
                         style: DsText.detail(nReady == w.players.length
                             ? DsColors.success
                             : DsColors.textSecondary))),
@@ -227,7 +234,7 @@ class _PrepPanelState extends State<PrepPanel> {
                     padding: EdgeInsets.symmetric(
                         horizontal: DsSpace.md, vertical: DsSpace.xs),
                     child: ProtoText(
-                      '${p.ready ? protoColor(DsColors.success, 'LISTO') : protoColor(DsColors.textSecondary, 'preparando...')} '
+                      '${p.ready ? protoColor(DsColors.success, ref.t('ui.missions.prep.player_ready')) : protoColor(DsColors.textSecondary, ref.t('ui.missions.prep.player_preparing'))} '
                       '${protoColor(p.isLocal ? DsColors.selected : DsColors.textPrimary, protoEsc(p.name))} '
                       '${protoColor(DsColors.textSecondary, '${protoEsc(p.className)} Lv${p.level}')}',
                       maxLines: 1,
@@ -237,31 +244,33 @@ class _PrepPanelState extends State<PrepPanel> {
                 SizedBox(height: DsSpace.sm),
                 SectionPanel(
                   icon: PixelIconKind.sword,
-                  title: 'TU EQUIPO',
+                  title: ref.t('ui.missions.prep.your_gear'),
                   children: [
 
-                    InfoLine('Arma',
+                    InfoLine(ref.t('ui.missions.prep.weapon'),
                         '<b style="color:#ff9f43">${protoEsc(w.weaponName)}</b>',
                         labelEms: 13),
-                    InfoLine('Consumibles',
-                        'Pociones x${w.potions} · Éteres x${w.ethers}',
+                    InfoLine(ref.t('ui.missions.prep.consumables'),
+                        ref.t('ui.missions.prep.consumables_value',
+                            {'potions': w.potions, 'ethers': w.ethers}),
                         labelEms: 13),
-                    InfoLine('Turnos',
-                        '${w.turnTimer.label} <span class="k">· lo elige el anfitrión</span>',
+                    InfoLine(ref.t('ui.missions.prep.turns'),
+                        ref.t('ui.missions.prep.host_picks',
+                            {'value': w.turnTimer.label}),
                         key: const ValueKey('prep-turn-timer'), labelEms: 13),
                     _combatModeLine(),
-                    InfoLine('Créditos', '<b>₵${w.credits}</b>', labelEms: 13),
+                    InfoLine(ref.t('ui.missions.prep.credits'), '<b>₵${w.credits}</b>',
+                        labelEms: 13),
                   ],
                 ),
                 SectionPanel(
                   icon: PixelIconKind.lock,
                   color: ProtoColors.orange,
-                  title: 'AVISO',
+                  title: ref.t('ui.missions.prep.notice'),
                   children: [
                     ProtoText(protoColor(
                         ProtoColors.orange,
-                        '<b>En la misión no hay tienda ni cambio de arma</b>: '
-                        'solo subes de nivel.')),
+                        ref.t('ui.missions.prep.notice_text'))),
                   ],
                 ),
               ],

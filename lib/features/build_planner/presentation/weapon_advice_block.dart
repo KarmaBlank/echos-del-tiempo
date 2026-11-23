@@ -7,6 +7,7 @@ import '../../../game_engine/models/item.dart' show ItemInstance;
 import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import 'build_fit_badge.dart' show kPlanColor;
+import 'build_text.dart';
 
 /// Consejo de arma (build_planner.md § 9.4): 4 líneas cortas (tipo
 /// ideal, mejor que tenés, mejor para mejorar, para comprar) con su
@@ -43,8 +44,8 @@ class WeaponAdviceBlock extends StatelessWidget {
   final ValueChanged<String>? onOpenForge;
   final VoidCallback? onOpenShop;
 
-  static String typesLabel(List<String> types) =>
-      types.map((t) => t.toUpperCase()).join(' o ');
+  static String typesLabel(List<String> types, [String or = ' o ']) =>
+      types.map((t) => t.toUpperCase()).join(or);
 
   Widget _icon(Color c) => PixelIcon(PixelIconKind.sword, size: 12, color: c);
 
@@ -63,10 +64,12 @@ class WeaponAdviceBlock extends StatelessWidget {
     final up = a.upgrade;
     final buy = a.buy;
     final attr = a.idealAttribute;
+    final s = context.buildStrings;
+    String types(List<String> t) => typesLabel(t, s.t('ui.build.advice.or'));
     String owned(WeaponPick w) => [
           nameOf(w.item!),
-          if (w.equipped) '(equipada)',
-          if (stashUids.contains(w.item!.uid)) '(alijo)',
+          if (w.equipped) s.t('ui.build.weapon.equipped'),
+          if (stashUids.contains(w.item!.uid)) s.t('ui.build.weapon.in_stash'),
         ].join(' ');
     // Botones en su propia fila (Wrap): nunca aprietan el texto.
     final actions = <Widget>[
@@ -76,15 +79,15 @@ class WeaponAdviceBlock extends StatelessWidget {
           onEquip != null)
         () {
           final why = equipBlocked?.call(best.item!.uid);
-          return _button('EQUIPAR', 'advice-equip',
+          return _button(s.t('ui.build.action.equip'), 'advice-equip',
               why == null ? () => onEquip!(best.item!.uid) : null,
               tooltip: why);
         }(),
       if (up != null && onOpenForge != null)
-        _button('IR A FORJA', 'advice-forge',
+        _button(s.t('ui.build.action.go_forge'), 'advice-forge',
             () => onOpenForge!(up.pick.item!.uid)),
       if (buy != null && onOpenShop != null)
-        _button('IR A LA ARMERÍA', 'advice-shop', onOpenShop),
+        _button(s.t('ui.build.action.go_shop'), 'advice-shop', onOpenShop),
     ];
     return Column(
       key: const ValueKey('weapon-advice'),
@@ -92,15 +95,18 @@ class WeaponAdviceBlock extends StatelessWidget {
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(DsSpace.md, DsSpace.xs, DsSpace.md, 0),
-          child: Text(retroText('Consejo de arma'),
+          child: Text(retroText(s.t('ui.build.advice.title')),
               style: DsText.detail(kPlanColor)),
         ),
         DsListRow(
           key: const ValueKey('advice-ideal'),
           compact: true,
           leading: _icon(kPlanColor),
-          title: retroText('Tipo ideal: ${typesLabel(a.idealTypes)}'
-              '${attr == null ? '' : ' · ${BuildPlanRules.attributeShort(attr)}'}'),
+          title: retroText(s.t('ui.build.advice.ideal', {
+            'types': types(a.idealTypes),
+            'attr':
+                attr == null ? '' : ' · ${BuildPlanRules.attributeShort(attr)}',
+          })),
           detail: retroText(a.idealReason),
           detailColor: DsColors.textSecondary,
         ),
@@ -108,13 +114,14 @@ class WeaponAdviceBlock extends StatelessWidget {
           Padding(
             padding: EdgeInsets.symmetric(
                 horizontal: DsSpace.md, vertical: DsSpace.xs),
-            child: _typePicker(a),
+            child: _typePicker(a, s),
           )
         else if (a.chosenType != null)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
             child: Text(
-                retroText('Quiero usar: ${a.chosenType!.toUpperCase()}'),
+                retroText(s.t('ui.build.advice.want',
+                    {'type': a.chosenType!.toUpperCase()})),
                 style: DsText.detail(kPlanColor)),
           ),
         if (a.howTo.isNotEmpty)
@@ -126,7 +133,8 @@ class WeaponAdviceBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    retroText('Cómo armarlo con ${a.activeType.toUpperCase()}'),
+                    retroText(s.t('ui.build.advice.how_to',
+                        {'type': a.activeType.toUpperCase()})),
                     style: DsText.detail(kPlanColor)),
                 for (final l in a.howTo)
                   Text(retroText('· $l'),
@@ -139,14 +147,15 @@ class WeaponAdviceBlock extends StatelessWidget {
           compact: true,
           leading: _icon(best == null ? DsColors.textSecondary : DsColors.mp),
           title: retroText(best == null
-              ? 'Mejor que tenés: ninguna'
-              : 'Mejor que tenés: ${owned(best)}'),
+              ? s.t('ui.build.advice.best_none')
+              : s.t('ui.build.advice.best', {'name': owned(best)})),
           titleColor:
               best == null || best.meets ? null : DsColors.textSecondary,
           detail: retroText(best == null
-              ? 'No tenés armas'
+              ? s.t('ui.build.advice.no_weapons')
               : best.equipped
-                  ? 'Ya la usás · ${best.reasons.first}'
+                  ? s.t(
+                      'ui.build.advice.in_use', {'reason': best.reasons.first})
                   : best.reasons.first),
           detailColor:
               best == null || best.meets ? DsColors.mp : DsColors.danger,
@@ -157,14 +166,15 @@ class WeaponAdviceBlock extends StatelessWidget {
             key: const ValueKey('advice-upgrade'),
             compact: true,
             leading: _icon(DsColors.reward),
-            title: retroText(
-                'Mejor para mejorar: ${owned(up.pick)} +${up.levels} POT'),
-            detail: retroText(
-                'Le gana a la mejor por ${up.gain.toStringAsFixed(1)} · '
-                'forja ${up.credits} créditos'),
+            title: retroText(s.t('ui.build.advice.upgrade',
+                {'name': owned(up.pick), 'levels': up.levels})),
+            detail: retroText(s.t('ui.build.advice.upgrade_gain', {
+              'gain': up.gain.toStringAsFixed(1),
+              'credits': up.credits,
+            })),
             detailColor: DsColors.reward,
             tooltip: _reasons(up.pick.base.name, [
-              'Forjada en POT hasta su tope (+${up.levels})',
+              s.t('ui.build.advice.upgrade_cap', {'levels': up.levels}),
               ...up.pick.reasons,
             ]),
           ),
@@ -173,9 +183,12 @@ class WeaponAdviceBlock extends StatelessWidget {
             key: const ValueKey('advice-buy'),
             compact: true,
             leading: _icon(DsColors.reward),
-            title: retroText('Para comprar: ${buy.base.name}'),
-            detail: retroText('${buy.base.price} créditos · '
-                '${buy.reasons.first}'),
+            title:
+                retroText(s.t('ui.build.advice.buy', {'name': buy.base.name})),
+            detail: retroText(s.t('ui.build.advice.buy_detail', {
+              'credits': buy.base.price,
+              'reason': buy.reasons.first,
+            })),
             detailColor: DsColors.textSecondary,
             tooltip: _reasons(buy.base.name, buy.reasons),
           ),
@@ -198,13 +211,14 @@ class WeaponAdviceBlock extends StatelessWidget {
 
   /// "Quiero usar: ‹ TIPO ›" (null = el ideal). Wrap: con texto grande o
   /// poco ancho baja de línea en vez de desbordar.
-  Widget _typePicker(WeaponAdvice a) {
+  Widget _typePicker(WeaponAdvice a, Strings s) {
     final options = <String?>[null, ...a.allTypes];
     final i = options.indexOf(a.chosenType);
     void step(int d) =>
         onChooseType!(options[(i + d + options.length) % options.length]);
     final value = a.chosenType == null
-        ? 'IDEAL (${typesLabel(a.idealTypes)})'
+        ? s.t('ui.build.advice.ideal_value',
+            {'types': typesLabel(a.idealTypes, s.t('ui.build.advice.or'))})
         : a.chosenType!.toUpperCase();
     return Wrap(
       key: const ValueKey('advice-type'),
@@ -212,11 +226,12 @@ class WeaponAdviceBlock extends StatelessWidget {
       runSpacing: DsSpace.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(retroText('Quiero usar:'), style: DsText.detail(kPlanColor)),
+        Text(retroText(s.t('ui.build.advice.want_label')),
+            style: DsText.detail(kPlanColor)),
         DsButton('‹',
             key: const ValueKey('advice-type-prev'),
             size: DsButtonSize.compact,
-            tooltip: 'Tipo anterior',
+            tooltip: s.t('ui.build.advice.prev_type'),
             onPressed: () => step(-1)),
         Text(retroText(value),
             key: const ValueKey('advice-type-value'),
@@ -224,7 +239,7 @@ class WeaponAdviceBlock extends StatelessWidget {
         DsButton('›',
             key: const ValueKey('advice-type-next'),
             size: DsButtonSize.compact,
-            tooltip: 'Tipo siguiente',
+            tooltip: s.t('ui.build.advice.next_type'),
             onPressed: () => step(1)),
       ],
     );

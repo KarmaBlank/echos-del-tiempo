@@ -35,6 +35,7 @@ import 'reaction_fx.dart';
 import 'summon_sprite.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
+import '../combat_strings.dart';
 
 /// Primitivas de dibujo en el lienzo virtual (sin antialias, texto con
 /// sombra como `txt` del prototipo).
@@ -849,7 +850,10 @@ class BattleScenePainter extends CustomPainter {
   /// Etiquetas de todos los actores, ya ubicadas sin superposición
   /// (px de pantalla, sin la sacudida). Las usa también el test.
   static Map<String, Rect> labelRects(SceneFrame f, SceneViewport vp,
-      {double Function(String text, double size)? measure}) {
+      {double Function(String text, double size)? measure,
+      String? vulnerable}) {
+    final vulnerableText = vulnerable ??
+        fallbackCombatStrings().t('ui.combat.scene.vulnerable');
     final u = f.geometry.labelUnit.toDouble();
     final m = measure ?? _pen.width;
     final reqs = <LabelRequest>[];
@@ -892,7 +896,7 @@ class BattleScenePainter extends CustomPainter {
       e.tag == null ? '${e.hp}/${e.maxHp}' : '${e.tag} ${e.hp}/${e.maxHp}';
 
   /// Texto del chip de un enemigo quebrado.
-  static const vulnerableText = 'VULNERABLE';
+  String get vulnerableText => scene.text.t('ui.combat.scene.vulnerable');
 
   /// Alto de la etiqueta de un enemigo: vida (texto + barra) y, debajo,
   /// la barra de quiebre, la de carga de ULT (jefes y élites) y el chip
@@ -912,7 +916,7 @@ class BattleScenePainter extends CustomPainter {
         u0 == null ? 1.0 : 1 - u0.script.darkness(scene.t - u0.t0);
     c.save();
     c.translate(shake.dx, shake.dy);
-    final rects = labelRects(f, vp);
+    final rects = labelRects(f, vp, vulnerable: vulnerableText);
     if (labelAlpha > 0.02) {
       if (labelAlpha < 1) {
         c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, labelAlpha));
@@ -1003,7 +1007,8 @@ class BattleScenePainter extends CustomPainter {
     if (f == null) return;
     final vp = SceneViewport(f.geometry.worldRect, scene.viewFor(f));
     final u = f.geometry.labelUnit.toDouble();
-    _floating(c, vp, u, labelRects(f, vp), f.floatTopMargin);
+    _floating(c, vp, u, labelRects(f, vp, vulnerable: vulnerableText),
+        f.floatTopMargin);
   }
 
   /// Barra de quiebre (amarilla; parpadea quebrado), carga de ULT (roja;
@@ -1894,8 +1899,12 @@ class BattleScenePainter extends CustomPainter {
     _pen.text(
         c,
         b.porFases
-            ? (group ? 'FASE DE JUGADORES' : 'FASE ENEMIGA')
-            : (group ? 'TURNO DEL GRUPO' : 'TURNO ENEMIGO'),
+            ? scene.text.t(group
+                ? 'ui.combat.scene.players_phase'
+                : 'ui.combat.scene.enemy_phase')
+            : scene.text.t(group
+                ? 'ui.combat.scene.party_turn'
+                : 'ui.combat.scene.enemy_turn'),
         vw / 2,
         band / 2 - 4,
         group ? const Color(0xFFFFD166) : const Color(0xFFFF4757),
@@ -1903,7 +1912,10 @@ class BattleScenePainter extends CustomPainter {
     if (group) {
       _pen.text(
           c,
-          missing.isEmpty ? 'Todos actuaron' : 'Faltan: ${missing.join(', ')}',
+          missing.isEmpty
+              ? scene.text.t('ui.combat.scene.all_acted')
+              : scene.text.t(
+                  'ui.combat.scene.missing', {'names': missing.join(', ')}),
           vw / 2,
           band / 2 + 12,
           const Color(0xFF9FB4FF),
@@ -1945,7 +1957,9 @@ class BattleScenePainter extends CustomPainter {
       _bandoBanner(c, b, vw, iconBand);
       return;
     }
-    _pen.text(c, b.porRonda ? 'RONDA ${b.round}' : 'TURNOS', 30,
+    _pen.text(c, b.porRonda
+            ? scene.text.t('ui.combat.scene.round', {'n': b.round})
+            : scene.text.t('ui.combat.scene.turns'), 30,
         iconBand / 2 + 3, const Color(0xFF9FB4FF), 8);
 
     final slots = timelineSlots(b, vw, g);
@@ -2211,8 +2225,10 @@ class BattleOverlayPainter extends CustomPainter {
     _pen.text(
         c,
         enemy
-            ? '! ULTIMATE ENEMIGA · ${ult?.casterName ?? ''}'
-            : '★ ULTIMATE · ${ult?.casterName ?? ''}',
+            ? scene.text.t(
+                'ui.combat.scene.enemy_ult', {'who': ult?.casterName ?? ''})
+            : scene.text.t(
+                'ui.combat.scene.ult', {'who': ult?.casterName ?? ''}),
         tx,
         by - 8,
         enemy ? breakColor : const Color(0xFFFFFFFF),
@@ -2337,7 +2353,8 @@ class BattleOverlayPainter extends CustomPainter {
 
     // Cartel central entre las dos bandas.
     if (pose.banner > 0) {
-      final title = 'DÚO · ${ult.name.toUpperCase()}';
+      final title = scene.text
+          .t('ui.combat.scene.duo', {'name': ult.name.toUpperCase()});
       final by = y1 + bh + gap / 2 + 6;
       final tw = _pen._layout(title, const Color(0xFFFFFFFF), 16).width;
       if (pose.banner < 1) {
@@ -2416,7 +2433,7 @@ class BattleOverlayPainter extends CustomPainter {
       final tx = mid - 100 + slide;
       final blink = !scene.options.reduceMotion && (a / 160).floor().isEven;
       _pen.text(
-          c, '! JEFE !', tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
+          c, scene.text.t('ui.combat.scene.boss_banner'), tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
           center: false);
       _pen.text(
           c, i.name.toUpperCase(), tx, cy + 6, const Color(0xFFFFFFFF), 16,

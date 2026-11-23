@@ -5,6 +5,7 @@ import '../../../app/design/ds_components.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -30,15 +31,19 @@ ItemFit buildFitOf(BuildPlanRules rules, BuildPlan plan, ItemInstance item,
         : rules.advances(plan, before, item);
 
 /// Línea de ficha (markup) "★ Tu build — Cumple: ... · casi: ..." o
-/// `null` si el arma no toca el plan.
-String? buildFitMarkup(ItemFit fit, {String lead = 'Cumple'}) {
+/// `null` si el arma no toca el plan. Con [s], en el idioma activo
+/// (sin [s], es-AR: callers todavía no migrados).
+String? buildFitMarkup(ItemFit fit, {String? lead, Strings? s}) {
   if (fit.isEmpty) return null;
   final parts = [
     if (fit.matches.isNotEmpty)
-      '$lead: ${fit.matches.map(protoEsc).join(' · ')}',
-    for (final n in fit.near) 'casi: ${protoEsc(n)}',
+      '${lead ?? s?.t('ui.build.fit.meets') ?? 'Cumple'}: '
+          '${fit.matches.map(protoEsc).join(' · ')}',
+    for (final n in fit.near)
+      '${s?.t('ui.build.fit.near') ?? 'casi'}: ${protoEsc(n)}',
   ];
-  return '<span style="color:$kPlanHex"><b>★ Tu build</b> — '
+  return '<span style="color:$kPlanHex"><b>'
+      '★ ${protoEsc(s?.t('ui.build.fit.title') ?? 'Tu build')}</b> — '
       '${parts.join(' · ')}</span>';
 }
 
@@ -67,8 +72,11 @@ class BuildFitBadge extends ConsumerWidget {
     final fit =
         buildFitOf(ref.watch(buildPlanRulesProvider), plan, it, before: before);
     if (!fit.any) return const SizedBox.shrink();
-    final tip =
-        buildFitMarkup(fit, lead: before == null ? 'Cumple' : 'Avanza')!;
+    final tip = buildFitMarkup(fit,
+        lead: before == null
+            ? ref.t('ui.build.fit.meets')
+            : ref.t('ui.build.fit.advances'),
+        s: ref.strings)!;
     return RetroTooltip(
       message: tip,
       child: Container(
@@ -78,7 +86,7 @@ class BuildFitBadge extends ConsumerWidget {
           border:
               Border.all(color: kPlanColor, width: RetroTheme.thinBorderWidth),
         ),
-        child: Text(compact ? '★' : '★ TU BUILD',
+        child: Text(compact ? '★' : '★ ${ref.t('ui.build.fit.badge')}',
             style: const TextStyle(color: kPlanColor, height: 1.1)),
       ),
     );

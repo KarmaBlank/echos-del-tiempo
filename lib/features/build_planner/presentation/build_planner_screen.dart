@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/item.dart' show ItemInstance;
 import '../../../game_engine/models/player_profile.dart';
@@ -64,18 +65,18 @@ class _BuildPlannerScreenState extends ConsumerState<BuildPlannerScreen> {
     return Scaffold(
       body: PanelFrame(
         key: const ValueKey('build-screen'),
-        title: 'BUILD · ${_name.toUpperCase()}',
+        title: ref.t('ui.build.screen.title', {'name': _name.toUpperCase()}),
         width: 1000,
         fill: true,
-        help: BuildPlannerView.help,
+        help: BuildPlannerView.helpOf(ref.strings),
         onClose: () => Navigator.of(context).maybePop(),
         actions: [
-          DsButton('VOLVER',
+          DsButton(ref.t('ui.build.screen.back'),
               key: const ValueKey('build-screen-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],
         child: p == null
-            ? Text('Cargando...', style: DsText.detail())
+            ? Text(ref.t('ui.build.screen.loading'), style: DsText.detail())
             : BuildPlannerView(
                 key: const ValueKey('build-planner'),
                 rules: ref.watch(buildPlanRulesProvider),

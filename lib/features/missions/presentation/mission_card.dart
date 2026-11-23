@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -7,6 +8,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../domain/mission_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Detalle de una misión (mostrador y preparación) con el sistema de
 /// diseño (design_system.md § 10.3): rango y nombre, `tipo · Lv`, zona y
@@ -14,7 +16,7 @@ import '../domain/mission_text.dart';
 /// `DsSectionHeader`; la condición de rango S en un `DsFold`. La acción
 /// ([action]) va abajo a la derecha. Ver docs/specs/panels.md §
 /// "Mostrador".
-class MissionCard extends StatelessWidget {
+class MissionCard extends ConsumerWidget {
   const MissionCard({
     super.key,
     required this.mission,
@@ -40,11 +42,14 @@ class MissionCard extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final m = mission;
     final low = playerLevel != null && playerLevel! < m.recommendedLevel;
-    final lv = 'Lv recomendado ${m.recommendedLevel}'
-        '${low ? ' · tu Lv $playerLevel' : ''}';
+    final lv = ref.t('ui.missions.card.level', {
+      'level': m.recommendedLevel,
+      'low': low ? 'yes' : 'no',
+      'mine': playerLevel ?? 0,
+    });
     final z = zone;
     final locked = z != null && !z.open;
     return Padding(
@@ -82,19 +87,19 @@ class MissionCard extends StatelessWidget {
                 key: ValueKey('mission-lock-${m.id}'),
                 protoColor(ProtoColors.red, protoEsc(z.label))),
           SizedBox(height: DsSpace.sm),
-          const DsSectionHeader('OBJETIVO'),
+          DsSectionHeader(ref.t('ui.missions.card.objective')),
           Text(retroText(missionObjectiveText(m, bossName: bossName)),
               style: DsText.body(DsColors.textPrimary)),
           SizedBox(height: DsSpace.sm),
-          const DsSectionHeader('RECOMPENSAS'),
+          DsSectionHeader(ref.t('ui.missions.rewards')),
           Text(retroText(missionRewardText(m, tier)),
               key: ValueKey('mission-rewards-${m.id}'),
               style: DsText.body(DsColors.textPrimary)),
           SizedBox(height: DsSpace.xs),
           DsFold(
             key: ValueKey('mission-srank-${m.id}'),
-            label: 'RANGO S',
-            openLabel: 'RANGO S',
+            label: ref.t('ui.missions.card.s_rank'),
+            openLabel: ref.t('ui.missions.card.s_rank'),
             child: Text(retroText(missionSRankText(m))),
           ),
           if (action != null)

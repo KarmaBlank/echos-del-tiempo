@@ -83,30 +83,30 @@ void main() {
       await tester.pump();
       final window =
           tester.widget<BattleCommandWindow>(find.byType(BattleCommandWindow));
-      expect(window.visible, isNotEmpty, reason: cat.label);
+      expect(window.visible, isNotEmpty, reason: cat.labelKey);
       final a = window.visible.first;
       final row = find.byKey(ValueKey('battle-act-${a.id}'));
       final cost = find.descendant(of: row, matching: find.byType(DsCost));
-      expect(cost, findsOneWidget, reason: cat.label);
+      expect(cost, findsOneWidget, reason: cat.labelKey);
       final dc = tester.widget<DsCost>(cost);
       final textF = find.descendant(of: cost, matching: find.byType(Text));
       final size = tester.widget<Text>(textF).style!.fontSize!;
       final height = tester.getSize(textF).height;
       skillSize ??= size;
       skillHeight ??= height;
-      expect(size, skillSize, reason: cat.label);
+      expect(size, skillSize, reason: cat.labelKey);
       // Mismo tamaño en pantalla (ningún FittedBox lo achica distinto).
-      expect(height, closeTo(skillHeight, 0.5), reason: cat.label);
+      expect(height, closeTo(skillHeight, 0.5), reason: cat.labelKey);
       // El costo nunca va dentro del título.
       final title = tester
           .widget<DsListRow>(
               find.descendant(of: row, matching: find.byType(DsListRow)))
           .title;
-      expect(title, isNot(contains(dc.label)), reason: cat.label);
-      expect(title, isNot(contains(' MP')), reason: cat.label);
+      expect(title, isNot(contains(dc.label)), reason: cat.labelKey);
+      expect(title, isNot(contains(' MP')), reason: cat.labelKey);
       // Resumen de una línea en el detalle.
-      expect(a.summary, isNotNull, reason: cat.label);
-      expect(a.summary, isNot(contains('<br')), reason: cat.label);
+      expect(a.summary, isNotNull, reason: cat.labelKey);
+      expect(a.summary, isNot(contains('<br')), reason: cat.labelKey);
     }
   });
 }

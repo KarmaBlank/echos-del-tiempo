@@ -9,6 +9,16 @@
     "ui.title",
     "ui.settings",
     "ui.world",
-    "ui.town"
+    "ui.town",
+    "ui.combat",
+    "ui.build",
+    "ui.run",
+    "ui.missions",
+    "ui.achievements",
+    "ui.ascension",
+    "ui.bestiary",
+    "ui.endgame",
+    "ui.passive_tree",
+    "ui.tutorial"
   ]
 }

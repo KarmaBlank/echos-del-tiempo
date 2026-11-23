@@ -13,6 +13,7 @@ import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Mecánicas de jefe v0.2 → escena, HUD y sonido (docs/specs/
@@ -190,31 +191,31 @@ void main() {
       final web = BattleState(party: [_hero('p1', webbed: true), _hero('p2')], enemies: [
         _foe('e0', 'matriarca', boss: true),
       ]);
-      final w = bossMechanicChips(web).single;
+      final w = bossMechanicChips(fallbackCombatStrings(), web).single;
       expect(w.long, contains('1 atrapado'));
       expect(w.tip, contains('Liberar'));
-      expect(combatantChips(web.party[0]).map((c) => c.short), contains('Telaraña'));
+      expect(combatantChips(fallbackCombatStrings(), web.party[0]).map((c) => c.short), contains('Telaraña'));
 
       final ice = _sierpe();
       ice.party[0].effects = [
         const TimedEffect(sourceId: 'escarcha', stat: BuffStat.speed, value: -0.2, turns: 99),
       ];
-      final f = bossMechanicChips(ice).single;
+      final f = bossMechanicChips(fallbackCombatStrings(), ice).single;
       expect(f.long, 'Campo Helado: 2 cristales · VEL −20%');
       expect(f.tip, contains('cristales'));
-      final slow = combatantChips(ice.party[0]).firstWhere((c) => c.short == '▼VEL');
+      final slow = combatantChips(fallbackCombatStrings(), ice.party[0]).firstWhere((c) => c.short == '▼VEL');
       expect(slow.long, '▼VEL −20%');
       expect(slow.tip, contains('Campo Helado'));
 
       final knight = BattleState(party: [_hero('p1')], enemies: [
         _foe('e0', 'caballeroHueco', boss: true, stance: 1, stanceTurns: 1),
       ]);
-      final k = bossMechanicChips(knight).single;
+      final k = bossMechanicChips(fallbackCombatStrings(), knight).single;
       expect(k.short, 'ESCUDO');
       expect(k.long, contains('cambia en su próximo turno'));
       knight.enemies[0].vulnerable = 2;
-      expect(bossMechanicChips(knight).single.long, contains('rota'));
-      expect(bossMechanicChips(BattleState(party: [_hero('p1')], enemies: [_foe('e0', 'lobo')])), isEmpty);
+      expect(bossMechanicChips(fallbackCombatStrings(), knight).single.long, contains('rota'));
+      expect(bossMechanicChips(fallbackCombatStrings(), BattleState(party: [_hero('p1')], enemies: [_foe('e0', 'lobo')])), isEmpty);
     });
   });
 
