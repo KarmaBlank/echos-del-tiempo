@@ -347,7 +347,8 @@ herramienta de área trabaja menos tiles.
   lado: RECOGER todo a la bolsa PESCA Y CULTIVO, con `helperXpShare`
   (10 %) de la XP. Tope `chestMax` (200): lleno, no cosechan ni pescan.
 - Estado a la vista (v0.33.1): vacío se dibuja apagado
-  (`FarmPalette.chestEmpty`); con cosas, con un brillo atrás
+  (`FarmPalette.chestEmpty`, multiplicado sobre el sprite y opaco; desde
+  v0.36.4 sin transparencia, que lo fundía con el pasto); con cosas, con un brillo atrás
   (`chestGlow`) y el número; lleno, con marco y número en `chestFull`.
   Mouse encima: tooltip del mapa "Cofre vacío", "Cofre: N objetos" o
   "Cofre lleno" (`HelperRules.chestText`). Sale del pueblo del estado,

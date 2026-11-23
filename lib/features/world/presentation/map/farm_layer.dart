@@ -361,8 +361,17 @@ class MapFarmLayer {
                 center: Offset(px, py - ts / 2), width: ts + 2, height: ts),
             Paint()..color = FarmPalette.chestGlow);
       }
-      final r = img('cofre_oficio', px, py,
-          empty ? (SpriteCatalog.pixelPaint()..color = FarmPalette.chestEmpty) : null);
+      // Vacío: opaco y oscurecido (modulate). Con transparencia se
+      // fundía con el pasto y parecía que no había cofre (v0.36.4).
+      final r = img(
+          'cofre_oficio',
+          px,
+          py,
+          empty
+              ? (SpriteCatalog.pixelPaint()
+                ..colorFilter = const ColorFilter.mode(
+                    FarmPalette.chestEmpty, BlendMode.modulate))
+              : null);
       if (full && r != null) {
         c.drawRect(
             r.inflate(1),
