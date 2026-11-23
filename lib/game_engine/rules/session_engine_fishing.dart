@@ -92,13 +92,15 @@ extension _FishingOp on _Op {
     if (last != null && s.time - last < _ft.d('minCastSec')) return false;
     _f.lastCast[p.id] = s.time;
     final bonus = FishingRules.rodBonus(p.profile);
-    final dock = WorldRules.townSpot(p.x, p.y) == TownSpot.fishing
+    final map = e.mapFor(s);
+    final lake = TownRules.lakeNear(s.town, p.x, p.y);
+    final dock = WorldRules.townSpot(p.x, p.y, map: map) == TownSpot.fishing
         ? _ft.d('dockBonus')
         : 0.0;
-    // Lago del mundo (farming.md § 7): zonas de LAGO y peces criando.
+    // El lago donde pesca (town_editor.md § 5): su tamaño y sus peces.
     final rare = bonus.rare +
         dock +
-        TownRules.lakeRare(s.town) +
+        TownRules.lakeRare(s.town, lake) +
         _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
     // Botín del agua (§ 8): a veces no es un pez.
     final kind =
@@ -106,7 +108,7 @@ extension _FishingOp on _Op {
     final FishCatch fish;
     switch (kind) {
       case WaterLootKind.fish:
-        fish = FishingRules.roll(_rand, TownRules.lakeRoll(s.town),
+        fish = FishingRules.roll(_rand, TownRules.lakeRoll(s.town, lake),
             rareBonus: rare, pity: p.profile.life.pity);
       case WaterLootKind.basura:
         final id = kWaterJunk[

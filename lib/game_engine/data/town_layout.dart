@@ -68,13 +68,12 @@ abstract final class TownLayout {
         w: 3),
     TownLandmark(TownSpot.fountain, 'FUENTE RÚNICA', Tile.fountain, 16, 10,
         w: 2, h: 2),
-    TownLandmark(TownSpot.sign, 'LAGO', Tile.sign, 12, 15),
     TownLandmark(TownSpot.trader, 'COMERCIANTE', Tile.merchant, 12, 17, w: 2),
     TownLandmark(TownSpot.lostLoot, 'LOOT PERDIDO', Tile.lostTower, 24, 15,
         w: 3),
   ];
 
-  /// Puntos de pesca marcados en la orilla del lago (sólidos).
+  /// Muelles del lago base sin mover (los arma `TownPlan`).
   static const fishingSpots = [(10, 15), (10, 18), (6, 14)];
 
   /// Árboles sueltos dentro del claro (decorado, sólidos).
@@ -95,27 +94,13 @@ abstract final class TownLayout {
     (24, 8),
   ];
 
-  // ---- huerta y ampliaciones (farming.md § 2 y § 6, v0.23.0) ----
+  // ---- huerta y lago base (town_editor.md § 7) ----
 
-  /// Huerta del pueblo base (tiles de tierra cultivable).
+  /// Huerta del pueblo base sin mover (la construcción `h0`).
   static const baseFarm = (x: 19, y: 18, w: 4, h: 3);
 
-  /// Columnas que suma cada ampliación al este.
-  static const stripWidth = 8;
-
-  /// Ancho con [expansions] ampliaciones.
-  static int widthFor(int expansions) => width + stripWidth * expansions;
-
-  /// Columna del camino de la franja [i] (la primera reemplaza al borde
-  /// de árboles del pueblo base).
-  static int stripX(int i) => width - 2 + stripWidth * i;
-
-  /// Rectángulo (en tiles) del espacio [slot]: los pares al norte, los
-  /// impares al sur de su franja.
-  static ({int x, int y, int w, int h}) slotRect(int slot) {
-    final x0 = stripX(slot ~/ 2) + 1;
-    return (x: x0, y: slot.isEven ? 7 : 14, w: 6, h: 6);
-  }
+  /// Cartel del lago base sin mover (la construcción `l0`).
+  static const baseSign = (12, 15);
 
   static TownLandmark landmark(TownSpot s) =>
       landmarks.firstWhere((l) => l.spot == s);

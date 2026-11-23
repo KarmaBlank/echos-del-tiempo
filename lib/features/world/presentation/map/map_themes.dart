@@ -252,6 +252,26 @@ abstract final class TownPalette {
   static const label = Color(0xFFFFF3C4);
 }
 
+/// Colores de la edición del pueblo (town_editor.md § 1.3).
+abstract final class TownEditPalette {
+  /// Franja fantasma de una ampliación.
+  static const side = Color(0x3366C2FF);
+  static const sideBorder = Color(0xFF66C2FF);
+  static const sideText = Color(0xFFDDF2FF);
+  static const sideLocked = Color(0xFF9AA0AC);
+
+  /// Contorno de cada construcción y el de la elegida.
+  static const outline = Color(0x99FFF3C4);
+  static const selected = Color(0xFFFFD166);
+
+  /// Fantasma de lo que se mueve o se pone.
+  static const valid = Color(0x6655E07A);
+  static const validBorder = Color(0xFF55E07A);
+  static const invalid = Color(0x66FF5C5C);
+  static const invalidBorder = Color(0xFFFF5C5C);
+  static const lakeGhost = Color(0x663F8FD6);
+}
+
 /// Colores de la huerta (farming.md § 2.3, v0.23.0).
 abstract final class FarmPalette {
   static const soil = Color(0xFF7A5534);

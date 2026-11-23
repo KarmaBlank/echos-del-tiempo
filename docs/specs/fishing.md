@@ -35,6 +35,10 @@ Rarezas: común, raro, épico, legendario.
 - El lago del pueblo es **del mundo**: `TownState.lake` (lista de ids;
   `null` = las de `zona1`, `kTownLakeDefault`). El anfitrión lo carga con
   `SessionEngine.setWorld(lake:)` y tira los peces solo de esa lista.
+- Desde v0.24.0 el pueblo puede tener varios lagos (`town_editor.md`
+  § 5): la lista de especies vale para todos, pero cada lago suma sus
+  propios peces soltados, su tamaño y su cría; se pesca en el más
+  cercano. Al fundirse dos lagos se juntan sus peces.
 - **Futuro (no implementado):** cada bioma tendrá su exterior con lagos
   y especies propias. Un pez de otro bioma se podrá convertir en
   "Cría de <pez>", un objeto que suma esa especie a `TownState.lake`.

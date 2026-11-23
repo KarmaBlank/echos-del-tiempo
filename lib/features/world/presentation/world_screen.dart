@@ -47,6 +47,7 @@ import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
+import 'panels/town_edit_overlay.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/lost_loot_panel.dart';
@@ -78,6 +79,10 @@ class WorldScreen extends ConsumerStatefulWidget {
 class _WorldScreenState extends ConsumerState<WorldScreen> {
   /// Parcela bajo el mouse (tile, posición en pantalla).
   ((int, int), Offset)? _hover;
+
+  /// Edición del pueblo: dónde arrancó el clic y si ya es un arrastre.
+  Offset? _editDown;
+  bool _editDragged = false;
   final _focus = FocusNode(debugLabel: 'world');
   final _chatFocus = FocusNode(debugLabel: 'chat');
   final _battleKey = GlobalKey<BattleViewState>();
@@ -267,7 +272,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       if (submenu) {
         battle.handleKey(event.logicalKey);
       } else if (view.mode != SessionMode.battle &&
-          (view.panel != null || controller.isFishing)) {
+          (view.panel != null ||
+              controller.isFishing ||
+              controller.editingTown)) {
         controller.handleKey(event.logicalKey);
       } else {
         _openPause();
@@ -401,8 +408,41 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: GameWidget(game: game, autofocus: false),
             ),
           ),
-          // Huerta: el mouse sobre una parcela muestra quién plantó, regó y
-          // abonó y las chances si la cosechás vos (farming.md § 2.4).
+          // Edición del pueblo (town_editor.md § 1): arrastrar mueve la
+          // cámara, la rueda hace zoom y un clic sin arrastre elige.
+          if (controller.editingTown)
+            Positioned.fill(
+              key: const ValueKey('town-edit-pointer'),
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (e) {
+                  _editDown = e.localPosition;
+                  _editDragged = false;
+                },
+                onPointerMove: (e) {
+                  final d = _editDown;
+                  if (d == null) return;
+                  if ((e.localPosition - d).distance > 4) _editDragged = true;
+                  if (_editDragged) game.panBy(e.delta);
+                },
+                onPointerUp: (e) {
+                  final dragged = _editDragged;
+                  _editDown = null;
+                  _editDragged = false;
+                  if (dragged) return;
+                  final t = game.tileAtScreen(e.localPosition);
+                  if (t != null) controller.editClick(t.$1, t.$2);
+                },
+                onPointerSignal: (e) {
+                  if (e is PointerScrollEvent) {
+                    game.zoomBy(e.scrollDelta.dy > 0 ? 1 : -1);
+                  }
+                },
+              ),
+            ),
+          // Carteles: el mouse sobre el cartel de un lago o una huerta
+          // muestra qué hay (town_editor.md § 6); sobre parcelas o agua,
+          // nada.
           if (view.mode == SessionMode.lobby && view.panel == null)
             Positioned.fill(
               key: const ValueKey('farm-hover'),
@@ -412,8 +452,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 onExit: (_) => setState(() => _hover = null),
                 onHover: (e) {
                   final tile = game.tileAtScreen(e.localPosition);
+                  if (tile != null) controller.editHover(tile.$1, tile.$2);
                   final next = tile != null &&
-                          controller.plotAt(tile.$1, tile.$2) != null
+                          controller.signAt(tile.$1, tile.$2) != null
                       ? (tile, e.localPosition)
                       : null;
                   if (next?.$1 != _hover?.$1) setState(() => _hover = next);
@@ -427,15 +468,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               left: h.$2.dx + 16,
               top: h.$2.dy + 16,
               child: IgnorePointer(
-                child: DsTooltipCard(
-                  title: 'PARCELA',
-                  children: [
-                    Text(controller.plotInfo(h.$1.$1, h.$1.$2),
-                        style: DsText.detail()),
-                  ],
-                ),
+                child: switch (controller.signAt(h.$1.$1, h.$1.$2)) {
+                  (final title, final text)? => DsTooltipCard(
+                      key: const ValueKey('sign-tooltip'),
+                      title: title,
+                      children: [Text(text, style: DsText.detail())],
+                    ),
+                  null => const SizedBox.shrink(),
+                },
               ),
             ),
+          if (controller.editingTown)
+            Positioned.fill(
+                child: TownEditOverlay(controller: controller)),
           // Pesca en el mapa: clic mantenido = E mantenida (sin ventana).
           if (controller.isFishing)
             Positioned.fill(

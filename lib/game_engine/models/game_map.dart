@@ -391,12 +391,17 @@ class GameMap {
     List<MapFloor> floors = const [],
     List<ZoneEntrance> entrances = const [],
     this.zone = 0,
+    this.townOrigin = (0, 0),
   })  : rows = List.unmodifiable(rows),
         floors = List.unmodifiable(floors),
         entrances = List.unmodifiable(entrances);
 
   final int width;
   final int height;
+
+  /// Pueblo: dónde cae el tile (0, 0) del pueblo base (town_editor.md
+  /// § 2; las ampliaciones al norte y al oeste lo corren).
+  final (int, int) townOrigin;
 
   /// Una fila por `y`, un carácter por `x` (ver [Tile]).
   final List<String> rows;

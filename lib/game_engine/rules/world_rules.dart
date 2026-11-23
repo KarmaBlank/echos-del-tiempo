@@ -86,10 +86,13 @@ abstract final class WorldRules {
   static const townRange = 12.0;
 
   /// El lugar del pueblo frente al que está el personaje en (x, y) px, o
-  /// `null` (el más cercano si hay dos). Ver `TownLayout`.
-  static TownSpot? townSpot(double x, double y) {
+  /// `null` (el más cercano si hay dos). Ver `TownLayout`. Con [map], los
+  /// lugares se corren con su origen y los muelles y carteles salen de
+  /// sus tiles (town_editor.md § 4); sin él, los del pueblo base.
+  static TownSpot? townSpot(double x, double y, {GameMap? map}) {
     TownSpot? best;
     var bd = townRange;
+    final (ox, oy) = map?.townOrigin ?? (0, 0);
     double rectDist(int tx, int ty, int w, int h) {
       final x0 = tx * tileSize, y0 = ty * tileSize;
       final x1 = x0 + w * tileSize, y1 = y0 + h * tileSize;
@@ -99,12 +102,32 @@ abstract final class WorldRules {
     }
 
     for (final l in TownLayout.landmarks) {
-      final d = rectDist(l.x, l.y, l.w, l.h);
+      final d = rectDist(l.x + ox, l.y + oy, l.w, l.h);
       if (d < bd) (bd, best) = (d, l.spot);
     }
-    for (final (fx, fy) in TownLayout.fishingSpots) {
-      final d = rectDist(fx, fy, 1, 1);
-      if (d < bd) (bd, best) = (d, TownSpot.fishing);
+    if (map == null) {
+      for (final (fx, fy) in TownLayout.fishingSpots) {
+        final d = rectDist(fx, fy, 1, 1);
+        if (d < bd) (bd, best) = (d, TownSpot.fishing);
+      }
+      final (sx, sy) = TownLayout.baseSign;
+      final d = rectDist(sx, sy, 1, 1);
+      if (d < bd) (bd, best) = (d, TownSpot.sign);
+      return best;
+    }
+    final cx = (x / tileSize).floor(), cy = (y / tileSize).floor();
+    for (var ty = cy - 2; ty <= cy + 2; ty++) {
+      for (var tx = cx - 2; tx <= cx + 2; tx++) {
+        if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) continue;
+        final spot = switch (map.tileAt(tx, ty)) {
+          Tile.fishing => TownSpot.fishing,
+          Tile.sign => TownSpot.sign,
+          _ => null,
+        };
+        if (spot == null) continue;
+        final d = rectDist(tx, ty, 1, 1);
+        if (d < bd) (bd, best) = (d, spot);
+      }
     }
     return best;
   }

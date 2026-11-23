@@ -102,7 +102,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 43 desde v0.22.2: pesca en el mapa (fishing.md § 7): acción `fLn`
 /// (caña, línea y boya a la vista) y `fl` en cada jugador del snapshot.
 /// 44 (v0.23.0): huerta, ampliaciones del pueblo y árboles de oficios.
-const kProtocolVersion = 44;
+/// 45 (v0.24.0): edición del pueblo (town_editor.md § 8): `town` con
+/// lados, construcciones y lagos propios.
+const kProtocolVersion = 45;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

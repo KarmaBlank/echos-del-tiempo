@@ -34,7 +34,9 @@ class LifeItemsView extends StatelessWidget {
     final c = controller;
     final life = profile.life;
     final f = life.farm;
-    final lakeFull = c.town.stockTotal >= TownRules.lakeCapacity(c.town);
+    final lake = TownRules.lakeNear(c.town, c.local.x, c.local.y);
+    final lakeFull =
+        lake == null || lake.stockTotal >= TownRules.lakeCapacity(lake);
     final fish = [
       for (final d in kFish.values)
         if (life.count(d.id) > 0 && d.biome != kWaterJunkBiome) d
@@ -90,7 +92,8 @@ class LifeItemsView extends StatelessWidget {
               trailing: DsButton('SOLTAR EN EL LAGO',
                   key: ValueKey('life-fish-stock-${d.id}'),
                   size: DsButtonSize.compact,
-                  onPressed: lakeFull ? null : () => c.stockFish(d.id)),
+                  onPressed:
+                      lakeFull ? null : () => c.stockFish(d.id, lake.id)),
             ),
         for (final d in junk)
           DsListRow(

@@ -131,30 +131,7 @@ void main() {
     await _shot(tester, 'cultivo_cosecha');
     await h.frames(40);
 
-    // ---- fuente rúnica: ampliar y elegir LAGO / HUERTA ----
-    // ignore: invalid_use_of_visible_for_testing_member
-    c.teleport(17.0 * 16, 12.4 * 16);
-    await h.frames(6);
-    expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);
-    await h.frames(2);
-    expect(c.expandTown(), isTrue);
-    await h.frames(3);
-    await _shot(tester, 'pueblo_fuente_eleccion');
-    expect(c.assignZone(TownZoneKind.lago), isTrue);
-    expect(c.assignZone(TownZoneKind.huerta), isTrue);
-    expect(c.expandTown(), isTrue);
-    expect(c.assignZone(TownZoneKind.huerta), isTrue);
-    expect(c.assignZone(TownZoneKind.lago), isTrue);
-    c.closePanel();
-    await h.frames(3);
-
-    // ---- el pueblo ampliado con lago y huerta ----
-    // En el camino de la primera franja, entre sus dos espacios.
-    // ignore: invalid_use_of_visible_for_testing_member
-    c.teleport((TownLayout.stripX(0) + 0.5) * 16.0, 13.5 * 16.0);
-    await h.frames(10);
-    await _shot(tester, 'pueblo_ampliado');
-
+    // (v0.24.0: la fuente ya no elige zonas; ver v0240_edicion_pueblo.)
     // ---- comerciante: PESCA y CULTIVO ----
     c.openPanel(WorldPanel.trader);
     await h.frames(3);

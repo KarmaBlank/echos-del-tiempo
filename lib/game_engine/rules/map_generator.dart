@@ -1,10 +1,11 @@
 import '../models/game_map.dart';
-import '../models/world_save.dart' show TownState, TownZoneKind;
+import '../models/world_save.dart' show TownState;
 import '../models/mission_def.dart';
 import '../models/zone_def.dart';
 import '../data/town_layout.dart';
 import 'mulberry32.dart';
 import 'zone_generators.dart';
+import 'town_plan.dart';
 import 'zone_rules.dart';
 
 /// Puerto de `lobbyMap` y `genMap` del prototipo. Ver
@@ -313,114 +314,35 @@ abstract final class MapGenerator {
   /// Columnas de muro entre pisos del atlas de una zona.
   static const floorGap = 18;
 
-  static GameMap? _town;
-
-  /// El pueblo (town_loop.md § 2.1, v0.21.0): claro de bosque con la
-  /// fuente rúnica al centro, caminos de tierra, el lago con puntos de
-  /// pesca, el puesto del comerciante, la forja, el tablero de encargos,
-  /// el Portal del Eco, la Estatua del Tiempo y la torre del Loot perdido.
-  /// Reemplaza al overworld caminable: las zonas se eligen desde el
-  /// tablero. Siempre el mismo (layout en `TownLayout`).
-  static GameMap town([int expansions = 0, List<TownZoneKind> zones = const []]) {
-    if (expansions <= 0) return _town ??= _buildTown(0, const []);
-    final key = '$expansions:${zones.map((z) => z.name).join(',')}';
+  /// El pueblo (town_loop.md § 2.1, town_editor.md § 4): claro de bosque
+  /// con la fuente rúnica al centro, caminos de tierra, los lugares fijos
+  /// y las construcciones del mundo (lagos, huertas) con sus caminos
+  /// procedurales. Reemplaza al overworld caminable: las zonas se eligen
+  /// desde el tablero. Sin argumento, el pueblo base.
+  static GameMap town([TownState t = const TownState()]) {
+    final key = TownPlan.keyOf(t);
     final hit = _towns[key];
     if (hit != null) return hit;
     if (_towns.length > 8) _towns.clear();
-    return _towns[key] = _buildTown(expansions, zones);
+    return _towns[key] = _buildTown(t);
   }
 
   static final _towns = <String, GameMap>{};
 
-  /// El pueblo de un mundo (farming.md § 6): con sus ampliaciones.
-  static GameMap townOf(TownState t) =>
-      town(t.expansions.clamp(0, 4), t.zones);
+  /// El pueblo de un mundo (town_editor.md): con sus ampliaciones.
+  static GameMap townOf(TownState t) => town(t);
 
-  static GameMap _buildTown(int expansions, List<TownZoneKind> zones) {
-    const h = TownLayout.height;
-    final w = TownLayout.widthFor(expansions);
-    final t = [
-      for (var y = 0; y < h; y++)
-        [
-          for (var x = 0; x < w; x++)
-            x == 0 || y == 0 || x == w - 1 || y == h - 1
-                ? Tile.tree
-                : Tile.grass,
-        ],
-    ];
-    void put(int x0, int x1, int y0, int y1, String c) {
-      for (var y = y0; y <= y1; y++) {
-        for (var x = x0; x <= x1; x++) {
-          t[y][x] = c;
-        }
-      }
-    }
-
-    // Bosque alrededor (dos de grosor en los lados) y matas sueltas.
-    for (var y = 0; y < h; y++) {
-      t[y][1] = Tile.tree;
-      t[y][w - 2] = Tile.tree;
-    }
-    for (final (x, y) in TownLayout.trees) {
-      t[y][x] = Tile.tree;
-    }
-    // Caminos de tierra: frente a los edificios, el eje norte-sur con la
-    // salida de expedición al sur, el anillo de la fuente y el ramal del
-    // lago y de la torre.
-    put(3, w - 4, 5, 5, Tile.path);
-    put(16, 17, 5, h - 1, Tile.path);
-    put(14, 19, 8, 13, Tile.path);
-    put(11, 26, 16, 16, Tile.path);
-    // Huerta del pueblo base (farming.md § 2).
-    const bf = TownLayout.baseFarm;
-    put(bf.x, bf.x + bf.w - 1, bf.y, bf.y + bf.h - 1, Tile.soil);
-    // Ampliaciones al este: camino norte-sur por franja y sus dos espacios
-    // (LAGO, HUERTA o pasto si todavía no se eligió).
-    if (expansions > 0) put(26, TownLayout.stripX(0), 16, 16, Tile.path);
-    for (var i = 0; i < expansions; i++) {
-      final sx = TownLayout.stripX(i);
-      put(sx, sx, 5, h - 3, Tile.path);
-      for (var k = 0; k < 2; k++) {
-        final slot = i * 2 + k;
-        final r = TownLayout.slotRect(slot);
-        final kind = slot < zones.length ? zones[slot] : null;
-        switch (kind) {
-          case TownZoneKind.lago:
-            put(r.x, r.x + r.w - 1, r.y, r.y + r.h - 1, Tile.water);
-            for (final (cx, cy) in [
-              (r.x, r.y),
-              (r.x + r.w - 1, r.y),
-              (r.x, r.y + r.h - 1),
-              (r.x + r.w - 1, r.y + r.h - 1),
-            ]) {
-              t[cy][cx] = Tile.grass;
-            }
-          case TownZoneKind.huerta:
-            put(r.x, r.x + r.w - 1, r.y + 1, r.y + r.h - 2, Tile.soil);
-          case null:
-            break;
-        }
-      }
-    }
-    // Lago (esquinas de pasto) y sus puntos de pesca.
-    put(3, 10, 14, 19, Tile.water);
-    for (final (x, y) in const [(3, 14), (10, 14), (3, 19), (10, 19)]) {
-      t[y][x] = Tile.grass;
-    }
-    for (final (x, y) in TownLayout.fishingSpots) {
-      t[y][x] = Tile.fishing;
-    }
-    // Lugares.
-    for (final l in TownLayout.landmarks) {
-      put(l.x, l.x + l.w - 1, l.y, l.y + l.h - 1, l.tile);
-    }
+  static GameMap _buildTown(TownState s) {
+    final p = TownPlan.of(s);
     return GameMap(
-      width: w,
-      height: h,
-      rows: [for (final row in t) row.join()],
+      width: p.width,
+      height: p.height,
+      rows: [for (final row in p.tiles) row.join()],
       theme: TownLayout.theme,
-      spawn: TownLayout.spawn,
+      spawn: WorldPoint(TownLayout.spawn.x + p.ox * tileSize,
+          TownLayout.spawn.y + p.oy * tileSize),
       lobby: true,
+      townOrigin: (p.ox, p.oy),
     );
   }
 
