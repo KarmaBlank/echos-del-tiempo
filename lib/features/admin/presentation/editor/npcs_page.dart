@@ -366,8 +366,9 @@ class _Sheet extends StatelessWidget {
         _kv('Rol', e.role),
         _kv('Hogar', e.biome),
         _kv('Se muda', e.rooted ? 'No (arraigado)' : 'Sí'),
-        _kv('Sprite', 'items.vida_${e.sprite}'),
-        if (e.portrait != e.sprite) _kv('Retrato', 'items.vida_${e.portrait}'),
+        _kv('Sprite', NpcEditorController.manifestId(e.sprite)),
+        if (e.portrait != e.sprite)
+          _kv('Retrato', NpcEditorController.manifestId(e.portrait)),
         const DsSectionHeader('UMBRALES DE AMISTAD'),
         for (final (k, v) in c.thresholds(e)) _kv(k, v),
       ]);

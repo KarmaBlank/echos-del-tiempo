@@ -90,9 +90,13 @@ class NpcEditorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Id del manifest de [sprite] (`items.vida_<sprite>`, el mismo que
+  /// usan `LifeIcon` y el retrato del cuadro de diálogo).
+  static String manifestId(String sprite) => 'items.vida_$sprite';
+
+  /// Miniatura (id de `SpriteEntry`: sección.clave.animación).
   ui.Image? imageOf(String sprite) =>
-      spriteImage?.call('items.vida_$sprite') ??
-      spriteImage?.call('vida_$sprite');
+      spriteImage?.call('${manifestId(sprite)}.idle');
 
   // ------------------------------------------------------------------
   // Borrador

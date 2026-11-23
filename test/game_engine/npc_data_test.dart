@@ -25,9 +25,36 @@ void main() {
     expect(back.quests.keys, kResidentQuestsDefaults.keys);
   });
 
-  test('el archivo del repo es igual a los valores del código', () {
+  // El dueño edita el archivo: no se compara con el código, solo que sea
+  // válido (npc_editor.md § 1).
+  test('el archivo del repo se lee, vuelve sin pérdida y usa ids válidos', () {
     final raw = file.readAsStringSync();
-    expect(NpcData.decode(raw).encode(), NpcData.defaults.encode());
+    final d = NpcData.decode(raw);
+    final again = NpcData.decode(d.encode());
+    expect(again.encode(), d.encode());
+    expect(NpcData.knownIds, containsAll({...d.talks.keys, ...d.ambient.keys}));
+    expect(kResidentQuestsDefaults.keys, containsAll(d.quests.keys));
+    for (final MapEntry(key: id, value: t) in d.talks.entries) {
+      expect(t.greet, isNotEmpty, reason: id);
+      void topics(List<TalkTopic> list) {
+        final ids = <String>{};
+        for (final x in list) {
+          expect(ids.add(x.id), isTrue, reason: '$id: tema repetido ${x.id}');
+          expect(x.lines, isNotEmpty, reason: '$id/${x.id}');
+          topics(x.sub);
+        }
+      }
+
+      topics(t.topics);
+      if (t.rooted) expect(t.decline, isNotEmpty, reason: id);
+    }
+    for (final MapEntry(key: id, value: q) in d.quests.entries) {
+      for (final st in q) {
+        if (st.reward != null) {
+          expect(kResidentRelics.containsKey(st.reward), isTrue, reason: id);
+        }
+      }
+    }
   });
 
   test('instalar pone el archivo encima y restore vuelve', () {

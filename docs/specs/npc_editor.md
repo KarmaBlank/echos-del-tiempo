@@ -23,10 +23,11 @@ los habitantes se escribe a mano acá; nada de la charla se genera.
   archivo roto o ausente = quedan los valores del código (respaldo) y se
   loguea.
 - Los valores del código (`kNpcTalksDefaults`, `kResidentQuestsDefaults`,
-  `kBiomeFishersDefaults`) siguen en Dart como respaldo; un test de ida y
-  vuelta prueba que el JSON del repo es igual a ellos (mientras nadie lo
-  edite; al editar, el test pasa a comprobar que el JSON decodifica sin
-  pérdida).
+  `kBiomeFishersDefaults`) son solo el respaldo si el archivo falta o
+  está roto; el archivo manda. El test del archivo comprueba que se lee,
+  que vuelve sin pérdida y que usa ids válidos (habitantes conocidos,
+  temas sin repetir, objetos únicos existentes), no que sea igual al
+  código. La migración se probó igual al código al crearlo.
 - Las reglas de los pedidos generados (órdenes de entrega, pedidos del
   pueblo, encargos de forja de Brann, pedido del día del pescador) son
   números de `kTuning` (grupos `town` y `fishing`), editables por el
