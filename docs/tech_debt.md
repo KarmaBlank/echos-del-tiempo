@@ -12,7 +12,7 @@
   de un legendario en el detalle) y la grilla angosta (detalle arriba,
   ancho < 560).
 
-## v0.25.7
+## v0.25.8
 
 - Sin test nuevo: que `PixelIcon` use el PNG de `items.<forma>` cuando
   está cargado y el dibujo procedural cuando falta (se verificó solo con

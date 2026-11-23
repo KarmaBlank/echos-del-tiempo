@@ -220,7 +220,7 @@ entries:
     testWidgets('Editor: perillas con vista previa, guardar y descartar',
         (t) async {
       final o = LocalSpriteOverrides('${tmp.path}/overrides');
-      // La espada es PNG desde v0.25.7: las perillas siguen valiendo
+      // La espada es PNG desde v0.25.8: las perillas siguen valiendo
       // para las entradas procedurales (y para el dibujo de respaldo).
       final cat = SpriteCatalog.fromYaml(
           File(SpriteCatalog.manifestPath).readAsStringSync().replaceFirst(

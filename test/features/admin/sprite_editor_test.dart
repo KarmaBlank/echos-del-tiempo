@@ -80,7 +80,7 @@ void main() {
         expect(kEnemies[e.key]?.boss == true || e.key.contains('Fase2'), isTrue, reason: e.id);
       }
       expect(cat.entry('characters.guerrero.idle')!.path, 'characters/guerrero/idle.png');
-      // Desde v0.25.7 los íconos de armas son PNG (tool/export_item_icons.dart).
+      // Desde v0.25.8 los íconos de armas son PNG (tool/export_item_icons.dart).
       expect(cat.entry('items.espada.idle')!.path, 'items/espada.png');
       expect(cat.entry('tiles.suelo.idle')!.procedural, isTrue);
       expect(cat.entry('items.espada.idle')!.expectedSize, (16, 16));

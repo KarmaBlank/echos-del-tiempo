@@ -1,4 +1,4 @@
-// Capturas de v0.25.7: íconos de armas e ítems en PNG (estilo de los de
+// Capturas de v0.25.8: íconos de armas e ítems en PNG (estilo de los de
 // oficio). NO es parte de la suite. Correr con
 //   flutter test tool/shots/v0257_iconos_armas_shots_test.dart
 import 'dart:io';
@@ -22,7 +22,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../test/features/world/fishing_map_harness.dart';
 import '../../test/real_fonts.dart';
 
-const _out = 'docs/release_shots/v0.25.7';
+const _out = 'docs/release_shots/v0.25.8';
 
 Future<void> _shot(WidgetTester t, String name, Size size) async {
   final layer = t.binding.renderViews.first.debugLayer! as OffsetLayer;

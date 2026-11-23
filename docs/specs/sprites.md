@@ -236,7 +236,7 @@ Sobrescribe todos los PNG listados en este spec (54 desde v0.5: 4 héroes,
 4. `flutter test` verifica que toda entrada del manifest apunte a un
    archivo existente.
 
-## Íconos de armas e ítems: procedural vs PNG (v0.25.7)
+## Íconos de armas e ítems: procedural vs PNG (v0.25.8)
 
 Dos maneras de que exista un sprite en el manifest:
 
@@ -248,7 +248,7 @@ Dos maneras de que exista un sprite en el manifest:
   el PNG, sin tocar Dart.
 
 Los íconos de armas, escudos, pociones, materiales, Ecos y cofre (las 25
-formas de `lib/core/procedural/item_icon_rows.dart`) son PNG desde v0.25.7,
+formas de `lib/core/procedural/item_icon_rows.dart`) son PNG desde v0.25.8,
 con el mismo estilo que los de oficio (`# vida:inicio/fin`): 16 × 16,
 contorno oscuro, luz arriba a la izquierda, sombra abajo a la derecha y
 brillo en el metal. Cada forma tiene dos archivos en
