@@ -1223,9 +1223,12 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   /// también las que suma ampliar el pueblo): sale la azada equipada.
-  bool get nearFarm {
-    if (!_townFree()) return false;
-    final tx = (local.x / 16).floor(), ty = (local.y / 16).floor();
+  bool get nearFarm => _townFree() && nearSoilAt(local.x, local.y);
+
+  /// Hay tierra de huerta a 2 tiles o menos de (x, y) px. Sirve también
+  /// para saber si otro jugador tiene la herramienta de huerta en la mano.
+  bool nearSoilAt(double x, double y) {
+    final tx = (x / 16).floor(), ty = (y / 16).floor();
     for (var dy = -2; dy <= 2; dy++) {
       for (var dx = -2; dx <= 2; dx++) {
         if (_isSoil(tx + dx, ty + dy)) return true;
@@ -1260,8 +1263,93 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(FarmShopAction(FarmShopOp.selectSeed, id: prev));
   }
 
-  /// Clic en la regadera del HUD: riega la parcela de enfrente.
-  bool farmWaterClick() => farmOp == FarmOp.water && farmWork();
+  FarmHand? _hand;
+  bool _handManual = false;
+
+  /// Lo que pide el estado de la parcela de enfrente (sugerencia).
+  FarmHand? get _suggestedHand {
+    final t = farmTile;
+    if (t == null) return null;
+    final pl = plotAt(t.$1, t.$2);
+    if (pl == null) return FarmHand.hoe;
+    if (!pl.planted) return FarmHand.seed;
+    if (FarmingRules.ripe(pl)) return null;
+    return FarmHand.can;
+  }
+
+  /// La herramienta de huerta en la mano (farming.md § 2.5). Mientras no
+  /// elijas a mano, sigue lo que pide la parcela de enfrente; una elección
+  /// manual se respeta hasta alejarte de la huerta.
+  FarmHand get farmHand {
+    if (!nearFarm) {
+      _handManual = false;
+      _hand = null;
+    }
+    if (!_handManual) _hand = _suggestedHand ?? _hand ?? FarmHand.hoe;
+    return _hand ?? FarmHand.hoe;
+  }
+
+  /// Si la elección actual fue manual.
+  bool get farmHandManual => farmHand == _hand && _handManual;
+
+  /// Clic en un casillero del HUD: lo deja en la mano (no hace la labor).
+  void selectFarmHand(FarmHand h) {
+    _hand = h;
+    _handManual = true;
+    _emit();
+  }
+
+  /// Tab / rueda: la herramienta siguiente (o la anterior).
+  void cycleFarmHand([int step = 1]) {
+    const all = FarmHand.values;
+    final i = all.indexOf(farmHand) + step;
+    selectFarmHand(all[i % all.length]);
+  }
+
+  /// Los tiles que tocaría el próximo E / clic (con el área de la azada o
+  /// la regadera) y si la herramienta elegida sirve ahí. `null` = lejos.
+  ({List<(int, int)> tiles, bool ok})? get farmTarget {
+    final t = farmTile;
+    final p = _s?.players[localId]?.profile;
+    if (t == null || p == null) return null;
+    final op = farmOp;
+    final tool = switch (op) {
+      FarmOp.till => FarmingRules.hoeOf(p),
+      FarmOp.water => FarmingRules.canOf(p),
+      _ => null,
+    };
+    final area = tool == null ? 0 : FarmingRules.toolBonus(p, tool).area;
+    final tiles = [
+      for (final xy in FarmingRules.areaTiles(t.$1, t.$2, area))
+        if (_isSoil(xy.$1, xy.$2)) xy,
+    ];
+    return (tiles: tiles, ok: op != null);
+  }
+
+  /// Por qué la herramienta elegida no sirve en la parcela de enfrente
+  /// (`null` = sirve, está madura o no hay parcela).
+  String? get farmBlockReason {
+    final t = farmTile;
+    final p = _s?.players[localId]?.profile;
+    if (t == null || p == null) return null;
+    final pl = plotAt(t.$1, t.$2);
+    if (pl != null && pl.planted && FarmingRules.ripe(pl)) return null;
+    return switch (farmHand) {
+      FarmHand.hoe => pl == null ? null : 'Ya está arada',
+      FarmHand.seed => pl == null
+          ? 'Primero arala'
+          : pl.planted
+              ? 'Ya está plantada'
+              : p.life.farm.activeSeed == null
+                  ? 'Sin semillas: comprá en el comerciante'
+                  : null,
+      FarmHand.can => pl == null
+          ? 'Primero arala'
+          : !pl.planted
+              ? 'Primero plantá'
+              : null,
+    };
+  }
 
   /// Clic en la caña del HUD: la siguiente caña propia.
   bool cycleRod() {
@@ -1277,12 +1365,16 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[localId]?.profile;
     if (t == null || p == null) return null;
     final pl = plotAt(t.$1, t.$2);
-    if (pl == null) return FarmOp.till;
-    if (!pl.planted) {
-      return p.life.farm.activeSeed == null ? null : FarmOp.plant;
+    // Madura: se cosecha con cualquier herramienta en la mano.
+    if (pl != null && pl.planted && FarmingRules.ripe(pl)) {
+      return FarmOp.harvest;
     }
-    if (FarmingRules.ripe(pl)) return FarmOp.harvest;
-    return FarmOp.water;
+    if (farmBlockReason != null) return null;
+    return switch (farmHand) {
+      FarmHand.hoe => FarmOp.till,
+      FarmHand.seed => FarmOp.plant,
+      FarmHand.can => FarmOp.water,
+    };
   }
 
   /// E en la huerta: arar, plantar, regar o cosechar.
@@ -1365,17 +1457,14 @@ class SessionController extends StateNotifier<SessionView?> {
             p.life.farm.ferts.isNotEmpty
         ? ' · [F] abonar'
         : '';
-    if (pl == null) return '[E o clic] Arar';
-    if (!pl.planted) {
-      return seed == null
-          ? 'Sin semillas: comprá en el comerciante'
-          : '[E o clic] Plantar ${kCrops[seed]!.name}';
-    }
     // Corto (una línea): el detalle completo está en el tooltip del mouse.
-    if (FarmingRules.ripe(pl)) {
+    if (pl != null && pl.planted && FarmingRules.ripe(pl)) {
       final o = FarmingRules.odds(p, pl);
       return '[E o clic] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
     }
+    if (farmBlockReason case final r?) return r;
+    if (pl == null) return '[E o clic] Arar';
+    if (!pl.planted) return '[E o clic] Plantar ${kCrops[seed]!.name}';
     final r = (FarmingRules.ratio(pl) * 100).round();
     return '[E o clic] Regar · $r %$fert';
   }
@@ -1904,7 +1993,7 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.lostLoot);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
-      } else if (farmOp != null) {
+      } else if (farmTile != null) {
         farmWork();
       } else if (facingWater) {
         startFishing();
@@ -1987,10 +2076,21 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     // Huerta (farming.md § 4): Q otra semilla, F abonar.
     if (_panel == null && farmTile != null) {
-      if (key == LogicalKeyboardKey.keyQ) {
+      if (key == LogicalKeyboardKey.keyQ ||
+          key == LogicalKeyboardKey.bracketRight) {
         cycleSeed();
         return true;
       }
+      if (key == LogicalKeyboardKey.bracketLeft) {
+        prevSeedPick();
+        return true;
+      }
+    }
+    if (_panel == null && nearFarm && key == LogicalKeyboardKey.tab) {
+      cycleFarmHand(HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
+      return true;
+    }
+    if (_panel == null && farmTile != null) {
       if (key == LogicalKeyboardKey.keyF) {
         farmFertilize();
         return true;
@@ -3269,3 +3369,6 @@ class _StashOp {
 
 /// Herramienta de oficio en la mano (HUD de herramienta, farming.md § 4).
 enum ActiveTool { rod, hoe }
+
+/// Herramienta de huerta en la mano (farming.md § 2.5).
+enum FarmHand { hoe, seed, can }

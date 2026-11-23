@@ -101,6 +101,7 @@ class ActorPainter {
     required bool blink,
     String? ascensionId,
     WeaponLook? look,
+    bool showWeapon = true,
   }) {
     final img = sprites.heroFor(classId, ascensionId);
     c.save();
@@ -120,7 +121,10 @@ class ActorPainter {
     if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
     if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
-    WeaponOverlay.draw(c, classId, weaponType, look: look, time: t / 1000);
+    // Con una herramienta de vida en la mano no se ve el arma.
+    if (showWeapon) {
+      WeaponOverlay.draw(c, classId, weaponType, look: look, time: t / 1000);
+    }
     if (alpha < 1) c.restore();
     c.restore();
   }

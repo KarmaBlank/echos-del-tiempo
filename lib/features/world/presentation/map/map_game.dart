@@ -719,6 +719,10 @@ class MapGame extends Game {
       fishing.drawShadows(c);
       farm.drawPlots(c, s.town, worldView, t);
       farm.drawHelper(c, s.town, t);
+      // Objetivo del próximo E / clic (solo el jugador local).
+      if (controller.farmTarget case final ft?) {
+        farm.drawTarget(c, ft.tiles, ft.ok);
+      }
     }
 
     // Entidades ordenadas por y (desempate: orden de llegada).
@@ -744,6 +748,14 @@ class MapGame extends Game {
       final fall = _falls[p.id];
       final fq = fallProgress(p.id);
       if (fall != null && fq == null) _falls.remove(p.id);
+      // Herramienta de vida en la mano: no se ve el arma. Los demás
+      // jugadores: caña con la línea afuera o cerca de la huerta (se deduce
+      // de la posición; sin protocolo nuevo).
+      final inTown = s.mode == SessionMode.lobby;
+      final toolOut = inTown &&
+          (mine
+              ? controller.activeTool != null
+              : p.fishLine != null || controller.nearSoilAt(px, py));
       void hero(double x, double y) => actors.hero(c,
           classId: p.profile.classId,
           weaponType: weapon?.type,
@@ -757,7 +769,8 @@ class MapGame extends Game {
           moving: mine ? controller.local.moving : p.moving,
           dead: p.hp <= 0,
           blink: grace && p.hp > 0,
-          ascensionId: p.profile.ascension.id);
+          ascensionId: p.profile.ascension.id,
+          showWeapon: !toolOut);
       if (fall != null && fq != null) {
         if (fq < 0.5) {
           // Se achica y se desvanece donde cayó.
@@ -778,8 +791,23 @@ class MapGame extends Game {
       add(py, () {
         hero(px, py);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
-        if (mine && line == null && controller.activeTool == ActiveTool.hoe) {
-          farm.drawHoe(c, px, py, controller.local.fx);
+        if (line == null && toolOut) {
+          final face = mine ? controller.local.fx : p.dir;
+          final tool = mine ? controller.activeTool : ActiveTool.hoe;
+          if (tool == ActiveTool.rod) {
+            fishing.drawIdleRod(c, px, py, face);
+          } else {
+            switch (mine ? controller.farmHand : FarmHand.hoe) {
+              case FarmHand.hoe:
+                farm.drawHoe(c, px, py, face);
+              case FarmHand.can:
+                farm.drawCan(c, px, py, face);
+              case FarmHand.seed:
+                final d = kCrops[p.profile.life.farm.activeSeed];
+                farm.drawSeedBag(c, px, py, face,
+                    FarmPalette.fruit[d?.rarity.index ?? 0]);
+            }
+          }
         }
         if (line != null) {
           final f = mine ? controller.mapFishing : null;

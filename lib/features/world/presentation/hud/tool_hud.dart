@@ -3,15 +3,14 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
-import '../../../../game_engine/models/session_action.dart' show FarmOp;
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../map/map_themes.dart';
 import '../session_controller.dart';
 
 /// HUD de la herramienta en la mano (farming.md § 4, fishing.md § 4),
 /// arriba de las pociones: el aviso compacto (`[E o clic] Arar`, fases de
-/// la pesca) y la herramienta equipada. Con la azada, además, el carrusel
-/// de semillas y la regadera. Solo en el pueblo; nunca en misiones (el
+/// la pesca) y la herramienta equipada. En la huerta, la barra de
+/// herramienta activa: Azada | Semilla (carrusel) | Regadera. Solo en el pueblo; nunca en misiones (el
 /// controlador devuelve `activeTool == null`).
 class ToolHud extends StatelessWidget {
   const ToolHud({super.key, required this.controller, required this.profile});
@@ -20,6 +19,9 @@ class ToolHud extends StatelessWidget {
   final PlayerProfile profile;
 
   static const width = 260.0;
+
+  /// Anchos fijos de los casilleros de la huerta (entran en [width]).
+  static const slotW = 76.0, seedW = 84.0;
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +40,9 @@ class ToolHud extends StatelessWidget {
             if (prompt != null)
               Text(prompt,
                   key: const ValueKey('hud-tool-prompt'),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: DsText.body(DsColors.reward)),
             SizedBox(height: DsSpace.xs),
@@ -61,61 +66,88 @@ class ToolHud extends StatelessWidget {
     ];
   }
 
+  /// Barra horizontal de tres casilleros (Azada | Semilla | Regadera), de
+  /// ancho fijo para que nada se corte en dos líneas. Clic en uno lo deja
+  /// en la mano (no hace la labor); el elegido va con borde dorado.
   List<Widget> _farm() {
     final f = profile.life.farm;
     final hoe = kFarmTools[f.hoe];
     final can = kFarmTools[f.can];
+    final hand = controller.farmHand;
     final active = f.activeSeed;
     final prev = FarmingRules.prevSeed(profile);
     final next = FarmingRules.nextSeed(profile);
-    final canWater = controller.farmOp == FarmOp.water;
+    final many = prev != null && prev != active;
+    final d = kCrops[active];
+
     Widget chip(String? id, double size, String key, VoidCallback? onTap) {
-      final d = kCrops[id];
+      final c = kCrops[id];
       final box = Container(
         key: ValueKey(key),
         width: size,
         height: size,
-        color: d == null
+        color: c == null
             ? DsColors.surfaceSunken
-            : FarmPalette.fruit[d.rarity.index],
+            : FarmPalette.fruit[c.rarity.index],
       );
-      if (onTap == null || d == null) return box;
-      return DsCard(padding: const EdgeInsets.all(2), onTap: onTap, child: box);
+      if (onTap == null || c == null) return box;
+      return GestureDetector(onTap: onTap, child: box);
     }
 
-    final d = kCrops[active];
-    final many = prev != null && prev != active;
+    Widget slot(FarmHand h, double w, String key, String label, String tip,
+        Widget? body) {
+      return SizedBox(
+        width: w,
+        child: DsCard(
+          key: ValueKey(key),
+          selected: hand == h,
+          padding: EdgeInsets.all(DsSpace.xs),
+          onTap: () => controller.selectFarmHand(h),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (body != null) body,
+            Text(label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.clip,
+                textAlign: TextAlign.center,
+                style: DsText.detail()),
+          ]),
+        ).tip(tip),
+      );
+    }
+
     return [
-      Text('Azada: ${hoe?.name ?? f.hoe}',
-          key: const ValueKey('hud-tool-hoe'),
-          textAlign: TextAlign.center,
-          style: DsText.detail()),
-      SizedBox(height: DsSpace.xs),
       Row(
-        key: const ValueKey('hud-seed-carousel'),
-        mainAxisAlignment: MainAxisAlignment.center,
+        key: const ValueKey('hud-farm-bar'),
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          chip(
-              many ? prev : null, 16, 'hud-seed-prev', controller.prevSeedPick),
-          SizedBox(width: DsSpace.sm),
-          chip(active, 32, 'hud-seed-current', null),
-          SizedBox(width: DsSpace.sm),
-          chip(many ? next : null, 16, 'hud-seed-next', controller.cycleSeed),
+          slot(FarmHand.hoe, slotW, 'hud-tool-hoe', 'Azada',
+              'Azada: ${hoe?.name ?? f.hoe} · [Tab] o rueda: herramienta', null),
+          slot(
+              FarmHand.seed,
+              seedW,
+              'hud-tool-seed',
+              d == null ? 'Sin semillas' : '×${f.seedCount(d.id)}',
+              d == null
+                  ? 'Sin semillas: comprá en el comerciante'
+                  : '${d.seedName} · [Q] o [ ]: otra semilla',
+              Row(
+                key: const ValueKey('hud-seed-carousel'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  chip(many ? prev : null, 10, 'hud-seed-prev',
+                      controller.prevSeedPick),
+                  SizedBox(width: DsSpace.xs),
+                  chip(active, 16, 'hud-seed-current', null),
+                  SizedBox(width: DsSpace.xs),
+                  chip(many ? next : null, 10, 'hud-seed-next',
+                      controller.cycleSeed),
+                ],
+              )),
+          slot(FarmHand.can, slotW, 'hud-tool-can', 'Regadera',
+              'Regadera: ${can?.name ?? f.can}', null),
         ],
       ),
-      SizedBox(height: DsSpace.xs),
-      Text(d == null ? 'Sin semillas' : '${d.seedName} ×${f.seedCount(d.id)}',
-          key: const ValueKey('hud-seed-name'),
-          textAlign: TextAlign.center,
-          style: DsText.body()),
-      Text('[Q] o rueda: otra semilla',
-          textAlign: TextAlign.center, style: DsText.detail()),
-      SizedBox(height: DsSpace.xs),
-      DsButton('Regadera: ${can?.name ?? f.can}',
-          key: const ValueKey('hud-tool-can'),
-          size: DsButtonSize.compact,
-          tooltip: canWater ? 'Regar la parcela de enfrente' : null,
-          onPressed: canWater ? controller.farmWaterClick : null),
     ];
   }
 }

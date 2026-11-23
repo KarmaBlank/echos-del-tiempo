@@ -63,6 +63,40 @@ class MapFarmLayer {
         Paint()..color = FarmPalette.hoeBlade);
   }
 
+  /// Recuadro de los tiles que tocará el próximo E / clic: verde si la
+  /// herramienta elegida sirve, naranja si no (el motivo va en el aviso).
+  void drawTarget(Canvas c, List<(int, int)> tiles, bool ok) {
+    final p = Paint()
+      ..color = ok ? FarmPalette.targetOk : FarmPalette.targetBad
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final (x, y) in tiles) {
+      c.drawRect(Rect.fromLTWH(x * ts + 0.5, y * ts + 0.5, ts - 1, ts - 1), p);
+    }
+  }
+
+  /// La bolsita de semillas en la mano, con el color del fruto elegido.
+  void drawSeedBag(Canvas c, double px, double py, num face, Color fruit) {
+    final f = face < 0 ? -1.0 : 1.0;
+    final x = px + f * 6 - 2.5, y = py - 10;
+    c.drawRect(Rect.fromLTWH(x, y, 5, 5), Paint()..color = FarmPalette.seedBag);
+    c.drawRect(
+        Rect.fromLTWH(x + 1, y - 1, 3, 1), Paint()..color = FarmPalette.seedBagTie);
+    c.drawRect(Rect.fromLTWH(x + 2, y + 2, 1, 1), Paint()..color = fruit);
+  }
+
+  /// La regadera en la mano, con el pico hacia [face].
+  void drawCan(Canvas c, double px, double py, num face) {
+    final f = face < 0 ? -1.0 : 1.0;
+    final x = px + f * 6 - 3, y = py - 11;
+    c.drawRect(Rect.fromLTWH(x, y, 6, 5), Paint()..color = FarmPalette.can);
+    c.drawRect(Rect.fromLTWH(x + 1, y - 2, 4, 1), Paint()..color = FarmPalette.canDark);
+    c.drawLine(Offset(px + f * (f < 0 ? 3 : 9), y + 1),
+        Offset(px + f * 12, y - 2), Paint()
+          ..color = FarmPalette.canDark
+          ..strokeWidth = 1);
+  }
+
   void _plot(Canvas c, FarmPlot p, double px, double py, double t) {
     final paint = Paint();
     c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2),

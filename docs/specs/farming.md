@@ -41,32 +41,53 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
   el que se pisa. El host acepta labores a ≤ `reachPx` (30 px) del centro
   del tile y como mucho una cada `minWorkSec`.
 
-### 2.2 Labores (tecla E, contextual)
-| Estado de la parcela | E hace | Notas |
+### 2.2 Labores (tecla E, según la herramienta en la mano, v0.24.1)
+| Herramienta en la mano | Sirve en | Si no sirve, el aviso dice |
 |---|---|---|
-| Tierra sin arar | Arar | Con la azada; área según azada (§ 4) |
-| Arada vacía | Plantar la semilla elegida | Q cambia de semilla |
-| Plantada, creciendo | Regar | Con la regadera; área según regadera |
-| Madura | Cosechar | Pop + aviso + chat |
+| Azada | Tierra sin arar (área según azada, § 4) | "Ya está arada" |
+| Semilla (la del carrusel) | Arada vacía | "Primero arala" / "Ya está plantada" / "Sin semillas: comprá en el comerciante" |
+| Regadera | Plantada, creciendo (área según regadera) | "Primero arala" / "Primero plantá" |
+| Cualquiera | Madura: cosechar (pop + aviso + chat) | — |
+
+Con una herramienta que no sirve, E / clic no hacen nada (el aviso dice
+por qué). La cosecha funciona con cualquier herramienta elegida: así no
+hay que cambiar de mano para levantar lo maduro.
 
 F abona la parcela de enfrente con el mejor abono que tengas. E o el
 clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 
-### 2.5 HUD de herramienta (v0.23.2)
+### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.24.1)
 - A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   también las que suma ampliar el pueblo, porque se mira el tile `soil`
-  del mapa) sale la azada equipada: se ve en la mano y aparece el HUD de
-  herramienta arriba de las pociones ([1] Vida / [2] Maná). Cerca de la
-  orilla manda la caña (fishing.md § 4.0).
-- Arriba del HUD, el aviso compacto: "[E o clic] Arar", "[E o clic]
-  Plantar Nabo del claro", "[E o clic] Regar · 45 %", "[E o clic]
-  Cosechar · 3 % legendaria". Ya no hay cartel abajo en el centro para la
-  huerta ni la pesca.
-- Azada equipada; carrusel de semillas: la elegida grande al centro, la
-  anterior chica a la izquierda y la siguiente a la derecha (clic en
-  ellas para cambiar), nombre y cantidad abajo. Q o la rueda del mouse
-  cambian de semilla. Abajo, la regadera equipada: clic riega la parcela
-  de enfrente (gris si no hay nada para regar).
+  del mapa) aparece el HUD de herramienta arriba de las pociones ([1]
+  Vida / [2] Maná). Cerca de la orilla manda la caña (fishing.md § 4.0).
+- Arriba, el aviso en una línea (nunca se parte; si no entra, termina en
+  "…"): "[E o clic] Arar", "[E o clic] Plantar Nabo del claro", "[E o
+  clic] Regar · 45 %", "[E o clic] Cosechar · 3 % legendaria" o el motivo
+  si la herramienta elegida no sirve ("Primero arala").
+- Abajo, una barra horizontal de tres casilleros de ancho fijo: Azada |
+  Semilla (carrusel: la elegida al medio, anterior y siguiente chicas a
+  los costados, cantidad abajo) | Regadera. Nombres cortos; el nombre
+  completo de la herramienta o semilla va en el tooltip (tamaño fijo). El
+  elegido lleva el borde dorado de selección. Clic en un casillero lo deja
+  en la mano (no hace la labor).
+- Controles: Tab (Mayús+Tab al revés) o la rueda del mouse cambian de
+  herramienta; Q o ] la semilla siguiente, [ la anterior (también clic en
+  las semillas de los costados); E o clic izquierdo en el mapa hacen la
+  labor; F abona. Los números quedan para las pociones.
+- Elección por defecto: mientras no elijas a mano, la herramienta sigue lo
+  que pide la parcela de enfrente (sin arar → azada, arada → semilla,
+  plantada → regadera). Una elección manual se respeta hasta que te alejás
+  de la huerta; al volver, otra vez sugiere.
+- Objetivo: el tile (o los tiles, con el área de la azada o la regadera)
+  que va a tocar el próximo E / clic se marca con un recuadro: verde si la
+  herramienta sirve, naranja si no. Solo lo ve el jugador local; colores
+  en `FarmPalette`.
+- En la mano se ve la herramienta elegida (azada, bolsita de semillas con
+  el color del fruto o regadera) y no el arma. Igual con la caña cerca del
+  agua. Los demás jugadores ven sin arma a quien tiene la línea afuera o
+  está cerca de la huerta (se deduce de la posición, con la azada; sin
+  protocolo nuevo).
 - Solo en el pueblo; nunca en misiones.
 - Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el comerciante:
   EQUIPAR en cada azada / regadera (`farmShop` `equipTool`, ya autoritativo

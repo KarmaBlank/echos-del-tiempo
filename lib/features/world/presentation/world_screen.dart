@@ -492,7 +492,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ),
             )
           // Con una herramienta en la mano: clic = E (sacar la caña, arar,
-          // plantar, regar, cosechar); la rueda cambia de semilla.
+          // plantar, regar, cosechar); la rueda cambia de herramienta.
           else if (view.panel == null && controller.activeTool != null)
             Positioned.fill(
               key: const ValueKey('tool-pointer'),
@@ -509,9 +509,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 onPointerSignal: (e) {
                   if (e is PointerScrollEvent &&
                       controller.activeTool == ActiveTool.hoe) {
-                    e.scrollDelta.dy < 0
-                        ? controller.prevSeedPick()
-                        : controller.cycleSeed();
+                    controller.cycleFarmHand(e.scrollDelta.dy < 0 ? -1 : 1);
                   }
                 },
               ),
