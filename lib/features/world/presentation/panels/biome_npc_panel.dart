@@ -164,7 +164,7 @@ LifeItemCellData? orderCell(SessionController c, BiomeNpcDef n,
 enum NpcMenu { comprar, encargos, pedidos, regalar, casa }
 
 /// Habitante de un bioma o del pueblo (overworld_biomes.md § 9 y § 10,
-/// ui_minimal.md § 9): primero el cuadro de diálogo abajo (retrato,
+/// ui_minimal.md § 10): primero el cuadro de diálogo abajo (retrato,
 /// nombre, frase escrita letra a letra y menú de opciones); cada opción
 /// abre una ventana de menú con franja de estado y su contenido.
 class BiomeNpcPanel extends StatefulWidget {

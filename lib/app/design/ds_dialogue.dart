@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'ds_tokens.dart';
 
-// Diálogo de personaje y ventanas de menú (ui_minimal.md § 9). Todo es
+// Diálogo de personaje y ventanas de menú (ui_minimal.md § 10). Todo es
 // visual: quien lo usa arma las opciones y decide qué hace cada una.
 
 /// Átomo: cursor ▶ dibujado (no depende de la fuente).
