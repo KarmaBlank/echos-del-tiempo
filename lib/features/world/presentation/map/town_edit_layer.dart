@@ -15,8 +15,22 @@ import 'map_themes.dart';
 abstract final class TownEditLayer {
   static const ts = 16.0;
 
-  static void draw(
-      Canvas c, SessionController ctl, GameMap map, MapText text) {
+  /// La franja fantasma de [side] en px del mundo para un mapa de
+  /// [w] × [h] px.
+  static Rect stripRect(TownSide side, double w, double h) {
+    const s = kTownStrip * ts;
+    return switch (side) {
+      TownSide.norte => Rect.fromLTWH(0, -s, w, s),
+      TownSide.sur => Rect.fromLTWH(0, h, w, s),
+      TownSide.oeste => Rect.fromLTWH(-s, 0, s, h),
+      TownSide.este => Rect.fromLTWH(w, 0, s, h),
+    };
+  }
+
+  /// [view]: lo visible del mundo (px); la etiqueta de cada franja va en
+  /// el centro de su parte visible.
+  static void draw(Canvas c, SessionController ctl, GameMap map, MapText text,
+      {Rect? view}) {
     final e = ctl.townEdit;
     if (e == null) return;
     final town = ctl.town;
@@ -26,25 +40,18 @@ abstract final class TownEditLayer {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final w = map.width * ts, h = map.height * ts;
-    const s = kTownStrip * ts;
-    final cost = TownRules.costText(TownRules.cost(town.expansions + 1));
     for (final side in TownSide.values) {
       if (TownRules.sideFull(town, side) != null) continue;
-      final r = switch (side) {
-        TownSide.norte => Rect.fromLTWH(0, -s, w, s),
-        TownSide.sur => Rect.fromLTWH(0, h, w, s),
-        TownSide.oeste => Rect.fromLTWH(-s, 0, s, h),
-        TownSide.este => Rect.fromLTWH(w, 0, s, h),
-      };
+      final r = stripRect(side, w, h);
       final picked = e.side == side;
       c.drawRect(r, fill..color = TownEditPalette.side);
-      c.drawRect(r.deflate(0.5),
-          line..color = picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
-      final why = ctl.cannotExpandTown(side);
-      final col =
-          why == null ? TownEditPalette.sideText : TownEditPalette.sideLocked;
-      text('AMPLIAR AL ${side.label}', r.center.dx, r.center.dy - 4, col, 7);
-      text(cost, r.center.dx, r.center.dy + 6, col, 6);
+      c.drawRect(
+          r.deflate(0.5),
+          line
+            ..color =
+                picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
+      // El texto (AMPLIAR y el costo) va en px de pantalla, en
+      // `TownStripCards` (town_editor.md § 1.3).
     }
     for (final b in town.builds) {
       final sel = b.id == e.selected;
@@ -78,13 +85,14 @@ abstract final class TownEditLayer {
     final ok = ctl.editGhostError == null;
     for (final p in parts) {
       final r = Rect.fromLTWH(p.x * ts, p.y * ts, p.w * ts, p.h * ts);
-      c.drawRect(
-          r, fill..color = ok ? TownEditPalette.valid : TownEditPalette.invalid);
+      c.drawRect(r,
+          fill..color = ok ? TownEditPalette.valid : TownEditPalette.invalid);
       c.drawRect(
           r.deflate(0.5),
           line
-            ..color =
-                ok ? TownEditPalette.validBorder : TownEditPalette.invalidBorder);
+            ..color = ok
+                ? TownEditPalette.validBorder
+                : TownEditPalette.invalidBorder);
     }
   }
 }

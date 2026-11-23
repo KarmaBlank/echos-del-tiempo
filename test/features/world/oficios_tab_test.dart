@@ -62,10 +62,26 @@ void main() {
             view: v, controller: c, initialTab: CharacterTab.lifeItems));
     await tester.pump();
     expect(find.textContaining('Azada de rama'), findsWidgets);
+    // Una categoría por vez: las semillas, en su pestaña.
+    expect(find.byKey(const ValueKey('life-seed-nabo_claro')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('life-cat-semillas')));
+    await tester.pump();
     final seed = find.byKey(const ValueKey('life-seed-nabo_claro'));
-    await tester.scrollUntilVisible(seed, 80,
-        scrollable: find.byType(Scrollable).last);
     expect(seed, findsOneWidget);
+    // El buscador filtra.
+    await tester.enterText(
+        find.descendant(
+            of: find.byKey(const ValueKey('life-search')),
+            matching: find.byType(EditableText)),
+        'zzz');
+    await tester.pump();
+    expect(find.byKey(const ValueKey('life-items-empty')), findsOneWidget);
+    await tester.enterText(
+        find.descendant(
+            of: find.byKey(const ValueKey('life-search')),
+            matching: find.byType(EditableText)),
+        '');
+    await tester.pump();
     expect(find.text('PARA PLANTAR'), findsOneWidget);
   });
 }

@@ -9,3 +9,4 @@ export 'ds_guide.dart';
 export 'ds_menu_button.dart';
 export 'ds_tokens.dart';
 export 'ds_progress.dart';
+export 'ds_sprite_icon.dart';

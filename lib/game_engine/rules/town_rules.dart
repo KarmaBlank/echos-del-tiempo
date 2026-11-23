@@ -38,6 +38,26 @@ abstract final class TownRules {
         if (c.cristales > 0) '${c.cristales} Cristales de Era',
       ].join(' · ');
 
+  /// Renglones del costo con lo que [p] tiene: (recurso, hace falta,
+  /// tiene). Solo los que la ampliación pide (town_editor.md § 1.3).
+  static List<({String name, int need, int have})> costLines(
+          PlayerProfile p, ExpansionCost c) =>
+      [
+        (name: 'Oro', need: c.gold, have: p.credits),
+        if (c.esquirlas > 0)
+          (
+            name: 'Esquirlas',
+            need: c.esquirlas,
+            have: p.materials[CraftMaterial.esquirla] ?? 0
+          ),
+        if (c.cristales > 0)
+          (
+            name: 'Cristales de Era',
+            need: c.cristales,
+            have: p.materials[CraftMaterial.cristal] ?? 0
+          ),
+      ];
+
   /// Por qué el pueblo no se puede ampliar más hacia [side] (o `null`).
   static String? sideFull(TownState s, TownSide side) {
     if (s.expansions >= maxExpansions) return 'El pueblo ya está al máximo';
@@ -143,8 +163,11 @@ abstract final class TownRules {
     if (b == null) return 'No existe';
     final w = TownPlan.widthOf(next), h = TownPlan.heightOf(next);
     final (ox, oy) = next.origin;
+    // Un tile de borde (la fila de árboles); la huerta base llega hasta
+    // la anteúltima fila, así que con dos de margen no podía volver a su
+    // propio lugar (v0.24.2).
     bool inside(int x, int y) =>
-        x + ox >= 2 && y + oy >= 2 && x + ox < w - 2 && y + oy < h - 2;
+        x + ox >= 1 && y + oy >= 1 && x + ox < w - 1 && y + oy < h - 1;
     final bb = b.bounds;
     final (sx, sy) = TownPlan.signOf(next, b);
     if (!inside(bb.x, bb.y) ||

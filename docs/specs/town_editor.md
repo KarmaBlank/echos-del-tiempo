@@ -24,7 +24,7 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 ### 1.2 Pasos (clic sin arrastrar)
 | Clic en | Abre |
 |---|---|
-| Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo |
+| Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo (pasar el mouse ya lo muestra en el panel de info) |
 | Lago (o su cartel) | AGREGAR ESPECIES · MOVER · BORRAR LAGO |
 | Huerta (o su cartel) | MOVER · BORRAR |
 | Tile libre (pasto o árbol) | CONSTRUIR: lista del catálogo (§ 3) |
@@ -34,11 +34,39 @@ MOVER y elegir qué construir dejan un fantasma que sigue al mouse
 deja ahí (esa es la confirmación) y CANCELAR / Esc lo descarta. La
 esquina superior izquierda del fantasma va en el tile del mouse.
 
-### 1.3 Dibujo
-Franjas fantasma celestes con "AMPLIAR AL NORTE" y el costo (gris si no
-alcanza la plata), contorno de cada construcción (dorado la elegida),
-fantasma verde / rojo. Colores en `TownEditPalette`. El menú del paso
-va a la derecha, la barra con la ayuda y LISTO arriba.
+### 1.3 Dibujo (legible desde v0.24.2)
+- Mientras se edita se oculta el HUD normal (TITULO, MENÚ, ALIJO,
+  pociones, chat, ficha del personaje, barra de herramientas y los
+  tooltips flotantes de los carteles). Solo queda la barra de edición
+  arriba, a todo el ancho y con fondo opaco: EDICIÓN DEL PUEBLO, una
+  ayuda corta de una línea (se corta con "…") y LISTO [ESC].
+- Franjas fantasma celestes. Encima, en px de pantalla
+  (`TownStripCards`), una tarjeta centrada en la parte visible de cada
+  franja (debajo de la barra y a la izquierda de la columna derecha):
+  AMPLIAR y el costo de a un recurso por renglón, "Oro 1500 (tenés
+  60000)", verde si alcanza y rojo si no (`TownRules.costLines`). Se
+  achica para entrar en la franja; si la parte visible es muy chica no
+  se muestra. Borde dorado con el mouse encima o elegida.
+- Contorno de cada construcción (dorado la elegida) y fantasma verde /
+  rojo. Colores en `TownEditPalette`.
+- Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
+  entre 240 y 320 px): el menú del paso y, debajo, el panel de info de
+  la construcción bajo el mouse (su cartel). Con un menú abierto no
+  aparece. La barra: ayuda corta en hasta dos renglones, sin "…".
+- Validación de MOVER (§ 3.2): el borde del pueblo es de un tile (la
+  fila de árboles), así cada construcción puede volver a su propio lugar
+  o correrse pisando el que deja.
+
+### 1.4 Etiquetas del mapa
+- Con zoom las etiquetas se achican con el mapa (la unidad de letra sale
+  de la escala dividida por el zoom).
+- Lugares del pueblo y carteles de construcciones tienen prioridad
+  (lugares primero, en el orden de `TownLayout.landmarks`) y no se pisan
+  entre sí, también jugando: cada una, en orden, prueba quedarse, subir
+  uno o dos renglones o bajar uno, con un margen a los costados; si no
+  entra, se oculta (`placeLabels`, función pura). Nunca se cortan en el
+  borde de la pantalla: se corren hacia adentro. Nombres de jugadores y
+  avisos no participan.
 
 ## 2. Ampliaciones por lado
 - Cada ampliación suma una franja de `kTownStrip` (8) tiles al norte,
