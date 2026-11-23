@@ -9,7 +9,6 @@ import 'package:echos_del_tiempo/core/procedural/weapon_look.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
-import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
