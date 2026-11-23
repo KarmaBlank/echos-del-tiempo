@@ -1,4 +1,4 @@
-// TÍTULO por defecto (docs/specs/title_screen.md): VERIFICAR sin avisos y
+﻿// TÍTULO por defecto (docs/specs/title_screen.md): VERIFICAR sin avisos y
 // nada cortado ni desbordado de 1280×720 a 2560×1440, con texto grande.
 // Goldens:
 //   flutter test --update-goldens test/features/lobby/title_default_layout_test.dart
@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/core/edition/game_edition.dart';
 import 'package:echos_del_tiempo/core/persistence/exit_guard.dart';
 import 'package:echos_del_tiempo/core/screen_layout/screen_bindings.dart';
 import 'package:echos_del_tiempo/core/screen_layout/screen_layout.dart';
@@ -113,6 +114,18 @@ Future<ScreenLayout> _bundled(WidgetTester tester) async {
 }
 
 void main() {
+  // La versión se dibuja en el título: fija para que el golden no cambie
+  // con cada release.
+  setUpAll(() => GameEdition.install(GameEdition(
+        mode: GameEdition.mundo.mode,
+        title: GameEdition.mundo.title,
+        version: '0.0.0',
+        dataFolder: GameEdition.mundo.dataFolder,
+        linuxDataFolder: GameEdition.mundo.linuxDataFolder,
+        releases: GameEdition.mundo.releases,
+        wire: GameEdition.mundo.wire,
+      )));
+  tearDownAll(() => GameEdition.install(GameEdition.mundo));
   tearDown(() => ScreenLayoutCatalog.instance.put('title', null));
   setUp(() => ExitGuard.register(#titleDefault, () async {}));
   tearDown(() => ExitGuard.unregister(#titleDefault));
