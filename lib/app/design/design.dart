@@ -4,6 +4,7 @@ library;
 export 'ds_action_row.dart';
 export 'ds_button.dart';
 export 'ds_components.dart';
+export 'ds_craft_template.dart';
 export 'ds_dialogue.dart';
 export 'ds_focus.dart';
 export 'ds_guide.dart';

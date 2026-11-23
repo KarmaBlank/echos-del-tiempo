@@ -9,11 +9,9 @@ import '../../world/presentation/panels/party_member_bar.dart';
 import '../../world/presentation/session_view.dart';
 import 'shop_sections.dart';
 
-/// Armería del lobby (`shop` del prototipo, líneas 1352-1358) en
-/// pestañas: COMPRAR · FORJA · FUSIÓN · CONSUMIBLES, cada una con su
-/// línea "qué hace" y lista + detalle. Ver docs/specs/panels.md §
-/// "Armería".
-class ArmoryPanel extends StatefulWidget {
+/// ARMERÍA del pueblo (v0.32.3): COMPRAR · VENDER · CONSUMIBLES. Ver
+/// docs/specs/panels.md § "Armería".
+class ArmoryPanel extends StatelessWidget {
   const ArmoryPanel({
     super.key,
     required this.view,
@@ -26,11 +24,65 @@ class ArmoryPanel extends StatefulWidget {
   final ArmoryTab initialTab;
 
   @override
-  State<ArmoryPanel> createState() => _ArmoryPanelState();
+  Widget build(BuildContext context) => ShopTabsPanel(
+      view: view,
+      controller: controller,
+      title: 'ARMERÍA',
+      help: kShopHelp,
+      tabs: ArmoryTab.values,
+      initial: initialTab.index);
 }
 
-class _ArmoryPanelState extends State<ArmoryPanel> {
-  late var _tab = widget.initialTab;
+/// FORJA del pueblo (v0.32.3): MEJORAR · CONDENSAR · FUSIÓN. Ver
+/// docs/specs/panels.md § "Forja".
+class ForgePanel extends StatelessWidget {
+  const ForgePanel({
+    super.key,
+    required this.view,
+    required this.controller,
+    this.initialTab = ForgeHallTab.upgrade,
+  });
+
+  final SessionView view;
+  final SessionController controller;
+  final ForgeHallTab initialTab;
+
+  @override
+  Widget build(BuildContext context) => ShopTabsPanel(
+      view: view,
+      controller: controller,
+      title: 'FORJA',
+      help: kForgeHelp,
+      tabs: ForgeHallTab.values,
+      initial: initialTab.index);
+}
+
+/// Organismo común de la ARMERÍA y la FORJA: marco, pestañas, línea "qué
+/// hace" y el contenido de la pestaña.
+class ShopTabsPanel extends StatefulWidget {
+  const ShopTabsPanel({
+    super.key,
+    required this.view,
+    required this.controller,
+    required this.title,
+    required this.help,
+    required this.tabs,
+    this.initial = 0,
+  });
+
+  final SessionView view;
+  final SessionController controller;
+  final String title;
+  final String help;
+  final List<ShopTabDef> tabs;
+  final int initial;
+
+  @override
+  State<ShopTabsPanel> createState() => _ShopTabsPanelState();
+}
+
+class _ShopTabsPanelState extends State<ShopTabsPanel> {
+  late var _tab = widget.initial;
 
   @override
   Widget build(BuildContext context) {
@@ -38,20 +90,21 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
     final controller = widget.controller;
     final shop = ShopContext(view, controller);
     final p = shop.profile;
+    final tab = widget.tabs[_tab];
     final close = view.mustAllocate ? null : controller.closePanel;
     // Q / E, Ctrl+Tab y 1-4 cambian de pestaña (menu_focus.dart).
     return PartyMemberKeys(
       view: view,
       controller: controller,
       child: MenuTabKeys(
-        count: ArmoryTab.values.length,
-        index: _tab.index,
-        onChanged: (i) => setState(() => _tab = ArmoryTab.values[i]),
+        count: widget.tabs.length,
+        index: _tab,
+        onChanged: (i) => setState(() => _tab = i),
         child: PanelFrame(
-          title: 'ARMERÍA',
+          title: widget.title,
           width: 1200,
           fill: true,
-          help: kShopHelp,
+          help: widget.help,
           onClose: close,
           titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b> · '
               '<span class="k">${protoEsc(shop.className())}</span>'),
@@ -59,9 +112,9 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
               view,
               controller,
               PanelTabs(
-                labels: [for (final t in ArmoryTab.values) t.label],
-                index: _tab.index,
-                onChanged: (i) => setState(() => _tab = ArmoryTab.values[i]),
+                labels: [for (final t in widget.tabs) t.label],
+                index: _tab,
+                onChanged: (i) => setState(() => _tab = i),
               )),
           actions: [
             PanelButton('PERSONAJE [C]',
@@ -71,11 +124,11 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(_tab.hint),
+              PanelHint(tab.hint),
               Expanded(
                   child: KeyedSubtree(
                       key: ValueKey((_tab, view.actorId)),
-                      child: _tab.build(shop))),
+                      child: tab.build(shop))),
             ],
           ),
         ),

@@ -55,7 +55,7 @@ void main() {
     await pumpPanel(tester,
         profile: lootWarrior(),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
     await _choose(tester, 'e1', CraftOp.transferSkill);
     await _tap(tester, 'craft-source-c1');
     await _tap(tester, 'craft-pick-0');
@@ -75,7 +75,7 @@ void main() {
     final c = await pumpPanel(tester,
         profile: lootWarrior(),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
     PlayerProfile me() => c.view!.me!.profile;
     // El Mágico tiene 1 cupo: la primera entra sin preguntar.
     await _choose(tester, 'm1', CraftOp.transferSkill);
@@ -169,7 +169,7 @@ void main() {
     await pumpPanel(tester,
         profile: p,
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.upgrade));
     final it = p.itemByUid(p.equippedUid!)!;
     final after = progression.crafting.forge(p, it.uid, UpgradeStat.spd).after!;
     final b = ShopPreview(progression).withItem(p, it);

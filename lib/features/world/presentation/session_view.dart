@@ -17,7 +17,15 @@ import '../../../game_engine/rules/atlas_rules.dart';
 /// docs/specs/ascension.md).
 enum WorldPanel {
   missionBoard,
+
+  /// ARMERÍA: comprar y vender armas (v0.32.3).
   armory,
+
+  /// FORJA: mejorar, condensar y fusionar (v0.32.3).
+  forge,
+
+  /// TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3).
+  workshop,
   character,
   prep,
   inventory,
@@ -75,6 +83,8 @@ class ChatLine {
 enum WorldPrompt {
   missionBoard('[E] Ver misiones'),
   armory('[E] Armería'),
+  forge('[E] Forja'),
+  workshop('[E] Taller de oficios'),
   seal('[E] Activar sello'),
   merchant('[E] Tienda y herrería'),
 

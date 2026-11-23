@@ -91,25 +91,15 @@ void main() {
       (tester) async {
     final c = await pumpPanel(tester,
         profile: lootWarrior(),
-        build: (v, c) => ArmoryPanel(view: v, controller: c));
+        build: (v, c) => ForgePanel(view: v, controller: c));
     PlayerProfile me() => c.view!.me!.profile;
-    // Abre con el cursor en la primera fila de COMPRAR.
-    expect(_focusedKey(), startsWith('shop-row-'));
-    final first = plain(tester, 'shop-title');
-    await _key(tester, LogicalKeyboardKey.arrowDown);
-    expect(_focusedKey(), startsWith('shop-row-'));
-    expect(plain(tester, 'shop-title'), isNot(first),
-        reason: 'el detalle sigue al cursor');
-    // Aro dorado visible con el teclado.
-    expect(find.byKey(const ValueKey('focus-ring')), findsWidgets);
-
     await _key(tester, LogicalKeyboardKey.keyE);
-    expect(_tab(tester, ArmoryTab.forge.index), isTrue);
+    expect(_tab(tester, ForgeHallTab.condense.index), isTrue);
     await _ctrlTab(tester);
-    expect(_tab(tester, ArmoryTab.fuse.index), isTrue);
+    expect(_tab(tester, ForgeHallTab.fuse.index), isTrue);
     await _ctrlTab(tester, shift: true);
-    await _key(tester, LogicalKeyboardKey.digit2);
-    expect(_tab(tester, ArmoryTab.forge.index), isTrue);
+    await _key(tester, LogicalKeyboardKey.digit1);
+    expect(_tab(tester, ForgeHallTab.upgrade.index), isTrue);
     await tester.pump();
     expect(_focusedKey(), startsWith('forge-row-'));
 

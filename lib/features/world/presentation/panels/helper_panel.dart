@@ -236,7 +236,7 @@ class _HelperPanelState extends State<HelperPanel> {
         Text(
             'Mejoras de este ${b.kind == BuildKind.huerta ? 'granjero' : 'pescador'}. '
             'Cuestan oro, ${kLifeMaterials[mat]!.name.toLowerCase()} y tablas '
-            '(se hacen en CONDENSAR); los rangos altos piden más nivel.',
+            '(se hacen en el TALLER DE OFICIOS); los rangos altos piden más nivel.',
             style: DsText.detail()),
         Text(
             'Tenés: ${p?.life.craft(mat) ?? 0} ${kLifeMaterials[mat]!.name.toLowerCase()}'
