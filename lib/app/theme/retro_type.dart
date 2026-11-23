@@ -262,6 +262,20 @@ abstract final class RetroType {
     return base * (f < 1 ? 1 : f);
   }
 
+  /// El escalador activo sin el factor de ventana de [RetroTextScale]
+  /// (solo el "Tamaño del texto"): para contenido que ya se escala con la
+  /// ventana por su cuenta (`DsScreenView`, screen_editor.md § 2.1).
+  static TextScaler withoutWindow(BuildContext context) {
+    final s = MediaQuery.textScalerOf(context);
+    if (s is! RetroTextScaler) return s;
+    final w = RetroTextScale.windowFactor(MediaQuery.sizeOf(context));
+    if (w == 1) return s;
+    return RetroTextScaler(s.factor / w,
+        devicePixelRatio: s.devicePixelRatio,
+        font: s.font,
+        readingTitles: s.readingTitles);
+  }
+
   /// Escalador para texto que no debe crecer con el ajuste (números dentro
   /// de casillas de tamaño fijo, siempre en Press Start 2P) pero sí quedar
   /// nítido.

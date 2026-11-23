@@ -22,11 +22,12 @@ import '../domain/account.dart';
 
 /// Piezas de la selección de personaje (docs/specs/characters.md § 2).
 
-/// `Jugado: DD/MM/AAAA` o `Nunca jugado`.
+/// `Jugado: DD/MM/AA` o `Nunca jugado` (año corto: entra en la tarjeta
+/// sin cortarse, docs/specs/title_screen.md § 3).
 String lastPlayedText(DateTime? t) {
   if (t == null) return 'Nunca jugado';
   String two(int n) => n.toString().padLeft(2, '0');
-  return 'Jugado: ${two(t.day)}/${two(t.month)}/${t.year}';
+  return 'Jugado: ${two(t.day)}/${two(t.month)}/${two(t.year % 100)}';
 }
 
 /// Campo de texto con la fuente pixel (nombre, confirmación).
@@ -115,11 +116,11 @@ class CharacterSlotCard extends StatelessWidget {
     // Ascendido: su sprite y su título (docs/specs/ascension.md § 5).
     final asc = ascensionFor(profile.classId, profile.ascension.id);
     final img = sprites?.heroFor(profile.classId, asc?.id);
-    // Una línea por dato (se cortan con "…"): con texto grande la tarjeta
-    // crece en alto sin partir palabras.
+    // Una línea por dato; si no entra, baja de renglón (nunca "…"): con
+    // texto grande la tarjeta crece en alto (title_screen.md § 3).
     final small = DsText.detail();
-    Widget line(String t, {TextStyle? style, Key? key}) => Text(retroText(t),
-        key: key, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
+    Widget line(String t, {TextStyle? style, Key? key}) =>
+        Text(retroText(t), key: key, softWrap: true, style: style);
     return MenuFocusable(
       key: ValueKey('char-slot-${slot.id}'),
       onTap: onTap,
@@ -154,8 +155,7 @@ class CharacterSlotCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(retroText(slot.displayName),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                         style: DsText.subtitle(selected
                             ? DsColors.selected
                             : DsColors.textPrimary)),

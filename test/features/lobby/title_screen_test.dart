@@ -132,7 +132,7 @@ void main() {
       expect(find.text(n), findsOneWidget, reason: n);
     }
     expect(find.text('Maga · Nv 12'), findsOneWidget);
-    expect(find.text('Jugado: 16/11/2026'), findsOneWidget);
+    expect(find.text('Jugado: 16/11/26'), findsOneWidget);
     expect(find.byKey(const ValueKey('char-new')), findsOneWidget);
 
     await _tap(tester, 'char-slot-c3');

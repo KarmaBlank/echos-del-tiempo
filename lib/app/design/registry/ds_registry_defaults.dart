@@ -65,11 +65,17 @@ final dsDefaultComponents = <DsComponentSpec>[
     textColor: _toneColor,
     build: (context, e) {
       final st = e.textStyle ?? DsTextStyleId.body;
-      return Align(
+      return _FitDown(
         alignment: _alignOf(e.align),
-        child: Text(retroText(e.text),
-            textAlign: e.align,
-            style: st.style(_toneColor(e.variant, st))),
+        wrap: true,
+        child: Align(
+          alignment: _alignOf(e.align),
+          widthFactor: 1,
+          heightFactor: 1,
+          child: Text(retroText(e.text),
+              textAlign: e.align,
+              style: st.style(_toneColor(e.variant, st))),
+        ),
       );
     },
   ),
@@ -99,7 +105,7 @@ final dsDefaultComponents = <DsComponentSpec>[
       'peligro' => DsColors.danger,
       _ => DsColors.textPrimary,
     },
-    build: (context, e) => SizedBox.expand(
+    build: (context, e) => _FitDown(
       child: DsButton(
         e.text,
         kind: switch (e.variant) {
@@ -128,7 +134,7 @@ final dsDefaultComponents = <DsComponentSpec>[
     textPadding: const EdgeInsets.all(11),
     surface: (_) => DsColors.surfaceRaised,
     textColor: (_, __) => DsColors.textPrimary,
-    build: (context, e) => SizedBox.expand(
+    build: (context, e) => _FitDown(
       child: DsButton.icon(Text(retroText(e.text)),
           tooltip: e.tooltip ?? e.text, onPressed: e.onPressed),
     ),
@@ -332,4 +338,38 @@ class _DataGrid extends StatelessWidget {
             ),
     );
   }
+}
+
+/// Llena la caja del elemento y, si el contenido no entra (texto grande),
+/// lo achica hasta que entre: nunca se corta ni se desborda
+/// (screen_editor.md § 2.1). [wrap]: el ancho queda fijo (el texto baja
+/// de renglón) y solo se achica si se pasa de alto.
+class _FitDown extends StatelessWidget {
+  const _FitDown(
+      {required this.child,
+      this.alignment = Alignment.center,
+      this.wrap = false});
+
+  final Widget child;
+  final Alignment alignment;
+  final bool wrap;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, box) {
+          if (!box.hasBoundedWidth || !box.hasBoundedHeight) return child;
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: alignment,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: box.maxWidth,
+                maxWidth: wrap ? box.maxWidth : double.infinity,
+                minHeight: box.maxHeight,
+              ),
+              child: child,
+            ),
+          );
+        },
+      );
 }

@@ -180,7 +180,7 @@ Reemplaza al editor de nombre + clase de un solo perfil; mismo estilo
   versión.
 - **Lista de personajes**: una tarjeta por personaje (hasta 4 por fila):
   sprite `idle` de su clase, nombre, `Clase · Nv N`, `Zona N` (la más
-  alta desbloqueada) y `Jugado: DD/MM/AAAA` (o `Nunca jugado`). El
+  alta desbloqueada) y `Jugado: DD/MM/AA` (o `Nunca jugado`). El
   elegido tiene borde dorado. Clic = elegirlo (se guarda); doble clic =
   jugar. Si hay lugar, una tarjeta `+ NUEVO PERSONAJE`. Cada dato va en
   **una línea** (se corta con "…", sin interlineado fijo): con texto

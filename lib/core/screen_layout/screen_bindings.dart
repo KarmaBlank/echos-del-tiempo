@@ -84,6 +84,7 @@ const titleBindings = ScreenBindingSpec(
     ScreenActionSpec('abrirAlijo', 'Abrir el alijo'),
     ScreenActionSpec('abrirBestiario', 'Abrir el bestiario'),
     ScreenActionSpec('abrirHazanas', 'Abrir las hazañas'),
+    ScreenActionSpec('verNotasParche', 'Ver las notas del parche'),
   ],
   dataSources: [
     ScreenDataSourceSpec('personajes', 'Personajes de la cuenta', [
@@ -105,7 +106,8 @@ const titleBindings = ScreenBindingSpec(
   ],
   slots: [
     ScreenSlotSpec('personajes', 'Mundo, personajes y sala'),
-    ScreenSlotSpec('avisos', 'Avisos (versión nueva, cuenta)'),
+    ScreenSlotSpec('avisos', 'Avisos de la cuenta'),
+    ScreenSlotSpec('version', 'Versión y actualización'),
     ScreenSlotSpec('estadoRed', 'Estado de red'),
   ],
 );

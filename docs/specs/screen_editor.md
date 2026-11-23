@@ -64,8 +64,12 @@ Escala `s = min(anchoVentana / width, altoVentana / height)`. Por eje:
 | `stretch` | márgenes a ambos bordes × `s`; el tamaño llena el resto |
 
 El contenido se dibuja a tamaño de diseño y se escala por `s` (pixel
-art nítido; el texto respeta los estilos del DS). `align` (start /
-center / end) alinea el texto dentro de su caja.
+art nítido; el texto respeta los estilos del DS). Adentro el texto usa
+el "Tamaño del texto" del jugador **sin** el factor de ventana de
+`RetroTextScale` (ya lo aplica `s`; aplicar los dos cortaba los botones a
+1920×1080). Textos y botones se achican para entrar en su caja si el
+texto grande no entra; los huecos se desplazan. `align` (start / center /
+end) alinea el texto dentro de su caja.
 
 ## 3. Carga en el juego
 
@@ -81,7 +85,7 @@ catálogo lee del repo en disco, así lo guardado se ve sin recompilar.
 Cada pantalla registra un `ScreenBindingSpec` (dato puro):
 
 - **Acciones** (`configuracion`, `salirDelJuego`, `ayudaTeclas`,
-  `nuevaPartida`, ...): nombre + etiqueta. En el juego la pantalla da un
+  `nuevaPartida`, `verNotasParche`, ...): nombre + etiqueta. En el juego la pantalla da un
   `ScreenAction(onPressed, tooltip)` por nombre; una acción sin handler
   (o `onPressed == null`) deja el botón deshabilitado, gris.
 - **Fuentes de datos** (`personajes`, `inventarioJugador`,
@@ -90,7 +94,8 @@ Cada pantalla registra un `ScreenBindingSpec` (dato puro):
   entrega la lista real.
 - **Huecos** (`slot`): organismos ligados a lógica que la pantalla
   arma ella misma (TÍTULO: `personajes` = mundo + selector + sala /
-  creador; `avisos` = versión nueva y avisos de la cuenta; `estadoRed`).
+  creador; `avisos` = avisos de la cuenta; `version` = versión y
+  actualización; `estadoRed`).
   El layout decide dónde van y su tamaño, nunca qué hacen.
 
 ## 5. El editor (Editor → PANTALLAS)
@@ -136,7 +141,14 @@ Sin literales de color fuera de los archivos de tema; sin negritas; sin
 esquinas redondeadas; tooltips con el tope fijo del DS; textos de UI en
 castellano rioplatense; nombres de código en inglés.
 
-## 8. Pendiente
+## 8. TÍTULO por defecto
+
+El `title.screen.json` del repo es el layout por defecto descrito en
+docs/specs/title_screen.md (columna de acciones, hueco de personajes a la
+derecha, versión y red en las esquinas). VERIFICAR no da avisos sobre él
+(test `title_default_layout_test.dart`).
+
+## 9. Pendiente
 
 - Registrar el resto de las pantallas (pausa, lobby, ajustes) con sus
   bindings y huecos.
