@@ -2,6 +2,7 @@ import '../models/game_map.dart';
 import '../models/world_save.dart' show TownState;
 import '../models/mission_def.dart';
 import '../models/zone_def.dart';
+import '../data/biomes_catalog.dart';
 import '../data/town_layout.dart';
 import 'mulberry32.dart';
 import 'zone_generators.dart';
@@ -331,6 +332,29 @@ abstract final class MapGenerator {
 
   /// El pueblo de un mundo (town_editor.md): con sus ampliaciones.
   static GameMap townOf(TownState t) => town(t);
+
+  /// El exterior del Bosque (overworld_biomes.md § 3) con las matas de
+  /// [picked] (índices de `BosqueLayout.forage`) ya recolectadas.
+  static GameMap bosque([Set<int> picked = const {}]) {
+    final key = (picked.toList()..sort()).join(',');
+    final hit = _bosques[key];
+    if (hit != null) return hit;
+    if (_bosques.length > 16) _bosques.clear();
+    return _bosques[key] = GameMap(
+      width: BosqueLayout.width,
+      height: BosqueLayout.height,
+      rows: BosqueLayout.rows(picked),
+      theme: BosqueLayout.theme,
+      spawn: BosqueLayout.spawn,
+      lobby: true,
+      place: kBosque,
+      entrances: [
+        for (final (z, x, y) in BosqueLayout.entrances) ZoneEntrance(z, x, y),
+      ],
+    );
+  }
+
+  static final _bosques = <String, GameMap>{};
 
   static GameMap _buildTown(TownState s) {
     final p = TownPlan.of(s);

@@ -100,6 +100,12 @@ abstract final class Tile {
   /// parcelas aradas y los cultivos se dibujan encima, desde el estado.
   static const soil = 'u';
 
+  /// Recolectable de un exterior de bioma (overworld_biomes.md § 3):
+  /// mata con frutos, hierbas u hongos (sólida). [forageUsed]: ya
+  /// recolectada, esperando que vuelva a crecer.
+  static const forage = 'q';
+  static const forageUsed = 'Q';
+
   /// Púas de la Prueba del Tiempo (caminables: dañan).
   static const spikes = 'x';
 
@@ -145,7 +151,7 @@ abstract final class Tile {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
-    shortcut, brazier, brazierLit,
+    shortcut, brazier, brazierLit, forage, forageUsed,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).
@@ -394,6 +400,7 @@ class GameMap {
     List<ZoneEntrance> entrances = const [],
     this.zone = 0,
     this.townOrigin = (0, 0),
+    this.place,
     this.townMarks,
   })  : rows = List.unmodifiable(rows),
         floors = List.unmodifiable(floors),
@@ -406,6 +413,10 @@ class GameMap {
   /// § 2; las ampliaciones al norte y al oeste lo corren).
   final (int, int) townOrigin;
 
+  /// Exterior de bioma (overworld_biomes.md § 2): su id (`bosque`);
+  /// `null` en el pueblo y en las mazmorras. Con `lobby = true` es zona
+  /// segura, pero sin los lugares del pueblo.
+  final String? place;
   /// Pueblo: los lugares en su posición de este mundo (coordenadas del
   /// pueblo base; town_editor.md § 3.3). `null` = los de siempre.
   final List<TownLandmark>? townMarks;

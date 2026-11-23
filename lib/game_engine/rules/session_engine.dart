@@ -67,6 +67,8 @@ import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_rules.dart';
+import 'biome_rules.dart';
+import '../data/biomes_catalog.dart';
 import '../models/world_save.dart' show TownState, TownSide, BuildKind, TownBuild;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
@@ -75,6 +77,7 @@ part 'session_engine_tutorial.dart';
 part 'session_engine_run.dart';
 part 'session_engine_fishing.dart';
 part 'session_engine_farming.dart';
+part 'session_engine_biome.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -251,7 +254,7 @@ class SessionEngine {
       ..worldId = id
       ..worldName = name;
     // El pueblo del mundo (farming.md § 10): huerta, ampliaciones y lago.
-    if (town != null) s.town = town;
+    if (town != null) s.town = BiomeRules.rebase(town, s.time);
     if (lake != null && lake.isNotEmpty) {
       s.town = s.town.copyWith(lake: List.unmodifiable(lake));
     }
@@ -426,6 +429,10 @@ class SessionEngine {
   GameMap _baseMapFor(GameSession s) {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
+      // Exterior de bioma (overworld_biomes.md § 2): el grupo viajó.
+      if (s.place == kBosque) {
+        return MapGenerator.bosque(BiomeRules.picked(s.town, kBosque, s.time));
+      }
       return MapGenerator.townOf(s.town);
     }
     final eco = s.eco;
@@ -797,7 +804,15 @@ class _Op {
     );
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
-      b.state = e.battles.join(b.state, e.partyMember(p, blessing: s.mission?.blessing)).state;
+      // Refuerzo (overworld_biomes.md § 5): entra con turno demorado.
+      b.state = e.battles
+          .join(b.state, e.partyMember(p, blessing: s.mission?.blessing),
+              delay: s.tutorial == null ? BiomeRules.reinforceDelay : 0)
+          .state;
+      if (s.tutorial == null) {
+        say('${profile.name} llega como refuerzo: actúa después de una '
+            'espera.');
+      }
       // En la pelea de práctica nadie cae y nadie trae su build: kit de
       // práctica (combat_tutorial.md § 3).
       if (s.tutorial case final t?) e.tutorials.applyKit(b.state, t, id);
@@ -1114,6 +1129,9 @@ class _Op {
             TownAction() ||
             LifeTreeAction():
         return farmingAction(p, a);
+
+      case TravelAction() || ForageAction():
+        return biomeAction(p, a);
 
       case BuyItemAction():
         if (!s.canShop) return false;
@@ -3864,6 +3882,9 @@ class _Op {
       ..abyss = null
       ..abyssOwner = null
       ..mode = SessionMode.lobby
+      // De una mazmorra se vuelve siempre al pueblo (overworld_biomes.md
+      // § 4): ahí está el comerciante.
+      ..place = null
       ..mission = null
       ..result = null
       ..battle = null

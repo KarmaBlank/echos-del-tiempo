@@ -35,6 +35,10 @@ class FountainPanel extends StatelessWidget {
       ('fountain-board', 'TABLERO DE ENCARGOS',
           'Encargos del pueblo para la próxima salida.', null,
           () => c.openPanel(WorldPanel.missionBoard)),
+      // Mapa de viaje (overworld_biomes.md § 1).
+      ('fountain-travel', 'MAPA DE VIAJE',
+          'Viajá con el grupo al Bosque y a otros lugares.', null,
+          () => c.openPanel(WorldPanel.travel)),
     ];
     return PanelFrame(
       key: const ValueKey('panel-fountain'),
