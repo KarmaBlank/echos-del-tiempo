@@ -381,8 +381,9 @@ abstract final class FarmPalette {
   static const canDark = Color(0xFF55697A);
 
   /// Cofre de oficio (farming.md § 8.3): vacío se ve apagado, con cosas
-  /// brilla un poco y lleno lleva un marco.
-  static const chestEmpty = Color(0x80FFFFFF);
+  /// brilla un poco y lleno lleva un marco. [chestEmpty] multiplica el
+  /// sprite (opaco: oscurece sin dejar ver el pasto a través).
+  static const chestEmpty = Color(0xFF9A9A9A);
   static const chestGlow = Color(0x55FFE680);
   static const chestFull = Color(0xFFFF9F43);
 
