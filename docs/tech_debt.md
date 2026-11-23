@@ -89,3 +89,23 @@ Funcionalidad pendiente:
 - tool/shots/v0256: `pumpPanel` fija su propio tamaño, así que la
   captura de 1024×640 de la ULT sale igual a la de 1280×720; falta una
   captura real a 1024×640.
+
+## v0.29.0
+
+- Habitantes en el pueblo (overworld_biomes.md § 10, town_editor.md
+  § 3.4): solo están las reglas puras y el modelo (`ResidentRules`,
+  `ResidentState`, cadena de encargos de Ilda) con test. Falta: guardar
+  `ResidentState` en `TownState` / mundo, acciones de red (invitar,
+  asignar casa, entregar encargo; subiría el protocolo a 51), la
+  construcción CASA en `kConstructions` con sprites por nivel, el
+  habitante caminando en el pueblo con rutina de día y noche, el "!" de
+  pedido, el registro de encargos, aplicar los beneficios (pociones,
+  salas reveladas, XP, forja, vida), el resumen en la fuente y las
+  cadenas de Velda, Kael, Brann y Oren. Ningún habitante está completo
+  de punta a punta en el juego todavía.
+- La relación con el habitante todavía no sube con nada.
+- Sprites de los habitantes: reusan los de granjero y pescador.
+- Exteriores nuevos: mismo esqueleto que el Bosque; sin capturas ni test
+  de UI de la pantalla del habitante ni del botón "ZONA N" del mapa de
+  viaje.
+- Peces y semillas nuevos usan el ícono genérico de su tipo.

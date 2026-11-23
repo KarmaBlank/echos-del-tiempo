@@ -47,6 +47,7 @@ import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
+import 'panels/biome_npc_panel.dart';
 import 'panels/travel_panel.dart';
 import 'panels/helper_panel.dart';
 import 'panels/town_edit_overlay.dart';
@@ -1026,6 +1027,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return FountainPanel(view: view, controller: controller);
       case WorldPanel.travel:
         return TravelPanel(view: view, controller: controller);
+      case WorldPanel.biomeNpc:
+        return BiomeNpcPanel(view: view, controller: controller);
       case WorldPanel.helper:
         return HelperPanel(view: view, controller: controller);
       case WorldPanel.stash:

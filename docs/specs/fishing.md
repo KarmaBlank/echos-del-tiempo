@@ -51,6 +51,12 @@ Mojarra de sombra, Bagre de raíz, Trucha musgosa, Lucio rúnico y el
 legendario Salmón del Eco Quieto; basura propia (Hojarasca mojada). Sin
 bonus de lago del pueblo. Ver `overworld_biomes.md` § 3.1.
 
+### 2.1c Lagos de los biomas (v0.29.0)
+
+Ruinas, Cavernas, Grieta y Abismo tienen su lago y su tabla (5 peces y 2
+basuras cada uno): ver overworld_biomes.md § 3.5. Misma pesca que el
+Bosque (`BiomeLayout.fish` / `junk`).
+
 ### 2.2 Tirada (anfitrión)
 - Rareza por pesos `weightComun/Raro/Epico/Legendario` (70/22/7/1). Los
   no comunes × (1 + bonus de rareza), con bonus = rareza efectiva de la

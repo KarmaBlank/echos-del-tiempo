@@ -45,6 +45,9 @@ enum WorldPanel {
 
   /// Mapa de viaje: pueblo y biomas (overworld_biomes.md § 1).
   travel,
+
+  /// Habitante de un bioma (overworld_biomes.md § 9).
+  biomeNpc,
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
   /// (farming.md § 8, v0.25.5).
   helper,

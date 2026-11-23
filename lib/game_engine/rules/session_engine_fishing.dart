@@ -92,7 +92,8 @@ extension _FishingOp on _Op {
     final bonus = FishingRules.rodBonus(p.profile);
     final map = e.mapFor(s);
     // Exterior de bioma (overworld_biomes.md § 3.1): su lago y su tabla.
-    final wild = s.place == kBosque;
+    final biome = biomeLayout(s.place);
+    final wild = biome != null;
     final lake = wild ? null : TownRules.lakeNear(s.town, p.x, p.y);
     final dock = WorldRules.townSpot(p.x, p.y, map: map) == TownSpot.fishing
         ? _ft.d('dockBonus')
@@ -102,8 +103,8 @@ extension _FishingOp on _Op {
         dock +
         (wild ? 0.0 : TownRules.lakeRare(s.town, lake)) +
         _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
-    final table = wild ? kForestFish : TownRules.lakeRoll(s.town, lake);
-    final junk = wild ? kForestJunk : kWaterJunk;
+    final table = wild ? biome.fish : TownRules.lakeRoll(s.town, lake);
+    final junk = wild ? biome.junk : kWaterJunk;
     // Botín del agua (§ 8): a veces no es un pez.
     final kind =
         FishingRules.rollLoot(_rand, p.profile, luck: bonus.rare + dock);

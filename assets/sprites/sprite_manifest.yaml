@@ -306,6 +306,12 @@ items:
   vida_npc_granjero_trabajo: { idle: items/vida_npc_granjero_trabajo.png, size: [16, 16] }
   vida_npc_pescador: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_pescador_trabajo: { idle: items/vida_npc_pescador_trabajo.png, size: [16, 16] }
+  # Habitantes de bioma (overworld_biomes.md § 9): arte provisorio.
+  vida_npc_ilda: { idle: items/vida_npc_granjero.png, size: [16, 16] }
+  vida_npc_velda: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_kael: { idle: items/vida_npc_granjero.png, size: [16, 16] }
+  vida_npc_brann: { idle: items/vida_npc_pescador.png, size: [16, 16] }
+  vida_npc_oren: { idle: items/vida_npc_granjero.png, size: [16, 16] }
   vida_cofre_oficio: { idle: items/vida_cofre_oficio.png, size: [16, 16] }
   # vida:fin
 tiles:

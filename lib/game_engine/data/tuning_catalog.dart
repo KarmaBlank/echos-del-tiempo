@@ -283,6 +283,28 @@ const Map<String, TuningDef> kTuningDefaults = {
     'forageXp': 6,
     'reinforceDelay': 1,
     'absentWeight': 0.6,
+    // Habitantes de bioma (overworld_biomes.md § 10): relación, etapas,
+    // edificio, pedidos y beneficio permanente de cada rol (base + paso
+    // por nivel).
+    'resInviteRep': 3,
+    'resSettledRep': 5,
+    'resRootedRep': 12,
+    'resMaxTier': 5,
+    'resMaxHouse': 3,
+    'resHouseGold': 800,
+    'resRequestEveryDays': 2,
+    'resUnhappyDays': 4,
+    'resRequestRep': 2,
+    'resherbolariaBase': 10,
+    'resherbolariaStep': 5,
+    'resarchivistaBase': 1,
+    'resarchivistaStep': 1,
+    'resinstructorBase': 5,
+    'resinstructorStep': 3,
+    'resforjadorBase': 5,
+    'resforjadorStep': 3,
+    'resvidenteBase': 3,
+    'resvidenteStep': 2,
   }),
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {

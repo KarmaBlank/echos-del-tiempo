@@ -429,10 +429,14 @@ abstract final class FarmingRules {
             farm: f.copyWith(crops: {...f.crops, key: f.cropCount(key) - 1})));
   }
 
-  static PlayerProfile? buySeed(PlayerProfile p, String crop, [int n = 1]) {
+  /// [price]: precio del habitante de bioma (overworld_biomes.md § 9.1)
+  /// para semillas que el agropecuario no vende.
+  static PlayerProfile? buySeed(PlayerProfile p, String crop,
+      [int n = 1, int? price]) {
     final c = kCrops[crop];
-    if (c == null || c.seedPrice <= 0 || n <= 0) return null;
-    final cost = c.seedPrice * n;
+    final unit = price ?? c?.seedPrice ?? 0;
+    if (c == null || unit <= 0 || n <= 0) return null;
+    final cost = unit * n;
     if (p.credits < cost) return null;
     return p.copyWith(
         credits: p.credits - cost,

@@ -12,7 +12,7 @@ import '../../../../core/procedural/weapon_look.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
-import '../../../../game_engine/data/biomes_catalog.dart' show BosqueLayout;
+import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout;
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart' show kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
@@ -763,7 +763,7 @@ class MapGame extends Game {
     if (map.lobby && map.place != null) {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
-      for (final (txt, x, y) in BosqueLayout.labels) {
+      for (final (txt, x, y) in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
         _rankedText(
             c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
       }
@@ -809,6 +809,19 @@ class MapGame extends Game {
           (id) => sprites.lifeIcon(id, 'herramienta'),
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
           hover: controller.hoverHelper);
+      } else if (biomeLayout(map.place) case final lay?) {
+        // Habitante del bioma (overworld_biomes.md § 9).
+        final (nx, ny) = lay.npc.tile;
+        final im = sprites.lifeIcon(lay.npc.sprite, 'herramienta');
+        if (im != null) {
+          final w = im.width.toDouble(), h = im.height.toDouble();
+          final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
+          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+              Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
+              SpriteCatalog.pixelPaint());
+        }
+        _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts,
+            ny * ts - 4, TownPalette.label, 6, 899);
       }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {

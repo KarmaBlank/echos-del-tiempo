@@ -333,23 +333,27 @@ abstract final class MapGenerator {
   /// El pueblo de un mundo (town_editor.md): con sus ampliaciones.
   static GameMap townOf(TownState t) => town(t);
 
-  /// El exterior del Bosque (overworld_biomes.md § 3) con las matas de
-  /// [picked] (índices de `BosqueLayout.forage`) ya recolectadas.
-  static GameMap bosque([Set<int> picked = const {}]) {
-    final key = (picked.toList()..sort()).join(',');
+  /// El exterior del Bosque (overworld_biomes.md § 3).
+  static GameMap bosque([Set<int> picked = const {}]) =>
+      biome(bosqueLayout, picked);
+
+  /// El exterior de un bioma (overworld_biomes.md § 3) con las matas de
+  /// [picked] (índices de `lay.forage`) ya recolectadas.
+  static GameMap biome(BiomeLayout lay, [Set<int> picked = const {}]) {
+    final key = '${lay.id}|${(picked.toList()..sort()).join(',')}';
     final hit = _bosques[key];
     if (hit != null) return hit;
-    if (_bosques.length > 16) _bosques.clear();
+    if (_bosques.length > 32) _bosques.clear();
     return _bosques[key] = GameMap(
-      width: BosqueLayout.width,
-      height: BosqueLayout.height,
-      rows: BosqueLayout.rows(picked),
-      theme: BosqueLayout.theme,
-      spawn: BosqueLayout.spawn,
+      width: BiomeLayout.width,
+      height: BiomeLayout.height,
+      rows: lay.rows(picked),
+      theme: lay.theme,
+      spawn: lay.spawn,
       lobby: true,
-      place: kBosque,
+      place: lay.id,
       entrances: [
-        for (final (z, x, y) in BosqueLayout.entrances) ZoneEntrance(z, x, y),
+        for (final (z, x, y) in lay.entrances) ZoneEntrance(z, x, y),
       ],
     );
   }
