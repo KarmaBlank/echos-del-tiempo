@@ -16,6 +16,9 @@
     edición, se programa un guardado a los 2 s (`townSaveDelay`); los
     cambios dentro de esa ventana se juntan en una sola escritura.
 - Avanzar sin cambios no escribe nada.
+- Fuera de la edición el pueblo cambia solo (cielo, ayudantes, cultivos):
+  eso no dispara guardados; se escribe una vez por día de juego (v0.39.1;
+  antes salía el aviso cada 2 s).
 
 ## 2. Aviso de guardado en el HUD
 

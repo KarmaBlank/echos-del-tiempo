@@ -3847,13 +3847,21 @@ class SessionController extends StateNotifier<SessionView?> {
     final ended = _townWasEdited && !editing;
     _townSeen = t;
     _townWasEdited = editing;
+    // El pueblo cambia solo todo el tiempo (cielo, ayudantes, cultivos):
+    // fuera de la edición se guarda una vez por día de juego, no en cada
+    // cambio (save_indicator.md § 1).
+    final day = t.sky.day;
+    final newDay = _townDay != null && day != _townDay && day > 1;
+    _townDay = day;
     if (first) return;
-    if (ended) {
+    if (ended || newDay) {
       _flushTownSave(emit: false);
-    } else if (changed) {
+    } else if (changed && editing) {
       if (!_disposing) _townSaveTimer ??= Timer(townSaveDelay, _flushTownSave);
     }
   }
+
+  int? _townDay;
 
   void _flushTownSave({bool emit = true}) {
     _townSaveTimer?.cancel();
