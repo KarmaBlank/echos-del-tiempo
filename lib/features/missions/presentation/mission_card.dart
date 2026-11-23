@@ -64,7 +64,7 @@ class MissionCard extends ConsumerWidget {
                   text: '${m.rank}  ',
                   style: DsText.title(DsColors.warning)),
               TextSpan(
-                  text: retroText(m.name),
+                  text: retroText(missionNameText(ref.strings, m)),
                   style: DsText.title(
                       locked ? DsColors.textDisabled : DsColors.textTitle)),
             ]),
@@ -72,7 +72,7 @@ class MissionCard extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
           ),
           ProtoText(
-              '${protoColor(DsColors.textSecondary, protoEsc(m.type))} · '
+              '${protoColor(DsColors.textSecondary, protoEsc(missionTypeText(ref.strings, m)))} · '
               '${protoColor(low ? DsColors.danger : DsColors.success, lv)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
@@ -81,18 +81,18 @@ class MissionCard extends ConsumerWidget {
                 key: ValueKey('mission-zone-${m.id}'),
                 protoColor(
                     locked ? DsColors.textDisabled : DsColors.textSecondary,
-                    protoEsc(zoneLineText(z.zone)))),
+                    protoEsc(zoneLineText(ref.strings, z.zone)))),
           if (z != null && z.label.isNotEmpty)
             ProtoText(
                 key: ValueKey('mission-lock-${m.id}'),
                 protoColor(ProtoColors.red, protoEsc(z.label))),
           SizedBox(height: DsSpace.sm),
           DsSectionHeader(ref.t('ui.missions.card.objective')),
-          Text(retroText(missionObjectiveText(m, bossName: bossName)),
+          Text(retroText(missionObjectiveText(ref.strings, m, bossName: bossName)),
               style: DsText.body(DsColors.textPrimary)),
           SizedBox(height: DsSpace.sm),
           DsSectionHeader(ref.t('ui.missions.rewards')),
-          Text(retroText(missionRewardText(m, tier)),
+          Text(retroText(missionRewardText(ref.strings, m, tier)),
               key: ValueKey('mission-rewards-${m.id}'),
               style: DsText.body(DsColors.textPrimary)),
           SizedBox(height: DsSpace.xs),
@@ -100,7 +100,7 @@ class MissionCard extends ConsumerWidget {
             key: ValueKey('mission-srank-${m.id}'),
             label: ref.t('ui.missions.card.s_rank'),
             openLabel: ref.t('ui.missions.card.s_rank'),
-            child: Text(retroText(missionSRankText(m))),
+            child: Text(retroText(missionSRankText(ref.strings, m))),
           ),
           if (action != null)
             Align(alignment: Alignment.centerRight, child: action),

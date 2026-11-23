@@ -196,5 +196,9 @@
   "ui.world.prompt.farm": "[E] Farm plot",
   "ui.world.prompt.entrance": "[E] Enter",
   "ui.world.prompt.stairs": "[E] Stairs",
-  "ui.world.prompt.poi": "[E] Use"
+  "ui.world.prompt.poi": "[E] Use",
+  "ui.world.loot.found": "{name} found: ",
+  "ui.world.loot.legendary": "LEGENDARY!",
+  "ui.world.loot.gave": "{from} gave {to}: ",
+  "ui.world.loot.gave_you": "{name} gave you:"
 }

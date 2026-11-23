@@ -22,5 +22,20 @@
   "ui.title.loading": "Cargando...",
   "ui.title.start_play": "> JUGAR",
   "ui.title.start_host": "> CREAR SALA",
-  "ui.title.start_join": "> UNIRSE"
+  "ui.title.start_join": "> UNIRSE",
+  "ui.title.update.checking_long": "buscando actualizaciones…",
+  "ui.title.update.checking": "buscando",
+  "ui.title.update.up_to_date": "al día",
+  "ui.title.update.check": "BUSCAR",
+  "ui.title.update.retry": "REINTENTAR",
+  "ui.title.update.apply": "ACTUALIZAR",
+  "ui.title.update.error": "error",
+  "ui.title.update.error_cap": "Error",
+  "ui.title.update.downloading": "Descargando {pct}%",
+  "ui.title.update.downloading_long": "Descargando… {pct}%",
+  "ui.title.update.installing": "Instalando",
+  "ui.title.update.installing_long": "Instalando… el juego se cierra y se vuelve a abrir solo.",
+  "ui.title.update.no_notes": "Sin notas.",
+  "ui.title.update.available": "Actualización disponible <b>{version}</b> <span style=\"color:#7d8bc4\">(tenés {current})</span>",
+  "ui.title.update.windows_only": "Solo en Windows: bajalo de la página del release"
 }

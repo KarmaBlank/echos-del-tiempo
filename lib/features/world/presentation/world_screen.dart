@@ -909,7 +909,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           zoneProgress: _zoneProgress(ref.strings, s, r, controller),
           unlocked: switch (r.unlocked[view.localId]) {
             final z? =>
-              zoneUnlockedText(z, controller.engine.catalog.zone(z)?.name),
+              zoneUnlockedText(ref.strings, z, switch (controller.engine.catalog.zone(z)) { final zd? => zoneNameText(ref.strings, zd), null => null }),
             null => null,
           },
           othersUnlocked: _othersUnlocked(ref.strings, s, r, view.localId),
@@ -1021,7 +1021,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return MissionBoardPanel(
           missions: catalog.missions,
           voteOpen: s.vote != null,
-          bossName: (m) => missionBossName(catalog, m),
+          bossName: (m) => missionBossName(ref.strings, catalog, m),
           playerLevel: me.profile.level,
           zones: controller.zones,
           // TUTORIAL: Ecos de práctica (combat_tutorial.md § 1-2).
@@ -1076,7 +1076,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:
-        return fullMapPanel(view, controller,
+        return fullMapPanel(view, controller, strings: ref.strings,
             reduceMotion:
                 ref.watch(gameSettingsProvider.select((g) => g.reduceMotion)));
       case WorldPanel.ecoPortal:
@@ -1149,7 +1149,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               potions: actor.profile.potions,
               ethers: actor.profile.ethers,
               tier: s.eco?.tier ?? missionTier(catalog, mission),
-              bossName: missionBossName(catalog, mission),
+              bossName: missionBossName(ref.strings, catalog, mission),
               weaponName: actor.profile.equippedUid == null
                   ? '-'
                   : rules.weaponDisplayName(

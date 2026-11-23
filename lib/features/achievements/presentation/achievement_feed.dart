@@ -7,7 +7,9 @@ import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../../world/presentation/world_strings.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
@@ -19,12 +21,18 @@ import '../../world/presentation/session_controller.dart';
 /// Texto del toast de una hazaña (achievements.md § 7), para lectores de
 /// pantalla y registros: `HAZAÑA · Primera fusión · +₵300 +2 Esquirlas
 /// del Eco`.
-String achievementToastText(String id) {
+String achievementToastText(String id, [Strings? strings]) {
+  final s = strings ?? worldFallbackStrings();
   final d = kAchievementsById[id];
-  if (d == null) return 'HAZAÑA · $id';
-  final r = d.reward.text;
-  return r.isEmpty ? 'HAZAÑA · ${d.name}' : 'HAZAÑA · ${d.name} · $r';
+  final name = d == null ? id : achievementNameText(s, d);
+  final r = d?.reward.text ?? '';
+  return s.t(r.isEmpty ? 'ui.achievements.toast_line' : 'ui.achievements.toast_line_reward',
+      {'name': name, 'reward': r});
 }
+
+/// Nombre de una hazaña en el idioma de [s] (docs/specs/i18n.md § 3.4).
+String achievementNameText(Strings s, AchievementDef d) =>
+    s.data(DataKeys.achievementName(d.id), d.name);
 
 /// Cola de toasts de hazañas (achievements.md § 7): hasta [maxVisible] a
 /// la vez, apilados; cada uno dura [toastS] segundos (por la DURACIÓN DE
@@ -224,7 +232,7 @@ class AchievementToastBox extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = kAchievementsById[id];
     final card = Semantics(
-      label: achievementToastText(id),
+      label: achievementToastText(id, ref.strings),
       container: true,
       child: ExcludeSemantics(
         child: ConstrainedBox(
@@ -252,7 +260,7 @@ class AchievementToastBox extends ConsumerWidget {
                       key: const ValueKey('ach-toast-head'),
                       style: DsText.subtitle(DsColors.reward)),
                 ]),
-                Text(retroText(d?.name ?? id),
+                Text(retroText(d == null ? id : achievementNameText(ref.strings, d)),
                     key: const ValueKey('ach-toast-name'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

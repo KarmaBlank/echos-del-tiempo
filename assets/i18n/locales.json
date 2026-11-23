@@ -22,6 +22,10 @@
     "ui.tutorial",
     "ui.lobby",
     "ui.inventory",
-    "ui.characters"
+    "ui.characters",
+    "data.zones",
+    "data.missions",
+    "data.enemies",
+    "data.achievements"
   ]
 }

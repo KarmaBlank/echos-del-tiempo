@@ -1,0 +1,16 @@
+{
+  "data.missions.m1.name": "Emerald Meadow",
+  "data.missions.type.exterminio": "Extermination",
+  "data.missions.z2.name": "Deepwood",
+  "data.missions.m2.name": "Chronal Ruins",
+  "data.missions.type.recuperacion": "Recovery",
+  "data.missions.z4.name": "Frozen Caverns",
+  "data.missions.z5.name": "Fallen Fortress",
+  "data.missions.type.urgente": "Urgent",
+  "data.missions.z6.name": "Time Labyrinth",
+  "data.missions.z7.name": "Igneous Rift",
+  "data.missions.z8.name": "Graveyard of Eras",
+  "data.missions.z9.name": "Abyss of Time",
+  "data.missions.z10.name": "Heart of Time",
+  "data.missions.m3.name": "Abyss of Time"
+}

@@ -17,8 +17,8 @@ const knownGaps = <String, Set<String>>{
   // TUTORIAL y del HUD del mundo, ★ del plan, − de las púas, ₵ de
   // créditos; en combate, ▲▼ de buffs, ▸ y ← de los menús).
   'PressStart2P': {'−', '₵', '▸'},
-  'VT323': {'★', '→', '↑', '↓', '▲', '▼', '←', '▸'},
-  'AtkinsonHyperlegible': {'★', '→', '₵', '↑', '↓', '▲', '▼', '←', '▸'},
+  'VT323': {'★', '→', '↑', '↓', '▲', '▼', '←', '▸', '▶'},
+  'AtkinsonHyperlegible': {'★', '→', '₵', '↑', '↓', '▲', '▼', '←', '▸', '▶'},
 };
 
 const fonts = {

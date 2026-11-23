@@ -17,6 +17,7 @@ import '../../../../game_engine/models/session_event.dart';
 import '../../../../game_engine/rules/loot_filter_rules.dart';
 import '../map/loot_painter.dart';
 import '../session_controller.dart';
+import '../world_strings.dart';
 
 /// Una línea del registro de loot: `Ana encontró: <objeto>` con el
 /// objeto en el color de su rareza.
@@ -69,7 +70,13 @@ class LootFeed extends ChangeNotifier {
     required this.itemName,
     required this.verdictFor,
     double Function()? clock,
-  }) : _clock = clock ?? _stopwatchClock();
+    Strings Function()? strings,
+  })  : _clock = clock ?? _stopwatchClock(),
+        _strings = strings;
+
+  /// Text of the active language (es-AR from disk when not given).
+  final Strings Function()? _strings;
+  Strings get _s => _strings?.call() ?? worldFallbackStrings();
 
   final String localId;
   final String Function(String playerId) playerName;
@@ -172,12 +179,12 @@ class LootFeed extends ChangeNotifier {
       case LootDropEvent(:final playerId, :final drop, :final groundId):
         final v = verdictFor(playerId, drop);
         if (v != null && !v.visible) return;
-        _line('${playerName(playerId)} encontró: ', drop, v);
+        _line(_s.t('ui.world.loot.found', {'name': playerName(playerId)}), drop, v);
         if (playerId == localId) {
           final legendary = drop.item?.rarity == Rarity.legendario;
           final style = v?.style ?? LootFilterRules.defaultStyle(drop);
           if (legendary) {
-            _toast('¡LEGENDARIO!', drop, style, legendary: true, verdict: v);
+            _toast(_s.t('ui.world.loot.legendary'), drop, style, legendary: true, verdict: v);
           } else if (groundId == null) {
             // Sin loot en el piso: entró directo al inventario.
             _toast('+', drop, style, verdict: v);
@@ -189,10 +196,13 @@ class LootFeed extends ChangeNotifier {
         _toast('+', drop, v?.style ?? LootFilterRules.defaultStyle(drop),
             verdict: v);
       case ItemGivenEvent(:final fromId, :final toId, :final drop):
-        _line('${playerName(fromId)} le dio a ${playerName(toId)}: ', drop);
+        _line(
+            _s.t('ui.world.loot.gave',
+                {'from': playerName(fromId), 'to': playerName(toId)}),
+            drop);
         if (toId == localId) {
           final v = verdictFor(toId, drop);
-          _toast('Te dio ${playerName(fromId)}:', drop,
+          _toast(_s.t('ui.world.loot.gave_you', {'name': playerName(fromId)}), drop,
               v?.style ?? LootFilterRules.defaultStyle(drop),
               verdict: v);
         }
@@ -214,6 +224,7 @@ final lootFeedProvider = Provider.autoDispose<LootFeed>((ref) {
     itemName: (d) => lootDropName(c.engine.progression.items.displayName, d,
         ecoName: c.engine.progression.ecos.fullName),
     verdictFor: c.lootVerdictFor,
+    strings: () => c.strings,
   );
   final sub = c.events.listen(feed.onEvent);
   // Duración de los avisos y "cerrar todos" (accessibility.md § 9.5).

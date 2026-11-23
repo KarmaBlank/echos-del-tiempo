@@ -196,5 +196,9 @@
   "ui.world.prompt.farm": "",
   "ui.world.prompt.entrance": "",
   "ui.world.prompt.stairs": "",
-  "ui.world.prompt.poi": ""
+  "ui.world.prompt.poi": "",
+  "ui.world.loot.found": "",
+  "ui.world.loot.legendary": "",
+  "ui.world.loot.gave": "",
+  "ui.world.loot.gave_you": ""
 }
