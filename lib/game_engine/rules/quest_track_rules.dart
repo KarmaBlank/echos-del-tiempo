@@ -74,6 +74,10 @@ abstract final class QuestTrackRules {
   static bool seen(PlayerProfile p, ResidentState r) =>
       p.npcSeen[r.npc] == newsKey(r);
 
+  /// ¿Ya habló alguna vez con [npc]? (DIARIO: solo los conocidos tienen
+  /// pestaña). Hablar siempre deja su huella en `npcSeen`.
+  static bool met(PlayerProfile p, String npc) => p.npcSeen.containsKey(npc);
+
   /// ¿Ya le contó el paso actual de su cadena?
   static bool questSeen(PlayerProfile p, ResidentState r) =>
       (p.npcSeen[r.npc] ?? '').split('|').first == 'q${r.quest}';

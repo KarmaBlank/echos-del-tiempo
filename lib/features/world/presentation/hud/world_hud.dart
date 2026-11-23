@@ -197,6 +197,8 @@ class WorldHud extends StatelessWidget {
                         onMenu != null,
                         controller.canEditParty,
                         controller.stashBlock == null,
+                        controller.isRun,
+                        s.mode == SessionMode.battle,
                         view.companions.length,
                         _unusedKey(_unused(s)),
                       ],
@@ -222,6 +224,18 @@ class WorldHud extends StatelessWidget {
                               style: RetroTheme.compactButton(),
                               onPressed: controller.toggleStash,
                               child: const Text('ALIJO [B]'),
+                            ),
+                          ],
+                          // DIARIO de encargos (roles.md § 8.1), fuera de la
+                          // Travesía.
+                          if (!controller.isRun &&
+                              s.mode != SessionMode.battle) ...[
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              key: const ValueKey('hud-journal'),
+                              style: RetroTheme.compactButton(),
+                              onPressed: controller.toggleJournal,
+                              child: const Text('DIARIO [J]'),
                             ),
                           ],
                           // Party jugando solo, en el pueblo (solo_party.md § 2.3).
@@ -1240,7 +1254,7 @@ class CompactPlayerBox extends StatelessWidget {
   }
 }
 
-/// Pliega / despliega la caja de objetivos y lo guarda (tecla J o clic en
+/// Pliega / despliega la caja de objetivos y lo guarda (tecla O o clic en
 /// la cabecera; docs/specs/exploration.md § "HUD").
 void toggleObjectives(WidgetRef ref) {
   final s = ref.read(gameSettingsProvider);

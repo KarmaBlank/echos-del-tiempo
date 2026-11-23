@@ -698,17 +698,37 @@ abstract final class TownRules {
     return null;
   }
 
-  /// El tile del cofre de [b] (coordenadas del pueblo base): al lado del
-  /// cartel, donde no haya otra construcción ni otro cartel.
+  /// El tile del cofre de [b] (coordenadas del pueblo base): siempre al
+  /// lado del cartel, en la misma fila (nunca arriba ni abajo; v0.32.2).
+  /// Primero del lado que no mira a la construcción; si ese lado sale del
+  /// pueblo, pisa otra construcción, otro cartel o un camino fijo, el
+  /// otro. Si los dos están tomados, el primero libre de construcciones y
+  /// carteles (aunque sea camino) y, en último caso, el de afuera.
   static (int, int) chestOf(TownState s, TownBuild b) {
     final (sx, sy) = TownPlan.signOf(s, b);
-    for (final (dx, dy) in const [(0, 1), (1, 0), (-1, 0), (0, -1)]) {
-      final x = sx + dx, y = sy + dy;
-      if (s.builds.any((o) => o.contains(x, y))) continue;
-      if (s.builds.any((o) => TownPlan.signOf(s, o) == (x, y))) continue;
+    final bb = b.bounds;
+    // Lado de afuera: lejos del centro de la construcción.
+    final out = sx * 2 >= bb.x + bb.right - 1 ? 1 : -1;
+    final sides = [(sx + out, sy), (sx - out, sy)];
+    final w = TownPlan.widthOf(s), h = TownPlan.heightOf(s);
+    final (ox, oy) = s.origin;
+    bool inside(int x, int y) =>
+        x + ox >= 1 && y + oy >= 1 && x + ox < w - 1 && y + oy < h - 1;
+    bool free(int x, int y) =>
+        inside(x, y) &&
+        !s.builds.any((o) => o.contains(x, y)) &&
+        !s.builds.any((o) => TownPlan.signOf(s, o) == (x, y));
+    final res = TownPlan.reserved(s);
+    for (final (x, y) in sides) {
+      if (!free(x, y)) continue;
+      final r = TownRect(x, y, 1, 1);
+      if (res.any((o) => o.overlaps(r))) continue;
       return (x, y);
     }
-    return (sx, sy + 1);
+    for (final (x, y) in sides) {
+      if (free(x, y)) return (x, y);
+    }
+    return sides.first;
   }
 
   /// La construcción cuyo cofre está a [r] px o menos de ([x], [y]).
