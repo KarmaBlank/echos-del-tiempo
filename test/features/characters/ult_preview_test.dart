@@ -167,9 +167,9 @@ void main() {
     });
   }
 
-  testWidgets('ventana angosta: la vista previa va arriba de la lista',
+  testWidgets('tabla de 4 columnas iguales; la vista previa en la cuarta',
       (tester) async {
-    for (final (w, narrow) in [(520.0, true), (1000.0, false)]) {
+    for (final w in [520.0, 1000.0]) {
       await pumpPanel(tester,
           profile: newProfile('Ana', 'guerrero'),
           textSize: TextSize.huge, build: (v, c) {
@@ -191,13 +191,18 @@ void main() {
       });
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '$w');
-      final preview = tester.getRect(find.byKey(const ValueKey('ult-preview')));
-      final header = tester.getRect(find.text('ULT EQUIPADA'));
-      if (narrow) {
-        expect(preview.bottom, lessThanOrEqualTo(header.top));
-      } else {
-        expect(preview.left, greaterThanOrEqualTo(header.right));
+      final cols = [
+        for (final k in ['list', 'desc', 'actions', 'preview'])
+          tester.getRect(find.byKey(ValueKey('ult-col-$k'))),
+      ];
+      for (var i = 1; i < cols.length; i++) {
+        expect(cols[i].width, closeTo(cols[0].width, 1.5), reason: '$w');
+        expect(cols[i].left, greaterThan(cols[i - 1].left), reason: '$w');
       }
+      final preview = tester.getRect(find.byKey(const ValueKey('ult-preview')));
+      expect(preview.left, greaterThanOrEqualTo(cols[3].left));
+      final header = tester.getRect(find.text('ULT EQUIPADA'));
+      expect(cols[0].top, greaterThan(header.bottom));
     }
   });
 
