@@ -8,15 +8,12 @@ import '../../../core/layout/layout_doc.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/craft_rules.dart';
-import '../../../game_engine/models/life_skills.dart' show kLifeMaterialIds;
-import '../../../game_engine/rules/life_craft_rules.dart';
-import '../../world/presentation/panels/life_icon.dart';
-import '../../world/presentation/panels/life_item_grid.dart';
 import 'craft_bench.dart' show materialColor, materialIcon;
 import 'craft_layout.dart';
 import 'shop_sections.dart';
 
-/// CONDENSAR: pestaña propia de la ARMERÍA (v0.20.25; materials_economy.md
+/// CONDENSAR: pestaña propia de la ARMERÍA (v0.20.25; solo materiales de
+/// arma desde v0.32.3: los de oficio están en el TALLER DE OFICIOS; materials_economy.md
 /// § 4.3, ui_minimal.md § 4). Izquierda "Elegí material" (las fuentes con
 /// lo que tienes), flecha, derecha "Se condensa en" (el resultado); abajo
 /// la receta, cuántas veces alcanza, la cantidad (×1 / MÁX) y CONDENSAR.
@@ -119,83 +116,9 @@ class _CondensePanelState extends State<CondensePanel> {
             KeyedSubtree(
                 key: const ValueKey('condense-confirm'),
                 child: r.region('confirm')),
-            SizedBox(height: DsSpace.md),
-            _life(),
           ],
         ),
       ),
-    );
-  }
-
-  /// Materiales de oficio (v0.27.0, materials_economy.md § 4.4): fibra,
-  /// cebo y tabla para contratar y mejorar ayudantes. Grilla como el
-  /// inventario; el detalle tiene la receta y CONDENSAR ×1 / ×5 / MÁX.
-  Widget _life() {
-    final p = shop.profile;
-    final inWorld = shop.view.session.run == null;
-    LifeItemCellData cell(String id) {
-      final d = kLifeMaterials[id]!;
-      final max = LifeCraftRules.maxTimes(p, id);
-      Widget go(String label, int n) {
-        final a = CraftAction(CraftOp.condense, '${LifeCraftRules.prefix}$id',
-            index: n);
-        final why = !inWorld
-            ? 'Solo en el Mundo'
-            : max < n || n < 1
-                ? 'No alcanza'
-                : shop.guards.craft(p, a);
-        return DsButton(label,
-            key: ValueKey('condense-life-$id-$label'),
-            size: DsButtonSize.compact,
-            kind: DsButtonKind.primary,
-            tooltip: why,
-            onPressed: why == null ? () => shop.controller.craft(a) : null);
-      }
-
-      return LifeItemCellData(
-        id: 'condense-life-$id',
-        icon: LifeIcon('mat_$id', switch (id) {
-          'cebo' => LifeIconKind.pescado,
-          'fibra' => LifeIconKind.cosecha,
-          _ => LifeIconKind.herramienta,
-        }, size: LifeItemGrid.iconSize),
-        border: DsColors.border,
-        search: d.name,
-        count: p.life.craft(id),
-        detail: LifeItemDetail(
-          name: d.name,
-          nameColor: DsColors.textTitle,
-          description: d.description,
-          lines: [
-            'Receta: ${LifeCraftRules.recipeText(id)}',
-            'Tenés ${p.life.craft(id)} · alcanza para $max',
-          ],
-          actions: [go('×1', 1), go('×5', 5), go('MÁX', max)],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const DsSectionHeader('Oficios'),
-        Text(
-            'Cosechas y pescados (nunca legendarios; primero los de menos '
-            'valor) se condensan en materiales para los ayudantes.',
-            style: DsText.detail()),
-        SizedBox(height: DsSpace.xs),
-        SizedBox(
-          height: 240,
-          child: LifeItemGrid(
-            key: const ValueKey('condense-life'),
-            groups: [
-              LifeItemGroup(null, [for (final id in kLifeMaterialIds) cell(id)])
-            ],
-            empty: '',
-          ),
-        ),
-      ],
     );
   }
 

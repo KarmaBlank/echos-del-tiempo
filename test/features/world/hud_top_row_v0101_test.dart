@@ -23,7 +23,7 @@ import '../../real_fonts.dart';
 Future<SessionController> _controller() async {
   final c = SessionController(
     engine: sessionEngine(zones: true),
-    // Nivel alto sin repartir: PERSONAJE [C] con su insignia.
+    // Nivel alto sin repartir: PERSONAJE [TAB] con su insignia.
     store: InMemoryProfileStore(zoneProgression.normalize(PlayerProfile(
         name: 'Ana', classId: 'guerrero', level: 30, unlockedZone: 1))),
     clock: const SessionClock(autoStart: false),

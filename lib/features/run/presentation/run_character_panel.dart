@@ -18,7 +18,7 @@ import '../../world/presentation/session_view.dart';
 /// Pestañas del personaje de la Travesía.
 enum RunCharacterTab {
   resumen('LO QUE LLEVO'),
-  inventory('INVENTARIO');
+  inventory('EQUIPAMIENTO');
 
   const RunCharacterTab(this.label);
   final String label;
@@ -83,6 +83,7 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
       width: 1000,
       fill: true,
       onClose: c.closePanel,
+      closeOnTab: true,
       titleTrailing: Flexible(
         child: Text('${prof.name}  $cls',
             style: DsText.body(DsColors.textSubtitle)),
@@ -252,7 +253,7 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
               '· Pociones ${prof.potions} · Éter ${prof.ethers} · '
               'Oro ${prof.credits}',
               style: DsText.body()),
-          Text('Equipar y ordenar: INVENTARIO [I].', style: DsText.detail()),
+          Text('Equipar y ordenar: EQUIPAMIENTO [I].', style: DsText.detail()),
         ]),
         section('ULT', [
           for (final o in ults)

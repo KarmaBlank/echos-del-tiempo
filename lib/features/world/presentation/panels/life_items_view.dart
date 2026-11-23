@@ -6,7 +6,10 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
+import '../../../../game_engine/models/life_skills.dart' show kLifeMaterialIds;
+import '../../../../game_engine/rules/life_craft_rules.dart';
 import '../../../../game_engine/rules/life_time_rules.dart';
+import '../../../../game_engine/rules/oficio_storage_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import 'life_tool_text.dart';
 import '../session_controller.dart';
@@ -14,13 +17,11 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 
-/// Pestaña PESCA Y CULTIVO de PERSONAJE (farming.md § 11, fishing.md
-/// § 5.1): herramientas de oficio, pescados, basura del agua, semillas,
-/// abonos y cosechas. Nunca ocupan casilleros del inventario. Solo en el
-/// pueblo (en una misión se ve el aviso). Desde v0.24.2 una categoría
-/// por vez (pestañas con la cantidad) y un buscador, en vez de secciones
-/// apiladas; cada fila con su ícono. Desde v0.24.4 una grilla de casillas con el
-/// detalle de la elegida a la derecha ([LifeItemGrid]).
+/// OFICIOS → INVENTARIO de PERSONAJE (docs/specs/oficio_storage.md,
+/// farming.md § 11, fishing.md § 5.1): una bolsa por oficio (PESCA,
+/// CULTIVO, HERRERÍA) con su tope de casillas, filtros por tipo, un
+/// buscador y la grilla con el detalle a la derecha ([LifeItemGrid]).
+/// Nunca ocupan casilleros de EQUIPAMIENTO. Solo en el pueblo.
 class LifeItemsView extends StatefulWidget {
   const LifeItemsView(
       {super.key,
@@ -36,17 +37,36 @@ class LifeItemsView extends StatefulWidget {
   State<LifeItemsView> createState() => _LifeItemsViewState();
 }
 
-/// Categorías de la pestaña, en orden.
+/// Tipos de celda con que se arma cada bolsa.
 enum LifeItemsCategory {
-  herramientas('HERRAMIENTAS'),
-  pescados('PESCADOS'),
-  semillas('SEMILLAS'),
-  cosechas('COSECHAS'),
-  bestiario('BESTIARIO DE PESCA');
-
-  const LifeItemsCategory(this.label);
-  final String label;
+  herramientas,
+  pescados,
+  semillas,
+  cosechas,
+  bestiario,
+  materiales
 }
+
+/// Filtros de cada bolsa: (id, etiqueta, prefijos de id de celda).
+const _filters = <OficioBag, List<(String, String, List<String>)>>{
+  OficioBag.pesca: [
+    ('todo', 'TODO', ['life-tool-cana', 'life-fish-', 'life-junk-']),
+    ('canas', 'CAÑAS', ['life-tool-cana']),
+    ('pescados', 'PESCADOS', ['life-fish-']),
+    ('basura', 'BASURA', ['life-junk-']),
+    ('bestiario', 'BESTIARIO', ['life-log-']),
+  ],
+  OficioBag.cultivo: [
+    ('todo', 'TODO', ['life-tool-a', 'life-tool-r', 'life-seed-', 'life-fert-', 'life-crop-']),
+    ('herramientas', 'HERRAMIENTAS', ['life-tool-a', 'life-tool-r']),
+    ('semillas', 'SEMILLAS', ['life-seed-']),
+    ('abonos', 'ABONOS', ['life-fert-']),
+    ('cosechas', 'COSECHAS', ['life-crop-']),
+  ],
+  OficioBag.herreria: [
+    ('todo', 'TODO', ['life-craft-']),
+  ],
+};
 
 /// Calidad de cosecha → color de rareza.
 Color cropQualityColor(CropQuality q) => fishRarityColor(switch (q) {
@@ -57,11 +77,9 @@ Color cropQualityColor(CropQuality q) => fishRarityColor(switch (q) {
     });
 
 class _LifeItemsViewState extends State<LifeItemsView> {
-  var _cat = LifeItemsCategory.herramientas;
+  var _bag = OficioBag.pesca;
+  final _filter = <OficioBag, String>{};
   var _query = '';
-
-  /// Sub-filtro de HERRAMIENTAS: `null` todas, `pesca` o `cultivo`.
-  String? _toolKind;
 
   /// Bioma del BESTIARIO DE PESCA (fishing.md § 10).
   String _logBiome = 'zona1';
@@ -87,22 +105,25 @@ class _LifeItemsViewState extends State<LifeItemsView> {
             key: const ValueKey('life-items-away'), style: DsText.detail()),
       );
     }
-    final cells = {
-      for (final c in LifeItemsCategory.values) c: _cells(c),
-    };
+    final all = [
+      for (final c in LifeItemsCategory.values) ..._cells(c),
+    ];
+    final filters = _filters[_bag]!;
+    final fid = _filter[_bag] ?? 'todo';
+    final f =
+        filters.firstWhere((e) => e.$1 == fid, orElse: () => filters.first);
+    final log = f.$1 == 'bestiario';
     final q = _query.trim().toLowerCase();
     final shown = [
-      for (final c in cells[_cat]!)
-        if ((q.isEmpty || c.search.toLowerCase().contains(q)) &&
-            (_cat != LifeItemsCategory.bestiario ||
+      for (final c in all)
+        if (f.$3.any(c.id.startsWith) &&
+            (q.isEmpty || c.search.toLowerCase().contains(q)) &&
+            (!log ||
                 (c.id.startsWith('life-log-$_logBiome-') &&
-                    (_logTime == null ||
-                        _logTimeOf(c.id) == _logTime))) &&
-            (_cat != LifeItemsCategory.herramientas ||
-                _toolKind == null ||
-                c.id.startsWith('life-tool-cana') == (_toolKind == 'pesca')))
+                    (_logTime == null || _logTimeOf(c.id) == _logTime))))
           c
     ];
+    final p = widget.profile;
     return Column(
       key: const ValueKey('life-items'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,14 +132,14 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           Expanded(
             child: DsTabBar(
               tabs: [
-                for (final c in LifeItemsCategory.values)
-                  DsTab(c.label,
-                      badge: '${cells[c]!.length}',
-                      key: ValueKey('life-cat-${c.name}')),
+                for (final b in OficioBag.values)
+                  DsTab(b.label,
+                      badge: '${OficioStorageRules.used(p, b)}/'
+                          '${OficioStorageRules.cap}',
+                      key: ValueKey('oficio-bag-${b.name}')),
               ],
-              index: _cat.index,
-              onChanged: (i) =>
-                  setState(() => _cat = LifeItemsCategory.values[i]),
+              index: _bag.index,
+              onChanged: (i) => setState(() => _bag = OficioBag.values[i]),
             ),
           ),
           SizedBox(width: DsSpace.sm),
@@ -127,23 +148,22 @@ class _LifeItemsViewState extends State<LifeItemsView> {
               width: 180,
               onChanged: (v) => setState(() => _query = v)),
         ]),
-        if (_cat == LifeItemsCategory.herramientas) ...[
+        if (filters.length > 1) ...[
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, children: [
-            for (final k in const [null, 'pesca', 'cultivo'])
-              DsButton((k ?? 'todas').toUpperCase(),
-                  key: ValueKey('life-tool-filter-${k ?? 'todas'}'),
+            for (final e in filters)
+              DsButton(e.$2,
+                  key: ValueKey('oficio-filter-${e.$1}'),
                   size: DsButtonSize.compact,
-                  selected: _toolKind == k,
-                  onPressed: () => setState(() => _toolKind = k)),
+                  selected: f.$1 == e.$1,
+                  onPressed: () => setState(() => _filter[_bag] = e.$1)),
           ]),
         ],
-        if (_cat == LifeItemsCategory.bestiario) ...[
+        if (log) ...[
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, children: [
             for (final b in _logBiomes)
-              DsButton(
-                  '${_biomeLabel(b)} ${_logFound(b)}/${_logTotal(b)}',
+              DsButton('${_biomeLabel(b)} ${_logFound(b)}/${_logTotal(b)}',
                   key: ValueKey('life-log-biome-$b'),
                   size: DsButtonSize.compact,
                   selected: _logBiome == b,
@@ -162,7 +182,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         SizedBox(height: DsSpace.xs),
         Expanded(
           child: LifeItemGrid(
-            key: ValueKey('life-list-${_cat.name}'),
+            key: ValueKey('life-list-${_bag.name}-${f.$1}'),
             groups: [LifeItemGroup(null, shown)],
             empty: q.isEmpty ? 'No hay nada acá.' : 'Sin resultados.',
             emptyKey: const ValueKey('life-items-empty'),
@@ -417,6 +437,35 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                       'sobre un cultivo.',
                 ),
               ),
+        ];
+      case LifeItemsCategory.materiales:
+        return [
+          for (final id in kLifeMaterialIds)
+            if (life.craft(id) > 0)
+              if (kLifeMaterials[id] case final d?)
+                LifeItemCellData(
+                  id: 'life-craft-$id',
+                  icon: LifeIcon(
+                      'mat_$id',
+                      switch (id) {
+                        'cebo' => LifeIconKind.pescado,
+                        'fibra' => LifeIconKind.cosecha,
+                        _ => LifeIconKind.herramienta,
+                      },
+                      size: _icon),
+                  border: DsColors.border,
+                  search: d.name,
+                  count: life.craft(id),
+                  detail: LifeItemDetail(
+                    name: d.name,
+                    nameColor: DsColors.textTitle,
+                    tags: const [
+                      ('MATERIAL DE OFICIO', DsColors.textSecondary)
+                    ],
+                    lines: ['Tenés ${life.craft(id)}'],
+                    description: d.description,
+                  ),
+                ),
         ];
       case LifeItemsCategory.cosechas:
         return [

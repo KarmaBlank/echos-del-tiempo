@@ -1,4 +1,4 @@
-# Spec: Movimiento libre por jugador (v0.33.0, protocolo 55)
+# Spec: Movimiento libre por jugador (v0.33.0, protocolo 57)
 
 Estado: implementado en v0.33.0. Reemplaza "todos viajan juntos"
 (overworld_biomes.md § 4) y la votación / preparación para entrar a una
@@ -54,7 +54,7 @@ una **instancia**: un lugar con solo los jugadores que están ahí.
 - `GameSession.ownerId`: el dueño del mundo (el primer jugador, el
   anfitrión). Editar el pueblo y lo que antes miraba "primer humano de la
   sala" mira esto: el anfitrión sigue siendo el dueño aunque esté en una
-  mazmorra. Viaja como `own` (protocolo 55) para que la UI oculte lo del dueño. Las hazañas de combate llevan un seguimiento por instancia (`GameSession.instance`, solo host).
+  mazmorra. Viaja como `own` (protocolo 57) para que la UI oculte lo del dueño. Las hazañas de combate llevan un seguimiento por instancia (`GameSession.instance`, solo host).
 - Estado del host por jugador (pesca pendiente, XP por estadía): se
   limpia solo para los jugadores que vuelven, no para todo el mundo.
 
@@ -120,7 +120,7 @@ se cierra. El `pueblo` nunca.
 - `GameSession.away` (`aw`): los que están en otro lugar, `[id, nombre,
   dónde]`, para la lista del grupo. Se recalcula solo cuando alguien se
   mueve, entra o sale.
-- Protocolo 55: un cliente viejo no entiende salas partidas; hay que
+- Protocolo 57: un cliente viejo no entiende salas partidas; hay que
   actualizar.
 
 ## 4. Cliente / UI

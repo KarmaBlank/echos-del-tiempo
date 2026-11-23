@@ -126,9 +126,15 @@ import '../../game_engine/serialization/session_json.dart';
 /// y `town` con `track` / `seen` (roles.md § 8).
 /// 54 (v0.32.2): faroles de las mazmorras oscuras (`PoiKind.lantern`,
 /// tiles `l` / `n`): el mapa que sale de la semilla cambia.
-/// 55 (v0.33.0): movimiento libre por jugador (free_movement.md): cada
+/// 55 (v0.32.3): TALLER DE OFICIOS en el pueblo (landmark `@workshop`,
+/// tile `O`) y ARMERÍA aparte de la FORJA (`@armory`, tile `R`): cambia
+/// el plano del pueblo que arma cada par.
+/// 56 (v0.32.6): lazos con los habitantes (`town.nat`) y `town` con
+/// `talk` / `nativeInvite` / `nativeTrade` (overworld_biomes.md § 12).
+
+/// 57 (v0.33.0): movimiento libre por jugador (free_movement.md): cada
 /// cliente recibe solo su instancia, `aw` con los que están en otro lugar.
-const kProtocolVersion = 55;
+const kProtocolVersion = 57;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

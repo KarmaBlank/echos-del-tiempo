@@ -1,3 +1,4 @@
+import 'oficio_storage_rules.dart';
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
@@ -37,6 +38,8 @@ import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
+import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
+import 'npc_talk_rules.dart';
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
@@ -669,7 +672,14 @@ class SessionEngine {
     final op = _Op(this, session.copy());
     final p = op.s.players[playerId]!;
     final before = p.profile;
+    final snap = op.snapshot();
     if (!op.apply(p, action)) return null;
+    // Bolsas de oficio llenas: la compra no se hace (oficio_storage.md).
+    if (OficioStorageRules.isPurchase(action) &&
+        OficioStorageRules.overflows(before, p.profile)) {
+      return null;
+    }
+    op.settleOficios(snap);
     op.learnEarnedUlts(p);
     op.achievements(actor: p, action: action, before: before);
     return op.result;
@@ -684,7 +694,9 @@ class SessionEngine {
   SessionStep tick(GameSession session, double dt, {bool world = true}) {
     if (session.paused) return SessionStep(session, const []);
     final op = _Op(this, session.copy());
+    final snap = op.snapshot();
     op.tick(dt, world: world);
+    op.settleOficios(snap);
     op.achievements();
     return op.result;
   }
@@ -749,6 +761,27 @@ class _Op {
   Iterable<SessionPlayer> get humans => players.where((p) => !p.isCompanion);
 
   void say(String text) => events.add(SystemMessageEvent(text));
+
+  /// Perfiles antes del paso, para [settleOficios].
+  Map<String, PlayerProfile> snapshot() =>
+      {for (final p in players) p.id: p.profile};
+
+  /// Vende solo lo nuevo que no entra en una bolsa de oficio llena
+  /// (docs/specs/oficio_storage.md § 3).
+  void settleOficios(Map<String, PlayerProfile> before) {
+    for (final p in players) {
+      final b = before[p.id];
+      if (b == null || identical(b, p.profile)) continue;
+      if (!OficioStorageRules.overflows(b, p.profile)) continue;
+      final r = OficioStorageRules.settle(b, p.profile);
+      p.profile = r.profile;
+      if (r.sold.isNotEmpty) {
+        say('Bolsa de oficio llena: ${p.name} vendió '
+            '${r.sold.map(OficioStorageRules.name).join(', ')} '
+            '(+${r.gold} de oro).');
+      }
+    }
+  }
 
   // ---------------- ULT v2 (ultimates_v2.md § 2) ----------------
 
