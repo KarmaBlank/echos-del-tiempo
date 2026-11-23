@@ -44,7 +44,7 @@ enum WorldPanel {
   fountain,
 
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
-  /// (farming.md § 8, v0.25.4).
+  /// (farming.md § 8, v0.25.5).
   helper,
 }
 

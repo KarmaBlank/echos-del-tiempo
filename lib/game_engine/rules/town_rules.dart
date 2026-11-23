@@ -485,7 +485,7 @@ abstract final class TownRules {
     ]);
   }
 
-  // ---------------- ayudantes (farming.md § 8, v0.25.4) ----------------
+  // ---------------- ayudantes (farming.md § 8, v0.25.5) ----------------
 
   static int get helperCost => t.i('helperCost');
 

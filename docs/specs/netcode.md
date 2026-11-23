@@ -761,7 +761,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
-## Mundo, protocolo 47 (v0.25.4: granjeros y pescadores)
+## Mundo, protocolo 47 (v0.25.5: granjeros y pescadores)
 
 - Cada construcción de `town.builds` suma `hp` (ayudantes), `ch`
   (cofre), `sd` (semillas de los granjeros) y `tk` (tareas por granjero,

@@ -249,7 +249,7 @@ herramienta de área trabaja menos tiles.
   donde se pesca: `lakeZoneRare` por cada 36 tiles por encima de 48 +
   `breedRare` por especie criando (tope `breedRareCap`).
 
-## 8. Ayudantes: granjeros y pescadores (v0.25.4)
+## 8. Ayudantes: granjeros y pescadores (v0.25.5)
 ### 8.1 Contratar
 - En EDITAR PUEBLO (solo el dueño): clic en una huerta o un lago →
   GRANJEROS / PESCADORES "1 / 3" → CONTRATAR AYUDANTE (`helperCost`, 800

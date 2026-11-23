@@ -217,7 +217,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'breedRare': 0.03,
     'breedRareCap': 0.15,
     'breedChance': 0.35,
-    // Ayudantes (farming.md § 8, v0.25.4): nivel del oficio para
+    // Ayudantes (farming.md § 8, v0.25.5): nivel del oficio para
     // contratar, oro por ayudante, parcelas de cada granjero, tiles de
     // lago por pescador, peces por vuelta, cada cuántos segundos trabajan,
     // × de XP al que recoge el cofre y tope del cofre.

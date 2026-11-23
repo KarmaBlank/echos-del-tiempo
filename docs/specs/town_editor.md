@@ -182,7 +182,7 @@ la izquierda son el eje de caminos).
   va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
   peces); construir, mover, borrar y ampliar, solo el dueño.
 
-- Huertas pegadas también se funden (v0.25.4): una huerta más grande con
+- Huertas pegadas también se funden (v0.25.5): una huerta más grande con
   las parcelas, semillas, ayudantes y cofre de las dos.
 - Opciones de una huerta o un lago: GRANJEROS / PESCADORES con CONTRATAR
   AYUDANTE y DESPEDIR (farming.md § 8.1). Cada construcción tiene un cofre

@@ -646,7 +646,7 @@ enum TownOp {
 /// construcción del catálogo al poner o especie al soltar un pez;
 /// [target] = la construcción a mover, borrar o el lago donde soltar;
 /// ([x], [y]) = tile del mapa de la esquina al poner o mover.
-/// Ayudantes (v0.25.4): `hireHelper` / `fireHelper` / `collectChest` con
+/// Ayudantes (v0.25.5): `hireHelper` / `fireHelper` / `collectChest` con
 /// [target]; `giveSeeds` / `takeSeeds` con [target], [id] = cultivo y
 /// [n] = cantidad (0 = todas); `helperTasks` con [target], [x] = el
 /// granjero y [n] = bits de `HelperTask`.

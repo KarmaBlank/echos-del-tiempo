@@ -170,7 +170,7 @@ class MapFarmLayer {
     }
   }
 
-  /// Los ayudantes (farming.md § 8, v0.25.4): granjeros caminando por
+  /// Los ayudantes (farming.md § 8, v0.25.5): granjeros caminando por
   /// su área y pescadores en su lugar de la orilla, con sus sprites
   /// (`items.vida_npc_*` del manifest; [sprite] los resuelve), el cofre
   /// de cada construcción con lo que tiene y, con el mouse encima de un

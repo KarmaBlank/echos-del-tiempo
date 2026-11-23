@@ -1539,7 +1539,7 @@ class SessionController extends StateNotifier<SessionView?> {
       _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
   bool stockFish(String species, [String? lakeId]) =>
       _apply(TownAction(TownOp.stock, id: species, target: lakeId));
-  // ---- Ayudantes (farming.md § 8, v0.25.4) ----
+  // ---- Ayudantes (farming.md § 8, v0.25.5) ----
 
   bool hireHelper(String buildId) =>
       _apply(TownAction(TownOp.hireHelper, target: buildId));

@@ -107,7 +107,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// 46 (v0.25.2): lugares fijos movibles (town_editor.md § 3.3): `town`
 /// suma `marks` y `move` acepta `tg` = `@<lugar>`; un cliente 45 armaría
 /// el pueblo con los lugares en su sitio de siempre.
-/// 47 (v0.25.4): granjeros y pescadores con cofre por construcción
+/// 47 (v0.25.5): granjeros y pescadores con cofre por construcción
 /// (farming.md § 8); se va la auto-pesca.
 const kProtocolVersion = 47;
 

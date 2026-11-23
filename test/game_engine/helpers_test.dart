@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
 
-// Granjeros, pescadores y cofres (farming.md § 8, v0.25.4).
+// Granjeros, pescadores y cofres (farming.md § 8, v0.25.5).
 
 FarmPlot _ripe() {
   final p = FarmingRules.plant(FarmingRules.till(), 'nabo_claro')!;

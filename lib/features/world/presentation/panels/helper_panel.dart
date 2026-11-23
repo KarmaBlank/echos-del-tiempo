@@ -12,7 +12,7 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 
-/// Pantalla de un ayudante (farming.md § 8, v0.25.4; tecla G al lado del
+/// Pantalla de un ayudante (farming.md § 8, v0.25.5; tecla G al lado del
 /// NPC). Granjero: SEMILLAS (dos grillas: las tuyas y las de la huerta,
 /// con PASAR → / ← DEVOLVER), TAREAS (plantar, regar, cosechar) y COFRE.
 /// Pescador: solo COFRE. Todo lo valida el anfitrión.

@@ -181,7 +181,7 @@ class TownState {
 
   static Map<String, int> _ints(Object? v) => TownBuild.ints(v);
 
-  /// Saves de antes de v0.25.4 (farming.md § 8.4): el ayudante del pueblo
+  /// Saves de antes de v0.25.5 (farming.md § 8.4): el ayudante del pueblo
   /// (`helper`) pasa a ser un granjero de la primera huerta y el granero
   /// (`silo`), el cofre de esa huerta.
   static TownState _legacyHelper(TownState s, Map<dynamic, dynamic> raw) {

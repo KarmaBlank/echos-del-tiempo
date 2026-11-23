@@ -168,7 +168,7 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   haya.
 - "Cobrar en" (ORO / MATERIALES) y VENDER TODO solo en VENDER.
 
-## 6. Auto-pesca (se fue en v0.25.4)
+## 6. Auto-pesca (se fue en v0.25.5)
 
 Ya no hay botón AUTO-PESCA ni tecla R: la reemplaza el PESCADOR de cada
 lago (farming.md § 8): saca peces solo, al cofre del lago, con la tabla
