@@ -5,11 +5,13 @@ import 'battle_state.dart';
 /// elige el anfitrión; rige desde la próxima pelea.
 enum CombatMode {
   timeline(TurnRule.velocidad, 'Línea de tiempo',
-      'La velocidad decide cuándo y cuántas veces actúa cada uno.'),
-  rounds(TurnRule.porRonda, 'Por rondas',
+      'En prueba: el más rápido juega más seguido; más táctico pero menos '
+          'parejo en cooperativo.'),
+  rounds(TurnRule.porRonda, 'Por rondas (recomendado)',
       'Todos actúan una vez por ronda; la velocidad decide quién va primero.'),
   phases(TurnRule.porFases, 'Por fases',
-      'Actúan todos los enemigos y después todo el grupo, en cualquier orden.');
+      'En prueba: todos los enemigos y después todos ustedes; más simple, '
+          'la velocidad pesa menos.');
 
   const CombatMode(this.turnRule, this.label, this.tip);
 

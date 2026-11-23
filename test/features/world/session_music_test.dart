@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'dart:collection';
 
 import 'package:echos_del_tiempo/core/audio/music/music_catalog.dart';
@@ -19,6 +20,7 @@ import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
 
 void main() {
+  useTimelineSoloDefault();
   test('de noche suena la variante calma del pueblo; la pesca gana', () {
     expect(
         MusicSelector.trackFor(

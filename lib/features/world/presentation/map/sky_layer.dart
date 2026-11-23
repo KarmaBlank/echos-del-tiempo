@@ -67,7 +67,8 @@ class MapSkyLayer {
       {required List<Offset> lights,
       double density = 1,
       double flash = 1,
-      bool motion = true}) {
+      bool motion = true,
+      bool tint = true}) {
     final dark = SkyRules.darkness(sky);
     final w = SkyRules.now(sky);
     final overcast = switch (w) {
@@ -77,7 +78,8 @@ class MapSkyLayer {
     };
     final alpha = math.max(dark * 0.72, overcast);
     final flies = dark > 0.3 ? fireflies(view, t, density) : const <(Offset, double)>[];
-    if (alpha > 0.01) {
+    // Sin [tint]: la noche la pone la capa de luz (lighting.md § 4).
+    if (tint && alpha > 0.01) {
       c.saveLayer(view, Paint());
       c.drawRect(
           view,
@@ -105,7 +107,7 @@ class MapSkyLayer {
       }
       c.restore();
     }
-    if (dark > 0.05) {
+    if (tint && dark > 0.05) {
       // Halo cálido de los faros.
       final glow = Paint();
       for (final l in lights) {
@@ -128,6 +130,16 @@ class MapSkyLayer {
     }
     if (w.wet) _rain(c, view, t, w == Weather.tormenta, density, motion);
     _bolts(c, view, t, flash);
+  }
+
+  /// Cuánto ilumina ahora el último rayo (0–1, lighting.md § 5.2).
+  double boltLight(double t) {
+    var k = 0.0;
+    for (final b in bolts) {
+      final q = (t - b.t0) / boltMs;
+      if (q >= 0 && q < 1) k = math.max(k, 1 - q);
+    }
+    return k;
   }
 
   void _rain(Canvas c, Rect view, double t, bool storm, double density,

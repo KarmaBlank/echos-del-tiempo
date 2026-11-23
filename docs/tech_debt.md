@@ -1,5 +1,30 @@
 ﻿# Deuda técnica
 
+## v0.31.0 (roles de exploración)
+
+Tests salteados (prioridad: salir rápido). Solo tests de reglas en
+`test/game_engine/roles_v031_test.dart`.
+
+- Sin test de sesión: primera captura, agua brillante en `_fishBite`,
+  `fisherReq`, XP de Herrería al forjar / encargar / condensar, `town.dy`
+  al reabrir la sala, rechazo de acciones de un habitante mudado en su
+  bioma.
+- Sin test de widget: BESTIARIO DE PESCA, pantalla del pescador nativo,
+  tarjeta de HERRERÍA, costo con descuento en la forja, clic sobre un
+  habitante o pescador. Sin capturas nuevas en docs/release_shots.
+- Party dividida: el pescador todavía no se queda afuera mientras el
+  grupo baja (viajan todos juntos).
+- Animales y CORRAL (farming.md § 13): solo el spec.
+- Pedido de tamaño: la bolsa no guarda tamaños; se valida con el récord.
+- El pescador nativo camina en elipse sin mirar obstáculos; el agua
+  brillante no evita muelles.
+- Paridad de XP pueblo / mazmorras: sigue sin simular.
+- Sprites de los pescadores nativos: reusan el del pescador.
+- Horarios de peces y afinidad de cultivos: derivados por rareza / id, sin
+  tabla escrita a mano; sin test de sesión de la tirada filtrada ni del
+  crecimiento con afinidad; sin registro de cultivos con "???" ni filtros
+  por bioma / hora en SEMILLAS y COSECHAS.
+
 ## v0.30.0 (habitantes en el pueblo y roles)
 
 Tests salteados (prioridad: salir rápido). Hay tests de reglas en
@@ -12,24 +37,24 @@ Tests salteados (prioridad: salir rápido). Hay tests de reglas en
 - Sin test de widget de la pantalla del habitante (pestañas), del
   REGISTRO DE ENCARGOS, de las opciones de la CASA en EDITAR PUEBLO ni
   del resumen de la FUENTE. Sin capturas de los habitantes caminando.
-- La forja muestra y valida en el cliente el costo sin el descuento de
+- (Hecho en v0.31.0) La forja muestra y valida en el cliente el costo sin el descuento de
   Brann (el anfitrión cobra con descuento); la tienda no sabe del pueblo.
 - Brann descuenta solo la forja de estadísticas (no reforja, afijos ni
   "tiradas").
 - Velda revela los primeros N PdI de cada piso (no salas del mapa).
-- Los habitantes del pueblo se hablan con E; el clic sobre ellos no abre
+- (Hecho en v0.31.0) Los habitantes del pueblo se hablan con E; el clic sobre ellos no abre
   su pantalla todavía.
-- Las órdenes piden especie y calidad, todavía no tamaño de pez.
-- El tope diario de XP por órdenes y el encargo de forja de "uno por día"
+- (Hecho en v0.31.0) Las órdenes piden especie y calidad, todavía no tamaño de pez.
+- (Hecho en v0.31.0) El tope diario de XP por órdenes y el encargo de forja de "uno por día"
   viven en memoria del anfitrión (se reinician al reabrir la sala).
 - Paridad de XP pueblo / mazmorras (roles.md § 1): los números
   (`orderXpPerValue`, `orderXpDayCap`, `lifeLevelCharXp`) son una primera
   pasada sin medir; falta una simulación por hito de zona.
-- Árboles de oficio sin nodos de poder de aventurero; sin oficio de
+- (Hecho en v0.31.0) Árboles de oficio sin nodos de poder de aventurero; sin oficio de
   Herrería (roles.md § 5).
 - Sprites: casas por nivel y habitantes son arte provisorio (los
   habitantes reusan granjero y pescador).
-- El habitante sigue también en su bioma después de mudarse.
+- (Hecho en v0.31.0) El habitante sigue también en su bioma después de mudarse.
 
 ## v0.27.0
 
@@ -141,6 +166,18 @@ Funcionalidad pendiente:
   viaje.
 - Peces y semillas nuevos usan el ícono genérico de su tipo.
 
+## v0.32.0
+
+- Iluminación (lighting.md): la batalla no tiene oscuridad (una pelea en
+  una mazmorra oscura se ve con luz normal). El minimapa y el mapa
+  grande no se oscurecen ni hay niebla de exploración que respete la luz.
+- Los enemigos fuera de la luz se esconden del todo; falta la silueta.
+- `LightRules.carried(bonus:)` es solo el gancho: ninguna linterna,
+  pasiva ni habitante sube el radio todavía. Hechizos no emiten luz.
+- Sin test de UI ni captura comparativa de la capa de luz
+  (`MapLightLayer`); solo tests puros de `LightRules`.
+- Los números de `kLightDefs` son constantes del catálogo, no están en
+  Editor → Balance (`kTuning`).
 ## v0.30.1 (plantilla TRASPASO)
 
 - El alijo (`StashBoard`) no se migró a `DsTransferTemplate`: tiene

@@ -38,6 +38,11 @@ class PlayerBuild {
   /// Nivel de mejora de la ULT que resuelve (1-5, § 2.4).
   final int ultLevel;
 
+  /// Poder de aventurero de los árboles de oficio (roles.md § 5), en
+  /// fracción: vida máxima y ATQ / MAG.
+  final double lifeHp;
+  final double lifeAtk;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -50,6 +55,8 @@ class PlayerBuild {
     this.ascension = AscensionProgress.empty,
     this.ultSel,
     this.ultLevel = 1,
+    this.lifeHp = 0,
+    this.lifeAtk = 0,
   });
 
   /// Id de la ascensión elegida (`null` = clase base).
@@ -70,6 +77,8 @@ class PlayerBuild {
         ascension: ascension,
         ultSel: ultSel,
         ultLevel: ultLevel,
+        lifeHp: lifeHp,
+        lifeAtk: lifeAtk,
       );
 }
 

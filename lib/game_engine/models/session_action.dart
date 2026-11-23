@@ -675,7 +675,11 @@ enum TownOp {
   order,
 
   /// Encargo de forja de Brann (roles.md § 4): un arma de tu clase.
-  commission
+  commission,
+
+  /// v0.31.0 (protocolo 52): entregar el pedido del pescador nativo del
+  /// bioma (fishing.md § 12), [TownAction.id] = bioma.
+  fisherReq
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

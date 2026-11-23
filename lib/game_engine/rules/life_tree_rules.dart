@@ -18,12 +18,14 @@ abstract final class LifeTreeRules {
   static int level(PlayerProfile p, LifeSkillKind k) => switch (k) {
         LifeSkillKind.pesca => FishingRules.level(p),
         LifeSkillKind.cultivo => FarmingRules.level(p),
+        LifeSkillKind.herreria => SmithRules.level(p),
       };
 
   static List<String> taken(PlayerProfile p, LifeSkillKind k) =>
       switch (k) {
         LifeSkillKind.pesca => p.life.fishTree,
         LifeSkillKind.cultivo => p.life.farm.tree,
+        LifeSkillKind.herreria => p.life.smithTree,
       };
 
   static String rootOf(LifeSkillKind k) =>
@@ -77,6 +79,8 @@ abstract final class LifeTreeRules {
           p.copyWith(life: p.life.copyWith(fishTree: nodes)),
         LifeSkillKind.cultivo => p.copyWith(
             life: p.life.copyWith(farm: p.life.farm.copyWith(tree: nodes))),
+        LifeSkillKind.herreria =>
+          p.copyWith(life: p.life.copyWith(smithTree: nodes)),
       };
 
   static PlayerProfile? take(PlayerProfile p, LifeSkillKind k, String id) {
@@ -117,4 +121,55 @@ abstract final class LifeTreeRules {
       fx(p, LifeSkillKind.pesca, f);
   static double farm(PlayerProfile p, String f) =>
       fx(p, LifeSkillKind.cultivo, f);
+  static double smith(PlayerProfile p, String f) =>
+      fx(p, LifeSkillKind.herreria, f);
+
+  /// Poder de aventurero (roles.md § 5): suma de [LifeFx.hp] o
+  /// [LifeFx.atk] en los tres árboles.
+  static double power(PlayerProfile p, String f) => [
+        for (final k in LifeSkillKind.values) fx(p, k, f),
+      ].fold(0.0, (a, b) => a + b);
+}
+
+/// Herrería (roles.md § 6): XP por forjar, encargos de forja y condensar.
+abstract final class SmithRules {
+  static TuningDef get t => LifeTreeRules.t;
+
+  static int get maxLevel => math.max(1, t.i('smithMaxLevel'));
+
+  static int xpNeed(int l) =>
+      (t.d('smithXpBase') * math.pow(l, t.d('smithXpExp'))).round();
+
+  static int levelFor(int xp) {
+    var l = 1, rest = xp;
+    while (l < maxLevel && rest >= xpNeed(l)) {
+      rest -= xpNeed(l);
+      l++;
+    }
+    return l;
+  }
+
+  static int level(PlayerProfile p) => levelFor(p.life.smithXp);
+
+  static (int, int) progress(int xp) {
+    var l = 1, rest = xp;
+    while (l < maxLevel && rest >= xpNeed(l)) {
+      rest -= xpNeed(l);
+      l++;
+    }
+    return l >= maxLevel ? (0, 0) : (rest, xpNeed(l));
+  }
+
+  /// Suma [base] de XP de Herrería (con el bonus de XP del árbol).
+  static PlayerProfile gain(PlayerProfile p, int base) {
+    if (base <= 0) return p;
+    final xp = (base * (1 + LifeTreeRules.smith(p, LifeFx.xp))).round();
+    return p.copyWith(life: p.life.copyWith(smithXp: p.life.smithXp + xp));
+  }
+
+  /// Descuento de la forja del árbol (tope `smithForgeCap`).
+  static double forgeDiscount(PlayerProfile p) => LifeTreeRules.smith(
+          p, LifeFx.forge)
+      .clamp(0.0, t.d('smithForgeCap'))
+      .toDouble();
 }

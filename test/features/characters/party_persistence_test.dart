@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,7 +21,9 @@ import '../../game_engine/session_test_helpers.dart';
 
 /// Party jugando solo: cada miembro guarda en su ranura y el progreso
 /// sigue al reabrir (docs/specs/solo_party.md § 5, characters.md § 1.4).
+
 void main() {
+  useTimelineSoloDefault();
   group('Account.party', () {
     Account three() {
       var a = Account();

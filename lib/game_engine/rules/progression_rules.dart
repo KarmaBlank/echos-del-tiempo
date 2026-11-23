@@ -14,6 +14,7 @@ import '../models/player_state.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import 'ascension_rules.dart';
+import 'life_tree_rules.dart';
 import 'craft_rules.dart';
 import 'eco_rules.dart';
 import 'inventory_rules.dart';
@@ -184,6 +185,8 @@ class ProgressionRules {
       ultSel: sel,
       ultLevel: UltRules.levelOf(
           p, sel ?? UltRules.baseUlt(p.classId, catalog)?.id ?? ''),
+      lifeHp: LifeTreeRules.power(p, LifeFx.hp),
+      lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
     );
   }
 
@@ -207,6 +210,8 @@ class ProgressionRules {
       passiveProgress: p.passiveProgress,
       item: it,
       ascension: p.ascension,
+      lifeHp: LifeTreeRules.power(p, LifeFx.hp),
+      lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
     ));
   }
 

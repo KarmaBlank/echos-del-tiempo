@@ -21,6 +21,7 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/models/weapon_passive.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import '../../../game_engine/rules/resident_rules.dart';
 import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
@@ -54,7 +55,11 @@ import 'skill_chip.dart';
 class ShopContext {
   ShopContext(this.view, this.controller)
       : rules = controller.engine.progression,
-        guards = ShopGuards(controller.engine.progression, view.mode),
+        guards = ShopGuards(controller.engine.progression, view.mode,
+            forgeDiscount: view.actor == null
+                ? 0
+                : ResidentRules.forgeDiscount(
+                    view.actor!.profile, view.session.town)),
         preview = ShopPreview(controller.engine.progression);
 
   final SessionView view;
@@ -1008,7 +1013,8 @@ class _UpgradeRow extends StatelessWidget {
     final l = item.forge.level(stat);
     const max = WeaponUpgradeLevels.upMax;
     final atMax = l >= max;
-    final cost = CraftRules.forgeCost(w, item.rarity, l);
+    final cost = CraftRules.discounted(
+        CraftRules.forgeCost(w, item.rarity, l), shop.guards.forgeDiscount);
     final reason = atMax ? null : shop.guards.upgrade(p, item.uid, stat);
     final locked = reason != null;
     return KeyedSubtree(

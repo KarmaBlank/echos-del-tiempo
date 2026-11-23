@@ -83,13 +83,18 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
 
   Widget _skillRow(LifeSkillKind k) {
     final lvl = LifeTreeRules.level(p, k);
-    final (cur, need) = k == LifeSkillKind.pesca
-        ? FishingRules.progress(p.life.fishXp)
-        : FarmingRules.progress(p.life.farm.xp);
+    final (cur, need) = switch (k) {
+      LifeSkillKind.pesca => FishingRules.progress(p.life.fishXp),
+      LifeSkillKind.cultivo => FarmingRules.progress(p.life.farm.xp),
+      LifeSkillKind.herreria => SmithRules.progress(p.life.smithXp),
+    };
     final free = LifeTreeRules.free(p, k);
-    final tool = k == LifeSkillKind.pesca
-        ? kRods[p.life.rod]?.name ?? ''
-        : '${kFarmTools[p.life.farm.hoe]?.name} · ${kFarmTools[p.life.farm.can]?.name}';
+    final tool = switch (k) {
+      LifeSkillKind.pesca => kRods[p.life.rod]?.name ?? '',
+      LifeSkillKind.cultivo =>
+        '${kFarmTools[p.life.farm.hoe]?.name} · ${kFarmTools[p.life.farm.can]?.name}',
+      LifeSkillKind.herreria => 'Forjar, encargos de forja y condensar',
+    };
     // Tarjeta del oficio (v0.24.4): nombre y puntos libres arriba, el
     // nivel grande, la XP con lo que falta y la barra; todo entero.
     return DsCard(
