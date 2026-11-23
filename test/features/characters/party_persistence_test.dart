@@ -268,8 +268,13 @@ void main() {
     await pumpEventQueue();
     final leo = c.session!.players['local-c2']!;
     party.failNext = true;
-    leo.profile = leo.profile.copyWith(credits: 999);
-    await tick(c, SessionController.saveEvery + 0.1);
+    // Se guarda al cerrar un menú (save_indicator.md § 1).
+    c.toggleInventory();
+    await tick(c);
+    final leo2 = c.session!.players['local-c2']!;
+    leo2.profile = leo.profile.copyWith(credits: 999);
+    c.toggleInventory();
+    await tick(c);
     expect(c.view!.saveError, isNotNull);
     expect(party.profileOf('c2')!.credits, isNot(999));
     await tick(c, SessionController.saveEvery + 0.1);

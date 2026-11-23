@@ -49,4 +49,79 @@ void main() {
     expect(c.saving, isFalse);
     c.dispose();
   });
+
+  group('política de guardado del perfil (save_indicator.md § 1)', () {
+    late InMemoryProfileStore store;
+    late SessionController c;
+
+    Future<void> step([double dt = 0.05]) async {
+      c.advance(dt);
+      await pumpEventQueue();
+    }
+
+    setUp(() async {
+      final p = newProfile('Ana', 'guerrero');
+      store = InMemoryProfileStore(p);
+      final net = LoopbackNetSession(LoopbackHub());
+      await net.connect(SessionConfig(profile: p));
+      c = SessionController(
+        engine: sessionEngine(zones: true),
+        store: store,
+        clock: const SessionClock(autoStart: false),
+        net: net,
+        world: WorldSave(
+            id: 'w',
+            name: 'W',
+            label: WorldLabel.solitario,
+            created: DateTime.utc(2026, 11, 1)),
+        onWorldTown: (a, b) {},
+      );
+      await c.start();
+      await step();
+    });
+    tearDown(() => c.dispose());
+
+    void touch(int credits) {
+      final me = c.session!.players[c.localId]!;
+      me.profile = me.profile.copyWith(credits: credits);
+    }
+
+    test('jugando dentro del mismo día no se guarda', () async {
+      touch(4321);
+      for (var i = 0; i < 60; i++) {
+        touch(4321);
+        await step(0.1);
+      }
+      expect((await store.load())!.credits, isNot(4321));
+    });
+
+    test('al cambiar de día se guarda con aviso', () async {
+      // El cielo arranca en el día 0 y pasa al 1 enseguida.
+      while (c.session!.town.sky.day < 1) {
+        await step();
+      }
+      final day = c.session!.town.sky.day;
+      for (var i = 0; i < 100000 && c.session!.town.sky.day == day; i++) {
+        touch(4321);
+        await step(1);
+      }
+      await step();
+      expect(c.session!.town.sky.day, isNot(day));
+      expect((await store.load())!.credits, 4321);
+      expect(c.saving, isTrue);
+    });
+
+    test('al cerrar un menú se guarda lo hecho con él abierto', () async {
+      c.toggleInventory();
+      await step();
+      touch(4321);
+      await step();
+      expect((await store.load())!.credits, isNot(4321), reason: 'dentro no guarda');
+      c.toggleInventory();
+      await step();
+      await step();
+      expect((await store.load())!.credits, 4321);
+      expect(c.saving, isTrue);
+    });
+  });
 }
