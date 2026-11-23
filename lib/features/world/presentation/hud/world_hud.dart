@@ -44,9 +44,11 @@ import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
 import 'potion_shortcuts.dart';
+import 'save_indicator.dart';
 import 'day_clock.dart';
 import 'tool_hud.dart';
 import 'tracked_quests_hud.dart';
+import 'update_notice.dart';
 import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -202,7 +204,11 @@ class WorldHud extends StatelessWidget {
                         view.companions.length,
                         _unusedKey(_unused(s)),
                       ],
-                      builder: (_) => Row(
+                      builder: (_) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (s.mode == SessionMode.lobby &&
@@ -260,6 +266,10 @@ class WorldHud extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                          // Hay versión nueva (update_notice.md).
+                          const UpdateNotice(),
                         ],
                       ),
                     ),
@@ -395,6 +405,7 @@ class WorldHud extends StatelessWidget {
                   view.messages,
                   chatFocus,
                   _localNameOf(s),
+                  view.saving,
                 ],
                 builder: (_) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,6 +442,11 @@ class WorldHud extends StatelessWidget {
                                       me.profile.ascension.id),
                             );
                           }),
+                    // Aviso de guardado bajo el chat (save_indicator.md § 2).
+                    if (view.saving) ...[
+                      const SizedBox(height: 4),
+                      const SaveIndicator(),
+                    ],
                   ],
                 ),
               ),
