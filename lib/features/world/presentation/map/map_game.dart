@@ -838,6 +838,8 @@ class MapGame extends Game {
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
           hover: controller.hoverHelper,
           markOf: _npcMark);
+      _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
+      _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
@@ -1312,4 +1314,22 @@ class MapGame extends Game {
 
   /// Haces de Legendarios recién caídos al inventario en curso (tests).
   int get activeBeams => _beams.length;
+
+  /// Lugares dibujados con sprite (v0.32.3: TALLER DE OFICIOS y
+  /// ARMERÍA): `items.vida_<id>` del manifest, apoyado en su rectángulo.
+  void _drawLandmarkSprite(Canvas c, GameMap map, TownSpot spot, String id) {
+    final im = sprites.lifeIcon(id, 'herramienta');
+    if (im == null) return;
+    final l = (map.townMarks ?? TownLayout.landmarks)
+        .where((l) => l.spot == spot)
+        .firstOrNull;
+    if (l == null) return;
+    final (ox, oy) = map.townOrigin;
+    final w = im.width.toDouble(), h = im.height.toDouble();
+    final cx = (l.x + ox + l.w / 2) * ts, bottom = (l.y + oy + l.h) * ts;
+    c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+        Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h),
+        SpriteCatalog.pixelPaint());
+  }
+
 }

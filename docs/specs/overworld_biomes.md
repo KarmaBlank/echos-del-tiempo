@@ -289,7 +289,7 @@ los enemigos fuera de la luz no se dibujan (los jefes sí). Los
 recolectables de los exteriores brillan un poco de noche. Detalle y
 números en lighting.md § 3 y § 5.3.
 
-## 12. Charla, arraigados y su puesto (v0.32.7)
+## 12. Charla, arraigados y su puesto (v0.32.5)
 
 Todos los habitantes (los cinco que se mudan y los cinco pescadores
 nativos) usan el mismo cuadro de diálogo (`DsDialogueBox` +
@@ -358,6 +358,6 @@ viven atados a su lago, que es único de su bioma. Se cambia con
 - Constantes en `NpcTalkRules` (todavía no en Balance).
 
 ### 12.5 Red y guardado
-- Protocolo 56 (el 55 lo usa otra rama): `town.nat` (lista de
+- Protocolo 56: `town.nat` (lista de
   `{n, t, td, r, o, d}`) y `town` con `talk` / `nativeInvite` /
   `nativeTrade`. Un mundo guardado sin `nat` carga con todo en cero.

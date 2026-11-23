@@ -273,9 +273,9 @@ class RunScreen extends StatelessWidget {
                 key: const ValueKey('run-open-shop'),
                 onPressed: () => controller.openPanel(WorldPanel.armory)),
           if (type == RunNodeType.armeria)
-            DsButton('ABRIR ARMERÍA',
+            DsButton('ABRIR FORJA',
                 key: const ValueKey('run-open-armory'),
-                onPressed: () => controller.openPanel(WorldPanel.armory)),
+                onPressed: () => controller.openPanel(WorldPanel.forge)),
           DsButton('LISTO',
               key: const ValueKey('run-ready'),
               kind: DsButtonKind.primary,
@@ -310,7 +310,7 @@ class RunScreen extends StatelessWidget {
       SizedBox(height: DsSpace.md),
       const DsSectionHeader('MEJORAR HABILIDADES'),
       Text(
-          'El arma (y lo que trae) se mejora en ABRIR ARMERÍA → FORJA. Acá, '
+          'El arma (y lo que trae) se mejora en ABRIR FORJA → MEJORAR. Acá, '
           'cada nivel suma +$pct % de poder a una habilidad libre (hasta '
           '+${RunTuning.skillUpMax}).',
           style: DsText.detail()),
