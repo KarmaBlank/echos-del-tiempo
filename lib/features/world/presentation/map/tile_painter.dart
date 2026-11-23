@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../../../core/settings/graphics.dart';
+import '../../../../game_engine/data/biomes_catalog.dart' show BosqueLayout;
 import '../../../../game_engine/models/game_map.dart';
 import 'map_themes.dart';
 
@@ -61,7 +62,7 @@ class TilePainter {
       if (lobby) themeId = 'lobby';
     }
     // El pueblo v0.21.0 es al aire libre (town_loop.md § 2.1).
-    if (themeId == 'pueblo') lobby = false;
+    if (themeId == 'pueblo' || themeId == 'bosque_ext') lobby = false;
     final th = mapTheme(themeId);
     final h = tileHash(tx, ty);
 
@@ -369,6 +370,10 @@ class TilePainter {
       case Tile.brazier || Tile.brazierLit:
         floor();
         _brazier(c, px, py, t, lit: ch == Tile.brazierLit);
+      // Recolectable de un exterior (overworld_biomes.md § 3.2).
+      case Tile.forage || Tile.forageUsed:
+        _grass(c, th, px, py, h);
+        _forageBush(c, px, py, tx, ty, used: ch == Tile.forageUsed);
       default:
         final zone = Tile.entranceZone(ch);
         if (zone != null) {
@@ -411,7 +416,7 @@ class TilePainter {
       lobby = inTown(tx, ty);
       if (lobby) themeId = 'lobby';
     }
-    if (themeId == 'pueblo') lobby = false;
+    if (themeId == 'pueblo' || themeId == 'bosque_ext') lobby = false;
     // Niebla del cementerio: sobre todo lo que no es vacío.
     if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
     final h = tileHash(tx, ty);
@@ -427,7 +432,13 @@ class TilePainter {
     }
 
     switch (ch) {
-      case Tile.path || Tile.grass || Tile.tree || Tile.rock || Tile.sign:
+      case Tile.path ||
+            Tile.grass ||
+            Tile.tree ||
+            Tile.rock ||
+            Tile.sign ||
+            Tile.forage ||
+            Tile.forageUsed:
         return false;
       case Tile.floor ||
             Tile.merchant ||
@@ -529,6 +540,8 @@ class TilePainter {
         Tile.bridge,
         Tile.lava,
         Tile.tombstone,
+        Tile.forage,
+        Tile.forageUsed,
         Tile.gear,
         ...Tile.poiTiles,
       }.contains(ch) ||
@@ -694,6 +707,24 @@ class TilePainter {
   }
 
   /// Cartel del lago (pesca).
+  /// Mata recolectable: con frutos del color de su tipo, o pelada.
+  void _forageBush(Canvas c, double px, double py, int tx, int ty,
+      {required bool used}) {
+    final kind = BosqueLayout.forage
+        .where((f) => f.x == tx && f.y == ty)
+        .map((f) => f.kind)
+        .firstOrNull ?? 0;
+    _circle(c, used ? ForagePalette.picked : ForagePalette.bush, px + 8,
+        py + 9, 7);
+    _circle(c, used ? ForagePalette.picked : ForagePalette.bushLight, px + 6,
+        py + 7, 3);
+    if (used) return;
+    final col = ForagePalette.fruit[kind % ForagePalette.fruit.length];
+    for (final (fx, fy) in const [(4, 9), (9, 5), (11, 11), (7, 12)]) {
+      _rect(c, col, px + fx, py + fy, 2, 2);
+    }
+  }
+
   void _sign(Canvas c, double px, double py) {
     _rect(c, TownPalette.plankDark, px + 7, py + 8, 2, 8);
     _rect(c, TownPalette.plankDark, px + 2, py + 2, 12, 7);

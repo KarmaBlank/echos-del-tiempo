@@ -91,26 +91,29 @@ extension _FishingOp on _Op {
     _f.lastCast[p.id] = s.time;
     final bonus = FishingRules.rodBonus(p.profile);
     final map = e.mapFor(s);
-    final lake = TownRules.lakeNear(s.town, p.x, p.y);
+    // Exterior de bioma (overworld_biomes.md § 3.1): su lago y su tabla.
+    final wild = s.place == kBosque;
+    final lake = wild ? null : TownRules.lakeNear(s.town, p.x, p.y);
     final dock = WorldRules.townSpot(p.x, p.y, map: map) == TownSpot.fishing
         ? _ft.d('dockBonus')
         : 0.0;
     // El lago donde pesca (town_editor.md § 5): su tamaño y sus peces.
     final rare = bonus.rare +
         dock +
-        TownRules.lakeRare(s.town, lake) +
+        (wild ? 0.0 : TownRules.lakeRare(s.town, lake)) +
         _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
+    final table = wild ? kForestFish : TownRules.lakeRoll(s.town, lake);
+    final junk = wild ? kForestJunk : kWaterJunk;
     // Botín del agua (§ 8): a veces no es un pez.
     final kind =
         FishingRules.rollLoot(_rand, p.profile, luck: bonus.rare + dock);
     final FishCatch fish;
     switch (kind) {
       case WaterLootKind.fish:
-        fish = FishingRules.roll(_rand, TownRules.lakeRoll(s.town, lake),
+        fish = FishingRules.roll(_rand, table,
             rareBonus: rare, pity: p.profile.life.pity);
       case WaterLootKind.basura:
-        final id = kWaterJunk[
-            (_rand() * kWaterJunk.length).floor() % kWaterJunk.length];
+        final id = junk[(_rand() * junk.length).floor() % junk.length];
         final d = kFish[id]!;
         fish =
             FishCatch(id, d.minCm + (_rand() * (d.maxCm - d.minCm)).round());

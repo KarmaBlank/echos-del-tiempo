@@ -31,6 +31,20 @@ class MoveAction extends SessionAction {
       {required this.epoch, this.dir = 1, this.moving = false});
 }
 
+/// `travel` (protocolo 48): el anfitrión lleva al grupo al lugar [place]
+/// del mapa de viaje (`pueblo`, `bosque`; overworld_biomes.md § 4).
+class TravelAction extends SessionAction {
+  final String place;
+  const TravelAction(this.place);
+}
+
+/// `forage` (protocolo 48): recolectar el punto [spot] del exterior
+/// (índice de `BosqueLayout.forage`; overworld_biomes.md § 3.2).
+class ForageAction extends SessionAction {
+  final int spot;
+  const ForageAction(this.spot);
+}
+
 /// Pausa de grupo (docs/specs/settings.md § "Pausa"): cualquier jugador
 /// pausa ([paused] `true`) o reanuda (`false`) la sala entera.
 class PauseAction extends SessionAction {

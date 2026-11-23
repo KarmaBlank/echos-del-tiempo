@@ -1463,6 +1463,11 @@ const _townLabels = {
   'stormBite': 'Tormenta: chance de que pique',
   'stormFisher': 'Tormenta: parte de la pesca de los pescadores',
   'faroCost': 'Faro: oro',
+  'forageRespawnSec': 'Bosque: segundos de rebrote de una mata',
+  'forageSeedChance': 'Bosque: chance de semilla al recolectar',
+  'forageXp': 'Bosque: XP de Cultivo por recolectar',
+  'reinforceDelay': 'Refuerzo: turnos de espera al entrar a una pelea',
+  'absentWeight': 'Dificultad: peso de cada ausente de la sala',
 };
 
 Map<String, String> _lifeTreeLabels() => {

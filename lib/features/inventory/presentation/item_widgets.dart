@@ -105,7 +105,9 @@ class PixelIcon extends StatelessWidget {
         painter: ItemIconPainter(
             kItemIconRows[iconKey] ?? kItemIconRows['espada']!, accent,
             procKey == null ? 'items' : 'items.$procKey',
-            look: look),
+            look: look)
+          ..pngKey = ItemIconImages.keyOf(
+              kItemIconRows.containsKey(iconKey) ? iconKey : 'espada'),
       );
 }
 

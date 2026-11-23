@@ -220,6 +220,9 @@ abstract final class ActionJson {
             'k': a.skill,
             if (a.node != null) 'n': a.node,
           },
+        // Protocolo 46 (v0.26.0): mapa de viaje y recolección.
+        TravelAction() => {'t': 'travel', 'p': a.place},
+        ForageAction() => {'t': 'forage', 'i': a.spot},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -448,6 +451,10 @@ abstract final class ActionJson {
             n: j.intOrNull('n') ?? 1);
       case 'lifeTree':
         return LifeTreeAction(j.str('k'), j.strOrNull('n'));
+      case 'travel':
+        return TravelAction(j.str('p'));
+      case 'forage':
+        return ForageAction(j.integer('i'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

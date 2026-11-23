@@ -236,6 +236,50 @@ Sobrescribe todos los PNG listados en este spec (54 desde v0.5: 4 héroes,
 4. `flutter test` verifica que toda entrada del manifest apunte a un
    archivo existente.
 
+## Íconos de armas e ítems: procedural vs PNG (v0.25.8)
+
+Dos maneras de que exista un sprite en el manifest:
+
+- `procedural: true`: se dibuja en código, no hay archivo. El Editor lo
+  muestra como "procedural" y sus perillas (`procedural.yaml`, § 7.5 de
+  game_editor.md) cambian el dibujo.
+- Ruta a un PNG: el archivo manda. Se generó una sola vez con una
+  herramienta y desde ahí es la fuente de verdad: se reemplaza o se edita
+  el PNG, sin tocar Dart.
+
+Los íconos de armas, escudos, pociones, materiales, Ecos y cofre (las 25
+formas de `lib/core/procedural/item_icon_rows.dart`) son PNG desde v0.25.8,
+con el mismo estilo que los de oficio (`# vida:inicio/fin`): 16 × 16,
+contorno oscuro, luz arriba a la izquierda, sombra abajo a la derecha y
+brillo en el metal. Cada forma tiene dos archivos en
+`assets/sprites/items/`:
+
+- `<forma>.png`: todo menos el acento (metal, mango, cuerda, papel…).
+- `<forma>_acento.png`: solo el acento (gema, color de rareza o del
+  material) en grises. El juego lo tiñe con el color que corresponde en
+  ese momento (rareza, tema, modo daltónico), así que un solo PNG sirve
+  para las cinco rarezas. Pintarlo en grises: blanco = color pleno.
+
+Las entradas están en el manifest entre `# items:inicio` y `# items:fin`.
+Encima del PNG el juego sigue dibujando la identidad del arma concreta
+(aura del elemento, destello del legendario, marca de ULT).
+
+Respaldo: si falta un PNG (o no carga), `PixelIcon` vuelve al dibujo
+procedural con las perillas de siempre. Las perillas de `items` ya no
+cambian lo que se ve mientras exista el PNG.
+
+Para cambiar un ícono: reemplazar el PNG (misma ruta y tamaño 16 × 16,
+fondo transparente) o importarlo desde el Editor de sprites, que lo
+guarda como override local y lo puede publicar al repo. Para volver a
+generarlos todos desde las formas:
+
+```
+dart run tool/export_item_icons.dart
+```
+
+Ojo: PISA todos los `items/<forma>.png` y `_acento.png` (también los
+editados a mano) y reescribe el bloque `# items:inicio/fin`.
+
 ## Dibujo: filtrado
 
 El prototipo dibuja con `imageSmoothingEnabled = false`. En Flutter/Flame

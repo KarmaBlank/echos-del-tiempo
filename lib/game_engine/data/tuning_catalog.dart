@@ -274,6 +274,15 @@ const Map<String, TuningDef> kTuningDefaults = {
     'stormBite': 0.3,
     'stormFisher': 0.35,
     'faroCost': 300,
+    // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
+    // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo
+    // por recolectar, turnos de espera del refuerzo que llega a una pelea
+    // (en intervalos propios) y peso de cada ausente en la dificultad.
+    'forageRespawnSec': 240,
+    'forageSeedChance': 0.12,
+    'forageXp': 6,
+    'reinforceDelay': 1,
+    'absentWeight': 0.6,
   }),
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {

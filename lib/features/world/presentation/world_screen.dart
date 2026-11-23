@@ -47,6 +47,7 @@ import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
+import 'panels/travel_panel.dart';
 import 'panels/helper_panel.dart';
 import 'panels/town_edit_overlay.dart';
 import 'panels/town_strip_cards.dart';
@@ -1004,6 +1005,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return TraderPanel(view: view, controller: controller);
       case WorldPanel.fountain:
         return FountainPanel(view: view, controller: controller);
+      case WorldPanel.travel:
+        return TravelPanel(view: view, controller: controller);
       case WorldPanel.helper:
         return HelperPanel(view: view, controller: controller);
       case WorldPanel.stash:

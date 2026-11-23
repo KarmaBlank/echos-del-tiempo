@@ -1,4 +1,4 @@
-# Deuda técnica
+﻿# Deuda técnica
 
 ## v0.27.0
 
@@ -11,6 +11,41 @@
 - test/features/world/session_music_test.dart: crossfade real a `townNight` al cruzar el atardecer con `SessionMusic` (solo está el de `trackFor`).
 - El cielo arranca en el día 1 en mundos viejos; no hay forma de ver la hora fuera del tinte (un reloj en el HUD queda pendiente).
 
+## v0.26.0 (mapa de viaje y Bosque, primera pasada)
+
+Tests salteados (prioridad del dueño: salir rápido). Solo hay tests de
+reglas en `test/game_engine/overworld_biomes_test.dart`:
+
+- Sin test de widget del MAPA DE VIAJE (botón gris para el no anfitrión,
+  PRÓXIMAMENTE, ACÁ). Se ve en `tool/shots/v0260_bosque_shots_test.dart`.
+- Sin test de red con dos peers viajando (cliente que ve el cambio de
+  mapa por snapshot) ni de `forage` por cable más allá del round-trip de
+  `SessionJson`.
+- Sin test de pesca en el lago del Bosque (tabla `kForestFish`, basura del
+  Bosque); la tirada es la misma de siempre con otra lista.
+- Sin test de plantar y cosechar las semillas del Bosque en la huerta
+  (son `CropDef` comunes: pasan por el mismo camino que las del pueblo).
+- Sin test de que la huerta, la edición del pueblo y los carteles del
+  pueblo no se dibujan en el exterior (`map_game.dart`).
+- Sin test del prompt `[E] Mapa de viaje` / `[E] Recolectar` ni del
+  botón MAPA DE VIAJE de la fuente.
+
+Funcionalidad pendiente:
+
+- Party dividida (unos en el pueblo, otros en un bioma o en la
+  mazmorra) y ubicación por jugador (town_loop.md § 11b). Hoy viajan
+  todos juntos y decide el anfitrión.
+- Con la party dividida, `roomExtra` de la dificultad por sala: hoy es
+  siempre 0 porque todos bajan.
+- Demora del refuerzo en los modos por ronda / por bando: solo está
+  probada en la línea de tiempo (`nextTurn`).
+- "Pedir ayuda" y el viaje del refuerzo (§ 11b): no hay.
+- XP de personaje por recolectar; respawn por misiones
+  (`biome.nodeRespawnMissions`): solo por tiempo.
+- Cinemática de viaje y música propia del Bosque.
+- Arte procedural de las matas (`ForagePalette`): sin entrada en
+  `sprite_manifest.yaml` todavía.
+- Los demás biomas (Ruinas, Cavernas, Grieta) se ven en gris.
 ## v0.25.7
 
 - test/features/world/farming_world_test.dart: CONTRATAR GRANJERO desde la fuente con nivel y oro: clic en la huerta contrata (helper +1, se cobra) y sale del modo elegir; no dueño ve los botones grises con el motivo.
@@ -36,6 +71,15 @@
   de un legendario en el detalle) y la grilla angosta (detalle arriba,
   ancho < 560).
 
+## v0.25.8
+
+- Sin test nuevo: que `PixelIcon` use el PNG de `items.<forma>` cuando
+  está cargado y el dibujo procedural cuando falta (se verificó solo con
+  las capturas de tool/shots/v0257_iconos_armas_shots_test.dart).
+- No se corrió la suite completa: solo test/features/admin,
+  inventory, combat (sprite_catalog, held_weapon) y world (ground_loot,
+  life_grid_shots).
+- Las armas en mano (weapon_overlay.dart) siguen con el dibujo procedural.
 ## v0.25.6
 
 - Sin test propio: ficha RESUMIDA del arma (`itemTipSummaryParts`), el

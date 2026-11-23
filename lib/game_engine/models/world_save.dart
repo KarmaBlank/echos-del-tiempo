@@ -40,6 +40,7 @@ class TownState {
       this.sides = const {},
       this.builds = kDefaultBuilds,
       this.marks = const {},
+      this.wild = const {},
       this.lights = const [],
       this.sky = const SkyState()});
 
@@ -65,6 +66,11 @@ class TownState {
   /// …) → esquina en coordenadas del pueblo base. Los que no están, en su
   /// lugar de siempre (`TownLayout.landmarks`).
   final Map<String, (int, int)> marks;
+
+  /// Recolectables de los exteriores ya usados (overworld_biomes.md § 3.2):
+  /// `<bioma>:<índice>` → segundo de la sala en que vuelve a crecer.
+  /// Al cargar el mundo se recorta al tiempo de rebrote (`setWorld`).
+  final Map<String, int> wild;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -162,6 +168,7 @@ class TownState {
     Map<String, (int, int)>? marks,
     List<(int, int)>? lights,
     SkyState? sky,
+    Map<String, int>? wild,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -172,7 +179,8 @@ class TownState {
         builds: builds ?? this.builds,
         marks: marks ?? this.marks,
         lights: lights ?? this.lights,
-        sky: sky ?? this.sky);
+        sky: sky ?? this.sky,
+        wild: wild ?? this.wild);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -188,6 +196,7 @@ class TownState {
               if (e.value > 0) e.key.code: e.value
           },
         'builds': [for (final b in builds) b.toJson()],
+        if (wild.isNotEmpty) 'wild': wild,
         if (marks.isNotEmpty)
           'marks': {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
@@ -262,6 +271,7 @@ class TownState {
       lake: raw['lake'] is List
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
+      wild: _ints(raw['wild']),
       marks: _marks(raw['marks']),
       lights: raw['lt'] is List
           ? {

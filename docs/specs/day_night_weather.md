@@ -93,4 +93,4 @@ crossfade normal al atardecer y al amanecer. La pesca sigue ganando.
 
 ## 7. Red
 
-Protocolo 48 (netcode.md): `town.sky`, `town.lt`, evento `bolt`.
+Protocolo 49 (netcode.md): `town.sky`, `town.lt`, evento `bolt`.

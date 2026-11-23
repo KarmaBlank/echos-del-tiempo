@@ -43,6 +43,8 @@ enum WorldPanel {
   /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
   fountain,
 
+  /// Mapa de viaje: pueblo y biomas (overworld_biomes.md § 1).
+  travel,
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
   /// (farming.md § 8, v0.25.5).
   helper,

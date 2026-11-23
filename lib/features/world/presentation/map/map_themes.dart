@@ -94,6 +94,22 @@ const Map<String, MapTheme> kMapThemes = {
     tree: Color(0xFF1C5A2A),
     tree2: Color(0xFF2E7A38),
   ),
+  // Exterior del Bosque (overworld_biomes.md § 3, v0.26.0): pasto más
+  // oscuro que el pueblo, árboles densos y agua verdosa.
+  'bosque_ext': MapTheme(
+    ground: Color(0xFF3A7A3C),
+    ground2: Color(0xFF4A8E46),
+    wall: Color(0xFF154520),
+    wall2: Color(0xFF235F2C),
+    path: Color(0xFF8C6E45),
+    path2: Color(0xFF76603C),
+    water: Color(0xFF256B7A),
+    grass: Color(0xFF3A7A3C),
+    grass2: Color(0xFF4A8E46),
+    tree: Color(0xFF14421E),
+    tree2: Color(0xFF22602C),
+    trunk: Color(0xFF3A2414),
+  ),
   // Mapa del mundo fuera del pueblo (el pueblo usa `lobby`).
   'mundo': MapTheme(
     ground: Color(0xFF4FA046),
@@ -333,6 +349,14 @@ abstract final class FishingPalette {
   static const zoneOut = Color(0xAAE0A040);
 }
 
+/// Colores de los recolectables de los exteriores (overworld_biomes.md
+/// § 3.2): la mata y el fruto de cada tipo (índice de `kForageKinds`).
+abstract final class ForagePalette {
+  static const bush = Color(0xFF2E6B30);
+  static const bushLight = Color(0xFF3F8A3E);
+  static const picked = Color(0xFF4F5E3A);
+  static const fruit = [Color(0xFF8E3FD1), Color(0xFF9BE36A), Color(0xFFE0A040)];
+}
 /// Forma del fruto maduro de un cultivo (farming.md § 2.3, v0.25.3).
 enum CropShape { root, grain, tuber, pumpkin, berries, bulb, flower, melon, rose, crystal }
 
@@ -418,6 +442,37 @@ abstract final class CropPalette {
         fruit: Color(0xFF3FE0D0),
         accent: Color(0xFFE0FFFA),
         glow: true),
+    // Bosque (overworld_biomes.md § 3.3) y silvestres (§ 3.2).
+    'helecho_dulce': CropLook(CropShape.flower,
+        seed: Color(0xFF6E8A4A),
+        plant: Color(0xFF2F7A3A),
+        fruit: Color(0xFF8BD86A),
+        accent: Color(0xFFDFF5C0)),
+    'arandano_sombra': CropLook(CropShape.berries,
+        seed: Color(0xFF4A3A6A),
+        plant: Color(0xFF2D5E3A),
+        fruit: Color(0xFF4A5AC8),
+        accent: Color(0xFFB8C0FF)),
+    'seta_reloj': CropLook(CropShape.bulb,
+        seed: Color(0xFFB89A70),
+        plant: Color(0xFF6A8A5A),
+        fruit: Color(0xFFC8402E),
+        accent: Color(0xFFFFE8C8)),
+    'moras_bosque': CropLook(CropShape.berries,
+        seed: Color(0xFF5A3A5A),
+        plant: Color(0xFF2E6B30),
+        fruit: Color(0xFF8E3FD1),
+        accent: Color(0xFFD8B0FF)),
+    'hierba_rocio': CropLook(CropShape.grain,
+        seed: Color(0xFF7A9A6A),
+        plant: Color(0xFF3F8A3E),
+        fruit: Color(0xFF9BE36A),
+        accent: Color(0xFFE8FFD0)),
+    'hongo_ambar': CropLook(CropShape.tuber,
+        seed: Color(0xFF8A6A40),
+        plant: Color(0xFF5A7A4A),
+        fruit: Color(0xFFE0A040),
+        accent: Color(0xFFFFE0A0)),
   };
 
   static CropLook of(String? id) => looks[id] ?? fallback;
