@@ -45,21 +45,39 @@ class MapFishingLayer {
   /// Hay un salto de captura en curso (tests y capturas).
   bool get popping => _pops.isNotEmpty;
 
+  int? _waterKey;
+
+  /// Posiciones (x, y, tamaño) de las sombras (tests).
+  List<(double, double, double)> get shadowLayout =>
+      [for (final s in _shadows) (s.x, s.y, s.size)];
+
   void _sync(GameMap m) {
     if (identical(m, _map)) return;
     _map = m;
-    _shadows.clear();
-    if (!m.lobby) return;
+    if (!m.lobby) {
+      _waterKey = null;
+      _shadows.clear();
+      return;
+    }
     final water = <(int, int)>[
       for (var y = 0; y < m.height; y++)
         for (var x = 0; x < m.width; x++)
           if (FishingCast.isWater(m, x, y)) (x, y),
     ];
+    // Cada snapshot trae otra instancia de GameMap aunque el lago no cambie:
+    // las sombras solo se regeneran si cambia la geometría del agua.
+    final key = Object.hash(m.width, m.height,
+        Object.hashAll([for (final (x, y) in water) y * m.width + x]));
+    if (key == _waterKey) return;
+    _waterKey = key;
+    _shadows.clear();
     if (water.isEmpty) return;
+    // Disposición determinista por geometría del lago.
+    final seed = math.Random(key & 0x7fffffff);
     for (var i = 0; i < 7; i++) {
-      final (tx, ty) = water[_rand.nextInt(water.length)];
+      final (tx, ty) = water[seed.nextInt(water.length)];
       _shadows.add(_Shadow(
-          (tx + 0.5) * 16, (ty + 0.5) * 16, 3.0 + _rand.nextDouble() * 3));
+          (tx + 0.5) * 16, (ty + 0.5) * 16, 3.0 + seed.nextDouble() * 3));
     }
   }
 
@@ -111,6 +129,28 @@ class MapFishingLayer {
       c.drawOval(
           Rect.fromCenter(
               center: Offset(s.x, s.y), width: s.size * 2, height: s.size),
+          p);
+    }
+  }
+
+  /// Agua brillante de un bioma (fishing.md § 11): destellos que laten
+  /// sobre el tile del día. [t] en segundos.
+  void drawHiddenSpot(Canvas c, GameMap m, String place, int day, double t) {
+    final spot = FishingCast.hiddenSpot(m, place, day);
+    if (spot == null) return;
+    final cx = (spot.$1 + 0.5) * 16, cy = (spot.$2 + 0.5) * 16;
+    final pulse = 0.5 + 0.5 * math.sin(t * 3);
+    c.drawCircle(Offset(cx, cy), 6 + 3 * pulse,
+        Paint()..color = FishingPalette.shimmerGlow);
+    final p = Paint()..color = FishingPalette.shimmer;
+    for (var i = 0; i < 3; i++) {
+      final a = t * 1.7 + i * 2.1;
+      final r = 2 + 4 * ((t * 0.8 + i / 3) % 1);
+      c.drawRect(
+          Rect.fromCenter(
+              center: Offset(cx + math.cos(a) * r, cy + math.sin(a) * r),
+              width: 1.5,
+              height: 1.5),
           p);
     }
   }

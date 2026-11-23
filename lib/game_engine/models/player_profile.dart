@@ -154,7 +154,7 @@ class PlayerProfile {
   /// Pesca, cañas y bolsa de Pescados (JSON `life`, fishing.md § 3).
   final LifeSkills life;
 
-  /// Encargos seguidos (roles.md § 7): `<tipo>:<habitante>` con tipo
+  /// Encargos seguidos (roles.md § 8): `<tipo>:<habitante>` con tipo
   /// `encargo`, `pedido` u `orden`; como mucho
   /// `QuestTrackRules.maxTracked`. JSON `trk` (protocolo 52).
   final List<String> tracked;

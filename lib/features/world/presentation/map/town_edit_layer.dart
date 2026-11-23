@@ -28,6 +28,28 @@ abstract final class TownEditLayer {
     };
   }
 
+  /// Dibuja el contorno de la unión de [parts] (coordenadas del pueblo),
+  /// corrido [inset] px hacia adentro.
+  static void _outline(
+      Canvas c, List<TownRect> parts, int ox, int oy, Paint line,
+      {double inset = 0.5}) {
+    bool inside(int x, int y) => parts.any((p) => p.contains(x, y));
+    for (final (x0, y0, x1, y1) in TownRect.outline(parts)) {
+      // El lado de adentro del segmento define hacia dónde se corre.
+      final horiz = y0 == y1;
+      final double dx, dy;
+      if (horiz) {
+        dx = 0;
+        dy = inside(x0, y0) ? inset : -inset;
+      } else {
+        dy = 0;
+        dx = inside(x0, y0) ? inset : -inset;
+      }
+      c.drawLine(Offset((x0 + ox) * ts + dx, (y0 + oy) * ts + dy),
+          Offset((x1 + ox) * ts + dx, (y1 + oy) * ts + dy), line);
+    }
+  }
+
   /// [view]: lo visible del mundo (px); la etiqueta de cada franja va en
   /// el centro de su parte visible.
   static void draw(Canvas c, SessionController ctl, GameMap map, MapText text,
@@ -85,12 +107,8 @@ abstract final class TownEditLayer {
     for (final b in town.builds) {
       final sel = b.id == e.selected;
       line.color = sel ? TownEditPalette.selected : TownEditPalette.outline;
-      for (final p in b.parts) {
-        c.drawRect(
-            Rect.fromLTWH((p.x + ox) * ts, (p.y + oy) * ts, p.w * ts, p.h * ts)
-                .deflate(0.5),
-            line);
-      }
+      // Contorno de la unión: una huerta o lago fundido se ve como uno.
+      _outline(c, b.parts, ox, oy, line);
     }
     // Faros (day_night_weather.md § 5).
     for (final f in town.lights) {
@@ -141,6 +159,18 @@ abstract final class TownEditLayer {
       return;
     }
     final ok = ctl.editGhostError == null;
+    // Vista previa de la fusión: si al soltar se funde con otra huerta o
+    // lago, se marca el contorno del resultado (town_editor.md § 4.2).
+    if (ok && (e.step == TownEditStep.placing || e.step == TownEditStep.moving)) {
+      final r = e.step == TownEditStep.placing
+          ? TownRules.place(town, e.placeDef!, g.$1, g.$2)
+          : TownRules.move(town, e.selected!, g.$1, g.$2);
+      final m = r.id == null ? null : r.town?.build(r.id!);
+      if (m != null && m.parts.length > parts.length) {
+        _outline(c, m.parts, ox, oy, line..color = TownEditPalette.selected,
+            inset: -1.5);
+      }
+    }
     for (final p in parts) {
       final r = Rect.fromLTWH(p.x * ts, p.y * ts, p.w * ts, p.h * ts);
       c.drawRect(r,

@@ -89,6 +89,23 @@ const Map<String, TuningDef> kTuningDefaults = {
     // máximo y bonus de rareza por tirar desde un muelle.
     'maxCastTiles': 5,
     'dockBonus': 0.1,
+    // Bestiario de pesca (fishing.md § 10): primera captura de cada
+    // especie, × su XP normal; XP de personaje por rareza × este factor.
+    'firstCatchFishXp': 5,
+    'firstCatchCharXp': 4,
+    // Agua brillante (fishing.md § 11).
+    'spotRare': 0.35,
+    'spotLoot': 0.25,
+    'spotRadius': 2,
+    // Horarios de los peces (fishing.md § 13): chance de que un pez fuera
+    // de su franja entre igual en la tirada.
+    'offHoursChance': 0.03,
+    // Pescador nativo del bioma (fishing.md § 12).
+    'fisherRarityLevels': 6,
+    'fisherXpBase': 30,
+    'fisherXpStep': 6,
+    'fisherCharXpPerValue': 1.5,
+    'fisherGoldPerValue': 0.6,
     // Botín del agua (fishing.md § 8): chance de que la captura no sea un
     // pez, pesos de cada tipo, mejora por nivel de Pesca y caña, pity del
     // cofre o arma y los legendarios exclusivos (nivel y caña mínimos).
@@ -117,6 +134,9 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // farming.md (v0.23.0): Cultivo, herramientas, huerta y agropecuario.
   TuningId.farming: TuningDef('Cultivo', {
+    // Afinidad de los cultivos con la hora y el clima (farming.md § 14).
+    'affinityBonus': 0.25,
+    'affinityMalus': 0.1,
     // Nivel: misma forma que Pesca.
     'maxLevel': 30,
     'xpBase': 40,
@@ -316,6 +336,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'orderRarityLevels': 12,
     'orderAnyBiomeLevel': 20,
     'orderQualityLevel': 15,
+    'orderSizeLevel': 8,
     'comGold': 40,
     'comMat': 4,
     'comLoot': 5,
@@ -337,6 +358,33 @@ const Map<String, TuningDef> kTuningDefaults = {
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {
     'pointsPerLevel': 1,
+    // Poder de aventurero (roles.md § 5).
+    'p_v': 0.04,
+    'p_d': 0.04,
+    'p_g': 0.04,
+    'p_g_2': 0.04,
+    'c_v': 0.04,
+    'c_d': 0.04,
+    'c_g': 0.04,
+    'c_g_2': 0.04,
+    // Herrería (roles.md § 6): nivel = curva de Pesca con estos números.
+    'smithMaxLevel': 30,
+    'smithXpBase': 40,
+    'smithXpExp': 1.5,
+    'smithXpForge': 12,
+    'smithXpCommission': 60,
+    'smithXpCondense': 4,
+    'smithForgeCap': 0.4,
+    'h_r': 0.05,
+    'h_a1': 0.05,
+    'h_b1': 0.04,
+    'h_a2': 0.08,
+    'h_b2': 0.04,
+    'h_c': 0.15,
+    'h_m': 0.05,
+    'h_m_2': 0.05,
+    'h_f': 0.08,
+    'h_f_2': 0.15,
     'p_r': 0.05,
     'p_a1': 0.06,
     'p_a2': 0.08,
@@ -566,7 +614,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Modo de combate por defecto de la sala (turn_modes.md § 1): 0 línea
     // de tiempo, 1 por rondas, 2 por fases.
     'modeCoop': 1,
-    'modeSolo': 0,
+    'modeSolo': 1,
     // Por fases: pausa de planificación al abrir la fase de jugadores (s).
     'planPause': 2,
   }),

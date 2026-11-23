@@ -14,7 +14,7 @@ import 'biome_npc_panel.dart'
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 
-/// DIARIO (roles.md § 7.1, antes "registro de encargos"): la subpestaña
+/// DIARIO (roles.md § 8.1, antes "registro de encargos"): la subpestaña
 /// SEGUIDOS con los encargos que seguís y una por habitante con su orden
 /// del día y los pasos de su cadena que ya pidió; el detalle a la
 /// derecha. Se abre con J en el pueblo, desde el HUD o la fuente.

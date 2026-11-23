@@ -761,6 +761,31 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 53 (v0.32.0: encargos seguidos y vistos)
+
+- `town {o: track, id: habitante, t: '<tipo>:<habitante>'}`: SEGUIR /
+  dejar de seguir un encargo, pedido u orden activo (como mucho 5).
+- `town {o: seen, id: habitante}`: marca como visto lo que el habitante
+  tiene para decir (paso de su cadena, pedido y orden).
+- El perfil suma `trk` (seguidos) y `seen` (habitante → huella de lo
+  visto). Los dos los valida el anfitrión y solo tocan el perfil de quien
+  los pide (roles.md § 8).
+- Un cliente 52 no conocería `track` / `seen`: la sala no mezcla
+  versiones.
+
+## Mundo, protocolo 52 (v0.31.0: roles de exploración)
+
+- `town {o: fisherReq, id: bioma}`: entregar el pedido del pescador
+  nativo del bioma (fishing.md § 12). Solo en ese bioma; lo valida el
+  anfitrión.
+- `town` del snapshot suma `dy` (topes del día del mundo: XP de órdenes,
+  encargo de forja y pedido del pescador), que también se guarda en el
+  mundo.
+- El perfil suma `life.sx` (XP de Herrería), `life.st` (árbol de
+  Herrería) y `life.lg` (bestiario de pesca: especie → récord en cm).
+  `lifeTree` acepta `k: herreria`.
+- Un cliente 51 no conocería `fisherReq`: la sala no mezcla versiones.
+
 ## Mundo, protocolo 51 (v0.30.0: habitantes en el pueblo)
 
 - `town` del snapshot suma `res` (lista de `ResidentState`: relación,

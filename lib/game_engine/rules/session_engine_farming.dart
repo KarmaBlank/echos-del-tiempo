@@ -20,9 +20,6 @@ class FarmingHostState {
   /// Segundos de tormenta desde la última tirada de rayo.
   double boltAcc = 0;
 
-  /// XP de órdenes de habitantes dada hoy (`id:día` → XP; § 10.5).
-  final orderXp = <String, int>{};
-
   /// Último día del mundo procesado para los habitantes.
   int residentDay = 0;
 
@@ -90,7 +87,10 @@ extension _FarmingOp on _Op {
       for (final e in t.plots.entries) {
         // Con lluvia se riega todo lo plantado (day_night_weather.md § 3.2).
         final w = rain ? FarmingRules.rain(e.value) : e.value;
-        final g = FarmingRules.grow(w, step);
+        // Afinidad del cultivo con la hora y el clima (farming.md § 14).
+        final seed = w.seed;
+        final g = FarmingRules.grow(w, step,
+            mult: seed == null ? 1 : LifeTimeRules.cropGrowth(seed, t.sky));
         if (g != e.value) changed = true;
         out[e.key] = g;
       }
@@ -120,7 +120,10 @@ extension _FarmingOp on _Op {
               1, (a, h) => math.max(a, FishingRules.level(h.profile))),
           farmLv: humans.fold(
               1, (a, h) => math.max(a, FarmingRules.level(h.profile))));
-      _fa.orderXp.removeWhere((k, _) => !k.endsWith(':${sky.day}'));
+      s.town = s.town.copyWith(daily: {
+        for (final e in s.town.daily.entries)
+          if (e.key.endsWith(':${sky.day}')) e.key: e.value,
+      });
     }
     if (SkyRules.now(sky) != Weather.tormenta) {
       _fa.boltAcc = 0;
@@ -360,6 +363,18 @@ extension _FarmingOp on _Op {
   void lifeLevelXp(SessionPlayer p, int lvl) =>
       grantCharXp(p, ResidentRules.t.i('lifeLevelCharXp') * lvl);
 
+  /// XP de Herrería (roles.md § 6); al subir de nivel, XP de personaje.
+  void smithXp(SessionPlayer p, int base) {
+    if (p.isCompanion || base <= 0) return;
+    final lvl0 = SmithRules.level(p.profile);
+    _profileChange(p, SmithRules.gain(p.profile, base));
+    final lvl1 = SmithRules.level(p.profile);
+    if (lvl1 > lvl0) {
+      say('${p.name} subió Herrería a nivel $lvl1.');
+      lifeLevelXp(p, lvl1);
+    }
+  }
+
   /// Suma [xp] de personaje a [p] (con sus subidas de nivel).
   void grantCharXp(SessionPlayer p, int xp) {
     if (xp <= 0) return;
@@ -500,6 +515,8 @@ extension _FarmingOp on _Op {
     if (npc == null || n == null) return false;
     final home = s.place == null;
     final day = math.max(1, s.town.sky.day);
+    // Una vez mudado, el habitante solo está en el pueblo (§ 10.1).
+    if (!home && s.town.resident(npc).invited) return false;
     switch (a.op) {
       case TownOp.invite:
         final r = ResidentRules.invite(s.town, npc);
@@ -557,15 +574,15 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.order:
         if (!home) return false;
-        final key = '${p.id}:$day';
-        final used = _fa.orderXp[key] ?? 0;
+        final key = '${p.profile.name}:$day';
+        final used = s.town.daily[key] ?? 0;
         final r = ResidentRules.deliverOrder(
             p.profile, s.town, npc, ResidentRules.t.i('orderXpDayCap') - used);
         if (r == null) return false;
         final pts = r.$1.treeBonus - p.profile.treeBonus;
         _profileChange(p, r.$1, gain: true);
         s.town = r.$2;
-        _fa.orderXp[key] = used + r.$3;
+        s.town = s.town.copyWith(daily: {...s.town.daily, key: used + r.$3});
         grantCharXp(p, r.$3);
         say('${p.name} entregó la orden de ${n.name} (+${r.$3} XP'
             '${pts > 0 ? ', +1 punto de árbol' : ''}).');
@@ -574,15 +591,16 @@ extension _FarmingOp on _Op {
         // Encargo de forja de Brann (roles.md § 4): un arma de tu clase,
         // uno por día del mundo.
         if (!home || npc != 'brann') return false;
-        final key = 'com:${p.id}:$day';
-        if (_fa.orderXp.containsKey(key)) return false;
+        final key = 'com:${p.profile.name}:$day';
+        if (s.town.daily.containsKey(key)) return false;
         final paid = ResidentRules.payCommission(p.profile, s.town);
         if (paid == null) return false;
         _profileChange(p, paid);
-        _fa.orderXp[key] = 0;
+        s.town = s.town.copyWith(daily: {...s.town.daily, key: 0});
         final ri = ResidentRules.commissionRarity(s.town.resident('brann'),
             fishLv: FishingRules.level(p.profile),
-            farmLv: FarmingRules.level(p.profile));
+            farmLv: FarmingRules.level(p.profile),
+            smithLv: SmithRules.level(p.profile));
         final item = rules.loot.generate(_rand,
             itemLevel: ResidentRules.commissionItemLevel(p.profile.level),
             rarity: Rarity.values[ri],
@@ -590,6 +608,7 @@ extension _FarmingOp on _Op {
             source: LootSource.chest);
         say('Brann forjó para ${p.name}: ${item.rarity.label.toLowerCase()} '
             'de nivel ${item.itemLevel}.');
+        smithXp(p, SmithRules.t.i('smithXpCommission'));
         _deliver(p, [LootDrop.item(item)], LootSource.mission, p.x, p.y,
             stashOverflow: true);
         return true;
@@ -701,6 +720,25 @@ extension _FarmingOp on _Op {
             TownOp.order ||
             TownOp.commission:
         return _residentAction(p, a);
+      case TownOp.fisherReq:
+        // Pescador nativo (fishing.md § 12): solo en su bioma.
+        final biome = a.id;
+        if (biome == null || s.place != biome || p.isCompanion) return false;
+        final day = math.max(1, s.town.sky.day);
+        final lv0 = FishingRules.level(p.profile);
+        final r = BiomeFisherRules.deliver(p.profile, s.town, biome, day);
+        if (r == null) return false;
+        _profileChange(p, r.$1, gain: true);
+        s.town = r.$2;
+        grantCharXp(p, r.$3);
+        say('${p.name} le entregó el pedido a '
+            '${kBiomeFishers[biome]?.name ?? 'el pescador'} (+${r.$3} XP).');
+        final lv1 = FishingRules.level(p.profile);
+        if (lv1 > lv0) {
+          say('${p.name} subió Pesca a nivel $lv1.');
+          lifeLevelXp(p, lv1);
+        }
+        return true;
       case TownOp.stock:
         final sp = a.id;
         if (sp == null) return false;

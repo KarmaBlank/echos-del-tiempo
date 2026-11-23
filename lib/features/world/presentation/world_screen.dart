@@ -48,6 +48,7 @@ import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/biome_npc_panel.dart';
+import 'panels/biome_fisher_panel.dart';
 import 'panels/quest_log_panel.dart';
 import 'panels/travel_panel.dart';
 import 'panels/helper_panel.dart';
@@ -405,6 +406,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         // Destellos del rayo y lluvia (accessibility.md; day_night_weather.md § 4).
         ..flashFactor = gfx.flashFactor
         ..reduceMotion = gfx.reduceMotion
+        // Oscuridad (lighting.md § 7).
+        ..darknessKeep = gfx.darkness.keep
         // Texto del mapa (accessibility.md § 9.5 y 9.6).
         ..noticeFactor = gfx.noticeDuration.factor
         ..labelBackdrop = gfx.mapLabelBackdrop;
@@ -464,6 +467,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (tile == null) return;
                   if (controller.helperAt(tile.$1, tile.$2) case final h?) {
                     controller.openHelper(h.build.id, h.index);
+                  } else if (controller.residentAt(tile.$1, tile.$2)
+                      case final n?) {
+                    // Clic sobre un habitante: abre su pantalla (como E).
+                    controller.openResident(n);
+                  } else if (controller.fisherAt(tile.$1, tile.$2)) {
+                    controller.openPanel(WorldPanel.biomeFisher);
                   }
                 },
                 child: MouseRegion(
@@ -522,6 +531,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (e.buttons != kPrimaryMouseButton) return;
                   // El clic sobre un ayudante abre su pantalla, no trabaja.
                   if (controller.hoverHelper != null) return;
+                  final tile = game.tileAtScreen(e.localPosition);
+                  if (tile != null &&
+                      (controller.residentAt(tile.$1, tile.$2) != null ||
+                          controller.fisherAt(tile.$1, tile.$2))) {
+                    return;
+                  }
                   if (controller.activeTool == ActiveTool.rod) {
                     controller.startFishing();
                   } else {
@@ -1030,6 +1045,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return TravelPanel(view: view, controller: controller);
       case WorldPanel.biomeNpc:
         return BiomeNpcPanel(view: view, controller: controller);
+      case WorldPanel.biomeFisher:
+        return BiomeFisherPanel(view: view, controller: controller);
       case WorldPanel.questLog:
         return QuestLogPanel(view: view, controller: controller);
       case WorldPanel.helper:

@@ -187,7 +187,10 @@ abstract final class TownRules {
           final touch = o.parts
               .any((p) => merged.parts.any((q) => p.touches(q)));
           if (!touch) continue;
-          final first = rest.indexOf(o) < index;
+          // La más grande se queda con id, cartel y cofre (empate: la
+          // que estaba antes en la lista).
+          final first = o.area > merged.area ||
+              (o.area == merged.area && rest.indexOf(o) < index);
           merged = first ? _merge(o, merged) : _merge(merged, o);
           final oi = rest.indexOf(o);
           rest.removeAt(oi);

@@ -15,9 +15,14 @@ anfitrión"). Cada opción tiene un tooltip de una línea (`CombatMode.tip`).
 
 | opción | regla | por defecto |
 |---|---|---|
-| Línea de tiempo | `velocidad` con los topes de v0.20.20 | solo |
-| Por rondas | `porRonda` (§ 4) | cooperativo |
-| Por fases | `porFases` (§ 3) | no |
+| Línea de tiempo | `velocidad` con los topes de v0.20.20 | no (en prueba) |
+| Por rondas (recomendado) | `porRonda` (§ 4) | solo y cooperativo |
+| Por fases | `porFases` (§ 3) | no (en prueba) |
+
+Desde v0.31.0 "Por rondas (recomendado)" es el de por defecto en solitario
+y en cooperativo (`modeSolo` = `modeCoop` = 1). Las otras dos dicen en su
+tooltip por qué están en prueba. Un `GameSettings.combatMode` ya guardado
+se respeta; solo cambia el de por defecto de los ajustes sin valor.
 
 Los defaults son ajustes de Balance (Editor → Balance → Límites de
 combate): `modeCoop` y `modeSolo` (0 línea de tiempo, 1 por rondas, 2 por

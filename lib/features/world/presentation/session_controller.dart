@@ -30,6 +30,7 @@ import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
 import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
 import '../../../game_engine/rules/resident_rules.dart';
+import '../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
 
@@ -1249,12 +1250,71 @@ class SessionController extends StateNotifier<SessionView?> {
       }
       return null;
     }
+    // Ya vive en el pueblo: no está más en su bioma (§ 10.1).
+    if (s.town.resident(lay.npc.id).invited) return null;
     final (nx, ny) = lay.npc.tile;
     return WorldRules.distance(
                 local.x, local.y, (nx + 0.5) * 16, (ny + 0.5) * 16) <
             26
         ? lay.npc
         : null;
+  }
+
+  /// El habitante parado sobre el tile ([tx], [ty]) del mapa (o el de al
+  /// lado), para abrir su pantalla con un clic (§ 10).
+  BiomeNpcDef? residentAt(int tx, int ty) {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby || editingTown) return null;
+    bool near(double x, double y) =>
+        ((x / 16).floor() - tx).abs() <= 1 &&
+        ((y / 16).floor() - ty).abs() <= 1;
+    final lay = biomeLayout(s.place);
+    if (lay == null) {
+      if (s.place != null) return null;
+      final night = SkyRules.isNight(s.town.sky);
+      for (final n in ResidentRules.living(s.town)) {
+        final pos = ResidentRules.position(s.town, n.id, s.time, night: night);
+        if (pos != null && near(pos.$1, pos.$2)) return n;
+      }
+      return null;
+    }
+    if (s.town.resident(lay.npc.id).invited) return null;
+    final (nx, ny) = lay.npc.tile;
+    return near((nx + 0.5) * 16, (ny + 0.5) * 16) ? lay.npc : null;
+  }
+
+  /// Abre la pantalla de [n] (clic o E).
+  void openResident(BiomeNpcDef n) {
+    talkNpc = n;
+    openPanel(WorldPanel.biomeNpc);
+  }
+
+  /// El pescador nativo cerca del jugador local (fishing.md § 12).
+  BiomeFisherDef? get nearFisher {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    final f = kBiomeFishers[lay.id];
+    if (f == null) return null;
+    final (x, y) = BiomeFisherRules.position(lay, s.time);
+    return WorldRules.distance(local.x, local.y, x, y) < 26 ? f : null;
+  }
+
+  /// ¿El pescador nativo está en el tile ([tx], [ty]) o al lado?
+  bool fisherAt(int tx, int ty) {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || lay == null || kBiomeFishers[lay.id] == null) {
+      return false;
+    }
+    final (x, y) = BiomeFisherRules.position(lay, s.time);
+    return ((x / 16).floor() - tx).abs() <= 1 &&
+        ((y / 16).floor() - ty).abs() <= 1;
+  }
+
+  bool fisherDeliver() {
+    final b = place;
+    return _apply(TownAction(TownOp.fisherReq, id: b));
   }
 
   /// Frase del habitante (cambia con el día del mundo).
@@ -2371,6 +2431,8 @@ class SessionController extends StateNotifier<SessionView?> {
       } else if (nearNpc case final n?) {
         talkNpc = n;
         openPanel(WorldPanel.biomeNpc);
+      } else if (nearFisher != null) {
+        openPanel(WorldPanel.biomeFisher);
       } else if (nearForage != null) {
         forage();
       } else if (nearChest case final b? when b.chest.isNotEmpty) {
@@ -2491,7 +2553,7 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
-    // J: DIARIO de encargos en el pueblo (roles.md § 7.1; en el campo J
+    // J: DIARIO de encargos en el pueblo (roles.md § 8.1; en el campo J
     // pliega los objetivos).
     if (key == LogicalKeyboardKey.keyJ && s.mode == SessionMode.lobby) {
       toggleJournal();
@@ -3032,7 +3094,7 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   /// Tecla B / botón ALIJO [B].
-  /// Abre / cierra el DIARIO de encargos (roles.md § 7.1).
+  /// Abre / cierra el DIARIO de encargos (roles.md § 8.1).
   void toggleJournal() {
     if (_panel == WorldPanel.questLog) {
       closePanel();
@@ -3725,6 +3787,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearTravel) return (WorldPrompt.poi, '[E] Mapa de viaje');
     if (nearNpc case final n?) {
       return (WorldPrompt.poi, '[E] Hablar con ${n.name}');
+    }
+    if (nearFisher case final f?) {
+      return (WorldPrompt.poi, '[E] Hablar con ${f.name}');
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
     final helperTip = nearHelper == null ? '' : ' · ${WorldPrompt.helper.label}';

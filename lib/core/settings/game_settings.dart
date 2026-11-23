@@ -28,6 +28,18 @@ enum FlashLevel {
   final double factor;
 }
 
+/// "Oscuridad" (accesibilidad, lighting.md § 7): cuánto oscurecen la
+/// noche y las mazmorras oscuras. [keep]: parte de la oscuridad que queda
+/// (1 = toda, 0 = nada: todo se ve como de día).
+enum DarknessLevel {
+  normal(1),
+  soft(0.45),
+  off(0);
+
+  const DarknessLevel(this.keep);
+  final double keep;
+}
+
 /// "Tamaño del texto" (accesibilidad): cuánto se agranda el texto de la
 /// UI sobre la escala base (`RetroType`, `RetroTextScaler`). Ver
 /// docs/specs/settings.md § 3 y docs/specs/ui_style.md § "Tipografía".
@@ -222,6 +234,7 @@ class GameSettings {
     this.fullscreen = false,
     this.screenShake = true,
     this.flashes = FlashLevel.normal,
+    this.darkness = DarknessLevel.normal,
     this.damageNumbers = true,
     this.confirmDrop = true,
     this.scale = ScaleMode.fit,
@@ -260,6 +273,9 @@ class GameSettings {
   /// Sacudida de la escena de batalla en golpes fuertes.
   final bool screenShake;
   final FlashLevel flashes;
+
+  /// Oscuridad de la noche y las mazmorras oscuras (lighting.md § 7).
+  final DarknessLevel darkness;
 
   /// Números de daño / cura flotantes en la escena de batalla.
   final bool damageNumbers;
@@ -384,6 +400,7 @@ class GameSettings {
     bool? fullscreen,
     bool? screenShake,
     FlashLevel? flashes,
+    DarknessLevel? darkness,
     bool? damageNumbers,
     bool? confirmDrop,
     ScaleMode? scale,
@@ -419,6 +436,7 @@ class GameSettings {
         fullscreen: fullscreen ?? this.fullscreen,
         screenShake: screenShake ?? this.screenShake,
         flashes: flashes ?? this.flashes,
+        darkness: darkness ?? this.darkness,
         damageNumbers: damageNumbers ?? this.damageNumbers,
         confirmDrop: confirmDrop ?? this.confirmDrop,
         scale: scale ?? this.scale,
@@ -461,6 +479,7 @@ class GameSettings {
         'fullscreen': fullscreen,
         'shake': screenShake,
         'flashes': flashes.name,
+        'darkness': darkness.name,
         'damageNumbers': damageNumbers,
         'confirmDrop': confirmDrop,
         'scale': scale.name,
@@ -504,6 +523,9 @@ class GameSettings {
       screenShake: flag(json['shake'], d.screenShake),
       flashes: FlashLevel.values.firstWhere((f) => f.name == json['flashes'],
           orElse: () => d.flashes),
+      darkness: DarknessLevel.values.firstWhere(
+          (f) => f.name == json['darkness'],
+          orElse: () => d.darkness),
       damageNumbers: flag(json['damageNumbers'], d.damageNumbers),
       confirmDrop: flag(json['confirmDrop'], d.confirmDrop),
       scale: ScaleMode.fromName(json['scale'], d.scale),
@@ -554,6 +576,7 @@ class GameSettings {
       other.fullscreen == fullscreen &&
       other.screenShake == screenShake &&
       other.flashes == flashes &&
+      other.darkness == darkness &&
       other.damageNumbers == damageNumbers &&
       other.confirmDrop == confirmDrop &&
       other.scale == scale &&
@@ -608,7 +631,8 @@ class GameSettings {
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
-          mapLabelBackdrop, battleLog, partyExpanded, ultBrowse, textDetail));
+          mapLabelBackdrop, battleLog, partyExpanded, ultBrowse, textDetail,
+          darkness));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

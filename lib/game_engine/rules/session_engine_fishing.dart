@@ -99,15 +99,27 @@ extension _FishingOp on _Op {
         ? _ft.d('dockBonus')
         : 0.0;
     // El lago donde pesca (town_editor.md § 5): su tamaño y sus peces.
+    // Agua brillante del bioma (fishing.md § 11): mejor rareza y botín.
+    final spot = wild &&
+        FishingCast.nearHiddenSpot(map, s.place!, math.max(1, s.town.sky.day),
+            p.x, p.y, _ft.i('spotRadius'));
+    final spotRare = spot ? _ft.d('spotRare') : 0.0;
     final rare = bonus.rare +
         dock +
+        spotRare +
         (wild ? 0.0 : TownRules.lakeRare(s.town, lake)) +
         _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
-    final table = wild ? biome.fish : TownRules.lakeRoll(s.town, lake);
+    // Horario y clima de cada pez (fishing.md § 13): fuera de su franja
+    // casi nunca pica.
+    final table = LifeTimeRules.activeTable(
+        wild ? biome.fish : TownRules.lakeRoll(s.town, lake),
+        s.town.sky,
+        _rand);
     final junk = wild ? biome.junk : kWaterJunk;
     // Botín del agua (§ 8): a veces no es un pez.
     final kind =
-        FishingRules.rollLoot(_rand, p.profile, luck: bonus.rare + dock);
+        FishingRules.rollLoot(_rand, p.profile,
+            luck: bonus.rare + dock + (spot ? _ft.d('spotLoot') : 0.0));
     final FishCatch fish;
     switch (kind) {
       case WaterLootKind.fish:
@@ -152,7 +164,7 @@ extension _FishingOp on _Op {
     _f.pending.remove(p.id);
     if (!success) return true;
     if (pend.kind == WaterLootKind.fish || pend.kind == WaterLootKind.basura) {
-      _grantFish(p, pend.fish);
+      _grantFish(p, pend.fish, log: pend.kind == WaterLootKind.fish);
       p.profile = FishingRules.markDry(p.profile, pend.kind);
     } else {
       _grantWaterLoot(p, pend.kind);
@@ -221,9 +233,24 @@ extension _FishingOp on _Op {
     _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
   }
 
-  void _grantFish(SessionPlayer p, FishCatch c, {bool auto = false}) {
+  void _grantFish(SessionPlayer p, FishCatch c,
+      {bool auto = false, bool log = false}) {
     final lvl0 = FishingRules.level(p.profile);
+    final first = log && !p.profile.life.discovered(c.species);
     var prof = FishingRules.addCatch(p.profile, c, auto: auto);
+    if (log) {
+      prof = prof.copyWith(life: prof.life.logCatch(c.species, c.sizeCm));
+    }
+    // Primera captura de la especie (fishing.md § 10): XP de Pesca y de
+    // personaje extra, sin el tope por estadía.
+    var firstXp = 0;
+    if (first) {
+      prof = prof.copyWith(
+          life: prof.life.copyWith(
+              fishXp: prof.life.fishXp +
+                  FishingRules.fishXp(c) * _ft.i('firstCatchFishXp')));
+      firstXp = FishingRules.charXp(c) * _ft.i('firstCatchCharXp');
+    }
     // XP de personaje con tope por estadía (town_loop.md § 11c).
     final used = _f.charXp[p.id] ?? 0;
     final cxp = math.min(FishingRules.charXp(c, auto: auto),
@@ -238,6 +265,11 @@ extension _FishingOp on _Op {
     events.add(FishCaughtEvent(p.id, c.species, c.sizeCm, auto: auto));
     say('${p.name} pescó ${c.def.name} (${c.sizeCm} cm, ${c.rarity.label})'
         '${auto ? ' con la red' : ''}.');
+    if (first) {
+      say('Especie nueva en el bestiario de pesca de ${p.name}: '
+          '${c.def.name}.');
+      grantCharXp(p, firstXp);
+    }
     final lvl1 = FishingRules.level(prof);
     if (lvl1 > lvl0) {
       say('${p.name} subió Pesca a nivel $lvl1.');

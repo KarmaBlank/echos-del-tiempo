@@ -8,7 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../design/ds_harness.dart';
 
-/// Encargos seguidos, marcas y diálogo de habitantes (roles.md § 7,
+/// Encargos seguidos, marcas y diálogo de habitantes (roles.md § 8,
 /// ui_minimal.md § 10).
 void main() {
   test('revelar, marcar, seguir y guardar', () {

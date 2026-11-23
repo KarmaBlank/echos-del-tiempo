@@ -5,7 +5,8 @@
 /// Oficio con árbol propio.
 enum LifeSkillKind {
   pesca('PESCA'),
-  cultivo('CULTIVO');
+  cultivo('CULTIVO'),
+  herreria('HERRERÍA');
 
   const LifeSkillKind(this.label);
   final String label;
@@ -60,9 +61,15 @@ abstract final class LifeFx {
   static const helper = 'helper';
   static const seed = 'seed';
   static const water = 'water';
-  // Los dos
+  // Herrería (roles.md § 6)
+  static const forge = 'forge';
+  // Todos
   static const sell = 'sell';
   static const xp = 'xp';
+  // Poder de aventurero (roles.md § 5): vida máxima y ATQ / MAG (en
+  // fracción, se suman al árbol de pasivas).
+  static const hp = 'hp';
+  static const atk = 'atk';
 }
 
 const _pesca = <LifeTreeNode>[
@@ -108,6 +115,14 @@ const _pesca = <LifeTreeNode>[
       '+{v} % de precio y +{v2} % de XP de Pesca.',
       x: 0, y: 5, cost: 3, major: true, links: ['p_k1', 'p_k2'],
       effects: {LifeFx.sell: 'p_f', LifeFx.xp: 'p_f_2'}),
+  // Poder de aventurero (roles.md § 5).
+  LifeTreeNode('p_v', 'Brazos de remo', 'Vida máxima +{v} %.',
+      x: -2, y: 1, links: ['p_a1'], effects: {LifeFx.hp: 'p_v'}),
+  LifeTreeNode('p_d', 'Arpón del eco', 'ATQ y MAG +{v} %.',
+      x: 2, y: 1, links: ['p_b1'], effects: {LifeFx.atk: 'p_d'}),
+  LifeTreeNode('p_g', 'Calma del lago', 'Vida máxima +{v} % y ATQ y MAG +{v2} %.',
+      x: -2, y: 5, cost: 2, links: ['p_f'],
+      effects: {LifeFx.hp: 'p_g', LifeFx.atk: 'p_g_2'}),
 ];
 
 const _cultivo = <LifeTreeNode>[
@@ -154,12 +169,47 @@ const _cultivo = <LifeTreeNode>[
       '+{v} % de precio y +{v2} % de XP de Cultivo.',
       x: 0, y: 5, cost: 3, major: true, links: ['c_k1', 'c_k2'],
       effects: {LifeFx.sell: 'c_f', LifeFx.xp: 'c_f_2'}),
+  // Poder de aventurero (roles.md § 5).
+  LifeTreeNode('c_v', 'Espalda de surco', 'Vida máxima +{v} %.',
+      x: -2, y: 1, links: ['c_a1'], effects: {LifeFx.hp: 'c_v'}),
+  LifeTreeNode('c_d', 'Hoz templada', 'ATQ y MAG +{v} %.',
+      x: 2, y: 1, links: ['c_b1'], effects: {LifeFx.atk: 'c_d'}),
+  LifeTreeNode('c_g', 'Raíz firme', 'Vida máxima +{v} % y ATQ y MAG +{v2} %.',
+      x: -2, y: 5, cost: 2, links: ['c_f'],
+      effects: {LifeFx.hp: 'c_g', LifeFx.atk: 'c_g_2'}),
+];
+
+// Herrería (roles.md § 6): árbol chico de 8 nodos.
+const _herreria = <LifeTreeNode>[
+  LifeTreeNode('h_r', 'Aprendiz de fragua', '+{v} % de XP de Herrería.',
+      x: 0, y: 0, cost: 0, root: true, links: ['h_a1', 'h_b1'],
+      effects: {LifeFx.xp: 'h_r'}),
+  LifeTreeNode('h_a1', 'Martillo justo', 'La forja cuesta {v} % menos.',
+      x: -1, y: 1, links: ['h_r', 'h_a2'], effects: {LifeFx.forge: 'h_a1'}),
+  LifeTreeNode('h_b1', 'Temple', 'Vida máxima +{v} %.',
+      x: 1, y: 1, links: ['h_r', 'h_b2'], effects: {LifeFx.hp: 'h_b1'}),
+  LifeTreeNode('h_a2', 'Yunque antiguo', 'La forja cuesta {v} % menos.',
+      x: -1, y: 2, links: ['h_a1', 'h_m'], exclusive: 'h_x',
+      effects: {LifeFx.forge: 'h_a2'}),
+  LifeTreeNode('h_b2', 'Filo del pasado', 'ATQ y MAG +{v} %.',
+      x: 1, y: 2, links: ['h_b1', 'h_m'], effects: {LifeFx.atk: 'h_b2'}),
+  LifeTreeNode('h_c', 'Ojo de oficio', '+{v} % de XP de Herrería.',
+      x: 0, y: 2, links: ['h_a1', 'h_b1'], exclusive: 'h_x',
+      effects: {LifeFx.xp: 'h_c'}),
+  LifeTreeNode('h_m', 'Mecanismo vivo', 'Vida máxima +{v} % y ATQ y MAG +{v2} %.',
+      x: 0, y: 3, cost: 2, major: true, links: ['h_a2', 'h_b2', 'h_f'],
+      effects: {LifeFx.hp: 'h_m', LifeFx.atk: 'h_m_2'}),
+  LifeTreeNode('h_f', 'Maestro de la fragua',
+      'La forja cuesta {v} % menos y +{v2} % de XP de Herrería.',
+      x: 0, y: 4, cost: 3, major: true, links: ['h_m'],
+      effects: {LifeFx.forge: 'h_f', LifeFx.xp: 'h_f_2'}),
 ];
 
 /// Los nodos de cada oficio.
 const kLifeTrees = <LifeSkillKind, List<LifeTreeNode>>{
   LifeSkillKind.pesca: _pesca,
   LifeSkillKind.cultivo: _cultivo,
+  LifeSkillKind.herreria: _herreria,
 };
 
 LifeTreeNode? lifeTreeNode(LifeSkillKind k, String id) {

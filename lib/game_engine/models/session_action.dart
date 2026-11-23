@@ -663,7 +663,7 @@ enum TownOp {
   lock,
   unlock,
 
-  /// v0.30.2 (protocolo 52, roles.md § 7): SEGUIR / dejar de seguir el
+  /// v0.30.2 (protocolo 52, roles.md § 8): SEGUIR / dejar de seguir el
   /// encargo [target] (`<tipo>:<habitante>`) y marcar como visto lo que
   /// [id] tiene para decir. Solo tocan el perfil de quien lo pide.
   track,
@@ -681,7 +681,11 @@ enum TownOp {
   order,
 
   /// Encargo de forja de Brann (roles.md § 4): un arma de tu clase.
-  commission
+  commission,
+
+  /// v0.31.0 (protocolo 52): entregar el pedido del pescador nativo del
+  /// bioma (fishing.md § 12), [TownAction.id] = bioma.
+  fisherReq
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

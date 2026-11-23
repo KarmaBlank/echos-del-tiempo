@@ -5,7 +5,7 @@ import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'resident_rules.dart';
 
-/// Tipo de encargo activo que se puede seguir (roles.md § 7).
+/// Tipo de encargo activo que se puede seguir (roles.md § 8).
 enum QuestTrackKind {
   encargo('Encargo'),
   pedido('Pedido'),
@@ -15,7 +15,7 @@ enum QuestTrackKind {
   final String label;
 }
 
-/// Marca sobre la cabeza de un habitante (roles.md § 7.4).
+/// Marca sobre la cabeza de un habitante (roles.md § 8.4).
 enum NpcMark { none, news, ready }
 
 /// Un encargo, pedido u orden activo de un habitante, con su avance.
@@ -54,7 +54,7 @@ class ActiveQuest {
       : '${npc.name} · ${kind.label.toLowerCase()}';
 }
 
-/// Seguimiento de encargos y marcas de habitantes (roles.md § 7): reglas
+/// Seguimiento de encargos y marcas de habitantes (roles.md § 8): reglas
 /// puras; el anfitrión valida SEGUIR y VISTO (`TownOp.track` / `seen`).
 abstract final class QuestTrackRules {
   static const maxTracked = 5;

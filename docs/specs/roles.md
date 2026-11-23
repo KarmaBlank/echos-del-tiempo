@@ -1,5 +1,17 @@
 # Spec: Roles del pueblo (v0.30.0)
 
+## 0. Principio de diseño: el pueblo es 100 % opcional
+
+Un grupo puede terminar el juego entero solo con mazmorras, botín y
+fusiones, sin pescar, cultivar, construir ni reclutar habitantes. Los
+roles del pueblo son un camino alternativo, nunca un requisito:
+
+- Nada del camino crítico (abrir zonas, jefes, niveles necesarios, poder
+  de equipo necesario) depende de los sistemas del pueblo.
+- Los bonus del pueblo (habitantes, nodos de poder de los oficios,
+  Herrería, encargos de forja) no se cuentan en el balance: el balance de
+  solo mazmorras sigue como hoy, y lo del pueblo es un extra.
+
 ## 1. Visión
 
 Quien prefiere la vida del pueblo (pescar, cultivar, forjar) tiene que
@@ -43,6 +55,11 @@ Cada habitante que vive en el pueblo pide una orden por día del mundo
   (`PlayerProfile.treeBonus`, JSON `tb`). El detalle de la orden muestra
   todo eso antes de entregar.
 - Valor = precio de venta × cantidad × (1 + calidad pedida).
+- Pescados con tamaño (v0.31.0): desde `orderSizeLevel` de Pesca, a veces
+  piden "de N cm o más" (un cuarto, la mitad o tres cuartos del rango).
+  La bolsa no guarda tamaños: vale el récord del bestiario.
+- Los topes del día (XP de órdenes, encargo de forja, pedido del pescador
+  nativo) se guardan en el mundo (`town.dy`).
 
 ## 4. Encargos de forja (Brann)
 
@@ -59,9 +76,46 @@ en una casa:
   la cadena larga.
 - Uno por jugador y día del mundo. Lo valida el anfitrión.
 
-## 5. Encargos seguidos, DIARIO y marcas (v0.32.0)
+## 5. Poder de aventurero en los oficios (v0.31.0)
 
-### 5.1 Revelación
+Cada árbol de oficio suma nodos de poder que valen dentro y fuera de las
+mazmorras (se suman al árbol de pasivas en `StatsCalculator` vía
+`PlayerBuild.lifeHp` / `lifeAtk`):
+- Pesca: Brazos de remo (vida +4 %), Arpón del eco (ATQ y MAG +4 %),
+  Calma del lago (ambos +4 %, desde Maestro del lago).
+- Cultivo: Espalda de surco, Hoz templada y Raíz firme (mismos números).
+- Herrería: Temple, Filo del pasado y Mecanismo vivo.
+Números en Balance → Oficios: árboles. Son un extra (§ 0): el balance de
+solo mazmorras no los cuenta.
+
+## 6. Herrería (v0.31.0)
+
+Tercer oficio con árbol chico (8 nodos), en la pestaña OFICIOS.
+- XP: `smithXpForge` por cada forja de estadística, `smithXpCommission`
+  por encargo de forja de Brann, `smithXpCondense` por condensar (fuera
+  de la Travesía). Curva `smithXpBase` × nivel^`smithXpExp`, tope
+  `smithMaxLevel`.
+- Cada nivel da XP de personaje (`lifeLevelCharXp` × nivel, § 2).
+- Árbol: Aprendiz de fragua (raíz, XP), Martillo justo / Yunque antiguo /
+  Maestro de la fragua (la forja cuesta menos, tope `smithForgeCap`),
+  Ojo de oficio (XP; excluyente con Yunque antiguo), Temple / Filo del
+  pasado / Mecanismo vivo (poder de aventurero).
+- Descuento de forja total = Brann + Herrería (`ResidentRules
+  .forgeDiscount`, tope 75 %); la forja lo muestra y valida igual que el
+  anfitrión.
+- El nivel de Herrería cuenta para la rareza del encargo de Brann.
+
+## 7. Roles de exploración (v0.31.0)
+
+- Pescador explorador: bestiario de pesca, primera captura, agua
+  brillante y pescador nativo de cada bioma (fishing.md § 10 a § 12).
+- Granjero y animales: especificado en farming.md § 13, sin implementar.
+- Pendiente: que el pescador se quede afuera mientras el grupo baja a la
+  mazmorra (party dividida, town_loop.md § 11b).
+
+## 8. Encargos seguidos, DIARIO y marcas (v0.32.0)
+
+### 8.1 Revelación
 
 Un paso nuevo de la cadena de un habitante no aparece en ENCARGOS ni en
 el DIARIO hasta que él lo pide en el diálogo (con el texto del paso).
@@ -70,7 +124,7 @@ Los pasos futuros nunca se listan. Al abrir el diálogo el cliente manda
 `npcSeen[npc] = QuestTrackRules.newsKey(r)` (paso de la cadena, pedido y
 orden). Si hay pedido u orden nuevos, el diálogo los menciona.
 
-### 5.2 SEGUIR y DIARIO
+### 8.2 SEGUIR y DIARIO
 
 Todo encargo, pedido u orden activo tiene SEGUIR / DEJAR DE SEGUIR
 (`TownAction(track, target: '<tipo>:<npc>')`, validado por el anfitrión;
@@ -78,21 +132,20 @@ como mucho 5; JSON `trk` del perfil). El DIARIO (J en el pueblo, clic en
 el recuadro del HUD o la FUENTE) tiene la subpestaña SEGUIDOS y una por
 habitante, grilla con detalle a la derecha y avance "Tenés 1/2 X".
 
-### 5.3 HUD y avisos
+### 8.3 HUD y avisos
 
 Debajo del reloj, un recuadro compacto con cada seguido (nombre y
 avance). Cuando sube lo que tenés de algo que pide un encargo activo,
 aparece unos segundos "Para: Ilda · encargo 3 (1/2)".
 
-### 5.4 Marcas sobre la cabeza
+### 8.4 Marcas sobre la cabeza
 
 Por jugador, en el pueblo y en los biomas: "!" dorado
 (`TownPalette.request`, con rebote chico) si tiene algo nuevo que todavía
 no te contó; "?" si tenés listo lo que pide; nada si no. Reemplaza el
 "!" genérico. Las subpestañas del DIARIO llevan la misma marca.
 
-## 6. Pendiente
+## 9. Pendiente
 
-Ver tech_debt.md v0.30.0 (tamaños en las órdenes, nodos de poder de
-aventurero en los árboles de oficio, rol de Herrería, verificación de la
-paridad de XP).
+Ver tech_debt.md v0.31.0 (paridad de XP sin simular, animales, party
+dividida).

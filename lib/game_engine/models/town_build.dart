@@ -147,6 +147,27 @@ class TownRect {
     return false;
   }
 
+  /// Contorno de la unión de [parts] como segmentos de un tile
+  /// `(x0, y0, x1, y1)` en coordenadas de tile: solo los bordes que dan
+  /// afuera, así una construcción fundida se ve como una sola (v0.31.2).
+  static List<(int, int, int, int)> outline(List<TownRect> parts) {
+    bool inside(int x, int y) => parts.any((p) => p.contains(x, y));
+    final out = <(int, int, int, int)>[];
+    final seen = <(int, int)>{};
+    for (final p in parts) {
+      for (var y = p.y; y < p.bottom; y++) {
+        for (var x = p.x; x < p.right; x++) {
+          if (!seen.add((x, y))) continue;
+          if (!inside(x, y - 1)) out.add((x, y, x + 1, y));
+          if (!inside(x, y + 1)) out.add((x, y + 1, x + 1, y + 1));
+          if (!inside(x - 1, y)) out.add((x, y, x, y + 1));
+          if (!inside(x + 1, y)) out.add((x + 1, y, x + 1, y + 1));
+        }
+      }
+    }
+    return out;
+  }
+
   TownRect inflate(int n) => TownRect(x - n, y - n, w + 2 * n, h + 2 * n);
   TownRect shift(int dx, int dy) => TownRect(x + dx, y + dy, w, h);
 

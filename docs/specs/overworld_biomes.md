@@ -278,3 +278,12 @@ de Brann).
 - Oren: vida máxima × (1 + beneficio) y vida llena al volver de una
   misión.
 - La Travesía y el tutorial no los usan.
+
+## 11. Mazmorras oscuras (v0.32.0)
+
+Las mazmorras de CAVERNAS (tema `cavernas`) son oscuras siempre y las de
+ABISMO (tema `abismo`) en los pisos impares: ambiente casi negro, se ve
+lo que alumbran los jugadores, las antorchas de pared y los braseros, y
+los enemigos fuera de la luz no se dibujan (los jefes sí). Los
+recolectables de los exteriores brillan un poco de noche. Detalle y
+números en lighting.md § 3 y § 5.3.

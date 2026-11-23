@@ -12,7 +12,7 @@ String questProgressText(ActiveQuest a) => a.item == null
     ? a.title
     : 'Tenés ${a.have}/${a.need} ${QuestTrackRules.itemName(a.item!)}';
 
-/// Encargos seguidos en el HUD (roles.md § 7.2): compacto, debajo del
+/// Encargos seguidos en el HUD (roles.md § 8.2): compacto, debajo del
 /// reloj; nombre y avance de cada uno. Cuando sube lo que tenés de algo
 /// que pide un encargo activo, avisa "Para: Ilda · encargo 3 (1/2)"
 /// unos segundos (§ 7.3).

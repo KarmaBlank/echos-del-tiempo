@@ -376,7 +376,7 @@ class MapFarmLayer {
       final bob = (math.sin(t / 140) * 1).roundToDouble();
       img(n.sprite, pos.$1, pos.$2 + 6 + bob);
       text(n.name, pos.$1, pos.$2 - 14, TownPalette.label, 6);
-      // Marca por jugador (roles.md § 7.4): "!" algo nuevo, "?" listo
+      // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo
       // para entregar.
       drawNpcMark(text, markOf?.call(n) ?? NpcMark.none, pos.$1,
           pos.$2 - 22, t);
@@ -437,7 +437,7 @@ class MapFarmLayer {
   }
 }
 
-/// Marca de habitante sobre la cabeza (roles.md § 7.4): "!" dorado si
+/// Marca de habitante sobre la cabeza (roles.md § 8.4): "!" dorado si
 /// tiene algo nuevo para contarte, "?" si tenés listo lo que pide; con un
 /// rebote chico. [t]: ms de animación.
 void drawNpcMark(MapText text, NpcMark mark, double x, double y, double t) {

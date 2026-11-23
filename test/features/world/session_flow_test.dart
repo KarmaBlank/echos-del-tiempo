@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'package:echos_del_tiempo/app/app.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
@@ -23,6 +24,7 @@ import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
 
 void main() {
+  useTimelineSoloDefault();
   testWidgets('título → lobby → misión → batalla → resultado → lobby',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 720);
