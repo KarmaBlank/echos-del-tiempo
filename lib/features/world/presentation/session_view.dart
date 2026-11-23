@@ -162,6 +162,7 @@ class SessionView {
     this.roomCode,
     this.disconnected,
     this.saveError,
+    this.saving = false,
     this.missionLoot = const [],
     this.promptText,
     this.atlas,
@@ -259,6 +260,10 @@ class SessionView {
   /// avisa en rojo (docs/specs/characters.md § 1.4). `null` = guardado.
   final String? saveError;
 
+  /// Hay algo escribiéndose a disco (pueblo, perfil, niebla): el HUD
+  /// muestra el aviso de guardado (docs/specs/save_indicator.md).
+  final bool saving;
+
   SessionMode get mode => session.mode;
   SessionPlayer? get me => session.players[localId];
   bool get mustAllocate => session.mustAllocate(localId);
@@ -325,6 +330,7 @@ class SessionView {
         roomCode: roomCode,
         disconnected: disconnected,
         saveError: saveError,
+        saving: saving,
         missionLoot: missionLoot,
         promptText: prompt != null ? null : promptText,
         atlas: atlas,

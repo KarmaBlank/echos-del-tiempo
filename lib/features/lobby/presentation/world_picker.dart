@@ -59,7 +59,7 @@ class WorldPicker extends ConsumerWidget {
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
-            DsButton('CREAR MUNDO',
+            DsButton('CREAR',
                 key: const ValueKey('world-create'),
                 onPressed: busy
                     ? null
@@ -68,7 +68,7 @@ class WorldPicker extends ConsumerWidget {
                             context, (_) => const _CreateWorldDialog());
                         if (r != null) await ctl.create(r.$1, r.$2);
                       }),
-            DsButton('RENOMBRAR MUNDO',
+            DsButton('CAMBIAR NOMBRE',
                 key: const ValueKey('world-rename'),
                 onPressed: busy || sel == null
                     ? null
@@ -77,7 +77,7 @@ class WorldPicker extends ConsumerWidget {
                             context, (_) => _RenameWorldDialog(sel));
                         if (n != null) await ctl.rename(sel.id, n);
                       }),
-            DsButton('BORRAR MUNDO',
+            DsButton('BORRAR',
                 key: const ValueKey('world-delete'),
                 accent: DsColors.danger,
                 onPressed: busy || sel == null

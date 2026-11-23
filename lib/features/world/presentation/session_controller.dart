@@ -288,7 +288,9 @@ class SessionController extends StateNotifier<SessionView?> {
     final st = fogStore;
     if (st == null || !fog.dirty) return;
     fog.dirty = false;
+    _beginSave();
     st.save(fog.archive);
+    _endSave();
   }
 
   /// Travesía: progreso entre runs de este dispositivo (§ 8).
@@ -958,6 +960,8 @@ class SessionController extends StateNotifier<SessionView?> {
 
   @override
   void dispose() {
+    _disposing = true;
+    _townSaveTimer?.cancel();
     _saveWorld();
     fog.reset();
     _saveFog();
@@ -3797,7 +3801,79 @@ class SessionController extends StateNotifier<SessionView?> {
     _settleRecovered();
     if (forceSave) _save(force: true);
     if (worldSave) _saveWorld();
+    _watchTown();
     _emit();
+  }
+
+  /// Espera tras un cambio del pueblo antes de escribirlo (junta varias
+  /// ediciones seguidas en una sola escritura).
+  static const townSaveDelay = Duration(seconds: 2);
+
+  /// Mínimo que queda a la vista el aviso de guardado (para leerlo).
+  static const savingMinVisible = Duration(milliseconds: 1500);
+
+  Object? _townSeen;
+  bool _townWasEdited = false;
+  Timer? _townSaveTimer;
+
+  /// Host/solo: el pueblo cambió (edición propia o de un cliente aplicada
+  /// acá) → se guarda al terminar la edición, o a los [townSaveDelay] si
+  /// sigue editando (docs/specs/save_indicator.md § 1).
+  void _watchTown() {
+    final s = _s;
+    if (s == null || isClient || isRun || world == null || onWorldTown == null) {
+      return;
+    }
+    final t = s.town, editing = s.townEditor != null;
+    final first = _townSeen == null;
+    final changed = !first && !identical(_townSeen, t);
+    final ended = _townWasEdited && !editing;
+    _townSeen = t;
+    _townWasEdited = editing;
+    if (first) return;
+    if (ended) {
+      _flushTownSave(emit: false);
+    } else if (changed) {
+      if (!_disposing) _townSaveTimer ??= Timer(townSaveDelay, _flushTownSave);
+    }
+  }
+
+  void _flushTownSave({bool emit = true}) {
+    _townSaveTimer?.cancel();
+    _townSaveTimer = null;
+    _saveWorld();
+    if (emit) _emit();
+  }
+
+  int _savesInFlight = 0;
+  bool _disposing = false;
+  DateTime? _savingSince;
+
+  /// Hay una escritura a disco en curso (o empezó hace menos de
+  /// [savingMinVisible]). Sin timers: la vista se recalcula en cada paso
+  /// del juego, así que el aviso se apaga solo en el siguiente.
+  bool get saving {
+    final since = _savingSince;
+    if (since == null) return false;
+    if (_savesInFlight > 0) return true;
+    if (DateTime.now().difference(since) < savingMinVisible) return true;
+    _savingSince = null;
+    return false;
+  }
+
+  void _beginSave() {
+    _savesInFlight++;
+    _savingSince ??= DateTime.now();
+  }
+
+  void _endSave() {
+    if (_savesInFlight > 0) _savesInFlight--;
+  }
+
+  /// Marca [f] como guardado en curso para el aviso del HUD.
+  Future<T> _tracked<T>(Future<T> f) {
+    _beginSave();
+    return f.whenComplete(_endSave);
   }
 
   void _addChat(ChatLine line) {
@@ -3830,12 +3906,14 @@ class SessionController extends StateNotifier<SessionView?> {
     final codec = SessionJson(engine.catalog);
     // Con las mazmorras de zona abiertas guardadas (persistent_dungeons.md).
     final town = _w == null ? s.town : _we.savedTown(_w!);
+    _beginSave();
     cb(
         w.id,
         town.copyWith(
             upgrades: w.town.upgrades,
             lostLoot: [for (final g in s.lostLoot) codec.groundToJson(g)],
             cycle: _worldCycle));
+    _endSave();
   }
 
   /// Se juega la Travesía (la UI arma sus pantallas en vez del pueblo).
@@ -3863,7 +3941,7 @@ class SessionController extends StateNotifier<SessionView?> {
       return false;
     }
     // Igual que el local: si falla no queda como guardado y se reintenta.
-    unawaited(ps.save(slot, p).then((_) => _companionSaveOk(id, p),
+    unawaited(_tracked(ps.save(slot, p)).then((_) => _companionSaveOk(id, p),
         onError: (Object e) {
       if (identical(_companionSaved[id], p)) _companionSaved.remove(id);
       _saveFailed(e);
@@ -3912,7 +3990,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _sinceSave = 0;
     // `_lastSaved` ya es [p] (para no repetir mientras se escribe); si
     // falla vuelve a `null` y el próximo intento (2 s) lo reintenta.
-    unawaited(store.save(p).then((_) => _saveOk(p), onError: (Object e) {
+    unawaited(_tracked(store.save(p)).then((_) => _saveOk(p), onError: (Object e) {
       if (identical(_lastSaved, p)) _lastSaved = null;
       _saveFailed(e);
     }));
@@ -4023,6 +4101,7 @@ class SessionController extends StateNotifier<SessionView?> {
       atlasGain: _atlasGain,
       bestiary: _bestiary,
       saveError: _saveError,
+      saving: saving,
       companions: _keep(prev?.companions, [..._companions.keys]),
       auto: prev != null && setEquals(prev.auto, _auto)
           ? prev.auto

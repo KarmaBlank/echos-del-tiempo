@@ -33,7 +33,6 @@ import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
-import '../../../ascension/domain/ascension_text.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../../missions/domain/mission_text.dart';
@@ -720,8 +719,35 @@ class MapGame extends Game {
     return QuestTrackRules.mark(p, controller.town, n);
   }
 
+  /// Distancia (en tiles) hasta la que se ven los carteles de lugares
+  /// del pueblo y los exteriores (town_loop.md § 2.1, v0.37.3).
+  static const placeLabelRange = 4.5;
+
+  /// Franja (en tiles) en la que el cartel aparece / se apaga suave.
+  static const placeLabelFade = 1.0;
+
+  /// Opacidad del cartel de lugar en ([x], [y]) según lo cerca que esté
+  /// el jugador local: 1 adentro de [placeLabelRange], 0 pasando la franja.
+  double _placeAlpha(double x, double y) {
+    final dx = (x - controller.local.x) / ts, dy = (y - controller.local.y) / ts;
+    final d = math.sqrt(dx * dx + dy * dy);
+    return (1 - (d - placeLabelRange) / placeLabelFade).clamp(0.0, 1.0);
+  }
+
+  /// Cartel de un lugar: solo cerca del jugador, con fundido.
+  void _placeText(Canvas c, String s, double x, double y, Color color,
+      double size, int priority) {
+    final a = _placeAlpha(x, y);
+    if (a <= 0) return;
+    _rankedText(c, s, x, y, color.withValues(alpha: color.a * a), size,
+        priority);
+  }
+
+  /// Etiqueta del mundo con prioridad. Todas van un paso más chicas que
+  /// el tamaño pedido (v0.37.3), con piso en 5.
   void _rankedText(Canvas c, String s, double x, double y, Color color,
       double size, int priority) {
+    size = size > 5 ? size - 1 : size;
     if (!screenLabels) return actors.text(c, s, x, y, color, size);
     labels.add(MapTextLabel(c.getTransform(), s, x, y, color, size,
         priority: priority));
@@ -782,15 +808,15 @@ class MapGame extends Game {
     }
     final merchant = map.merchant;
     if (merchant != null) {
-      actors.text(
-          c, 'TIENDA', merchant.x, merchant.y - 34, const Color(0xFFFFD166), 6);
+      _placeText(c, 'TIENDA', merchant.x, merchant.y - 34,
+          const Color(0xFFFFD166), 6, 0);
     }
     if (map.lobby && map.place != null) {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
       for (final (txt, x, y)
           in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
-        _rankedText(
+        _placeText(
             c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
       }
     } else if (map.lobby) {
@@ -800,14 +826,14 @@ class MapGame extends Game {
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
       for (final l in map.townMarks ?? TownLayout.landmarks) {
-        _rankedText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
+        _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }
       farm.drawZoneLabels(
           c,
           s.town,
           (txt, x, y, col, size) =>
-              _rankedText(c, txt, x, y, col, size, rank++));
+              _placeText(c, txt, x, y, col, size, rank++));
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
@@ -1025,8 +1051,9 @@ class MapGame extends Game {
               mine: f,
               text: (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
         }
-        actors.text(c, profileTitle(p.profile), px, py - 22,
-            mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 6);
+        // Solo el nombre, un paso más chico (v0.37.3).
+        actors.text(c, p.name, px, py - 22,
+            mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 5);
       });
     }
 
@@ -1198,11 +1225,11 @@ class MapGame extends Game {
       final cx = e.center.x, cy = e.center.y;
       final col = z.open ? zoneColor(e.zone) : const Color(0xFF9AA0AC);
       if (!z.open) {
-        actors.text(c, z.playable ? 'BLOQUEADA' : 'PRÓXIMAMENTE', cx, cy - 56,
-            const Color(0xFFFF6B81), 6);
+        _placeText(c, z.playable ? 'BLOQUEADA' : 'PRÓXIMAMENTE', cx,
+            cy - 56, const Color(0xFFFF6B81), 6, 950);
       }
-      actors.text(c, z.zone.name, cx, cy - 47, col, 7);
-      actors.text(c, z.zone.levelText, cx, cy - 38, col, 6);
+      _placeText(c, z.zone.name, cx, cy - 47, col, 7, 951);
+      _placeText(c, z.zone.levelText, cx, cy - 38, col, 6, 952);
     }
 
     // Haces de los Legendarios y etiquetas del loot, encima de todo.

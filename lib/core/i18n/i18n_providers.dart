@@ -52,7 +52,7 @@ final activeLocaleProvider = Provider<LocaleId>((ref) {
 });
 
 /// Player-facing text of the active language: `ref.watch(stringsProvider)
-/// .t('ui.title.start')`, or `ref.t(…)` / `ref.strings`.
+/// .t('ui.title.play')`, or `ref.t(…)` / `ref.strings`.
 final stringsProvider = Provider<Strings>((ref) => ref
     .watch(stringTablesProvider)
     .strings(ref.watch(activeLocaleProvider),

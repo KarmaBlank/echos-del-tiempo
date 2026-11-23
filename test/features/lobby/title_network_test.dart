@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
+import 'title_flow.dart';
 
 Future<void> _pump(WidgetTester tester, NetSessionFactory factory) async {
   tester.view.physicalSize = const Size(1280, 720);
@@ -49,12 +50,13 @@ void main() {
   testWidgets('P2P sin Firebase: deshabilitado con el motivo', (tester) async {
     await _pump(tester,
         NetSessionFactory.unavailable('P2P', 'P2P por internet: falta configurar Firebase'));
+    await goToCoop(tester);
     expect(find.text('P2P por internet: falta configurar Firebase'), findsOneWidget);
-    expect(_onPressed(tester, 'ABRIR SALA'), isNull);
+    expect(_onPressed(tester, 'CREAR SALA'), isNull);
     expect(_onPressed(tester, 'UNIRSE'), isNull);
   });
 
-  testWidgets('red disponible: unirse exige código y muestra el error',
+  testWidgets('red disponible: unirse pide el código y muestra el error',
       (tester) async {
     final hub = LoopbackHub();
     await _pump(
@@ -63,22 +65,42 @@ void main() {
             label: 'LAN',
             codeHint: 'IP:PUERTO',
             create: () => LoopbackNetSession(hub)));
+    await goToCoop(tester);
     expect(find.text('Red: LAN'), findsOneWidget);
-    expect(find.text('IP:PUERTO'), findsOneWidget);
-    expect(_onPressed(tester, 'ABRIR SALA'), isNotNull);
+    expect(_onPressed(tester, 'CREAR SALA'), isNotNull);
 
-    await tester.tap(find.text('UNIRSE'));
-    await tester.pump();
-    expect(find.text('Escribe el código de la sala.'), findsOneWidget);
+    // UNIRSE: un paso con solo el campo del código.
+    await tapTitleKey(tester, 'title-join-step');
+    expect(find.byKey(const ValueKey('title-code')), findsOneWidget);
+    expect(find.text('IP:PUERTO'), findsOneWidget);
+    await tapTitleKey(tester, 'title-join-next');
+    expect(find.text('Escribí el código de la sala.'), findsOneWidget);
 
     await tester.enterText(find.byKey(const ValueKey('title-code')), 'ZZZZ9');
-    await tester.tap(find.text('UNIRSE'));
-    await tester.pump();
-    await tester.pump();
+    await tapTitleKey(tester, 'title-join-next');
+    expect(find.byKey(const ValueKey('char-play')), findsOneWidget);
+    expect(find.text('> UNIRSE'), findsOneWidget);
+    await tapTitleKey(tester, 'char-play');
     await tester.pump();
     expect(find.byKey(const ValueKey('title-net-status')), findsOneWidget);
     expect(find.textContaining('no encontrada'), findsOneWidget);
     // Se puede volver a intentar.
-    expect(_onPressed(tester, 'UNIRSE'), isNotNull);
+    expect(_onPressed(tester, '> UNIRSE'), isNotNull);
+  });
+
+  testWidgets('VOLVER deshace cada paso hasta el menú', (tester) async {
+    await _pump(
+        tester,
+        NetSessionFactory(
+            label: 'LAN',
+            codeHint: 'IP:PUERTO',
+            create: () => LoopbackNetSession(LoopbackHub())));
+    await goToHostCharacters(tester);
+    expect(find.text('> CREAR SALA'), findsOneWidget);
+    for (final step in ['worlds', 'coop', 'mode', 'menu']) {
+      await tapTitleKey(tester, 'title-back');
+      expect(find.byKey(ValueKey('title-step-$step')), findsOneWidget,
+          reason: step);
+    }
   });
 }

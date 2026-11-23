@@ -147,13 +147,14 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('compacto (título): al día no muestra nada', (tester) async {
+  testWidgets('compacto (título): al día muestra versión y BUSCAR', (tester) async {
     await pumpCompact(
         tester,
         FakeUpdateService(const UpToDate(
             current: SemVer(0, 1, 0), latest: SemVer(0, 1, 0))));
-    expect(find.textContaining('v0.1.0'), findsNothing);
-    expect(find.byKey(const ValueKey('update-check')), findsNothing);
+    expect(find.textContaining('v0.1.0'), findsOneWidget);
+    expect(find.byKey(const ValueKey('update-check')), findsOneWidget);
+    expect(find.byKey(const ValueKey('update-available')), findsNothing);
     expect(find.byKey(const ValueKey('update-apply')), findsNothing);
   });
 
