@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,19 +8,19 @@ import '../../../../core/procedural/item_icons.dart';
 import '../../../../core/settings/settings_providers.dart';
 import '../../../combat/presentation/game_sprites.dart';
 
-/// Aviso de guardado del HUD (docs/specs/save_indicator.md Â§ 2): el Ã­cono
+/// Aviso de guardado del HUD (docs/specs/save_indicator.md § 2): el ícono
 /// `items.eco` del manifest girando en bucle (de a octavos de vuelta, al
 /// estilo pixel art) + el texto, mientras algo se escribe a disco. Con
-/// REDUCIR MOVIMIENTO el Ã­cono queda quieto.
+/// REDUCIR MOVIMIENTO el ícono queda quieto.
 class SaveIndicator extends ConsumerStatefulWidget {
   const SaveIndicator({super.key});
 
-  static const text = 'Guardandoâ€¦ no cierres el juego';
+  static const text = 'Guardando… no cierres el juego';
 
-  /// Sprite del Ã­cono (id lÃ³gico del manifest, secciÃ³n `items`).
+  /// Sprite del ícono (id lógico del manifest, sección `items`).
   static const spriteKey = 'eco';
 
-  /// Cada cuÃ¡nto avanza un octavo de vuelta.
+  /// Cada cuánto avanza un octavo de vuelta.
   static const step = Duration(milliseconds: 125);
 
   @override
@@ -29,36 +28,25 @@ class SaveIndicator extends ConsumerStatefulWidget {
 }
 
 class _SaveIndicatorState extends ConsumerState<SaveIndicator> {
-  Timer? _timer;
-  int _frame = 0;
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  // Sin timer propio: el giro sale del reloj y avanza con los rebuilds que
+  // ya hace el HUD en cada paso del juego. Un timer que pide cuadros no
+  // deja asentarse a los tests (pumpAndSettle) ni suma trabajo extra.
+  int get _frame =>
+      (DateTime.now().millisecondsSinceEpoch ~/ SaveIndicator.step.inMilliseconds) % 8;
 
   @override
   Widget build(BuildContext context) {
-    // Los Ã­conos de Ã­tems se cargan junto con los sprites del juego.
-    ref.watch(gameSpritesProvider);
+    // Los íconos de ítems se cargan junto con los sprites del juego.
     final still =
         ref.watch(gameSettingsProvider.select((s) => s.reduceMotion));
-    if (still) {
-      _timer?.cancel();
-      _timer = null;
-    } else {
-      _timer ??= Timer.periodic(SaveIndicator.step, (_) {
-        if (mounted) setState(() => _frame = (_frame + 1) % 8);
-      });
-    }
+    final frame = still ? 0 : _frame;
     return IgnorePointer(
       child: Row(
         key: const ValueKey('hud-saving'),
         mainAxisSize: MainAxisSize.min,
         children: [
           Transform.rotate(
-            angle: _frame * math.pi / 4,
+            angle: frame * math.pi / 4,
             child: DsSpriteIcon(ItemIconImages.base(SaveIndicator.spriteKey),
                 size: 16),
           ),
