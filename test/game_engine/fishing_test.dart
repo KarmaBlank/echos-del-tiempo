@@ -18,7 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
 
-/// Pesca y comerciante (docs/specs/fishing.md).
+/// Pesca y agropecuario (docs/specs/fishing.md).
 PlayerProfile _withFish(Map<String, int> bag, {int credits = 0}) =>
     newProfile('Ana', 'guerrero').copyWith(
         credits: credits, life: LifeSkills(bag: bag));
@@ -272,7 +272,7 @@ void main() {
       expect(s.players['p0']!.profile.xp, lessThanOrEqualTo(60));
     });
 
-    test('comerciante en la sala: vender, canjear, cañas', () {
+    test('agropecuario en la sala: vender, canjear, cañas', () {
       final e = sessionEngine();
       var s = e.addPlayer(e.create(), 'p0',
           _withFish({'carpa_musgo': 2, 'pez_reloj': 1}, credits: 400))!.state;

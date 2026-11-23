@@ -786,7 +786,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 - Un cliente 42 abriría el panel PESCA que ya no existe y no vería las
   cañas de los demás: la sala no mezcla versiones.
 
-## Mundo, protocolo 42 (v0.22.0: pesca y comerciante)
+## Mundo, protocolo 42 (v0.22.0: pesca y agropecuario)
 
 - Acciones nuevas (fishing.md § 7): `fBite {pw}`, `fRes {ok}`, `fAuto`,
   `fSell {sp?, mat?}`, `fSwap {sp}`, `rodBuy {r}`, `rodEq {r}`.

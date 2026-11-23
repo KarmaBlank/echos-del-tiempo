@@ -225,11 +225,14 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               style: DsText.detail()),
         ]),
         SizedBox(height: DsSpace.xs),
-        Wrap(
-          spacing: DsSpace.sm,
-          runSpacing: DsSpace.xs,
-          crossAxisAlignment: WrapCrossAlignment.center,
+        // Búsqueda y filtros en una sola fila que se desliza de costado:
+        // la lista se queda con el alto (v0.24.4).
+        SingleChildScrollView(
+          key: const ValueKey('ult-filter-bar'),
+          scrollDirection: Axis.horizontal,
+          child: Row(
           children: [
+            for (final w in <Widget>[
             DsSearchField(
                 key: const ValueKey('ult-search'),
                 hint: 'BUSCAR POR NOMBRE',
@@ -268,8 +271,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 onChanged: (o) => _setPrefs(_prefs.copyWith(sort: o)),
                 buttonKey: const ValueKey('ult-sort'),
                 optionKey: (o) => ValueKey('ult-sort-${o.name}')),
+            ]) ...[w, SizedBox(width: DsSpace.sm)],
           ],
-        ),
+        )),
         SizedBox(height: DsSpace.xs),
         if (shown.isEmpty)
           Text('Ninguna ULT con estos filtros.', style: DsText.detail()),
@@ -287,20 +291,23 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
   }
 
   Widget _row(UltEntry e, String? equipped, String? selected, {Key? key}) {
-    final lv = _learned(e) ? ' · Nv ${e.level}' : '';
     final reason = e.option?.reason;
-    final detail = !e.owned
-        ? 'Falta · ${_how(e)}'
-        : reason == null
-            ? e.origin.label
-            : '${e.origin.label} · $reason';
+    // Nombre solo en su línea (completo, puede bajar); nivel y origen
+    // abajo, también completos (v0.24.4).
+    final detail = [
+      if (_learned(e)) 'Nv ${e.level}',
+      if (!e.owned) 'Falta · ${_how(e)}' else e.origin.label,
+      if (e.owned && reason != null) reason,
+    ].join(' · ');
     final fresh = widget.profile.ultNew.contains(e.id);
     final isEq = e.id == equipped;
     return DsListRow(
       key: key ?? ValueKey('ult-row-${e.id}'),
       compact: true,
-      title: '${e.name}$lv',
-      detail: detail,
+      wrap: true,
+      title: e.name,
+      subtitle: detail,
+      subtitleColor: e.available ? null : DsColors.textSecondary,
       titleColor: e.available ? null : DsColors.textSecondary,
       selected: e.id == selected,
       // Solo el clic elige (el hover no cambia nada).

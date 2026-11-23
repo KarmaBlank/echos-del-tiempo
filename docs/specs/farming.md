@@ -24,7 +24,7 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 - XP y nivel por personaje, como Pesca: `xpBase × l^xpExp` por nivel,
   tope `maxLevel` (30). JSON `life.farm.xp`.
 - Se ve donde se ve Pesca: PERSONAJE (línea OFICIOS y pestaña OFICIOS),
-  el comerciante y la pestaña PESCA Y CULTIVO.
+  el agropecuario y la pestaña PESCA Y CULTIVO.
 - XP por cosecha: `xp base × xp<Rareza> × qualityMult<Calidad>` (+ el
   árbol). Arar, plantar y regar dan `workXp` (1). XP de personaje por
   cosecha `charXp<Rareza>` con tope `charXpCap` por estadía en el pueblo
@@ -45,7 +45,7 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 | Herramienta en la mano | Sirve en | Si no sirve, el aviso dice |
 |---|---|---|
 | Azada | Tierra sin arar (área según azada, § 4) | "Ya está arada" |
-| Semilla (la del carrusel) | Arada vacía | "Primero arala" / "Ya está plantada" / "Sin semillas: comprá en el comerciante" |
+| Semilla (la del carrusel) | Arada vacía | "Primero arala" / "Ya está plantada" / "Sin semillas: comprá en el agropecuario" |
 | Regadera | Plantada, creciendo (área según regadera) | "Primero arala" / "Primero plantá" |
 | Cualquiera | Madura: cosechar (pop + aviso + chat) | — |
 
@@ -59,18 +59,36 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 ### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.24.1)
 - A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   también las que suma ampliar el pueblo, porque se mira el tile `soil`
-  del mapa) aparece el HUD de herramienta arriba de las pociones ([1]
-  Vida / [2] Maná). Cerca de la orilla manda la caña (fishing.md § 4.0).
-- Arriba, el aviso en una línea (nunca se parte; si no entra, termina en
-  "…"): "[E o clic] Arar", "[E o clic] Plantar Nabo del claro", "[E o
-  clic] Regar · 45 %", "[E o clic] Cosechar · 3 % legendaria" o el motivo
-  si la herramienta elegida no sirve ("Primero arala").
-- Abajo, una barra horizontal de tres casilleros de ancho fijo: Azada |
-  Semilla (carrusel: la elegida al medio, anterior y siguiente chicas a
-  los costados, cantidad abajo) | Regadera. Nombres cortos; el nombre
-  completo de la herramienta o semilla va en el tooltip (tamaño fijo). El
+  del mapa) aparece el HUD de herramienta. Desde v0.24.4 es una barra
+  abajo al centro de la pantalla (372 px), entre el chat (abajo a la
+  izquierda) y las pociones y la tarjeta del grupo (abajo a la derecha),
+  sin tapar ninguno a 1280×720 ni a 1024×640: con una herramienta en la
+  mano el chat se angosta para dejarle lugar. Cerca de la orilla manda la
+  caña (fishing.md § 4.0), en el mismo lugar: ícono de la caña (32 px) y
+  el botón con su nombre.
+- Justo arriba de la barra, centrado, el aviso en una línea (nunca se
+  parte; si no entra, termina en "…"): "[E o clic] Arar", "[E o clic]
+  Plantar Nabo del claro", "[E o clic] Regar · 45 %", "[E o clic]
+  Cosechar · 3 % legendaria" o el motivo si la herramienta elegida no
+  sirve ("Primero arala").
+- La barra: tres casilleros de ancho fijo, Azada | Semilla | Regadera.
+  Íconos de herramienta de 32 px; carrusel de semillas con la elegida de
+  40 px al medio y la anterior y la siguiente de 24 px a los costados, y
+  abajo el nombre de la semilla y la cantidad. Los rótulos se ven enteros
+  (bajan de línea antes que cortarse). El nombre completo de la
+  herramienta va en el tooltip (tamaño fijo). El
   elegido lleva el borde dorado de selección. Clic en un casillero lo deja
   en la mano (no hace la labor).
+- Cuarto casillero ABONO (v0.24.4; la barra pasa a 480 px): ícono del
+  abono elegido, rótulo "Abono [F]" y la cantidad. Por defecto el mejor
+  abono que tengas; clic en el ícono pasa al siguiente propio (elección
+  local, no se guarda). Con ABONO en la mano, E / clic abona la parcela
+  de enfrente con ese abono (`FarmTileAction` con el id del abono en
+  `seed`, como ya aceptaba el host: sin cambio de protocolo). Motivos si
+  no sirve: "Primero arala", "Primero plantá", "Ya tiene abono", "Sin
+  abono: comprá en el agropecuario". F sigue abonando con el abono
+  elegido sin cambiar de herramienta, y frente a una parcela plantada sin
+  abono el aviso suma "· [F] Abonar".
 - Controles: Tab (Mayús+Tab al revés) o la rueda del mouse cambian de
   herramienta; Q o ] la semilla siguiente, [ la anterior (también clic en
   las semillas de los costados); E o clic izquierdo en el mapa hacen la
@@ -89,7 +107,7 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   está cerca de la huerta (se deduce de la posición, con la azada; sin
   protocolo nuevo).
 - Solo en el pueblo; nunca en misiones.
-- Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el comerciante:
+- Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el agropecuario:
   EQUIPAR en cada azada / regadera (`farmShop` `equipTool`, ya autoritativo
   del anfitrión; no hace falta protocolo nuevo).
 
@@ -174,7 +192,7 @@ Tooltip: "Mejora las chances: normal / rara / épica / legendaria".
 (precio y XP).
 
 ## 4. Herramientas (como las cañas)
-Espacio de herramienta aparte de las armas; se compran en el comerciante
+Espacio de herramienta aparte de las armas; se compran en el agropecuario
 y rinden según `efectividad = piso + (1 − piso) × (nivel/requerido)^curva`
 (town_loop.md § 11c).
 
@@ -238,11 +256,11 @@ herramienta de área trabaja menos tiles.
   cosecha las maduras (calidad normal, sin hallazgos) de hasta
   `helperPlots × nivel` parcelas (+ «Capataz» del árbol), y replanta la
   misma semilla. Lo cosechado va al granero (`town.silo`).
-- Cualquiera recoge el granero en el comerciante (CULTIVO → VENDER →
+- Cualquiera recoge el granero en el agropecuario (CULTIVO → VENDER →
   RECOGER) con `helperXpShare` (10 %) de la XP.
 - Se dibuja al costado de la huerta del pueblo.
 
-## 9. Comerciante (vista CULTIVO)
+## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →
 categoría).
 - COMPRAR: Semillas (×1 y ×5), Abonos (tooltip con lo que sesgan),
@@ -269,6 +287,12 @@ categoría).
   pueblo sin ampliar y sin parcelas.
 
 ## 11. Pestaña PESCA Y CULTIVO (PERSONAJE)
+Desde v0.24.4 cada categoría es una grilla de casillas como el
+inventario (`LifeItemGrid`, la misma del agropecuario): ícono de 32 px
+con borde del color de la rareza o calidad, cantidad, marca "E" si está
+equipada o elegida para plantar y un dato chico abajo. Clic en una
+casilla la muestra en el panel de detalle (nombre en el color de la
+rareza, etiquetas, datos completos y acciones). Nada se corta con "…".
 Solo en el pueblo (en una misión dice "Disponible en el pueblo."). No
 usa casilleros del inventario. Secciones: HERRAMIENTAS (cañas, azadas y
 regaderas, la equipada con EQUIPADA y las otras con EQUIPAR), PESCADOS

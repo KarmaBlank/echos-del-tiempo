@@ -88,7 +88,7 @@ enum BalanceKind {
   /// Movimiento en el mapa de campo (world.md § "Colisión y movimiento").
   exploration('exploration', 'Exploración', 'Ajustes de exploración'),
 
-  /// Cultivo, huerta y comerciante (farming.md, v0.23.0).
+  /// Cultivo, huerta y agropecuario (farming.md, v0.23.0).
   farming('farming', 'Cultivo', 'Ajustes de Cultivo'),
 
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).

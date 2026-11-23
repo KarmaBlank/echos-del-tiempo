@@ -20,7 +20,7 @@ enum TownSpot {
   /// Fuente rúnica: punto de reunión; abre el tablero.
   fountain,
 
-  /// Puesto del comerciante: compra pescado, vende cañas (fishing.md § 5).
+  /// Puesto del agropecuario: compra pescado, vende cañas (fishing.md § 5).
   trader,
 
   /// Cartel del lago: qué especies hay y tu nivel de Pesca.
@@ -82,7 +82,7 @@ abstract final class TownLayout {
         w: 3),
     TownLandmark(TownSpot.fountain, 'FUENTE RÚNICA', Tile.fountain, 16, 10,
         w: 2, h: 2),
-    TownLandmark(TownSpot.trader, 'COMERCIANTE', Tile.merchant, 12, 17, w: 2),
+    TownLandmark(TownSpot.trader, 'AGROPECUARIO', Tile.merchant, 12, 17, w: 2),
     TownLandmark(TownSpot.lostLoot, 'LOOT PERDIDO', Tile.lostTower, 24, 15,
         w: 3),
   ];

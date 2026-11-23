@@ -44,12 +44,13 @@ void main() {
     expect(c.farmHandManual, isFalse);
     expect(find.textContaining('[E o clic] Arar'), findsOneWidget);
     expect(c.farmTarget!.ok, isTrue);
-    // El aviso va arriba de las pociones, en una línea.
+    // Barra abajo al centro (v0.24.4); el aviso, una línea arriba de ella.
     expect(find.byKey(const ValueKey('hud-prompt')), findsNothing);
     final prompt =
         tester.getRect(find.byKey(const ValueKey('hud-tool-prompt')));
-    final potions = tester.getRect(find.byKey(const ValueKey('hud-potions')));
-    expect(prompt.bottom, lessThanOrEqualTo(potions.top));
+    final bar = tester.getRect(find.byKey(const ValueKey('hud-farm-bar')));
+    expect(prompt.bottom, lessThanOrEqualTo(bar.top));
+    expect((prompt.center.dx - bar.center.dx).abs(), lessThan(1));
     final seed = c.session!.players[c.localId]!.profile.life.farm.activeSeed;
     c.cycleSeed();
     await h.frames(2);
@@ -108,6 +109,12 @@ void main() {
     await press();
     expect(c.plotAt(tx, ty)!.watered, isTrue);
     // Tab con el teclado también cambia de herramienta.
+    // Regadera → ABONO (v0.24.4); sin abono, dice por qué.
+    expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
+    expect(c.farmHand, FarmHand.fert);
+    await h.frames(2);
+    expect(find.byKey(const ValueKey('hud-tool-fert')), findsOneWidget);
+    expect(find.text('Sin abono: comprá en el agropecuario'), findsOneWidget);
     expect(c.handleKey(LogicalKeyboardKey.tab), isTrue);
     expect(c.farmHand, FarmHand.hoe);
     // Lejos de la huerta se olvida la elección manual.
@@ -141,6 +148,9 @@ void main() {
     await tester.tap(find.text('PESCA Y CULTIVO'));
     await h.frames(2);
     expect(find.byKey(const ValueKey('life-tool-azada_rama')), findsOneWidget);
+    // Grilla (v0.24.4): EQUIPAR va en el detalle de la casilla elegida.
+    await tester.tap(find.byKey(const ValueKey('life-tool-azada_hierro')));
+    await h.frames(2);
     await tester.tap(find.byKey(const ValueKey('life-tool-eq-azada_hierro')));
     await h.frames(2);
     expect(

@@ -3,6 +3,7 @@ import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/fishing_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/life_tree_rules.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -33,6 +34,15 @@ void main() {
     expect(find.byKey(const ValueKey('life-row-pesca')), findsOneWidget);
     expect(find.byKey(const ValueKey('life-row-cultivo')), findsOneWidget);
     expect(find.byKey(const ValueKey('life-xp-pesca')), findsOneWidget);
+    // Tarjetas enteras (v0.24.4): el nivel a la vista, nada con "…".
+    expect(find.text('Nivel 4'), findsOneWidget);
+    for (final k in ['pesca', 'cultivo']) {
+      for (final p in tester.renderObjectList<RenderParagraph>(find.descendant(
+          of: find.byKey(ValueKey('life-row-$k')),
+          matching: find.byType(RichText)))) {
+        expect(p.didExceedMaxLines, isFalse);
+      }
+    }
     // 3 puntos libres: en la fila y en la insignia de la pestaña.
     expect(find.byKey(const ValueKey('life-free-pesca')), findsOneWidget);
     expect(
@@ -60,6 +70,9 @@ void main() {
         profile: fisher(),
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.lifeItems));
+    await tester.pump();
+    // Grilla de casillas (v0.24.4): el nombre va en el detalle al elegirla.
+    await tester.tap(find.byKey(const ValueKey('life-tool-azada_rama')));
     await tester.pump();
     expect(find.textContaining('Azada de rama'), findsWidgets);
     // Una categoría por vez: las semillas, en su pestaña.
