@@ -65,6 +65,15 @@ class _HelperPanelState extends State<HelperPanel> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Bloqueado (farming.md § 8.6): "!" dorado y los motivos.
+          if (HelperRules.blockers(b, i) case final why when why.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.only(bottom: DsSpace.xs),
+              child: DsToast(why.join(' · '),
+                  key: const ValueKey('helper-blocked'),
+                  kind: DsToastKind.reward,
+                  leading: Text('!', style: DsText.title(DsColors.reward))),
+            ),
           Text(TownRules.helperLine(b), style: DsText.detail()),
           Builder(builder: (_) {
             final st = b.stat(i);

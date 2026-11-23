@@ -380,6 +380,12 @@ abstract final class FarmPalette {
   static const can = Color(0xFF7E95A8);
   static const canDark = Color(0xFF55697A);
 
+  /// Cofre de oficio (farming.md § 8.3): vacío se ve apagado, con cosas
+  /// brilla un poco y lleno lleva un marco.
+  static const chestEmpty = Color(0x80FFFFFF);
+  static const chestGlow = Color(0x55FFE680);
+  static const chestFull = Color(0xFFFF9F43);
+
   /// Color del fruto por rareza del cultivo (índice de `FishRarity`).
   static const fruit = [
     Color(0xFFE8C170),

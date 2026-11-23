@@ -17,6 +17,7 @@ import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../characters/presentation/stash_panel.dart';
@@ -488,6 +489,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   controller.hoverHelper = helper;
                   final next = tile != null &&
                           (helper != null ||
+                              controller.chestAt(tile.$1, tile.$2) != null ||
                               controller.signAt(tile.$1, tile.$2) != null)
                       ? (tile, e.localPosition)
                       : null;
@@ -589,13 +591,21 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: MapHoverTip(
                 cursor: h.$2,
                 child: IgnorePointer(
-                child: switch (controller.signAt(h.$1.$1, h.$1.$2)) {
-                  (final title, final text)? => DsTooltipCard(
+                child: switch ((
+                  controller.chestAt(h.$1.$1, h.$1.$2),
+                  controller.signAt(h.$1.$1, h.$1.$2)
+                )) {
+                  (final chest?, _) => DsTooltipCard(
+                      key: const ValueKey('chest-tooltip'),
+                      title: HelperRules.chestText(chest),
+                      children: const [],
+                    ),
+                  (_, (final title, final text)?) => DsTooltipCard(
                       key: const ValueKey('sign-tooltip'),
                       title: title,
                       children: [Text(text, style: DsText.detail())],
                     ),
-                  null => const SizedBox.shrink(),
+                  _ => const SizedBox.shrink(),
                 },
               ),
               ),

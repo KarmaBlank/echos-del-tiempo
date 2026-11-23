@@ -660,11 +660,17 @@ abstract final class TownRules {
       TownState s, TownBuild b, int i, double time) {
     final (ox, oy) = s.origin;
     final (ax, ay) = b.anchor;
+    // Bloqueado (§ 8.6): se queda quieto, sin trabajar.
+    final stuck = HelperRules.blocked(b, i);
     if (b.kind == BuildKind.lago) {
       final (x, y) = fisherSpot(s, b, i);
-      return (x: (x + ox + 0.5) * 16, y: (y + oy + 0.5) * 16, work: true);
+      return (x: (x + ox + 0.5) * 16, y: (y + oy + 0.5) * 16, work: !stuck);
     }
     final area = helperArea(b, i);
+    if (stuck && area.isNotEmpty) {
+      final (x, y) = area.first;
+      return (x: (ax + x + ox + 0.5) * 16, y: (ay + y + oy + 0.5) * 16, work: false);
+    }
     if (area.isEmpty) {
       return (x: (ax + ox - 0.5) * 16, y: (ay + oy + 0.5) * 16, work: false);
     }
