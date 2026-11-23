@@ -17,6 +17,9 @@ class FarmingHostState {
   /// Última vuelta de los ayudantes (`s.time ~/ período`).
   int? lastRound;
 
+  /// Segundos de tormenta desde la última tirada de rayo.
+  double boltAcc = 0;
+
   void newStay() => charXp.clear();
 }
 
@@ -57,12 +60,16 @@ extension _FarmingOp on _Op {
     if (_fa.acc < 1) return;
     final step = _fa.acc;
     _fa.acc = 0;
+    _skyTick(step);
     final t = s.town;
+    final rain = SkyRules.now(t.sky).wet;
     if (t.plots.isNotEmpty) {
       var changed = false;
       final out = <String, FarmPlot>{};
       for (final e in t.plots.entries) {
-        final g = FarmingRules.grow(e.value, step);
+        // Con lluvia se riega todo lo plantado (day_night_weather.md § 3.2).
+        final w = rain ? FarmingRules.rain(e.value) : e.value;
+        final g = FarmingRules.grow(w, step);
         if (g != e.value) changed = true;
         out[e.key] = g;
       }
@@ -76,6 +83,36 @@ extension _FarmingOp on _Op {
           .floor();
       if (_fa.lastRound != null && k != _fa.lastRound) _helperRound();
       _fa.lastRound = k;
+    }
+  }
+
+  /// El reloj del mundo y los rayos de la tormenta (day_night_weather.md
+  /// § 1 y § 3.3). Solo el anfitrión: el cielo viaja en el pueblo.
+  void _skyTick(double dt) {
+    final sky = SkyRules.advance(s.town.sky, dt, _rand);
+    s.town = s.town.copyWith(sky: sky);
+    if (SkyRules.now(sky) != Weather.tormenta) {
+      _fa.boltAcc = 0;
+      return;
+    }
+    _fa.boltAcc += dt;
+    final every = math.max(1.0, SkyRules.t.d('boltEverySec'));
+    while (_fa.boltAcc >= every) {
+      _fa.boltAcc -= every;
+      if (_rand() >= SkyRules.t.d('boltChance')) continue;
+      final keys = s.town.plots.keys.toList()..sort();
+      if (keys.isEmpty) continue;
+      final k =
+          keys[(_rand() * keys.length).floor().clamp(0, keys.length - 1)];
+      final xy = parsePlotKey(k);
+      if (xy == null) continue;
+      final hit = s.town.plots[k]!;
+      s.town = TownRules.strike(s.town, k);
+      events.add(LightningEvent(xy.$1, xy.$2, lost: hit.planted));
+      if (hit.planted) {
+        say('Un rayo cayó en la huerta: se perdió '
+            '${kCrops[hit.seed]?.name.toLowerCase() ?? 'un cultivo'}.');
+      }
     }
   }
 
@@ -108,13 +145,18 @@ extension _FarmingOp on _Op {
     final (ox, oy) = s.town.origin;
     final (ax, ay) = b0.anchor;
     for (var i = 0; i < b0.helper; i++) {
-      final (nb, hs) = TownRules.farmerCycle(b, i,
-          (pl) => FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!);
-      b = nb;
-      for (final (x, y, h) in hs) {
-        events.add(CropHarvestedEvent(owner.id, h.crop.id, h.quality.index,
-            h.count, ax + x + ox, ay + y + oy,
-            helper: true));
+      // Ritmo (§ 8.5): a veces hace una vuelta más.
+      final turns = _rand() < HelperRules.extraChance(b, i) ? 2 : 1;
+      for (var k = 0; k < turns; k++) {
+        final (nb, hs) = TownRules.farmerCycle(b, i,
+            (pl) => FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!,
+            rand: _rand, rareSeed: () => FarmingRules.rareSeed(_rand));
+        b = nb;
+        for (final (x, y, h) in hs) {
+          events.add(CropHarvestedEvent(owner.id, h.crop.id, h.quality.index,
+              h.count, ax + x + ox, ay + y + oy,
+              helper: true));
+        }
       }
     }
     return b;
@@ -123,12 +165,29 @@ extension _FarmingOp on _Op {
   TownBuild _fisherRound(TownBuild b0, double net) {
     var b = b0;
     final roll = TownRules.lakeRoll(s.town, b0);
-    final n = b0.helper * (TownRules.t.i('fisherCatch') + net.round());
-    for (var i = 0; i < n && !TownRules.chestFull(b); i++) {
-      // Como la red de antes: nunca legendarios.
-      final f = FishingRules.roll(_rand, roll, auto: true);
-      if (f.rarity == FishRarity.legendario) continue;
-      b = TownRules.addToChest(b, f.species, 1);
+    // Con tormenta casi no pica (day_night_weather.md § 3.3).
+    final storm = SkyRules.fisherFactor(s.town.sky);
+    for (var i = 0; i < b0.helper; i++) {
+      final turns = _rand() < HelperRules.extraChance(b, i) ? 2 : 1;
+      final per = TownRules.t.i('fisherCatch') +
+          net.round() +
+          HelperRules.extraFish(b, i);
+      final n = (per * turns * storm).round();
+      final rare = HelperRules.rareFishChance(b, i);
+      var got = 0;
+      for (var k = 0; k < n && !TownRules.chestFull(b); k++) {
+        var f = FishingRules.roll(_rand, roll, auto: true);
+        // Rareza (§ 8.5): tira otra vez y se queda con el más raro.
+        if (rare > 0 && _rand() < rare) {
+          final g = FishingRules.roll(_rand, roll, auto: true);
+          if (g.rarity.index > f.rarity.index) f = g;
+        }
+        // Como la red de antes: nunca legendarios.
+        if (f.rarity == FishRarity.legendario) continue;
+        b = TownRules.addToChest(b, f.species, 1);
+        got++;
+      }
+      b = HelperRules.gainXp(b, i, got);
     }
     return b;
   }
@@ -377,6 +436,29 @@ extension _FarmingOp on _Op {
         _profileChange(p, r.$1);
         say('${p.name} amplió el pueblo al ${side.label.toLowerCase()}.');
         return true;
+      case TownOp.place when a.id == kFaroId:
+        final x = a.x, y = a.y;
+        if (!_isOwner(p) || x == null || y == null) return false;
+        final r = TownRules.placeLight(p.profile, s.town, x, y);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1);
+        say('${p.name} puso un faro.');
+        return true;
+      case TownOp.move when TownState.parseLightId(a.target) != null:
+        final x = a.x, y = a.y;
+        if (!_isOwner(p) || x == null || y == null) return false;
+        final r = TownRules.moveLight(s.town, a.target!, x, y);
+        if (r == null) return false;
+        s.town = r;
+        return true;
+      case TownOp.remove when TownState.parseLightId(a.target) != null:
+        if (!_isOwner(p)) return false;
+        final r = TownRules.removeLight(s.town, a.target!);
+        if (r == null) return false;
+        s.town = r;
+        say('${p.name} sacó un faro.');
+        return true;
       case TownOp.place:
         final id = a.id, x = a.x, y = a.y;
         if (!_isOwner(p) || id == null || x == null || y == null) return false;
@@ -449,6 +531,18 @@ extension _FarmingOp on _Op {
         if (r == null) return false;
         s.town = r.$2;
         _profileChange(p, r.$1);
+        return true;
+      case TownOp.helperUpgrade:
+        final id = a.target, i = a.x, u = HelperUpgrade.fromName(a.id);
+        if (!_isOwner(p) || id == null || i == null || u == null) return false;
+        final r = HelperRules.upgrade(p.profile, s.town, id, i, u);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1);
+        final b = s.town.build(id)!;
+        say('${p.name} mejoró ${u.label.toLowerCase()} del '
+            '${b.kind == BuildKind.huerta ? 'granjero' : 'pescador'} ${i + 1} '
+            '(rango ${b.stat(i).rank(u)}).');
         return true;
       case TownOp.collectChest:
         final id = a.target;

@@ -111,7 +111,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// (farming.md § 8); se va la auto-pesca.
 /// 48 (v0.26.0): mapa de viaje y exteriores de bioma (overworld_biomes.md):
 /// `place` en el snapshot, `town.wild` y acciones `travel` / `forage`.
-const kProtocolVersion = 48;
+/// 49 (v0.27.0): día, noche y clima (`town.sky`), faros (`town.lt`),
+/// nivel y mejoras de cada ayudante (`cr`), `helperUpgrade`, evento
+/// `bolt` y materiales de oficio en el perfil (`life.cf`).
+const kProtocolVersion = 49;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

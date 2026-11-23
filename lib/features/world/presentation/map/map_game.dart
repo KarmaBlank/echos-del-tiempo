@@ -23,6 +23,7 @@ import '../../../../game_engine/models/session_event.dart';
 import '../../../../game_engine/data/exploration_catalog.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
+import '../../../../game_engine/rules/sky_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../ascension/domain/ascension_text.dart';
@@ -35,6 +36,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_labels.dart';
 import 'map_themes.dart';
+import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
 import 'tile_painter.dart';
@@ -133,6 +135,13 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
+
+  /// Noche, lluvia y rayos (day_night_weather.md § 4).
+  final sky = MapSkyLayer();
+
+  /// Destellos (0–1, ajustes de accesibilidad) y «reducir movimiento».
+  double flashFactor = 1;
+  bool reduceMotion = false;
 
   /// Carteles de subida de nivel de oficio (farming.md § 2.6).
   final lifeLevels = MapLifeLevelLayer();
@@ -477,6 +486,9 @@ class MapGame extends Game {
       farm.addPop(playerId, tx, ty, label, RarityColors.of(r),
           RarityColors.of(r), t + 250);
     }
+    if (e case LightningEvent(:final tx, :final ty)) {
+      sky.addBolt(tx, ty, t);
+    }
     if (e case QuestDoneEvent(:final kind)) {
       _questT0 = t;
       _questText = questText(kind);
@@ -797,6 +809,19 @@ class MapGame extends Game {
     final ents = <(double, int, void Function())>[];
     void add(double y, void Function() draw) =>
         ents.add((y, ents.length, draw));
+    // Faros del pueblo (day_night_weather.md § 5): prendidos de noche.
+    final outdoor = SkyRules.outdoor(map.theme, town: map.lobby);
+    final night = outdoor && SkyRules.darkness(s.town.sky) > 0.25;
+    final lights = <Offset>[];
+    if (map.lobby && map.place == null) {
+      final (ox, oy) = map.townOrigin;
+      for (final (fx, fy) in s.town.lights) {
+        final px = (fx + ox) * ts, py = (fy + oy) * ts;
+        if (!worldView.inflate(64).contains(Offset(px, py))) continue;
+        lights.add(Offset(px + 8, py + 2));
+        add(py + 15, () => tiles.faro(c, px, py, t, lit: night));
+      }
+    }
 
     final grace = s.mode == SessionMode.field &&
         s.graceLeft > 0 &&
@@ -961,6 +986,22 @@ class MapGame extends Game {
     lifeLevels.draw(c, t, controller.localId, (id) => _lastDrawn[id],
         (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
+    // El cielo encima de todo el mapa (no en la edición del pueblo).
+    if (outdoor && !controller.editingTown) {
+      for (var y = y0; y <= y1; y++) {
+        for (var x = x0; x <= x1; x++) {
+          if (map.tileAt(x, y) == Tile.brazierLit) {
+            lights.add(Offset(x * ts + 8, y * ts + 2));
+          }
+        }
+      }
+      sky.draw(c, s.town.sky, worldView, t,
+          lights: lights,
+          density: particleDensity,
+          flash: flashFactor,
+          motion: !reduceMotion);
+    }
+
     if (map.lobby && map.place == null) {
       TownEditLayer.draw(c, controller, map,
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size),
@@ -1010,6 +1051,7 @@ class MapGame extends Game {
           worldSize: labelPx(p.loot.style.size)));
     }
     c.restore();
+    if (outdoor && !controller.editingTown) _drawSkyNotice(c, s.town.sky);
     if (showingFallToast) {
       final q = (t - _myFallT0!) / fallToastMs;
       final a = q < 0.8 ? 1.0 : (1 - q) / 0.2;
@@ -1029,6 +1071,24 @@ class MapGame extends Game {
           const Color(0xFFFFFFFF).withValues(alpha: a), 6);
     }
     _drawFade(c, view);
+  }
+
+  /// Cartel chico arriba (day_night_weather.md § 3.4): de noche, el
+  /// pronóstico de mañana; de día con lluvia o tormenta, el clima.
+  void _drawSkyNotice(Canvas c, SkyState sky) {
+    if (!sky.started) return;
+    final w = SkyRules.now(sky);
+    final txt = SkyRules.isNight(sky)
+        ? 'Noche · ${SkyRules.forecast(sky)}'
+        : w == Weather.despejado
+            ? null
+            : w == Weather.tormenta
+                ? 'Tormenta'
+                : 'Llueve';
+    if (txt == null) return;
+    c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
+        Paint()..color = SkyPalette.forecastBack);
+    actors.text(c, txt, vw / 2, 40, SkyPalette.forecast, 6);
   }
 
   /// Primera mitad de la caída: el héroe se achica (a 0.2) y se desvanece

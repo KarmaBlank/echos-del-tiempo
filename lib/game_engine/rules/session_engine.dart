@@ -66,10 +66,13 @@ import '../data/town_layout.dart' show TownLayout, TownSpot;
 import 'fishing_rules.dart';
 import 'farming_rules.dart';
 import 'life_tree_rules.dart';
+import 'helper_rules.dart';
+import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
 import '../data/biomes_catalog.dart';
-import '../models/world_save.dart' show TownState, TownSide, BuildKind, TownBuild;
+import '../models/world_save.dart'
+    show TownState, TownSide, BuildKind, TownBuild, HelperUpgrade, Weather;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 

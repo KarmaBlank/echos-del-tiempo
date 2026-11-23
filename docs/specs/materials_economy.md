@@ -158,6 +158,21 @@ La conversión es el tope (todo convertido, reserva de 10 Esq y 2 Cri por
 misión); un jugador real queda entre las dos columnas, es decir **Épico ≈
 4–6 misiones medias y 3–6 tardías**, dentro de la meta.
 
+### 4.4 Materiales de oficio (v0.27.0)
+
+En CONDENSAR, debajo de lo de siempre, la sección OFICIOS (grilla con
+detalle y ×1 / ×5 / MÁX):
+
+| Material | Receta (Editor → Balance → Pueblo) |
+|---|---|
+| Fibra vegetal | `fibraIn` (5) cosechas + `lifeEsq` (1) Esquirla + `lifeCr` (20) de oro |
+| Cebo prensado | `ceboIn` (5) pescados + 1 Esquirla + 20 de oro |
+| Tabla tratada | `tablaFibra` (3) fibras + `tablaEsq` (2) Esquirlas + `tablaCr` (50) de oro |
+
+Gasta primero lo de menos valor (rareza y calidad); nunca legendarios.
+Pagan contratar y mejorar ayudantes (farming.md § 8.5). Red: la misma
+`CraftAction` `condense` con `w = life:<id>`.
+
 ## 5. Decisiones del dueño (aprobadas)
 
 1. **Bajar el drop directo de Épicos**: SÍ. Peso base del Épico 2.7 →

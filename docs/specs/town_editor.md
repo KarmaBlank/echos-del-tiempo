@@ -237,6 +237,12 @@ y) (`tg` = `@<lugar>` mueve un lugar fijo, § 3.3; v0.25.2, protocolo 46); `remo
 anfitrión valida todo (pueblo, dueño, reglas de § 3.2) y el pueblo
 viaja en el estado.
 
+## 8.1 Faros (v0.27.0)
+
+CONSTRUIR suma FARO: 1×1, `faroCost` de oro, en pasto o camino, no es
+sólido ni corta caminos; MOVER y BORRAR como lo demás
+(day_night_weather.md § 5). `TownState.lights` (`lt`).
+
 ## 9. Pendiente
 - Otros tipos de construcción (decorado, corrales).
 - Rotar construcciones y achicar lagos.

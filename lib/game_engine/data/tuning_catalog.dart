@@ -229,6 +229,51 @@ const Map<String, TuningDef> kTuningDefaults = {
     'helperEverySec': 45,
     'helperXpShare': 0.1,
     'chestMax': 200,
+    // Progresión de cada ayudante (farming.md § 8.5, v0.27.0): nivel
+    // tope, XP del nivel l = base × l^exp (1 por parcela atendida o pez),
+    // materiales de oficio al contratar, mejoras (oro y materiales por
+    // rango, niveles por rango, tope de rangos) y su efecto por rango.
+    'helperMaxLevel': 10,
+    'helperXpBase': 30,
+    'helperXpExp': 1.4,
+    'hireMat': 5,
+    'upGold': 400,
+    'upMat': 3,
+    'upTabla': 1,
+    'upRankLevels': 3,
+    'upMaxRank': 4,
+    'upPlots': 2,
+    'upRitmo': 0.15,
+    'upCalidad': 0.1,
+    'upRareSeed': 0.03,
+    'upPeces': 1,
+    'upRareza': 0.06,
+    // Materiales de oficio de CONDENSAR (v0.27.0): cosechas o pescados
+    // por fibra / cebo, Esquirlas y oro de cada una; fibras, Esquirlas y
+    // oro por tabla.
+    'fibraIn': 5,
+    'ceboIn': 5,
+    'lifeEsq': 1,
+    'lifeCr': 20,
+    'tablaFibra': 3,
+    'tablaEsq': 2,
+    'tablaCr': 50,
+    // Día, noche y clima (day_night_weather.md, v0.27.0): segundos de día
+    // y de noche, del atardecer / amanecer, chances del clima, parte del
+    // día que dura, rayos (cada cuánto se tira y la chance), picada y
+    // pescadores con tormenta y el oro del faro.
+    'daySec': 300,
+    'nightSec': 300,
+    'duskSec': 40,
+    'rainChance': 0.25,
+    'stormChance': 0.06,
+    'weatherMinFrac': 0.2,
+    'weatherMaxFrac': 0.45,
+    'boltEverySec': 12,
+    'boltChance': 0.4,
+    'stormBite': 0.3,
+    'stormFisher': 0.35,
+    'faroCost': 300,
     // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
     // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo
     // por recolectar, turnos de espera del refuerzo que llega a una pelea

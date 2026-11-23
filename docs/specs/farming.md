@@ -349,6 +349,41 @@ herramienta de área trabaja menos tiles.
 la primera huerta; `town.silo` → el cofre de esa huerta. El granero del
 agropecuario (RECOGER) ya no existe.
 
+### 8.5 Progresión de cada ayudante (v0.27.0)
+
+Ser granjero o pescador es una dedicación: cada ayudante contratado es
+alguien con su nivel y sus mejoras. Números en Editor → Balance →
+Pueblo.
+
+- Nivel 1 a `helperMaxLevel` (10). XP por trabajo: 1 por parcela que
+  planta, riega o cosecha; 1 por pez que saca. Del nivel l al siguiente:
+  `helperXpBase` × l^`helperXpExp` (30 × l^1.4).
+- Contratar cuesta `helperCost` (800) de oro + `hireMat` (5) de fibra
+  vegetal (granjero) o cebo prensado (pescador), además del nivel del
+  oficio de siempre.
+- Pestaña MEJORAS en su pantalla (G): grilla tipo inventario, una
+  casilla por mejora con rango, efecto, costo y MEJORAR. El rango r
+  cuesta `upGold`·r de oro + `upMat`·r de fibra / cebo + `upTabla`·(r−1)
+  tablas y pide nivel 1 + (r−1)·`upRankLevels` del ayudante. Tope
+  `upMaxRank` (4) por mejora.
+  - Granjero: PARCELAS (+`upPlots` parcelas que atiende; las áreas se
+    corren una detrás de la otra), RITMO (+`upRitmo` de chance de una
+    vuelta extra), CALIDAD (+`upCalidad` de chance de subir un escalón
+    la cosecha), HALLAZGO (+`upRareSeed` de chance de una semilla rara
+    para la huerta al cosechar).
+  - Pescador: RED (+`upPeces` pez por vuelta), RITMO (igual), RAREZA
+    (+`upRareza` de chance de tirar otra vez y quedarse con el pez más
+    raro; nunca legendarios).
+- Materiales de oficio: se hacen en CONDENSAR (materials_economy.md §
+  4.4). Viven en `life.cf` del perfil.
+- Datos: `TownBuild.crew` (`cr`: `x` XP, `u` rangos por mejora). Los
+  ayudantes de antes quedan en nivel 1 sin mejoras; fundir dos
+  construcciones junta sus ayudantes con su progreso; despedir saca el
+  último con lo suyo.
+- Clima (day_night_weather.md § 3): con lluvia no hay nada que regar; con
+  tormenta los pescadores sacan `stormFisher` de lo de siempre y los
+  rayos pueden pegarle a una parcela.
+
 ## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →
 categoría).

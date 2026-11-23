@@ -109,6 +109,12 @@ class EventJson {
             'x': e.tx,
             'y': e.ty,
           },
+        LightningEvent() => {
+            't': 'bolt',
+            'x': e.tx,
+            'y': e.ty,
+            if (e.lost) 'l': true,
+          },
         FishCaughtEvent() => {
             't': 'fCaught',
             'id': e.playerId,
@@ -266,6 +272,9 @@ class EventJson {
       case 'cLoot':
         return FarmLootEvent(j.str('id'), j.str('l'), j.integer('r'),
             j.integer('x'), j.integer('y'));
+      case 'bolt':
+        return LightningEvent(j.integer('x'), j.integer('y'),
+            lost: j['l'] == true);
       case 'fCaught':
         return FishCaughtEvent(j.str('id'), j.str('sp'), j.integer('cm'),
             auto: j['auto'] == true);

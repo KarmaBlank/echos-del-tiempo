@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'farm_plot.dart';
 
 /// Filas o columnas que suma cada ampliación del pueblo (town_editor.md
@@ -53,6 +55,67 @@ enum HelperTask {
 }
 
 const kAllHelperTasks = 7;
+
+/// Mejora de un ayudante (farming.md § 8.5, v0.27.0). Cada una es de
+/// granjero o de pescador y sube por rangos.
+enum HelperUpgrade {
+  parcelas('Parcelas', true),
+  ritmo('Ritmo', true),
+  calidad('Calidad', true),
+  hallazgo('Hallazgo', true),
+  red('Red', false),
+  ritmoRed('Ritmo', false),
+  rareza('Rareza', false);
+
+  const HelperUpgrade(this.label, this.farmer);
+  final String label;
+
+  /// De granjero (`true`) o de pescador.
+  final bool farmer;
+
+  static HelperUpgrade? fromName(Object? n) {
+    for (final v in values) {
+      if (v.name == n) return v;
+    }
+    return null;
+  }
+}
+
+/// Lo de un ayudante en particular (farming.md § 8.5): su XP de trabajo y
+/// los rangos de cada mejora. Los ayudantes de antes de v0.27.0 quedan en
+/// nivel 1 sin mejoras.
+class HelperStat {
+  const HelperStat({this.xp = 0, this.ups = const {}});
+
+  final int xp;
+  final Map<HelperUpgrade, int> ups;
+
+  int rank(HelperUpgrade u) => ups[u] ?? 0;
+
+  HelperStat copyWith({int? xp, Map<HelperUpgrade, int>? ups}) =>
+      HelperStat(xp: xp ?? this.xp, ups: ups ?? this.ups);
+
+  Map<String, Object?> toJson() => {
+        if (xp > 0) 'x': xp,
+        if (ups.isNotEmpty) 'u': {for (final e in ups.entries) e.key.name: e.value},
+      };
+
+  static HelperStat fromJson(Object? raw) {
+    if (raw is! Map) return const HelperStat();
+    final u = raw['u'];
+    return HelperStat(
+      xp: raw['x'] is num ? (raw['x'] as num).round().clamp(0, 1 << 30) : 0,
+      ups: u is Map
+          ? {
+              for (final e in u.entries)
+                if (HelperUpgrade.fromName(e.key) case final k?)
+                  if (e.value is num && (e.value as num) > 0)
+                    k: (e.value as num).round().clamp(0, 20),
+            }
+          : const {},
+    );
+  }
+}
 
 /// Rectángulo de tiles en coordenadas del pueblo base (el origen del
 /// pueblo sin ampliar; las ampliaciones al norte y al oeste dan valores
@@ -118,7 +181,8 @@ class TownBuild {
       this.helper = 0,
       this.chest = const {},
       this.seeds = const {},
-      this.tasks = const []});
+      this.tasks = const [],
+      this.crew = const []});
 
   final String id;
   final BuildKind kind;
@@ -147,6 +211,17 @@ class TownBuild {
   final List<int> tasks;
 
   int taskMask(int i) => i < tasks.length ? tasks[i] : kAllHelperTasks;
+
+  /// Nivel y mejoras de cada ayudante (farming.md § 8.5); falta = nivel 1
+  /// sin mejoras.
+  final List<HelperStat> crew;
+
+  HelperStat stat(int i) => i < crew.length ? crew[i] : const HelperStat();
+
+  /// [crew] con el ayudante [i] cambiado (rellena hasta [helper]).
+  List<HelperStat> crewWith(int i, HelperStat st) => [
+        for (var k = 0; k < math.max(helper, i + 1); k++) k == i ? st : stat(k)
+      ];
 
   int get chestTotal => chest.values.fold(0, (a, b) => a + b);
   int get seedTotal => seeds.values.fold(0, (a, b) => a + b);
@@ -210,14 +285,16 @@ class TownBuild {
           int? helper,
           Map<String, int>? chest,
           Map<String, int>? seeds,
-          List<int>? tasks}) =>
+          List<int>? tasks,
+          List<HelperStat>? crew}) =>
       TownBuild(id, kind, parts ?? this.parts,
           stock: stock ?? this.stock,
           plots: plots ?? this.plots,
           helper: helper ?? this.helper,
           chest: chest ?? this.chest,
           seeds: seeds ?? this.seeds,
-          tasks: tasks ?? this.tasks);
+          tasks: tasks ?? this.tasks,
+          crew: crew ?? this.crew);
 
   /// Movida para que su esquina quede en ([x], [y]).
   TownBuild movedTo(int x, int y) {
@@ -236,6 +313,8 @@ class TownBuild {
         if (chest.isNotEmpty) 'ch': chest,
         if (seeds.isNotEmpty) 'sd': seeds,
         if (tasks.any((m) => m != kAllHelperTasks)) 'tk': tasks,
+        if (crew.any((c) => c.xp > 0 || c.ups.isNotEmpty))
+          'cr': [for (final c in crew) c.toJson()],
       };
 
   static Map<String, int> ints(Object? v) => v is Map
@@ -269,6 +348,9 @@ class TownBuild {
                 for (final m in raw['tk'] as List)
                   m is num ? m.round() & kAllHelperTasks : kAllHelperTasks
               ]
+            : const [],
+        crew: raw['cr'] is List
+            ? [for (final c in raw['cr'] as List) HelperStat.fromJson(c)]
             : const [],
         plots: pl is Map
             ? {

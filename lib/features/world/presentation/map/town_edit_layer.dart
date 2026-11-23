@@ -92,6 +92,15 @@ abstract final class TownEditLayer {
             line);
       }
     }
+    // Faros (day_night_weather.md § 5).
+    for (final f in town.lights) {
+      line.color = TownState.lightId(f) == e.selected
+          ? TownEditPalette.selected
+          : TownEditPalette.outline;
+      c.drawRect(
+          Rect.fromLTWH((f.$1 + ox) * ts, (f.$2 + oy) * ts, ts, ts).deflate(0.5),
+          line);
+    }
     // Lugares fijos: también se pueden mover (town_editor.md § 3.3).
     for (final l in TownPlan.landmarksOf(town)) {
       line.color = l.id == e.selected
@@ -109,7 +118,11 @@ abstract final class TownEditLayer {
     final g = e.ghost;
     if (g == null) return;
     final List<TownRect> parts;
-    if (e.step == TownEditStep.placing) {
+    if (e.step == TownEditStep.placing && e.placeDef == kFaroId ||
+        e.step == TownEditStep.moving &&
+            TownState.parseLightId(e.selected) != null) {
+      parts = [TownRect(g.$1, g.$2, 1, 1)];
+    } else if (e.step == TownEditStep.placing) {
       final d = construction(e.placeDef ?? '');
       if (d == null) return;
       parts = [TownRect(g.$1, g.$2, d.w, d.h)];

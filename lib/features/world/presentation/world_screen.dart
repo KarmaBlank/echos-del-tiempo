@@ -400,6 +400,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       game
         ..scaleMode = gfx.scale
         ..particleDensity = gfx.particles.factor
+        // Destellos del rayo y lluvia (accessibility.md; day_night_weather.md § 4).
+        ..flashFactor = gfx.flashFactor
+        ..reduceMotion = gfx.reduceMotion
         // Texto del mapa (accessibility.md § 9.5 y 9.6).
         ..noticeFactor = gfx.noticeDuration.factor
         ..labelBackdrop = gfx.mapLabelBackdrop;

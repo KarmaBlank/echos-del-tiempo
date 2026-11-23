@@ -10,6 +10,7 @@ import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/map_generator.dart';
 import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
+import '../../../game_engine/rules/sky_rules.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
 
@@ -22,6 +23,7 @@ final sessionMusicProvider = Provider.autoDispose<SessionMusic>((ref) {
     localId: controller.localId,
     themeOf: (id) => controller.engine.catalog.mission(id)?.theme,
     fishing: () => controller.mapFishing != null,
+    night: () => SkyRules.isNight(controller.sky),
   );
   final remove = controller.addListener(music.onView);
   ref.onDispose(remove);
@@ -95,11 +97,15 @@ abstract final class MusicSelector {
     bool boss = false,
     String? bossId,
     bool fishing = false,
+    bool night = false,
   }) {
     switch (mode) {
       case SessionMode.lobby:
-        // Pescando en el pueblo: la variante de ocarina (music.md § 5.2).
+        // Pescando en el pueblo: la variante de ocarina (music.md § 5.2);
+        // gana aun de noche.
         if (inTown && fishing) return Music.fishing;
+        // De noche, la variante calma (§ 5.3).
+        if (inTown && night) return Music.townNight;
         return inTown ? Music.town : Music.overworld;
       case SessionMode.prep:
       case SessionMode.result:
@@ -151,7 +157,7 @@ abstract final class MusicSelector {
 /// el de victoria.
 class SessionMusic {
   SessionMusic(this.music,
-      {required this.localId, this.themeOf, this.fishing});
+      {required this.localId, this.themeOf, this.fishing, this.night});
 
   final MusicService music;
   final String localId;
@@ -161,6 +167,9 @@ class SessionMusic {
 
   /// Si el jugador local tiene la caña afuera (pesca del mapa).
   final bool Function()? fishing;
+
+  /// Es de noche en el mundo (la variante calma del pueblo).
+  final bool Function()? night;
 
   bool _started = false;
   bool _inTown = true;
@@ -230,6 +239,7 @@ class SessionMusic {
       boss: s.battle?.boss ?? false,
       bossId: MusicSelector.bossIdOf(s.battle?.state),
       fishing: fishing?.call() ?? false,
+      night: night?.call() ?? false,
     );
     if (t != _track) {
       final leavingBattle =
