@@ -98,13 +98,13 @@ class RunScreen extends StatelessWidget {
         ],
       );
 
-  /// PERSONAJE [C] e INVENTARIO [I] (las mismas teclas que en el Mundo).
+  /// PERSONAJE [TAB] y EQUIPAMIENTO [I] (las mismas teclas que en el Mundo).
   Widget _character() => Wrap(spacing: DsSpace.sm, children: [
-        DsButton('PERSONAJE [C]',
+        DsButton('PERSONAJE [TAB]',
             key: const ValueKey('run-open-character'),
             tooltip: 'Atributos, arma, ULT, mejoras y objetos de la run',
             onPressed: () => controller.openPanel(WorldPanel.character)),
-        DsButton('INVENTARIO [I]',
+        DsButton('EQUIPAMIENTO [I]',
             key: const ValueKey('run-open-inventory'),
             tooltip: 'Equipar armas, usar pociones y ordenar el bolso',
             onPressed: () => controller.openPanel(WorldPanel.inventory)),

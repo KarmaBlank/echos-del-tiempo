@@ -254,6 +254,9 @@ dueño.
 
 ## 9. v0.23.0: agropecuario con pestañas, PESCA Y CULTIVO y árbol
 
+> **v0.32.4:** PESCA Y CULTIVO pasó a PERSONAJE → OFICIOS → INVENTARIO
+> → PESCA (docs/specs/oficio_storage.md).
+
 - El agropecuario tiene pestañas PESCA y CULTIVO (desde v0.23.2, primero
   COMPRAR / VENDER: § 5.3). Lo de cultivo: farming.md § 9.
 - PERSONAJE → PESCA Y CULTIVO (solo en el pueblo): cañas, pescados (con

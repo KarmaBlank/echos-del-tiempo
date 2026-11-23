@@ -1047,6 +1047,11 @@ coincide) y, si el filtro lo oculta, `(oculto por tu filtro)` en dim.
 
 ## Personaje (`char`, 1298-1335)
 
+**v0.32.4.** INVENTARIO pasa a llamarse EQUIPAMIENTO; PESCA Y CULTIVO
+desaparece y todo lo de oficios vive en OFICIOS (subpestañas HABILIDADES
+e INVENTARIO). `Tab` / `C` abren y cierran PERSONAJE, `I` lo abre en
+EQUIPAMIENTO. Ver oficio_storage.md.
+
 **v0.11 (sistema de diseño, design_system.md § 10).** Pestañas `DsTabBar`
 (`tab-N`) con la insignia de puntos adentro (`tab-badge-N`); la línea
 fija de ayuda de cada pestaña pasó al "?" del título. La línea del título

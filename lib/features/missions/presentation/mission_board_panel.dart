@@ -43,7 +43,7 @@ class MissionBoardPanel extends StatefulWidget {
   final ValueChanged<String> onPropose;
   final VoidCallback onClose;
 
-  /// `Personaje [C]` (botones de abajo del prototipo, línea 1360).
+  /// `Personaje [TAB]` (botones de abajo del prototipo, línea 1360).
   final VoidCallback? onCharacter;
 
   /// Nombre del jefe de una misión (para el objetivo).
@@ -176,7 +176,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           onClose: w.onClose,
           actions: [
             if (w.onCharacter != null)
-              DsButton('PERSONAJE [C]',
+              DsButton('PERSONAJE [TAB]',
                   key: const ValueKey('board-character'),
                   onPressed: w.onCharacter),
             DsButton('CERRAR [ESC]',

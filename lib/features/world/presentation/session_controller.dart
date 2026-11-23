@@ -2482,7 +2482,7 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
       if (s.mode == SessionMode.battle) return false;
-      if (key == LogicalKeyboardKey.keyC) {
+      if (key == LogicalKeyboardKey.tab || key == LogicalKeyboardKey.keyC) {
         toggleCharacter();
         return true;
       }
@@ -2531,7 +2531,8 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
     }
-    if (_panel == null && nearFarm && key == LogicalKeyboardKey.tab) {
+    // R: otra mano en la huerta (Tab abre PERSONAJE desde v0.32.4).
+    if (_panel == null && nearFarm && key == LogicalKeyboardKey.keyR) {
       cycleFarmHand(HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
       return true;
     }
@@ -2541,7 +2542,13 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
     }
-    if (key == LogicalKeyboardKey.keyC && s.mode != SessionMode.battle) {
+    // Tab (y C, de alias): abre / cierra PERSONAJE.
+    if ((key == LogicalKeyboardKey.tab || key == LogicalKeyboardKey.keyC) &&
+        s.mode != SessionMode.battle) {
+      if (HardwareKeyboard.instance.isShiftPressed &&
+          key == LogicalKeyboardKey.tab) {
+        return true;
+      }
       toggleCharacter();
       return true;
     }

@@ -64,7 +64,7 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
                 onChanged: (i) => setState(() => _tab = ArmoryTab.values[i]),
               )),
           actions: [
-            PanelButton('PERSONAJE [C]',
+            PanelButton('PERSONAJE [TAB]',
                 onPressed: () => controller.openPanel(WorldPanel.character)),
             PanelButton('CERRAR [ESC]', onPressed: close),
           ],
