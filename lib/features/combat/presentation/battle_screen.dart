@@ -41,6 +41,7 @@ import 'enemy_live_info.dart';
 import 'battle_bar_layout.dart';
 import 'battle_command_window.dart';
 import 'battle_hud.dart';
+import 'combat_strings.dart';
 import 'game_sprites.dart';
 import 'scene/battle_layout.dart';
 import 'scene/battle_painter.dart';
@@ -214,6 +215,23 @@ class BattleViewState extends State<BattleView>
   /// Enemigo apuntado (`tgt` del prototipo).
   String? _target;
 
+  /// Active language (docs/specs/i18n.md § 3).
+  Strings get _s => combatStrings(context);
+
+  /// Rebuilds the battle when the language changes (OPCIONES → IDIOMA).
+  ProviderSubscription<Strings>? _langSub;
+  bool _langListening = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_langListening) return;
+    _langListening = true;
+    _langSub = listenCombatStrings(context, () {
+      if (mounted) setState(() {});
+    });
+  }
+
   /// Submenú de poción abierto (`potMode`): elegir a quién.
   BattleItem? _potMode;
 
@@ -338,6 +356,7 @@ class BattleViewState extends State<BattleView>
 
   @override
   void dispose() {
+    _langSub?.close();
     _clearLogHistory();
     _ticker.dispose();
     scene.dispose();
@@ -498,15 +517,17 @@ class BattleViewState extends State<BattleView>
 
   /// `Quiebre n/m` del enemigo [e] (docs/specs/break_and_enemy_ults.md
   /// § 1), con `¡VULNERABLE!` si está quebrado y `¡ULT!` si la avisó.
-  static String breakInfoMarkup(Combatant e) {
+  String breakInfoMarkup(Combatant e) {
     if (!e.hasBreak && !e.ultPending) return '';
     final parts = <String>[
       if (e.hasBreak)
         e.broken
-            ? hexSpan('#ffe14d', '¡VULNERABLE! ×1.5')
-            : hexSpan('#ffe14d',
-                'Quiebre ${e.breakGauge.floor()}/${e.breakMax.round()}'),
-      if (e.ultPending) hexSpan('#ff3355', '¡ULT!'),
+            ? hexSpan('#ffe14d', _s.t('ui.combat.menu.vulnerable'))
+            : hexSpan(
+                '#ffe14d',
+                _s.t('ui.combat.menu.break_gauge',
+                    {'n': e.breakGauge.floor(), 'max': e.breakMax.round()})),
+      if (e.ultPending) hexSpan('#ff3355', _s.t('ui.combat.target.ult')),
     ];
     return ' · ${parts.join(' ')}';
   }
@@ -514,10 +535,9 @@ class BattleViewState extends State<BattleView>
   /// `est(v, all)`: daño estimado en dorado y el crítico en `#7d8bc4`.
   /// Sin [crit] (filas del menú) solo la cifra: el crítico va en la
   /// descripción.
-  static String _est(Combatant p, num v,
-          {bool all = false, bool crit = true}) =>
-      ' <span style="color:#ffd166">${jsRound(v)}${all ? ' c/u' : ''}</span>'
-      '${crit ? '<span style="color:#7d8bc4"> (crít ${jsRound(v * p.critMultiplier)})</span>' : ''}';
+  String _est(Combatant p, num v, {bool all = false, bool crit = true}) =>
+      ' <span style="color:#ffd166">${jsRound(v)}${all ? _s.t('ui.combat.menu.each') : ''}</span>'
+      '${crit ? '<span style="color:#7d8bc4"> ${_s.t('ui.combat.menu.crit_est', {'n': jsRound(v * p.critMultiplier)})}</span>' : ''}';
 
   /// `+N` / `P%` y la letra del estado en su color.
   static String _stTag(StatusApplication st) => hexSpan(
@@ -526,31 +546,31 @@ class BattleViewState extends State<BattleView>
       '${statusLetterOf(st.kind)}');
 
   /// Lo que se agrega al nombre de una técnica (`info`, línea 1217).
-  static String _skillInfo(SkillDef tk, Combatant p, {bool crit = true}) =>
+  String _skillInfo(SkillDef tk, Combatant p, {bool crit = true}) =>
       (tk.charge > 0
           ? _est(p, p.attack * tk.charge, crit: crit)
           : _skillInfoBase(tk, p, crit: crit)) +
       variantTagMarkup(tk);
 
-  static String _skillInfoBase(SkillDef tk, Combatant p, {bool crit = true}) {
+  String _skillInfoBase(SkillDef tk, Combatant p, {bool crit = true}) {
     switch (tk.kind) {
       case SkillKind.heal:
-        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 6)}${tk.lowestAlly ? '' : ' c/u'}')}';
+        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 6)}${tk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}')}';
       case SkillKind.haste:
-        return ' ${hexSpan('#ffd166', 'adelanta aliados')}';
+        return ' ${hexSpan('#ffd166', _s.t('ui.combat.menu.info.haste'))}';
       case SkillKind.taunt:
-        return ' ${hexSpan('#ff7675', 'te atacan a ti ×${tk.amount}')}';
+        return ' ${hexSpan('#ff7675', _s.t('ui.combat.menu.info.taunt', {'n': tk.amount}))}';
       case SkillKind.guard:
-        return ' ${hexSpan('#74b9ff', 'equipo recibe ½')}';
+        return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.guard'))}';
       case SkillKind.regen:
-        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 4)}${tk.lowestAlly ? '' : ' c/u'} + regen 5%×3')}';
+        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 4)}${tk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}${_s.t('ui.combat.menu.info.regen')}')}';
       case SkillKind.defenseUp:
         // Fortaleza del Guardián: también escudo al grupo.
-        return ' ${hexSpan('#74b9ff', 'DEF +${tk.amount} (ahora ${p.defense})${tk.partyShield > 0 ? ' + escudo a todos' : ''}')}';
+        return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.defense_up', {'n': tk.amount, 'now': p.defense, 'shield': '${tk.partyShield > 0}'}))}';
       case SkillKind.protect:
-        return ' ${hexSpan('#ffeaa7', 'absorbe el daño de aliados')}';
+        return ' ${hexSpan('#ffeaa7', _s.t('ui.combat.menu.info.protect'))}';
       case SkillKind.bulwark:
-        return ' ${hexSpan('#74b9ff', 'cura 30%, defensa y protección')}';
+        return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.bulwark'))}';
       case SkillKind.support:
         // Kit de ascensión: el primer efecto, corto.
         final b = tk.partyBuffs.firstOrNull;
@@ -560,7 +580,7 @@ class BattleViewState extends State<BattleView>
             variantTagMarkup(tk).isNotEmpty) {
           return '';
         }
-        return ' ${hexSpan('#ffb142', b != null ? 'grupo ${b.stat.label} ${jsRound(b.value * 100)}%' : tk.partyShield > 0 ? 'escudo a todos' : tk.advanceAllies > 0 ? 'adelanta aliados' : tk.trap > 0 ? 'trampas' : tk.selfBuff != null ? 'crítico seguro' : 'apoyo')}';
+        return ' ${hexSpan('#ffb142', b != null ? _s.t('ui.combat.menu.info.party_buff', {'stat': b.stat.label, 'pct': jsRound(b.value * 100)}) : _s.t(tk.partyShield > 0 ? 'ui.combat.menu.info.party_shield' : tk.advanceAllies > 0 ? 'ui.combat.menu.info.haste' : tk.trap > 0 ? 'ui.combat.menu.info.traps' : tk.selfBuff != null ? 'ui.combat.menu.info.sure_crit' : 'ui.combat.menu.info.support'))}';
       case SkillKind.physical || SkillKind.magical:
         final st = tk.status;
         return _est(p,
@@ -568,18 +588,18 @@ class BattleViewState extends State<BattleView>
                 all: tk.allTargets, crit: crit) +
             (st != null ? ' ${_stTag(st)}' : '') +
             (tk.critBonus > 0
-                ? hexSpan('#ff6b81', ' +${jsRound(tk.critBonus * 100)}% crít')
+                ? hexSpan('#ff6b81',
+                    _s.t('ui.combat.menu.info.crit_bonus', {'pct': jsRound(tk.critBonus * 100)}))
                 : '');
     }
   }
 
   /// Descripción de Atacar.
-  static String _attackDesc(Combatant cur) =>
-      '<b>Atacar</b> <span class="k">sin costo</span><br>'
-      'Daño físico ATQ ${cur.attack}:${_est(cur, cur.attack, crit: false)}'
+  String _attackDesc(Combatant cur) =>
+      '${_s.t('ui.combat.attack.desc', {'atk': cur.attack})}${_est(cur, cur.attack, crit: false)}'
       '<br>${critLineMarkup(cur, cur.attack)}'
-      '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', '${jsRound(cur.stunOnAttackChance * 100)}% de aturdir')}' : ''}'
-      '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', '25%: cura 2% al grupo')}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', '25%: aplica Sagrado')}' : ''}';
+      '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', _s.t('ui.combat.attack.stun', {'pct': jsRound(cur.stunOnAttackChance * 100)}))}' : ''}'
+      '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', _s.t('ui.combat.attack.believer'))}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', _s.t('ui.combat.attack.inherent'))}' : ''}';
 
   /// Una fila de DÚOS: [cur] con [q] haciendo el dúo [id]. Id estable:
   /// `duo-<aliado>` el de clase (como en v0.8.2) y `duo-<aliado>-<id>`
@@ -604,24 +624,21 @@ class BattleViewState extends State<BattleView>
       mpCost: mp,
       reach: SkillReach.allFoes,
       summary: [
-        hexSpan(SkillReach.allFoes.hex, 'A TODOS'),
+        hexSpan(SkillReach.allFoes.hex, _s.t('ui.combat.duo.all')),
         el.label,
-        hexSpan('#ffd166', '${jsRound(sum)} c/u'),
+        hexSpan('#ffd166', '${jsRound(sum)}${_s.t('ui.combat.menu.each')}'),
         _stTag(du.status),
-        '$mp MP cada uno',
+        _s.t('ui.combat.duo.mp_each', {'n': mp}),
       ].join(' · '),
       dual: true,
-      description: '<b>★ ${du.name}</b> <span class="k">dúo '
-          '${w == null ? 'de clase' : 'de armas'}: ${protoEsc(cur.name)} + '
-          '${protoEsc(q.name)}</span><br>'
-          '${w == null ? 'Clases' : 'Armas'}: $pair · elemento '
-          '${el.label}<br>'
-          '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
-          '${jsRound(sum)}</b> a TODOS los enemigos<br>'
+      description: '<b>★ ${du.name}</b> <span class="k">'
+          '${_s.t('ui.combat.duo.kind', {'kind': w == null ? 'class' : 'weapon', 'a': protoEsc(cur.name), 'b': protoEsc(q.name)})}</span><br>'
+          '${_s.t('ui.combat.duo.pair', {'kind': w == null ? 'class' : 'weapon', 'pair': pair, 'el': el.label})}<br>'
+          '${_s.t('ui.combat.duo.formula', {'x': fm(du.power), 'sum': jsRound(sum)})}<br>'
           '${critLineMarkup(cur, sum, all: true)}<br>'
           '${statusApplicationMarkup(du.status)}<br>'
-          '$mp MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
-      reason: ok ? null : 'Hace falta $mp MP cada uno.',
+          '${_s.t('ui.combat.duo.cost_line', {'n': mp, 'who': protoEsc(q.name)})}',
+      reason: ok ? null : _s.t('ui.combat.duo.need_mp', {'n': mp}),
       onSelect: ok
           ? () => _send(DualCommand(q.id, dualId: w == null ? null : id))
           : null,
@@ -685,11 +702,15 @@ class BattleViewState extends State<BattleView>
     return [
       BattleAction(
         id: 'heal-lowest',
-        name: sk.lowestAlly ? 'Al más herido' : 'Al grupo',
-        value: hexSpan('#7bed9f', '+$a${sk.lowestAlly ? '' : ' c/u'}'),
-        description: sk.lowestAlly
-            ? '${protoEsc(sk.name)} al aliado con menos vida: +$a HP'
-            : '${protoEsc(sk.name)} a cada aliado: +$a HP',
+        name: _s.t(sk.lowestAlly
+            ? 'ui.combat.heal.lowest'
+            : 'ui.combat.heal.party'),
+        value: hexSpan('#7bed9f', '+$a${sk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}'),
+        description: _s.t(
+            sk.lowestAlly
+                ? 'ui.combat.heal.lowest_desc'
+                : 'ui.combat.heal.party_desc',
+            {'skill': protoEsc(sk.name), 'n': a}),
         onSelect: () => _send(SkillCommand(sk.id)),
       ),
       for (final q in b.party)
@@ -697,12 +718,17 @@ class BattleViewState extends State<BattleView>
           BattleAction(
             id: 'heal-ally-${q.id}',
             name: q.id == cur.id
-                ? 'Yo (${protoEsc(q.name)})'
+                ? _s.t('ui.combat.menu.me', {'name': protoEsc(q.name)})
                 : protoEsc(q.name),
             value: hexSpan('#7bed9f', '+$a'),
             cost: hexSpan('#9fb4ff', '${q.hp}/${q.maxHp} HP'),
-            description: '${protoEsc(sk.name)} para ${protoEsc(q.name)}: '
-                '${q.hp}/${q.maxHp} HP → +$a',
+            description: _s.t('ui.combat.heal.ally_desc', {
+              'skill': protoEsc(sk.name),
+              'who': protoEsc(q.name),
+              'hp': q.hp,
+              'max': q.maxHp,
+              'n': a
+            }),
             onSelect: () => _send(SkillCommand(sk.id, targetId: q.id)),
           ),
       for (final e in _foes)
@@ -713,15 +739,17 @@ class BattleViewState extends State<BattleView>
             value: hexSpan('#ff6b81',
                 '−${healOnFoeDamage(a, e, mult: mult)}'),
             cost: hexSpan('#9fb4ff', '${e.hp}/${e.maxHp} HP'),
-            description: '${protoEsc(sk.name)} contra ${protoEsc(e.name)}: '
-                'Daño a no muertos: ${healOnFoeDamage(a, e, mult: mult)} '
-                '(Sagrado)',
+            description: _s.t('ui.combat.heal.foe_desc', {
+              'skill': protoEsc(sk.name),
+              'who': protoEsc(e.name),
+              'n': healOnFoeDamage(a, e, mult: mult)
+            }),
             onSelect: () => _send(SkillCommand(sk.id, targetId: e.id)),
           ),
       BattleAction(
         id: 'back',
-        name: '← Volver',
-        description: 'Vuelve a las habilidades (Esc).',
+        name: _s.t('ui.combat.menu.back'),
+        description: _s.t('ui.combat.menu.back_skills'),
         onSelect: () => setState(() {
           _healMode = null;
           _selected = 0;
@@ -740,19 +768,19 @@ class BattleViewState extends State<BattleView>
     final hit = BattleEngine.defendHitUlt.round();
     return BattleAction(
       id: 'defend',
-      name: 'Defender',
-      value: hexSpan('#74b9ff', '½ daño'),
-      cost: hexSpan(kPulseHex, '+$pulse Pulso'),
-      summary: '${hexSpan('#74b9ff', '½ daño')} · '
-          '${hexSpan(kPulseHex, '+$pulse Pulso')} · '
+      name: _s.t('ui.combat.defend.name'),
+      value: hexSpan('#74b9ff', _s.t('ui.combat.defend.half')),
+      cost: hexSpan(kPulseHex, _s.t('ui.combat.defend.pulse', {'n': pulse})),
+      summary: '${hexSpan('#74b9ff', _s.t('ui.combat.defend.half'))} · '
+          '${hexSpan(kPulseHex, _s.t('ui.combat.defend.pulse', {'n': pulse}))} · '
           '${hexSpan('#ee70ad', '+$ult ULT')}',
-      description: '<b>Defender</b><br>Recibís la mitad del daño hasta tu '
-          'próximo turno, y tu siguiente turno llega 30% antes.<br>'
-          '+$pulse de Pulso${cur.guardStreak ? ' (defendiste el turno '
-              'anterior: rinde menos)' : ' (+${BattleEngine.defendPulseRepeat}'
-              ' si repetís)'}. Carga +$ult de ULT, y +$hit más si te '
-          'golpean defendiendo.<br><span class="k">El tiempo agotado '
-          'defiende solo, sin este premio.</span>',
+      description: _s.t('ui.combat.defend.desc', {
+        'pulse': pulse,
+        'streak': '${cur.guardStreak}',
+        'repeat': BattleEngine.defendPulseRepeat,
+        'ult': ult,
+        'hit': hit
+      }),
       onSelect: () => _send(const DefendCommand()),
     );
   }
@@ -778,7 +806,7 @@ class BattleViewState extends State<BattleView>
     out.add(BattleCategoryEntry(BattleCategory.weapon, [
       BattleAction(
         id: 'attack',
-        name: 'Atacar',
+        name: _s.t('ui.combat.attack.name'),
         value: _est(cur, cur.attack, crit: false),
         description: _attackDesc(cur),
         onSelect: () => _send(AttackCommand(targetId: tg)),
@@ -791,11 +819,9 @@ class BattleViewState extends State<BattleView>
         if (q.webbed)
           BattleAction(
             id: 'free-${q.id}',
-            name: 'Liberar a ${protoEsc(q.name)}',
-            cost: hexSpan('#edeff5', '½ turno'),
-            description: '<b>Liberar</b><br>Cortás la telaraña de '
-                '${protoEsc(q.name)}: no pierde su turno. Te cuesta medio '
-                'turno.',
+            name: _s.t('ui.combat.free.name', {'who': protoEsc(q.name)}),
+            cost: hexSpan('#edeff5', _s.t('ui.combat.free.cost')),
+            description: _s.t('ui.combat.free.desc', {'who': protoEsc(q.name)}),
             onSelect: () => _send(AttackCommand(targetId: q.id)),
           ),
       // Las Instante viven en ARMA (battle_attack_menu.md § 6: "un
@@ -844,7 +870,7 @@ class BattleViewState extends State<BattleView>
                       (ult.kind == SkillKind.magical ? cur.magic : cur.attack) *
                           ult.power,
                       all: ult.allTargets)
-                  : hexSpan('#74b9ff', 'apoyo'),
+                  : hexSpan('#74b9ff', _s.t('ui.combat.menu.info.support')),
               ultCharge: cur.ult.floor(),
               reach: skillReach(ult),
               summary: skillSummaryMarkup(ult, cur),
@@ -852,7 +878,7 @@ class BattleViewState extends State<BattleView>
               description: describeSkillMarkup(ult, cur, ultimate: true),
               reason: ready
                   ? null
-                  : 'La barra ULT tiene que estar llena.',
+                  : _s.t('ui.combat.ult.not_ready'),
               onSelect:
                   ready ? () => _send(UltimateCommand(targetId: tg)) : null,
             ),
@@ -866,18 +892,17 @@ class BattleViewState extends State<BattleView>
         [
           BattleAction(
             id: 'potion',
-            name: 'Poción de vida',
+            name: _s.t('ui.combat.item.potion'),
             value: hexSpan('#7bed9f', '+45%'),
             count: cur.potions,
             reach: SkillReach.ally,
-            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
-                '${hexSpan('#7bed9f', '+45% HP')} · revive',
-            description:
-                '<b>Poción de vida</b> ▸ elegir a quién<br>Cura 45% de '
-                'la vida máx. del aliado que elijas (o a ti). Revive a un aliado '
-                'caído y quita ${statusNameMarkup(StatusKind.burn)} y '
-                '${statusNameMarkup(StatusKind.poison)}.',
-            reason: cur.potions > 0 ? null : 'No te quedan.',
+            summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
+                '${hexSpan('#7bed9f', '+45% HP')} · ${_s.t('ui.combat.item.revives')}',
+            description: _s.t('ui.combat.item.potion_desc', {
+              'burn': statusNameMarkup(StatusKind.burn),
+              'poison': statusNameMarkup(StatusKind.poison)
+            }),
+            reason: cur.potions > 0 ? null : _s.t('ui.combat.item.none_left'),
             onSelect: cur.potions > 0
                 ? () => setState(() {
                       _potMode = BattleItem.potion;
@@ -887,16 +912,14 @@ class BattleViewState extends State<BattleView>
           ),
           BattleAction(
             id: 'ether',
-            name: 'Poción de maná',
+            name: _s.t('ui.combat.item.ether'),
             value: hexSpan('#74b9ff', '+50%'),
             count: cur.ethers,
             reach: SkillReach.ally,
-            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
+            summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
                 '${hexSpan('#74b9ff', '+50% MP')}',
-            description:
-                '<b>Poción de maná</b> ▸ elegir a quién<br>Restaura 50% '
-                'del maná máx. del aliado que elijas (o a ti).',
-            reason: cur.ethers > 0 ? null : 'No te quedan.',
+            description: _s.t('ui.combat.item.ether_desc'),
+            reason: cur.ethers > 0 ? null : _s.t('ui.combat.item.none_left'),
             onSelect: cur.ethers > 0
                 ? () => setState(() {
                       _potMode = BattleItem.ether;
@@ -908,17 +931,17 @@ class BattleViewState extends State<BattleView>
           if (cur.aethers > 0)
             BattleAction(
               id: 'aether',
-              name: 'Éter',
+              name: _s.t('ui.combat.item.aether'),
               value: hexSpan('#ffd166', '100%'),
               count: cur.aethers,
               reach: SkillReach.ally,
-              summary: '${hexSpan(SkillReach.ally.hex, 'A un caído')} · '
-                  '${hexSpan('#ffd166', 'revive con toda la vida')}',
-              description: 'Éter ▸ elegir a quién<br>Revive a un aliado '
-                  'caído con el 100% de su vida máx. y le quita '
-                  '${statusNameMarkup(StatusKind.burn)} y '
-                  '${statusNameMarkup(StatusKind.poison)}.',
-              reason: _anyDown ? null : 'No hay aliados caídos.',
+              summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_fallen'))} · '
+                  '${hexSpan('#ffd166', _s.t('ui.combat.item.full_revive'))}',
+              description: _s.t('ui.combat.item.aether_desc', {
+                'burn': statusNameMarkup(StatusKind.burn),
+                'poison': statusNameMarkup(StatusKind.poison)
+              }),
+              reason: _anyDown ? null : _s.t('ui.combat.item.nobody_down'),
               onSelect: _anyDown
                   ? () => setState(() {
                         _potMode = BattleItem.aether;
@@ -937,41 +960,34 @@ class BattleViewState extends State<BattleView>
       if (cur.chained)
         BattleAction(
           id: 'pass',
-          name: 'Terminar turno',
-          cost: hexSpan('#9fb4ff', 'próximo ×1'),
-          description: '<b>Terminar turno</b> <span class="k">P</span><br>'
-              'Ya usaste una habilidad Instante: terminás el turno sin la '
-              'acción que te queda. El próximo turno llega como siempre.',
+          name: _s.t('ui.combat.pass.end_name'),
+          cost: hexSpan('#9fb4ff', _s.t('ui.combat.pass.end_cost')),
+          description: _s.t('ui.combat.pass.end_desc'),
           onSelect: () => _send(const PassCommand()),
         )
       else
         BattleAction(
           id: 'pass',
-          name: 'Pasar turno',
-          cost: hexSpan('#9fb4ff', 'próximo ×½'),
-          description: '<b>Pasar turno</b> <span class="k">P</span><br>'
-              'Terminás el turno sin actuar; tu próximo turno llega antes '
-              '(a la mitad del intervalo). Sin carga de ULT ni defensa: '
-              'sirve para esperar la reacción o el cebado de un aliado.',
+          name: _s.t('ui.combat.pass.name'),
+          cost: hexSpan('#9fb4ff', _s.t('ui.combat.pass.cost')),
+          description: _s.t('ui.combat.pass.desc'),
           onSelect: () => _send(const PassCommand()),
         ),
       // Modos de turno (turn_modes.md § 6).
       if (widget.battle.grouped)
         BattleAction(
           id: 'endTurn',
-          name: 'TERMINAR TURNO',
-          description: 'Cerrás tu parte de la fase o del bloque sin actuar '
-              '(o sin usar la acción extra).',
+          name: _s.t('ui.combat.pass.end_turn_name'),
+          description: _s.t('ui.combat.pass.end_turn_desc'),
           onSelect: () => _send(const EndTurnCommand()),
         ),
       if (widget.battle.porRonda)
         BattleAction(
           id: 'wait',
-          name: 'ESPERAR',
-          description: 'Pasás al final de la ronda en curso. Una vez por '
-              'ronda.',
+          name: _s.t('ui.combat.pass.wait_name'),
+          description: _s.t('ui.combat.pass.wait_desc'),
           reason: widget.battle.waited.contains(cur.id)
-              ? 'Ya esperaste en esta ronda'
+              ? _s.t('ui.combat.pass.waited')
               : null,
           onSelect: () => _send(const WaitCommand()),
         ),
@@ -1025,17 +1041,18 @@ class BattleViewState extends State<BattleView>
             BattleAction(
               id: 'give-${q.id}',
               name: protoEsc(q.name),
-              value: hexSpan('#ffd166', '+${q.maxHp} ¡revive!'),
+              value: hexSpan('#ffd166',
+                  '+${q.maxHp}${_s.t('ui.combat.item.revive_tag')}'),
               cost: hexSpan('#9fb4ff', '0/${q.maxHp} HP'),
-              description: 'Éter para ${protoEsc(q.name)}: revive con '
-                  '${q.maxHp}/${q.maxHp} HP',
+              description: _s.t('ui.combat.item.aether_for',
+                  {'who': protoEsc(q.name), 'max': q.maxHp}),
               onSelect: () =>
                   _send(ItemCommand(BattleItem.aether, targetPlayerId: q.id)),
             ),
         BattleAction(
           id: 'back',
-          name: '← Volver',
-          description: 'Vuelve a los objetos (Esc).',
+          name: _s.t('ui.combat.menu.back'),
+          description: _s.t('ui.combat.menu.back_items'),
           onSelect: () => setState(() {
             _potMode = null;
             _selected = 0;
@@ -1051,26 +1068,34 @@ class BattleViewState extends State<BattleView>
             BattleAction(
               id: 'give-${q.id}',
               name: q.id == cur.id
-                  ? 'Yo (${protoEsc(q.name)})'
+                  ? _s.t('ui.combat.menu.me', {'name': protoEsc(q.name)})
                   : protoEsc(q.name),
               value: hexSpan(pot ? '#7bed9f' : '#74b9ff',
-                  '+${pot ? jsRound(q.maxHp * 0.45) : jsRound(q.maxMp * 0.5)}${!q.alive ? ' ¡revive!' : ''}'),
+                  '+${pot ? jsRound(q.maxHp * 0.45) : jsRound(q.maxMp * 0.5)}${!q.alive ? _s.t('ui.combat.item.revive_tag') : ''}'),
               cost: hexSpan(
                   '#9fb4ff',
                   pot
                       ? '${q.hp}/${q.maxHp} HP'
                       : '${q.mp.floor()}/${q.maxMp} MP'),
               description: pot
-                  ? '<b>Poción de vida</b> para ${protoEsc(q.name)}: '
-                      '${q.hp}/${q.maxHp} HP → +${jsRound(q.maxHp * 0.45)}'
-                  : '<b>Poción de maná</b> para ${protoEsc(q.name)}: '
-                      '${q.mp.floor()}/${q.maxMp} MP → +${jsRound(q.maxMp * 0.5)}',
+                  ? _s.t('ui.combat.item.potion_for', {
+                      'who': protoEsc(q.name),
+                      'hp': q.hp,
+                      'max': q.maxHp,
+                      'n': jsRound(q.maxHp * 0.45)
+                    })
+                  : _s.t('ui.combat.item.ether_for', {
+                      'who': protoEsc(q.name),
+                      'mp': q.mp.floor(),
+                      'max': q.maxMp,
+                      'n': jsRound(q.maxMp * 0.5)
+                    }),
               onSelect: () => _send(ItemCommand(item, targetPlayerId: q.id)),
             ),
         BattleAction(
           id: 'back',
-          name: '← Volver',
-          description: 'Vuelve a los objetos (Esc).',
+          name: _s.t('ui.combat.menu.back'),
+          description: _s.t('ui.combat.menu.back_items'),
           onSelect: () => setState(() {
             _potMode = null;
             _selected = 0;
@@ -1086,10 +1111,9 @@ class BattleViewState extends State<BattleView>
         const <BattleAction>[], entry.actions, const [], _page,
         more: (n) => BattleAction(
               id: 'more',
-              name: 'Más ▸',
+              name: _s.t('ui.combat.menu.more'),
               value: hexSpan('#9fb4ff', '+$n'),
-              description: 'Más acciones de esta categoría. Esc vuelve a la '
-                  'primera página.',
+              description: _s.t('ui.combat.menu.more_desc'),
               onSelect: () => setState(() {
                 _page++;
                 _selected = 0;
@@ -1097,8 +1121,8 @@ class BattleViewState extends State<BattleView>
             ),
         back: BattleAction(
           id: 'page-back',
-          name: '← Volver',
-          description: 'Vuelve a la primera página (Esc).',
+          name: _s.t('ui.combat.menu.back'),
+          description: _s.t('ui.combat.menu.back_page'),
           onSelect: () => setState(() {
             _page = 0;
             _selected = 0;
@@ -1280,6 +1304,7 @@ class BattleViewState extends State<BattleView>
   @override
   Widget build(BuildContext context) {
     scene.options = widget.sceneOptions;
+    scene.strings = _s;
     if (widget.layout == null) {
       // Recarga en caliente del layout y las perillas (Editor → LAYOUT).
       return ListenableBuilder(
@@ -1539,23 +1564,25 @@ class BattleViewState extends State<BattleView>
     if (cur == null) {
       who = hexSpan('#7d8bc4', '…');
     } else if (cur.id == me?.id) {
-      who = '<b>Tu turno</b>';
+      who = '<b>${_s.t('ui.combat.turn.yours')}</b>';
     } else if (widget.companions.contains(cur.id)) {
       // Compañero con AUTO (sin AUTO se abre la ventana de comandos).
-      who = 'Turno de ${protoEsc(cur.name)} '
-          '(${widget.auto.contains(cur.id) ? 'AUTO' : 'compañero'})';
+      who = _s.t('ui.combat.turn.companion', {
+        'name': protoEsc(cur.name),
+        'auto': '${widget.auto.contains(cur.id)}'
+      });
     } else if (cur.isPlayer) {
-      who = '<b>Turno de ${protoEsc(cur.name)}</b>';
+      who = '<b>${_s.t('ui.combat.turn.of', {'name': protoEsc(cur.name)})}</b>';
     } else {
-      who = '<b style="color:#ff6b81">Turno de ${protoEsc(cur.name)}</b>';
+      who = '<b style="color:#ff6b81">${_s.t('ui.combat.turn.of', {'name': protoEsc(cur.name)})}</b>';
     }
     var mine = '';
     if (me != null && cur?.id != me.id) {
       final i = predictTurns(b, turnWindow(b)).indexOf(me.id);
       if (!me.alive) {
-        mine = hexSpan('#7d8bc4', 'Estás fuera de combate');
+        mine = hexSpan('#7d8bc4', _s.t('ui.combat.turn.knocked_out'));
       } else if (i >= 0) {
-        mine = hexSpan('#7d8bc4', 'Tu turno en $i');
+        mine = hexSpan('#7d8bc4', _s.t('ui.combat.turn.yours_in', {'n': i}));
       }
     }
     return BattleBarPanel(
@@ -1565,7 +1592,7 @@ class BattleViewState extends State<BattleView>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              bossMechanicRow(b),
+              bossMechanicRow(_s, b),
               ProtoText(who,
                   style: DsText.title(),
                   textAlign: TextAlign.center),
@@ -1593,31 +1620,30 @@ class BattleViewState extends State<BattleView>
     if (_selected >= visible.length) _selected = 0;
     final tg = _foes.where((e) => e.id == target).firstOrNull;
     final String? header = switch (_potMode) {
-      BattleItem.potion => '<b>¿A quién le das la Poción de vida (+45% vida, '
-          'revive, quita ${statusNameMarkup(StatusKind.burn)} y '
-          '${statusNameMarkup(StatusKind.poison)})?</b>',
-      BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
-          'maná)?</b>',
-      BattleItem.aether => '¿A quién revives con el Éter (100% de la vida)?',
+      BattleItem.potion => _s.t('ui.combat.pick.potion', {
+          'burn': statusNameMarkup(StatusKind.burn),
+          'poison': statusNameMarkup(StatusKind.poison)
+        }),
+      BattleItem.ether => _s.t('ui.combat.pick.ether'),
+      BattleItem.aether => _s.t('ui.combat.pick.aether'),
       _ when _healMode != null =>
-        '¿A quién lanzas ${protoEsc(_healMode!.name)}? (a un no muerto le '
-            'hace daño)',
+        _s.t('ui.combat.pick.heal', {'skill': protoEsc(_healMode!.name)}),
       // Después de una Instante el turno sigue (combat.md).
       _ => cur.chained
-          ? hexSpan(kInstantHex, 'Encadenaste: te queda una acción')
+          ? hexSpan(kInstantHex, _s.t('ui.combat.pick.chained'))
           : null,
     };
     final targetLine = tg == null
         ? ''
-        : 'Objetivo: <b style="color:#ff6b81">${protoEsc(tg.name)}</b> '
+        : '${_s.t('ui.combat.target.line', {'name': protoEsc(tg.name)})} '
             '<span class="k">${tg.hp}/${tg.maxHp} HP</span>'
             '${breakInfoMarkup(tg)}'
             // Familia y debilidades, solo si ya se lo mató (bestiary.md).
             '${tg.practice ? ' · ${familyShortMarkup(null, family: EnemyFamily.training)}' : widget.bestiary?.knows(tg.enemyType) ?? false ? ' · ${familyShortMarkup(tg.enemyType)}' : ''}';
     return BattleCommandWindow(
       actorName: widget.companions.contains(cur.id)
-          ? 'Turno de ${cur.name} (compañero)'
-          : '¡Tu turno! ${cur.name}',
+          ? _s.t('ui.combat.turn.companion_actor', {'name': cur.name})
+          : _s.t('ui.combat.turn.your_actor', {'name': cur.name}),
       categories: entries,
       category: _category,
       visible: visible,
@@ -1628,7 +1654,7 @@ class BattleViewState extends State<BattleView>
           '<span style="color:#74b9ff">MP ${cur.mp.floor()}/${cur.maxMp}</span>'
           ' · <span style="color:${ultReady(cur) ? '#ee70ad' : '#a29bfe'}">'
           'ULT ${cur.ult.floor()}%</span>',
-      extra: bossMechanicRow(widget.battle),
+      extra: bossMechanicRow(_s, widget.battle),
       mp: cur.mp,
       pulse: cur.pulse,
       card: card,
@@ -1669,7 +1695,7 @@ class _LogBand extends StatelessWidget {
     final who = cur == null
         ? ''
         : cur.id == localId
-            ? 'TÚ'
+            ? combatStrings(context).t('ui.combat.turn.you_short')
             : (cur.name.length > 6 ? cur.name.substring(0, 6) : cur.name);
     // La banda tiene el alto de la escena (16 px virtuales): su texto no
     // crece con el ajuste (sigue nítido); el log completo está en la
@@ -1814,7 +1840,9 @@ class _EndOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                outcome.victory ? '¡VICTORIA!' : 'DERROTA',
+                combatStrings(context).t(outcome.victory
+                    ? 'ui.combat.end.victory'
+                    : 'ui.combat.end.defeat'),
                 style: text.displayLarge?.copyWith(
                   color: outcome.victory ? ProtoColors.gold : ProtoColors.red,
                   shadows: const [
@@ -1826,8 +1854,8 @@ class _EndOverlay extends StatelessWidget {
               if (outcome.victory) ...[
                 const SizedBox(height: 24),
                 Text(
-                    retroText(
-                        '+${outcome.xp} XP · +₵${outcome.credits} para cada uno'),
+                    retroText(combatStrings(context).t('ui.combat.end.reward',
+                        {'xp': outcome.xp, 'credits': outcome.credits})),
                     style: const TextStyle(color: ProtoColors.gold)),
               ],
             ],

@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/features/combat/presentation/battle_hud.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -41,7 +42,7 @@ void main() {
             turns: 1),
       ],
     );
-    final chips = combatantChips(c);
+    final chips = combatantChips(fallbackCombatStrings(), c);
     expect(chips.map((x) => x.long).toList(), [
       '▲VEL +20%',
       '▼ATQ −15%',
@@ -55,7 +56,7 @@ void main() {
     expect(chips[3].tip, contains('Mano Sanadora'));
 
     c.hp = 80;
-    expect(combatantChips(c).map((x) => x.long),
+    expect(combatantChips(fallbackCombatStrings(), c).map((x) => x.long),
         isNot(contains('Último Aliento')));
   });
 }

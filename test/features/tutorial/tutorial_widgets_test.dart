@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/features/tutorial/presentation/tutorial_widgets
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/rules/tutorial_rules.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import '../../app/button_look.dart';
@@ -21,10 +22,10 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   tester.view.physicalSize = const Size(1280, 720);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(
+  await tester.pumpWidget(ProviderScope(child: MaterialApp(
     theme: RetroTheme.build(),
     home: Scaffold(body: child),
-  ));
+  )));
   await tester.pump();
 }
 
@@ -230,7 +231,7 @@ void main() {
         const TutorialRules().automaton(4)
       ])
         ..currentId = 'p1';
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         theme: RetroTheme.build(),
         home: Scaffold(
           body: TutorialOverlay(
@@ -248,7 +249,7 @@ void main() {
             onControl: (_) {},
           ),
         ),
-      ));
+      )));
       await tester.pump();
       final panel = tester.getRect(find.byKey(const ValueKey('tutorial-panel')));
       final scene = tester.getRect(find.byType(BattleView));

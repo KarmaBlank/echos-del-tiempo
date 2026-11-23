@@ -11,7 +11,7 @@ import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
 import '../../../../game_engine/rules/battle_engine.dart'
-    show stanceName, ultimateOf;
+    show ultimateOf;
 import '../../../../game_engine/rules/js_math.dart';
 import '../../../../app/theme/vision_palette.dart';
 import '../../../../core/fx/fx_catalog.dart';
@@ -21,6 +21,7 @@ import 'proc_fx.dart';
 import 'reaction_fx.dart';
 import 'duo_cinematic.dart';
 import 'ult_cinematic.dart';
+import '../combat_strings.dart';
 
 /// Tipo de efecto (`k` de `addFx` en el prototipo, más los de los
 /// disparadores del árbol: docs/specs/battle_presentation.md
@@ -519,8 +520,10 @@ FxTimeline? battleMomentData(String id) {
 List<BattleFx> mapBattleEvents(
   List<BattleEvent> events,
   BattleState state,
-  Offset Function(String id) position,
-) {
+  Offset Function(String id) position, {
+  Strings? strings,
+}) {
+  final s = strings ?? fallbackCombatStrings();
   final out = <BattleFx>[];
   _Action? action;
 
@@ -794,7 +797,7 @@ List<BattleFx> mapBattleEvents(
               ring(here.dx, here.dy - 8, a.color);
             }
           case SkillKind.defenseUp:
-            txt(e.actorId, -30, 'DEF +${sk.amount}', _manaBlue);
+            txt(e.actorId, -30, s.t('ui.combat.fx.def_up', {'n': sk.amount}), _manaBlue);
             if (!m('skill_defense_up')) aura(e.actorId, FxElement.mana);
           case SkillKind.protect:
             if (!m('skill_protect')) {
@@ -804,13 +807,13 @@ List<BattleFx> mapBattleEvents(
               }
             }
           case SkillKind.taunt:
-            txt(e.actorId, -30, '¡PROVOCA!', const Color(0xFFFF7675));
+            txt(e.actorId, -30, s.t('ui.combat.fx.taunt'), const Color(0xFFFF7675));
             if (!m('skill_taunt')) {
               ring(here.dx, here.dy - 8, const Color(0xFFFF7675), big: true);
             }
           case SkillKind.guard:
             for (final q in aliveParty()) {
-              txt(q.id, -30, 'ESCUDO', _manaBlue);
+              txt(q.id, -30, s.t('ui.combat.fx.shield'), _manaBlue);
             }
             if (!m('skill_guard')) {
               for (final q in aliveParty()) {
@@ -819,7 +822,7 @@ List<BattleFx> mapBattleEvents(
             }
           case SkillKind.haste:
             for (final q in aliveParty()) {
-              if (q.id != e.actorId) txt(q.id, -26, '¡PRISA!', _gold);
+              if (q.id != e.actorId) txt(q.id, -26, s.t('ui.combat.fx.haste'), _gold);
             }
             m('skill_haste');
           case SkillKind.heal || SkillKind.regen || SkillKind.bulwark:
@@ -855,7 +858,7 @@ List<BattleFx> mapBattleEvents(
             el: a.el,
             who: e.actorId,
             ult: UltFx(
-              name: du?.def.name ?? 'Dúo',
+              name: du?.def.name ?? s.t('ui.combat.fx.duo'),
               casterName: actor?.name ?? '',
               bulwark: false,
               ultId: du?.id,
@@ -1038,7 +1041,7 @@ List<BattleFx> mapBattleEvents(
         procDl[t] = base + ProcTiming.beamHitMs;
       case 'choqueTermico' when t != null:
         at(FxKind.puff, t, dy: -10, dl: base);
-        txt(t, -34, '¡ATURDIDO!', ProcColors.stun, dl: base);
+        txt(t, -34, s.t('ui.combat.fx.stunned'), ProcColors.stun, dl: base);
         procDl[t] = base;
       case 'tiempoGelido' when t != null:
         aura(t, FxElement.freeze, dl: base);
@@ -1064,7 +1067,7 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: '¡OTRA VEZ!',
+            text: s.t('ui.combat.fx.again'),
             color: procKeystoneColor,
             big: true,
             delayMs: base + ProcTiming.bannerMs,
@@ -1152,7 +1155,7 @@ List<BattleFx> mapBattleEvents(
       if (!moment('shield_absorb', caster: id, dl: dl)) {
         at(FxKind.crack, id, color: ProcColors.shield, dl: dl);
       }
-      txt(id, -30, 'ABSORBE ${e.amount}', ProcColors.shield, dl: dl);
+      txt(id, -30, s.t('ui.combat.fx.absorbs', {'n': e.amount}), ProcColors.shield, dl: dl);
       return;
     }
     final dl = procDl[id] ?? procBase();
@@ -1160,7 +1163,7 @@ List<BattleFx> mapBattleEvents(
       at(FxKind.bubble, id, color: ProcColors.shield, dl: dl);
     }
     final lp = lastProc;
-    final label = 'ESCUDO +${e.amount}';
+    final label = s.t('ui.combat.fx.shield_up', {'n': e.amount});
     // Escudo propio: el valor va en el cartel; si no, sobre el aliado.
     if (lp == null ||
         lp.actorId != id ||
@@ -1175,11 +1178,14 @@ List<BattleFx> mapBattleEvents(
     final dl = procDl[id] ?? procBase();
     final pct = '${(e.value.abs() * 100).round()}%';
     final (String label, Color color) = switch (e.stat) {
-      BuffStat.speed => ('VEL +$pct', ProcColors.frenzy),
-      BuffStat.attack when e.value >= 0 => ('ATQ +$pct', ProcColors.retaliate),
-      BuffStat.attack => ('ATQ −$pct', ProcColors.weaken),
+      BuffStat.speed =>
+        (s.t('ui.combat.fx.speed_up', {'pct': pct}), ProcColors.frenzy),
+      BuffStat.attack when e.value >= 0 =>
+        (s.t('ui.combat.fx.attack_up', {'pct': pct}), ProcColors.retaliate),
+      BuffStat.attack =>
+        (s.t('ui.combat.fx.attack_down', {'pct': pct}), ProcColors.weaken),
       BuffStat.damageTaken => ('+$pct DAÑO', ProcColors.mark),
-      BuffStat.stunLock => ('ATURDIDO +${e.turns}', ProcColors.stun),
+      BuffStat.stunLock => (s.t('ui.combat.fx.stun_more', {'n': e.turns}), ProcColors.stun),
       _ => ('${e.stat.label} ${e.value < 0 ? '−' : '+'}$pct', _gold),
     };
     final buffMoment = switch (e.stat) {
@@ -1299,20 +1305,20 @@ List<BattleFx> mapBattleEvents(
     final dl = hitDl[id] ?? procDl[id] ?? 0;
     switch (e.phase) {
       case IcePhase.brittle:
-        txt(id, -46, '¡QUEBRADIZO!', kBrittleColor);
+        txt(id, -46, s.t('ui.combat.fx.brittle'), kBrittleColor);
       case IcePhase.shattered:
         if (!moment('brittle_shatter', caster: id, dl: dl)) {
           at(FxKind.shatter, id, dy: -10, color: kBrittleColor, dl: dl);
         }
         final m = kElementStatuses['freeze']!.brittleMult;
-        txt(id, -44, '¡SE ROMPE! ×${fm(m)}', kBrittleColor, dl: dl);
+        txt(id, -44, s.t('ui.combat.fx.shatters', {'x': fm(m)}), kBrittleColor, dl: dl);
       case IcePhase.thawed:
         // Derretir ya tiene su cartel.
         if (!melted.contains(id)) {
-          txt(id, -40, 'DESCONGELADO', _manaBlue, dl: dl);
+          txt(id, -40, s.t('ui.combat.fx.thawed'), _manaBlue, dl: dl);
         }
       case IcePhase.resisted:
-        txt(id, -54, 'RESISTE HIELO', _gray, dl: dl);
+        txt(id, -54, s.t('ui.combat.fx.resists_ice'), _gray, dl: dl);
     }
   }
 
@@ -1367,10 +1373,10 @@ List<BattleFx> mapBattleEvents(
             who: id));
       }
       if (e.critical) {
-        txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _critRed, dl: dl);
+        txt(id, -34, s.t('ui.combat.fx.crit', {'x': fm(e.critMultiplier)}), _critRed, dl: dl);
       }
       if (e.pierceMultiplier > 1) {
-        txt(id, -44, '¡PERFORANTE ×${fm(e.pierceMultiplier)}!', _orange,
+        txt(id, -44, s.t('ui.combat.fx.pierce', {'x': fm(e.pierceMultiplier)}), _orange,
             dl: dl);
       }
       return;
@@ -1406,15 +1412,15 @@ List<BattleFx> mapBattleEvents(
         e.critical ? _gold : (e.vulnerable ? breakColor : fxWhite),
         big: e.critical || e.vulnerable, heavy: heavy, dl: dl);
     if (e.critical) {
-      txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _gold, dl: dl);
+      txt(id, -34, s.t('ui.combat.fx.crit', {'x': fm(e.critMultiplier)}), _gold, dl: dl);
       if (heavy) out.add(BattleFx(FxKind.flash, color: fxWhite, delayMs: dl));
     }
     // Dúo (v0.8.3): la etiqueta de combo `×2 DÚO` sobre cada golpeado.
     if (a != null && a.event.kind == BattleActionKind.dual) {
-      txt(id, e.critical ? -46 : -34, '×2 DÚO', a.color, dl: dl);
+      txt(id, e.critical ? -46 : -34, s.t('ui.combat.fx.duo_x2'), a.color, dl: dl);
     }
     if (e.vulnerable && vulnShown.add(id)) {
-      txt(id, -44, 'QUIEBRE ×1.5', breakColor, dl: dl);
+      txt(id, -44, s.t('ui.combat.fx.break_bonus'), breakColor, dl: dl);
     }
     // Familia del enemigo (docs/specs/bestiary.md § 1.3): una vez por
     // acción, encima del QUIEBRE si lo hay.
@@ -1422,8 +1428,9 @@ List<BattleFx> mapBattleEvents(
       final weak = e.affinity > 1;
       txt(id, e.vulnerable ? -54 : -44,
           e.affinity == 0
-              ? 'INMUNE'
-              : '${weak ? 'DÉBIL' : 'RESISTE'} ×${fm(e.affinity)}',
+              ? s.t('ui.combat.fx.immune')
+              : s.t('ui.combat.fx.affinity',
+                  {'weak': '$weak', 'x': fm(e.affinity)}),
           weak ? _orange : _gray,
           dl: dl);
     }
@@ -1498,19 +1505,19 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: '¡QUIEBRE!',
+            text: s.t('ui.combat.fx.break'),
             color: breakColor,
             big: true,
             delayMs: dl + BattleFx.breakBannerMs,
             who: id));
         if (e.cancelledUlt) {
-          txt(id, -60, 'ULT CANCELADA', _critRed, dl: dl + 250);
+          txt(id, -60, s.t('ui.combat.fx.ult_cancelled'), _critRed, dl: dl + 250);
         }
       case BreakPhase.skipped:
-        txt(id, -34, '¡QUEBRADO!', breakColor);
+        txt(id, -34, s.t('ui.combat.fx.broken'), breakColor);
         if (!moment('break_stunned', caster: id)) aura(id, FxElement.stun);
       case BreakPhase.recovered:
-        txt(id, -40, 'SE RECUPERA', _gray, dl: action == null ? 0 : lateBase());
+        txt(id, -40, s.t('ui.combat.fx.recovers'), _gray, dl: action == null ? 0 : lateBase());
       case BreakPhase.fissured:
         // Barra llena (combo_balance.md § 5): cartel FISURADO con el golpe.
         final dl = procDl[id] ?? action?.dl[id] ?? 0;
@@ -1519,12 +1526,12 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: 'FISURADO',
+            text: s.t('ui.combat.target.fissured'),
             color: breakColor,
             delayMs: dl + BattleFx.breakBannerMs,
             who: id));
       case BreakPhase.steadied:
-        txt(id, -40, 'SE RECOMPONE', _gray);
+        txt(id, -40, s.t('ui.combat.fx.recomposes'), _gray);
       case BreakPhase.fill || BreakPhase.decay:
         break; // la barra de la etiqueta ya lo muestra
     }
@@ -1588,32 +1595,32 @@ List<BattleFx> mapBattleEvents(
         final dl = a != null && a.enemyUlt
             ? a.ult!.lastImpact(math.max(1, a.dl.length)) + 120
             : strike + 60;
-        txt(tg, -50, '¡TELARAÑA!', webColor, dl: dl);
+        txt(tg, -50, s.t('ui.combat.fx.web'), webColor, dl: dl);
         at(FxKind.ring, tg, dy: -8, color: webColor, dl: dl);
       case BossMechanicPhase.webFreed:
         if (tg == null) return;
-        txt(tg, -40, '¡LIBRE!', _healGreen, dl: 120);
+        txt(tg, -40, s.t('ui.combat.fx.free'), _healGreen, dl: 120);
         at(FxKind.ring, tg, dy: -8, color: _healGreen, dl: 120);
         aura(tg, FxElement.heal, dl: 120);
       case BossMechanicPhase.webSkip:
         if (tg == null) return;
-        txt(tg, -34, '¡ATRAPADO!', webColor);
+        txt(tg, -34, s.t('ui.combat.fx.caught'), webColor);
         aura(tg, FxElement.stun);
       case BossMechanicPhase.webStruggle:
         if (tg == null) return;
-        txt(tg, -34, 'FORCEJEA ½', webColor);
+        txt(tg, -34, s.t('ui.combat.fx.struggles'), webColor);
         at(FxKind.ring, tg, dy: -8, color: webColor);
       case BossMechanicPhase.frost:
         final pct = jsRound(e.value * 100);
         for (final q in aliveParty()) {
-          txt(q.id, -40, 'VEL −$pct%', frostColor, dl: 80);
+          txt(q.id, -40, s.t('ui.combat.fx.speed_down', {'pct': pct}), frostColor, dl: 80);
           aura(q.id, FxElement.freeze, dl: 80);
         }
         at(FxKind.pulse, e.actorId, dy: -12, color: frostColor);
       case BossMechanicPhase.thaw:
         final dl = action == null ? 0 : lateBase();
         for (final q in aliveParty()) {
-          txt(q.id, -40, 'DESHIELO', _healGreen, dl: dl + 120);
+          txt(q.id, -40, s.t('ui.combat.fx.thaw'), _healGreen, dl: dl + 120);
           aura(q.id, FxElement.heal, dl: dl + 120);
         }
       case BossMechanicPhase.shatter:
@@ -1621,7 +1628,7 @@ List<BattleFx> mapBattleEvents(
         final dl = procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0;
         procDl[tg] = dl + 180;
         at(FxKind.shatter, tg, dy: -6, color: frostColor, dl: dl + 180);
-        txt(tg, -30, 'CRISTAL ROTO', frostColor, dl: dl + 200);
+        txt(tg, -30, s.t('ui.combat.fx.crystal_broken'), frostColor, dl: dl + 200);
       case BossMechanicPhase.reform:
         if (tg == null) return;
         final a = action;
@@ -1630,7 +1637,7 @@ List<BattleFx> mapBattleEvents(
             : a!.ult!.lastImpact(math.max(1, a.dl.length)) + 200;
         aura(tg, FxElement.freeze, dl: dl);
         at(FxKind.ring, tg, dy: -6, color: frostColor, dl: dl);
-        txt(tg, -30, 'SE REFORMA', frostColor, dl: dl);
+        txt(tg, -30, s.t('ui.combat.fx.reforms'), frostColor, dl: dl);
       case BossMechanicPhase.stanceShift:
         final st = e.value.round();
         final p = position(e.actorId);
@@ -1639,7 +1646,9 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: 'POSTURA: ${stanceName(st)}',
+            text: s.t('ui.combat.fx.stance', {
+              'stance': st == 1 ? 'shield' : st == 2 ? 'sword' : 'none'
+            }),
             color: stanceColor(st),
             big: true,
             delayMs: dl,
@@ -1648,7 +1657,7 @@ List<BattleFx> mapBattleEvents(
       case BossMechanicPhase.resisted:
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
-        txt(e.actorId, -54, 'BLOQUEA −${jsRound(e.value * 100)}%',
+        txt(e.actorId, -54, s.t('ui.combat.fx.blocks', {'pct': jsRound(e.value * 100)}),
             const Color(0xFFB2BEC3),
             dl: dl);
 
@@ -1670,11 +1679,11 @@ List<BattleFx> mapBattleEvents(
           at(FxKind.poof, tg, dy: -10, dl: dl + 120);
           at(FxKind.ring, tg, dy: -8, color: col, dl: dl + 120);
         }
-        txt(tg, -34, echo ? '¡ECO!' : '¡SIERVO!', col, dl: dl + 160);
+        txt(tg, -34, s.t(echo ? 'ui.combat.fx.echo' : 'ui.combat.fx.servant'), col, dl: dl + 160);
       case BossMechanicPhase.echoResist:
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
-        txt(e.actorId, -54, 'ECO ×${fm(e.value)}', echoColor, dl: dl);
+        txt(e.actorId, -54, s.t('ui.combat.fx.echo_x', {'x': fm(e.value)}), echoColor, dl: dl);
       case BossMechanicPhase.lavaRise:
         final a = action;
         final dl = a?.ult != null
@@ -1690,7 +1699,7 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: '¡LAVA ${e.value.round()} TURNOS!',
+            text: s.t('ui.combat.fx.lava_turns', {'n': e.value.round()}),
             color: lavaColor,
             big: true,
             delayMs: dl + 80,
@@ -1699,15 +1708,15 @@ List<BattleFx> mapBattleEvents(
         if (tg == null) return;
         at(FxKind.lavaBurst, tg, dy: 0, color: lavaColor, el: FxElement.burn);
         aura(tg, FxElement.burn, dl: 120);
-        txt(tg, -44, '¡LAVA! Q+${e.value.round()}', lavaColor, dl: 80);
+        txt(tg, -44, s.t('ui.combat.fx.lava_hit', {'n': e.value.round()}), lavaColor, dl: 80);
       case BossMechanicPhase.lavaFade:
-        txt(e.actorId, -40, 'LA LAVA SE ENFRÍA', _gray,
+        txt(e.actorId, -40, s.t('ui.combat.fx.lava_cools'), _gray,
             dl: action == null ? 0 : lateBase());
       case BossMechanicPhase.immune:
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId) + 90;
         at(FxKind.pulse, e.actorId, dy: -14, color: immuneColor, dl: dl);
-        txt(e.actorId, -60, 'INMUNE', immuneColor, dl: dl);
+        txt(e.actorId, -60, s.t('ui.combat.fx.immune'), immuneColor, dl: dl);
       case BossMechanicPhase.markCast:
         if (tg == null) return;
         final dl = action?.ult != null ? afterUlt(160) : 120;
@@ -1718,13 +1727,13 @@ List<BattleFx> mapBattleEvents(
             el: FxElement.arcane,
             dl: dl);
         at(FxKind.reticle, tg, dy: -10, color: voidMarkColor, dl: dl + 200);
-        txt(tg, -46, '¡MARCADO!', voidMarkColor, dl: dl + 200);
+        txt(tg, -46, s.t('ui.combat.fx.marked'), voidMarkColor, dl: dl + 200);
       case BossMechanicPhase.markHit:
         if (tg == null) return;
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, tg);
         at(FxKind.shatter, tg, dy: -10, color: voidMarkColor, dl: dl);
-        txt(tg, -56, 'MARCA ×${fm(e.value)}', voidMarkColor, dl: dl);
+        txt(tg, -56, s.t('ui.combat.fx.mark_x', {'x': fm(e.value)}), voidMarkColor, dl: dl);
       case BossMechanicPhase.markGuarded:
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
@@ -1732,7 +1741,9 @@ List<BattleFx> mapBattleEvents(
         txt(
             e.actorId,
             -56,
-            tg == e.actorId ? 'MARCA ANULADA' : '¡PROTEGE LA MARCA!',
+            s.t(tg == e.actorId
+                ? 'ui.combat.fx.mark_void'
+                : 'ui.combat.fx.mark_protected'),
             _healGreen,
             dl: dl);
       case BossMechanicPhase.phaseShift:
@@ -1750,7 +1761,7 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: 'FASE ${e.value.round()}',
+            text: s.t('ui.combat.boss.phase.short', {'n': e.value.round()}),
             color: phaseColor,
             big: true,
             delayMs: dl + BattleFx.transformFlashMs + 60,
@@ -1758,13 +1769,13 @@ List<BattleFx> mapBattleEvents(
       case BossMechanicPhase.evaded:
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
-        txt(e.actorId, -54, '¡ESQUIVA!', const Color(0xFFB2BEC3), dl: dl);
+        txt(e.actorId, -54, s.t('ui.combat.fx.dodge'), const Color(0xFFB2BEC3), dl: dl);
 
       // ---- Jefes del Abismo v0.8 (abyss_bosses.md § 4) ----
       case BossMechanicPhase.abyssTelegraph:
         final k = AbyssMoveKind.values[
             e.value.round().clamp(0, AbyssMoveKind.values.length - 1)];
-        txt(e.actorId, -66, 'PRÓXIMO: ${k.label.toUpperCase()}', abyssColor,
+        txt(e.actorId, -66, s.t('ui.combat.abyss.next_long', {'move': k.label.toUpperCase()}), abyssColor,
             dl: lateBase() + 200);
       case BossMechanicPhase.enrage:
         final p = position(e.actorId);
@@ -1772,7 +1783,7 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: '¡FURIA!',
+            text: s.t('ui.combat.fx.fury'),
             color: phaseColor,
             big: true,
             who: e.actorId));
@@ -1780,35 +1791,36 @@ List<BattleFx> mapBattleEvents(
         final r = ReactionKind.values[
             e.value.round().clamp(0, ReactionKind.values.length - 1)];
         at(FxKind.ring, e.actorId, dy: -12, color: abyssColor);
-        txt(e.actorId, -60, 'SELLO · ${r.label.toUpperCase()}', abyssColor);
+        txt(e.actorId, -60, s.t('ui.combat.fx.seal', {'r': r.label.toUpperCase()}), abyssColor);
       case BossMechanicPhase.sealBroken:
         final dl = (procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0) + 160;
         at(FxKind.shatter, e.actorId, dy: -12, color: abyssColor, dl: dl);
-        txt(e.actorId, -60, '¡SELLO ROTO!', _healGreen, dl: dl);
+        txt(e.actorId, -60, s.t('ui.combat.fx.seal_broken'), _healGreen, dl: dl);
       case BossMechanicPhase.sealFade:
-        txt(e.actorId, -50, 'EL SELLO SE APAGA', _gray);
+        txt(e.actorId, -50, s.t('ui.combat.fx.seal_fades'), _gray);
       case BossMechanicPhase.rewind:
         aura(e.actorId, FxElement.heal, dl: 120);
-        txt(e.actorId, -56, 'REBOBINA +${e.value.round()}', abyssColor,
+        txt(e.actorId, -56, s.t('ui.combat.fx.rewind', {'n': e.value.round()}), abyssColor,
             dl: 120);
       case BossMechanicPhase.timeWarp:
         at(FxKind.pulse, e.actorId, dy: -14, color: abyssColor);
         for (final q in aliveParty()) {
-          txt(q.id, -40, 'RETRASO', abyssColor, dl: 120);
+          txt(q.id, -40, s.t('ui.combat.fx.delay'), abyssColor, dl: 120);
         }
       case BossMechanicPhase.mirror:
         if (tg == null) return;
         at(FxKind.arc, e.actorId,
             dy: -14, to: tg, color: echoColor, el: FxElement.arcane);
-        txt(e.actorId, -46, 'REFLEJO', echoColor);
+        txt(e.actorId, -46, s.t('ui.combat.fx.reflect'), echoColor);
       case BossMechanicPhase.devour:
         at(FxKind.pulse, e.actorId, dy: -14, color: phaseColor);
-        txt(e.actorId, -56, 'DEVORA ${e.value.round()} BUFF'
-            '${e.value.round() == 1 ? '' : 'S'}', phaseColor, dl: 120);
+        txt(e.actorId, -56,
+            s.t('ui.combat.fx.devours', {'n': e.value.round()}), phaseColor,
+            dl: 120);
       case BossMechanicPhase.aspect:
         final el = GameElement.values[
             e.value.round().clamp(0, GameElement.values.length - 1)];
-        txt(e.actorId, -56, 'ASPECTO: ${el.label.toUpperCase()}', abyssColor);
+        txt(e.actorId, -56, s.t('ui.combat.fx.aspect', {'el': el.label.toUpperCase()}), abyssColor);
     }
   }
 
@@ -1867,25 +1879,25 @@ List<BattleFx> mapBattleEvents(
         txt(
             targetId,
             -46,
-            '${statusLetter(kind)}+$stacks${e.weakness ? ' (débil)' : ''}',
+            '${statusLetter(kind)}+$stacks${e.weakness ? s.t('ui.combat.fx.weak_tag') : ''}',
             statusColor(kind),
             dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
       case DelayedEvent(:final targetId):
         final a = action;
         if (!isPlayer(targetId)) {
-          txt(targetId, -44, 'RETRASO', _violet, dl: procDl[targetId] ?? 0);
+          txt(targetId, -44, s.t('ui.combat.fx.delay'), _violet, dl: procDl[targetId] ?? 0);
         } else if (a != null && a.enemyUlt) {
           // Engranaje del Fin: todo el grupo se retrasa con el impacto.
-          txt(targetId, -44, 'RETRASO', _violet,
+          txt(targetId, -44, s.t('ui.combat.fx.delay'), _violet,
               dl: a.dl[targetId] ??
                   a.ult!.lastImpact(math.max(1, a.dl.length)));
         }
       case TurnSkippedEvent(:final actorId, :final cause):
         if (cause == StatusKind.stun) {
-          txt(actorId, -34, '¡ATURDIDO!', const Color(0xFFFFEAA7));
+          txt(actorId, -34, s.t('ui.combat.fx.stunned'), const Color(0xFFFFEAA7));
           moment('stunned', caster: actorId);
         } else {
-          txt(actorId, -34, '¡CONGELADO!', _manaBlue);
+          txt(actorId, -34, s.t('ui.combat.fx.frozen'), _manaBlue);
           if (!moment('frozen', caster: actorId)) {
             aura(actorId, FxElement.freeze);
           }
@@ -1927,7 +1939,8 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.warn,
             x: p.dx,
             y: p.dy,
-            text: '¡El ${c?.name ?? '?'} se prepara para $name!',
+            text: s.t('ui.combat.fx.ult_prepares',
+                {'who': c?.name ?? '?', 'name': name}),
             color: enemyUltColor(e.ultId),
             who: actorId));
         at(FxKind.pulse, actorId, dy: -10, color: _critRed, heavy: true);
@@ -1944,7 +1957,7 @@ List<BattleFx> mapBattleEvents(
             .lastImpact(math.max(1, u?.dl.length ?? 1)) +
         120;
     for (final q in aliveParty()) {
-      txt(q.id, -56, 'BUFFS BORRADOS', _violet, dl: at);
+      txt(q.id, -56, s.t('ui.combat.fx.buffs_wiped'), _violet, dl: at);
     }
   }
   // Los objetivos de la cinemática, en el orden de sus impactos.

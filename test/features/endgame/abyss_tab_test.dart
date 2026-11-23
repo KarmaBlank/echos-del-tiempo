@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/abyss_rules.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -150,7 +151,7 @@ void main() {
       eliteDrops: const [],
       drops: const {},
     );
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       home: Scaffold(
         body: ResultsPanel(
           result: r,
@@ -165,7 +166,7 @@ void main() {
           ],
         ),
       ),
-    ));
+    )));
     expect(find.byKey(const ValueKey('results-exclusive')), findsOneWidget);
     expect(find.textContaining('EXCLUSIVO DEL ABISMO'), findsOneWidget);
     expect(find.byKey(const ValueKey('results-abyss')), findsOneWidget);

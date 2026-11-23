@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
@@ -12,6 +13,7 @@ import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
 import '../../inventory/presentation/item_widgets.dart' hide PixelIcon;
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Un drop propio de la misión con el veredicto de tu filtro.
 class ResultDrop {
@@ -30,7 +32,7 @@ class ResultDrop {
 /// Pantalla de resultado de la misión (`#result` del prototipo): rango,
 /// tiempo, XP, créditos, bonus y armas obtenidas. Ver
 /// docs/specs/exploration.md § "Paneles".
-class ResultsPanel extends StatelessWidget {
+class ResultsPanel extends ConsumerWidget {
   const ResultsPanel({
     super.key,
     required this.result,
@@ -53,9 +55,6 @@ class ResultsPanel extends StatelessWidget {
   /// Victoria v0.20.22: la ventana se cierra y el grupo sigue en el mapa
   /// hasta que todos tocan LISTO (sin regreso automático).
   final bool victoryLap;
-
-  static const lapHint =
-      'Junten el botín y toquen LISTO para volver al pueblo.';
 
   /// Jefe del Abismo vencido: `X vencido: +2 puntos de Atlas`
   /// (docs/specs/abyss_bosses.md § 4).
@@ -85,9 +84,6 @@ class ResultsPanel extends StatelessWidget {
       r.missionId != 'trial' &&
       r.missionId != 'abismo';
 
-  static const finalTitle = '¡Venciste al Devorador de Eras!';
-  static const finalSubtitle = 'El tiempo vuelve a fluir. Gracias por jugar.';
-
   /// `Zona 2 · Bosque Hondo · Piso 3/3` (misiones de zona).
   final String? zoneProgress;
 
@@ -110,7 +106,7 @@ class ResultsPanel extends StatelessWidget {
   static String rankLabel(MissionRank r) => r.name.toUpperCase();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final r = result;
     final el = r.time.floor();
     final time = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
@@ -153,7 +149,9 @@ class ResultsPanel extends StatelessWidget {
       if (mine != null)
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: Text(retroText('¡Obtuviste: ${weaponName(mine)}!'),
+          child: Text(
+              retroText(ref.t('ui.missions.results.you_got',
+                  {'weapon': weaponName(mine)})),
               style: const TextStyle(color: ProtoColors.orange)),
         ),
       if (r.drops.isNotEmpty)
@@ -164,8 +162,13 @@ class ResultsPanel extends StatelessWidget {
             color: ProtoColors.dim),
       if (r.eliteDrops.isNotEmpty)
         line(
-            'Élites derrotados: ${r.elites} · '
-            '${r.eliteDrops.map((d) => '${playerName(d.playerId)}: ${weaponName(d.weaponId)}').join(' · ')}',
+            ref.t('ui.missions.results.elites', {
+              'n': r.elites,
+              'drops': r.eliteDrops
+                  .map((d) =>
+                      '${playerName(d.playerId)}: ${weaponName(d.weaponId)}')
+                  .join(' · '),
+            }),
             color: ProtoColors.gold),
       if (exclusive.isNotEmpty)
         Container(
@@ -179,7 +182,7 @@ class ResultsPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(retroText('EXCLUSIVO DEL ABISMO'),
+              Text(retroText(ref.t('ui.missions.results.abyss_exclusive')),
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.title,
@@ -191,14 +194,15 @@ class ResultsPanel extends StatelessWidget {
                   LootLabel(
                       text: d.text,
                       verdict: d.verdict,
-                      hiddenNote: '(oculto por tu filtro)',
+                      hiddenNote: ref.t('ui.missions.results.hidden_by_filter'),
                       tooltip: d.tooltip),
               ]),
             ],
           ),
         ),
       if (this.loot.isNotEmpty) ...[
-        line('TUS DROPS (${this.loot.length})', color: ProtoColors.gold),
+        line(ref.t('ui.missions.results.your_drops', {'n': this.loot.length}),
+            color: ProtoColors.gold),
         Wrap(
           key: const ValueKey('results-loot'),
           spacing: 8,
@@ -208,7 +212,7 @@ class ResultsPanel extends StatelessWidget {
               LootLabel(
                   text: d.text,
                   verdict: d.verdict,
-                  hiddenNote: '(oculto por tu filtro)',
+                  hiddenNote: ref.t('ui.missions.results.hidden_by_filter'),
                   tooltip: d.tooltip),
           ],
         ),
@@ -216,16 +220,21 @@ class ResultsPanel extends StatelessWidget {
     ];
     return PanelFrame(
       width: 900,
-      title: r.success ? 'MISIÓN COMPLETADA' : 'MISIÓN FALLIDA',
+      title: ref.t(r.success
+          ? 'ui.missions.results.success'
+          : 'ui.missions.results.failure'),
       actions: [
         if (onAscend != null)
-          PanelButton('ELEGIR ASCENSIÓN',
+          PanelButton(ref.t('ui.missions.results.choose_ascension'),
               key: const ValueKey('results-ascend'),
               accent: ProtoColors.violet,
               onPressed: onAscend),
         // Abre con el foco en el primario: Enter = volver.
         InitialFocus(
-          child: PanelButton(victoryLap ? 'CERRAR' : 'VOLVER AL LOBBY',
+          child: PanelButton(
+              ref.t(victoryLap
+                  ? 'ui.missions.results.close'
+                  : 'ui.missions.results.back_to_lobby'),
               key: const ValueKey('results-back'), onPressed: onBack),
         ),
       ],
@@ -241,7 +250,7 @@ class ResultsPanel extends StatelessWidget {
                 color: ProtoColors.input,
                 border: Border.all(color: ProtoColors.gold, width: 3),
               ),
-              child: Text(retroText(finalTitle),
+              child: Text(retroText(ref.t('ui.missions.results.final_title')),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
@@ -249,7 +258,7 @@ class ResultsPanel extends StatelessWidget {
                       color: ProtoColors.gold,
                       shadows: shadow)),
             ),
-            Text(retroText(finalSubtitle),
+            Text(retroText(ref.t('ui.missions.results.final_subtitle')),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: ProtoColors.sky)),
             const SizedBox(height: 8),
@@ -269,7 +278,7 @@ class ResultsPanel extends StatelessWidget {
                   width: RetroType.width(context, 260),
                   child: SectionPanel(
                     icon: PixelIconKind.star,
-                    title: 'RANGO',
+                    title: ref.t('ui.missions.results.rank'),
                     children: [
                       Center(
                         child: Text(rankLabel(r.rank),
@@ -285,8 +294,8 @@ class ResultsPanel extends StatelessWidget {
                                       offset: Offset(4, 4)),
                                 ])),
                       ),
-                      InfoLine('Tiempo', time, labelEms: 8),
-                      InfoLine('K.O.', '${r.kos}', labelEms: 8),
+                      InfoLine(ref.t('ui.missions.results.time'), time, labelEms: 8),
+                      InfoLine(ref.t('ui.missions.results.kos'), '${r.kos}', labelEms: 8),
                     ],
                   ),
                 ),
@@ -294,13 +303,16 @@ class ResultsPanel extends StatelessWidget {
                 Expanded(
                   child: SectionPanel(
                     icon: PixelIconKind.coin,
-                    title: 'RECOMPENSAS',
+                    title: ref.t('ui.missions.rewards'),
                     children: [
-                      InfoLine('XP total', '<b>+${r.xp}</b>', labelEms: 21),
-                      InfoLine('Créditos de peleas', '<b>₵${r.credits}</b>',
+                      InfoLine(ref.t('ui.missions.results.xp'), '<b>+${r.xp}</b>',
+                          labelEms: 21),
+                      InfoLine(ref.t('ui.missions.results.fight_credits'),
+                          '<b>₵${r.credits}</b>',
                           labelEms: 21),
                       InfoLine(
-                          'Bonus de rango ${rankLabel(r.rank)}',
+                          ref.t('ui.missions.results.rank_bonus',
+                              {'rank': rankLabel(r.rank)}),
                           '<b>+₵${r.bonus}</b> '
                               '<span class="k">(${(r.bonusPercent * 100).round()}%)</span>',
                           labelEms: 21),
@@ -313,23 +325,28 @@ class ResultsPanel extends StatelessWidget {
           if (progress.isNotEmpty)
             SectionPanel(
                 icon: PixelIconKind.arrowIn,
-                title: 'PROGRESO',
+                title: ref.t('ui.missions.results.progress'),
                 children: progress),
           if (loot.isNotEmpty)
             SectionPanel(
-                icon: PixelIconKind.gem, title: 'BOTÍN', children: loot),
+                icon: PixelIconKind.gem,
+                title: ref.t('ui.missions.results.loot'),
+                children: loot),
           Row(
             children: [
               Expanded(
                 child: Text(
                     retroText(victoryLap
-                        ? lapHint
-                        : 'Regreso automático en ${r.timeLeft.ceil()}s'),
+                        ? ref.t('ui.missions.results.lap_hint')
+                        : ref.t('ui.missions.results.auto_return',
+                            {'s': r.timeLeft.ceil()})),
                     key: const ValueKey('results-footer'),
                     style: const TextStyle(color: ProtoColors.dim)),
               ),
               KeyHints(
-                  confirm: victoryLap ? 'Cerrar' : 'Volver al lobby',
+                  confirm: ref.t(victoryLap
+                      ? 'ui.missions.results.hint_close'
+                      : 'ui.missions.results.hint_lobby'),
                   back: null),
             ],
           ),

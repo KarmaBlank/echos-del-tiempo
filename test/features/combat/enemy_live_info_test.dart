@@ -17,6 +17,7 @@ import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter/gestures.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -137,7 +138,7 @@ void main() {
   testWidgets('insignia abreviada: hover muestra el nombre completo',
       (tester) async {
     final e = start().enemies.first..statuses[StatusKind.burn] = 2;
-    final chip = combatantChips(e).first;
+    final chip = combatantChips(fallbackCombatStrings(), e).first;
     await pump(tester, Center(child: StatusChipView(chip)));
     final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await g.addPointer(location: Offset.zero);

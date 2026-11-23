@@ -8,6 +8,7 @@ import '../../../game_engine/models/bestiary.dart';
 import '../../characters/presentation/characters_providers.dart';
 import '../../combat/presentation/game_sprites.dart';
 import 'bestiary_view.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// El BESTIARIO desde el título (docs/specs/bestiary.md § 4): el de la
 /// cuenta, solo lectura.
@@ -39,19 +40,19 @@ class _BestiaryScreenState extends ConsumerState<BestiaryScreen> {
     return Scaffold(
       body: PanelFrame(
         key: const ValueKey('bestiary-screen'),
-        title: 'BESTIARIO',
+        title: ref.t('ui.bestiary.title'),
         width: 1000,
         fill: true,
-        help: BestiaryView.help,
+        help: ref.t('ui.bestiary.help'),
         onClose: () => Navigator.of(context).maybePop(),
         actions: [
-          DsButton('VOLVER',
+          DsButton(ref.t('ui.bestiary.back'),
               key: const ValueKey('bestiary-screen-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],
         child: b == null
-            ? const Text('Cargando...',
-                style: TextStyle(color: ProtoColors.dim))
+            ? Text(ref.t('ui.bestiary.loading'),
+                style: const TextStyle(color: ProtoColors.dim))
             : BestiaryView(bestiary: b, sprites: sprites),
       ),
     );

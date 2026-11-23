@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
@@ -91,8 +92,8 @@ void main() {
       (tester) async {
     final (menu, _) = await pump(tester);
     expect(menu.category, BattleCategory.weapon);
-    expect(BattleCategory.weapon.label, 'ARMA');
-    expect(BattleCategory.values.map((c) => c.label), isNot(contains('DEFENDER')));
+    expect(BattleCategory.weapon.labelKey, 'ui.combat.cat.weapon');
+    expect(BattleCategory.values.map((c) => fallbackCombatStrings().t(c.labelKey)), isNot(contains('DEFENDER')));
     expect(find.text('ARMA'), findsOneWidget);
     expect(row('attack'), findsOneWidget);
     expect(row('defend'), findsOneWidget);

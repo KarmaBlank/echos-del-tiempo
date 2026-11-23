@@ -219,7 +219,7 @@ void main() {
     addTearDown(tester.view.reset);
     final style = LootFilterRules.defaultStyle(
         const LootDrop.item(ItemInstance(uid: 'a', baseId: 'espada_bronce')));
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: ResultsPanel(
@@ -249,7 +249,7 @@ void main() {
           ],
         ),
       ),
-    ));
+    )));
     expect(find.text('TUS DROPS (2)'), findsOneWidget);
     expect(find.byType(LootLabel), findsNWidgets(2));
     expect(find.textContaining('(oculto por tu filtro)'), findsOneWidget);

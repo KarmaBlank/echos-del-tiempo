@@ -1,0 +1,17 @@
+{
+  "ui.achievements.filter.all": "",
+  "ui.achievements.filter.pending": "",
+  "ui.achievements.filter.done": "",
+  "ui.achievements.done_count": "",
+  "ui.achievements.empty": "",
+  "ui.achievements.state.done": "",
+  "ui.achievements.state.pending": "",
+  "ui.achievements.reward": "",
+  "ui.achievements.progress": "",
+  "ui.achievements.done_on": "",
+  "ui.achievements.title": "",
+  "ui.achievements.back": "",
+  "ui.achievements.loading": "",
+  "ui.achievements.toast_head": "",
+  "ui.achievements.help": ""
+}

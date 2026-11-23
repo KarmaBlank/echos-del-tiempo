@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:flutter/services.dart';
@@ -14,13 +15,14 @@ import '../../../game_engine/rules/family_rules.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../domain/bestiary_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// El BESTIARIO (docs/specs/bestiary.md § 4): búsqueda arriba, filtro por
 /// familia a la izquierda, lista por zona (una fila por enemigo; silueta y
 /// "???" los que todavía no se mataron) y la ficha del elegido a la
 /// derecha.
 /// Solo lectura: lo llena ganar batallas.
-class BestiaryView extends StatefulWidget {
+class BestiaryView extends ConsumerStatefulWidget {
   const BestiaryView({
     super.key,
     required this.bestiary,
@@ -41,10 +43,10 @@ class BestiaryView extends StatefulWidget {
       'búsqueda.';
 
   @override
-  State<BestiaryView> createState() => _BestiaryViewState();
+  ConsumerState<BestiaryView> createState() => _BestiaryViewState();
 }
 
-class _BestiaryViewState extends State<BestiaryView> {
+class _BestiaryViewState extends ConsumerState<BestiaryView> {
   final _entries = bestiaryEntries();
   final _search = TextEditingController();
   final _nodes = <String, FocusNode>{};
@@ -127,7 +129,8 @@ class _BestiaryViewState extends State<BestiaryView> {
           center: Text.rich(
             key: const ValueKey('bestiary-count'),
             TextSpan(children: [
-              TextSpan(text: 'Descubiertos ', style: DsText.detail()),
+              TextSpan(
+                  text: ref.t('ui.bestiary.discovered'), style: DsText.detail()),
               TextSpan(
                   text: '${_b.discovered}',
                   style: DsText.body(DsColors.reward)),
@@ -136,14 +139,15 @@ class _BestiaryViewState extends State<BestiaryView> {
                   style: DsText.body(DsColors.textPrimary)),
               if (visible.length != _entries.length)
                 TextSpan(
-                    text: ' · mostrando ${visible.length}',
+                    text: ref.t('ui.bestiary.showing',
+                        {'n': visible.length}),
                     style: DsText.detail()),
             ]),
           ),
           actions: [
             DsSearchField(
                 key: const ValueKey('bestiary-search'),
-                hint: 'Buscar...',
+                hint: ref.t('ui.bestiary.search'),
                 width: 200,
                 controller: _search),
           ],
@@ -161,7 +165,7 @@ class _BestiaryViewState extends State<BestiaryView> {
               Expanded(
                 child: visible.isEmpty
                     ? Center(
-                        child: Text(retroText('Nada con ese filtro todavía'),
+                        child: Text(retroText(ref.t('ui.bestiary.empty')),
                             style: DsText.detail()))
                     : Focus(
                         canRequestFocus: false,
@@ -174,10 +178,13 @@ class _BestiaryViewState extends State<BestiaryView> {
                               children: [
                                 for (final z in byZone.keys) ...[
                                   DsSectionHeader(z == kAbyssBestiaryZone
-                                      ? 'Jefes del Abismo'
+                                      ? ref.t('ui.bestiary.section.abyss')
                                       : z <= 0 || z > kZones.length
-                                          ? 'Otros'
-                                          : 'Zona $z · ${kZones[z - 1].name}'),
+                                          ? ref.t('ui.bestiary.section.other')
+                                          : ref.t('ui.bestiary.section.zone', {
+                                              'zone': z,
+                                              'name': kZones[z - 1].name
+                                            })),
                                   for (final e in byZone[z]!) _row(e),
                                 ],
                               ],
@@ -200,9 +207,9 @@ class _BestiaryViewState extends State<BestiaryView> {
   }
 
   /// Nombre del filtro (los largos, abreviados para que entren).
-  static String _short(EnemyFamily f) => switch (f) {
-        EnemyFamily.iceElemental => 'ELEM. ESCARCHA',
-        EnemyFamily.aberration => 'ABERRACIÓN',
+  String _short(EnemyFamily f) => switch (f) {
+        EnemyFamily.iceElemental => ref.t('ui.bestiary.family.ice_short'),
+        EnemyFamily.aberration => ref.t('ui.bestiary.family.aberration_short'),
         _ => f.label.toUpperCase(),
       };
 
@@ -225,7 +232,7 @@ class _BestiaryViewState extends State<BestiaryView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          chip('TODAS', null, null),
+          chip(ref.t('ui.bestiary.filter.all'), null, null),
           for (final f in EnemyFamily.values)
             if (f != EnemyFamily.training) chip(_short(f), f, familyColor(f)),
         ],
@@ -279,7 +286,7 @@ class _BestiaryViewState extends State<BestiaryView> {
               : DsColors.textSecondary,
       selected: e.id == _sel,
       trailing: Text(
-          known && f != null ? f.code : (e.def.boss ? 'JEFE' : ''),
+          known && f != null ? f.code : (e.def.boss ? ref.t('ui.bestiary.boss') : ''),
           style: DsText.detail(
               known && f != null ? familyColor(f) : DsColors.textSecondary)),
       onTap: () {
@@ -299,7 +306,7 @@ class _BestiaryViewState extends State<BestiaryView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(child: _sprite(e, 120, known: known)),
-          const DsSectionHeader('Ficha'),
+          DsSectionHeader(ref.t('ui.bestiary.card')),
           ProtoText(
               key: const ValueKey('bestiary-detail-text'),
               enemyInfoMarkup(e.def, _b, description: true)),
@@ -307,13 +314,18 @@ class _BestiaryViewState extends State<BestiaryView> {
             SizedBox(height: DsSpace.sm),
             DsFold(
                 key: ValueKey('bestiary-drops-${e.id}'),
-                label: 'ZONA Y BOTÍN',
-                openLabel: 'ZONA Y BOTÍN',
+                label: ref.t('ui.bestiary.zone_and_loot'),
+                openLabel: ref.t('ui.bestiary.zone_and_loot'),
                 child: ProtoText(enemyDropsMarkup(e))),
           ] else ...[
             SizedBox(height: DsSpace.sm),
             Text(
-                retroText('Zona: ${e.zone > 0 && e.zone != kAbyssBestiaryZone ? '${e.zone} · ' : ''}${e.zoneName}'),
+                retroText(ref.t('ui.bestiary.zone', {
+                  'zone': e.zone > 0 && e.zone != kAbyssBestiaryZone
+                      ? '${e.zone} · '
+                      : '',
+                  'name': e.zoneName
+                })),
                 style: DsText.detail()),
           ],
         ],

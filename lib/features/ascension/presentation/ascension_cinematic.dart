@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
@@ -10,6 +11,7 @@ import '../../../game_engine/data/ascension_catalog.dart';
 import '../../../game_engine/data/classes_catalog.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/sprite_catalog.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Tiempos de la cinemática de ascensión (docs/specs/ascension.md § 5).
 abstract final class AscensionCinematicTiming {
@@ -27,7 +29,7 @@ abstract final class AscensionCinematicTiming {
 /// en el personaje, destello, cambia el sprite al ascendido y el cartel
 /// con el nombre. [at] fija un instante (tests y capturas); sin [at]
 /// corre sola y llama a [onDone].
-class AscensionCinematic extends StatefulWidget {
+class AscensionCinematic extends ConsumerStatefulWidget {
   const AscensionCinematic({
     super.key,
     required this.playerName,
@@ -55,10 +57,10 @@ class AscensionCinematic extends StatefulWidget {
   final bool reduceMotion;
 
   @override
-  State<AscensionCinematic> createState() => AscensionCinematicState();
+  ConsumerState<AscensionCinematic> createState() => AscensionCinematicState();
 }
 
-class AscensionCinematicState extends State<AscensionCinematic>
+class AscensionCinematicState extends ConsumerState<AscensionCinematic>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
       vsync: this,
@@ -157,7 +159,7 @@ class AscensionCinematicState extends State<AscensionCinematic>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(retroText('ASCENSIÓN'),
+                Text(retroText(ref.t('ui.ascension.banner')),
                     style: TextStyle(
                         fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,

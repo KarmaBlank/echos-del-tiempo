@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -7,6 +8,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Color de una rama del Atlas.
 Color atlasBranchColor(AtlasBranch b) => switch (b) {
@@ -19,18 +21,18 @@ Color atlasBranchColor(AtlasBranch b) => switch (b) {
     };
 
 /// Ficha de un nodo (markup).
-String atlasNodeMarkup(AtlasNodeDef n, {String? state}) =>
+String atlasNodeMarkup(Strings t, AtlasNodeDef n, {String? state}) =>
     '<b>${protoEsc(n.name)}</b>'
-    '${n.notable ? ' ${protoColor(ProtoColors.pink, '(notable)')}' : ''}<br>'
+    '${n.notable ? ' ${protoColor(ProtoColors.pink, t.t('ui.endgame.atlas.notable'))}' : ''}<br>'
     '${protoColor(atlasBranchColor(n.branch), protoEsc(n.branch.label))}'
-    '${n.locked || n.cost == 0 ? '' : ' · costo ${n.cost}'}<br>'
+    '${n.locked || n.cost == 0 ? '' : t.t('ui.endgame.atlas.cost', {'cost': n.cost})}<br>'
     '${protoEsc(n.text)}'
     '${state == null ? '' : '<br>${protoColor(ProtoColors.dim, protoEsc(state))}'}';
 
 /// El Atlas del Tiempo (docs/specs/ecos_atlas.md § 5): la grilla de
 /// nodos a la izquierda y el detalle del elegido a la derecha. Tomar y
 /// reiniciar los decide quien lo usa ([onTake], [onReset]).
-class AtlasView extends StatefulWidget {
+class AtlasView extends ConsumerStatefulWidget {
   const AtlasView({
     super.key,
     required this.progress,
@@ -56,10 +58,10 @@ class AtlasView extends StatefulWidget {
   static const cols = 9, rows = 7;
 
   @override
-  State<AtlasView> createState() => _AtlasViewState();
+  ConsumerState<AtlasView> createState() => _AtlasViewState();
 }
 
-class _AtlasViewState extends State<AtlasView> {
+class _AtlasViewState extends ConsumerState<AtlasView> {
   String _sel = AtlasRules.rootId;
 
   AtlasRules get rules => widget.rules;
@@ -67,9 +69,9 @@ class _AtlasViewState extends State<AtlasView> {
 
   /// Estado de un nodo para la ficha.
   String _state(AtlasNodeDef n) {
-    if (n.locked) return 'Próximamente';
-    if (rules.has(p, n.id)) return 'Tomado';
-    return rules.cannotTake(p, n.id) ?? 'Disponible';
+    if (n.locked) return ref.t('ui.endgame.atlas.soon');
+    if (rules.has(p, n.id)) return ref.t('ui.endgame.atlas.taken');
+    return rules.cannotTake(p, n.id) ?? ref.t('ui.endgame.atlas.available');
   }
 
   @override
@@ -120,13 +122,13 @@ class _AtlasViewState extends State<AtlasView> {
               .clamp(340.0, MediaQuery.sizeOf(context).width * 0.45),
           child: PanelDetail(
             footer: [
-              PanelButton('REINICIAR',
+              PanelButton(ref.t('ui.endgame.reset'),
                   key: const ValueKey('atlas-reset'),
                   onPressed: widget.editBlocked != null || p.nodes.isEmpty
                       ? null
                       : widget.onReset),
               if (!node.locked && !taken)
-                PanelButton('TOMAR',
+                PanelButton(ref.t('ui.endgame.take'),
                     key: const ValueKey('atlas-take'),
                     accent: ProtoColors.green,
                     reason: why,
@@ -136,12 +138,15 @@ class _AtlasViewState extends State<AtlasView> {
               // Primero el nodo elegido (lo que se decide), después el resto.
               ProtoText(
                   key: const ValueKey('atlas-detail'),
-                  atlasNodeMarkup(node, state: _state(node))),
+                  atlasNodeMarkup(ref.strings, node, state: _state(node))),
               const SizedBox(height: 8),
               ProtoText(
                   key: const ValueKey('atlas-points'),
-                  'Puntos libres <b>$free</b> · ganados $earned/'
-                  '${AtlasRules.maxPoints}'),
+                  ref.t('ui.endgame.atlas.points', {
+                    'free': free,
+                    'earned': earned,
+                    'max': AtlasRules.maxPoints,
+                  })),
               if (widget.note != null)
                 ProtoText(protoColor(ProtoColors.sky, protoEsc(widget.note!))),
               const SizedBox(height: 4),
@@ -149,23 +154,23 @@ class _AtlasViewState extends State<AtlasView> {
                 alignment: Alignment.centerLeft,
                 child: RetroTooltip(
                   key: const ValueKey('atlas-legend'),
-                  message: '${protoColor(ProtoColors.dim, 'Primeras veces: tiers '
-                      '${count('t')}/16 · zonas ${count('z')}/10 · jefes '
-                      '${count('b')}/10')}<br>'
-                      'Lleno = tomado · borde fuerte = podés tomarlo · ? = '
-                      'próximamente · el número es el costo. Reiniciar es '
-                      'gratis.<br>'
+                  message: '${protoColor(ProtoColors.dim, ref.t('ui.endgame.atlas.firsts', {
+                        'tiers': count('t'),
+                        'zones': count('z'),
+                        'bosses': count('b'),
+                      }))}<br>'
+                      '${ref.t('ui.endgame.atlas.legend_text')}<br>'
                       '${[
                         for (final (b, where) in const [
-                          (AtlasBranch.cartografia, 'arriba'),
-                          (AtlasBranch.tesoro, 'derecha'),
-                          (AtlasBranch.caza, 'abajo'),
-                          (AtlasBranch.dominio, 'izquierda'),
+                          (AtlasBranch.cartografia, 'up'),
+                          (AtlasBranch.tesoro, 'right'),
+                          (AtlasBranch.caza, 'down'),
+                          (AtlasBranch.dominio, 'left'),
                         ])
-                          '${protoColor(atlasBranchColor(b), b.label)} $where',
+                          '${protoColor(atlasBranchColor(b), b.label)} ${ref.t('ui.endgame.atlas.dir.$where')}',
                       ].join(' · ')}',
-                  child: const Text('[? Leyenda]',
-                      style: TextStyle(color: ProtoColors.sky)),
+                  child: Text(ref.t('ui.endgame.atlas.legend'),
+                      style: const TextStyle(color: ProtoColors.sky)),
                 ),
               ),
             ],
@@ -187,7 +192,7 @@ class _AtlasViewState extends State<AtlasView> {
       width: size,
       height: size,
       child: RetroTooltip(
-        message: atlasNodeMarkup(n, state: _state(n)),
+        message: atlasNodeMarkup(ref.strings, n, state: _state(n)),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(

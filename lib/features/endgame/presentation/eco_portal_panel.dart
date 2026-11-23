@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
@@ -20,27 +21,23 @@ import '../domain/endgame_text.dart';
 import 'abyss_view.dart';
 import 'atlas_view.dart';
 import 'eco_zone_hub.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
-  zonas('ZONAS',
-      'Los Ecos se abren en el portal de su zona. Elegí una zona y IR te '
-      'lleva hasta él.'),
-  ecos('ECOS',
-      'Tus Ecos: mejoralos con materiales. Se abren en el portal de su zona.'),
-  atlas('ATLAS',
-      'Árbol de la cuenta: ganás puntos al completar algo por primera vez.'),
-  abismo('ABISMO',
-      'Jefes del Abismo: juntá Fragmentos en Ecos de tier 10+ y abrí su pelea.');
+  zonas,
+  ecos,
+  atlas,
+  abismo;
 
-  const EcoPortalTab(this.label, this.hint);
-  final String label;
-  final String hint;
+  /// Keys of the tab label and its hint (`ui.endgame.tab.<name>.*`).
+  String get labelKey => 'ui.endgame.tab.$name.label';
+  String get hintKey => 'ui.endgame.tab.$name.hint';
 }
 
 /// Portal del Eco del pueblo (docs/specs/ecos_atlas.md § 1, § 4, § 5):
 /// ECOS (lista + ficha, abrir y craftear) y ATLAS (el árbol de la cuenta).
-class EcoPortalPanel extends StatefulWidget {
+class EcoPortalPanel extends ConsumerStatefulWidget {
   const EcoPortalPanel({
     super.key,
     required this.view,
@@ -57,10 +54,10 @@ class EcoPortalPanel extends StatefulWidget {
   final GameSprites? sprites;
 
   @override
-  State<EcoPortalPanel> createState() => _EcoPortalPanelState();
+  ConsumerState<EcoPortalPanel> createState() => _EcoPortalPanelState();
 }
 
-class _EcoPortalPanelState extends State<EcoPortalPanel> {
+class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
   late var _tab = widget.initialTab;
   String? _sel;
 
@@ -83,37 +80,39 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
         index: _tab.index,
         onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
         child: PanelFrame(
-          title: 'PORTAL DEL ECO',
+          title: ref.t('ui.endgame.portal.title'),
           width: 1040,
           fill: true,
           help: _tab == EcoPortalTab.abismo ? kAbyssHelp : kEcoPortalHelp,
           onClose: c.closePanel,
           titleTrailing: ProtoText(
               key: const ValueKey('portal-points'),
-              'Atlas: <b>$free</b> punto${free == 1 ? '' : 's'} libre'
-              '${free == 1 ? '' : 's'}'),
+              ref.t('ui.endgame.portal.points', {'n': free})),
           header: PartyMemberBar.header(
               view,
               c,
               PanelTabs(
-                labels: [for (final t in EcoPortalTab.values) t.label],
+                labels: [
+                  for (final t in EcoPortalTab.values) ref.t(t.labelKey)
+                ],
                 index: _tab.index,
                 onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
               )),
           actions: [
-            PanelButton('CERRAR [ESC]', onPressed: c.closePanel),
+            PanelButton(ref.t('ui.endgame.close'), onPressed: c.closePanel),
           ],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(_tab.hint),
+              PanelHint(ref.t(_tab.hintKey)),
               Expanded(
                 child: switch (_tab) {
                   EcoPortalTab.zonas => EcoZoneHub(
                       key: const ValueKey('eco-hub'),
                       profile: p,
                       zoneName: (z) =>
-                          c.engine.catalog.zone(z)?.name ?? 'Zona $z',
+                          c.engine.catalog.zone(z)?.name ??
+                          ref.t('ui.endgame.zone_n', {'zone': z}),
                       goBlocked: c.ecoTravelBlocked,
                       onGo: (z, t) => c.travelToEcoPortal(z, tier: t)),
                   EcoPortalTab.ecos => _ecos(p),
@@ -139,14 +138,14 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
       key: const ValueKey('atlas-view'),
       progress: atlas,
       rules: c.engine.atlasRules,
-      editBlocked: c.canEditAtlas ? null : 'Solo en el pueblo',
+      editBlocked:
+          c.canEditAtlas ? null : ref.t('ui.endgame.only_in_town'),
       onTake: (id) => setState(() => c.takeAtlasNode(id)),
       onReset: () => setState(() => c.resetAtlas()),
       note: remote
-          ? 'En grupo vale el Atlas del anfitrión; tus puntos se guardan en '
-              'tu cuenta.'
+          ? ref.t('ui.endgame.atlas.note_client')
           : s.players.length > 1
-              ? 'Tu Atlas vale para todo el grupo.'
+              ? ref.t('ui.endgame.atlas.note_host')
               : null,
     );
   }
@@ -166,8 +165,7 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
       if (ecos.isEmpty)
         ProtoText(protoColor(
             ProtoColors.dim,
-            'No tenés Ecos. Caen de enemigos de nivel 45 o más (zonas 9 y '
-            '10) y al completar otros Ecos.')),
+            ref.t('ui.endgame.ecos.none'))),
       for (final e in ecos)
         MenuRow(
           wrap: true,
@@ -194,11 +192,12 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
       // fila por material con el costo y, si no se puede, el motivo.
       list.addAll([
         const SizedBox(height: 8),
-        MenuHeader('MEJORAR ${protoColor(ProtoColors.dim, '· tienes '
-            'Esquirla ${p.material(CraftMaterial.esquirla)}'
-            ' · Cristal ${p.material(CraftMaterial.cristal)}'
-            ' · Prisma ${p.material(CraftMaterial.prisma)}'
-            ' · Ancla ${p.material(CraftMaterial.ancla)}')}'),
+        MenuHeader('${ref.t('ui.endgame.ecos.upgrade')} ${protoColor(ProtoColors.dim, ref.t('ui.endgame.ecos.have', {
+              'shard': p.material(CraftMaterial.esquirla),
+              'crystal': p.material(CraftMaterial.cristal),
+              'prism': p.material(CraftMaterial.prisma),
+              'anchor': p.material(CraftMaterial.ancla),
+            }))}'),
         for (final op in EcoCraftOp.values)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -209,7 +208,7 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
                   child: ProtoText(ecoCraftRowMarkup(e, op)),
                 ),
                 const SizedBox(width: 8),
-                PanelButton('USAR',
+                PanelButton(ref.t('ui.endgame.ecos.use'),
                     key: ValueKey('eco-craft-${op.name}'),
                     reason: ecoCraftBlocked(s, view.actorId, p, e, op),
                     onPressed: () => setState(() => c.ecoCraft(e.uid, op))),
@@ -225,10 +224,12 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
         footer: e == null
             ? const []
             : [
-                const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
+                KeyHints(
+                    confirm: ref.t('ui.endgame.hint.choose'),
+                    back: ref.t('ui.endgame.hint.close')),
                 // Los Ecos se abren en el portal de su zona (ecos_zone.md
                 // § 4): acá solo se viaja hasta él.
-                PanelButton('IR AL PORTAL',
+                PanelButton(ref.t('ui.endgame.go_to_portal'),
                     key: const ValueKey('eco-go'),
                     accent: ProtoColors.green,
                     reason: c.ecoTravelBlocked(e.zone),
@@ -237,7 +238,7 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
         children: e == null
             ? [
                 ProtoText(protoColor(ProtoColors.dim,
-                    'Elegí un Eco de la lista para ver su ficha.')),
+                    ref.t('ui.endgame.ecos.pick'))),
               ]
             : [
                 ProtoText(

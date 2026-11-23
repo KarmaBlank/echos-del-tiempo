@@ -273,10 +273,10 @@ void main() {
       tester.view.physicalSize = const Size(1280, 720);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         theme: RetroTheme.build(),
         home: Scaffold(body: child),
-      ));
+      )));
       await tester.pump();
     }
 

@@ -19,6 +19,7 @@ import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart' hide PixelIcon;
 import 'build_planner_view.dart' show GoalMark, PickOption, showBuildPicker;
+import 'build_text.dart';
 
 // BUILD v2 — arma objetivo (docs/specs/build_planner_v2.md § 1 y § 4):
 // fila del objetivo, buscador de bases y detalle con requisitos, "qué
@@ -50,25 +51,33 @@ class WeaponTargetRow extends StatelessWidget {
     final color = target.rarity == null
         ? DsColors.reward
         : RarityColors.of(target.rarity!);
+    final s = context.buildStrings;
     return Semantics(
-      label: '$name, $pct por ciento del objetivo'
-          '${miss == null ? '' : ', faltan $miss'}',
+      label: s.t('ui.build.target.semantics', {'name': name, 'pct': pct}) +
+          (miss == null
+              ? ''
+              : s.t('ui.build.target.semantics_miss', {'n': miss})),
       child: DsListRow(
         leading: Text('★', style: DsText.body(color)),
         title: retroText(name),
         titleColor: color,
         detail: retroText(best == null
-            ? '${target.priority.label} · sin candidata'
-            : '${target.priority.label} · faltan $miss'
-                '${best!.inStash ? ' · ALIJO' : ''}'),
+            ? s.t('ui.build.target.row_none', {'prio': target.priority.label})
+            : s.t('ui.build.target.row_miss',
+                    {'prio': target.priority.label, 'n': miss}) +
+                (best!.inStash ? s.t('ui.build.target.row_stash') : '')),
         onTap: onTap,
         tooltip: best == null
             ? null
             : DsTooltipCard(title: retroText(name), children: [
                 Text(
-                    retroText('Mejor candidata: '
-                        '${rules.progression.items.displayName(best!.item)}'
-                        '${best!.inStash ? ' (en el alijo)' : ''}'),
+                    retroText(s.t('ui.build.target.best', {
+                          'name':
+                              rules.progression.items.displayName(best!.item)
+                        }) +
+                        (best!.inStash
+                            ? s.t('ui.build.target.best_stash')
+                            : '')),
                     style: DsText.detail()),
               ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -134,17 +143,19 @@ class _BaseSearchState extends State<_BaseSearch> {
   final _elements = <GameElement>{};
   bool _usable = false;
 
-  static const _familyNames = {
-    'guerrero': 'GUERRERO',
-    'maga': 'MAGA',
-    'tirador': 'TIRADOR',
-    'paladin': 'PALADÍN',
-  };
-  static const _categoryNames = {
-    WeaponCategory.melee: 'CUERPO A CUERPO',
-    WeaponCategory.ranged: 'DISTANCIA',
-    WeaponCategory.caster: 'LANZADOR',
-  };
+  Strings get _s => context.buildStrings;
+
+  Map<String, String> get _familyNames => {
+        'guerrero': _s.t('ui.build.search.fam_warrior'),
+        'maga': _s.t('ui.build.search.fam_mage'),
+        'tirador': _s.t('ui.build.search.fam_shooter'),
+        'paladin': _s.t('ui.build.search.fam_paladin'),
+      };
+  Map<WeaponCategory, String> get _categoryNames => {
+        WeaponCategory.melee: _s.t('ui.build.search.cat_melee'),
+        WeaponCategory.ranged: _s.t('ui.build.search.cat_ranged'),
+        WeaponCategory.caster: _s.t('ui.build.search.cat_caster'),
+      };
 
   @override
   void dispose() {
@@ -190,13 +201,15 @@ class _BaseSearchState extends State<_BaseSearch> {
       elements: _elements,
       usableAt: _usable ? widget.planLevel : null,
     ));
+    final families = _familyNames;
+    final categories = _categoryNames;
     return PanelFrame(
       key: const ValueKey('base-search'),
-      title: 'ARMA OBJETIVO',
+      title: _s.t('ui.build.search.title'),
       width: 760,
       onClose: () => Navigator.of(context).pop(),
       actions: [
-        DsButton('CANCELAR',
+        DsButton(_s.t('ui.build.dialog.cancel'),
             key: const ValueKey('base-search-cancel'),
             onPressed: () => Navigator.of(context).pop()),
       ],
@@ -208,19 +221,20 @@ class _BaseSearchState extends State<_BaseSearch> {
             alignment: Alignment.centerLeft,
             child: DsSearchField(
               key: const ValueKey('base-search-field'),
-              hint: 'Nombre, habilidad o implícito...',
+              hint: _s.t('ui.build.search.hint'),
               width: 520,
               controller: _q,
               onChanged: (_) => setState(() {}),
             ),
           ),
-          _toggles('TIPO', types, _types, (t) => t.toUpperCase(), 'bs-type'),
-          _toggles('FAMILIA', _familyNames.keys, _families,
-              (f) => _familyNames[f]!, 'bs-fam'),
-          _toggles('CATEGORÍA', WeaponCategory.values, _categories,
-              (c) => _categoryNames[c]!, 'bs-cat'),
+          _toggles(_s.t('ui.build.search.type'), types, _types,
+              (t) => t.toUpperCase(), 'bs-type'),
+          _toggles(_s.t('ui.build.search.family'), families.keys, _families,
+              (f) => families[f]!, 'bs-fam'),
+          _toggles(_s.t('ui.build.search.category'), WeaponCategory.values,
+              _categories, (c) => categories[c]!, 'bs-cat'),
           _toggles(
-              'ELEMENTO',
+              _s.t('ui.build.search.element'),
               [
                 for (final e in GameElement.values)
                   if (e != GameElement.fisico) e
@@ -233,7 +247,7 @@ class _BaseSearchState extends State<_BaseSearch> {
             child: Wrap(children: [
               DsButton(
                   retroText(
-                      'PUEDO USARLA AL NIVEL DEL PLAN (${widget.planLevel})'),
+                      _s.t('ui.build.search.usable', {'n': widget.planLevel})),
                   key: const ValueKey('bs-usable'),
                   size: DsButtonSize.compact,
                   kind: DsButtonKind.ghost,
@@ -242,9 +256,11 @@ class _BaseSearchState extends State<_BaseSearch> {
             ]),
           ),
           SizedBox(height: DsSpace.sm),
-          Text(retroText('${list.length} bases'), style: DsText.detail()),
+          Text(retroText(_s.t('ui.build.search.count', {'n': list.length})),
+              style: DsText.detail()),
           if (list.isEmpty)
-            Text(retroText('Ninguna base coincide'), style: DsText.detail()),
+            Text(retroText(_s.t('ui.build.search.none')),
+                style: DsText.detail()),
           for (final w in list.take(80)) _row(w),
         ],
       ),
@@ -266,22 +282,30 @@ class _BaseSearchState extends State<_BaseSearch> {
           ? Text('★', style: DsText.body(DsColors.reward))
           : null,
       title: retroText(w.name),
-      detail:
-          retroText('${w.type} · Nv ${w.level}${req.isEmpty ? '' : ' · $req'}'
-              '${miss.isEmpty ? '' : ' (no llegás)'}'),
+      detail: retroText(
+          _s.t('ui.build.search.row', {'type': w.type, 'level': w.level}) +
+              (req.isEmpty ? '' : ' · $req') +
+              (miss.isEmpty ? '' : _s.t('ui.build.search.row_short'))),
       detailColor: miss.isEmpty ? null : DsColors.danger,
       onTap: () => Navigator.of(context).pop(w),
       tooltip: DsTooltipCard(title: retroText(w.name), children: [
-        Text(retroText('${w.type} · Nv ${w.level} · familia ${w.classId}'),
+        Text(
+            retroText(_s.t('ui.build.search.tip_line',
+                {'type': w.type, 'level': w.level, 'family': w.classId})),
             style: DsText.detail()),
         if (skills.isNotEmpty)
-          Text(retroText('Habilidades: $skills'), style: DsText.body()),
+          Text(retroText(_s.t('ui.build.search.skills', {'list': skills})),
+              style: DsText.body()),
         for (final m in w.implicit)
-          Text(retroText('Implícito: ${m.text}'), style: DsText.detail()),
+          Text(retroText(_s.t('ui.build.search.implicit', {'text': m.text})),
+              style: DsText.detail()),
         if (req.isNotEmpty)
-          Text(retroText('Pide $req'),
+          Text(retroText(_s.t('ui.build.search.requires', {'req': req})),
               style: DsText.detail(miss.isEmpty ? null : DsColors.danger)),
-        Text(retroText(w.price > 0 ? 'Armería ₵${w.price}' : 'Sale como loot'),
+        Text(
+            retroText(w.price > 0
+                ? _s.t('ui.build.search.armory', {'price': '₵${w.price}'})
+                : _s.t('ui.build.search.loot')),
             style: DsText.detail()),
       ]),
     );
@@ -357,6 +381,8 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   Future<T?> _pick<T>(String title, List<PickOption<T>> o) =>
       showBuildPicker<T>(context, title, o);
 
+  Strings get _s => context.buildStrings;
+
   @override
   Widget build(BuildContext context) {
     final cands = _r.candidates(_t, _p, stash: widget.stash);
@@ -372,16 +398,19 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       onClose: () => Navigator.of(context).pop(),
       actions: [
         if (widget.editable)
-          DsButton('QUITAR OBJETIVO',
+          DsButton(_s.t('ui.build.target.remove'),
               key: const ValueKey('target-remove'),
               kind: DsButtonKind.ghost,
               onPressed: () =>
                   Navigator.of(context).pop(const TargetEdit.removed())),
-        DsButton(widget.editable ? 'CANCELAR' : 'CERRAR',
+        DsButton(
+            widget.editable
+                ? _s.t('ui.build.dialog.cancel')
+                : _s.t('ui.build.tpl.close'),
             key: const ValueKey('target-close'),
             onPressed: () => Navigator.of(context).pop()),
         if (widget.editable)
-          DsButton('GUARDAR',
+          DsButton(_s.t('ui.build.dialog.save'),
               key: const ValueKey('target-save'),
               kind: DsButtonKind.primary,
               onPressed: () => Navigator.of(context).pop(TargetEdit(_t))),
@@ -417,14 +446,15 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       key: const ValueKey('target-reqs'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('OBJETIVO',
+        DsSectionHeader(_s.t('ui.build.target.header'),
             trailing: DsPercent(pct, label: _r.targetName(_t))),
         Text(
-            retroText('${_t.priority.label} · desde Nv ${_t.level}'
-                '${_t.keepQuebrar ? '' : ' · sin Quebrar'}'),
+            retroText(_s.t('ui.build.target.from_level',
+                    {'prio': _t.priority.label, 'n': _t.level}) +
+                (_t.keepQuebrar ? '' : _s.t('ui.build.target.no_break'))),
             style: DsText.detail()),
         if (cur == null)
-          Text(retroText('Sin candidatas: buscala en el loot o la Armería.'),
+          Text(retroText(_s.t('ui.build.target.no_candidates')),
               style: DsText.detail()),
         for (final r in cur?.reqs ?? const <TargetReq>[])
           DsListRow(
@@ -434,7 +464,9 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
             titleColor: r.done ? DsColors.success : null,
             detail: r.detail == null
                 ? null
-                : retroText(r.done ? r.detail! : 'tiene ${r.detail}'),
+                : retroText(r.done
+                    ? r.detail!
+                    : _s.t('ui.build.target.has', {'detail': r.detail})),
           ),
         for (final e in errors)
           Padding(
@@ -453,19 +485,22 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
         padding: EdgeInsets.only(top: DsSpace.sm),
         child: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           for (final (k, l, f) in [
-            ('prio', 'PRIORIDAD', _editPriority),
-            ('rarity', 'RAREZA', _editRarity),
-            ('mod', '+ MOD', _addMod),
-            ('passive', 'PASIVA', _editPassive),
-            ('skill', '+ HABILIDAD', _addSkill),
-            ('ilvl', 'NV. DE OBJETO', _editIlvl),
-            ('forge', 'FORJA', _editForge),
+            ('prio', _s.t('ui.build.target.edit_prio'), _editPriority),
+            ('rarity', _s.t('ui.build.target.edit_rarity'), _editRarity),
+            ('mod', _s.t('ui.build.target.edit_mod'), _addMod),
+            ('passive', _s.t('ui.build.target.edit_passive'), _editPassive),
+            ('skill', _s.t('ui.build.target.edit_skill'), _addSkill),
+            ('ilvl', _s.t('ui.build.target.edit_ilvl'), _editIlvl),
+            ('forge', _s.t('ui.build.target.edit_forge'), _editForge),
           ])
             DsButton(l,
                 key: ValueKey('target-edit-$k'),
                 size: DsButtonSize.compact,
                 onPressed: f),
-          DsButton(_t.keepQuebrar ? 'CONSERVAR QUEBRAR' : 'SIN QUEBRAR',
+          DsButton(
+              _t.keepQuebrar
+                  ? _s.t('ui.build.target.keep_break')
+                  : _s.t('ui.build.target.no_break_btn'),
               key: const ValueKey('target-edit-quebrar'),
               size: DsButtonSize.compact,
               kind: DsButtonKind.ghost,
@@ -473,7 +508,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
               onPressed: () => setState(
                   () => _t = _t.copyWith(keepQuebrar: !_t.keepQuebrar))),
           if (_t.mods.isNotEmpty || _t.skills.isNotEmpty)
-            DsButton('QUITAR REQUISITO',
+            DsButton(_s.t('ui.build.target.drop_req'),
                 key: const ValueKey('target-edit-drop'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.ghost,
@@ -493,9 +528,12 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       key: const ValueKey('target-missing'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('QUÉ TE FALTA  ${lines.length}'),
+        DsSectionHeader(_s.t('ui.build.target.missing', {'n': lines.length})),
         if (lines.isEmpty)
-          Text(retroText(cur == null ? 'Elegí una candidata' : '¡Completa!'),
+          Text(
+              retroText(cur == null
+                  ? _s.t('ui.build.target.pick_candidate')
+                  : _s.t('ui.build.target.complete')),
               style: DsText.body(DsColors.success)),
         for (final l in lines)
           Padding(
@@ -506,7 +544,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
                 style: DsText.body(l.sourceInStash ? DsColors.mp : null)),
           ),
         if (plan.steps.isNotEmpty) ...[
-          DsSectionHeader('PLAN DE FUSIÓN',
+          DsSectionHeader(_s.t('ui.build.target.fusion_plan'),
               trailing: Text(retroText(WeaponTargetRules.credits(plan.credits)),
                   style: DsText.body(DsColors.reward))),
           for (var i = 0; i < plan.steps.length; i++)
@@ -516,17 +554,19 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
                   horizontal: DsSpace.md, vertical: DsSpace.xs),
               child: Text(
                   retroText('${i + 1}. ${plan.steps[i].text}'
-                      '${plan.steps[i].sourceInStash ? ' (sacala del alijo primero)' : ''}'),
+                      '${plan.steps[i].sourceInStash ? _s.t('ui.build.target.from_stash') : ''}'),
                   style: DsText.detail()),
             ),
           if (plan.materials.isNotEmpty)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
               child: Text(
-                  retroText('Materiales: ${[
-                    for (final e in plan.materials.entries)
-                      '${e.value} ${e.key.label}'
-                  ].join(' · ')}'),
+                  retroText(_s.t('ui.build.target.materials', {
+                    'list': [
+                      for (final e in plan.materials.entries)
+                        '${e.value} ${e.key.label}'
+                    ].join(' · ')
+                  })),
                   style: DsText.detail()),
             ),
         ],
@@ -547,7 +587,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
           key: ValueKey(key),
           rules: widget.rules.progression,
           count: list.length,
-          empty: 'Sin armas',
+          empty: _s.t('ui.build.target.no_weapons'),
           slot: (i) => ItemSlotData(
             content: CellContent.item(list[i].item),
             selected: list[i].item.uid == cur?.item.uid,
@@ -560,8 +600,9 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
             item: list[i].item,
             attributes: _p.attributes,
             focused: focused,
-            note: '★ ${list[i].percent}% del objetivo'
-                '${list[i].inStash ? ' · en el alijo' : ''}',
+            note: '★ ${_s.t('ui.build.target.note', {
+                  'pct': list[i].percent
+                })}${list[i].inStash ? _s.t('ui.build.target.note_stash') : ''}',
             child: child,
           ),
           decorate: (i, child) => Stack(children: [
@@ -586,13 +627,12 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       key: const ValueKey('target-candidates'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('CANDIDATAS · INVENTARIO  ${inv.length}'),
+        DsSectionHeader(_s.t('ui.build.target.cand_inv', {'n': inv.length})),
         grid('cand-inv', inv),
-        DsSectionHeader('CANDIDATAS · ALIJO COMPARTIDO  ${st.length}',
-            trailing: const DsTag('ALIJO', color: DsColors.mp)),
-        Text(
-            retroText('Solo se miran: nada sale del alijo sin que lo '
-                'saques vos.'),
+        DsSectionHeader(_s.t('ui.build.target.cand_stash', {'n': st.length}),
+            trailing:
+                DsTag(_s.t('ui.build.target.stash_tag'), color: DsColors.mp)),
+        Text(retroText(_s.t('ui.build.target.stash_note')),
             style: DsText.detail()),
         grid('cand-stash', st),
       ],
@@ -602,7 +642,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   // ---- edición ----
 
   Future<void> _editPriority() async {
-    final p = await _pick<TargetPriority>('PRIORIDAD', [
+    final p = await _pick<TargetPriority>(_s.t('ui.build.target.edit_prio'), [
       for (final p in TargetPriority.values)
         PickOption(p, p.label, null, key: 'prio-${p.key}'),
     ]);
@@ -610,9 +650,13 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   }
 
   Future<void> _editRarity() async {
-    final r = await _pick<Rarity>('RAREZA MÍNIMA', [
+    final r = await _pick<Rarity>(_s.t('ui.build.target.min_rarity'), [
       for (final r in Rarity.values)
-        PickOption(r, r.label, '${r.maxMods} ranuras · forja ${r.forgeCap}',
+        PickOption(
+            r,
+            r.label,
+            _s.t('ui.build.target.rarity_sub',
+                {'slots': r.maxMods, 'forge': r.forgeCap}),
             key: 'rar-${r.name}'),
     ]);
     if (r != null) {
@@ -622,19 +666,23 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
 
   Future<void> _addMod() async {
     final type = _r.typeOf(_t);
-    final id = await _pick<String>('MOD', [
+    final id = await _pick<String>(_s.t('ui.build.pick.mod_title'), [
       for (final a in kAffixes.values)
         if (!_t.mods.any((m) => m.affixId == a.id) &&
             (type == null || a.allows(type)))
-          PickOption(a.id, BuildPlanRules.affixLabel(a.id),
-              a.slot == AffixSlot.prefix ? 'prefijo' : 'sufijo',
+          PickOption(
+              a.id,
+              BuildPlanRules.affixLabel(a.id),
+              _s.t('ui.build.pick.slot',
+                  {'slot': a.slot == AffixSlot.prefix ? 'prefix' : 'suffix'}),
               key: 'mod-${a.id}'),
     ]);
     if (id == null) return;
     final def = kAffixes[id]!;
-    final tier = await _pick<int>('TIER MÍNIMO (T1 es el mejor)', [
+    final tier = await _pick<int>(_s.t('ui.build.pick.min_tier'), [
       for (final t in def.tiers.reversed)
-        PickOption(t.tier, 'T${t.tier} o mejor', 'objeto Nv ${t.minLevel}+',
+        PickOption(t.tier, _s.t('ui.build.pick.tier', {'tier': t.tier}),
+            _s.t('ui.build.target.item_level', {'n': t.minLevel}),
             key: 'tier-${t.tier}'),
     ]);
     if (tier != null) {
@@ -644,8 +692,8 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
 
   Future<void> _editPassive() async {
     final type = _r.typeOf(_t);
-    final id = await _pick<String>('PASIVA DE ARMA', [
-      const PickOption('', 'Ninguna', null, key: 'wp-none'),
+    final id = await _pick<String>(_s.t('ui.build.pick.passive_title'), [
+      PickOption('', _s.t('ui.build.target.none'), null, key: 'wp-none'),
       for (final w in kWeaponPassives.values)
         if (!w.unique && (type == null || w.types.contains(type)))
           PickOption(w.id, w.name, w.descriptionAt(1), key: 'wp-${w.id}'),
@@ -655,7 +703,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       setState(() => _t = _t.copyWith(passive: () => null));
       return;
     }
-    final lv = await _pick<int>('NIVEL MÍNIMO', [
+    final lv = await _pick<int>(_s.t('ui.build.target.min_level'), [
       for (var l = 1; l <= 5; l++)
         PickOption(l, kWeaponPassives[id]!.nameAt(l), null, key: 'wpl-$l'),
     ]);
@@ -670,7 +718,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
         .where((s) => !_t.skills.contains(s.id))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
-    final id = await _pick<String>('HABILIDAD EN EL ARMA', [
+    final id = await _pick<String>(_s.t('ui.build.target.skill_title'), [
       for (final s in list) PickOption(s.id, s.name, null, key: 'sk-${s.id}'),
     ]);
     if (id != null) {
@@ -679,21 +727,24 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   }
 
   Future<void> _editIlvl() async {
-    final v = await _pick<int>('NIVEL DE OBJETO MÍNIMO', [
+    final v = await _pick<int>(_s.t('ui.build.target.ilvl_title'), [
       for (final l in const [10, 20, 30, 36, 40, 50])
-        PickOption(l, 'Nv $l', null, key: 'ilvl-$l'),
+        PickOption(l, _s.t('ui.build.tpl.level', {'n': l}), null,
+            key: 'ilvl-$l'),
     ]);
     if (v != null) setState(() => _t = _t.copyWith(itemLevel: () => v));
   }
 
   Future<void> _editForge() async {
-    final s = await _pick<UpgradeStat>('FORJA', [
+    final s = await _pick<UpgradeStat>(_s.t('ui.build.target.edit_forge'), [
       for (final s in UpgradeStat.values)
-        PickOption(s, s.label, 'pedís ${_t.forge[s] ?? 0}',
+        PickOption(s, s.label,
+            _s.t('ui.build.target.forge_sub', {'n': _t.forge[s] ?? 0}),
             key: 'forge-${s.key}'),
     ]);
     if (s == null) return;
-    final l = await _pick<int>('NIVEL DE ${s.label.toUpperCase()}', [
+    final l = await _pick<int>(
+        _s.t('ui.build.target.forge_level', {'stat': s.label.toUpperCase()}), [
       for (var l = 0; l <= 5; l++) PickOption(l, '$l', null, key: 'fl-$l'),
     ]);
     if (l == null) return;
@@ -705,7 +756,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   }
 
   Future<void> _dropReq() async {
-    final id = await _pick<String>('QUITAR REQUISITO', [
+    final id = await _pick<String>(_s.t('ui.build.target.drop_req'), [
       for (final m in _t.mods)
         PickOption('mod:${m.affixId}', BuildPlanRules.affixLabel(m.affixId),
             'T${m.minTier}',

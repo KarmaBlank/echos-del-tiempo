@@ -14,6 +14,7 @@ import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/combat_strings.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Jefes v0.3 → escena, HUD y sonido (docs/specs/battle_presentation.md
@@ -228,45 +229,45 @@ void main() {
   group('HUD', () {
     test('chips de cada mecánica con cómo contrarrestarla', () {
       final ech = _boss('hechicera', adds: ['ecoHechicera', 'ecoHechicera']);
-      final e = bossMechanicChips(ech).single;
+      final e = bossMechanicChips(fallbackCombatStrings(), ech).single;
       expect(e.long, contains('Ecos: 2 vivos'));
       expect(e.tip, contains('concentrá'));
       ech.enemies[1].hp = 0;
       ech.enemies[0].mechTurns = 1;
-      expect(bossMechanicChips(ech).single.long, contains('vuelven en 2 turnos'));
+      expect(bossMechanicChips(fallbackCombatStrings(), ech).single.long, contains('vuelven en 2 turnos'));
 
       final lava = _boss('bestiaMagma', lava: 2);
-      expect(bossMechanicChips(lava).single.short, 'LAVA 2');
-      expect(bossMechanicChips(lava).single.long, contains('no te defiendas'));
+      expect(bossMechanicChips(fallbackCombatStrings(), lava).single.short, 'LAVA 2');
+      expect(bossMechanicChips(fallbackCombatStrings(), lava).single.long, contains('no te defiendas'));
       final calm = _boss('bestiaMagma');
       calm.enemies[0].actions = 1;
-      expect(bossMechanicChips(calm).single.long, contains('sube en 2 acciones'));
+      expect(bossMechanicChips(fallbackCombatStrings(), calm).single.long, contains('sube en 2 acciones'));
 
       final court = _boss('espectroCoronado', adds: ['siervoEspectral', 'siervoEspectral']);
-      expect(bossMechanicChips(court).single.short, 'INMUNE (2)');
+      expect(bossMechanicChips(fallbackCombatStrings(), court).single.short, 'INMUNE (2)');
       court.enemies[1].hp = 0;
       court.enemies[2].hp = 0;
-      expect(bossMechanicChips(court).single.long, contains('los estados entran'));
+      expect(bossMechanicChips(fallbackCombatStrings(), court).single.long, contains('los estados entran'));
 
       final sent = _boss('centinela');
       sent.party[0].voidMarked = true;
-      final m = bossMechanicChips(sent).single;
+      final m = bossMechanicChips(fallbackCombatStrings(), sent).single;
       expect(m.short, 'MARCA ×2');
       expect(m.tip, contains('Proteja'));
-      expect(combatantChips(sent.party[0]).map((c) => c.short), contains('Marcado ×2'));
+      expect(combatantChips(fallbackCombatStrings(), sent.party[0]).map((c) => c.short), contains('Marcado ×2'));
 
       final dev = _boss('devorador');
-      expect(bossMechanicChips(dev).single.short, 'FASE 1');
+      expect(bossMechanicChips(fallbackCombatStrings(), dev).single.short, 'FASE 1');
       dev.enemies[0]
         ..phase = 2
         ..actions = 1;
-      expect(bossMechanicChips(dev).single.long, contains('Colapso Temporal cada 2 (en 1)'));
+      expect(bossMechanicChips(fallbackCombatStrings(), dev).single.long, contains('Colapso Temporal cada 2 (en 1)'));
     });
 
     test('marca del Vigilante con su origen en el chip', () {
       final p = _hero('p1')
         ..effects = [const TimedEffect(sourceId: 'vigilancia', stat: BuffStat.damageTaken, value: 0.2, turns: 2)];
-      final chip = combatantChips(p).firstWhere((c) => c.short == 'Marca');
+      final chip = combatantChips(fallbackCombatStrings(), p).firstWhere((c) => c.short == 'Marca');
       expect(chip.tip, contains('Vigilante del Vacío'));
     });
   });

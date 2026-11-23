@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
@@ -6,6 +7,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Un jugador en la votación.
 class VoteEntry {
@@ -16,7 +18,7 @@ class VoteEntry {
 
 /// Votación de misión (`renderVote`, líneas 1364-1375): quién propone,
 /// quién ya votó y los botones. Ver docs/specs/panels.md § "Votación".
-class VotePanel extends StatelessWidget {
+class VotePanel extends ConsumerWidget {
   const VotePanel({
     super.key,
     required this.proposedBy,
@@ -37,7 +39,7 @@ class VotePanel extends StatelessWidget {
   final ValueChanged<bool> onVote;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return RetroPanel(
       selected: true,
       padding: const EdgeInsets.all(8),
@@ -46,16 +48,22 @@ class VotePanel extends StatelessWidget {
         children: [
           Text.rich(
             TextSpan(children: [
-              const TextSpan(
-                  text: 'Votación', style: TextStyle(color: ProtoColors.gold)),
-              TextSpan(text: retroText(' · $proposedBy propone ')),
+              TextSpan(
+                  text: ref.t('ui.missions.vote.title'),
+                  style: const TextStyle(color: ProtoColors.gold)),
+              TextSpan(
+                  text: retroText(ref.t('ui.missions.vote.proposes',
+                      {'name': proposedBy}))),
               TextSpan(
                   text: retroText(missionName),
                   style: const TextStyle(color: ProtoColors.ink)),
-              TextSpan(text: ' (rango $rank) · '),
+              TextSpan(text: ref.t('ui.missions.vote.rank', {'rank': rank})),
               TextSpan(
                   text:
-                      '${players.where((p) => p.yes).length}/${players.length} sí',
+                      ref.t('ui.missions.vote.yes_count', {
+                    'yes': players.where((p) => p.yes).length,
+                    'total': players.length,
+                  }),
                   style: const TextStyle(color: ProtoColors.green)),
             ]),
             textAlign: TextAlign.center,
@@ -77,18 +85,18 @@ class VotePanel extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: voted
                 ? [
-                    const Text('Esperando al resto...',
-                        style: TextStyle(color: RetroPalette.muted)),
-                    PanelButton('CANCELAR',
+                    Text(ref.t('ui.missions.vote.waiting'),
+                        style: const TextStyle(color: RetroPalette.muted)),
+                    PanelButton(ref.t('ui.missions.vote.cancel'),
                         key: const ValueKey('vote-no'),
                         onPressed: () => onVote(false)),
                   ]
                 : [
-                    PanelButton('SÍ [Y]',
+                    PanelButton(ref.t('ui.missions.vote.yes'),
                         key: const ValueKey('vote-yes'),
                         accent: RetroPalette.green,
                         onPressed: () => onVote(true)),
-                    PanelButton('NO [N]',
+                    PanelButton(ref.t('ui.missions.vote.no'),
                         key: const ValueKey('vote-no'),
                         onPressed: () => onVote(false)),
                   ],

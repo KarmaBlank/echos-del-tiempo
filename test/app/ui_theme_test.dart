@@ -460,11 +460,13 @@ void main() {
             tester.view.physicalSize = const Size(1280, 720);
             tester.view.devicePixelRatio = 1;
             addTearDown(tester.view.reset);
-            Widget app(Widget home) => MaterialApp(
-                  theme: RetroTheme.build(),
-                  builder: (context, child) =>
-                      RetroTextScale(factor: size.factor, child: child!),
-                  home: Scaffold(body: home),
+            Widget app(Widget home) => ProviderScope(
+                  child: MaterialApp(
+                    theme: RetroTheme.build(),
+                    builder: (context, child) =>
+                        RetroTextScale(factor: size.factor, child: child!),
+                    home: Scaffold(body: home),
+                  ),
                 );
             await tester.pumpWidget(app(BestiaryView(
                 bestiary: BestiaryProgress({'slime': 5, 'lobo': 3}))));

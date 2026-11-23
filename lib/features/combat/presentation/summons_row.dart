@@ -5,6 +5,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/summoner_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
+import 'combat_strings.dart';
 import 'scene/summon_sprite.dart';
 
 /// Fila compacta de las invocaciones de un jugador en su tarjeta de la
@@ -22,18 +23,22 @@ class SummonsRow extends StatelessWidget {
       key: const ValueKey('summons-row'),
       spacing: 4,
       runSpacing: 2,
-      children: [for (final s in summons) _chip(s)],
+      children: [for (final s in summons) _chip(combatStrings(context), s)],
     );
   }
 
-  Widget _chip(Combatant s) {
+  Widget _chip(Strings t, Combatant s) {
     final k = summonKindOf(s);
     final col = k == null ? ProtoColors.dim : summonColor(k);
     final d = k == null ? null : kSummons[k];
     return RetroTooltip(
-      message: '${s.name}\nVida ${s.hp}/${s.maxHp} · poder ${s.attack}'
+      message: '${s.name}\n${t.t('ui.combat.summon.stats', {
+            'hp': s.hp,
+            'max': s.maxHp,
+            'power': s.attack
+          })}'
           '${d == null ? '' : ' · ${d.element.label}'}\n'
-          'Turnos: ${summonTurnsText(s)}',
+          '${t.t('ui.combat.summon.turns', {'turns': summonTurnsText(s)})}',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

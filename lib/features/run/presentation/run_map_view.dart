@@ -1,9 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/run_state.dart';
 import '../../../game_engine/rules/run_tuning.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Color de cada tipo de nodo (siempre acompañado de su letra, no solo el
 /// color).
@@ -17,37 +19,23 @@ Color runNodeColor(RunNodeType t) => switch (t) {
     };
 
 /// Letra del nodo en el mapa.
-String runNodeLetter(RunNodeType t) => switch (t) {
-      RunNodeType.combate => 'C',
-      RunNodeType.elite => 'E',
-      RunNodeType.jefe => 'J',
-      RunNodeType.tienda => 'T',
-      RunNodeType.armeria => 'A',
-      RunNodeType.descanso => 'D',
-    };
+String runNodeLetter(Strings s, RunNodeType t) =>
+    s.t('ui.run.node.${t.name}.letter');
+
+/// Name of the node type (`COMBATE`, `TIENDA`...).
+String runNodeLabel(Strings s, RunNodeType t) =>
+    s.t('ui.run.node.${t.name}.label');
 
 /// Qué hace cada tipo de nodo (tooltip del mapa y de la leyenda).
-String runNodeHelp(RunNodeType t) => switch (t) {
-      RunNodeType.combate =>
-        'Pelea común. Al ganar: oro y una recompensa (objeto, arma o extra).',
-      RunNodeType.elite =>
-        'Pelea difícil contra una élite. Más oro y a veces una ULT de rama.',
-      RunNodeType.jefe =>
-        'El guardián del piso. Al vencerlo se pasa al piso siguiente.',
-      RunNodeType.tienda =>
-        'Comprá armas de tu clase, pociones y Éter con oro; vendé lo que sobre.',
-      RunNodeType.armeria =>
-        'Mejorá tus armas con oro (forja) y pasá habilidades entre armas (fusión).',
-      RunNodeType.descanso =>
-        'Recupera el ${(RunTuning.restHeal * 100).round()} % de vida y maná.',
-    };
+String runNodeHelp(Strings s, RunNodeType t) => s.t(
+    'ui.run.node.${t.name}.help', {'pct': (RunTuning.restHeal * 100).round()});
 
 /// Tooltip de un tipo de nodo (molécula).
-Widget runNodeTip(RunNodeType t, {String? extra}) => DsTooltipCard(
-      title: t.label,
+Widget runNodeTip(Strings s, RunNodeType t, {String? extra}) => DsTooltipCard(
+      title: runNodeLabel(s, t),
       titleColor: runNodeColor(t),
       children: [
-        Text(runNodeHelp(t)),
+        Text(runNodeHelp(s, t)),
         if (extra != null) Text(extra, style: DsText.detail()),
       ],
     );
@@ -55,7 +43,7 @@ Widget runNodeTip(RunNodeType t, {String? extra}) => DsTooltipCard(
 /// Un nodo del mapa (átomo): cuadrado con la letra del tipo. [reachable]
 /// lo resalta y lo hace votable; [current] es donde está el grupo;
 /// [mine] es el voto propio.
-class RunNodeTile extends StatelessWidget {
+class RunNodeTile extends ConsumerWidget {
   const RunNodeTile({
     super.key,
     required this.type,
@@ -74,7 +62,7 @@ class RunNodeTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = runNodeColor(type);
     final dim = !reachable && !current;
     Widget box(bool hot) => Container(
@@ -97,7 +85,7 @@ class RunNodeTile extends StatelessWidget {
             ),
           ),
           child: Text(
-            runNodeLetter(type),
+            runNodeLetter(ref.strings, type),
             style: DsText.subtitle(current
                 ? ProtoColors.bg
                 : dim
@@ -105,11 +93,11 @@ class RunNodeTile extends StatelessWidget {
                     : c),
           ),
         );
-    final tip = runNodeTip(type,
+    final tip = runNodeTip(ref.strings, type,
         extra: current
-            ? 'El grupo está acá.'
+            ? ref.t('ui.run.map.group_here')
             : reachable
-                ? 'Clic para votar este camino.'
+                ? ref.t('ui.run.map.click_to_vote')
                 : null);
     if (onTap == null) return DsTooltip(card: tip, child: box(false));
     return DsTooltip(

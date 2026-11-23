@@ -33,6 +33,7 @@ import '../domain/turn_order.dart';
 import 'game_sprites.dart';
 import 'hero_figure.dart';
 import 'status_icons.dart';
+import 'combat_strings.dart';
 import 'summons_row.dart';
 
 /// Piezas de la barra de batalla (docs/specs/exploration.md § "Batalla"):
@@ -100,15 +101,11 @@ Color _hex(String hex) =>
 /// K.O., `defending`, `protecting`, `taunt`, `bonusDefense` (Fortaleza /
 /// Baluarte), la lentitud de Congelación y los efectos del árbol v2
 /// (buffs con duración, marcas, escudos, Último Aliento activo).
-List<StatusChip> combatantChips(Combatant p) {
+List<StatusChip> combatantChips(Strings s, Combatant p) {
   final chips = <StatusChip>[];
   if (!p.alive) {
-    chips.add(const StatusChip(
-        'K.O.',
-        'K.O.',
-        ProtoColors.crimson,
-        '<b style="color:#ff4757">Fuera de combate</b><br>No actúa hasta que '
-            'un aliado lo reviva con una Poción de vida.'));
+    chips.add(StatusChip(
+        'K.O.', 'K.O.', ProtoColors.crimson, s.t('ui.combat.chip.ko.tip')));
   }
   for (final k in StatusKind.values) {
     final n = p.stacks(k);
@@ -116,8 +113,8 @@ List<StatusChip> combatantChips(Combatant p) {
     final hex = statusHex(k);
     // Mojado / Cargado: el valor son turnos que quedan, no stacks.
     final count = k.timed
-        ? '$n ${n == 1 ? 'turno' : 'turnos'}'
-        : '×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${p.holyTurns} turnos' : ''}';
+        ? s.t('ui.combat.turns', {'n': n})
+        : '×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {'n': p.holyTurns})}' : ''}';
     chips.add(StatusChip(
       '${statusLetterOf(k)}$n',
       '${k.label} $n',
@@ -129,80 +126,73 @@ List<StatusChip> combatantChips(Combatant p) {
     ));
   }
   if (p.defending) {
-    chips.add(const StatusChip(
-        'Defiende',
-        'Defiende ½',
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.defend.short'),
+        s.t('ui.combat.chip.defend.long'),
         ProtoColors.ice,
-        '<b style="color:#74b9ff">Defendiendo</b><br>Recibe la mitad del daño '
-            'hasta su próximo turno.'));
+        s.t('ui.combat.chip.defend.tip')));
   }
   if (p.protecting) {
-    chips.add(const StatusChip(
-        'Protege',
-        'Protege',
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.protect.short'),
+        s.t('ui.combat.chip.protect.short'),
         ProtoColors.cream,
-        '<b style="color:#ffeaa7">Protección</b><br>Hasta su próximo turno, '
-            'TODO el daño dirigido a sus aliados lo recibe él.'));
+        s.t('ui.combat.chip.protect.tip')));
   }
   if (p.taunt > 0) {
-    chips.add(StatusChip(
-        'Provoca ${p.taunt}',
-        'Provoca ${p.taunt}',
-        ProtoColors.taunt,
-        '<b style="color:#ff7675">Provoca</b><br>Los próximos ${p.taunt} '
-            'ataques enemigos van contra él.'));
+    final taunt = s.t('ui.combat.chip.taunt.short', {'n': p.taunt});
+    chips.add(StatusChip(taunt, taunt, ProtoColors.taunt,
+        s.t('ui.combat.chip.taunt.tip', {'n': p.taunt})));
   }
   if (p.bonusDefense > 0) {
     chips.add(StatusChip(
-        '▲DEF+${p.bonusDefense}',
-        '▲DEF +${p.bonusDefense}',
+        s.t('ui.combat.chip.bonus_def.short', {'n': p.bonusDefense}),
+        s.t('ui.combat.chip.bonus_def.long', {'n': p.bonusDefense}),
         ProtoColors.ice,
-        '<b style="color:#74b9ff">▲ Defensa +${p.bonusDefense}</b> '
-            '<span class="k">(Fortaleza / Baluarte)</span><br>'
-            '+${p.bonusDefense} DEF durante el combate (cada punto = −3% de '
-            'daño recibido, máx −60%). DEF total ${p.defense}.'));
+        s.t('ui.combat.chip.bonus_def.tip',
+            {'n': p.bonusDefense, 'total': p.defense})));
   }
   final ice = p.stacks(StatusKind.freeze);
   if (ice > 0) {
     final pct = jsRound(BattleEngine.freezeSlowPerStack * ice * 100);
-    chips.add(
-        StatusChip('▼VEL', '▼VEL −$pct%', ProtoColors.ice, freezeSlowTip(ice)));
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.slow.short'),
+        s.t('ui.combat.chip.slow.long', {'pct': pct}),
+        ProtoColors.ice,
+        freezeSlowTip(ice)));
   }
   if (p.brittle && ice > 0 && p.alive) {
-    chips.add(StatusChip(
-        'Quebr.', 'Quebradizo', const Color(0xFF81ECEC), brittleTip()));
+    chips.add(StatusChip(s.t('ui.combat.chip.brittle.short'),
+        s.t('ui.combat.chip.brittle.long'), const Color(0xFF81ECEC), brittleTip()));
   }
   if (p.freezeResist > 0 && p.alive) {
-    chips.add(StatusChip('▲HIELO', 'Resiste hielo ${p.freezeResist}',
-        ProtoColors.ice, freezeResistTip(p.freezeResist)));
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.ice_resist.short'),
+        s.t('ui.combat.chip.ice_resist.long', {'n': p.freezeResist}),
+        ProtoColors.ice,
+        freezeResistTip(p.freezeResist)));
   }
   if (p.webbed && p.alive) {
-    chips.add(const StatusChip(
-        'Telaraña',
-        'Atrapado (telaraña)',
-        Color(0xFFEDEFF5),
-        '<b style="color:#edeff5">Atrapado en la telaraña</b>'
-            '<br>Pierde su próximo turno salvo que un aliado lo '
-            'libere usando <b>Atacar</b> sobre él (opción "Liberar" del menú). '
-            '<span class="k">Solo: forcejea y pierde medio turno.</span>'));
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.web.short'),
+        s.t('ui.combat.chip.web.long'),
+        const Color(0xFFEDEFF5),
+        s.t('ui.combat.chip.web.tip')));
   }
   if (p.voidMarked && p.alive) {
-    chips.add(const StatusChip(
-        'Marcado ×2',
-        'Marca del Vacío ×2',
-        Color(0xFFB57BFF),
-        '<b style="color:#b57bff">Marca del Vacío</b><br>El próximo golpe del '
-            'Centinela va contra él y pega <b>×2</b>, salvo que otro aliado lo '
-            '<b>Proteja</b>. <span class="k">Solo: Defender también la '
-            'contrarresta.</span>'));
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.void_mark.short'),
+        s.t('ui.combat.chip.void_mark.long'),
+        const Color(0xFFB57BFF),
+        s.t('ui.combat.chip.void_mark.tip')));
   }
-  chips.addAll(treeEffectChips(p));
+  chips.addAll(treeEffectChips(s, p));
   return chips;
 }
 
 /// Chips de las mecánicas de los jefes vivos (docs/specs/bosses.md
 /// § "v0.2"): qué hacen ahora y cómo contrarrestarlas.
-List<StatusChip> bossMechanicChips(BattleState b) {
+List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
   final chips = <StatusChip>[];
   for (final e in b.enemies) {
     if (!e.alive) continue;
@@ -213,7 +203,7 @@ List<StatusChip> bossMechanicChips(BattleState b) {
         final n = b.party.where((p) => p.alive && p.webbed).length;
         chips.add(StatusChip(
             '${m.name}${n > 0 ? ' ×$n' : ''}',
-            '${m.name}${n > 0 ? ' · $n atrapado${n == 1 ? '' : 's'}' : ''}',
+            '${m.name}${n > 0 ? ' · ${s.t('ui.combat.boss.web_caught', {'n': n})}' : ''}',
             const Color(0xFFEDEFF5),
             '<b style="color:#edeff5">${m.name}</b> '
                 '<span class="k">(${protoEsc(e.name)})</span><br>${m.counter}'));
@@ -225,13 +215,14 @@ List<StatusChip> bossMechanicChips(BattleState b) {
           final fx = p.effectFrom(m.id, BuffStat.speed);
           if (fx != null && -fx.value > slow) slow = -fx.value;
         }
+        final slowPct = jsRound(slow * 100);
         chips.add(StatusChip(
-            'Cristales $n${slow > 0 ? ' −${jsRound(slow * 100)}%' : ''}',
-            '${m.name}: $n cristal${n == 1 ? '' : 'es'}'
-                '${slow > 0 ? ' · VEL −${jsRound(slow * 100)}%' : ''}',
+            s.t('ui.combat.boss.frost.short', {'n': n, 'slow': slowPct}),
+            s.t('ui.combat.boss.frost.long',
+                {'name': m.name, 'n': n, 'slow': slowPct}),
             const Color(0xFF9FE3F0),
             '<b style="color:#9fe3f0">${m.name}</b> '
-                '<span class="k">($n cristal${n == 1 ? '' : 'es'} vivo${n == 1 ? '' : 's'})</span>'
+                '<span class="k">(${s.t('ui.combat.boss.frost.alive', {'n': n})})</span>'
                 '<br>${m.counter}'));
       case BossMechanicKind.stance:
         final shield = e.stance == 1;
@@ -242,19 +233,21 @@ List<StatusChip> bossMechanicChips(BattleState b) {
                 ? '#74b9ff'
                 : '#ff6b6b';
         final when = e.broken
-            ? 'rota (quebrado)'
+            ? s.t('ui.combat.boss.stance.broken')
             : e.stanceTurns <= 1
-                ? 'cambia en su próximo turno'
-                : 'cambia en ${e.stanceTurns} turnos';
+                ? s.t('ui.combat.boss.stance.next_turn')
+                : s.t('ui.combat.boss.stance.in_turns', {'n': e.stanceTurns});
+        final stance = shield ? 'shield' : 'sword';
         chips.add(StatusChip(
-            shield ? 'ESCUDO' : 'ESPADA',
-            'Postura ${shield ? 'ESCUDO −$pct% físico' : 'ESPADA −$pct% mágico'} · $when',
+            s.t('ui.combat.boss.stance.short', {'stance': stance}),
+            s.t('ui.combat.boss.stance.long',
+                {'stance': stance, 'pct': pct, 'when': when}),
             e.broken
                 ? const Color(0xFF7F8C8D)
                 : shield
                     ? ProtoColors.ice
                     : const Color(0xFFFF6B6B),
-            '<b style="color:$hex">Postura de ${shield ? 'escudo' : 'espada'}</b> '
+            '<b style="color:$hex">${s.t('ui.combat.boss.stance.tip_title', {'stance': stance})}</b> '
                 '<span class="k">($when)</span><br>${m.counter}'));
 
       // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
@@ -264,25 +257,26 @@ List<StatusChip> bossMechanicChips(BattleState b) {
             b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
         final max = b.party.length == 1 ? m.soloAdds : m.adds;
         final back = m.every - e.mechTurns;
-        final when =
-            n >= max ? '' : ' · vuelven en $back turno${back == 1 ? '' : 's'}';
+        final when = n >= max
+            ? ''
+            : ' · ${s.t('ui.combat.boss.back_in', {'n': back})}';
         final (String short, String long, Color col, String hex) = echo
             ? (
-                'Ecos $n',
-                'Ecos: $n vivo${n == 1 ? '' : 's'} (×${fm(m.value)} daño)$when',
+                s.t('ui.combat.boss.echo.short', {'n': n}),
+                '${s.t('ui.combat.boss.echo.long', {'n': n, 'x': fm(m.value)})}$when',
                 const Color(0xFF7FF3FF),
                 '#7ff3ff'
               )
             : n > 0
                 ? (
-                    'INMUNE ($n)',
-                    'Séquito $n · INMUNE a estados$when',
+                    s.t('ui.combat.boss.court.immune_short', {'n': n}),
+                    '${s.t('ui.combat.boss.court.immune_long', {'n': n})}$when',
                     const Color(0xFFB8C6FF),
                     '#b8c6ff'
                   )
                 : (
-                    'Séquito 0',
-                    'Séquito 0 · los estados entran$when',
+                    s.t('ui.combat.boss.court.open_short'),
+                    '${s.t('ui.combat.boss.court.open_long')}$when',
                     ProtoColors.green,
                     '#7bed9f'
                   );
@@ -296,13 +290,16 @@ List<StatusChip> bossMechanicChips(BattleState b) {
         final up = e.lava > 0;
         final next = m.every - e.actions % m.every;
         chips.add(StatusChip(
-            up ? 'LAVA ${e.lava}' : 'Lava en $next',
             up
-                ? 'LAVA ${e.lava} turno${e.lava == 1 ? '' : 's'} · ¡no te defiendas!'
-                : '${m.name}: sube en $next acci${next == 1 ? 'ón' : 'ones'}',
+                ? s.t('ui.combat.boss.lava.up_short', {'n': e.lava})
+                : s.t('ui.combat.boss.lava.down_short', {'n': next}),
+            up
+                ? s.t('ui.combat.boss.lava.up_long', {'n': e.lava})
+                : s.t('ui.combat.boss.lava.down_long',
+                    {'name': m.name, 'n': next}),
             up ? const Color(0xFFFF7B29) : const Color(0xFFFFB142),
             '<b style="color:#ff7b29">${m.name}</b> '
-            '<span class="k">(${up ? 'activa ${e.lava} turnos' : 'sube en $next acciones'})</span>'
+            '<span class="k">(${up ? s.t('ui.combat.boss.lava.up_tip', {'n': e.lava}) : s.t('ui.combat.boss.lava.down_tip', {'n': next})})</span>'
             '<br>${m.counter}'));
       case BossMechanicKind.mark:
         final marked =
@@ -310,29 +307,35 @@ List<StatusChip> bossMechanicChips(BattleState b) {
         final next = m.every - e.actions % m.every;
         final x = fm(b.party.length == 1 ? m.soloValue : m.value);
         chips.add(StatusChip(
-            marked == null ? 'Marca en $next' : 'MARCA ×$x',
             marked == null
-                ? '${m.name}: marca en $next acci${next == 1 ? 'ón' : 'ones'}'
-                : '${m.name}: ${marked.name} ×$x · ¡protegelo!',
+                ? s.t('ui.combat.boss.mark.next_short', {'n': next})
+                : s.t('ui.combat.boss.mark.on_short', {'x': x}),
+            marked == null
+                ? s.t('ui.combat.boss.mark.next_long',
+                    {'name': m.name, 'n': next})
+                : s.t('ui.combat.boss.mark.on_long',
+                    {'name': m.name, 'who': marked.name, 'x': x}),
             const Color(0xFFB57BFF),
             '<b style="color:#b57bff">${m.name}</b> '
-            '<span class="k">(${marked == null ? 'nadie marcado' : 'marcado: ${protoEsc(marked.name)}'})</span>'
+            '<span class="k">(${marked == null ? s.t('ui.combat.boss.mark.nobody') : s.t('ui.combat.boss.mark.marked', {'who': protoEsc(marked.name)})})</span>'
             '<br>${m.counter}'));
       case BossMechanicKind.phases:
         final two = e.phase >= 2;
         final next = m.every - e.actions % m.every;
         chips.add(StatusChip(
-            two ? 'FASE 2' : 'FASE 1',
+            s.t('ui.combat.boss.phase.short', {'n': two ? 2 : 1}),
             two
-                ? 'FASE 2 · Colapso Temporal cada ${m.every} (en $next)'
-                : 'FASE 1 · se transforma al ${jsRound(m.value * 100)}%',
+                ? s.t('ui.combat.boss.phase.two_long',
+                    {'every': m.every, 'next': next})
+                : s.t('ui.combat.boss.phase.one_long',
+                    {'pct': jsRound(m.value * 100)}),
             two ? ProtoColors.crimson : ProtoColors.pink,
             '<b style="color:#d63031">${m.name}</b> '
-            '<span class="k">(${two ? 'fase 2' : 'fase 1'})</span><br>${m.counter}'));
+            '<span class="k">(${s.t('ui.combat.boss.phase.tip', {'n': two ? 2 : 1})})</span><br>${m.counter}'));
 
       // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 4) ----
       case BossMechanicKind.abyss:
-        chips.addAll(abyssChips(b, e, m));
+        chips.addAll(abyssChips(s, b, e, m));
     }
   }
   return chips;
@@ -340,13 +343,15 @@ List<StatusChip> bossMechanicChips(BattleState b) {
 
 /// Chips de un Jefe del Abismo: fase, próximo movimiento, furia, sello,
 /// aspecto, inmunidad y buffs comidos.
-List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
+List<StatusChip> abyssChips(
+    Strings s, BattleState b, Combatant e, BossMechanicDef m) {
   final d = abyssBossOf(e.enemyType);
   if (d == null) return const [];
   final ph = AbyssRules.phaseOf(d, e);
   final n = AbyssRules.phaseIndex(d, e) + 1;
+  final of = d.phases.length;
   final tip = '<b style="color:#c39bff">${protoEsc(d.name)}</b> '
-      '<span class="k">(fase $n/${d.phases.length} · ${protoEsc(ph.name)})</span>'
+      '<span class="k">(${s.t('ui.combat.abyss.tip_phase', {'n': n, 'of': of, 'name': protoEsc(ph.name)})})</span>'
       '<br>${m.counter}';
   const violet = Color(0xFFC39BFF);
   final next = AbyssRules.nextMove(d, e);
@@ -358,10 +363,13 @@ List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
   // Lo más urgente primero: la caja del detalle puede cortar los últimos.
   return [
     StatusChip(
-        immune ? 'INMUNE' : 'FASE $n/${d.phases.length}',
         immune
-            ? 'FASE $n/${d.phases.length} · INMUNE al daño · matá a sus invocaciones'
-            : 'FASE $n/${d.phases.length} · ${ph.name}',
+            ? s.t('ui.combat.abyss.immune_short')
+            : s.t('ui.combat.abyss.phase_short', {'n': n, 'of': of}),
+        immune
+            ? s.t('ui.combat.abyss.immune_long', {'n': n, 'of': of})
+            : s.t('ui.combat.abyss.phase_long',
+                {'n': n, 'of': of, 'name': ph.name}),
         immune
             ? const Color(0xFFB8C6FF)
             : n >= d.phases.length
@@ -369,45 +377,58 @@ List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
                 : ProtoColors.pink,
         tip),
     if (e.abyssEnraged)
-      StatusChip('FURIA', 'FURIA: golpea a todos', ProtoColors.crimson, tip),
+      StatusChip(s.t('ui.combat.abyss.fury_short'),
+          s.t('ui.combat.abyss.fury_long'), ProtoColors.crimson, tip),
     if (!e.abyssEnraged && next.kind.telegraphed)
-      StatusChip('PRÓX: ${next.label}', 'PRÓXIMO: ${next.label}', violet, tip),
+      StatusChip(s.t('ui.combat.abyss.next_short', {'move': next.label}),
+          s.t('ui.combat.abyss.next_long', {'move': next.label}), violet, tip),
     if (e.abyssSeal > 0)
       () {
         final r = ReactionKind
             .values[(e.abyssSeal - 1).clamp(0, ReactionKind.values.length - 1)];
-        final need = solo ? 'cualquier reacción' : r.label;
-        return StatusChip('SELLO ${e.abyssSealTurns}',
-            'SELLO ${e.abyssSealTurns}t · rompelo con $need', violet, tip);
+        final need = solo ? s.t('ui.combat.abyss.any_reaction') : r.label;
+        return StatusChip(
+            s.t('ui.combat.abyss.seal_short', {'n': e.abyssSealTurns}),
+            s.t('ui.combat.abyss.seal_long',
+                {'n': e.abyssSealTurns, 'need': need}),
+            violet,
+            tip);
       }(),
     if (e.abyssAspect > 0)
       () {
         final el = GameElement.values[
             (e.abyssAspect - 1).clamp(0, GameElement.values.length - 1)];
-        return StatusChip('Aspecto ${el.label}',
-            'Aspecto ${el.label} · resiste ${el.label}', ProtoColors.ice, tip);
+        return StatusChip(
+            s.t('ui.combat.abyss.aspect_short', {'el': el.label}),
+            s.t('ui.combat.abyss.aspect_long', {'el': el.label}),
+            ProtoColors.ice,
+            tip);
       }(),
     if (!e.abyssEnraged)
       StatusChip(
-          'Furia en $enrage',
-          'Furia en $enrage turno${enrage == 1 ? '' : 's'}',
+          s.t('ui.combat.abyss.fury_in_short', {'n': enrage}),
+          s.t('ui.combat.abyss.fury_in_long', {'n': enrage}),
           enrage <= 5 ? ProtoColors.crimson : ProtoColors.dim,
           tip),
     if (d.healHurts > 0)
       StatusChip(
-          'Curas lo dañan',
-          'Las curas lo dañan (${jsRound(d.healHurts * 100)}%)',
+          s.t('ui.combat.abyss.heal_hurts_short'),
+          s.t('ui.combat.abyss.heal_hurts_long',
+              {'pct': jsRound(d.healHurts * 100)}),
           ProtoColors.green,
           tip),
     if (e.abyssFeast > 0)
-      StatusChip('Comió ${e.abyssFeast}', 'Buffs comidos: ${e.abyssFeast}',
-          ProtoColors.orange, tip),
+      StatusChip(
+          s.t('ui.combat.abyss.feast_short', {'n': e.abyssFeast}),
+          s.t('ui.combat.abyss.feast_long', {'n': e.abyssFeast}),
+          ProtoColors.orange,
+          tip),
   ];
 }
 
 /// La fila de chips de las mecánicas de jefe (vacía si no hay).
-Widget bossMechanicRow(BattleState b) {
-  final chips = bossMechanicChips(b);
+Widget bossMechanicRow(Strings s, BattleState b) {
+  final chips = bossMechanicChips(s, b);
   if (chips.isEmpty) return const SizedBox.shrink();
   return Padding(
     padding: const EdgeInsets.only(bottom: 4),
@@ -421,106 +442,100 @@ Widget bossMechanicRow(BattleState b) {
 
 /// Chips de los efectos del árbol de pasivas v2 (passive_tree_v2.md § 7):
 /// cada uno dice su origen y los turnos que le quedan.
-List<StatusChip> treeEffectChips(Combatant p) {
+List<StatusChip> treeEffectChips(Strings s, Combatant p) {
   final chips = <StatusChip>[];
   String src(TimedEffect e) => displayName(e.sourceId);
-  String turns(TimedEffect e) => '${e.turns} turno${e.turns == 1 ? '' : 's'}';
+  String turns(TimedEffect e) => s.t('ui.combat.turns', {'n': e.turns});
   for (final e in p.effects) {
     final pct = jsRound(e.value.abs() * 100);
     final from = src(e);
     switch (e.stat) {
       case BuffStat.speed when e.value < 0:
         chips.add(StatusChip(
-            '▼VEL',
-            '▼VEL −$pct%',
+            s.t('ui.combat.chip.slow.short'),
+            s.t('ui.combat.chip.slow.long', {'pct': pct}),
             ProtoColors.ice,
-            '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
-                '<span class="k">($from)</span><br>'
-                'Su turno llega más tarde.'
-                '${kSkills.containsKey(e.sourceId) ? ' (${turns(e)})' : ' Rompé los cristales de hielo para quitarlo.'}'));
+            s.t('ui.combat.tree.slow.tip', {'pct': pct, 'from': from}) +
+                (kSkills.containsKey(e.sourceId)
+                    ? ' (${turns(e)})'
+                    : s.t('ui.combat.tree.slow.crystals'))));
       case BuffStat.speed:
         chips.add(StatusChip(
-            '▲VEL',
-            '▲VEL +$pct%',
+            s.t('ui.combat.tree.haste.short'),
+            s.t('ui.combat.tree.haste.long', {'pct': pct}),
             ProtoColors.green,
-            '<b style="color:#7bed9f">▲ Velocidad +$pct%</b> '
-                '<span class="k">($from · ${turns(e)})</span><br>'
-                'Su próximo turno llega antes.'));
+            s.t('ui.combat.tree.haste.tip',
+                {'pct': pct, 'from': from, 'turns': turns(e)})));
       case BuffStat.attack:
         final up = e.value >= 0;
+        final dir = up ? 'up' : 'down';
         chips.add(StatusChip(
-            up ? '▲ATQ' : '▼ATQ',
-            '${up ? '▲' : '▼'}ATQ ${up ? '+' : '−'}$pct%',
+            s.t('ui.combat.tree.attack.short', {'dir': dir}),
+            s.t('ui.combat.tree.attack.long', {'dir': dir, 'pct': pct}),
             up ? ProtoColors.orange : ProtoColors.ice,
             '<b style="color:${up ? '#ff9f43' : '#74b9ff'}">'
-                '${up ? '▲' : '▼'} Ataque ${up ? '+' : '−'}$pct%</b> '
+                '${s.t('ui.combat.tree.attack.title', {'dir': dir, 'pct': pct})}</b> '
                 '<span class="k">($from · ${turns(e)})</span><br>'
-                '${up ? 'Pega más fuerte.' : 'Pega más débil.'}'));
+                '${s.t('ui.combat.tree.attack.body', {'dir': dir})}'));
       case BuffStat.damageTaken:
         chips.add(StatusChip(
-            'Marca',
-            'Marca +$pct%',
+            s.t('ui.combat.tree.mark.short'),
+            s.t('ui.combat.tree.mark.long', {'pct': pct}),
             ProtoColors.red,
-            '<b style="color:#ff6b81">Marcado</b> '
-                '<span class="k">($from · ${turns(e)})</span><br>'
-                'Recibe +$pct% de daño de todos.'));
+            s.t('ui.combat.tree.mark.tip',
+                {'pct': pct, 'from': from, 'turns': turns(e)})));
       case BuffStat.shield:
         final n = e.value.round();
+        final label = s.t('ui.combat.tree.shield.short', {'n': n});
         chips.add(StatusChip(
-            'Escudo $n',
-            'Escudo $n',
+            label,
+            label,
             ProtoColors.cream,
-            '<b style="color:#ffeaa7">Escudo $n</b> '
-                '<span class="k">($from · ${turns(e)})</span><br>'
-                'Absorbe $n de daño de golpes enemigos antes que la vida.'));
+            s.t('ui.combat.tree.shield.tip',
+                {'n': n, 'from': from, 'turns': turns(e)})));
       case BuffStat.stunLock:
         chips.add(StatusChip(
-            'Aturd+1',
-            'Aturdido +1',
+            s.t('ui.combat.tree.stun.short'),
+            s.t('ui.combat.tree.stun.long'),
             ProtoColors.cream,
-            '<b style="color:#ffeaa7">Aturdimiento extendido</b> '
-                '<span class="k">($from)</span><br>'
-                'Su aturdimiento dura 1 turno más.'));
+            s.t('ui.combat.tree.stun.tip', {'from': from})));
       // ---- ascensión (docs/specs/ascension.md) ----
       case BuffStat.guard:
         chips.add(StatusChip(
-            '▼DAÑO',
-            'Defensa −$pct%',
+            s.t('ui.combat.tree.guard.short'),
+            s.t('ui.combat.tree.guard.long', {'pct': pct}),
             ProtoColors.sky,
-            '<b style="color:#74b9ff">Defensa: −$pct% de daño recibido</b> '
-                '<span class="k">($from · ${turns(e)})</span>'));
+            s.t('ui.combat.tree.guard.tip',
+                {'pct': pct, 'from': from, 'turns': turns(e)})));
       case BuffStat.crit:
         chips.add(StatusChip(
-            '▲CRÍT',
-            '▲CRÍT +$pct%',
+            s.t('ui.combat.tree.crit.short'),
+            s.t('ui.combat.tree.crit.long', {'pct': pct}),
             ProtoColors.pink,
-            '<b style="color:#ff6b81">Crítico +$pct%</b> '
-                '<span class="k">($from · ${turns(e)})</span>'));
+            s.t('ui.combat.tree.crit.tip',
+                {'pct': pct, 'from': from, 'turns': turns(e)})));
       case BuffStat.critMulti:
         chips.add(StatusChip(
-            '▲×CRÍT',
-            '▲×CRÍT +${fm(e.value)}',
+            s.t('ui.combat.tree.crit_multi.short'),
+            s.t('ui.combat.tree.crit_multi.long', {'x': fm(e.value)}),
             ProtoColors.pink,
-            '<b style="color:#ff6b81">Multiplicador de crítico +${fm(e.value)}</b> '
-                '<span class="k">($from · ${turns(e)})</span>'));
+            s.t('ui.combat.tree.crit_multi.tip',
+                {'x': fm(e.value), 'from': from, 'turns': turns(e)})));
       case BuffStat.trap:
         final n = e.value.round();
         chips.add(StatusChip(
-            'Trampa',
-            'Trampa $n',
+            s.t('ui.combat.tree.trap.short'),
+            s.t('ui.combat.tree.trap.long', {'n': n}),
             ProtoColors.green,
-            '<b style="color:#7bed9f">Trampa $n</b> '
-                '<span class="k">($from · ${turns(e)})</span><br>'
-                'Salta al empezar su turno: $n de daño.'));
+            s.t('ui.combat.tree.trap.tip',
+                {'n': n, 'from': from, 'turns': turns(e)})));
       case BuffStat.charge:
         final n = e.value.round();
         chips.add(StatusChip(
-            'Carga',
-            'Carga $n',
+            s.t('ui.combat.tree.charge.short'),
+            s.t('ui.combat.tree.charge.long', {'n': n}),
             ProtoColors.orange,
-            '<b style="color:#ff9f43">Disparo cargado $n</b> '
-                '<span class="k">($from)</span><br>'
-                'Cae al empezar su próximo turno: $n de daño.'));
+            s.t('ui.combat.tree.charge.tip', {'n': n, 'from': from})));
       case BuffStat.damage ||
             BuffStat.lifeSteal ||
             BuffStat.delayPower ||
@@ -549,7 +564,7 @@ List<StatusChip> treeEffectChips(Combatant p) {
         m.name,
         ProtoColors.crimson,
         '<b style="color:#ff4757">${m.name}</b> '
-        '<span class="k">(vida &lt; ${jsRound(m.threshold * 100)}%)</span>'
+        '<span class="k">(${s.t('ui.combat.tree.low_life', {'pct': jsRound(m.threshold * 100)})})</span>'
         '<br>${m.description}'));
   }
   return chips;
@@ -569,7 +584,7 @@ class StatusChipView extends StatelessWidget {
       message: chip.tip,
       // Tooltip corto: nombre y turnos; la explicación, plegada.
       foldAfter: 1,
-      foldTitle: 'Qué hace',
+      foldTitle: combatStrings(context).t('ui.combat.chip.what_it_does'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
         decoration: BoxDecoration(
@@ -790,7 +805,8 @@ class _PulseRow extends StatelessWidget {
     final n = player.pulse.clamp(0, BattleEngine.pulseMax);
     return Row(
       children: [
-        Text('PULSO', maxLines: 1, softWrap: false, style: style),
+        Text(combatStrings(context).t('ui.combat.hud.pulse'),
+            maxLines: 1, softWrap: false, style: style),
         const SizedBox(width: 4),
         Flexible(
           child: Align(
@@ -824,25 +840,25 @@ String _classLine(Combatant p) {
 
 /// Detalle de [p] para el tooltip de su tarjeta: ATQ, MAG, DEF, crítico,
 /// velocidad y arma (lo que antes ocupaba el panel izquierdo).
-String heroStatsMarkup(Combatant p, {int points = 0}) {
+String heroStatsMarkup(Strings s, Combatant p, {int points = 0}) {
   final build = p.build;
   final up = build?.weaponUpgrades.total ?? 0;
   final weapon = build == null
       ? ''
       : '${build.equippedWeapon.name}${up > 0 ? ' +$up' : ''}';
   final speed = 100 / turnInterval(p);
-  final pts = points > 0 ? ' ${hexSpan('#ffd166', '+$points pts')}' : '';
+  final pts = points > 0
+      ? ' ${hexSpan('#ffd166', s.t('ui.combat.hud.points', {'n': points}))}'
+      : '';
   return [
     '${heroNameMarkup(p)} <span class="k">${_classLine(p)}</span>',
     if (weapon.isNotEmpty) hexSpan('#ff9f43', '⚔ ${protoEsc(weapon)}$pts'),
     'HP ${p.hp}/${p.maxHp} · MP ${p.mp.floor()}/${p.maxMp} · '
         'ULT ${p.ult.floor()}% · '
-        '${hexSpan('#ffb142', 'Pulso ${p.pulse}/${BattleEngine.pulseMax}')}'
-        '${p.chained ? ' ${hexSpan('#9fe8ff', '+1 acción (Instante)')}' : ''}',
-    '<span class="k">ATQ ${p.attack} · MAG ${p.magic} · '
-        'DEF ${p.defense}</span>',
-    '<span class="k">Crít ${jsRound(p.critChance * 100)}% '
-        '(×${fm(p.critMultiplier)}) · VEL ${speed.toStringAsFixed(1)}</span>',
+        '${hexSpan('#ffb142', s.t('ui.combat.hud.pulse_value', {'n': p.pulse, 'max': BattleEngine.pulseMax}))}'
+        '${p.chained ? ' ${hexSpan('#9fe8ff', s.t('ui.combat.hud.chained'))}' : ''}',
+    '<span class="k">${s.t('ui.combat.hud.stats', {'atk': p.attack, 'mag': p.magic, 'def': p.defense})}</span>',
+    '<span class="k">${s.t('ui.combat.hud.crit_speed', {'crit': jsRound(p.critChance * 100), 'x': fm(p.critMultiplier), 'spd': speed.toStringAsFixed(1)})}</span>',
   ].join('<br>');
 }
 
@@ -1017,7 +1033,8 @@ class _PartyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = player;
     final img = sprites?.heroFor(p.classId, p.ascensionId);
-    final chips = combatantChips(p);
+    final s = combatStrings(context);
+    final chips = combatantChips(s, p);
     final left = turnTimeLeft;
     // Turno: corto para que el nombre no se corte ("T+3").
     // Sistema de diseño (design_system.md § 10.3): jerarquía por color.
@@ -1110,7 +1127,9 @@ class _PartyCard extends StatelessWidget {
                             label: 'MP', valueChars: 9, stack: narrow)),
                     if (local || companion)
                       _BarRow(ultBar(p.ult),
-                          ultReady(p) ? '¡LISTA!' : '${p.ult.floor()}%',
+                          ultReady(p)
+                              ? s.t('ui.combat.hud.ult_ready')
+                              : '${p.ult.floor()}%',
                           label: 'ULT',
                           color: ultColor,
                           valueChars: 9,
@@ -1133,7 +1152,7 @@ class _PartyCard extends StatelessWidget {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: DsButton(
-                          'AUTO: ${auto ? 'SÍ' : 'NO'}',
+                          s.t('ui.combat.hud.auto', {'on': '$auto'}),
                           key: ValueKey('auto-toggle-${p.id}'),
                           size: DsButtonSize.compact,
                           selected: auto,
@@ -1154,7 +1173,7 @@ class _PartyCard extends StatelessWidget {
       ),
     );
     return RetroTooltip(
-        message: heroStatsMarkup(p, points: points), child: card);
+        message: heroStatsMarkup(s, p, points: points), child: card);
   }
 }
 
@@ -1169,14 +1188,15 @@ class TargetBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = enemy;
+    final s = combatStrings(context);
     // Sigue al modo daltónico (accessibility.md § 3).
     const breakColor = VisionColor(VisionSlot.breakBar);
     final hpText = '${e.hp}/${e.maxHp}';
     final breakText =
         e.broken
-            ? '¡ROTO!'
+            ? s.t('ui.combat.target.broken')
             : e.fissured
-                ? 'FISURADO'
+                ? s.t('ui.combat.target.fissured')
                 : '${e.breakGauge.floor()}/${e.breakMax.round()}';
     // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
     final chars =
@@ -1208,19 +1228,21 @@ class TargetBar extends StatelessWidget {
               ),
               if (e.elite || e.boss) ...[
                 const SizedBox(width: 4),
-                DsTag(e.boss ? 'JEFE' : '★ ÉLITE',
+                DsTag(s.t(e.boss ? 'ui.combat.target.boss' : 'ui.combat.target.elite'),
                     key: const ValueKey('target-rank'),
                     color: DsColors.reward),
               ],
               if (e.ultPending) ...[
                 const SizedBox(width: 4),
-                const DsTag('¡ULT!', color: DsColors.danger),
+                DsTag(s.t('ui.combat.target.ult'), color: DsColors.danger),
               ],
             ]),
             // ULT v2 (ultimates_v2.md § 4.1): el nombre de la que avisa;
             // la lanza en su próximo turno.
             if (e.ultPending && kEnemyUlts[e.ultId] != null)
-              Text('Prepara ${kEnemyUlts[e.ultId]!.name}: la lanza en su turno',
+              Text(
+                  s.t('ui.combat.enemy.ult_prepares',
+                      {'name': kEnemyUlts[e.ultId]!.name}),
                   key: const ValueKey('target-ult-name'),
                   maxLines: 2,
                   style: DsText.detail(DsColors.danger)),
@@ -1237,7 +1259,7 @@ class TargetBar extends StatelessWidget {
                       height: 4,
                       color: breakColor),
                   breakText,
-                  label: 'QB',
+                  label: s.t('ui.combat.target.break_bar'),
                   color: breakColor,
                   valueChars: chars),
           ],
@@ -1291,7 +1313,7 @@ class BattleAllyList extends StatelessWidget {
     final rows = [
       for (var i = 0; i < members.length; i++) ...[
         if (i > 0) const SizedBox(height: 3),
-        _row(members[i], order),
+        _row(combatStrings(context), members[i], order),
       ],
     ];
     return LayoutBuilder(builder: (context, cons) {
@@ -1323,7 +1345,7 @@ class BattleAllyList extends StatelessWidget {
     });
   }
 
-  Widget _row(Combatant p, List<String> order) {
+  Widget _row(Strings s, Combatant p, List<String> order) {
     final img = sprites?.heroFor(p.classId, p.ascensionId);
     final current = battle.currentId == p.id;
     final hovered = hoverId == p.id;
@@ -1331,7 +1353,7 @@ class BattleAllyList extends StatelessWidget {
     final stunned = p.stacks(StatusKind.stun) > 0;
     final stunIcon = statusIconOf(StatusKind.stun);
     final chips = [
-      for (final c in combatantChips(p))
+      for (final c in combatantChips(s, p))
         if (c.short != 'K.O.') c,
     ];
     final Widget mark;
@@ -1418,7 +1440,7 @@ class BattleAllyList extends StatelessWidget {
       key: ValueKey('ally-row-${p.id}'),
       onEnter: (_) => onHover?.call(p.id),
       onExit: (_) => onHover?.call(null),
-      child: RetroTooltip(message: heroStatsMarkup(p), child: row),
+      child: RetroTooltip(message: heroStatsMarkup(s, p), child: row),
     );
   }
 }

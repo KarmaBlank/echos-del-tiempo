@@ -7,6 +7,7 @@ import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
@@ -207,7 +208,7 @@ class _AchievementToastsState extends State<AchievementToasts> {
 /// recompensa con un ícono por material/poción. Entra deslizando desde la
 /// derecha con un destello y un eco translúcido (≤ 400 ms; sin animación
 /// con "reducir movimiento"). Clic: lo descarta.
-class AchievementToastBox extends StatelessWidget {
+class AchievementToastBox extends ConsumerWidget {
   const AchievementToastBox({super.key, required this.id, this.onDismiss});
 
   final String id;
@@ -220,7 +221,7 @@ class AchievementToastBox extends StatelessWidget {
   static const enter = Duration(milliseconds: 360);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final d = kAchievementsById[id];
     final card = Semantics(
       label: achievementToastText(id),
@@ -247,7 +248,7 @@ class AchievementToastBox extends StatelessWidget {
                       size: RetroType.width(context, 10),
                       color: DsColors.reward),
                   SizedBox(width: DsSpace.xs),
-                  Text(retroText('HAZAÑA LOGRADA'),
+                  Text(retroText(ref.t('ui.achievements.toast_head')),
                       key: const ValueKey('ach-toast-head'),
                       style: DsText.subtitle(DsColors.reward)),
                 ]),

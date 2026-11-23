@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -15,9 +16,10 @@ import '../../combat/domain/skill_text.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../domain/ascension_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Ficha de una ascensión (markup): tema, kit y nodo raíz.
-String ascensionCardMarkup(AscensionDef a) {
+String ascensionCardMarkup(Strings t, AscensionDef a) {
   final hex = ascensionHex(a);
   final skills = [
     for (final id in a.skillIds)
@@ -28,9 +30,9 @@ String ascensionCardMarkup(AscensionDef a) {
   return '<b style="color:$hex">${protoEsc(a.name.toUpperCase())}</b><br>'
       '${protoColor(ProtoColors.dim, protoEsc(a.theme))}<br>'
       '${protoColor(ProtoColors.cream, protoEsc(a.motto))}<br>'
-      '<b>Despertar:</b> ${protoEsc(root?.name ?? '')}<br>'
+      '${t.t('ui.ascension.card.awakening', {'name': protoEsc(root?.name ?? '')})}<br>'
       '${protoEsc(root?.text ?? '')}<br>'
-      '<b>Kit</b><br>'
+      '${t.t('ui.ascension.card.kit')}<br>'
       '${[
     for (final s in skills)
       '· <b>${protoEsc(s.name)}</b> ${protoColor(ProtoColors.ice, '${s.mp} MP')}',
@@ -95,7 +97,7 @@ class AscendedHero extends StatelessWidget {
 
 /// Las 2 ascensiones de una clase para elegir (§ 2): dos tarjetas con el
 /// héroe ascendido, la ficha y ELEGIR.
-class AscensionChoiceView extends StatelessWidget {
+class AscensionChoiceView extends ConsumerWidget {
   const AscensionChoiceView({
     super.key,
     required this.classId,
@@ -112,20 +114,20 @@ class AscensionChoiceView extends StatelessWidget {
   final String? blocked;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final options = ascensionsOf(classId);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final (i, a) in options.indexed) ...[
           if (i > 0) const SizedBox(width: 16),
-          Expanded(child: _card(a)),
+          Expanded(child: _card(ref, a)),
         ],
       ],
     );
   }
 
-  Widget _card(AscensionDef a) {
+  Widget _card(WidgetRef ref, AscensionDef a) {
     final col = Color(a.color);
     return Container(
       key: ValueKey('asc-card-${a.id}'),
@@ -150,7 +152,7 @@ class AscensionChoiceView extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: SingleChildScrollView(
-                    child: ProtoText(ascensionCardMarkup(a)),
+                    child: ProtoText(ascensionCardMarkup(ref.strings, a)),
                   ),
                 ),
               ],
@@ -159,7 +161,9 @@ class AscensionChoiceView extends StatelessWidget {
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
-            child: PanelButton('ELEGIR ${a.name.toUpperCase()}',
+            child: PanelButton(
+                ref.t('ui.ascension.choose',
+                    {'name': a.name.toUpperCase()}),
                 key: ValueKey('asc-choose-${a.id}'),
                 accent: col,
                 reason: blocked,
@@ -172,7 +176,7 @@ class AscensionChoiceView extends StatelessWidget {
 }
 
 /// El mini-árbol de 8 nodos (§ 3) con la ficha del nodo elegido.
-class AscensionTreeView extends StatefulWidget {
+class AscensionTreeView extends ConsumerStatefulWidget {
   const AscensionTreeView({
     super.key,
     required this.def,
@@ -198,10 +202,10 @@ class AscensionTreeView extends StatefulWidget {
   static const cols = 3, rows = 5;
 
   @override
-  State<AscensionTreeView> createState() => _AscensionTreeViewState();
+  ConsumerState<AscensionTreeView> createState() => _AscensionTreeViewState();
 }
 
-class _AscensionTreeViewState extends State<AscensionTreeView> {
+class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
   static const _rules = AscensionRules();
   String? _sel;
 
@@ -211,14 +215,21 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
   String? _why(AscensionNode n) {
     if (_rules.has(p, n.id)) return null;
     final free = _rules.free(p);
-    if (free < n.cost) return 'Faltan puntos ($free/${n.cost})';
-    if (!n.links.any((l) => _rules.has(p, l))) return 'No está conectado';
+    if (free < n.cost) {
+      return ref.t('ui.ascension.node.missing_points',
+          {'free': free, 'cost': n.cost});
+    }
+    if (!n.links.any((l) => _rules.has(p, l))) {
+      return ref.t('ui.ascension.node.not_linked');
+    }
     return null;
   }
 
   String _state(AscensionNode n) => _rules.has(p, n.id)
-      ? (n.root ? 'Despertado al ascender' : 'Tomado')
-      : _why(n) ?? 'Disponible';
+      ? ref.t(n.root
+          ? 'ui.ascension.node.awakened'
+          : 'ui.ascension.node.taken')
+      : _why(n) ?? ref.t('ui.ascension.node.available');
 
   @override
   Widget build(BuildContext context) {
@@ -267,16 +278,16 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
               .clamp(340.0, MediaQuery.sizeOf(context).width * 0.45),
           child: PanelDetail(
             footer: [
-              PanelButton('REINICIAR',
+              PanelButton(ref.t('ui.ascension.reset'),
                   key: const ValueKey('asc-reset'),
                   onPressed: widget.editBlocked != null || p.nodes.isEmpty
                       ? null
                       : widget.onReset),
-              PanelButton('CAMBIAR',
+              PanelButton(ref.t('ui.ascension.change'),
                   key: const ValueKey('asc-change'),
                   onPressed: widget.onChange),
               if (!taken)
-                PanelButton('TOMAR',
+                PanelButton(ref.t('ui.ascension.take'),
                     key: const ValueKey('asc-take'),
                     accent: ProtoColors.green,
                     reason: why,
@@ -287,15 +298,18 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
               ProtoText(
                   key: const ValueKey('asc-node-detail'),
                   '<b>${protoEsc(node.name)}</b>'
-                  '${node.major ? ' ${protoColor(ProtoColors.pink, '(mayor)')}' : ''} '
-                  '${node.root ? protoColor(ProtoColors.gold, 'Raíz') : protoColor(ProtoColors.dim, 'costo ${node.cost}')}<br>'
+                  '${node.major ? ' ${protoColor(ProtoColors.pink, ref.t('ui.ascension.node.major'))}' : ''} '
+                  '${node.root ? protoColor(ProtoColors.gold, ref.t('ui.ascension.node.root')) : protoColor(ProtoColors.dim, ref.t('ui.ascension.node.cost', {'cost': node.cost}))}<br>'
                   '${protoEsc(node.text)}<br>'
                   '${protoColor(ProtoColors.dim, protoEsc(_state(node)))}'),
               const SizedBox(height: 6),
               ProtoText(
                   key: const ValueKey('asc-points'),
-                  'Puntos libres <b>${_rules.free(p)}</b> · ganados '
-                  '${p.earned}/${3 * AscensionProgress.pointsPerTrial}'),
+                  ref.t('ui.ascension.points', {
+                    'free': _rules.free(p),
+                    'earned': p.earned,
+                    'max': 3 * AscensionProgress.pointsPerTrial,
+                  })),
               const SizedBox(height: 6),
               Row(
                 children: [
@@ -426,5 +440,6 @@ class _TreeLinks extends CustomPainter {
 }
 
 /// Texto de los títulos del panel (`retroText`).
-String ascensionPanelTitle(AscensionDef? a) =>
-    retroText(a == null ? 'ESTATUA DEL TIEMPO' : 'ESTATUA DEL TIEMPO · ${a.name}');
+String ascensionPanelTitle(Strings t, AscensionDef? a) => retroText(a == null
+    ? t.t('ui.ascension.title')
+    : t.t('ui.ascension.title_with', {'name': a.name}));

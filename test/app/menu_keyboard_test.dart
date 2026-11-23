@@ -195,7 +195,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: MissionBoardPanel(
@@ -207,7 +207,7 @@ void main() {
           onClose: () => closed++,
         ),
       ),
-    ));
+    )));
     await tester.pump();
     await tester.pump();
     final m = cat.missions;
@@ -226,7 +226,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
         body: PrepPanel(
@@ -240,7 +240,7 @@ void main() {
           onCharacter: () {},
         ),
       ),
-    ));
+    )));
     await tester.pump();
     // Sin pestañas de tienda solo hay una: Q / E no hacen nada.
     await _key(tester, LogicalKeyboardKey.keyE);
@@ -309,7 +309,7 @@ void main() {
   testWidgets('MenuTabKeys: no toca las teclas escribiendo en un campo',
       (tester) async {
     var tab = 0;
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(child: MaterialApp(
       home: Scaffold(
         body: StatefulBuilder(
           builder: (context, set) => MenuTabKeys(
@@ -320,7 +320,7 @@ void main() {
           ),
         ),
       ),
-    ));
+    )));
     await tester.pump();
     await _key(tester, LogicalKeyboardKey.keyE);
     expect(tab, 0);

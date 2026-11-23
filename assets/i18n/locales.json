@@ -7,6 +7,16 @@
   },
   "domains": [
     "ui.title",
-    "ui.settings"
+    "ui.settings",
+    "ui.combat",
+    "ui.build",
+    "ui.run",
+    "ui.missions",
+    "ui.achievements",
+    "ui.ascension",
+    "ui.bestiary",
+    "ui.endgame",
+    "ui.passive_tree",
+    "ui.tutorial"
   ]
 }
