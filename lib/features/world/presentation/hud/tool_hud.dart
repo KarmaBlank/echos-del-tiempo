@@ -67,16 +67,32 @@ class ToolHud extends StatelessWidget {
     final life = profile.life;
     final rod = kRods[life.rod];
     final many = life.rods.length > 1;
-    return Row(key: const ValueKey('hud-rod-bar'), children: [
-      LifeIcon(life.rod, LifeIconKind.herramienta, size: iconSize),
-      SizedBox(width: DsSpace.sm),
-      Expanded(
-        child: DsButton('Caña: ${rod?.name ?? life.rod}',
-            key: const ValueKey('hud-tool-rod'),
-            tooltip: many ? 'Cambiar a la siguiente caña' : null,
-            onPressed: many ? controller.cycleRod : null),
-      ),
-    ]);
+    // Casillero como los de la huerta (ícono + nombre), nunca gris.
+    final card = DsCard(
+      key: const ValueKey('hud-tool-rod'),
+      selected: true,
+      padding: EdgeInsets.all(DsSpace.xs),
+      onTap: many ? controller.cycleRod : null,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+            height: seedSize,
+            child: Center(
+                child: LifeIcon(life.rod, LifeIconKind.herramienta,
+                    size: iconSize))),
+        Text(rod?.name ?? life.rod,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: DsText.subtitle(DsColors.text)),
+      ]),
+    );
+    return Row(
+        key: const ValueKey('hud-rod-bar'),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+              width: seedW,
+              child: many ? card.tip('Cambiar a la siguiente caña') : card),
+        ]);
   }
 
   /// Barra de tres casilleros (Azada | Semilla | Regadera), de ancho fijo

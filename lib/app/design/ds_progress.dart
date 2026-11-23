@@ -244,10 +244,22 @@ class DsPercent extends StatelessWidget {
     return Semantics(
       label: '${label.isEmpty ? '' : '$label, '}$percent por ciento',
       excludeSemantics: true,
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
+      // Con ancho acotado, la barra se achica para no pasarse del borde
+      // (tarjetas de OFICIOS, v0.25.4).
+      child: LayoutBuilder(builder: (context, box) => Row(
+          mainAxisSize: MainAxisSize.min, children: [
         Text(retroText('$percent%'), maxLines: 1, style: DsText.body(c)),
         SizedBox(width: DsSpace.xs),
-        Container(
+        if (box.hasBoundedWidth)
+          Flexible(child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: w), child: _bar(f, c, w)))
+        else
+          _bar(f, c, w),
+      ])),
+    );
+  }
+
+  Widget _bar(double f, Color c, double w) => Container(
           width: w,
           height: 6,
           decoration: BoxDecoration(
@@ -256,8 +268,5 @@ class DsPercent extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: FractionallySizedBox(
               widthFactor: f, heightFactor: 1, child: ColoredBox(color: c)),
-        ),
-      ]),
-    );
-  }
+        );
 }

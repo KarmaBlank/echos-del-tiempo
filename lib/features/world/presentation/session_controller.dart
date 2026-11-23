@@ -2153,8 +2153,6 @@ class SessionController extends StateNotifier<SessionView?> {
         startFishing();
       } else if (nearTrader) {
         openPanel(WorldPanel.trader);
-      } else if (nearSign) {
-        addLocalNotice(signText);
       } else if (canFish) {
         startFishing();
       } else if (nearEntrance case final e?) {
@@ -3481,7 +3479,6 @@ class SessionController extends StateNotifier<SessionView?> {
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
     if (facingWater) return (WorldPrompt.fishing, null);
     if (nearTrader) return (WorldPrompt.trader, null);
-    if (nearSign) return (WorldPrompt.sign, null);
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {

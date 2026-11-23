@@ -406,12 +406,15 @@ class WorldHud extends StatelessWidget {
                 child: Center(child: vote),
               ),
             // Herramienta en la mano y su aviso (solo en el pueblo): barra
-            // abajo al centro, entre el chat y el grupo (v0.24.4).
+            // centrada en la PANTALLA (v0.25.4); solo se corre si pisaría
+            // el chat o la columna derecha.
             if (s.players[view.localId] case final me?
                 when controller.activeTool != null)
               Positioned(
-                left: _gap * 2 + chatWidth,
-                right: _gap * 2 + rightWidth,
+                left: _toolSide(box.maxWidth, _gap * 2 + chatWidth,
+                    _gap * 2 + rightWidth).$1,
+                right: _toolSide(box.maxWidth, _gap * 2 + chatWidth,
+                    _gap * 2 + rightWidth).$2,
                 bottom: _gap,
                 child: Align(
                   alignment: Alignment.bottomCenter,
@@ -1516,4 +1519,12 @@ class _LevelUpBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Márgenes (izq, der) de la barra de herramienta: centrada en la
+/// pantalla de ancho [w]; si así pisaría [minL] o [minR], la franja libre.
+(double, double) _toolSide(double w, double minL, double minR) {
+  final c = (w - ToolHud.width) / 2;
+  if (c >= minL && c >= minR) return (c, c);
+  return (minL, minR);
 }
