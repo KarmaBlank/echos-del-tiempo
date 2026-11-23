@@ -3,7 +3,11 @@ import 'dart:math' as math;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import '../models/farm_plot.dart';
+import '../models/town_build.dart';
+import 'farming_rules.dart';
 import 'life_craft_rules.dart';
+import 'town_rules.dart';
 
 /// Costo de un rango de mejora o de contratar.
 typedef HelperCost = ({int gold, Map<String, int> mats, int level});
@@ -179,4 +183,58 @@ abstract final class HelperRules {
         '+${pct('upRareza')} de chance de un pez mejor',
     };
   }
+
+  // ---------------- bloqueo (farming.md § 8.6) ----------------
+
+  /// Por qué el ayudante [i] de [b] está BLOQUEADO: no puede hacer
+  /// ninguna de sus tareas ni ahora ni en ninguna vuelta futura sin que un
+  /// jugador cambie algo. Vacía = no está bloqueado (trabaja o espera a
+  /// que algo crezca o se seque). Igual en host y clientes: sale del
+  /// estado del pueblo.
+  static List<String> blockers(TownBuild b, int i) {
+    if (i < 0 || i >= b.helper) return const [];
+    final full = TownRules.chestFull(b);
+    if (b.kind == BuildKind.lago) {
+      return full ? const ['El cofre está lleno'] : const [];
+    }
+    if (b.kind != BuildKind.huerta) return const [];
+    final area = TownRules.helperArea(b, i);
+    if (area.isEmpty) return const ['No hay parcelas asignadas'];
+    final m = b.taskMask(i);
+    if (m & kAllHelperTasks == 0) return const ['No tiene tareas prendidas'];
+    bool on(HelperTask t) => m & t.bit != 0;
+    final plots = [
+      for (final (x, y) in area) b.plots[plotKey(x, y)]
+    ];
+    final seeds = b.seedTotal > 0;
+    final empty = plots.any((p) => p == null || !p.planted);
+    final growing =
+        plots.any((p) => p != null && p.planted && !FarmingRules.ripe(p));
+    final anyPlanted = plots.any((p) => p != null && p.planted);
+    // Llega a madurar solo: ya está madura, regada o crece seca.
+    final dryGrows = FarmingRules.t.d('dryRate') > 0;
+    final regar = on(HelperTask.regar);
+    final ripens = plots.any((p) =>
+        p != null &&
+        p.planted &&
+        (FarmingRules.ripe(p) || p.watered || dryGrows || regar));
+    final harvest = on(HelperTask.cosechar) && !full && ripens;
+    // Algo que puede hacer ahora o más adelante solo.
+    final can = (on(HelperTask.plantar) && seeds && (empty || harvest)) ||
+        (regar && growing) ||
+        harvest;
+    if (can) return const [];
+    final out = <String>[];
+    if (on(HelperTask.plantar) && !seeds) out.add('Sin semillas para plantar');
+    if (on(HelperTask.cosechar) && full && anyPlanted) {
+      out.add('El cofre está lleno');
+    }
+    if (on(HelperTask.plantar) && seeds && !empty) {
+      out.add('Todas sus parcelas están plantadas');
+    }
+    if (out.isEmpty) out.add('No tiene nada para hacer con sus tareas');
+    return out;
+  }
+
+  static bool blocked(TownBuild b, int i) => blockers(b, i).isNotEmpty;
 }

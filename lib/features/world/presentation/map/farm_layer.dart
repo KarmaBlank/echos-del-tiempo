@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
@@ -361,8 +362,13 @@ class MapFarmLayer {
         final id = farm
             ? (work ? 'npc_granjero_trabajo' : 'npc_granjero')
             : (work ? 'npc_pescador_trabajo' : 'npc_pescador');
-        final bob = pos.work ? 0.0 : (math.sin(t / 120) * 1).roundToDouble();
+        final stuck = HelperRules.blocked(b, i);
+        final bob = pos.work || stuck
+            ? 0.0
+            : (math.sin(t / 120) * 1).roundToDouble();
         img(id, pos.x, pos.y + 6 + bob);
+        // Bloqueado (farming.md § 8.6): quieto y con el "!" dorado.
+        if (stuck) drawNpcMark(text, NpcMark.news, pos.x, pos.y - 22, t);
       }
     }
     // Habitantes (overworld_biomes.md § 10.1): caminan frente a su casa

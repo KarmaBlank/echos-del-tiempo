@@ -393,6 +393,30 @@ Pueblo.
   tormenta los pescadores sacan `stormFisher` de lo de siempre y los
   rayos pueden pegarle a una parcela.
 
+### 8.6 Ayudante bloqueado (v0.32.6)
+
+Un ayudante está BLOQUEADO cuando no puede hacer ninguna de sus tareas
+ni ahora ni en ninguna vuelta futura sin que un jugador cambie algo
+(`HelperRules.blockers(b, i)`: lista de motivos; vacía = no bloqueado).
+- Granjero: sin área (`No hay parcelas asignadas`); sin tareas prendidas
+  (`No tiene tareas prendidas`); si no, no está bloqueado mientras
+  pueda (a) PLANTAR: tiene semillas y hay parcelas vacías, o se van a
+  vaciar porque él cosecha; (b) REGAR: hay plantas creciendo; (c)
+  COSECHAR: cofre con lugar y alguna planta madura o que va a madurar
+  sola (regada, `dryRate` > 0 o él la riega). Bloqueado, los motivos:
+  `Sin semillas para plantar`, `El cofre está lleno`, `Todas sus
+  parcelas están plantadas` o, si ninguno aplica, `No tiene nada para
+  hacer con sus tareas`.
+- Pescador: no usa cebo y siempre tiene su lago; solo se bloquea con el
+  cofre lleno (`El cofre está lleno`).
+- Esperar NO es bloqueo: plantas creciendo, una parcela que se va a
+  secar, la próxima vuelta: camina normal y sin marca.
+- Bloqueado: se queda quieto en su primera parcela (el pescador deja la
+  caña) y muestra el "!" dorado de los habitantes sobre la cabeza. Su
+  pantalla (G) arranca con un aviso "!" y los motivos.
+- Sin cambio de protocolo: host y clientes lo calculan del pueblo que ya
+  viaja en el estado.
+
 ## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →
 categoría).
