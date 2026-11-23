@@ -1,12 +1,11 @@
 /// Pasa un texto DETALLADO (texto plano, sin markup) a su versión
 /// RESUMIDA (docs/specs/ui_minimal.md § 8.2): saca paréntesis y
 /// fórmulas, cambia abreviaturas por palabras, se queda con la primera
-/// oración y corta en [maxChars]. Sirve para los textos que vienen de
+/// oración entera (nunca la corta). Sirve para los textos que vienen de
 /// datos (mecánicas, keystones, mods, oficios, objetos de vida); los que
 /// leen mal así se escriben a mano en su armador. Con [sentence] en
 /// `false` no agrega el punto final (mods, etiquetas).
-String plainShort(String full,
-    {int maxChars = kShortMaxChars, bool sentence = true}) {
+String plainShort(String full, {bool sentence = true}) {
   var t = full.trim();
   // Paréntesis: casi siempre reglas finas o el detalle de la fórmula.
   t = t.replaceAll(RegExp(r'\s*\([^()]*\)'), '');
@@ -27,15 +26,11 @@ String plainShort(String full,
   // Primera oración (o hasta el primer ";").
   final end = RegExp(r'[.;](\s|$)').firstMatch(t);
   if (end != null) t = t.substring(0, end.start);
+  // The sentence stays whole: never cut mid-way nor end in "…"
+  // (ui_style.md § "Tooltips cortos", v0.36.1).
   t = t.trim();
-  if (t.length > maxChars) {
-    final cut = t.lastIndexOf(', ', maxChars);
-    t = cut > maxChars ~/ 2
-        ? t.substring(0, cut)
-        : '${t.substring(0, t.lastIndexOf(' ', maxChars - 1)).trim()}…';
-  }
   if (t.isEmpty || !sentence) return t;
-  if (!t.endsWith('.') && !t.endsWith('…') && !t.endsWith('!')) t = '$t.';
+  if (!t.endsWith('.') && !t.endsWith('!')) t = '$t.';
   return t;
 }
 

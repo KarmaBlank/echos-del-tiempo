@@ -963,8 +963,6 @@ class _ForgePassiveLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final line = ProtoText(passiveForgeNote(item),
         key: const ValueKey('forge-passive-note'),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
         style: DsText.detail());
     final name = rules.items.passiveOf(item)?.nameAt(item.effectivePassiveLevel);
     if (passive == null || name == null) return line;
@@ -972,8 +970,6 @@ class _ForgePassiveLine extends StatelessWidget {
       Flexible(
         child: ProtoText(
             '<span style="color:$kPassiveHex">${protoEsc(name)}</span>',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: DsText.body()),
       ),
       SizedBox(width: DsSpace.sm),
