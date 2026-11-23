@@ -3552,17 +3552,18 @@ class _Op {
   void _enemyAi(FieldEnemy en, GameMap map, double dt) {
     final calm = s.time < s.graceUntil;
     final dh = _dist(en.x, en.y, en.homeX, en.homeY);
-    // Llama errante (lighting.md § 3.1.1): en lo oscuro se la ve de lejos.
-    final dark = LightRules.isDark(map.theme, floor: s.mission?.floor ?? 0) ||
-        (SkyRules.outdoor(map.theme, town: map.lobby) &&
-            SkyRules.isNight(s.town.sky));
+    // Llama errante (lighting.md § 3.1.1): prendida a mano en una
+    // mazmorra oscura se la ve de lejos; al aire libre no castiga.
+    final dark = LightRules.isDark(map.theme, floor: s.mission?.floor ?? 0);
+    final outdoor = SkyRules.outdoor(map.theme, town: map.lobby);
     SessionPlayer? near;
     var nd = double.infinity;
     for (final p in players) {
       if (!p.alive) continue;
       // Distancia relativa a su radio: el que más llama la atención gana.
       final d = _dist(p.x, p.y, en.x, en.y) /
-          LightRules.aggroFactor(wisp: p.wisp, dark: dark);
+          LightRules.aggroFactor(
+              wisp: p.wisp, dark: dark, outdoor: outdoor);
       if (d < nd) {
         nd = d;
         near = p;
