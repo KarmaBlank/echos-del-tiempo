@@ -41,7 +41,7 @@ import 'void_painter.dart';
 import 'fishing_layer.dart';
 import 'farm_layer.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
-    show kCrops, CropQuality;
+    show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../../../../game_engine/data/fishing_catalog.dart';
@@ -837,6 +837,11 @@ class MapGame extends Game {
                 farm.drawCan(c, px, py, face);
               case FarmHand.seed:
                 final d = kCrops[p.profile.life.farm.activeSeed];
+                farm.drawSeedBag(
+                    c, px, py, face, FarmPalette.fruit[d?.rarity.index ?? 0]);
+              case FarmHand.fert:
+                // El abono, como bolsa del color de su rareza.
+                final d = kFertilizers[controller.farmFert];
                 farm.drawSeedBag(
                     c, px, py, face, FarmPalette.fruit[d?.rarity.index ?? 0]);
             }

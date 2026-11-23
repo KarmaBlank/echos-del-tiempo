@@ -1,4 +1,3 @@
-import '../../../../core/text/text_detail.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -9,9 +8,10 @@ import '../../../../game_engine/rules/fishing_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
+import 'life_item_grid.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 
-/// Puesto del COMERCIANTE (fishing.md § 5, v0.23.2): primero COMPRAR o
+/// Puesto del AGROPECUARIO (fishing.md § 5, v0.23.2): primero COMPRAR o
 /// VENDER, después PESCA o CULTIVO. Buscador y filtro por tipo siempre a
 /// la vista; "Cobrar en" (oro o materiales) solo al VENDER.
 class TraderPanel extends StatefulWidget {
@@ -62,7 +62,7 @@ class _TraderPanelState extends State<TraderPanel> {
             .any((k) => parseCropKey(k)?.$1.rarity != FishRarity.legendario);
     return PanelFrame(
       key: const ValueKey('panel-trader'),
-      title: 'COMERCIANTE',
+      title: 'AGROPECUARIO',
       width: 760,
       onClose: c.closePanel,
       actions: [
@@ -149,13 +149,23 @@ class _TraderPanelState extends State<TraderPanel> {
                 style: DsText.detail()),
           ],
           SizedBox(height: DsSpace.sm),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 440),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _visible(_tab == 0 ? _fishing() : _farming()),
-              ),
+          // Grilla de casillas con el detalle de la elegida (v0.24.4).
+          SizedBox(
+            height:
+                (MediaQuery.sizeOf(context).height * 0.42).clamp(200.0, 440.0),
+            child: LifeItemGrid(
+              key: ValueKey('trade-grid-$_mode-$_tab'),
+              groups: _visible(_tab == 0 ? _fishing() : _farming()),
+              extra: _mode == 1 && _tab == 1 ? _silo() : null,
+              empty: _query.isNotEmpty || _kind != null
+                  ? 'Nada coincide con la búsqueda.'
+                  : _mode == 1
+                      ? (_tab == 0
+                          ? 'No tenés pescados. Probá en la orilla del lago.'
+                          : 'No tenés cosechas. Plantá en la huerta del pueblo.')
+                      : 'Nada para comprar.',
+              emptyKey:
+                  ValueKey(_tab == 0 ? 'trade-empty' : 'trade-crop-empty'),
             ),
           ),
         ],
@@ -163,43 +173,35 @@ class _TraderPanelState extends State<TraderPanel> {
     );
   }
 
-  /// Filas del modo actual que pasan el buscador y el filtro de tipo.
-  List<Widget> _visible(List<_Row> rows) {
+  /// Grupos del modo actual con lo que pasa el buscador y el filtro.
+  List<LifeItemGroup> _visible(List<_Row> rows) {
     final q = _query.toLowerCase();
-    final out = <Widget>[];
-    for (final k in _kinds) {
-      if (_kind != null && _kind != k) continue;
-      final group = [
-        for (final r in rows)
-          if (r.sell == (_mode == 1) &&
-              r.kind == k &&
-              (q.isEmpty || r.name.toLowerCase().contains(q)))
-            r.widget
-      ];
-      if (group.isEmpty) continue;
-      if (out.isNotEmpty) out.add(SizedBox(height: DsSpace.sm));
-      out
-        ..add(DsSectionHeader(k.toUpperCase(),
-            key: ValueKey('trade-group-$k'),
-            trailing: DsBadge('${group.length}', neutral: true)))
-        ..addAll(group);
-    }
-    if (out.isEmpty) {
-      return [
-        Text(
-            _query.isNotEmpty || _kind != null
-                ? 'Nada coincide con la búsqueda.'
-                : _mode == 1
-                    ? (_tab == 0
-                        ? 'No tenés pescados. Probá en la orilla del lago.'
-                        : 'No tenés cosechas. Plantá en la huerta del pueblo.')
-                    : 'Nada para comprar.',
-            key: ValueKey(_tab == 0 ? 'trade-empty' : 'trade-crop-empty'),
-            style: DsText.detail())
-      ];
-    }
-    return out;
+    return [
+      for (final k in _kinds)
+        if (_kind == null || _kind == k)
+          LifeItemGroup(
+              k.toUpperCase(),
+              [
+                for (final r in rows)
+                  if (r.sell == (_mode == 1) &&
+                      r.kind == k &&
+                      (q.isEmpty || r.cell.search.toLowerCase().contains(q)))
+                    r.cell
+              ],
+              headerKey: ValueKey('trade-group-$k')),
+    ];
   }
+
+  static const _icon = LifeItemGrid.iconSize;
+
+  /// Botón CANJEAR de un legendario.
+  Widget _swap(
+          String key, VoidCallback onPressed, int cristales, int prismas) =>
+      DsButton('CANJEAR',
+          key: ValueKey(key),
+          size: DsButtonSize.compact,
+          tooltip: '$cristales Cristales de Era y $prismas Prisma Roto',
+          onPressed: onPressed);
 
   // ---------------- PESCA ----------------
 
@@ -215,55 +217,78 @@ class _TraderPanelState extends State<TraderPanel> {
     return [
       for (final r in kRods.values)
         _Row(
-            r.name,
             'cañas',
-            DsListRow(
-              key: ValueKey('trade-rod-${r.id}'),
-              leading: LifeIcon(r.id, LifeIconKind.herramienta),
-              compact: true,
-              title: r.name,
-              titleColor: fishRarityColor(r.rarity),
-              detail: 'Caña · nivel ${r.reqLevel} · rinde '
-                  '${(FishingRules.effectiveness(lvl, r.reqLevel) * 100).round()} %'
-                  '${r.rareBonus > 0 ? ' · rareza +${(r.rareBonus * 100).round()} %' : ''}',
-              trailing: _rodButton(r),
+            LifeItemCellData(
+              id: 'trade-rod-${r.id}',
+              icon: LifeIcon(r.id, LifeIconKind.herramienta, size: _icon),
+              border: fishRarityColor(r.rarity),
+              search: r.name,
+              equipped: p?.life.rod == r.id,
+              caption: p?.life.rods.contains(r.id) ?? false
+                  ? 'Tenés'
+                  : '${r.price} oro',
+              detail: LifeItemDetail(
+                name: r.name,
+                nameColor: fishRarityColor(r.rarity),
+                tags: [
+                  ('CAÑA', DsColors.textSecondary),
+                  (r.rarity.label.toUpperCase(), fishRarityColor(r.rarity)),
+                ],
+                lines: [
+                  'Nivel requerido: ${r.reqLevel}',
+                  'Rinde: ${(FishingRules.effectiveness(lvl, r.reqLevel) * 100).round()} %',
+                  if (r.rareBonus > 0)
+                    'Rareza: +${(r.rareBonus * 100).round()} %',
+                  'Precio: ${r.price} de oro',
+                ],
+                actions: [_rodButton(r)],
+              ),
             )),
       for (final f in species)
         _Row(
-            f.name,
             f.biome == kWaterJunkBiome
                 ? 'basura'
                 : f.rarity == FishRarity.legendario
                     ? 'legendarios'
                     : 'peces',
             sell: true,
-            DsListRow(
-              key: ValueKey('trade-row-${f.id}'),
-              leading: LifeIcon(
+            LifeItemCellData(
+              id: 'trade-row-${f.id}',
+              icon: LifeIcon(
                   f.id,
                   f.biome == kWaterJunkBiome
                       ? LifeIconKind.basura
-                      : LifeIconKind.pescado),
-              compact: true,
-              title: '${f.name} ×${bag[f.id]}',
-              titleColor: fishRarityColor(f.rarity),
-              detail: '${f.rarity.label} · ${f.price} de oro c/u',
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (f.rarity == FishRarity.legendario) ...[
-                  DsButton('CANJEAR',
-                      key: ValueKey('trade-swap-${f.id}'),
-                      size: DsButtonSize.compact,
-                      tooltip: '${t.i('legendCristales')} Cristales de Era y '
-                          '${t.i('legendPrismas')} Prisma Roto',
-                      onPressed: () => c.exchangeFish(f.id)),
-                  SizedBox(width: DsSpace.xs),
+                      : LifeIconKind.pescado,
+                  size: _icon),
+              border: fishRarityColor(f.rarity),
+              search: f.name,
+              count: bag[f.id],
+              caption: '${f.price} oro',
+              detail: LifeItemDetail(
+                name: f.name,
+                nameColor: fishRarityColor(f.rarity),
+                tags: [
+                  (
+                    f.biome == kWaterJunkBiome ? 'BASURA DEL AGUA' : 'PESCADO',
+                    DsColors.textSecondary
+                  ),
+                  (f.rarity.label.toUpperCase(), fishRarityColor(f.rarity)),
                 ],
-                DsButton('VENDER',
-                    key: ValueKey('trade-sell-${f.id}'),
-                    size: DsButtonSize.compact,
-                    onPressed: () =>
-                        c.sellFish(species: f.id, materials: _materials)),
-              ]),
+                lines: [
+                  'Tenés ${bag[f.id]}',
+                  'Vale ${f.price} de oro c/u',
+                ],
+                actions: [
+                  if (f.rarity == FishRarity.legendario)
+                    _swap('trade-swap-${f.id}', () => c.exchangeFish(f.id),
+                        t.i('legendCristales'), t.i('legendPrismas')),
+                  DsButton('VENDER',
+                      key: ValueKey('trade-sell-${f.id}'),
+                      size: DsButtonSize.compact,
+                      onPressed: () =>
+                          c.sellFish(species: f.id, materials: _materials)),
+                ],
+              ),
             )),
     ];
   }
@@ -291,6 +316,23 @@ class _TraderPanelState extends State<TraderPanel> {
 
   // ---------------- CULTIVO ----------------
 
+  /// Granero del ayudante (arriba de la grilla, al VENDER cultivo).
+  Widget? _silo() {
+    final silo = c.town.silo;
+    if (silo.isEmpty) return null;
+    return DsListRow(
+      key: const ValueKey('trade-silo'),
+      compact: true,
+      wrap: true,
+      title: 'Granero del ayudante',
+      subtitle: '${silo.values.fold(0, (a, b) => a + b)} cosechas para recoger',
+      trailing: DsButton('RECOGER',
+          key: const ValueKey('trade-silo-take'),
+          size: DsButtonSize.compact,
+          onPressed: c.collectSilo),
+    );
+  }
+
   List<_Row> _farming() {
     final p = widget.view.me?.profile;
     final f = p?.life.farm;
@@ -308,109 +350,142 @@ class _TraderPanelState extends State<TraderPanel> {
     return [
       for (final s in seeds)
         _Row(
-            s.seedName,
             'semillas',
-            DsListRow(
-              key: ValueKey('trade-seed-${s.id}'),
-              leading: LifeIcon('semilla_${s.id}', LifeIconKind.semilla),
-              compact: true,
-              title: s.seedName,
-              titleColor: fishRarityColor(s.rarity),
-              detail:
-                  '${s.rarity.label} · crece en ${(s.growSec / 60).round()} min '
-                  '· tenés ${f?.seedCount(s.id) ?? 0}',
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                DsButton('×1 ${s.seedPrice}',
-                    key: ValueKey('trade-seed-buy-${s.id}'),
-                    size: DsButtonSize.compact,
-                    onPressed:
-                        gold >= s.seedPrice ? () => c.buySeed(s.id) : null),
-                SizedBox(width: DsSpace.xs),
-                DsButton('×5 ${s.seedPrice * 5}',
-                    key: ValueKey('trade-seed-buy5-${s.id}'),
-                    size: DsButtonSize.compact,
-                    onPressed: gold >= s.seedPrice * 5
-                        ? () => c.buySeed(s.id, 5)
-                        : null),
-              ]),
+            LifeItemCellData(
+              id: 'trade-seed-${s.id}',
+              icon: LifeIcon('semilla_${s.id}', LifeIconKind.semilla,
+                  size: _icon),
+              border: fishRarityColor(s.rarity),
+              search: s.seedName,
+              count: (f?.seedCount(s.id) ?? 0) > 0 ? f!.seedCount(s.id) : null,
+              caption: '${s.seedPrice} oro',
+              detail: LifeItemDetail(
+                name: s.seedName,
+                nameColor: fishRarityColor(s.rarity),
+                tags: [
+                  ('SEMILLA', DsColors.textSecondary),
+                  (s.rarity.label.toUpperCase(), fishRarityColor(s.rarity)),
+                ],
+                lines: [
+                  'Crece en ${(s.growSec / 60).round()} min',
+                  'Tenés ${f?.seedCount(s.id) ?? 0}',
+                  'Precio: ${s.seedPrice} de oro c/u',
+                ],
+                actions: [
+                  DsButton('COMPRAR 1 · ${s.seedPrice}',
+                      key: ValueKey('trade-seed-buy-${s.id}'),
+                      size: DsButtonSize.compact,
+                      onPressed:
+                          gold >= s.seedPrice ? () => c.buySeed(s.id) : null),
+                  DsButton('COMPRAR 5 · ${s.seedPrice * 5}',
+                      key: ValueKey('trade-seed-buy5-${s.id}'),
+                      size: DsButtonSize.compact,
+                      onPressed: gold >= s.seedPrice * 5
+                          ? () => c.buySeed(s.id, 5)
+                          : null),
+                ],
+              ),
             )),
       for (final d in kFertilizers.values)
         _Row(
-            d.name,
             'abonos',
-            DsListRow(
-              key: ValueKey('trade-fert-${d.id}'),
-              leading: LifeIcon(d.id, LifeIconKind.semilla),
-              compact: true,
-              title: d.name,
-              titleColor: fishRarityColor(d.rarity),
-              detail: 'Mejora las chances: normal / rara / épica / legendaria '
-                  '(+${t.d('fert${d.key}Bias')}) · tenés ${f?.fertCount(d.id) ?? 0}',
-              tooltip: DsTooltipCard(
-                  title: d.name,
-                  detail:
-                      'Mejora las chances: normal / rara / épica / legendaria. '
-                      'Se usa con F sobre un cultivo y lo hace crecer '
-                      '× ${t.d('fert${d.key}Speed')}.',
-                  children: [
-                    Text(
-                        TextDetail.isSummary
-                            ? 'Mejora la cosecha y la hace crecer más rápido. '
-                                'Usalo con F sobre un cultivo.'
-                            : 'Mejora las chances: normal / rara / épica / '
-                                'legendaria. Se usa con F sobre un cultivo y '
-                                'lo hace crecer × ${t.d('fert${d.key}Speed')}.',
-                        style: DsText.detail()),
-                  ]),
-              trailing: DsButton('COMPRAR ${d.price}',
-                  key: ValueKey('trade-fert-buy-${d.id}'),
-                  size: DsButtonSize.compact,
-                  onPressed: gold >= d.price ? () => c.buyFert(d.id) : null),
+            LifeItemCellData(
+              id: 'trade-fert-${d.id}',
+              icon: LifeIcon(d.id, LifeIconKind.semilla, size: _icon),
+              border: fishRarityColor(d.rarity),
+              search: d.name,
+              count: (f?.fertCount(d.id) ?? 0) > 0 ? f!.fertCount(d.id) : null,
+              caption: '${d.price} oro',
+              detail: LifeItemDetail(
+                name: d.name,
+                nameColor: fishRarityColor(d.rarity),
+                tags: [
+                  ('ABONO', DsColors.textSecondary),
+                  (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                ],
+                lines: [
+                  'Mejora las chances de calidad: +${t.d('fert${d.key}Bias')}',
+                  'Crecimiento × ${t.d('fert${d.key}Speed')}',
+                  'Tenés ${f?.fertCount(d.id) ?? 0}',
+                  'Precio: ${d.price} de oro',
+                ],
+                description: 'Mejora las chances: normal / rara / épica / '
+                    'legendaria. Se usa con F sobre un cultivo.',
+                actions: [
+                  DsButton('COMPRAR ${d.price}',
+                      key: ValueKey('trade-fert-buy-${d.id}'),
+                      size: DsButtonSize.compact,
+                      onPressed:
+                          gold >= d.price ? () => c.buyFert(d.id) : null),
+                ],
+              ),
             )),
       for (final d in kFarmTools.values)
         if (d.price > 0 || _owned(d))
           _Row(
-              d.name,
               d.kind == FarmToolKind.azada ? 'azadas' : 'regaderas',
-              DsListRow(
-                key: ValueKey('trade-tool-${d.id}'),
-                leading: LifeIcon(d.id, LifeIconKind.herramienta),
-                compact: true,
-                title: d.name,
-                titleColor: fishRarityColor(d.rarity),
-                detail: '${d.kind.label} · nivel ${d.reqLevel} · rinde '
-                    '${(FarmingRules.effectiveness(lvl, d.reqLevel) * 100).round()} %'
-                    '${d.area > 0 ? ' · área ${d.area == 1 ? 'en cruz' : '3 × 3'}' : ''}',
-                trailing: _toolButton(d),
+              LifeItemCellData(
+                id: 'trade-tool-${d.id}',
+                icon: LifeIcon(d.id, LifeIconKind.herramienta, size: _icon),
+                border: fishRarityColor(d.rarity),
+                search: d.name,
+                equipped:
+                    (d.kind == FarmToolKind.azada ? f?.hoe : f?.can) == d.id,
+                caption: _owned(d) ? 'Tenés' : '${d.price} oro',
+                detail: LifeItemDetail(
+                  name: d.name,
+                  nameColor: fishRarityColor(d.rarity),
+                  tags: [
+                    (d.kind.label.toUpperCase(), DsColors.textSecondary),
+                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                  ],
+                  lines: [
+                    'Nivel requerido: ${d.reqLevel}',
+                    'Rinde: ${(FarmingRules.effectiveness(lvl, d.reqLevel) * 100).round()} %',
+                    if (d.area > 0)
+                      'Área: ${d.area == 1 ? 'en cruz' : '3 × 3'}',
+                    'Precio: ${d.price} de oro',
+                  ],
+                  actions: [_toolButton(d)],
+                ),
               )),
       for (final (key, crop, quality, n) in crops)
         _Row(
-            crop.name,
             crop.rarity == FishRarity.legendario ? 'legendarios' : 'cultivos',
             sell: true,
-            DsListRow(
-              key: ValueKey('trade-crop-$key'),
-              leading: LifeIcon('cosecha_${crop.id}', LifeIconKind.cosecha),
-              compact: true,
-              title: '${crop.name} ×$n',
-              titleColor: fishRarityColor(crop.rarity),
-              detail: 'Calidad ${quality.label} · '
-                  '${p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)} de oro c/u',
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (crop.rarity == FishRarity.legendario) ...[
-                  DsButton('CANJEAR',
-                      key: ValueKey('trade-crop-swap-$key'),
-                      size: DsButtonSize.compact,
-                      tooltip: '${t.i('legendCristales')} Cristales de Era y '
-                          '${t.i('legendPrismas')} Prisma Roto',
-                      onPressed: () => c.exchangeCrop(key)),
-                  SizedBox(width: DsSpace.xs),
+            LifeItemCellData(
+              id: 'trade-crop-$key',
+              icon: LifeIcon('cosecha_${crop.id}', LifeIconKind.cosecha,
+                  size: _icon),
+              border: fishRarityColor(crop.rarity),
+              search: crop.name,
+              count: n,
+              caption:
+                  '${p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)} oro',
+              detail: LifeItemDetail(
+                name: crop.name,
+                nameColor: fishRarityColor(crop.rarity),
+                tags: [
+                  ('COSECHA', DsColors.textSecondary),
+                  (
+                    'CALIDAD ${quality.label.toUpperCase()}',
+                    DsColors.textSecondary
+                  ),
                 ],
-                DsButton('VENDER',
-                    key: ValueKey('trade-crop-sell-$key'),
-                    size: DsButtonSize.compact,
-                    onPressed: () => c.sellCrop(key, materials: _materials)),
-              ]),
+                lines: [
+                  'Tenés $n',
+                  'Vale ${p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)} de oro c/u',
+                ],
+                actions: [
+                  if (crop.rarity == FishRarity.legendario)
+                    _swap('trade-crop-swap-$key', () => c.exchangeCrop(key),
+                        t.i('legendCristales'), t.i('legendPrismas')),
+                  DsButton('VENDER',
+                      key: ValueKey('trade-crop-sell-$key'),
+                      size: DsButtonSize.compact,
+                      onPressed: () => c.sellCrop(key, materials: _materials)),
+                ],
+              ),
             )),
     ];
   }
@@ -444,11 +519,10 @@ class _TraderPanelState extends State<TraderPanel> {
   }
 }
 
-/// Una fila del puesto: nombre (buscador), tipo (filtro) y modo.
+/// Una casilla del puesto: tipo (filtro), modo y la casilla.
 class _Row {
-  const _Row(this.name, this.kind, this.widget, {this.sell = false});
-  final String name;
+  const _Row(this.kind, this.cell, {this.sell = false});
   final String kind;
-  final Widget widget;
+  final LifeItemCellData cell;
   final bool sell;
 }

@@ -1,4 +1,4 @@
-﻿import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/battle_event.dart';
@@ -37,7 +37,7 @@ enum WorldPanel {
   /// El pozo Loot perdido del pueblo (missions.md § "Loot perdido").
   lostLoot,
 
-  /// Puesto del comerciante (fishing.md § 5).
+  /// Puesto del agropecuario (fishing.md § 5).
   trader,
 
   /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
@@ -79,8 +79,8 @@ enum WorldPrompt {
   /// Punto de pesca del lago (fishing.md § 4).
   fishing('[E o clic] Pescar'),
 
-  /// Puesto del comerciante (fishing.md § 5).
-  trader('[E] Comerciante'),
+  /// Puesto del agropecuario (fishing.md § 5).
+  trader('[E] Agropecuario'),
 
   /// Cartel del lago.
   sign('[E] Leer cartel'),

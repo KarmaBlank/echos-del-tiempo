@@ -37,7 +37,7 @@ abstract final class TuningId {
 
 /// Los valores del código.
 const Map<String, TuningDef> kTuningDefaults = {
-  // fishing.md (v0.22.0): Pesca, cañas, minijuego y comerciante.
+  // fishing.md (v0.22.0): Pesca, cañas, minijuego y agropecuario.
   TuningId.fishing: TuningDef('Pesca', {
     // Nivel: XP para pasar del nivel l = xpBase × l^xpExp; tope maxLevel.
     'maxLevel': 30,
@@ -108,14 +108,14 @@ const Map<String, TuningDef> kTuningDefaults = {
     'autoMult': 0.4,
     'autoCount': 3,
     'autoCooldownSec': 30,
-    // Comerciante: × del valor si se cobra en materiales, oro por
+    // Agropecuario: × del valor si se cobra en materiales, oro por
     // Esquirla y recompensa del canje de un legendario.
     'matRate': 1.2,
     'matValue': 25,
     'legendCristales': 3,
     'legendPrismas': 1,
   }),
-  // farming.md (v0.23.0): Cultivo, herramientas, huerta y comerciante.
+  // farming.md (v0.23.0): Cultivo, herramientas, huerta y agropecuario.
   TuningId.farming: TuningDef('Cultivo', {
     // Nivel: misma forma que Pesca.
     'maxLevel': 30,
@@ -184,7 +184,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'legendPityAfter': 150,
     'lootMatMin': 1,
     'lootMatMax': 2,
-    // Comerciante: × en materiales, oro por Esquirla y canje de un
+    // Agropecuario: × en materiales, oro por Esquirla y canje de un
     // legendario.
     'matRate': 1.2,
     'matValue': 25,

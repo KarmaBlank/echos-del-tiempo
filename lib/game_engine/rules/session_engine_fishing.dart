@@ -1,6 +1,6 @@
 part of 'session_engine.dart';
 
-// Pesca y comerciante en la sala (docs/specs/fishing.md § 6). El
+// Pesca y agropecuario en la sala (docs/specs/fishing.md § 6). El
 // minijuego corre en cada cliente; el anfitrión tira el pez al clavar,
 // valida el resultado (picada pendiente, tiempos mínimos, caña) y otorga.
 

@@ -69,7 +69,7 @@ class CropDef {
   /// XP de Cultivo base (antes de rareza y calidad).
   final int xp;
 
-  /// Precio de la semilla en el comerciante (0 = no se vende: cae de
+  /// Precio de la semilla en el agropecuario (0 = no se vende: cae de
   /// cosechas o de las mazmorras).
   final int seedPrice;
   final String lore;
@@ -112,7 +112,7 @@ class FarmToolDef {
   /// Azada: chance de cosecha doble. Regadera: × de duración del riego.
   final double extra;
 
-  /// Precio en el comerciante (0 = no se vende).
+  /// Precio en el agropecuario (0 = no se vende).
   final int price;
 }
 
