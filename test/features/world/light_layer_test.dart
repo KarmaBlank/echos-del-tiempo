@@ -36,4 +36,11 @@ void main() {
     expect(red(300, 300), lessThan(40)); // lejos: casi negro
     expect(kLightDefs, isNotEmpty);
   });
+
+  test('la ventana de luz se alinea hacia abajo en negativos (bordes)', () {
+    expect(MapLightLayer.floorChunk(-5), -MapLightLayer.chunk);
+    expect(MapLightLayer.floorChunk(-17), -2 * MapLightLayer.chunk);
+    expect(MapLightLayer.floorChunk(0), 0);
+    expect(MapLightLayer.floorChunk(17), MapLightLayer.chunk);
+  });
 }
