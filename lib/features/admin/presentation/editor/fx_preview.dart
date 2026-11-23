@@ -12,6 +12,7 @@ import '../../../combat/presentation/scene/particles.dart';
 import '../../../combat/presentation/scene/ult_cinematic.dart';
 import '../../../combat/presentation/scene/ult_fx.dart' show UltDirector;
 import '../../../combat/presentation/sprite_catalog.dart';
+import 'fx_editor_selection.dart';
 
 /// Mini escena de batalla del Editor (game_editor.md § 3.2): mundo de
 /// 240 × 135 px con el lanzador (y su compañero) a la izquierda y 1–4
@@ -117,6 +118,9 @@ class FxPreviewPainter extends CustomPainter {
     this.hero,
     this.partner,
     this.enemyImages = const [],
+    this.selectedTrack,
+    this.selectedKey,
+    this.onion = false,
     super.repaint,
   });
 
@@ -127,6 +131,16 @@ class FxPreviewPainter extends CustomPainter {
   final bool camera;
   final ui.Image? hero, partner;
   final List<ui.Image?> enemyImages;
+
+  /// Element being edited: framed with the selection box (§ 7.7).
+  final int? selectedTrack;
+  final ({int track, bool fire, int index})? selectedKey;
+
+  /// Draw the previous and next key of [selectedTrack], faint.
+  final bool onion;
+
+  /// World → canvas scale of the last paint (drag on the move handle).
+  static double lastScale = 1;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -141,6 +155,7 @@ class FxPreviewPainter extends CustomPainter {
         (size.height - w.height * fit) / 2);
     canvas.clipRect(Offset.zero & (w * fit));
     canvas.scale(fit);
+    var scale = fit;
     // Cámara de la cinemática (la misma función que la batalla).
     if (camera && const {'ult', 'duo', 'enemy_ult'}.contains(t.category)) {
       final script = scriptFromTimeline(t, UltStyle.duo);
@@ -152,6 +167,7 @@ class FxPreviewPainter extends CustomPainter {
       final z = (view.zoom / 1).clamp(1.0, 2.0);
       canvas.translate(w.width / 2, w.height / 2);
       canvas.scale(z);
+      scale *= z;
       canvas.translate(-view.center.dx, -view.center.dy);
     }
     canvas.translate(sim.particles.shakeOffset().dx, 0);
@@ -193,9 +209,31 @@ class FxPreviewPainter extends CustomPainter {
           foes[i],
           flip: true);
     }
+    final sel = selectedTrack;
+    if (onion && sel != null && sel < t.tracks.length) {
+      final (prev, next) = fxNeighborKeys(t, sel, time);
+      for (final at in [prev, next]) {
+        if (at == null) continue;
+        canvas.saveLayer(
+            null, Paint()..color = DsColors.background.withValues(alpha: 0.35));
+        FxPlayer.paint(canvas, t, at.toDouble(), st);
+        canvas.restore();
+      }
+    }
     FxPlayer.paint(canvas, t, time, st);
     FxPlayer.paintPrims(canvas, t, time, st);
     sim.particles.paint(canvas);
+    if (sel != null && sel < t.tracks.length) {
+      final key = selectedKey;
+      final tr = t.tracks[sel];
+      final k = key != null && key.track == sel && key.fire &&
+              key.index < tr.fires.length
+          ? tr.fires[key.index]
+          : null;
+      paintSelection(canvas,
+          fxSelectionBox(t, sel, time, st, Offset.zero & w, key: k), scale);
+    }
+    lastScale = scale;
     canvas.restore();
     // Barras de cine y tarjeta del nombre (pistas `letterbox` y
     // `title_card`; las mismas reglas que la batalla).
@@ -228,25 +266,68 @@ class FxPreviewPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(FxPreviewPainter old) => true;
+
+  /// Green box around the edited element, a cross handle when it can be
+  /// moved and corner squares when it can be scaled. Line widths are in
+  /// screen px ([scale] = world → screen).
+  static void paintSelection(Canvas canvas, FxSelectionBox b, double scale) {
+    final px = 1 / scale;
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * px
+      ..color = DsColors.editSelection
+      ..isAntiAlias = false;
+    final fill = Paint()
+      ..color = DsColors.editSelection
+      ..isAntiAlias = false;
+    canvas.drawRect(b.rect, stroke);
+    if (b.canScale) {
+      final h = 6 * px;
+      for (final c in [
+        b.rect.topLeft,
+        b.rect.topRight,
+        b.rect.bottomLeft,
+        b.rect.bottomRight,
+      ]) {
+        canvas.drawRect(Rect.fromCenter(center: c, width: h, height: h), fill);
+      }
+    }
+    if (b.canMove) {
+      final c = b.rect.center;
+      final l = 6 * px;
+      canvas.drawRect(
+          Rect.fromCenter(center: c, width: 2 * l, height: 2 * px), fill);
+      canvas.drawRect(
+          Rect.fromCenter(center: c, width: 2 * px, height: 2 * l), fill);
+    }
+  }
 }
 
-/// Regla de la línea de tiempo: pistas con keyframes (rombos) y disparos
-/// (marcas), impactos y el cabezal (game_editor.md § 3.2).
+/// Regla de la línea de tiempo (game_editor.md § 3.2 y § 7.7): una fila
+/// por elemento y propiedad ("Sprite · Escala"), keys como rombos,
+/// disparos como marcas, el key elegido en verde y el cabezal con su
+/// tiempo.
 class FxTimelinePainter extends CustomPainter {
   FxTimelinePainter({
     required this.timeline,
     required this.time,
+    required this.rows,
     this.selectedTrack,
+    this.selectedField,
     this.selectedKey,
   });
 
   final FxTimeline timeline;
   final double time;
+
+  /// One row per element and property ([fxRowsOf]).
+  final List<FxRow> rows;
   final int? selectedTrack;
+  final String? selectedField;
   final ({int track, bool fire, int index})? selectedKey;
 
   static const rowH = 16.0;
-  static const labelW = 96.0;
+  static const labelW = 150.0;
   static const rulerH = 18.0;
 
   /// Rombos/marcas en pantalla, para el clic.
@@ -257,79 +338,114 @@ class FxTimelinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final d = timeline.duration.toDouble();
     final fill = Paint()..isAntiAlias = false;
-    canvas.drawRect(Offset.zero & size, fill..color = const Color(0xFF12111C));
-    // Regla.
-    final tp = TextPainter(textDirection: TextDirection.ltr);
-    void label(String s, Offset o, Color c) {
-      tp.text = TextSpan(
-          text: s, style: DsText.detail(c).copyWith(fontSize: 9));
-      tp.layout();
+    canvas.drawRect(Offset.zero & size, fill..color = DsColors.surfaceSunken);
+    final tp = TextPainter(
+        textDirection: TextDirection.ltr, maxLines: 1, ellipsis: '…');
+    void label(String s, Offset o, Color c, [double maxW = double.infinity]) {
+      tp.text =
+          TextSpan(text: s, style: DsText.detail(c).copyWith(fontSize: 9));
+      tp.layout(maxWidth: maxW);
       tp.paint(canvas, o);
     }
 
+    // Regla.
     for (var ms = 0; ms <= d; ms += 100) {
       final x = xOf(ms.toDouble(), d, size.width);
       final major = ms % 500 == 0;
       canvas.drawRect(Rect.fromLTWH(x, major ? 2 : 10, 1, major ? 14 : 6),
-          fill..color = const Color(0xFF4A4766));
-      if (major) label('$ms', Offset(x + 2, 1), const Color(0xFF8D89B3));
+          fill..color = DsColors.borderControl);
+      if (major) label(fxSeconds(ms), Offset(x + 2, 1), DsColors.textSecondary);
     }
     // Fases.
     final ph = timeline.phases;
     for (final (from, len, col) in [
-      (0, ph.build, const Color(0x2233AAFF)),
-      (ph.build, ph.release, const Color(0x22FF7B29)),
-      (ph.build + ph.release, ph.recover, const Color(0x2299FF99)),
+      (0, ph.build, DsColors.mp),
+      (ph.build, ph.release, DsColors.warning),
+      (ph.build + ph.release, ph.recover, DsColors.success),
     ]) {
       final x0 = xOf(from.toDouble(), d, size.width);
       final x1 = xOf((from + len).toDouble(), d, size.width);
       canvas.drawRect(Rect.fromLTRB(x0, rulerH, x1, size.height),
-          fill..color = col);
+          fill..color = col.withValues(alpha: 0.08));
     }
-    for (var i = 0; i < timeline.tracks.length; i++) {
-      final tr = timeline.tracks[i];
+    final selKey = selectedKey;
+    for (var i = 0; i < rows.length; i++) {
+      final row = rows[i];
+      final tr = timeline.tracks[row.track];
       final y = rulerH + i * rowH;
-      if (i == selectedTrack) {
+      final rowSel = row.track == selectedTrack &&
+          (selectedField == null || row.field == selectedField);
+      if (rowSel) {
         canvas.drawRect(Rect.fromLTWH(0, y, size.width, rowH),
-            fill..color = const Color(0x337C5CFF));
+            fill..color = DsColors.editSelection.withValues(alpha: 0.14));
       }
-      label(tr.type.toUpperCase(), Offset(4, y + 2),
-          tr.known ? const Color(0xFFCFCBEA) : const Color(0xFF8D89B3));
+      // Separador entre elementos.
+      if (i > 0 && rows[i - 1].track != row.track) {
+        canvas.drawRect(
+            Rect.fromLTWH(0, y, size.width, 1), fill..color = DsColors.border);
+      }
+      label(
+          fxRowLabel(timeline, row),
+          Offset(4, y + 2),
+          rowSel
+              ? DsColors.editSelection
+              : tr.known
+                  ? DsColors.textPrimary
+                  : DsColors.textSecondary,
+          labelW - 8);
       final cy = y + rowH / 2;
-      for (var k = 0; k < tr.keys.length; k++) {
-        final x = xOf(tr.keys[k].t.toDouble(), d, size.width);
-        final sel = selectedKey == (track: i, fire: false, index: k);
-        final p = Path()
-          ..moveTo(x, cy - 5)
-          ..lineTo(x + 5, cy)
-          ..lineTo(x, cy + 5)
-          ..lineTo(x - 5, cy)
-          ..close();
-        canvas.drawPath(
-            p, fill..color = sel ? const Color(0xFFFFE066) : const Color(0xFF9FF6FF));
-      }
-      for (var k = 0; k < tr.fires.length; k++) {
-        final x = xOf(tr.fires[k].t.toDouble(), d, size.width);
-        final sel = selectedKey == (track: i, fire: true, index: k);
-        final imp = tr.type == 'impact' && !tr.fires[k].b('pre');
-        canvas.drawRect(Rect.fromLTWH(x - 1, y + 2, imp ? 3 : 2, rowH - 4),
-            fill
-              ..color = sel
-                  ? const Color(0xFFFFE066)
-                  : imp
-                      ? const Color(0xFFFF6B6B)
-                      : const Color(0xFFB48CFF));
+      for (final (fire, list) in [(false, tr.keys), (true, tr.fires)]) {
+        for (var k = 0; k < list.length; k++) {
+          if (!fxRowShows(row, list[k], fire: fire)) continue;
+          final x = xOf(list[k].t.toDouble(), d, size.width);
+          final sel = selKey == (track: row.track, fire: fire, index: k);
+          if (sel) {
+            // Recuadro verde alrededor del key elegido.
+            canvas.drawRect(Rect.fromLTWH(x - 7, y + 1, 14, rowH - 2),
+                fill..color = DsColors.editSelection.withValues(alpha: 0.35));
+          }
+          final col = sel
+              ? DsColors.editSelection
+              : fire
+                  ? (tr.type == 'impact' && !list[k].b('pre')
+                      ? DsColors.danger
+                      : DsColors.textSubtitle)
+                  : DsColors.mp;
+          if (fire) {
+            canvas.drawRect(Rect.fromLTWH(x - 1, y + 2, sel ? 3 : 2, rowH - 4),
+                fill..color = col);
+          } else {
+            final r = sel ? 6.0 : 5.0;
+            final p = Path()
+              ..moveTo(x, cy - r)
+              ..lineTo(x + r, cy)
+              ..lineTo(x, cy + r)
+              ..lineTo(x - r, cy)
+              ..close();
+            canvas.drawPath(p, fill..color = col);
+          }
+        }
       }
     }
-    // Impactos sobre la regla y cabezal.
+    // Impactos sobre la regla y cabezal con su tiempo.
     for (final f in timeline.impacts) {
       final x = xOf(f.t.toDouble(), d, size.width);
-      canvas.drawRect(Rect.fromLTWH(x - 1, 0, 3, rulerH),
-          fill..color = const Color(0xFFFF6B6B));
+      canvas.drawRect(
+          Rect.fromLTWH(x - 1, 0, 3, rulerH), fill..color = DsColors.danger);
     }
-    final hx = xOf(time.clamp(0, d), d, size.width);
-    canvas.drawRect(Rect.fromLTWH(hx, 0, 1, size.height),
-        fill..color = const Color(0xFFFFFFFF));
+    final hx = xOf(time.clamp(0, d).toDouble(), d, size.width);
+    canvas.drawRect(Rect.fromLTWH(hx - 1, 0, 2, size.height),
+        fill..color = DsColors.focus);
+    tp.text = TextSpan(
+        text: fxSeconds(time),
+        style: DsText.detail(DsColors.background).copyWith(fontSize: 9));
+    tp.layout();
+    final tx = (hx + 2)
+        .clamp(labelW, math.max(labelW, size.width - tp.width - 4))
+        .toDouble();
+    canvas.drawRect(Rect.fromLTWH(tx - 2, 0, tp.width + 4, 11),
+        fill..color = DsColors.focus);
+    tp.paint(canvas, Offset(tx, 0));
   }
 
   @override
