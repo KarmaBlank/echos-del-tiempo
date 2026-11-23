@@ -14,6 +14,7 @@ enum DsGalleryPage {
   surfaces('TARJETAS'),
   character('PERSONAJE'),
   inventory('INVENTARIO'),
+  transfer('TRASPASO'),
   battle('BATALLA');
 
   const DsGalleryPage(this.label);
@@ -143,6 +144,7 @@ class _DsGalleryScreenState extends State<DsGalleryScreen> {
         DsGalleryPage.surfaces => const SurfacesPage(),
         DsGalleryPage.character => const CharacterMockup(),
         DsGalleryPage.inventory => const InventoryMockup(),
+        DsGalleryPage.transfer => const TransferMockup(),
         DsGalleryPage.battle => const BattleMockup(),
       };
 }

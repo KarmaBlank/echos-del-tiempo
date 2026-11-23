@@ -133,7 +133,7 @@ abstract final class FarmingRules {
 
   /// Avanza [dt] segundos (con el árbol de quien plantó, `boost`, y el
   /// ritmo del último riego, `waterRate`).
-  static FarmPlot grow(FarmPlot p, double dt) {
+  static FarmPlot grow(FarmPlot p, double dt, {double mult = 1}) {
     if (p.seed == null) {
       return p.wet > 0 ? p.copyWith(wet: math.max(0, p.wet - dt)) : p;
     }
@@ -141,7 +141,8 @@ abstract final class FarmingRules {
     final wet = p.wet > 0;
     final rate = (wet ? p.waterRate : t.d('dryRate')) *
         fertSpeed(p.fert) *
-        (1 + p.boost);
+        (1 + p.boost) *
+        mult;
     final g = dt * rate;
     return p.copyWith(
         grow: p.grow + g,

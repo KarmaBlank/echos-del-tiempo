@@ -45,7 +45,13 @@ class TownState {
       this.wild = const {},
       this.lights = const [],
       this.sky = const SkyState(),
-      this.residents = const {}});
+      this.residents = const {},
+      this.daily = const {}});
+
+  /// Topes del día del mundo (roles.md § 3 y § 4), guardados en el mundo
+  /// para que reabrir la sala no los reinicie: `<jugador>:<día>` → XP de
+  /// órdenes dada; `com:<jugador>:<día>` → encargo de forja pedido.
+  final Map<String, int> daily;
 
   /// Habitantes de bioma (overworld_biomes.md § 10): relación, encargos,
   /// pedidos y si viven en el pueblo. Por id del habitante.
@@ -189,6 +195,7 @@ class TownState {
     SkyState? sky,
     Map<String, int>? wild,
     Map<String, ResidentState>? residents,
+    Map<String, int>? daily,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -201,7 +208,8 @@ class TownState {
         lights: lights ?? this.lights,
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
-        residents: residents ?? this.residents);
+        residents: residents ?? this.residents,
+        daily: daily ?? this.daily);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -229,6 +237,7 @@ class TownState {
             for (final k in (residents.keys.toList()..sort()))
               residents[k]!.toJson()
           ],
+        if (daily.isNotEmpty) 'dy': daily,
       };
 
   /// [r] guardado (por su id).
@@ -314,6 +323,12 @@ class TownState {
           ? {
               for (final v in raw['res'] as List)
                 if (ResidentState.fromJson(v) case final r?) r.npc: r,
+            }
+          : const {},
+      daily: raw['dy'] is Map
+          ? {
+              for (final e in (raw['dy'] as Map).entries)
+                if (e.value is num) '${e.key}': (e.value as num).round(),
             }
           : const {},
     );

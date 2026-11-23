@@ -400,6 +400,9 @@ abstract final class FishingPalette {
   static const line = Color(0xCCEFEFEF);
   static const bobber = TownPalette.bobber;
   static const foam = Color(0xCCFFFFFF);
+  // Agua brillante de los biomas (fishing.md § 11).
+  static const shimmer = Color(0xCCBFEFFF);
+  static const shimmerGlow = Color(0x5580D8FF);
   static const reed = Color(0xFF3E7B3A);
   // Pesca en el mapa (v0.22.2).
   static const rod = TownPalette.plankDark;

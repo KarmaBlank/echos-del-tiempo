@@ -75,6 +75,7 @@ Visión completa en roles.md.
 - Subir de nivel Pesca o Cultivo da XP de personaje (`lifeLevelCharXp`
   × nivel nuevo, tablero Pueblo), sin el tope por estadía. Las órdenes de
   los habitantes suman XP de personaje y puntos de árbol (roles.md § 3).
-- Pendiente (tech_debt.md v0.30.0): nodos de poder de aventurero
-  (estadísticas, % de daño o vida) en los árboles de oficio y un oficio
-  de Herrería propio.
+- v0.31.0: nodos de poder de aventurero (vida y ATQ / MAG) en los tres
+  árboles; Pesca y Cultivo pasan a 16 nodos. Oficio de Herrería con su
+  árbol de 8 nodos (roles.md § 5 y § 6), acción `lifeTree {k: herreria}`,
+  perfil `life.st` / `life.sx`.

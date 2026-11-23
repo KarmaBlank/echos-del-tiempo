@@ -270,3 +270,59 @@ class BattleMockup extends StatelessWidget {
     );
   }
 }
+
+/// Plantilla TRASPASO (ui_minimal.md § 9) con datos de ejemplo.
+class TransferMockup extends StatefulWidget {
+  const TransferMockup({super.key});
+
+  @override
+  State<TransferMockup> createState() => _TransferMockupState();
+}
+
+class _TransferMockupState extends State<TransferMockup> {
+  final _mine = {'trigo': 12, 'zanahoria': 4, 'calabaza': 1};
+  final _there = <String, int>{'trigo': 3};
+
+  List<DsTransferItem> _items(Map<String, int> m) => [
+        for (final e in m.entries)
+          DsTransferItem(
+            id: e.key,
+            icon: const SizedBox.square(
+                dimension: 24, child: ColoredBox(color: DsColors.border)),
+            name: e.key.toUpperCase(),
+            border: e.key == 'calabaza' ? DsColors.reward : DsColors.border,
+            tag: e.key == 'calabaza' ? 'rara' : 'comun',
+            count: e.value,
+            info: 'ejemplo',
+          ),
+      ];
+
+  void _move(Map<String, int> from, Map<String, int> to, String id, int q) {
+    final have = from[id] ?? 0;
+    final n = q == 0 || q > have ? have : q;
+    setState(() {
+      from[id] = have - n;
+      to[id] = (to[id] ?? 0) + n;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 780,
+        child: DsTransferTemplate(
+          keyPrefix: 'gallery-transfer',
+          leftTitle: 'TUS ÍTEMS',
+          rightTitle: 'CONTENEDOR',
+          left: _items(_mine),
+          right: _items(_there),
+          filters: const [
+            DsTransferFilter('TODAS', null),
+            DsTransferFilter('COMÚN', 'comun'),
+            DsTransferFilter('RARA', 'rara'),
+          ],
+          onMove: (from, id, q) => from == DsTransferSide.left
+              ? _move(_mine, _there, id, q)
+              : _move(_there, _mine, id, q),
+        ),
+      );
+}

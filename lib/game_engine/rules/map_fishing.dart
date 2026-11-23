@@ -20,6 +20,40 @@ abstract final class FishingCast {
       isWater(m, tx, ty) ||
       (_inside(m, tx, ty) && m.tileAt(tx, ty) == Tile.fishing);
 
+  /// Agua brillante de un bioma (fishing.md § 11): un tile de agua con
+  /// orilla al lado, elegido por [place] y el [day] del mundo (cambia cada
+  /// día). Puro y determinista: el cliente lo dibuja, el anfitrión lo usa.
+  static (int, int)? hiddenSpot(GameMap m, String place, int day) {
+    final cands = <(int, int)>[];
+    for (var y = 0; y < m.height; y++) {
+      for (var x = 0; x < m.width; x++) {
+        if (!isWater(m, x, y)) continue;
+        var land = false;
+        for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+          if (_inside(m, x + dx, y + dy) && !isWater(m, x + dx, y + dy)) {
+            land = true;
+          }
+        }
+        if (land) cands.add((x, y));
+      }
+    }
+    if (cands.isEmpty) return null;
+    var h = day * 2654435761;
+    for (final c in place.codeUnits) {
+      h = (h ^ c) * 16777619 & 0x7fffffff;
+    }
+    return cands[h.abs() % cands.length];
+  }
+
+  /// ¿(x, y) px está a [radius] tiles o menos del agua brillante?
+  static bool nearHiddenSpot(
+      GameMap m, String place, int day, double x, double y, int radius) {
+    final s = hiddenSpot(m, place, day);
+    if (s == null) return false;
+    final (tx, ty) = tileOf(x, y);
+    return (tx - s.$1).abs() <= radius && (ty - s.$2).abs() <= radius;
+  }
+
   /// Tile del punto (x, y) px.
   static (int, int) tileOf(double x, double y) =>
       ((x / ts).floor(), (y / ts).floor());

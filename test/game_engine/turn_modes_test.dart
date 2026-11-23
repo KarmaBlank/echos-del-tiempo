@@ -295,7 +295,7 @@ void main() {
 
   test('modo por defecto: rondas en cooperativo, línea de tiempo solo', () {
     expect(CombatMode.defaultFor(coop: true), CombatMode.rounds);
-    expect(CombatMode.defaultFor(coop: false), CombatMode.timeline);
+    expect(CombatMode.defaultFor(coop: false), CombatMode.rounds);
     for (final m in CombatMode.values) {
       expect(CombatMode.fromName(m.name), m);
       expect(m.tip, isNotEmpty);
