@@ -182,8 +182,14 @@ con cada cambio; el plano se cachea por la clave de lados y huellas
 
 ### 4.2 Lagos que se funden
 Un lago puede tener varias partes (rectángulos). Al poner o mover un
-lago que toca o pisa otros, quedan uno solo: el id del que estaba antes
-en la lista, todas las partes y la suma de sus peces. Orilla: las
+lago (o huerta) que pisa otro del mismo tipo o comparte un lado con él
+(tiles ortogonalmente vecinos), quedan uno solo; tocarse solo por una
+esquina (diagonal) o dejar un hueco de 1 tile o más los deja separados.
+El resultado conserva el id (y con él el cartel) del más grande (empate:
+el que estaba antes en la lista), todas las partes y la suma de peces,
+cofre, semillas y ayudantes (v0.31.2). El editor dibuja el contorno de la
+unión (no de cada parte) y, en el fantasma, el contorno del resultado
+fundido antes de confirmar. Orilla: las
 esquinas exteriores de cada parte son pasto; en un lago fundido, la
 mitad de esas esquinas (según un hash del tile) muerde también los dos
 tiles vecinos. Muelles: en cada parte, (derecha, fila 2), (derecha,
