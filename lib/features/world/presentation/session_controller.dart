@@ -1,4 +1,5 @@
 import '../../../game_engine/models/combat_mode.dart';
+import '../../../game_engine/models/fog_of_war.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -681,6 +682,10 @@ class SessionController extends StateNotifier<SessionView?> {
   static const saveEvery = 2.0;
 
   final local = LocalPlayer();
+
+  /// Niebla de exploración del jugador local en mazmorras oscuras
+  /// (lighting.md § 5.4). Solo del cliente: no viaja ni se guarda.
+  final fog = FogOfWar();
   final _events = StreamController<SessionEvent>.broadcast();
   GameSession? _s;
   Timer? _timer;
