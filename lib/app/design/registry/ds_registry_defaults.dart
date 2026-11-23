@@ -105,23 +105,38 @@ final dsDefaultComponents = <DsComponentSpec>[
       'peligro' => DsColors.danger,
       _ => DsColors.textPrimary,
     },
-    build: (context, e) => _FitDown(
-      child: DsButton(
-        e.text,
-        kind: switch (e.variant) {
-          'primario' => DsButtonKind.primary,
-          'fantasma' => DsButtonKind.ghost,
-          _ => DsButtonKind.secondary,
-        },
-        size: e.size == 'compacto'
-            ? DsButtonSize.compact
-            : DsButtonSize.normal,
-        accent: e.variant == 'peligro' ? DsColors.danger : null,
-        tooltip: e.tooltip,
-        trailing: e.badge == null ? null : DsBadge(e.badge!),
-        onPressed: e.onPressed,
-      ),
-    ),
+    // La marca (NUEVO) va en la esquina, encima del botón: no suma ancho,
+    // así el texto no se achica para hacerle lugar.
+    build: (context, e) {
+      final button = _FitDown(
+        child: DsButton(
+          e.text,
+          kind: switch (e.variant) {
+            'primario' => DsButtonKind.primary,
+            'fantasma' => DsButtonKind.ghost,
+            _ => DsButtonKind.secondary,
+          },
+          size: e.size == 'compacto'
+              ? DsButtonSize.compact
+              : DsButtonSize.normal,
+          accent: e.variant == 'peligro' ? DsColors.danger : null,
+          tooltip: e.tooltip,
+          onPressed: e.onPressed,
+        ),
+      );
+      if (e.badge == null) return button;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          button,
+          Positioned(
+            top: -DsSpace.sm,
+            right: -DsSpace.sm,
+            child: IgnorePointer(child: DsBadge(e.badge!)),
+          ),
+        ],
+      );
+    },
   ),
   DsComponentSpec(
     id: 'icon_button',
