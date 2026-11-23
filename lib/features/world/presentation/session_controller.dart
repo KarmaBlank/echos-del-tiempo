@@ -1169,7 +1169,13 @@ class SessionController extends StateNotifier<SessionView?> {
   /// también lo abre; v0.23.0).
   bool get nearCounter => townSpot == TownSpot.board;
 
-  bool get nearArmory => townSpot == TownSpot.forge;
+  bool get nearArmory => townSpot == TownSpot.armory;
+
+  /// Frente a la FORJA (v0.32.3: su propio panel).
+  bool get nearForge => townSpot == TownSpot.forge;
+
+  /// Frente al TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3).
+  bool get nearWorkshop => townSpot == TownSpot.workshop;
 
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
@@ -2423,6 +2429,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.missionBoard);
       } else if (nearArmory) {
         openPanel(WorldPanel.armory);
+      } else if (nearForge) {
+        openPanel(WorldPanel.forge);
+      } else if (nearWorkshop) {
+        openPanel(WorldPanel.workshop);
       } else if (nearPortal) {
         openPanel(WorldPanel.ecoPortal);
       } else if (nearStatue) {
@@ -3705,7 +3715,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if (mode == SessionMode.prep &&
         (_panel == null ||
             _panel == WorldPanel.missionBoard ||
-            _panel == WorldPanel.armory)) {
+            _panel == WorldPanel.armory ||
+            _panel == WorldPanel.forge)) {
       _panel = WorldPanel.prep;
     }
     if (_panel == WorldPanel.prep && mode != SessionMode.prep) _panel = null;
@@ -3717,6 +3728,8 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastMode = mode;
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
+            _panel == WorldPanel.workshop ||
+            _panel == WorldPanel.forge ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
@@ -3727,7 +3740,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.questLog ||
             _panel == WorldPanel.helper) &&
         mode != SessionMode.lobby &&
-        !(_panel == WorldPanel.armory && _runShopOpen(s))) {
+        !((_panel == WorldPanel.armory || _panel == WorldPanel.forge) &&
+            _runShopOpen(s))) {
       _panel = null;
     }
     if (_panel == WorldPanel.party && !canEditParty) _panel = null;
@@ -3790,6 +3804,8 @@ class SessionController extends StateNotifier<SessionView?> {
   (WorldPrompt?, String?) _prompt() {
     if (_panel != null || editingTown) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
+    if (nearForge) return (WorldPrompt.forge, null);
+    if (nearWorkshop) return (WorldPrompt.workshop, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);

@@ -23,12 +23,12 @@ void main() {
     'medium': (Size(1280, 720), TextSize.large),
     'narrow': (Size(800, 900), TextSize.enormous),
   };
-  final screens = <String, (ArmoryTab, List<String>)>{
-    'fuse': (ArmoryTab.fuse, const []),
-    'forge': (ArmoryTab.forge, const []),
-    'condense': (ArmoryTab.condense, const []),
-    'forge_selected': (ArmoryTab.forge, const ['up-espada_bronce-pow']),
-    'fuse_actions': (ArmoryTab.fuse, const ['bench-next']),
+  final screens = <String, (ForgeHallTab, List<String>)>{
+    'fuse': (ForgeHallTab.fuse, const []),
+    'forge': (ForgeHallTab.upgrade, const []),
+    'condense': (ForgeHallTab.condense, const []),
+    'forge_selected': (ForgeHallTab.upgrade, const ['up-espada_bronce-pow']),
+    'fuse_actions': (ForgeHallTab.fuse, const ['bench-next']),
   };
   for (final MapEntry(key: screen, value: (tab, taps)) in screens.entries) {
     for (final MapEntry(key: name, value: (size, text)) in cases.entries) {
@@ -40,14 +40,14 @@ void main() {
                 credits: 1000),
             textSize: text,
             build: (v, c) =>
-                ArmoryPanel(view: v, controller: c, initialTab: tab));
+                ForgePanel(view: v, controller: c, initialTab: tab));
         tester.view.physicalSize = size;
         await tester.pump();
         for (final k in taps) {
           await tapVisible(tester, find.byKey(ValueKey(k)));
         }
         await tester.pump();
-        await expectLater(find.byType(ArmoryPanel),
+        await expectLater(find.byType(ForgePanel),
             matchesGoldenFile('goldens/craft_${screen}_default_$name.png'));
       });
     }

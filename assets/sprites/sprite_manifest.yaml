@@ -330,6 +330,11 @@ items:
   vida_casa_2: { idle: items/vida_casa_2.png, size: [48, 48] }
   vida_casa_3: { idle: items/vida_casa_3.png, size: [48, 48] }
   # vida:fin
+  # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3): arte
+  # provisorio (la casa de nivel 3); se cambia acá sin tocar Dart.
+  vida_taller_oficios: { idle: items/vida_casa_3.png, size: [48, 48] }
+  # ARMERÍA del pueblo (v0.32.3): arte provisorio (la casa de nivel 2).
+  vida_armeria: { idle: items/vida_casa_2.png, size: [48, 48] }
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }

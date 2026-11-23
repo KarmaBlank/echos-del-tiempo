@@ -42,7 +42,7 @@ void main() {
           CraftMaterial.prisma: 1,
         }),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
     await tester.pump();
     await _shot(tester, '01_fusion_boton_condensar');
     await _tap(tester, 'bench-condense');

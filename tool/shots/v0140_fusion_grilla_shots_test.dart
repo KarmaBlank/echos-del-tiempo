@@ -36,7 +36,7 @@ void main() {
         devicePixelRatio: 1.5,
         profile: lootWarrior(),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
     await tester.pump();
     await _shot(tester, 'fusion_grilla');
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));

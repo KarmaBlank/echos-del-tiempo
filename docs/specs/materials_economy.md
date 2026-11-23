@@ -160,8 +160,10 @@ misión); un jugador real queda entre las dos columnas, es decir **Épico ≈
 
 ### 4.4 Materiales de oficio (v0.27.0)
 
-En CONDENSAR, debajo de lo de siempre, la sección OFICIOS (grilla con
-detalle y ×1 / ×5 / MÁX):
+En el TALLER DE OFICIOS del pueblo (desde v0.32.3; antes, una sección
+OFICIOS debajo de CONDENSAR de la armería, que ahora es solo de
+materiales de arma): grilla con chips por oficio, detalle a la derecha y
+×1 / ×5 / MÁX (town_loop.md § 2.1, ui_minimal.md § 4.1):
 
 | Material | Receta (Editor → Balance → Pueblo) |
 |---|---|
