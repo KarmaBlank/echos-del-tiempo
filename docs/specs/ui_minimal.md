@@ -247,3 +247,41 @@ implícito en una línea sin tier ni rango y la pasiva en una línea. Todo
 el resto (tiers, prefijos y sufijos, peso, forja, habilidades) va en un
 único plegable `MÁS DETALLE` con la ficha DETALLADA. En Ajustes, debajo
 de TEXTOS, una línea de ejemplo por modo.
+
+## 9. Plantillas de pantalla: "Grid+detalle" y "Traspaso" (v0.30.1)
+
+Dos plantillas para toda pantalla de ítems. Elegir según lo que hace el
+jugador; no mezclar.
+
+### 9.1 Grid+detalle (mirar, comprar, vender, mejorar)
+
+- Un solo contenedor: grilla de casillas a la izquierda (como INVENTARIO)
+  y panel de detalle a la derecha con el nombre, etiquetas, datos y los
+  botones de la acción (COMPRAR, VENDER, MEJORAR...).
+- Implementación: `LifeItemGrid` (`features/world/presentation/panels`).
+- Casos: tiendas, MEJORAS de ayudantes, catálogos.
+
+### 9.2 Traspaso (mover ítems entre dos contenedores)
+
+- Implementación: `DsTransferTemplate` (`lib/app/design/ds_transfer_template.dart`),
+  átomo de casilla `DsItemCell`. Solo dibuja: los ítems (`DsTransferItem`),
+  los filtros (`DsTransferFilter`) y las acciones (`onMove`, `canMove`)
+  llegan por parámetros.
+- Arriba: buscador y chips de filtro (rareza); se aplican a las dos grillas.
+- IZQUIERDA = lo del jugador; DERECHA = el otro contenedor (huerta, cofre,
+  lago, alijo). Cada grilla tiene título con el total de unidades.
+- En el medio, botones `PASAR 1 →`, `PASAR TODO →`, `← PASAR 1`,
+  `← PASAR TODO` (las cantidades son configurables). Solo se habilitan los
+  del lado del ítem elegido; si no se puede, quedan grises (tooltip con el
+  motivo solo si es raro, p. ej. "El lago está lleno"). Un sentido que no
+  existe (peces soltados, cofre que se recoge entero) no muestra botones.
+- Botones extra (RECOGER TODO) van debajo de los de pasar.
+- Abajo: una línea con el ítem elegido (nombre ×cantidad · dato corto).
+- Altura de grilla fija (240 por defecto, con scroll): todo entra sin
+  cortar botones a 1280×720.
+- Casos: SEMILLAS y COFRE del ayudante, AGREGAR ESPECIES del lago.
+  El alijo (`StashBoard`) sigue con su layout propio (ver tech_debt).
+- Claves de test: `<prefijo>-cell-l-<id>` / `-cell-r-<id>`,
+  `<prefijo>-give-1|TODO`, `<prefijo>-take-1|TODO`, `<prefijo>-search`,
+  `<prefijo>-filter-<i>`, `<prefijo>-info`.
+- Galería: página TRASPASO.
