@@ -1,0 +1,645 @@
+{
+  "version": 1,
+  "npcs": {
+    "ilda": {
+      "greet": [
+        "Llegaste justo. Estaba separando hojas.",
+        "¿Venís a charlar o a buscar remedios?",
+        "El bosque está tranquilo hoy."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué hacés?",
+          "lines": [
+            "Curo con lo que da el bosque. Hojas, raíces, rocío."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Por ahora. Si tu pueblo necesita quien cure, me mudo."
+          ],
+          "talks": 1,
+          "where": "biome"
+        },
+        {
+          "id": "pueblo",
+          "label": "¿Cómo te trata el pueblo?",
+          "lines": [
+            "Bien. Extraño el bosque, pero acá alguien siempre se lastima."
+          ],
+          "where": "town"
+        },
+        {
+          "id": "ecos",
+          "label": "Los ecos",
+          "lines": [
+            "Bajan por el río, como hojas. Algunos vienen de mañana."
+          ],
+          "talks": 2,
+          "sub": [
+            {
+              "id": "miedo",
+              "label": "¿Te dan miedo?",
+              "lines": [
+                "No. Lo que tiene que pasar, pasa. Yo curo lo que quede."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sombra",
+          "label": "Algo raro en el bosque",
+          "lines": [
+            "Hay rincones donde la luz no entra. No es el follaje."
+          ],
+          "talks": 4,
+          "rep": 3
+        }
+      ],
+      "quests": [
+        {
+          "kind": "recolectar",
+          "target": "hierba_rocio",
+          "n": 3,
+          "text": "Traeme tres hierbas de rocío: las de esta mañana, no las de ayer.",
+          "gold": 60
+        },
+        {
+          "kind": "pescar",
+          "target": "trucha_musgo",
+          "n": 1,
+          "text": "Una trucha musgosa. Dicen que guarda el agua de un río más viejo.",
+          "gold": 120
+        },
+        {
+          "kind": "cultivar",
+          "target": "helecho_dulce",
+          "n": 2,
+          "text": "Plantá helecho dulce en tu huerta y traeme dos.",
+          "gold": 150
+        },
+        {
+          "kind": "mazmorra",
+          "target": "2",
+          "n": 1,
+          "text": "Bajá al Bosque Hondo. Algo de allá abajo me cambia las moras.",
+          "gold": 300,
+          "rep": 2,
+          "reward": "frasco_ilda"
+        }
+      ]
+    },
+    "velda": {
+      "greet": [
+        "Cuidado dónde pisás: esa placa es un mapa.",
+        "Ah, sos vos. Anoto y te escucho.",
+        "Las ruinas hablan si sabés leer."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué anotás?",
+          "lines": [
+            "Todo lo que dejó el pasado. Era más avanzado que nosotros."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Vivo donde están los papeles. Si me das un techo, los llevo."
+          ],
+          "talks": 1,
+          "where": "biome"
+        },
+        {
+          "id": "pueblo",
+          "label": "¿Y el pueblo?",
+          "lines": [
+            "Tranquilo. Ya armé un archivo en mi casa."
+          ],
+          "where": "town"
+        },
+        {
+          "id": "automatas",
+          "label": "Los autómatas",
+          "lines": [
+            "Se movían con magia, no con vapor. Esperan una orden."
+          ],
+          "talks": 2,
+          "sub": [
+            {
+              "id": "orden",
+              "label": "¿Qué orden?",
+              "lines": [
+                "Nadie la recuerda. Por eso sigo leyendo."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "caida",
+          "label": "¿Qué pasó con el pasado?",
+          "lines": [
+            "Algo hizo que todo volviera a ser medieval. No sé qué. Todavía."
+          ],
+          "talks": 4,
+          "rep": 3
+        }
+      ],
+      "quests": [
+        {
+          "kind": "recolectar",
+          "target": "musgo_cobre",
+          "n": 3,
+          "text": "El musgo de cobre crece sobre los mecanismos. Traeme tres.",
+          "gold": 80
+        },
+        {
+          "kind": "pescar",
+          "target": "pez_pinon",
+          "n": 1,
+          "text": "Un pez piñón del estanque: tiene dientes de engranaje.",
+          "gold": 160
+        },
+        {
+          "kind": "mazmorra",
+          "target": "3",
+          "n": 1,
+          "text": "Entrá a las Ruinas Cronales. Quiero saber qué orden esperan los autómatas.",
+          "gold": 400,
+          "rep": 2,
+          "reward": "placa_velda"
+        }
+      ]
+    },
+    "kael": {
+      "greet": [
+        "Hombros abajo. Respirá.",
+        "Otra vez por acá. Bien.",
+        "El frío enseña paciencia."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué enseñás?",
+          "lines": [
+            "A moverse sin miedo. Lo demás viene solo."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Acá entreno. Si tu pueblo tiene lugar, entreno allá."
+          ],
+          "talks": 1,
+          "where": "biome"
+        },
+        {
+          "id": "pueblo",
+          "label": "¿Te gusta el pueblo?",
+          "lines": [
+            "Hay sol. Me cuesta acostumbrarme."
+          ],
+          "where": "town"
+        },
+        {
+          "id": "eco",
+          "label": "El eco de las cavernas",
+          "lines": [
+            "A veces oigo mis pasos antes de darlos. Vienen del futuro."
+          ],
+          "talks": 2
+        }
+      ],
+      "quests": [
+        {
+          "kind": "recolectar",
+          "target": "cristal_escarcha",
+          "n": 3,
+          "text": "Tres cristales de escarcha. Entrenar con frío enseña rápido.",
+          "gold": 100
+        },
+        {
+          "kind": "pescar",
+          "target": "trucha_hielo",
+          "n": 1,
+          "text": "Una trucha de hielo. Hay que tener paciencia: es la lección.",
+          "gold": 180
+        },
+        {
+          "kind": "elite",
+          "target": "6",
+          "n": 1,
+          "text": "En el Laberinto Temporal hay un guardián que pelea antes de que llegues. Vencelo.",
+          "gold": 500,
+          "rep": 2,
+          "reward": "silbato_kael"
+        }
+      ]
+    },
+    "brann": {
+      "greet": [
+        "Cuidado, que quema.",
+        "¿Traés metal? No, ya sé, traés preguntas.",
+        "El fuego de abajo no se apaga nunca."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué forjás?",
+          "lines": [
+            "Lo que deja el pasado, rehecho. Nada se pierde del todo."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Vivo al lado del fuego. Si en tu pueblo hay fuego, voy."
+          ],
+          "talks": 1,
+          "where": "biome"
+        },
+        {
+          "id": "pueblo",
+          "label": "¿Cómo va la forja?",
+          "lines": [
+            "Más fría que la grieta. Igual sale buen acero."
+          ],
+          "where": "town"
+        },
+        {
+          "id": "mecanismo",
+          "label": "El calor de la grieta",
+          "lines": [
+            "Viene de un mecanismo viejo, más abajo. Sigue andando solo."
+          ],
+          "talks": 2,
+          "sub": [
+            {
+              "id": "quien",
+              "label": "¿Quién lo hizo?",
+              "lines": [
+                "Los de antes. Sabían mezclar magia y engranaje."
+              ]
+            }
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "kind": "recolectar",
+          "target": "raiz_ignea",
+          "n": 3,
+          "text": "Raíces ígneas: arden lento, como la fragua que encontré abajo.",
+          "gold": 140
+        },
+        {
+          "kind": "cultivar",
+          "target": "chile_volcan",
+          "n": 2,
+          "text": "Dos chiles de volcán de tu huerta. El calor también se cultiva.",
+          "gold": 220
+        },
+        {
+          "kind": "mazmorra",
+          "target": "7",
+          "n": 1,
+          "text": "Bajá a la Grieta Ígnea. Ese mecanismo viejo sigue andando y quiero saber por qué.",
+          "gold": 600,
+          "rep": 2,
+          "reward": "martillo_brann"
+        }
+      ]
+    },
+    "oren": {
+      "greet": [
+        "Ya sabía que venías.",
+        "Sentate. O no. Ya te vi hacer las dos cosas.",
+        "Llegás a tiempo. Siempre."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué ves?",
+          "lines": [
+            "Lo que va a pasar. No lo puedo cambiar; solo mirar."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Vivo donde el futuro se oye mejor. Tu pueblo también sirve."
+          ],
+          "talks": 1,
+          "where": "biome"
+        },
+        {
+          "id": "pueblo",
+          "label": "¿Qué ves desde el pueblo?",
+          "lines": [
+            "Gente que vuelve sana. Eso ya pasó, aunque no pasó."
+          ],
+          "where": "town"
+        },
+        {
+          "id": "futuro",
+          "label": "El futuro",
+          "lines": [
+            "Hay algo muy malo allá. Y aun así, tiene que llegar."
+          ],
+          "talks": 2,
+          "sub": [
+            {
+              "id": "bueno",
+              "label": "¿Termina bien?",
+              "lines": [
+                "Creo que sí. Pero porque pasa todo lo que tiene que pasar."
+              ]
+            }
+          ]
+        }
+      ],
+      "quests": [
+        {
+          "kind": "recolectar",
+          "target": "polvo_eco",
+          "n": 3,
+          "text": "Polvo de eco: lo que deja el futuro cuando pasa.",
+          "gold": 180
+        },
+        {
+          "kind": "pescar",
+          "target": "pez_eco",
+          "n": 1,
+          "text": "Un pez eco. Ya lo pescaste; todavía no lo sabés.",
+          "gold": 260
+        },
+        {
+          "kind": "cultivar",
+          "target": "trigo_eco",
+          "n": 2,
+          "text": "Dos espigas de trigo del eco. Tienen que crecer en tu pueblo.",
+          "gold": 320
+        },
+        {
+          "kind": "mazmorra",
+          "target": "9",
+          "n": 1,
+          "text": "Entrá al Abismo. Lo que tiene que pasar, pasa allá abajo.",
+          "gold": 800,
+          "rep": 2,
+          "reward": "reloj_oren"
+        }
+      ]
+    },
+    "pesc_bosque": {
+      "greet": [
+        "Shh, que pican.",
+        "Sentate en la orilla, hay lugar.",
+        "Hoy el agua está clara."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué pescás?",
+          "lines": [
+            "Lo que el lago quiera dar. Hay peces de antes de los árboles."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Desde siempre. Esta orilla es mi casa."
+          ],
+          "talks": 1
+        },
+        {
+          "id": "brillo",
+          "label": "El agua que brilla",
+          "lines": [
+            "Ahí pasa un eco. Los peces lo siguen."
+          ],
+          "talks": 2,
+          "orders": 1
+        },
+        {
+          "id": "lago",
+          "label": "Este lago",
+          "lines": [
+            "Tiene más años que el bosque. Lo sé por los peces."
+          ],
+          "talks": 4,
+          "orders": 2
+        }
+      ],
+      "rooted": true,
+      "decline": [
+        "Gracias, de verdad. Pero acá me siento bien, no me voy a mover.",
+        "Llevate esto. Lo hice con una raíz más vieja que el lago."
+      ],
+      "gift": "Anzuelo de raíz",
+      "ambient": [
+        "Este lago guarda peces que ya nadaban antes de los árboles.",
+        "Si ves el agua brillar, tirá ahí. No me preguntes por qué."
+      ]
+    },
+    "pesc_ruinas": {
+      "greet": [
+        "Cuidado con los engranajes del fondo.",
+        "El estanque giró un poco hoy.",
+        "¿Venís a pescar o a mirar?"
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué pescás?",
+          "lines": [
+            "Peces que muerden metal viejo. No me preguntes cómo."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Entre las ruinas. Me hacen compañía."
+          ],
+          "talks": 1
+        },
+        {
+          "id": "estanque",
+          "label": "El estanque que gira",
+          "lines": [
+            "Lo mueve un mecanismo del pasado. Nadie le da cuerda."
+          ],
+          "talks": 2,
+          "orders": 1
+        },
+        {
+          "id": "nombre",
+          "label": "¿Por qué Engranaje?",
+          "lines": [
+            "Arreglo lo que encuentro. Y encuentro mucho."
+          ],
+          "talks": 4,
+          "orders": 2
+        }
+      ],
+      "rooted": true,
+      "decline": [
+        "No, no. Acá me siento bien, no me voy a mover.",
+        "Pero tomá: un carrete de los de antes. Todavía gira."
+      ],
+      "gift": "Carrete de engranaje",
+      "ambient": [
+        "Los peces de acá muerden metal viejo. Raro, ¿no?",
+        "El estanque gira despacio, como un reloj que nadie da cuerda."
+      ]
+    },
+    "pesc_cavernas": {
+      "greet": [
+        "Hablá bajo. El eco asusta a los peces.",
+        "Hace frío, ¿no? Ya te acostumbrás.",
+        "El hielo cruje. Buena señal."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué pescás?",
+          "lines": [
+            "Lo que nada bajo el hielo. Hay que tener paciencia."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Sí. Acá no hay día ni noche, y me gusta así."
+          ],
+          "talks": 1
+        },
+        {
+          "id": "eco",
+          "label": "Los ecos bajo el hielo",
+          "lines": [
+            "A veces suenan antes de que tire la línea."
+          ],
+          "talks": 2,
+          "orders": 1
+        }
+      ],
+      "rooted": true,
+      "decline": [
+        "Qué lindo que me invites. Pero acá me siento bien, no me voy a mover.",
+        "Tomá esta línea: no se corta ni con el peor frío."
+      ],
+      "gift": "Línea de escarcha",
+      "ambient": [
+        "Bajo el hielo se oyen ecos. A veces son peces.",
+        "Paciencia: acá el agua tarda en contestar."
+      ]
+    },
+    "pesc_grieta": {
+      "greet": [
+        "No te acerques mucho al borde.",
+        "Hoy el lago hierve tranquilo.",
+        "Manos firmes, ¿eh?"
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué pescás?",
+          "lines": [
+            "Lo que aguanta este calor. Pocos peces, pero duros."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Al lado del fuego. Me crié acá."
+          ],
+          "talks": 1
+        },
+        {
+          "id": "tiempo",
+          "label": "Peces de otro tiempo",
+          "lines": [
+            "Algunos ya estuvieron en otra época. Se les nota en las escamas."
+          ],
+          "talks": 2,
+          "orders": 1
+        }
+      ],
+      "rooted": true,
+      "decline": [
+        "Ja. Acá me siento bien, no me voy a mover.",
+        "Pero esto es tuyo: una caña templada en este mismo lago."
+      ],
+      "gift": "Caña templada",
+      "ambient": [
+        "Pescar en brasas pide manos duras y caña firme.",
+        "Lo que sale de este lago ya estuvo en otro tiempo."
+      ]
+    },
+    "pesc_abismo": {
+      "greet": [
+        "Ya pescaste conmigo. Mañana.",
+        "El agua devuelve lo que cae del futuro.",
+        "Sentate. Esto lleva tiempo, y el tiempo sobra."
+      ],
+      "topics": [
+        {
+          "id": "oficio",
+          "label": "¿Qué pescás?",
+          "lines": [
+            "Lo que el futuro deja caer al agua."
+          ]
+        },
+        {
+          "id": "vivis",
+          "label": "¿Vivís acá?",
+          "lines": [
+            "Vivo acá ahora, y antes, y después."
+          ],
+          "talks": 1
+        },
+        {
+          "id": "nombre",
+          "label": "¿Por qué Eco Viejo?",
+          "lines": [
+            "Porque llegué antes de llegar. Como todos los ecos."
+          ],
+          "talks": 2,
+          "orders": 1,
+          "sub": [
+            {
+              "id": "de_donde",
+              "label": "¿De cuándo venís?",
+              "lines": [
+                "De un mañana que no se puede cambiar. Tranquilo: termina bien."
+              ]
+            }
+          ]
+        }
+      ],
+      "rooted": true,
+      "decline": [
+        "Ya sabía que me ibas a invitar. Acá me siento bien, no me voy a mover.",
+        "Este señuelo lo vas a usar. Ya lo usaste."
+      ],
+      "gift": "Señuelo del mañana",
+      "ambient": [
+        "Pesco lo que el futuro deja caer al agua.",
+        "Todo lo que saques de acá ya lo sacaste antes."
+      ]
+    }
+  }
+}

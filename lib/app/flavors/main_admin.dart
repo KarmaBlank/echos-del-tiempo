@@ -6,11 +6,13 @@ import '../../core/audio/audioplayers_sfx_player.dart';
 import '../../core/audio/sfx_files.dart';
 import '../../core/audio/sfx_service.dart';
 import '../../core/data/build_template_loader.dart';
+import '../../core/data/npc_data_loader.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
 import '../../features/admin/presentation/editor/fx_editor_controller.dart';
 import '../../features/admin/presentation/editor/layout_editor_controller.dart';
+import '../../features/admin/presentation/editor/npc_editor_controller.dart';
 import '../../features/admin/presentation/editor/sprite_editor_controller.dart';
 import '../../features/combat/presentation/scene/fx_bridge.dart';
 import '../../features/combat/data/local_sprite_overrides.dart';
@@ -31,6 +33,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Plantillas de BUILD para Balance → Plantillas (build_planner_v2.md § 2.2).
   await BuildTemplateLoader.load();
+  // Textos y encargos de los habitantes (docs/specs/npc_editor.md § 1).
+  await NpcDataLoader.load();
   // Mismas opciones que la señalización REST de escritorio (solo lectura).
   const firebase = DefaultFirebaseOptions.windows;
   final controller = AdminController(
@@ -80,7 +84,10 @@ Future<void> main() async {
       controller: controller,
       sprites: sprites,
       animations: fx,
-      layouts: layouts));
+      layouts: layouts,
+      // NPC (docs/specs/npc_editor.md).
+      npcs: NpcEditorController(
+          balance: controller, spriteImage: sprites.imageOf)));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

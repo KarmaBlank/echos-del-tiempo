@@ -56,7 +56,9 @@ const _vivis = 'vivis';
 
 /// Por habitante: los cinco que se mudan (por id) y los cinco arraigados
 /// (`pesc_<bioma>`).
-const kNpcTalks = <String, NpcTalkDef>{
+/// Valores del código (respaldo de `assets/data/npcs/npcs.json`,
+/// npc_editor.md § 1).
+const kNpcTalksDefaults = <String, NpcTalkDef>{
   // ---------------- se mudan ----------------
   'ilda': NpcTalkDef(greet: [
     'Llegaste justo. Estaba separando hojas.',
@@ -408,6 +410,10 @@ const kNpcTalks = <String, NpcTalkDef>{
         ]),
   ]),
 };
+
+/// Lo que lee el juego: el código, con el archivo de datos encima
+/// (`NpcData.install`).
+final Map<String, NpcTalkDef> kNpcTalks = Map.of(kNpcTalksDefaults);
 
 /// La charla de [npc] (o `null`).
 NpcTalkDef? npcTalk(String npc) => kNpcTalks[npc];

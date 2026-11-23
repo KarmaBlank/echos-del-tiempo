@@ -290,6 +290,10 @@ números en lighting.md § 3 y § 5.3.
 
 ## 12. Charla, arraigados y su puesto (v0.32.6)
 
+> Los textos (saludos, temas, frases al invitar) y las cadenas de
+> encargos viven en `assets/data/npcs/npcs.json` y se editan en el
+> Editor → NPC (npc_editor.md).
+
 Todos los habitantes (los cinco que se mudan y los cinco pescadores
 nativos) usan el mismo cuadro de diálogo (`DsDialogueBox` +
 `DsChoiceMenu`, ui_minimal.md § 10). Todo lo que hacen (tienda,

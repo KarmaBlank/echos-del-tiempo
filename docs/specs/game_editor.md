@@ -388,6 +388,8 @@ la vieja.
 
 Todo con los componentes de docs/specs/design_system.md:
 
+> Área **NPC** (habitantes: ficha, DIÁLOGO, PEDIDOS): ver npc_editor.md.
+
 - Raíz: `DsToolbar` con título "Editor" y `DsTabBar` de tres pestañas:
   **Monitoreo · Balance · Visual** (Balance con sub-pestañas actuales:
   Entidades, Cambios, Parche). `DsBadge` en la pestaña con cambios sin
