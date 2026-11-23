@@ -104,7 +104,7 @@ se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
 - Alcanzable: después del cambio, toda construcción tiene camino (§ 4.1).
 - Los árboles sueltos debajo de una construcción desaparecen.
 
-### 3.3 Lugares fijos (v0.24.5)
+### 3.3 Lugares fijos (v0.25.2)
 Todos los lugares de `TownLayout.landmarks` (FUENTE RÚNICA, PORTAL,
 TABLERO DE ENCARGOS, FORJA, ESTATUA DEL TIEMPO, el puesto del
 comerciante y LOOT PERDIDO) se pueden mover; nunca borrar. Id de
@@ -214,7 +214,7 @@ abajo; `stock` al lago base; las parcelas a la huerta que las contiene.
 `town {o: expand|place|move|remove|stock|hireHelper, id?, tg?, x?, y?}`:
 `expand` con `id` = lado (`n`/`s`/`e`/`o`); `place` con `id` = la del
 catálogo y (x, y) la esquina en tiles del mapa; `move` con `tg` y (x,
-y) (`tg` = `@<lugar>` mueve un lugar fijo, § 3.3; v0.24.5, protocolo 46); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
+y) (`tg` = `@<lugar>` mueve un lugar fijo, § 3.3; v0.25.2, protocolo 46); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
 anfitrión valida todo (pueblo, dueño, reglas de § 3.2) y el pueblo
 viaja en el estado.
 

@@ -104,7 +104,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// 44 (v0.23.0): huerta, ampliaciones del pueblo y árboles de oficios.
 /// 45 (v0.24.0): edición del pueblo (town_editor.md § 8): `town` con
 /// lados, construcciones y lagos propios.
-/// 46 (v0.24.5): lugares fijos movibles (town_editor.md § 3.3): `town`
+/// 46 (v0.25.2): lugares fijos movibles (town_editor.md § 3.3): `town`
 /// suma `marks` y `move` acepta `tg` = `@<lugar>`; un cliente 45 armaría
 /// el pueblo con los lugares en su sitio de siempre.
 const kProtocolVersion = 46;
