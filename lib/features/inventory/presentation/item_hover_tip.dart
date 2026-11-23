@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/panel_frame.dart' show RetroTooltip;
+import '../../../core/text/text_detail.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_type.dart';
@@ -36,6 +38,12 @@ Widget itemHoverTip({
   if (ownerName == null && item.uid == using) {
     final parts = itemTipParts(rules, item,
         level: viewer.level, attributes: attributes, equipped: equipped);
+    // TEXTOS en RESUMIDO (ui_minimal.md § 8.3): la ficha completa al pie.
+    final more = TextDetail.fullIfSummary(() => itemTooltipMarkup(rules, item,
+        level: viewer.level,
+        attributes: attributes,
+        equipped: equipped,
+        skillDetails: true));
     return RetroHoverCard(
       placement: RetroTipPlacement.below,
       gap: 4,
@@ -45,10 +53,12 @@ Widget itemHoverTip({
       keyboardFocus: focused,
       builder: (ctx) => RetroTipFolds(
           key: const ValueKey('inv-tip-folds'),
-          summary: parts.summary +
-              summaryExtra +
-              (note == null ? '' : '<br>$note'),
-          sections: parts.sections,
+          summary:
+              parts.summary + summaryExtra + (note == null ? '' : '<br>$note'),
+          sections: [
+            ...parts.sections,
+            if (more != null) (RetroTooltip.detailTitle, more),
+          ],
           maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
       child: child,
     );

@@ -457,7 +457,16 @@ class RetroTooltip extends StatelessWidget {
       required this.child,
       this.foldAfter,
       this.foldTitle = 'Más detalle',
-      this.keyboardFocus = false});
+      this.keyboardFocus = false,
+      this.detail});
+
+  /// Texto DETALLADO del mismo objeto (ui_minimal.md § 8.3): con el
+  /// ajuste TEXTOS en RESUMIDO, va plegado en `MÁS DETALLE` al pie (Alt
+  /// lo despliega). `null` o igual a [message]: no se agrega.
+  final String? detail;
+
+  /// Título del plegable con el texto DETALLADO.
+  static const detailTitle = 'MÁS DETALLE';
 
   /// Ver [RetroHoverCard.keyboardFocus].
   final bool keyboardFocus;
@@ -482,6 +491,7 @@ class RetroTooltip extends StatelessWidget {
     final n = foldAfter;
     final parts = n == null ? null : splitAt(message, n);
     final fold = parts != null && parts.$2.isNotEmpty;
+    final more = detail != null && detail != message ? detail! : null;
     return RetroHoverCard(
       placement: RetroTipPlacement.below,
       gap: 4,
@@ -491,9 +501,14 @@ class RetroTooltip extends StatelessWidget {
       keyboardFocus: keyboardFocus,
       builder: (ctx) {
         final w = RetroType.width(ctx, RetroHoverCard.textWidth);
-        if (!fold) return RetroTipText(message, maxWidth: w);
+        if (!fold && more == null) return RetroTipText(message, maxWidth: w);
         return RetroTipFolds(
-            summary: parts.$1, sections: [(foldTitle, parts.$2)], maxWidth: w);
+            summary: fold ? parts.$1 : message,
+            sections: [
+              if (fold) (foldTitle, parts.$2),
+              if (more != null) (detailTitle, more),
+            ],
+            maxWidth: w);
       },
       child: child,
     );
