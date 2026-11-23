@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'farm_layer.dart' show MapText;
@@ -63,6 +64,16 @@ abstract final class TownEditLayer {
             line);
       }
     }
+    // Lugares fijos: también se pueden mover (town_editor.md § 3.3).
+    for (final l in TownPlan.landmarksOf(town)) {
+      line.color = l.id == e.selected
+          ? TownEditPalette.selected
+          : TownEditPalette.outline;
+      c.drawRect(
+          Rect.fromLTWH((l.x + ox) * ts, (l.y + oy) * ts, l.w * ts, l.h * ts)
+              .deflate(0.5),
+          line);
+    }
     if (e.tile case (final tx, final ty)? when e.step == TownEditStep.choose) {
       c.drawRect(Rect.fromLTWH(tx * ts, ty * ts, ts, ts).deflate(0.5),
           line..color = TownEditPalette.selected);
@@ -76,9 +87,15 @@ abstract final class TownEditLayer {
       parts = [TownRect(g.$1, g.$2, d.w, d.h)];
     } else if (e.step == TownEditStep.moving) {
       final b = ctl.editSelected;
-      if (b == null) return;
-      final m = b.movedTo(g.$1 - ox, g.$2 - oy);
-      parts = [for (final p in m.parts) p.shift(ox, oy)];
+      final l = ctl.editLandmark;
+      if (l != null) {
+        parts = [TownRect(g.$1, g.$2, l.w, l.h)];
+      } else if (b == null) {
+        return;
+      } else {
+        final m = b.movedTo(g.$1 - ox, g.$2 - oy);
+        parts = [for (final p in m.parts) p.shift(ox, oy)];
+      }
     } else {
       return;
     }

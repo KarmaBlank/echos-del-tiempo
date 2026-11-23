@@ -343,6 +343,23 @@ extension _FarmingOp on _Op {
     }
   }
 
+  /// Tras mover un lugar (town_editor.md § 3.3): quien quedó dentro de
+  /// algo sólido vuelve a la aparición (al sur de la fuente).
+  void _unstuckTown() {
+    final m = e.mapFor(s);
+    var i = 0;
+    for (final p in s.playerList) {
+      final tx = (p.x / 16).floor(), ty = (p.y / 16).floor();
+      if (!WorldRules.isSolid(m, tx, ty)) continue;
+      final sp = m.spawn;
+      p.x = sp.x + (i % 3 - 1) * 12.0;
+      p.y = sp.y + (i ~/ 3) * 10.0;
+      i++;
+      p.fishLine = null;
+      p.epoch++;
+    }
+  }
+
   bool _townAction(SessionPlayer p, TownAction a) {
     if (!_inTown(p)) return false;
     switch (a.op) {
@@ -371,6 +388,10 @@ extension _FarmingOp on _Op {
         final r = TownRules.move(s.town, id, x, y);
         if (r.town == null) return false;
         s.town = r.town!;
+        if (TownLayout.byId(id) case final l?) {
+          _unstuckTown();
+          say('${p.name} movió ${l.name.toLowerCase()}.');
+        }
         return true;
       case TownOp.remove:
         final id = a.target;

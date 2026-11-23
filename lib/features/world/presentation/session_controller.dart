@@ -22,6 +22,7 @@ import '../../../game_engine/models/game_mode.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
+import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
@@ -1574,8 +1575,9 @@ class SessionController extends StateNotifier<SessionView?> {
       final b = side != null
           ? null
           : (TownRules.buildAt(town, tx, ty) ??
-                  TownRules.buildAtSign(town, tx, ty))
-              ?.id;
+                      TownRules.buildAtSign(town, tx, ty))
+                  ?.id ??
+              TownRules.landmarkAt(town, tx, ty)?.id;
       if (side == e.hoverSide && b == e.hoverBuild) return;
       e
         ..hoverSide = side
@@ -1620,15 +1622,16 @@ class SessionController extends StateNotifier<SessionView?> {
         final side = editSideAt(tx, ty);
         final b = TownRules.buildAt(town, tx, ty) ??
             TownRules.buildAtSign(town, tx, ty);
+        final l = b == null ? TownRules.landmarkAt(town, tx, ty) : null;
         e.reset();
         if (side != null) {
           e
             ..step = TownEditStep.side
             ..side = side;
-        } else if (b != null) {
+        } else if ((b?.id ?? l?.id) case final id?) {
           e
             ..step = TownEditStep.options
-            ..selected = b.id;
+            ..selected = id;
         } else if (_freeTile(tx, ty)) {
           e
             ..step = TownEditStep.choose
@@ -1663,12 +1666,21 @@ class SessionController extends StateNotifier<SessionView?> {
   void editStartMove() {
     final e = _edit;
     final b = e?.selected == null ? null : town.build(e!.selected!);
-    if (e == null || b == null) return;
+    final l = editLandmark;
+    if (e == null || (b == null && l == null)) return;
     final (ox, oy) = town.origin;
+    final (ax, ay) = b?.anchor ?? (l!.x, l.y);
     e
       ..step = TownEditStep.moving
-      ..ghost = (b.anchor.$1 + ox, b.anchor.$2 + oy);
+      ..ghost = (ax + ox, ay + oy);
     _emit();
+  }
+
+  /// El lugar fijo elegido en la edición (town_editor.md § 3.3).
+  TownLandmark? get editLandmark {
+    final id = _edit?.selected;
+    if (id == null || TownLayout.byId(id) == null) return null;
+    return TownPlan.landmarksOf(town).firstWhere((l) => l.id == id);
   }
 
   void editStep(TownEditStep step) {
