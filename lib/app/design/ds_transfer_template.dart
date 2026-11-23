@@ -333,8 +333,6 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
               : '${sel.name} ×${sel.count}'
                   '${sel.info == null ? '' : ' · ${sel.info}'}',
           key: ValueKey(_p('info')),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: sel == null ? DsText.detail() : DsText.body(sel.border),
         ),
       ],

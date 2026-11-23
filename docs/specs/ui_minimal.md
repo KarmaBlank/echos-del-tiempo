@@ -215,7 +215,8 @@ Cómo se arma: se genera desde los datos (efecto + valor principal,
 mano habilidad por habilidad. Los textos que ya vienen escritos (mods,
 mecánicas, keystones, oficios) pasan por `plainShort`
 (`lib/core/text/plain_text.dart`): saca paréntesis y fórmulas, cambia
-abreviaturas por palabras y se queda con la primera oración. Donde eso
+abreviaturas por palabras y se queda con la primera oración **entera**
+(v0.36.1: nunca corta a mitad de oración ni termina en "…"). Donde eso
 lee mal se escribe a mano (estados, invocaciones, peso, abonos).
 
 ### 8.3 MÁS DETALLE en RESUMIDO

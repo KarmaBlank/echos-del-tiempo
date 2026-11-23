@@ -432,7 +432,7 @@ String weaponRoleLine(WeaponDef w, ItemInstance it) {
   final passive = items.passiveText(it);
   if (passive != null) {
     l.add(_c(kPassiveHex,
-        'Pasiva: ${_esc(plainShort(passive, maxChars: 40, sentence: false))}'));
+        'Pasiva: ${_esc(plainShort(passive))}'));
   }
   final full = TextDetail.run(
       TextDetail.full,
