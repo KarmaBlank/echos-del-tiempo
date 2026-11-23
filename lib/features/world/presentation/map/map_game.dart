@@ -618,7 +618,7 @@ class MapGame extends Game {
     canvas.save();
     canvas.clipRect(dst);
     paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen,
-        backdrop: labelBackdrop);
+        backdrop: labelBackdrop, zoom: zoom);
     canvas.translate(dst.left, dst.top);
     canvas.scale(dst.width / vw, dst.height / vh);
     fishing.drawOverlay(canvas);
@@ -633,6 +633,14 @@ class MapGame extends Game {
   /// Etiquetas del último [drawWorld] (se dibujan en [render]).
   final labels = <MapLabel>[];
   final labelPen = PixelLabelPen();
+
+  /// Etiqueta con [priority] (no se pisa con las otras con prioridad).
+  void _rankedText(Canvas c, String s, double x, double y, Color color,
+      double size, int priority) {
+    if (!screenLabels) return actors.text(c, s, x, y, color, size);
+    labels.add(MapTextLabel(c.getTransform(), s, x, y, color, size,
+        priority: priority));
+  }
 
   /// Todas las capas del mapa en el lienzo virtual (orden del spec).
   void drawWorld(Canvas c, SessionView view) {
@@ -668,8 +676,8 @@ class MapGame extends Game {
     final pulse = TrialRules.pulseCharge(s.time);
     // Capa estática por bloques + tiles animados encima (exploration.md §
     // "Rendimiento").
-    final worldView = Rect.fromLTWH(camX.roundToDouble(), camY.roundToDouble(),
-        vw * z, vh * z);
+    final worldView = Rect.fromLTWH(
+        camX.roundToDouble(), camY.roundToDouble(), vw * z, vh * z);
     tileLayer.draw(c, map, worldView,
         theme: map.theme,
         backdrop: abyss,
@@ -695,12 +703,18 @@ class MapGame extends Game {
     if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
       final (ox, oy) = map.townOrigin;
+      // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
+      // mundo"); primero los lugares, después los carteles.
+      var rank = 0;
       for (final l in TownLayout.landmarks) {
-        actors.text(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
-            TownPalette.label, 6);
+        _rankedText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
+            TownPalette.label, 6, rank++);
       }
-      farm.drawZoneLabels(c, s.town,
-          (txt, x, y, col, size) => actors.text(c, txt, x, y, col, size));
+      farm.drawZoneLabels(
+          c,
+          s.town,
+          (txt, x, y, col, size) =>
+              _rankedText(c, txt, x, y, col, size, rank++));
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
@@ -804,8 +818,8 @@ class MapGame extends Game {
                 farm.drawCan(c, px, py, face);
               case FarmHand.seed:
                 final d = kCrops[p.profile.life.farm.activeSeed];
-                farm.drawSeedBag(c, px, py, face,
-                    FarmPalette.fruit[d?.rarity.index ?? 0]);
+                farm.drawSeedBag(
+                    c, px, py, face, FarmPalette.fruit[d?.rarity.index ?? 0]);
             }
           }
         }
@@ -888,7 +902,8 @@ class MapGame extends Game {
 
     if (map.lobby) {
       TownEditLayer.draw(c, controller, map,
-          (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
+          (s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+          view: worldView);
     }
 
     // Carteles de las entradas de zona (mapa del mundo).

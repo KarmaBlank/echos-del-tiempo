@@ -49,6 +49,12 @@ class TownEdit {
   /// oeste; lo consume el mapa.
   (double, double)? shift;
 
+  /// Franja fantasma bajo el mouse (panel de info, § 1.3).
+  TownSide? hoverSide;
+
+  /// Construcción bajo el mouse (panel de info, § 1.3).
+  String? hoverBuild;
+
   void reset() {
     step = TownEditStep.browse;
     tile = null;

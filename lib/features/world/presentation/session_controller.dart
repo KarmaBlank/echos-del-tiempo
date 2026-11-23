@@ -1557,17 +1557,30 @@ class SessionController extends StateNotifier<SessionView?> {
     if (!_apply(TownAction(TownOp.expand, id: side.code))) return false;
     // La cámara de la edición acompaña al pueblo si se corrió el origen.
     final after = town.origin;
-    _edit?.shift = ((after.$1 - before.$1) * 16.0, (after.$2 - before.$2) * 16.0);
+    _edit?.shift =
+        ((after.$1 - before.$1) * 16.0, (after.$2 - before.$2) * 16.0);
     _emit();
     return true;
   }
 
   /// Mouse sobre el tile ([tx], [ty]) en la edición: el fantasma de lo
-  /// que se mueve o se pone lo sigue.
+  /// que se mueve o se pone lo sigue; si no, anota la franja o la
+  /// construcción bajo el mouse para el panel de info.
   void editHover(int tx, int ty) {
     final e = _edit;
     if (e == null) return;
     if (e.step != TownEditStep.moving && e.step != TownEditStep.placing) {
+      final side = editSideAt(tx, ty);
+      final b = side != null
+          ? null
+          : (TownRules.buildAt(town, tx, ty) ??
+                  TownRules.buildAtSign(town, tx, ty))
+              ?.id;
+      if (side == e.hoverSide && b == e.hoverBuild) return;
+      e
+        ..hoverSide = side
+        ..hoverBuild = b;
+      _emit();
       return;
     }
     if (e.ghost == (tx, ty)) return;
@@ -1598,10 +1611,9 @@ class SessionController extends StateNotifier<SessionView?> {
         e.ghost = (tx, ty);
         if (editGhostError == null) {
           final ok = e.step == TownEditStep.placing
-              ? _apply(TownAction(TownOp.place,
-                  id: e.placeDef, x: tx, y: ty))
-              : _apply(TownAction(TownOp.move,
-                  target: e.selected, x: tx, y: ty));
+              ? _apply(TownAction(TownOp.place, id: e.placeDef, x: tx, y: ty))
+              : _apply(
+                  TownAction(TownOp.move, target: e.selected, x: tx, y: ty));
           if (ok) e.reset();
         }
       default:
@@ -1690,6 +1702,7 @@ class SessionController extends StateNotifier<SessionView?> {
         ? ('LAGO', TownRules.lakeSignText(town, b))
         : ('HUERTA', TownRules.farmSignText(b));
   }
+
   bool takeLifeNode(LifeSkillKind k, String node) =>
       _apply(LifeTreeAction(k.name, node));
   bool resetLifeTree(LifeSkillKind k) => _apply(LifeTreeAction(k.name, null));

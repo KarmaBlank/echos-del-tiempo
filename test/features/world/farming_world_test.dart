@@ -6,6 +6,7 @@ import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -93,6 +94,9 @@ void main() {
     await h.frames(3);
     expect(c.editingTown, isTrue);
     expect(find.byKey(const ValueKey('town-edit-bar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('town-edit-done')), findsOneWidget);
+    // El HUD normal se oculta en la edición (town_editor.md § 1).
+    expect(find.byType(WorldHud), findsNothing);
     final me = (c.local.x, c.local.y);
 
     final game = tester

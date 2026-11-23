@@ -462,7 +462,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ),
             ),
           if (_hover case final h?
-              when view.mode == SessionMode.lobby && view.panel == null)
+              when view.mode == SessionMode.lobby &&
+                  view.panel == null &&
+                  !controller.editingTown)
             Positioned(
               key: const ValueKey('farm-tooltip'),
               left: h.$2.dx + 16,
@@ -479,8 +481,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ),
             ),
           if (controller.editingTown)
-            Positioned.fill(
-                child: TownEditOverlay(controller: controller)),
+            Positioned.fill(child: TownEditOverlay(controller: controller)),
           // Pesca en el mapa: clic mantenido = E mantenida (sin ventana).
           if (controller.isFishing)
             Positioned.fill(
@@ -741,16 +742,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         ];
       default:
         return [
-          Positioned.fill(
-            child: WorldHud(
-              view: view,
-              controller: controller,
-              onExit: () => Navigator.of(context).maybePop(),
-              onMenu: _openPause,
-              chatFocus: _chatFocus,
-              onChatDone: _chatDone,
+          // Edición del pueblo: solo su barra y su panel (town_editor.md
+          // § 1); el HUD normal se oculta para que nada se pise.
+          if (!controller.editingTown)
+            Positioned.fill(
+              child: WorldHud(
+                view: view,
+                controller: controller,
+                onExit: () => Navigator.of(context).maybePop(),
+                onMenu: _openPause,
+                chatFocus: _chatFocus,
+                onChatDone: _chatDone,
+              ),
             ),
-          ),
           if (view.panel case final panel?)
             Positioned.fill(child: _panel(panel, view, controller)),
           if (s.victoryLap) ...[

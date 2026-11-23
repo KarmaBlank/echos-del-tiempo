@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../app/theme/proto_colors.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/world_save.dart';
@@ -25,52 +24,114 @@ class TownEditOverlay extends StatelessWidget {
     final e = c.townEdit;
     if (e == null) return const SizedBox.shrink();
     final menu = _menu(c, e);
-    return Stack(children: [
-      Positioned(
-        top: 8,
-        left: 0,
-        right: 0,
-        child: Center(
-          child: Container(
-            key: const ValueKey('town-edit-bar'),
-            constraints: const BoxConstraints(maxWidth: 900),
-            color: ProtoColors.scrim(0.8),
-            padding: EdgeInsets.symmetric(
-                horizontal: DsSpace.md, vertical: DsSpace.xs),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text('EDICIÓN DEL PUEBLO', style: DsText.title()),
-              SizedBox(width: DsSpace.md),
-              Flexible(
-                  child: Text(_hint(c, e),
-                      overflow: TextOverflow.ellipsis,
-                      style: DsText.detail())),
-              SizedBox(width: DsSpace.md),
-              DsButton('LISTO [ESC]',
-                  key: const ValueKey('town-edit-done'),
-                  size: DsButtonSize.compact,
-                  kind: DsButtonKind.primary,
-                  onPressed: c.exitTownEdit),
-            ]),
+    final info = _info(c, e);
+    // Barra de arriba a todo el ancho y, debajo a la derecha, una sola
+    // columna: el menú del paso y el panel de info de lo que está bajo
+    // el mouse (town_editor.md § 1.3). Nada se superpone.
+    return LayoutBuilder(builder: (context, box) {
+      final side = (box.maxWidth * 0.3).clamp(240.0, 320.0);
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+          key: const ValueKey('town-edit-bar'),
+          color: DsColors.background,
+          padding: EdgeInsets.symmetric(
+              horizontal: DsSpace.md, vertical: DsSpace.xs),
+          child: Row(children: [
+            Text('EDICIÓN DEL PUEBLO', style: DsText.title()),
+            SizedBox(width: DsSpace.md),
+            Expanded(
+                child: Text(_hint(c, e),
+                    key: const ValueKey('town-edit-hint'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DsText.detail())),
+            SizedBox(width: DsSpace.md),
+            DsButton('LISTO [ESC]',
+                key: const ValueKey('town-edit-done'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.primary,
+                onPressed: c.exitTownEdit),
+          ]),
+        ),
+        Expanded(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: EdgeInsets.all(DsSpace.sm),
+              child: SizedBox(
+                width: side,
+                child: SingleChildScrollView(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (menu != null)
+                          Container(
+                            key: const ValueKey('town-edit-menu'),
+                            color: DsColors.background,
+                            padding: EdgeInsets.all(DsSpace.sm),
+                            child: menu,
+                          ),
+                        if (menu != null && info != null)
+                          SizedBox(height: DsSpace.xs),
+                        if (info != null)
+                          Container(
+                            key: const ValueKey('town-edit-hover'),
+                            color: DsColors.background,
+                            padding: EdgeInsets.all(DsSpace.sm),
+                            child: info,
+                          ),
+                      ]),
+                ),
+              ),
+            ),
           ),
         ),
-      ),
-      if (menu != null)
-        Positioned(
-          top: 64,
-          right: 16,
-          width: 320,
-          child: Container(
-            key: const ValueKey('town-edit-menu'),
-            color: DsColors.background,
-            padding: EdgeInsets.all(DsSpace.sm),
-            child: menu,
-          ),
-        ),
-    ]);
+      ]);
+    });
+  }
+
+  /// Info de lo que está bajo el mouse: franja (con su costo) o
+  /// construcción. `null` si no hay nada o si ya lo muestra el menú.
+  static Widget? _info(SessionController c, TownEdit e) {
+    if (e.step != TownEditStep.browse && e.step != TownEditStep.side) {
+      return null;
+    }
+    final town = c.town;
+    if (e.hoverSide case final side?) {
+      if (e.step == TownEditStep.side && e.side == side) return null;
+      final why = c.cannotExpandTown(side);
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSectionHeader('AMPLIAR AL ${side.label}'),
+            Text(TownRules.costText(TownRules.cost(town.expansions + 1)),
+                key: const ValueKey('town-edit-hover-cost'),
+                style: DsText.detail()),
+            Text(why ?? 'Clic para ampliar.', style: DsText.detail()),
+          ]);
+    }
+    if (e.step != TownEditStep.browse) return null;
+    final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
+    if (b == null) return null;
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DsSectionHeader(b.kind.label),
+          Text(
+              b.kind == BuildKind.lago
+                  ? TownRules.lakeSignText(town, b)
+                  : TownRules.farmSignText(b),
+              style: DsText.detail()),
+          Text('Clic para ver opciones.', style: DsText.detail()),
+        ]);
   }
 
   static String _hint(SessionController c, TownEdit e) => switch (e.step) {
-        TownEditStep.moving || TownEditStep.placing =>
+        TownEditStep.moving ||
+        TownEditStep.placing =>
           c.editGhostError ?? 'Clic para dejarlo acá',
         _ => 'WASD o arrastrar: cámara · rueda: zoom · clic: elegir',
       };
@@ -94,7 +155,8 @@ class TownEditOverlay extends StatelessWidget {
         final why = c.cannotExpandTown(side);
         return col([
           DsSectionHeader('AMPLIAR AL ${side.label}',
-              trailing: DsBadge('${town.expansions}/${TownRules.maxExpansions}')),
+              trailing:
+                  DsBadge('${town.expansions}/${TownRules.maxExpansions}')),
           Text(
               'Suma una franja de $kTownStrip tiles de terreno libre. '
               '${TownRules.costText(TownRules.cost(town.expansions + 1))}',
@@ -240,9 +302,9 @@ class TownEditOverlay extends StatelessWidget {
               ? 'MOVER'
               : construction(e.placeDef ?? '')?.name ?? ''),
           Text(c.editGhostError ?? 'Clic en el mapa para dejarlo.',
-              key: const ValueKey('town-edit-ghost'),
-              style: DsText.detail()),
-          if (e.step == TownEditStep.moving && c.editSelected?.kind == BuildKind.lago)
+              key: const ValueKey('town-edit-ghost'), style: DsText.detail()),
+          if (e.step == TownEditStep.moving &&
+              c.editSelected?.kind == BuildKind.lago)
             Text('Pegado a otro lago, se funden en uno con todos sus peces.',
                 style: DsText.detail()),
           SizedBox(height: DsSpace.xs),

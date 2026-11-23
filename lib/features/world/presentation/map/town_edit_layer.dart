@@ -15,8 +15,13 @@ import 'map_themes.dart';
 abstract final class TownEditLayer {
   static const ts = 16.0;
 
-  static void draw(
-      Canvas c, SessionController ctl, GameMap map, MapText text) {
+  /// Etiqueta corta de la franja de [side] ("+ NORTE").
+  static String sideTag(TownSide side) => '+ ${side.label}';
+
+  /// [view]: lo visible del mundo (px); la etiqueta de cada franja va en
+  /// el centro de su parte visible.
+  static void draw(Canvas c, SessionController ctl, GameMap map, MapText text,
+      {Rect? view}) {
     final e = ctl.townEdit;
     if (e == null) return;
     final town = ctl.town;
@@ -27,7 +32,6 @@ abstract final class TownEditLayer {
       ..strokeWidth = 1;
     final w = map.width * ts, h = map.height * ts;
     const s = kTownStrip * ts;
-    final cost = TownRules.costText(TownRules.cost(town.expansions + 1));
     for (final side in TownSide.values) {
       if (TownRules.sideFull(town, side) != null) continue;
       final r = switch (side) {
@@ -38,13 +42,21 @@ abstract final class TownEditLayer {
       };
       final picked = e.side == side;
       c.drawRect(r, fill..color = TownEditPalette.side);
-      c.drawRect(r.deflate(0.5),
-          line..color = picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
+      c.drawRect(
+          r.deflate(0.5),
+          line
+            ..color =
+                picked ? TownEditPalette.selected : TownEditPalette.sideBorder);
       final why = ctl.cannotExpandTown(side);
       final col =
           why == null ? TownEditPalette.sideText : TownEditPalette.sideLocked;
-      text('AMPLIAR AL ${side.label}', r.center.dx, r.center.dy - 4, col, 7);
-      text(cost, r.center.dx, r.center.dy + 6, col, 6);
+      // Solo una etiqueta corta y chica; el costo va en el panel de la
+      // derecha al pasar el mouse (town_editor.md § 1.3).
+      final vis = view == null ? r : r.intersect(view);
+      if (vis.width <= 0 || vis.height <= 0) continue;
+      final hot = picked || e.hoverSide == side;
+      text(sideTag(side), vis.center.dx, vis.center.dy + 3,
+          hot ? TownEditPalette.selected : col, 6);
     }
     for (final b in town.builds) {
       final sel = b.id == e.selected;
@@ -78,13 +90,14 @@ abstract final class TownEditLayer {
     final ok = ctl.editGhostError == null;
     for (final p in parts) {
       final r = Rect.fromLTWH(p.x * ts, p.y * ts, p.w * ts, p.h * ts);
-      c.drawRect(
-          r, fill..color = ok ? TownEditPalette.valid : TownEditPalette.invalid);
+      c.drawRect(r,
+          fill..color = ok ? TownEditPalette.valid : TownEditPalette.invalid);
       c.drawRect(
           r.deflate(0.5),
           line
-            ..color =
-                ok ? TownEditPalette.validBorder : TownEditPalette.invalidBorder);
+            ..color = ok
+                ? TownEditPalette.validBorder
+                : TownEditPalette.invalidBorder);
     }
   }
 }
