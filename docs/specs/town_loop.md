@@ -68,10 +68,31 @@ restos del pasado magitec:
 | **Huerta** | Cultivo | Tierra cerca de raíces de ruinas antiguas |
 | **Agropecuario** | Compra/venta | Viajero del presente; único que compra pescado y cosecha |
 | **Torre de loot perdido** | Revelar botín, pool de objetos sin recoger (`loot.md` § 4b.2) | Ruina magitec que atrae ecos de objetos perdidos |
-| **Forja / Posada** | Crafteo y mejora de equipo, descanso | Edificios mejorables (§ 4) |
+| **Forja / Posada** | Mejorar, condensar y fusionar armas (v0.32.3: panel FORJA propio), descanso | Edificios mejorables (§ 4) |
+| **Armería** (v0.32.3) | Comprar y vender armas | Edificio propio, aparte de la forja |
+| **Taller de oficios** (v0.32.3) | Condensar y fabricar lo de los oficios: materiales de cultivo y pesca (fibra, cebo, tabla); más adelante semillas y herramientas de oficio | Banco de trabajo del presente para lo que dan el lago y la huerta |
 | **Caminos de tierra** | Navegación; uno lleva a la salida de expedición | — |
 
 Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
+
+#### TALLER DE OFICIOS (v0.32.3)
+
+- Nombre genérico y neutral de lore: **el dueño puede renombrarlo**
+  (cambia solo `TownLayout.landmarks` y los textos del panel).
+- Las armas quedan en dos lugares (panels.md § "Armería y Forja"): la
+  ARMERÍA compra y vende; la FORJA mejora, condensa materiales de arma y
+  fusiona. Todo lo de oficio (plantas,
+  pescados, semillas, herramientas de oficio y materiales de cultivo y
+  pesca) se hace en el taller.
+- Lugar fijo `TownSpot.workshop` (`@workshop`), tile `O` (sólido; se
+  dibuja pasto y encima el sprite `items.vida_taller_oficios` del
+  manifest, hoy arte provisorio de la casa de nivel 3). 3 × 3 en (6, 6)
+  del pueblo base, al sur del camino norte, entre el portal y el lago.
+  Sin cartel ni cofre (es un lugar, no una construcción).
+- `[E] Taller de oficios` abre `WorldPanel.workshop` (`WorkshopPanel`):
+  plantilla `DsCraftGridTemplate` (ui_minimal.md § 4.1). Hoy las
+  recetas son las de materials_economy.md § 4.4; las recetas nuevas de
+  oficio van acá, nunca en la armería.
 
 ---
 

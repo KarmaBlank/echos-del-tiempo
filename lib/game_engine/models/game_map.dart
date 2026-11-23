@@ -104,6 +104,10 @@ abstract final class Tile {
   /// pasto y el sprite del taller va encima (`items.vida_taller_oficios`).
   static const workshop = 'O';
 
+  /// ARMERÍA del pueblo (sólido; v0.32.3): pasto y encima el sprite
+  /// `items.vida_armeria`. La FORJA sigue siendo [armory].
+  static const shop = 'R';
+
   /// Tierra de la huerta (caminable; farming.md § 2, v0.23.0). Las
   /// parcelas aradas y los cultivos se dibujan encima, desde el estado.
   static const soil = 'u';
@@ -160,7 +164,7 @@ abstract final class Tile {
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit, forage, forageUsed, house,
-    workshop,
+    workshop, shop,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).

@@ -36,19 +36,22 @@ class TownPlan {
   /// dueño, el resto en su lugar de siempre. Mismo orden que
   /// `TownLayout.landmarks` (la prioridad de las etiquetas).
   ///
-  /// El TALLER DE OFICIOS (v0.32.3) llegó después: en un pueblo guardado
-  /// antes, si su lugar de siempre ya está ocupado (una construcción, un
-  /// faro, otro lugar movido), sin marca propia va al hueco libre más
-  /// cercano (town_editor.md § 3.3).
+  /// La ARMERÍA y el TALLER DE OFICIOS (v0.32.3, `TownLayout.lateSpots`)
+  /// llegaron después: en un pueblo guardado antes, si su lugar de
+  /// siempre ya está ocupado (una construcción, un faro, otro lugar
+  /// movido), sin marca propia van al hueco libre más cercano
+  /// (town_editor.md § 3.3).
   static List<TownLandmark> landmarksOf(TownState s) {
-    final raw = _rawLandmarks(s);
-    final id = TownLayout.landmark(TownSpot.workshop).id;
-    if (s.marks.containsKey(id)) return raw;
-    final i = raw.indexWhere((l) => l.spot == TownSpot.workshop);
-    final def = raw[i];
-    if (!_blocked(s, raw, def.x, def.y, def)) return raw;
-    final (x, y) = _freeSpot(s, raw, def);
-    return [...raw]..[i] = def.at(x, y);
+    var raw = _rawLandmarks(s);
+    for (final spot in TownLayout.lateSpots) {
+      final i = raw.indexWhere((l) => l.spot == spot);
+      final def = raw[i];
+      if (s.marks.containsKey(def.id)) continue;
+      if (!_blocked(s, raw, def.x, def.y, def)) continue;
+      final (x, y) = _freeSpot(s, raw, def);
+      raw = [...raw]..[i] = def.at(x, y);
+    }
+    return raw;
   }
 
   static List<TownLandmark> _rawLandmarks(TownState s) => s.marks.isEmpty

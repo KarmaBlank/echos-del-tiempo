@@ -237,7 +237,35 @@ armería, ver abajo; en `prep` la armería del lobby no se abre).
   (`ReadyAction`) abajo a la derecha, visibles en todas las pestañas.
 - `Esc` no cierra la preparación (no hay a dónde volver).
 
-## Armería (`shop`, 1352-1358)
+## Armería y Forja (v0.32.3)
+
+Antes un solo panel ARMERÍA abría desde el edificio con el cartel FORJA
+(confuso). Desde v0.32.3 son dos lugares y dos paneles
+(`armory_panel.dart`, ambos sobre el organismo `ShopTabsPanel`):
+
+- **FORJA** (`TownSpot.forge`, el edificio de siempre; `[E] Forja`,
+  `WorldPanel.forge`, `ForgePanel`). Pestañas `MEJORAR · CONDENSAR ·
+  FUSIÓN` (`ForgeHallTab`): MEJORAR es la FORJA de siempre (sube
+  Poder, Crítico, Velocidad, Defensa); CONDENSAR solo materiales de arma
+  (ui_minimal.md § 4); FUSIÓN como abajo. Ayuda `kForgeHelp`. En la
+  Travesía, el nodo ARMERÍA abre este panel (`ABRIR FORJA`).
+- **ARMERÍA** (`TownSpot.armory`, edificio nuevo de 3 × 3 en (26, 6) del
+  pueblo base, tile `R`, sprite `items.vida_armeria` del manifest con
+  arte provisorio; `[E] Armería`, `WorldPanel.armory`, `ArmoryPanel`).
+  Pestañas `COMPRAR · VENDER · CONSUMIBLES` (`ArmoryTab`). COMPRAR y
+  VENDER usan `DsCraftGridTemplate` (`armory_shop.dart`): buscador
+  (`armory-buy-search` / `armory-sell-search`), chips (COMPRAR: TODAS +
+  una por clase; VENDER: TODAS + una por rareza que tengas), grilla de
+  casillas estilo INVENTARIO (`armory-buy-cell-<base>` /
+  `armory-sell-cell-<uid>`) y detalle a la derecha con `COMPRAR ₵n`
+  (`buy-<base>`) o `VENDER ₵n` (`sell-<uid>`, `CraftOp.sell`; la
+  equipada no se vende), grises con el motivo. Vender también sigue en
+  Personaje › Inventario. CONSUMIBLES queda acá por ahora (pendiente: el
+  dueño decide si se muda).
+- Preparación: las pestañas de las dos (ARMERÍA y después FORJA).
+- Sin cartel ni cofre: son lugares fijos, no construcciones.
+
+## Armería (`shop`, 1352-1358) — referencia anterior a v0.32.3
 
 Título `ARMERÍA` [?], a la derecha `Créditos $N`. Pestañas `COMPRAR ·
 FORJA · FUSIÓN · CONSUMIBLES` (`ArmoryTab`), cada una con su línea "qué

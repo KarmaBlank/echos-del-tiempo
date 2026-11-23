@@ -5,8 +5,11 @@ enum TownSpot {
   /// Tablero de encargos: elegir zona / misión (el mapa de viaje).
   board,
 
-  /// Forja / armería.
+  /// FORJA: mejorar, condensar y fusionar armas (v0.32.3).
   forge,
+
+  /// ARMERÍA: comprar y vender armas (v0.32.3; panels.md § "Armería").
+  armory,
 
   /// Portal del Eco (ecos_atlas.md § 1).
   portal,
@@ -98,7 +101,13 @@ abstract final class TownLayout {
         w: 3),
     TownLandmark(TownSpot.workshop, 'TALLER DE OFICIOS', Tile.workshop, 6, 6,
         w: 3, h: 3),
+    TownLandmark(TownSpot.armory, 'ARMERÍA', Tile.shop, 26, 6, w: 3, h: 3),
   ];
+
+  /// Lugares que llegaron después del editor (v0.32.3): en un pueblo
+  /// guardado antes van al hueco libre más cercano si el suyo está
+  /// ocupado (`TownPlan.landmarksOf`).
+  static const lateSpots = [TownSpot.workshop, TownSpot.armory];
 
   /// Muelles del lago base sin mover (los arma `TownPlan`).
   static const fishingSpots = [(10, 15), (10, 18), (6, 14)];

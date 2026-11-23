@@ -37,7 +37,7 @@ Future<void> _toOps(WidgetTester tester, String uid) async {
   await pumpPanel(tester,
       profile: lootWarrior(),
       build: (v, c) =>
-          ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+          ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
   await _tap(tester, 'bench-weapon-$uid');
   await _tap(tester, 'bench-next');
 }

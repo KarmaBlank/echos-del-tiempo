@@ -838,7 +838,8 @@ class MapGame extends Game {
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
           hover: controller.hoverHelper,
           markOf: _npcMark);
-      _drawWorkshop(c, map);
+      _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
+      _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
@@ -1304,13 +1305,13 @@ class MapGame extends Game {
   /// Haces de Legendarios recién caídos al inventario en curso (tests).
   int get activeBeams => _beams.length;
 
-  /// TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3): el sprite
-  /// `items.vida_taller_oficios` del manifest, apoyado en su rectángulo.
-  void _drawWorkshop(Canvas c, GameMap map) {
-    final im = sprites.lifeIcon('taller_oficios', 'herramienta');
+  /// Lugares dibujados con sprite (v0.32.3: TALLER DE OFICIOS y
+  /// ARMERÍA): `items.vida_<id>` del manifest, apoyado en su rectángulo.
+  void _drawLandmarkSprite(Canvas c, GameMap map, TownSpot spot, String id) {
+    final im = sprites.lifeIcon(id, 'herramienta');
     if (im == null) return;
     final l = (map.townMarks ?? TownLayout.landmarks)
-        .where((l) => l.spot == TownSpot.workshop)
+        .where((l) => l.spot == spot)
         .firstOrNull;
     if (l == null) return;
     final (ox, oy) = map.townOrigin;

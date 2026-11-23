@@ -125,7 +125,8 @@ import '../../game_engine/serialization/session_json.dart';
 /// 53 (v0.32.0): encargos seguidos y vistos en el perfil (`trk`, `seen`)
 /// y `town` con `track` / `seen` (roles.md § 8).
 /// 54 (v0.32.3): TALLER DE OFICIOS en el pueblo (landmark `@workshop`,
-/// tile `O`): cambia el plano del pueblo que arma cada par.
+/// tile `O`) y ARMERÍA aparte de la FORJA (`@armory`, tile `R`): cambia
+/// el plano del pueblo que arma cada par.
 const kProtocolVersion = 54;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en

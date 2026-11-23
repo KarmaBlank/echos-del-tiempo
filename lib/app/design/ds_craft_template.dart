@@ -18,6 +18,7 @@ class DsCraftItem {
     required this.border,
     required this.name,
     this.tag,
+    this.search,
     this.count,
     this.description,
     this.lines = const [],
@@ -34,6 +35,9 @@ class DsCraftItem {
 
   /// Valor que miran los filtros (el oficio).
   final String? tag;
+
+  /// Texto del buscador (por defecto [name]).
+  final String? search;
 
   /// Cuántos tenés (abajo a la derecha de la casilla).
   final int? count;
@@ -85,7 +89,11 @@ class DsCraftGridTemplate extends StatefulWidget {
     required this.items,
     this.filters = const [],
     this.empty = 'Nada para hacer.',
+    this.searchHint,
   });
+
+  /// Con texto, buscador arriba de los chips (`<p>-search`).
+  final String? searchHint;
 
   /// Prefijo de las claves: `<p>-filter-<i>`, `<p>-cell-<id>`,
   /// `<p>-detail`, `<p>-empty`.
@@ -104,6 +112,7 @@ class DsCraftGridTemplate extends StatefulWidget {
 class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
   int _filter = 0;
   String? _id;
+  String _query = '';
 
   String _p(String s) => '${widget.keyPrefix}-$s';
 
@@ -112,7 +121,10 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
     final tag = widget.filters.isEmpty ? null : widget.filters[_filter].tag;
     final shown = [
       for (final i in widget.items)
-        if (tag == null || i.tag == tag) i
+        if ((tag == null || i.tag == tag) &&
+            (_query.isEmpty ||
+                (i.search ?? i.name).toLowerCase().contains(_query)))
+          i
     ];
     final sel = shown.where((i) => i.id == _id).firstOrNull ??
         shown.firstOrNull;
@@ -141,8 +153,20 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.filters.length > 1) ...[
-          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        if (widget.searchHint != null || widget.filters.length > 1) ...[
+          Wrap(
+              spacing: DsSpace.xs,
+              runSpacing: DsSpace.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+            if (widget.searchHint != null)
+              DsSearchField(
+                  key: ValueKey(_p('search')),
+                  hint: widget.searchHint!,
+                  width: 200,
+                  onChanged: (v) =>
+                      setState(() => _query = v.trim().toLowerCase())),
+            if (widget.filters.length > 1)
             for (var i = 0; i < widget.filters.length; i++)
               DsButton(widget.filters[i].label,
                   key: ValueKey(_p('filter-$i')),
