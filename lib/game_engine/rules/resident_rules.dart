@@ -81,7 +81,7 @@ const kResidentRelics = <String, ResidentRelicDef>{
 };
 
 /// Cadenas de encargos (§ 10.2), de 3 a 4 pasos por habitante.
-const kResidentQuests = <String, List<QuestStepDef>>{
+const kResidentQuestsDefaults = <String, List<QuestStepDef>>{
   'ilda': [
     QuestStepDef(QuestKind.recolectar, 'hierba_rocio', 3,
         'Traeme tres hierbas de rocío: las de esta mañana, no las de ayer.',
@@ -144,6 +144,10 @@ const kResidentQuests = <String, List<QuestStepDef>>{
         gold: 800, rep: 2, reward: 'reloj_oren'),
   ],
 };
+
+/// Lo que lee el juego (código + `assets/data/npcs/npcs.json`).
+final Map<String, List<QuestStepDef>> kResidentQuests =
+    Map.of(kResidentQuestsDefaults);
 
 /// Resultado de entregar un encargo: perfil y pueblo nuevos y el paso de
 /// la cadena cumplido (si hubo).

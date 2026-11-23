@@ -4,7 +4,7 @@ description: >
   Feature-First, netcode agnóstico (P2P hoy, servidor dedicado / rollback
   a futuro vía la interfaz en lib/netcode/contracts).
 publish_to: "none"
-version: 0.35.0+118
+version: 0.35.1+119
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -81,6 +81,7 @@ flutter:
     # Datos de las ULT (docs/specs/ultimates_v2.md § 5.1).
     - assets/data/ults/
     - assets/data/enemy_ults/
+    - assets/data/npcs/
     # Plantillas de BUILD (docs/specs/build_planner_v2.md § 2.2).
     - assets/data/build_templates.yaml
     - assets/data/build_templates_custom.yaml

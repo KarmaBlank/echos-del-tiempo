@@ -388,6 +388,8 @@ la vieja.
 
 Todo con los componentes de docs/specs/design_system.md:
 
+> Área **NPC** (habitantes: ficha, DIÁLOGO, PEDIDOS): ver npc_editor.md.
+
 - Raíz: `DsToolbar` con título "Editor" y `DsTabBar` de tres pestañas:
   **Monitoreo · Balance · Visual** (Balance con sub-pestañas actuales:
   Entidades, Cambios, Parche). `DsBadge` en la pestaña con cambios sin
@@ -888,6 +890,62 @@ suma la entrada al manifest. Lo cargan los composition roots
 - **Pendiente**: sonido en momentos de batalla que no son ULT (hoy los
   elige `SessionSfx` por código), forma de onda en la pista, tono para
   OGG.
+
+### 7.7 Qué se está animando (claridad del editor de animaciones)
+
+Pedido del dueño: al agregar un key no se entendía qué parte se estaba
+keyeando ni qué se cambiaba. Comportamiento
+(`editor/fx_editor_selection.dart`, `fx_preview.dart`,
+`animations_page.dart`, `fx_editor_controller.dart`):
+
+- **Nombres legibles.** Cada pista es un *elemento* con nombre en
+  castellano (Sprite, Partículas, Estela, Forma, Cámara, Oscurecido,
+  Sacudida, Sonido…) y cada campo de un key es una *propiedad*
+  (Escala, Posición X/Y, Rotación, Opacidad, Ancla, Color, Valor…).
+  Lo que no tiene nombre conocido se muestra con su id del formato.
+- **Selección en verde.** Token nuevo `DsColors.editSelection` (verde
+  del tema, sigue al modo daltónico). El elemento de la pista elegida
+  se enmarca en la vista previa con un **recuadro verde**:
+  - Elementos con lugar en el mundo: centrado en su ancla
+    (`anchor`/`at`/`to`, o el objetivo; los ecos en el lanzador) más
+    `dx`/`dy`, de lado 28 px × `scale` (valores interpolados en el
+    cabezal; en pistas de disparos, el disparo elegido o el último).
+  - Elementos de pantalla completa (cámara, oscurecido, barras de cine,
+    tarjeta, destello, tinte, sacudida, congelado, sonido): el recuadro
+    enmarca la escena entera.
+  - **Manijas**: cruz al centro si el elemento tiene `dx`/`dy`
+    (arrastrar sobre la vista previa mueve el key elegido; medio px de
+    paso, una sola entrada de deshacer por arrastre), cuadraditos en
+    las esquinas si tiene `scale` (la escala se edita en el inspector).
+- **Línea de tiempo**: **una fila por elemento y propiedad**
+  ("Sprite · Escala"), en el orden en que aparecen los campos; las
+  pistas de disparos tienen una fila "Elemento · Disparos". Un rombo
+  aparece en la fila de cada propiedad que ese key fija. Línea
+  separadora entre elementos; la fila elegida y su etiqueta en verde;
+  el key elegido con recuadro verde y rombo más grande. La regla está
+  en segundos y el cabezal es una línea dorada con su tiempo
+  ("0.40 s"). Clic en una fila elige elemento y propiedad; doble clic
+  o `+ KEY` agrega el key en esa fila. Alto máximo 280 px con scroll.
+- **Dónde cae el key.** Sobre la línea de tiempo: "Editando: Sprite ·
+  Escala · key en 0.40 s · cabezal 0.52 s" y, al agregar, "Key en
+  0.40 s · Sprite · Escala" (o "Disparo en 0.80 s · Sacudida ·
+  Disparos"), en verde.
+- **Inspector (derecha).** Con un key elegido: elemento, número de key y
+  la misma frase de lugar; tabla **PROPIEDAD · ANTES · EN ESTE KEY**
+  con todas las propiedades del key y del anterior de la misma lista:
+  rombo lleno verde = keyeada en este key, rombo vacío = sigue el valor
+  anterior ("sigue"); en verde las que cambian respecto del key
+  anterior. Debajo, la interpolación de llegada (o "Disparo: ocurre
+  una vez, sin interpolación"). Los campos numéricos editables llevan
+  la etiqueta en verde si cambian; editar actualiza la vista previa al
+  instante (como antes, `FxCatalog.setLive`).
+- **Piel de cebolla** (`PIEL DE CEBOLLA`, apagada por defecto): dibuja
+  tenue la escena en el key anterior y el siguiente del elemento
+  elegido. Reproducir/pausa, loop, velocidad y scrub siguen como en
+  § 7.2.
+- **Pendiente**: arrastrar las esquinas para escalar en la vista previa,
+  rotar con manija, y una fila por propiedad para disparos.
+- Tests: `test/features/admin/animation_editor_selection_test.dart`.
 
 ## 8. Preguntas abiertas (respondidas por el dueño)
 

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../../core/audio/sfx_files.dart';
 import '../../core/balance/balance_asset_loader.dart';
 import '../../core/data/build_template_loader.dart';
+import '../../core/data/npc_data_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/layout/layout_catalog.dart';
@@ -27,6 +28,8 @@ Future<void> main() async {
   await LayoutCatalog.instance.load();
   // Plantillas de BUILD (docs/specs/build_planner_v2.md § 2.2).
   await BuildTemplateLoader.load();
+  // Textos y encargos de los habitantes (docs/specs/npc_editor.md § 1).
+  await NpcDataLoader.load();
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
       ults: await UltDataLoader.load());

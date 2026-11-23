@@ -21,7 +21,7 @@ class BiomeFisherDef {
   String get sprite => 'npc_pesc_$biome';
 }
 
-const kBiomeFishers = <String, BiomeFisherDef>{
+const kBiomeFishersDefaults = <String, BiomeFisherDef>{
   kBosque: BiomeFisherDef(kBosque, 'Nera de la Orilla', [
     'Este lago guarda peces que ya nadaban antes de los árboles.',
     'Si ves el agua brillar, tirá ahí. No me preguntes por qué.',
@@ -43,6 +43,10 @@ const kBiomeFishers = <String, BiomeFisherDef>{
     'Todo lo que saques de acá ya lo sacaste antes.',
   ]),
 };
+
+/// Lo que lee el juego (código + frases de `assets/data/npcs/npcs.json`).
+final Map<String, BiomeFisherDef> kBiomeFishers =
+    Map.of(kBiomeFishersDefaults);
 
 /// Lo que pide hoy el pescador de un bioma.
 typedef FisherRequest = ({String species, int n, int cm});

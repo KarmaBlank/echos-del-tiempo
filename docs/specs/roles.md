@@ -151,6 +151,12 @@ Por jugador, en el pueblo y en los biomas: "!" dorado
 no te contó; "?" si tenés listo lo que pide; nada si no. Reemplaza el
 "!" genérico. Las subpestañas del DIARIO llevan la misma marca.
 
+## 8.5 Editor
+
+Las reglas de órdenes, pedidos y encargos de forja se ven y ajustan por
+habitante en el Editor → NPC → PEDIDOS (npc_editor.md § 4), con
+ejemplos generados para un nivel elegido.
+
 ## 9. Pendiente
 
 Ver tech_debt.md v0.31.0 (paridad de XP sin simular, animales, party

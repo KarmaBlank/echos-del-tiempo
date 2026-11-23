@@ -41,7 +41,36 @@ class TownPlan {
   /// siempre ya está ocupado (una construcción, un faro, otro lugar
   /// movido), sin marca propia van al hueco libre más cercano
   /// (town_editor.md § 3.3).
+  ///
+  /// Memorizado (exploration.md § "Rendimiento"): con un lugar tardío
+  /// tapado, ubicarlo recorre todo el pueblo, y esto se pide decenas de
+  /// veces por cuadro (carteles, cofres, pescadores, avisos). Por
+  /// instancia de [TownState] (es inmutable) y, si llega otra con el
+  /// mismo plano (cambió una parcela o un cofre), por su clave.
   static List<TownLandmark> landmarksOf(TownState s) {
+    final hit = _landmarks[s];
+    if (hit != null) return hit;
+    final key = _layoutKey(s);
+    final byKey = _landmarksByKey[key];
+    if (byKey != null) return _landmarks[s] = byKey;
+    if (_landmarksByKey.length > 16) _landmarksByKey.clear();
+    return _landmarks[s] = _landmarksByKey[key] = _computeLandmarks(s);
+  }
+
+  static final _landmarks = Expando<List<TownLandmark>>('lugares');
+  static final _landmarksByKey = <String, List<TownLandmark>>{};
+  static final _reserved = Expando<List<TownRect>>('reservado');
+
+  /// Lo que mueve los lugares: lados, marcas, construcciones y faros.
+  static String _layoutKey(TownState s) => [
+        for (final v in TownSide.values) s.side(v),
+        for (final e in s.marks.entries) '${e.key}:${e.value.$1}.${e.value.$2}',
+        for (final b in s.builds)
+          '${b.id}:${b.kind.name}:${b.parts.map((p) => p.toJson().join('.')).join('/')}',
+        for (final (x, y) in s.lights) 'f$x.$y',
+      ].join(',');
+
+  static List<TownLandmark> _computeLandmarks(TownState s) {
     var raw = _rawLandmarks(s);
     for (final spot in TownLayout.lateSpots) {
       final i = raw.indexWhere((l) => l.spot == spot);
@@ -147,11 +176,12 @@ class TownPlan {
   }
 
   /// Lugares (con un tile de margen) y caminos fijos: ahí no se construye.
-  static List<TownRect> reserved(TownState s) => [
+  static List<TownRect> reserved(TownState s) => _reserved[s] ??=
+      List.unmodifiable([
         for (final l in landmarksOf(s))
           TownRect(l.x, l.y, l.w, l.h).inflate(1),
         ...fixedPaths(s),
-      ];
+      ]);
 
   /// El cartel de [b]: el primer lugar de `signSpots` que no pisa un
   /// camino fijo, un lugar ni otra construcción (si ninguno, el primero).

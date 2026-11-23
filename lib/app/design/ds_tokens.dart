@@ -69,6 +69,10 @@ abstract final class DsColors {
   /// del dorado de selección.
   static const conditionReady = ProtoColors.sky;
 
+  /// What an editor is acting on: selection box and handles on a canvas,
+  /// the selected key and the changed values (game_editor.md § 7.7).
+  static const editSelection = ProtoColors.green;
+
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
         'superficie': surface,
@@ -90,6 +94,7 @@ abstract final class DsColors {
         'Pulso': pulse,
         'MP': mp,
         'Instante': instant,
+        'selección de editor': editSelection,
       };
 }
 
@@ -139,6 +144,10 @@ class DsTextColor extends Color {
 
 /// Estilos de texto con nombre (design_system.md § 3.2).
 abstract final class DsText {
+  /// Display: Press Start 2P 32 nominal (nombre del juego en el título).
+  static TextStyle display([Color? c]) =>
+      RetroType.style(RetroType.display, color: c ?? DsColors.textTitle);
+
   /// Título: Press Start 2P 16 nominal.
   static TextStyle title([Color? c]) =>
       RetroType.style(RetroType.title, color: c ?? DsColors.textTitle);
