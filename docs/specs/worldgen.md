@@ -255,6 +255,10 @@ cuando el id existe.
   colisión no cambian, y lo único que viaja sigue siendo la semilla.
   `GameMap.floors[f]` describe cada piso (rectángulo, spawn, escaleras,
   arena, spots, vaults).
+- v0.34.0: la semilla de una misión de zona del Mundo es fija por mundo
+  (`DungeonRules.seedFor(worldId, missionId)`) y la mazmorra se guarda
+  (persistent_dungeons.md). Ecos, Pruebas, Abismo y sin mundo siguen con
+  semilla nueva en cada entrada.
 - El piso `f` de la zona `z` se genera con
   `semilla_f = (semilla + 7919 × f + 104729 × z) | 0`.
 - Todos los pisos tienen la **arena** de 13 × 13 con barrera `G` como el

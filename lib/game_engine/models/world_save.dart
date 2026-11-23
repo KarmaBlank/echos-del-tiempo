@@ -2,12 +2,14 @@
 /// pueblo; los personajes siguen aparte y entran a cualquier mundo.
 library;
 
+import 'dungeon_save.dart';
 import 'farm_plot.dart';
 import 'npc_bond.dart';
 import 'resident.dart';
 import 'sky.dart';
 import 'town_build.dart';
 
+export 'dungeon_save.dart';
 export 'farm_plot.dart';
 export 'npc_bond.dart';
 export 'resident.dart';
@@ -49,7 +51,17 @@ class TownState {
       this.sky = const SkyState(),
       this.residents = const {},
       this.daily = const {},
-      this.bonds = const {}});
+      this.bonds = const {},
+      this.dungeons = const {}});
+
+  /// Mazmorras de zona del mundo (persistent_dungeons.md), por id de
+  /// misión. Solo del anfitrión: se guarda (`dg`) pero no viaja en
+  /// `farmJson`.
+  final Map<String, DungeonSave> dungeons;
+
+  /// [d] guardada (por su misión).
+  TownState withDungeon(DungeonSave d) =>
+      copyWith(dungeons: {...dungeons, d.missionId: d});
 
   /// Lazos con los habitantes (overworld_biomes.md § 12): charlas y,
   /// para los arraigados, amistad y pedidos. JSON `nat`.
@@ -210,6 +222,7 @@ class TownState {
     Map<String, ResidentState>? residents,
     Map<String, int>? daily,
     Map<String, NpcBond>? bonds,
+    Map<String, DungeonSave>? dungeons,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -224,7 +237,8 @@ class TownState {
         wild: wild ?? this.wild,
         residents: residents ?? this.residents,
         daily: daily ?? this.daily,
-        bonds: bonds ?? this.bonds);
+        bonds: bonds ?? this.bonds,
+        dungeons: dungeons ?? this.dungeons);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -272,6 +286,11 @@ class TownState {
         if (lostLoot.isNotEmpty) 'lost': lostLoot,
         if (cycle != 0) 'cycle': cycle,
         ...farmJson(),
+        if (dungeons.isNotEmpty)
+          'dg': [
+            for (final k in (dungeons.keys.toList()..sort()))
+              dungeons[k]!.toJson()
+          ],
       };
 
   static Map<String, int> _ints(Object? v) => TownBuild.ints(v);
@@ -354,6 +373,12 @@ class TownState {
           ? {
               for (final v in raw['nat'] as List)
                 if (NpcBond.fromJson(v) case final b?) b.npc: b,
+            }
+          : const {},
+      dungeons: raw['dg'] is List
+          ? {
+              for (final v in raw['dg'] as List)
+                if (DungeonSave.fromJson(v) case final d?) d.missionId: d,
             }
           : const {},
     );

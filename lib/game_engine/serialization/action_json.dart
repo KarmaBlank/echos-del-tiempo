@@ -228,6 +228,8 @@ abstract final class ActionJson {
             't': 'leaveD',
             if (a.poiId != null) 'i': a.poiId,
           },
+        // Protocolo 58 (v0.34.0): Ofrenda del jefe.
+        OfferBossAction() => {'t': 'offer'},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -462,6 +464,8 @@ abstract final class ActionJson {
         return ForageAction(j.integer('i'));
       case 'leaveD':
         return LeaveDungeonAction(poiId: j.intOrNull('i'));
+      case 'offer':
+        return const OfferBossAction();
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

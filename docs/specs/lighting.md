@@ -179,11 +179,13 @@ la red ni se guarda.
 - Faroles: en `MissionRun.poiUsed`, que ya viaja en el snapshot y se
   guarda con la run: compartidos por el grupo y del host.
 - Niebla: del cliente, toda la misión (§ 5.4).
-- Cada vez que se entra a una mazmorra se genera con una semilla nueva
-  (worldgen.md § 6.6): salir y volver a entrar es otra mazmorra, así que
-  hoy faroles y niebla duran la misión, no la zona. Que persistan "por
-  mazmorra" pide decidir si una zona mantiene su mapa entre entradas
-  (pendiente del dueño).
+- v0.34.0 (persistent_dungeons.md): las mazmorras de zona tienen semilla
+  fija por mundo y su `MissionRun` se guarda en el mundo, así que los
+  faroles encendidos quedan para siempre en ese mundo (no se apagan con
+  la reaparición). La niebla se guarda por jugador en su dispositivo
+  (`FogOfWar.archive`, `accounts/fog.json`, § 2.3 de ese spec). Ecos,
+  Pruebas y Abismo siguen siendo nuevos en cada entrada: faroles y
+  niebla duran esa visita.
 
 ## 6. Colores
 

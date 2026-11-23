@@ -46,6 +46,12 @@ class LeaveDungeonAction extends SessionAction {
   const LeaveDungeonAction({this.poiId});
 }
 
+/// `offer` (protocolo 58, persistent_dungeons.md § 4): pagar la Ofrenda
+/// en el altar del jefe vencido de una mazmorra de zona para revivirlo.
+class OfferBossAction extends SessionAction {
+  const OfferBossAction();
+}
+
 /// `forage` (protocolo 48): recolectar el punto [spot] del exterior
 /// (índice de `BosqueLayout.forage`; overworld_biomes.md § 3.2).
 class ForageAction extends SessionAction {

@@ -26,7 +26,8 @@ Cada jugador decide solo dónde está:
   pesca en el pueblo o recolecta en el bosque nunca entra a una pelea
   ajena.
 - Al terminar una mazmorra sus jugadores vuelven al **pueblo** (como
-  siempre) y la instancia se cierra.
+  siempre) y la instancia se cierra. Desde v0.34.0 una mazmorra de zona
+  queda **guardada en el mundo** al cerrarse (persistent_dungeons.md).
 
 ## 2. Modelo (host)
 
@@ -102,7 +103,9 @@ solo; los demás siguen adentro.
   suyo que quedó en el piso de la mazmorra se queda ahí (deuda).
 - La instancia sigue para los que quedan. Si sale el último, **la
   instancia se cierra** (sin resultado ni rango; el loot del piso se
-  pierde). Volver a ENTRAR arma una nueva.
+  pierde). Desde v0.34.0, si es una mazmorra de zona, antes de cerrarse
+  se **estaciona** en el mundo (persistent_dungeons.md § 2.1) y volver a
+  ENTRAR la restaura; Ecos, Pruebas y Abismo arman una nueva.
 - Sus compañeros de solitario salen con él.
 
 ### 2.3 Cerrar

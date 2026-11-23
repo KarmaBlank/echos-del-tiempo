@@ -41,6 +41,7 @@ import 'quest_track_rules.dart' show QuestTrackRules;
 import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
 import 'npc_talk_rules.dart';
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
+import 'dungeon_rules.dart';
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
 import 'inventory_rules.dart';
@@ -601,6 +602,28 @@ class SessionEngine {
   /// campo (nunca en batalla ni repartiendo puntos), vivo, sin resultado;
   /// en la entrada del piso 1 o junto a una piedra de paso activada
   /// ([poiId]).
+  /// [session] con su mazmorra de zona guardada en el pueblo
+  /// (persistent_dungeons.md § 2). Igual si no hay nada que guardar.
+  GameSession parkDungeon(GameSession session) {
+    final t = DungeonRules.park(session, catalog);
+    return identical(t, session.town) ? session : (session.copy()..town = t);
+  }
+
+  /// El jugador [id] puede usar el altar de la Ofrenda ahora.
+  bool canOffer(GameSession s, String id) {
+    final p = s.players[id];
+    final m = s.mission;
+    if (p == null || m == null || s.mode != SessionMode.field ||
+        s.result != null || !DungeonRules.persistent(s, zone: m.zone)) {
+      return false;
+    }
+    final b = DungeonRules.boss(m);
+    return b != null &&
+        !b.alive &&
+        b.floor == m.floor &&
+        _Op._dist(p.x, p.y, b.homeX, b.homeY) <= DungeonRules.altarReach;
+  }
+
   bool canLeave(GameSession s, String id, {int? poiId}) {
     final p = s.players[id];
     final m = s.mission;
@@ -1287,6 +1310,8 @@ class _Op {
       // Salir solo de la mazmorra lo resuelve WorldEngine (free_movement.md).
       case LeaveDungeonAction():
         return false;
+      case OfferBossAction():
+        return _offerBoss(p);
       case TravelAction() || ForageAction():
         return biomeAction(p, a);
 
@@ -2450,6 +2475,17 @@ class _Op {
     if (m == null) return;
     final z = m.zone == 0 ? null : catalog.zone(m.zone);
     if (z != null) {
+      // persistent_dungeons.md: la mazmorra de zona es del mundo.
+      if (DungeonRules.persistent(s, zone: m.zone)) {
+        if (DungeonRules.restore(s.town, m.id, catalog) case (final run, final n)?) {
+          s.mission = run;
+          _enterField(m, run.seed);
+          if (n > 0) say('Pasaron días: los enemigos de la mazmorra volvieron.');
+          return;
+        }
+        _startZoneMission(m, z, seed: DungeonRules.seedFor(s.worldId!, m.id));
+        return;
+      }
       _startZoneMission(m, z);
       return;
     }
@@ -4058,8 +4094,42 @@ class _Op {
     }
   }
 
+  /// `OfferBossAction` (persistent_dungeons.md § 4): paga la Ofrenda en el
+  /// altar del jefe vencido y lo revive en su sala.
+  bool _offerBoss(SessionPlayer p) {
+    final m = s.mission;
+    if (m == null ||
+        s.mode != SessionMode.field ||
+        s.result != null ||
+        p.isCompanion ||
+        !p.alive ||
+        !DungeonRules.persistent(s, zone: m.zone)) {
+      return false;
+    }
+    final b = DungeonRules.boss(m);
+    if (b == null ||
+        b.alive ||
+        b.floor != m.floor ||
+        _dist(p.x, p.y, b.homeX, b.homeY) > DungeonRules.altarReach) {
+      return false;
+    }
+    final paid = DungeonRules.pay(p.profile, m.zone);
+    if (paid == null) return false;
+    p.profile = paid;
+    b
+      ..alive = true
+      ..x = b.homeX
+      ..y = b.homeY
+      ..aggro = false;
+    s.graceUntil = s.time + SessionEngine.missionStartGrace;
+    say('${p.name} hizo la Ofrenda: el jefe volvió a su sala.');
+    return true;
+  }
+
   /// `toLobby`.
   void toLobby() {
+    // La mazmorra de zona queda guardada tal cual (persistent_dungeons.md).
+    s.town = DungeonRules.park(s, catalog);
     final ids = [for (final p in players) p.id];
     e.fishing.newStay(ids);
     e.farming.newStay(ids);

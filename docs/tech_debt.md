@@ -225,3 +225,25 @@ Funcionalidad pendiente:
   ítem suelto pediría una acción nueva del protocolo.
 - Sin test de UI de la pantalla del ayudante ni del lago con la plantilla
   (solo el test de `DsTransferTemplate`); sin captura nueva de la galería.
+
+## v0.34.0 (mazmorras persistentes)
+
+- Ecos por zona (portales por tier en el exterior de cada bioma,
+  "Ecos de esta zona" en el mapa de viaje): solo especificado en
+  docs/specs/ecos_zone.md; pide decisiones del dueño (economía del objeto
+  Eco, desbloqueo de tiers, qué pasa con el Portal del pueblo).
+- El grupo `Mazmorras` de `kTuning` (reaparición y costo de la Ofrenda)
+  no tiene codec en Editor → Balance todavía: se cambia en el código.
+- El mundo se escribe a disco al volver al pueblo y al cerrar la sala:
+  si un amigo es el último en salir de una mazmorra y el anfitrión se
+  cae antes de su próxima vuelta al pueblo, se pierde lo de esa visita.
+- El loot que quedó en el piso de una mazmorra guardada no se guarda
+  (va al Loot perdido como siempre al volver; al salir solo se pierde).
+- Cofres no se rellenan con la reaparición (decisión documentada); los
+  revividos dan su botín normal.
+- La niebla se guarda en el dispositivo (`accounts/fog.json`), no en el
+  perfil: jugar el mismo personaje en otra PC no la trae. Las 48 claves
+  más recientes (también entran las de Ecos, que no vuelven).
+- El altar usa el dibujo del relicario: falta un sprite propio de altar
+  (sprite_manifest) y una marca en el minimapa.
+- Sin test de widget del panel OFRENDA ni captura de la galería.
