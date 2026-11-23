@@ -7,29 +7,58 @@ import '../models/game_map.dart';
 /// Una luz puesta en el mapa, en coordenadas de tile (con fracción: el
 /// centro del tile (3, 4) es (3.5, 4.5)).
 class LightSource {
-  const LightSource(this.x, this.y, this.def, {this.scale = 1});
+  const LightSource(this.x, this.y, this.def,
+      {this.scale = 1,
+      this.ownX0 = 0,
+      this.ownY0 = 0,
+      this.ownX1 = 0,
+      this.ownY1 = 0});
   final double x, y;
   final LightDef def;
+
+  /// Estructura propia de la luz, rectángulo de tiles [ownX0, ownX1) ×
+  /// [ownY0, ownY1) (lighting.md § 2.2): para esta luz es transparente,
+  /// así la ventana de una casa o el brillo de la forja salen hacia
+  /// afuera en vez de quedar tapados por su propio edificio. Vacío por
+  /// defecto.
+  final int ownX0, ownY0, ownX1, ownY1;
 
   /// Multiplica el brillo (titileo, luciérnagas que parpadean).
   final double scale;
 }
 
-/// Mapa de luz de una ventana de tiles (lighting.md § 2): por tile, el
-/// color de la luz (r, g, b en 0–1) sin el ambiente.
+/// Mapa de luz de una ventana de tiles (lighting.md § 2): por muestra, el
+/// color de la luz (r, g, b en 0–1) sin el ambiente. Cada tile tiene
+/// [sub] × [sub] muestras (en los centros de sus subceldas): con 1, una en
+/// el centro del tile; la capa de dibujo usa 2 para que las sombras
+/// tengan borde nítido.
 class LightGrid {
-  LightGrid(this.x0, this.y0, this.w, this.h) : rgb = Float32List(w * h * 3);
-  final int x0, y0, w, h;
+  LightGrid(this.x0, this.y0, this.w, this.h, {this.sub = 1})
+      : rgb = Float32List(w * h * sub * sub * 3);
+  final int x0, y0, w, h, sub;
   final Float32List rgb;
+
+  /// Muestras por fila / columna.
+  int get sw => w * sub;
+  int get sh => h * sub;
 
   bool inside(int tx, int ty) =>
       tx >= x0 && ty >= y0 && tx < x0 + w && ty < y0 + h;
 
-  /// Brillo (el canal más alto) en el tile; 0 afuera de la ventana.
+  /// Brillo (el canal más alto) en el tile (el máximo de sus muestras);
+  /// 0 afuera de la ventana.
   double lum(int tx, int ty) {
     if (!inside(tx, ty)) return 0;
-    final i = ((ty - y0) * w + (tx - x0)) * 3;
-    return math.max(rgb[i], math.max(rgb[i + 1], rgb[i + 2]));
+    var best = 0.0;
+    final rw = sw;
+    for (var j = 0; j < sub; j++) {
+      for (var k = 0; k < sub; k++) {
+        final i = (((ty - y0) * sub + j) * rw + (tx - x0) * sub + k) * 3;
+        best =
+            math.max(best, math.max(rgb[i], math.max(rgb[i + 1], rgb[i + 2])));
+      }
+    }
+    return best;
   }
 
   /// Suma [other] por [k] (misma ventana).
@@ -105,7 +134,14 @@ abstract final class LightRules {
             continue;
           }
           if (c == Tile.forage && !biome) continue;
-          out.add(LightSource(x + 0.5, y + 0.5, kLightDefs[id]!));
+          if (kOpaqueTiles.contains(c)) {
+            // Luz sobre un edificio: su estructura no la tapa (§ 2.2).
+            final (ox0, oy0, ox1, oy1) = structureOf(map, x, y);
+            out.add(LightSource(x + 0.5, y + 0.5, kLightDefs[id]!,
+                ownX0: ox0, ownY0: oy0, ownX1: ox1, ownY1: oy1));
+          } else {
+            out.add(LightSource(x + 0.5, y + 0.5, kLightDefs[id]!));
+          }
         } else if (dark &&
             c == Tile.wall &&
             _hash(x, y) % kTorchEvery == 0 &&
@@ -119,10 +155,80 @@ abstract final class LightRules {
     return out;
   }
 
+  /// Luz natural de [map] en el rectángulo [x0, x1)×[y0, y1)
+  /// (lighting.md § 3.3): la del tema ([kAmbientLights]) en tiles
+  /// caminables elegidos por hash de la posición, y una luz guía en la
+  /// llegada y las escaleras de cada piso (también en los pisos de
+  /// faroles, para que el arranque no sea negro). Determinista: sale del
+  /// mapa (que sale de la semilla). El pueblo no tiene.
+  static List<LightSource> ambientEmitters(
+      GameMap map, int x0, int y0, int x1, int y1) {
+    final out = <LightSource>[];
+    if (map.lobby && map.place == null) return out; // el pueblo: faros
+    x0 = math.max(0, x0);
+    y0 = math.max(0, y0);
+    x1 = math.min(map.width, x1);
+    y1 = math.min(map.height, y1);
+    final spec = kAmbientLights[map.theme];
+    if (spec != null) {
+      final def = kLightDefs[spec.light]!;
+      for (var y = y0; y < y1; y++) {
+        final row = map.rows[y];
+        for (var x = x0; x < x1; x++) {
+          if (_hash(x * 3 + 7, y * 5 + 11) % spec.every != 0) continue;
+          if (!Tile.isWalkable(row[x]) || row[x] == Tile.voidTile) continue;
+          out.add(LightSource(x + 0.5, y + 0.5, def));
+        }
+      }
+    }
+    final guide = kLightDefs[LightId.guia]!;
+    void anchor(WorldPoint? p) {
+      if (p == null) return;
+      final tx = p.x / 16, ty = p.y / 16;
+      if (tx < x0 || ty < y0 || tx >= x1 || ty >= y1) return;
+      out.add(LightSource(tx, ty, guide));
+    }
+
+    if (map.floors.isEmpty) {
+      anchor(map.spawn);
+    }
+    for (final f in map.floors) {
+      anchor(f.spawn);
+      anchor(f.stairsDown);
+      anchor(f.stairsUp);
+    }
+    return out;
+  }
+
+  /// Rectángulo [x0, x1) × [y0, y1) de la estructura del tile ([x], [y]):
+  /// el tramo de fila y de columna del mismo tile que lo contiene.
+  static (int, int, int, int) structureOf(GameMap map, int x, int y) {
+    final c = map.rows[y][x];
+    var ax = x, bx = x + 1, ay = y, by = y + 1;
+    while (ax > 0 && map.rows[y][ax - 1] == c) {
+      ax--;
+    }
+    while (bx < map.width && map.rows[y][bx] == c) {
+      bx++;
+    }
+    while (ay > 0 && map.rows[ay - 1][x] == c) {
+      ay--;
+    }
+    while (by < map.height && map.rows[by][x] == c) {
+      by++;
+    }
+    return (ax, ay, bx, by);
+  }
+
   static const _dirs = [
-    (1, 0, 1.0), (-1, 0, 1.0), (0, 1, 1.0), (0, -1, 1.0),
-    (1, 1, math.sqrt2), (1, -1, math.sqrt2),
-    (-1, 1, math.sqrt2), (-1, -1, math.sqrt2),
+    (1, 0, 1.0),
+    (-1, 0, 1.0),
+    (0, 1, 1.0),
+    (0, -1, 1.0),
+    (1, 1, math.sqrt2),
+    (1, -1, math.sqrt2),
+    (-1, 1, math.sqrt2),
+    (-1, -1, math.sqrt2),
   ];
 
   /// Sobreestimación máxima del camino de 8 vecinos respecto de la línea
@@ -154,14 +260,24 @@ abstract final class LightRules {
       final dist = Float64List(n * n)..fillRange(0, n * n, double.infinity);
       final (tr, tg, tb) = tintOf(s.def.tint);
       dist[(sy - ly0) * n + (sx - lx0)] = 0;
-      // Bloqueo de la ventana local, leído una sola vez.
+      // Bloqueo de la ventana local, leído una sola vez. La estructura
+      // propia de la luz (§ 2.2) es transparente para ella.
       final blk = Float64List(n * n);
+      var anyOpaque = false;
       for (var cy = 0; cy < n; cy++) {
+        final ty = cy + ly0;
         for (var cx = 0; cx < n; cx++) {
-          blk[cy * n + cx] = block(cx + lx0, cy + ly0);
+          final tx = cx + lx0;
+          if (tx >= s.ownX0 && tx < s.ownX1 && ty >= s.ownY0 && ty < s.ownY1) {
+            continue;
+          }
+          final v = block(tx, ty);
+          blk[cy * n + cx] = v;
+          if (v.isInfinite) anyOpaque = true;
         }
       }
-      final queue = <int>[(sy - ly0) * n + (sx - lx0)];
+      final si = (sy - ly0) * n + (sx - lx0);
+      final queue = <int>[si];
       // Relajación en cola (radios chicos: barata).
       var qi = 0;
       while (qi < queue.length) {
@@ -169,15 +285,14 @@ abstract final class LightRules {
         final cx = i % n, cy = i ~/ n;
         final d = dist[i];
         // Un opaco que no es la fuente no deja pasar.
-        if (i != (sy - ly0) * n + (sx - lx0) && blk[i].isInfinite) {
-          continue;
-        }
+        if (i != si && blk[i].isInfinite) continue;
         for (final (dx, dy, step) in _dirs) {
           final nx = cx + dx, ny = cy + dy;
           if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
           final b = blk[ny * n + nx];
           // Diagonal entre dos opacos: no se cuela.
-          if (dx != 0 && dy != 0 &&
+          if (dx != 0 &&
+              dy != 0 &&
               blk[cy * n + nx].isInfinite &&
               blk[ny * n + cx].isInfinite) {
             continue;
@@ -191,6 +306,10 @@ abstract final class LightRules {
           }
         }
       }
+      final sub = grid.sub, rw = grid.sw;
+      final inv = 1 / sub;
+      // Posición de la fuente relativa a la ventana local (para el rayo).
+      final ox = s.x - lx0, oy = s.y - ly0;
       for (var cy = 0; cy < n; cy++) {
         final ty = cy + ly0;
         if (ty < grid.y0 || ty >= grid.y0 + grid.h) continue;
@@ -202,20 +321,90 @@ abstract final class LightRules {
           // Rodeo = camino − recta (ambos desde el centro del tile de la
           // fuente), sin la sobreestimación propia de los 8 vecinos.
           final straight = _len(tx + 0.5 - sx - 0.5, ty + 0.5 - sy - 0.5);
-          final detour =
-              math.max(0.0, path - straight * (1 + octileSlack));
-          final d = _len(tx + 0.5 - s.x, ty + 0.5 - s.y) + detour;
-          if (d >= r) continue;
-          final f = 1 - d / r;
-          final k = k0 * f * f;
-          final gi = ((ty - grid.y0) * grid.w + (tx - grid.x0)) * 3;
-          grid.rgb[gi] += tr * k;
-          grid.rgb[gi + 1] += tg * k;
-          grid.rgb[gi + 2] += tb * k;
+          final detour = math.max(0.0, path - straight * (1 + octileSlack));
+          final opaqueCell = blk[cy * n + cx].isInfinite;
+          for (var j = 0; j < sub; j++) {
+            final py = ty + (j + 0.5) * inv;
+            for (var k = 0; k < sub; k++) {
+              final px = tx + (k + 0.5) * inv;
+              final d = _len(px - s.x, py - s.y) + detour;
+              if (d >= r) continue;
+              // Sombra nítida (§ 2.1): la muestra tiene que verse desde la
+              // fuente en línea recta. De un opaco solo se ilumina la mitad
+              // que da a la fuente.
+              if (anyOpaque) {
+                if (opaqueCell &&
+                    (px - tx - 0.5) * (s.x - tx - 0.5) +
+                            (py - ty - 0.5) * (s.y - ty - 0.5) <
+                        0) {
+                  continue;
+                }
+                if (!_sees(blk, n, ox, oy, px - lx0, py - ly0)) continue;
+              }
+              final f = 1 - d / r;
+              final kk = k0 * f * f;
+              final gi =
+                  (((ty - grid.y0) * sub + j) * rw + (tx - grid.x0) * sub + k) *
+                      3;
+              grid.rgb[gi] += tr * kk;
+              grid.rgb[gi + 1] += tg * kk;
+              grid.rgb[gi + 2] += tb * kk;
+            }
+          }
         }
       }
     }
   }
+
+  /// Línea de vista de (ax, ay) a (bx, by) en la ventana local [blk] de
+  /// lado [n] (recorrido de celdas exacto): corta si cruza un opaco que
+  /// no sea la celda de partida ni la de llegada, o si pasa justo por la
+  /// esquina entre dos opacos en diagonal.
+  static bool _sees(
+      Float64List blk, int n, double ax, double ay, double bx, double by) {
+    var cx = ax.floor(), cy = ay.floor();
+    final ex = bx.floor(), ey = by.floor();
+    if (cx == ex && cy == ey) return true;
+    final dx = bx - ax, dy = by - ay;
+    final stepX = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
+    final stepY = dy > 0 ? 1 : (dy < 0 ? -1 : 0);
+    final tdx = stepX == 0 ? double.infinity : (1 / dx).abs();
+    final tdy = stepY == 0 ? double.infinity : (1 / dy).abs();
+    var tmx = stepX == 0
+        ? double.infinity
+        : (stepX > 0 ? (cx + 1 - ax) : (ax - cx)) * tdx;
+    var tmy = stepY == 0
+        ? double.infinity
+        : (stepY > 0 ? (cy + 1 - ay) : (ay - cy)) * tdy;
+    // Como mucho |Δx| + |Δy| pasos.
+    for (var guard = (ex - cx).abs() + (ey - cy).abs() + 2;
+        guard > 0;
+        guard--) {
+      if ((tmx - tmy).abs() < 1e-9) {
+        // Esquina exacta: pasa si al menos uno de los dos lados está libre.
+        if (_opaque(blk, n, cx + stepX, cy) &&
+            _opaque(blk, n, cx, cy + stepY)) {
+          return false;
+        }
+        cx += stepX;
+        cy += stepY;
+        tmx += tdx;
+        tmy += tdy;
+      } else if (tmx < tmy) {
+        cx += stepX;
+        tmx += tdx;
+      } else {
+        cy += stepY;
+        tmy += tdy;
+      }
+      if (cx == ex && cy == ey) return true;
+      if (_opaque(blk, n, cx, cy)) return false;
+    }
+    return true;
+  }
+
+  static bool _opaque(Float64List blk, int n, int x, int y) =>
+      x < 0 || y < 0 || x >= n || y >= n || blk[y * n + x] == double.infinity;
 
   static double _len(double dx, double dy) => math.sqrt(dx * dx + dy * dy);
 
@@ -224,7 +413,8 @@ abstract final class LightRules {
   static double flicker(double tMs, double amp, int seed) {
     if (amp <= 0) return 1;
     final p = seed * 0.37;
-    final v = math.sin(tMs / 130 + p) * 0.6 + math.sin(tMs / 47 + p * 2.1) * 0.4;
+    final v =
+        math.sin(tMs / 130 + p) * 0.6 + math.sin(tMs / 47 + p * 2.1) * 0.4;
     return 1 + amp * v;
   }
 
@@ -238,7 +428,11 @@ abstract final class LightRules {
       required (double, double, double) night}) {
     (double, double, double) mix(
             (double, double, double) a, (double, double, double) b, double t) =>
-        (a.$1 + (b.$1 - a.$1) * t, a.$2 + (b.$2 - a.$2) * t, a.$3 + (b.$3 - a.$3) * t);
+        (
+          a.$1 + (b.$1 - a.$1) * t,
+          a.$2 + (b.$2 - a.$2) * t,
+          a.$3 + (b.$3 - a.$3) * t
+        );
     const day = (1.0, 1.0, 1.0);
     final d = dark.clamp(0.0, 1.0);
     var c = d < 0.5 ? mix(day, dusk, d * 2) : mix(dusk, night, (d - 0.5) * 2);

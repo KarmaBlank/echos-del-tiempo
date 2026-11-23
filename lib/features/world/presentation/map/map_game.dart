@@ -1138,6 +1138,7 @@ class MapGame extends Game {
                 ? [
                     ...LightRules.tileEmitters(map, a, b, cx, cy,
                         dark: darkMap, biome: map.place != null),
+                    ...LightRules.ambientEmitters(map, a, b, cx, cy),
                     for (final (fx, fy) in townLights)
                       LightSource(fx + ox + 0.5, fy + oy + 0.3,
                           kLightDefs[LightId.faro]!),

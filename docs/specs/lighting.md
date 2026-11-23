@@ -1,4 +1,4 @@
-# Iluminación (v0.32.2)
+# Iluminación (v0.36.2)
 
 Sistema de luz por tile para el mapa (pueblo, exteriores y mazmorras).
 La batalla no cambia. Código: reglas puras en
@@ -37,6 +37,35 @@ llega ninguna luz queda el ambiente (de día, blanco: no cambia nada).
   diagonal entre dos opacos no se cuela.
 - Tiles que atenúan (`kAttenuatingTiles`: árboles, lápidas): la luz pasa
   pero cuesta `kAttenuationCost` (2.5) tiles extra.
+
+### 2.1 Sombras nítidas (v0.36.2)
+
+- Además del camino, cada muestra tiene que verse desde la posición
+  exacta de la fuente en línea recta (recorrido de celdas exacto contra
+  los opacos; no cuentan la celda de partida ni la de llegada; por la
+  esquina justa entre dos opacos en diagonal no pasa). Si no se ve, no
+  recibe nada de esa luz: detrás de un muro queda la sombra, sin la
+  mancha borrosa que dejaba la luz al "rodear" el muro.
+- De un tile opaco solo se ilumina la mitad que da a la fuente (producto
+  punto ≥ 0 respecto del centro del tile): la luz no se filtra al otro
+  lado de un muro de un tile.
+- Los rodeos del camino siguen sirviendo para los que atenúan (árboles).
+- Si en la ventana local de una luz no hay ningún opaco, no se tiran
+  rayos (camino rápido: pueblo abierto, praderas).
+- Opacos desde v0.36.2: además de muros y rocas, los edificios y
+  estructuras sólidas del pueblo y los biomas: casas, forja, armería,
+  taller, tablero, puesto, fuente, estatua, portal y torre del loot. Los
+  árboles y lápidas siguen atenuando. Agua, carteles, puntos de pesca y
+  matas no tapan.
+
+### 2.2 Luces sobre un edificio
+
+Un emisor cuyo tile es opaco (ventana de una casa, brillo de la forja,
+fuente, portal) lleva el rectángulo de su estructura (`LightSource.own*`,
+tramo de fila y columna del mismo tile, `LightRules.structureOf`): para
+esa luz el edificio es transparente, así alumbra hacia afuera por todos
+los lados en vez de oscurecerse a sí mismo. Para las demás luces el
+edificio tapa.
 - Las luces se suman; cada canal se recorta a 1 al combinar con el
   ambiente; luz que sigue la posición exacta (sin estela) y caída redonda.
 `test/game_engine/lantern_test.dart`: faroles solo en pisos oscuros,
@@ -60,30 +89,57 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 | ventana | casas de los habitantes (una por casa) | 3 | 0.55 | 3 % |
 | brasero | braseros encendidos de las misiones | 6 | 1 | 12 % |
 | antorcha | paredes de mazmorras oscuras (una cada `kTorchEvery` = 29 paredes que dan a un piso) | 4.5 | 0.85 | 14 % |
-| luciérnaga | luciérnagas de la noche (móviles) | 1.6 | 0.35 × parpadeo | no |
+| luciérnaga | luciérnagas de la noche (móviles; v0.36.2, antes 1.6 / 0.35) | 3 | 0.6 × parpadeo | no |
 | flora | recolectables de los exteriores de bioma | 2.2 | 0.35 | no |
 | pesca | puntos de pesca | 2 | 0.3 | no |
 | botín | objetos legendarios en el piso | 2.5 | 0.5 | no |
-| jugador_pueblo | cada jugador vivo, de noche al aire libre | 3.5 | 0.5 | no |
-| jugador_oscuro | cada jugador vivo en mazmorra oscura | 9 | 1 | 4 % |
-| farol | faroles encendidos de las mazmorras oscuras (§ 5.5) | 11 | 1 | 4 % |
+| jugador_pueblo | cada jugador vivo, de noche al aire libre (v0.36.2, antes 3.5 / 0.5) | 4.5 | 0.6 | no |
+| jugador_oscuro | cada jugador vivo en mazmorra oscura (v0.36.2, antes 9) | 11 | 1 | 4 % |
+| hongo / cristal / magitec / fatuo / ascua / enjambre | luz natural del tema (§ 3.3) | 4–5 | 0.55–0.7 | ascua 10 % |
+| guía | llegada y escaleras de cada piso (§ 3.3) | 6 | 0.9 | 5 % |
+| farol | faroles encendidos de las mazmorras oscuras (§ 5.5; v0.36.2, antes 11) | 13 | 1 | 4 % |
 
 ### 3.1 Luz que lleva el jugador
 
 `LightRules.carried(dark:, bonus:)`. `bonus` (tiles extra de radio) es el
 gancho para linternas, pasivas o beneficios de habitantes: hoy siempre 0.
 
-En la oscuridad el radio es 9 (v0.32.2; antes 6). Con la caída de § 2 y
-el umbral de § 5.3 (0.12) se ve a un enemigo hasta ~5.9 tiles
-(`r × (1 − √0.12)`) y la luz se apaga del todo a los 9: alcanza para
-leer la sala en la que estás sin ver la siguiente. Antes era ~3.9: se
-chocaba con los enemigos antes de verlos.
+En la oscuridad el radio es 11 (v0.36.2; 9 en v0.32.2, 6 antes). Con la
+caída de § 2 y el umbral de § 5.3 (0.12) se ve a un enemigo hasta ~7.2
+tiles (`r × (1 − √0.12)`) y la luz se apaga del todo a los 11: se lee la
+sala en la que estás con comodidad sin ver la siguiente (y con las
+sombras de § 2.1 lo de atrás de las esquinas sigue oculto). De noche al
+aire libre: radio 4.5, intensidad 0.6.
 
 ### 3.2 Titileo
 
 Las luces con `flicker > 0` (llamas) van a una capa aparte que se
 multiplica por `LightRules.flicker(t)` (dos senos lentos, ±10 %). Con
 REDUCIR MOVIMIENTO no titilan.
+
+### 3.3 Luz natural (v0.36.2)
+
+Todo lugar que puede quedar a oscuras (exteriores y mazmorras al aire
+libre de noche, pisos oscuros) se tiene que poder jugar sin depender
+solo de la luz del jugador. `LightRules.ambientEmitters`:
+
+- `kAmbientLights` (catálogo, por tema): una luz temática en uno de cada
+  `every` tiles caminables, elegidos por hash de la posición (el mapa
+  sale de la semilla: determinista y igual en todos los clientes). Es
+  solo luz: no cambia el mapa ni corta el paso. Pradera y mundo:
+  enjambres de luciérnagas; bosque: hongos; ruinas, laberinto y corazón:
+  lámparas magitec; cavernas y abismo: cristales; fortaleza y grieta:
+  ascuas; cementerio: fuegos fatuos. El pueblo no tiene (tiene faros).
+- Luz guía (`guia`, radio 6) en la llegada y las escaleras de cada piso,
+  también en los pisos de faroles (§ 5.5): el arranque no es negro.
+- Se ve la forma del lugar; los rincones lejos de todo quedan en
+  penumbra. `test/game_engine/natural_light_test.dart` mide, sin
+  jugadores, la fracción de tiles caminables a la vista (≥ 0.12) por
+  tema y exige más del 20 % (y menos del 90 %). Hoy: pradera 44 %,
+  bosque 62 %, ruinas 55 %, cavernas 61 %, fortaleza 51 %, laberinto
+  52 %, grieta 58 %, cementerio 26 %, abismo 25 %, corazón 31 %,
+  exterior del bosque 78 %.
+- Pendiente: un dibujo propio para cada emisor (hoy es el brillo).
 
 ## 4. Dibujo y rendimiento
 
@@ -96,10 +152,17 @@ REDUCIR MOVIMIENTO no titilan.
 - Por cuadro: copia de la capa fija + capa de llamas × titileo + luces
   móviles (jugadores, luciérnagas, botín), que son pocas y de radio
   chico.
-- Se dibuja como una malla (`Canvas.drawVertices`) con un vértice en el
-  centro de cada tile y su color: la GPU interpola entre tiles (nada de
-  bloques) y se multiplica sobre el mapa (`BlendMode.multiply`). Un solo
-  llamado de dibujo, sin texturas ni shaders.
+- Resolución: 2 × 2 muestras por tile (`MapLightLayer.sub`, v0.36.2;
+  `LightGrid.sub`). El borde de una sombra se resuelve en medio tile en
+  vez de uno. `LightGrid.lum(tx, ty)` (enemigos en la penumbra, niebla)
+  devuelve el máximo de las muestras del tile: con verse un pedazo
+  alcanza.
+- Se dibuja como una malla (`Canvas.drawVertices`) con un vértice por
+  muestra y su color: la GPU interpola (nada de bloques) y se multiplica
+  sobre el mapa (`BlendMode.multiply`). Los índices son de 16 bits: la
+  malla se parte en bandas de filas de < 65 536 vértices (un llamado por
+  banda; casi siempre uno o dos). Las posiciones se guardan entre
+  cuadros; el color se arma en un bucle sin closures.
 - Si el ambiente es blanco (de día, sin tormenta) la capa no se dibuja.
 
 ## 5. Ambiente
@@ -169,7 +232,7 @@ la red ni se guarda.
 - Ids: `piso × 100 + 99 − k` (los otros PdI usan los primeros números).
 - [E] Encender el farol (`InteractPoiAction`, el host decide, como los
   braseros): pasa a `poiUsed`, el tile pasa a `n` y emite la luz `farol`
-  (radio 11) para siempre en la misión. Con todos los faroles de una
+  (radio 13; siempre más que la luz del jugador) para siempre en la misión. Con todos los faroles de una
   zona prendidos, la zona queda casi a la luz.
 - En el minimapa: como los braseros (apagado / encendido), detrás de la
   niebla.
@@ -215,3 +278,8 @@ sale de la semilla y agregan `PoiKind.lantern` a los eventos: protocolo
 `test/game_engine/light_rules_test.dart`: caída con la distancia, muros
 que cortan, árboles que atenúan, mazmorras oscuras, luz del jugador y
 ambiente.
+v0.36.2: muro que deja oscuro el otro lado de un farol, borde de sombra
+nítido en 2 × 2, edificio que tapa una antorcha y emisor sobre un
+edificio que igual alumbra alrededor. `test/perf/light_perf_test.dart`
+mide con 2 × 2 y `test/perf/town_soak_perf_test.dart` controla que el
+pueblo no se ponga más lento.
