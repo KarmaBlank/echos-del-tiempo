@@ -140,3 +140,16 @@ Funcionalidad pendiente:
   de UI de la pantalla del habitante ni del botón "ZONA N" del mapa de
   viaje.
 - Peces y semillas nuevos usan el ícono genérico de su tipo.
+
+## v0.32.0
+
+- Iluminación (lighting.md): la batalla no tiene oscuridad (una pelea en
+  una mazmorra oscura se ve con luz normal). El minimapa y el mapa
+  grande no se oscurecen ni hay niebla de exploración que respete la luz.
+- Los enemigos fuera de la luz se esconden del todo; falta la silueta.
+- `LightRules.carried(bonus:)` es solo el gancho: ninguna linterna,
+  pasiva ni habitante sube el radio todavía. Hechizos no emiten luz.
+- Sin test de UI ni captura comparativa de la capa de luz
+  (`MapLightLayer`); solo tests puros de `LightRules`.
+- Los números de `kLightDefs` son constantes del catálogo, no están en
+  Editor → Balance (`kTuning`).

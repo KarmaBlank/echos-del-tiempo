@@ -102,6 +102,7 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 | REDUCIR MOVIMIENTO (ACCESIBILIDAD) | SÍ / **NO** | sin sacudida, destellos a lo sumo SUAVES, sin parpadeos ni zoom de cámara (§ 3.8) |
 | SACUDIDA (ACCESIBILIDAD) | SÍ / NO | la escena de batalla tiembla con los golpes fuertes (`ParticleSystem.shake`). Con NO la escena la anula en cada frame. Con REDUCIR MOVIMIENTO se ve en NO y deshabilitada (el valor propio se guarda igual) |
 | DESTELLOS (ACCESIBILIDAD) | NORMALES / SUAVES / NO | multiplica el alfa de los destellos de pantalla completa de la batalla por 1 / 0.35 / 0: el rojo de "te pegaron fuerte" (`hurtFlash`), los blancos de golpe brutal y quiebre (`FxKind.flash`), el tinte de "tiempo detenido" (`timeStop`), el blanco del impacto de una ULT, el de la entrada a la arena y el de la cinemática de ascensión. Con REDUCIR MOVIMIENTO, NORMALES vale como SUAVES |
+| OSCURIDAD (ACCESIBILIDAD, v0.32.0) | NORMAL / SUAVE / APAGADA | cuánto oscurecen la noche y las mazmorras oscuras del mapa (`DarknessLevel.keep` 1 / 0.45 / 0; lighting.md § 7). APAGADA deja todo como de día y muestra a todos los enemigos. Se guarda como `darkness` |
 
 Pantalla completa sin paquetes nuevos: el runner de Windows
 (`windows/runner/flutter_window.cpp`) atiende el canal `ecos/window`

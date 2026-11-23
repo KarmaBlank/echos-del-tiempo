@@ -6,6 +6,9 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../game_engine/data/light_catalog.dart';
+import '../../../../game_engine/rules/light_rules.dart';
+import 'light_layer.dart';
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
 import '../../../../core/procedural/weapon_look.dart';
@@ -110,6 +113,7 @@ class MapGame extends Game {
   String _perfProbe() =>
       '${tileLayer.direct ? 'tiles directo' : 'tiles en caché'}'
       ' (${tileLayer.cachedChunks} bloques, ${tileLayer.built} grabados)'
+      ' · luz ${light.rebuilds} recálculos'
       ' · etiquetas ${labelPen.cached} medidas'
       ' (${labelPen.misses} de ${labelPen.hits + labelPen.misses})'
       // Host: cuánto pesa el último `state` (netcode.md § "Perfiles solo
@@ -139,6 +143,12 @@ class MapGame extends Game {
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
 
+  /// Mapa de luz (lighting.md § 4).
+  final light = MapLightLayer();
+
+  /// Ajuste OSCURIDAD (1 = normal, 0.45 = suave, 0 = apagada).
+  double darknessKeep = 1;
+
   /// Destellos (0–1, ajustes de accesibilidad) y «reducir movimiento».
   double flashFactor = 1;
   bool reduceMotion = false;
@@ -165,6 +175,9 @@ class MapGame extends Game {
   /// Veredicto del filtro por objeto del piso (se recalcula si cambia
   /// el filtro o el nivel del jugador).
   final _verdicts = <int, (String?, int, FilterVerdict, BuildWants?)>{};
+
+  /// Brillo mínimo para ver un enemigo en una mazmorra oscura.
+  static const darkSeen = 0.12;
 
   /// Duración del estallido del haz al caer (ms).
   static const beamBurstMs = 1500.0;
@@ -837,6 +850,11 @@ class MapGame extends Game {
     final outdoor = SkyRules.outdoor(map.theme, town: map.lobby);
     final night = outdoor && SkyRules.darkness(s.town.sky) > 0.25;
     final lights = <Offset>[];
+    // Mazmorra oscura (lighting.md § 5): solo con misión en curso.
+    final darkMap = !map.lobby &&
+        s.mission != null &&
+        LightRules.isDark(map.theme, floor: currentFloor(view)?.index ?? 0);
+    final movingLights = <LightSource>[];
     if (map.lobby && map.place == null) {
       final (ox, oy) = map.townOrigin;
       for (final (fx, fy) in s.town.lights) {
@@ -899,6 +917,10 @@ class MapGame extends Game {
         continue;
       }
       _lastDrawn[p.id] = (px, py);
+      if (p.hp > 0 && (darkMap || night)) {
+        movingLights.add(LightSource(
+            px / ts, py / ts, LightRules.carried(dark: darkMap)));
+      }
       final line = s.mode != SessionMode.lobby
           ? null
           : mine
@@ -973,6 +995,15 @@ class MapGame extends Game {
       for (final e in mission.enemies) {
         if (!e.alive || e.floor != mission.floor) continue;
         final d = _lerpPos('f${e.id}', e.x, e.y);
+        // En la penumbra de una mazmorra oscura no se ven (salvo jefes).
+        if (darkMap && !e.boss) {
+          final lg = light.last;
+          if (lg != null &&
+              lg.lum((d.x / ts).floor(), (d.y / ts).floor()) <
+                  darkSeen * darknessKeep) {
+            continue;
+          }
+        }
         add(d.y, () {
           actors.enemy(c,
               type: e.group.first,
@@ -1011,19 +1042,64 @@ class MapGame extends Game {
         (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
     // El cielo encima de todo el mapa (no en la edición del pueblo).
-    if (outdoor && !controller.editingTown) {
-      for (var y = y0; y <= y1; y++) {
-        for (var x = x0; x <= x1; x++) {
-          if (map.tileAt(x, y) == Tile.brazierLit) {
-            lights.add(Offset(x * ts + 8, y * ts + 2));
-          }
+    if ((outdoor || darkMap) && !controller.editingTown) {
+      // Luz por tile multiplicada sobre el mapa (lighting.md § 4).
+      final dk = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
+      final w = SkyRules.now(s.town.sky);
+      final overcast = !outdoor
+          ? 0.0
+          : switch (w) {
+              Weather.tormenta => 1.0,
+              Weather.lluvia => 0.5,
+              Weather.despejado => 0.0,
+            };
+      final ambient = darkMap
+          ? MapLightLayer.dungeonAmbient
+          : MapLightLayer.outdoorAmbient(dk,
+              overcast: overcast, bolt: sky.boltLight(t) * flashFactor);
+      final lit = darkMap || dk > 0.05;
+      if (lit && outdoor) {
+        for (final (o, b) in sky.fireflies(worldView, t, particleDensity)) {
+          movingLights.add(LightSource(o.dx / ts, o.dy / ts,
+              kLightDefs[LightId.luciernaga]!, scale: b * dk));
         }
       }
-      sky.draw(c, s.town.sky, worldView, t,
-          lights: lights,
-          density: particleDensity,
-          flash: flashFactor,
-          motion: !reduceMotion);
+      if (lit) {
+        for (final l in floor) {
+          if (!l.legendary || l.hidden) continue;
+          movingLights.add(LightSource(l.ground.x / ts, l.ground.y / ts,
+              kLightDefs[LightId.botin]!));
+        }
+      }
+      final (ox, oy) = map.townOrigin;
+      final townLights = map.lobby && map.place == null
+          ? s.town.lights
+          : const <(int, int)>[];
+      if (ambient.$1 < 0.995 || ambient.$3 < 0.995) {
+        light.draw(c, map, worldView,
+            ambient: ambient,
+            fixed: (a, b, cx, cy) => lit
+                ? [
+                    ...LightRules.tileEmitters(map, a, b, cx, cy,
+                        dark: darkMap, biome: map.place != null),
+                    for (final (fx, fy) in townLights)
+                      LightSource(fx + ox + 0.5, fy + oy + 0.3,
+                          kLightDefs[LightId.faro]!),
+                  ]
+                : const [],
+            moving: lit ? movingLights : const [],
+            t: t,
+            keep: darknessKeep,
+            motion: !reduceMotion);
+      }
+      if (outdoor) {
+        sky.draw(c, s.town.sky, worldView, t,
+            lights: lights,
+            density: particleDensity,
+            flash: flashFactor,
+            motion: !reduceMotion,
+            tint: false);
+      }
     }
 
     if (map.lobby && map.place == null) {
