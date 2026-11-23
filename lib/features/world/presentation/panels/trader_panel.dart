@@ -156,7 +156,6 @@ class _TraderPanelState extends State<TraderPanel> {
             child: LifeItemGrid(
               key: ValueKey('trade-grid-$_mode-$_tab'),
               groups: _visible(_tab == 0 ? _fishing() : _farming()),
-              extra: _mode == 1 && _tab == 1 ? _silo() : null,
               empty: _query.isNotEmpty || _kind != null
                   ? 'Nada coincide con la búsqueda.'
                   : _mode == 1
@@ -315,23 +314,6 @@ class _TraderPanelState extends State<TraderPanel> {
   }
 
   // ---------------- CULTIVO ----------------
-
-  /// Granero del ayudante (arriba de la grilla, al VENDER cultivo).
-  Widget? _silo() {
-    final silo = c.town.silo;
-    if (silo.isEmpty) return null;
-    return DsListRow(
-      key: const ValueKey('trade-silo'),
-      compact: true,
-      wrap: true,
-      title: 'Granero del ayudante',
-      subtitle: '${silo.values.fold(0, (a, b) => a + b)} cosechas para recoger',
-      trailing: DsButton('RECOGER',
-          key: const ValueKey('trade-silo-take'),
-          size: DsButtonSize.compact,
-          onPressed: c.collectSilo),
-    );
-  }
 
   List<_Row> _farming() {
     final p = widget.view.me?.profile;

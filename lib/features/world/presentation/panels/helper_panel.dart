@@ -10,6 +10,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
+import 'life_item_grid.dart';
 
 /// Pantalla de un ayudante (farming.md § 8, v0.25.4; tecla G al lado del
 /// NPC). Granjero: SEMILLAS (dos grillas: las tuyas y las de la huerta,
@@ -30,10 +31,6 @@ class _HelperPanelState extends State<HelperPanel> {
   String _query = '';
   FishRarity? _rarity;
 
-  /// Semilla elegida y de qué lado (true = la del granjero).
-  String? _sel;
-  bool _right = false;
-  int _qty = 1;
 
   SessionController get c => widget.controller;
 
@@ -90,6 +87,41 @@ class _HelperPanelState extends State<HelperPanel> {
 
   // ---------------- SEMILLAS ----------------
 
+  LifeItemCellData _seedCell(TownBuild b, String id, int n, bool theirs) {
+    final d = kCrops[id]!;
+    final mine = widget.view.me?.profile.life.farm.seedCount(id) ?? 0;
+    final there = b.seeds[id] ?? 0;
+    Widget btn(String label, int q) => DsButton(
+        theirs ? '← DEVOLVER $label' : 'PASAR $label →',
+        key: ValueKey('helper-${theirs ? 'take' : 'give'}-$label'),
+        size: DsButtonSize.compact,
+        kind: theirs ? DsButtonKind.secondary : DsButtonKind.primary,
+        onPressed: () => theirs
+            ? c.takeSeeds(b.id, id, q)
+            : c.giveSeeds(b.id, id, q));
+    return LifeItemCellData(
+      id: 'helper-cell-${theirs ? 'r' : 'l'}-$id',
+      icon: LifeIcon('semilla_$id', LifeIconKind.semilla,
+          size: LifeItemGrid.iconSize),
+      border: fishRarityColor(d.rarity),
+      search: d.seedName,
+      count: n,
+      detail: LifeItemDetail(
+        name: d.seedName,
+        nameColor: fishRarityColor(d.rarity),
+        tags: [
+          (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+          (theirs ? 'DE LA HUERTA' : 'TUYA', DsColors.textSecondary),
+        ],
+        lines: ['Tenés $mine', 'La huerta tiene $there'],
+        description: theirs
+            ? 'Los granjeros plantan de acá en sus parcelas.'
+            : 'Pasala a la huerta: los granjeros la plantan solos.',
+        actions: [btn('1', 1), if (n >= 10) btn('10', 10), btn('TODO', 0)],
+      ),
+    );
+  }
+
   Widget _seeds(TownBuild b) {
     final p = widget.view.me?.profile;
     final mine = p?.life.farm.seeds ?? const <String, int>{};
@@ -101,17 +133,11 @@ class _HelperPanelState extends State<HelperPanel> {
       return q.isEmpty || d.seedName.toLowerCase().contains(q);
     }
 
-    final left = [
-      for (final e in mine.entries)
-        if (e.value > 0 && pass(e.key)) e
-    ]..sort((a, b) => a.key.compareTo(b.key));
-    final right = [
-      for (final e in b.seeds.entries)
-        if (e.value > 0 && pass(e.key)) e
-    ]..sort((a, b) => a.key.compareTo(b.key));
-    final sel = _sel == null ? null : kCrops[_sel!];
-    final have = _sel == null ? 0 : (_right ? b.seeds[_sel] : mine[_sel]) ?? 0;
-    int n() => _qty <= 0 ? 0 : _qty;
+    List<LifeItemCellData> cells(Map<String, int> m, bool theirs) => [
+          for (final e in (m.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key))))
+            if (e.value > 0 && pass(e.key)) _seedCell(b, e.key, e.value, theirs)
+        ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -135,128 +161,20 @@ class _HelperPanelState extends State<HelperPanel> {
         ]),
         SizedBox(height: DsSpace.sm),
         SizedBox(
-          height: 260,
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(
-                child: _grid('TUS SEMILLAS', 'helper-mine', left, false,
-                    'No tenés semillas que coincidan.')),
-            SizedBox(width: DsSpace.sm),
-            Expanded(
-                child: _grid('SEMILLAS DE LA HUERTA', 'helper-theirs', right,
-                    true, 'Sin semillas: el granjero solo riega y cosecha.')),
-          ]),
-        ),
-        SizedBox(height: DsSpace.sm),
-        DsCard(
-          key: const ValueKey('helper-detail'),
-          child: Row(children: [
-            if (sel != null) ...[
-              LifeIcon('semilla_${sel.id}', LifeIconKind.semilla, size: 32),
-              SizedBox(width: DsSpace.sm),
+          height: 360,
+          child: LifeItemGrid(
+            key: const ValueKey('helper-seeds'),
+            groups: [
+              LifeItemGroup('TUS SEMILLAS', cells(mine, false),
+                  headerKey: const ValueKey('helper-mine')),
+              LifeItemGroup('SEMILLAS DE LA HUERTA', cells(b.seeds, true),
+                  headerKey: const ValueKey('helper-theirs')),
             ],
-            Expanded(
-              child: sel == null
-                  ? Text('Elegí una semilla de una de las grillas.',
-                      style: DsText.detail())
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                          Text(sel.seedName,
-                              style: DsText.body(fishRarityColor(sel.rarity))),
-                          Text(
-                              '${sel.rarity.label} · tenés ${mine[sel.id] ?? 0} · '
-                              'la huerta tiene ${b.seeds[sel.id] ?? 0}',
-                              style: DsText.detail()),
-                        ]),
-            ),
-            for (final (label, v) in const [('1', 1), ('10', 10), ('TODO', 0)])
-              Padding(
-                padding: EdgeInsets.only(left: DsSpace.xs),
-                child: DsButton(label,
-                    key: ValueKey('helper-qty-$label'),
-                    size: DsButtonSize.compact,
-                    selected: _qty == v,
-                    onPressed: () => setState(() => _qty = v)),
-              ),
-            SizedBox(width: DsSpace.sm),
-            DsButton('PASAR →',
-                key: const ValueKey('helper-give'),
-                size: DsButtonSize.compact,
-                kind: DsButtonKind.primary,
-                onPressed: sel != null && !_right && have > 0
-                    ? () => c.giveSeeds(b.id, sel.id, n())
-                    : null),
-            SizedBox(width: DsSpace.xs),
-            DsButton('← DEVOLVER',
-                key: const ValueKey('helper-take'),
-                size: DsButtonSize.compact,
-                onPressed: sel != null && _right && have > 0
-                    ? () => c.takeSeeds(b.id, sel.id, n())
-                    : null),
-          ]),
-        ),
-      ],
-    );
-  }
-
-  Widget _grid(String title, String key, List<MapEntry<String, int>> items,
-      bool right, String empty) {
-    final total = items.fold(0, (a, e) => a + e.value);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        DsSectionHeader(title,
-            trailing: DsBadge('$total', key: ValueKey('$key-count'))),
-        Expanded(
-          child: items.isEmpty
-              ? Text(empty, style: DsText.detail())
-              : SingleChildScrollView(
-                  child: Wrap(
-                    key: ValueKey(key),
-                    spacing: DsSpace.xs,
-                    runSpacing: DsSpace.xs,
-                    children: [
-                      for (final e in items) _cell(e.key, e.value, right),
-                    ],
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _cell(String id, int n, bool right) {
-    final d = kCrops[id]!;
-    final on = _sel == id && _right == right;
-    return DsTooltip(
-      message: '${d.seedName} · ${d.rarity.label} · ×$n',
-      child: DsPressable(
-        key: ValueKey('helper-cell-${right ? 'r' : 'l'}-$id'),
-        onPressed: () => setState(() {
-          _sel = id;
-          _right = right;
-        }),
-        builder: (context, state) => Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: state.hovered ? DsColors.hover : DsColors.surfaceSunken,
-            border: Border.all(
-                color: on ? DsColors.selected : fishRarityColor(d.rarity),
-                width: on ? 2 : 1),
+            empty: 'No hay semillas que coincidan. Comprá en el agropecuario '
+                'o cosechá para conseguir.',
           ),
-          child: Stack(children: [
-            Center(
-                child: LifeIcon('semilla_$id', LifeIconKind.semilla, size: 32)),
-            Positioned(
-              right: 2,
-              bottom: 0,
-              child: Text('$n', style: DsText.detail(DsColors.textPrimary)),
-            ),
-          ]),
         ),
-      ),
+      ],
     );
   }
 
@@ -295,38 +213,68 @@ class _HelperPanelState extends State<HelperPanel> {
   // ---------------- COFRE ----------------
 
   Widget _chest(TownBuild b) {
+    final lake = b.kind == BuildKind.lago;
     final items = b.chest.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
-    String name(String k) => b.kind == BuildKind.lago
-        ? (kFish[k]?.name ?? k)
-        : switch (parseCropKey(k)) {
-            (final crop, final q)? => '${crop.name} (${q.label})',
-            null => k,
-          };
+    final collect = DsButton('RECOGER TODO',
+        key: const ValueKey('helper-collect'),
+        size: DsButtonSize.compact,
+        kind: DsButtonKind.primary,
+        onPressed: b.chest.isEmpty ? null : () => c.collectChest(b.id));
+    LifeItemCellData cell(String k, int n) {
+      if (lake) {
+        final f = kFish[k];
+        return LifeItemCellData(
+          id: 'helper-chest-$k',
+          icon: LifeIcon(k, LifeIconKind.pescado, size: LifeItemGrid.iconSize),
+          border: f == null ? DsColors.border : fishRarityColor(f.rarity),
+          search: f?.name ?? k,
+          count: n,
+          detail: LifeItemDetail(
+              name: f?.name ?? k,
+              nameColor: f == null ? DsColors.textPrimary : fishRarityColor(f.rarity),
+              lines: ['×$n en el cofre'],
+              actions: [collect]),
+        );
+      }
+      final pc = parseCropKey(k);
+      final col = pc == null ? DsColors.border : fishRarityColor(pc.$1.rarity);
+      return LifeItemCellData(
+        id: 'helper-chest-$k',
+        icon: LifeIcon('cosecha_${pc?.$1.id ?? k}', LifeIconKind.cosecha,
+            size: LifeItemGrid.iconSize),
+        border: col,
+        search: pc?.$1.name ?? k,
+        count: n,
+        detail: LifeItemDetail(
+            name: pc?.$1.name ?? k,
+            nameColor: col,
+            tags: [if (pc != null) (pc.$2.label.toUpperCase(), col)],
+            lines: ['×$n en el cofre'],
+            actions: [collect]),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        DsSectionHeader('COFRE',
-            trailing: DsBadge('${b.chestTotal}/${TownRules.t.i('chestMax')}',
-                key: const ValueKey('helper-chest-count'))),
-        if (items.isEmpty)
-          Text('Vacío. Lo que junten los ayudantes cae acá.',
-              style: DsText.detail())
-        else
-          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-            for (final e in items)
-              DsTag('${name(e.key)} ×${e.value}',
-                  color: DsColors.textSecondary),
-          ]),
-        SizedBox(height: DsSpace.sm),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: DsButton('RECOGER TODO',
-              key: const ValueKey('helper-collect'),
-              kind: DsButtonKind.primary,
-              onPressed:
-                  b.chest.isEmpty ? null : () => c.collectChest(b.id)),
+        Row(children: [
+          Text('${b.chestTotal}/${TownRules.t.i('chestMax')} en el cofre',
+              key: const ValueKey('helper-chest-count'),
+              style: DsText.detail()),
+          const Spacer(),
+          collect,
+        ]),
+        SizedBox(height: DsSpace.xs),
+        SizedBox(
+          height: 300,
+          child: LifeItemGrid(
+            groups: [
+              LifeItemGroup(null, [for (final e in items) cell(e.key, e.value)])
+            ],
+            empty: 'Vacío. Lo que junten los ayudantes cae acá.',
+          ),
         ),
       ],
     );

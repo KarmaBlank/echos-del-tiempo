@@ -18,7 +18,6 @@ class FountainPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = controller;
-    final p = view.me?.profile;
     final t = c.town;
     final editWhy = c.cannotEditTown;
     return PanelFrame(

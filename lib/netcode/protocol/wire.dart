@@ -104,7 +104,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 44 (v0.23.0): huerta, ampliaciones del pueblo y árboles de oficios.
 /// 45 (v0.24.0): edición del pueblo (town_editor.md § 8): `town` con
 /// lados, construcciones y lagos propios.
-const kProtocolVersion = 45;
+/// 47 (v0.25.4): granjeros y pescadores con cofre por construcción
+/// (farming.md § 8); se va la auto-pesca.
+const kProtocolVersion = 47;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
