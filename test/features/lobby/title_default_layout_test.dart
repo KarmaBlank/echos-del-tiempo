@@ -1,4 +1,4 @@
-﻿// TÍTULO por defecto (docs/specs/title_screen.md): VERIFICAR sin avisos y
+// TÍTULO por defecto (docs/specs/title_screen.md): VERIFICAR sin avisos y
 // nada cortado ni desbordado de 1280×720 a 2560×1440, con texto grande.
 // Goldens:
 //   flutter test --update-goldens test/features/lobby/title_default_layout_test.dart
@@ -6,6 +6,8 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/edition/game_edition.dart';
@@ -24,6 +26,8 @@ import 'package:echos_del_tiempo/features/lobby/presentation/title_screen.dart';
 import 'package:echos_del_tiempo/features/screen_editor/domain/screen_checks.dart';
 import 'package:echos_del_tiempo/features/screen_editor/presentation/screen_editor_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
+import 'package:echos_del_tiempo/netcode/contracts/net_session_factory.dart';
+import 'package:echos_del_tiempo/netcode/loopback/loopback_net_session.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +36,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import '../../real_fonts.dart';
+import 'title_flow.dart';
 
 Account _account() {
   final rules = CharacterRules(progression);
@@ -62,6 +67,10 @@ Future<void> _pump(WidgetTester tester,
       gameSpritesProvider
           .overrideWith((ref) => Completer<GameSprites>().future),
       appExitProvider.overrideWithValue(() async {}),
+      netSessionFactoryProvider.overrideWithValue(NetSessionFactory(
+          label: 'LAN',
+          codeHint: 'IP:PUERTO',
+          create: () => LoopbackNetSession(LoopbackHub()))),
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -96,6 +105,7 @@ void _expectNothingClipped(WidgetTester tester, Size window) {
   // Los botones de la columna se ven enteros (el texto no se sale del
   // botón).
   for (final id in ['title-start', 'title-settings', 'title-quit']) {
+    if (find.byKey(ValueKey(id)).evaluate().isEmpty) continue;
     final button = tester.getRect(find.byKey(ValueKey(id)));
     final label = find.descendant(
         of: find.byKey(ValueKey(id)), matching: find.byType(RichText));
@@ -154,7 +164,10 @@ void main() {
       ScreenLayoutCatalog.instance.put('title', await _bundled(tester));
       await _pump(tester, size: size, text: text);
       expect(find.byKey(const ValueKey('title-screen-layout')), findsOneWidget);
-      expect(find.text('Jugado: 19/11/26'), findsOneWidget);
+      // Menú mínimo con la versión y BUSCAR en la esquina.
+      expect(find.text('v0.0.0'), findsOneWidget);
+      expect(find.byKey(const ValueKey('update-check')), findsOneWidget);
+      expect(find.byKey(const ValueKey('char-create')), findsNothing);
       // Huecos vacíos no se ven (antes salía "ESTADO DE RED").
       expect(find.text('ESTADO DE RED'), findsNothing);
       expect(find.text('AVISOS DE LA CUENTA'), findsNothing);
@@ -173,4 +186,52 @@ void main() {
       _expectNothingClipped(tester, size);
     });
   }
+
+  // Cada paso del flujo de JUGAR sin recortes (title_screen.md § 1.1).
+  // Con TITLE_SHOTS=<carpeta> guarda una captura de cada uno:
+  //   $env:TITLE_SHOTS = "docs\release_shots"; flutter test test/features/lobby/title_default_layout_test.dart
+  testWidgets('pasos del flujo sin recortes (1280x720)', (tester) async {
+    ScreenLayoutCatalog.instance.put('title', await _bundled(tester));
+    const size = Size(1280, 720);
+    await _pump(tester, size: size);
+    final out = Platform.environment['TITLE_SHOTS'];
+    Future<void> shot(String name) async {
+      _expectNothingClipped(tester, size);
+      if (out == null) return;
+      await tester.runAsync(() async {
+        final b = tester.renderObject<RenderRepaintBoundary>(find
+            .ancestor(
+                of: find.byType(TitleScreen),
+                matching: find.byType(RepaintBoundary))
+            .first);
+        final img = await b.toImage();
+        final png = await img.toByteData(format: ui.ImageByteFormat.png);
+        Directory(out).createSync(recursive: true);
+        File('$out/v0.37.4_$name.png')
+            .writeAsBytesSync(png!.buffer.asUint8List());
+      });
+    }
+
+    await shot('01_menu');
+    await tapTitleKey(tester, 'title-start');
+    await shot('02_modo');
+    await tapTitleKey(tester, 'title-solo');
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    expect(find.byKey(const ValueKey('world-picker')), findsOneWidget);
+    await shot('03_mundo');
+    await tapTitleKey(tester, 'title-worlds-next');
+    expect(find.byKey(const ValueKey('carousel')), findsOneWidget);
+    expect(find.text('> JUGAR'), findsOneWidget);
+    await shot('04_personaje');
+    for (final _ in [1, 2]) {
+      await tapTitleKey(tester, 'title-back');
+    }
+    await tapTitleKey(tester, 'title-coop');
+    await shot('05_cooperativo');
+    await tapTitleKey(tester, 'title-join-step');
+    expect(find.byKey(const ValueKey('title-code')), findsOneWidget);
+    await shot('06_unirse_codigo');
+  });
 }

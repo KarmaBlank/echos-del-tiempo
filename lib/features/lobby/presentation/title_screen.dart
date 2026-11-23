@@ -16,7 +16,6 @@ import '../../../app/feature_flags.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/section_panel.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../game_engine/models/item.dart';
@@ -89,6 +88,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   final _code = TextEditingController();
   Account? _account;
   bool _busy = false;
+
+  /// Paso del flujo y camino elegido (title_screen.md § 1.1).
+  _Step _step = _Step.menu;
+  _Path _path = _Path.solo;
   late final Future<void> _loading;
   StreamSubscription<Account>? _changes;
 
@@ -288,7 +291,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     _lastTap = dbl ? null : now;
     _lastTapId = dbl ? null : id;
     if (_account?.selectedId != id) unawaited(_update((a) => a.select(id)));
-    if (dbl) unawaited(_start());
+    if (dbl) unawaited(_play());
   }
 
   Future<void> _rename() async {
@@ -405,7 +408,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (_busy) return;
     if (code != null && code.trim().length < 4) {
       setState(() {
-        _netStatus = 'Escribe el código de la sala.';
+        _netStatus = 'Escribí el código de la sala.';
         _netError = true;
       });
       return;
@@ -458,6 +461,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (!mounted) return;
     ref.read(musicServiceProvider).playTrack(Music.title);
     ref.read(activeNetSessionProvider.notifier).state = null;
+    // De vuelta de la partida: el menú principal (title_screen.md § 1.1).
+    setState(() => _step = _Step.menu);
     if (reason != null) {
       setState(() {
         _netStatus = reason;
@@ -467,65 +472,140 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   }
 
   // ------------------------------------------------------------------
+  // Flujo de JUGAR (title_screen.md § 1.1)
+  // ------------------------------------------------------------------
+
+  void _go(_Step s) => setState(() {
+        _step = s;
+        _netStatus = null;
+        _netError = false;
+      });
+
+  /// El paso después de elegir el camino [p].
+  void _choose(_Path p) {
+    _path = p;
+    _go(p == _Path.join
+        ? _Step.join
+        : (_travesia ? _Step.characters : _Step.worlds));
+  }
+
+  /// VOLVER (o Esc): el paso anterior; en el creador, cierra el creador.
+  void _back() {
+    if (_busy) return;
+    switch (_step) {
+      case _Step.menu:
+        return;
+      case _Step.mode:
+        _go(_Step.menu);
+      case _Step.coop:
+        _go(_Step.mode);
+      case _Step.join:
+        _go(_Step.coop);
+      case _Step.worlds:
+        _go(_path == _Path.solo ? _Step.mode : _Step.coop);
+      case _Step.characters:
+        final a = _account;
+        if (_creating && a != null && a.characters.isNotEmpty) {
+          setState(() => _creating = false);
+          return;
+        }
+        _go(switch (_path) {
+          _Path.join => _Step.join,
+          _ when !_travesia => _Step.worlds,
+          _Path.solo => _Step.mode,
+          _Path.host => _Step.coop,
+        });
+    }
+  }
+
+  void _joinNext() {
+    if (_code.text.trim().length < 4) {
+      setState(() {
+        _netStatus = 'Escribí el código de la sala.';
+        _netError = true;
+      });
+      return;
+    }
+    _go(_Step.characters);
+  }
+
+  /// La acción principal del paso Personaje según el camino.
+  Future<void> _play() async {
+    final factory = ref.read(netSessionFactoryProvider);
+    switch (_path) {
+      case _Path.solo:
+        await _start();
+      case _Path.host:
+        if (factory != null && factory.available) await _connect(factory);
+      case _Path.join:
+        if (factory != null && factory.available) {
+          await _connect(factory, code: _code.text);
+        }
+    }
+  }
+
+  // ------------------------------------------------------------------
   // UI
   // ------------------------------------------------------------------
 
+  /// Carrusel de personajes + acciones del elegido.
   Widget _selector(Account a, GameSprites? sprites) {
     final sel = a.selected;
     final has = sel != null && !_busy;
+    final chars = a.characters;
+    final index = chars.indexWhere((c) => c.id == a.selectedId);
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-              'PERSONAJES (${a.characters.length}/${Account.maxCharacters})',
-              style: DsText.subtitle()),
-        ),
-        const SizedBox(height: 12),
-        // Grilla: tantas tarjetas por fila como entren en el ancho del
-        // hueco (title_screen.md § 3).
-        SizedBox(
-          width: double.infinity,
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              for (final c in a.characters)
-                CharacterSlotCard(
-                  slot: c,
-                  profile: _norm(c),
-                  className: _className(_norm(c).classId),
-                  selected: c.id == a.selectedId,
+        Text('PERSONAJES (${chars.length}/${Account.maxCharacters})',
+            textAlign: TextAlign.center, style: DsText.subtitle()),
+        SizedBox(height: DsSpace.md),
+        DsCarousel(
+          itemCount: chars.length + (a.isFull ? 0 : 1),
+          selectableCount: chars.length,
+          index: index < 0 ? 0 : index,
+          itemExtent: CharacterSlotCard.widthOf(context),
+          onChanged: _busy
+              ? null
+              : (i) => unawaited(_update((a) => a.select(chars[i].id))),
+          itemBuilder: (context, i) => i < chars.length
+              ? CharacterSlotCard(
+                  slot: chars[i],
+                  profile: _norm(chars[i]),
+                  className: _className(_norm(chars[i]).classId),
+                  selected: chars[i].id == a.selectedId,
                   sprites: sprites,
-                  onTap: () => _tapSlot(c.id),
-                  // Enter: elige; sobre la ya elegida, juega.
-                  onKeyActivate: () => c.id == a.selectedId
-                      ? unawaited(_start())
-                      : _tapSlot(c.id),
-                ),
-              if (!a.isFull)
-                NewCharacterCard(onTap: () => setState(_openCreator)),
-            ],
-          ),
+                  onTap: () => _tapSlot(chars[i].id),
+                  // Enter: elige; sobre la ya elegida, sigue.
+                  onKeyActivate: () => chars[i].id == a.selectedId
+                      ? unawaited(_play())
+                      : _tapSlot(chars[i].id),
+                )
+              : NewCharacterCard(onTap: () => setState(_openCreator)),
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: DsSpace.lg),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.sm,
+          alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            // JUGAR y NUEVO PERSONAJE van en la columna de acciones
-            // (title_screen.md § 1).
-            DsButton('RENOMBRAR',
+            DsButton('NUEVO PERSONAJE',
+                key: const ValueKey('char-create'),
+                tooltip:
+                    a.isFull ? 'Máximo ${Account.maxCharacters} personajes' : null,
+                onPressed:
+                    _busy || a.isFull ? null : () => setState(_openCreator)),
+            DsButton('CAMBIAR NOMBRE',
                 key: const ValueKey('char-rename'),
                 onPressed: has ? _rename : null),
             DsButton('BORRAR',
                 key: const ValueKey('char-delete'),
+                accent: DsColors.danger,
                 onPressed: has ? _delete : null),
-            // Travesía (roguelike.md § 12.2): sin alijo, plan de build ni
-            // bestiario (son del Mundo; la run no los usa ni los llena).
+            // Travesía (roguelike.md § 12.2): sin alijo, plan de build,
+            // bestiario ni hazañas (son del Mundo).
             if (!_travesia) ...[
               DsButton('ALIJO',
                   key: const ValueKey('char-stash'),
@@ -537,13 +617,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               DsButton('BESTIARIO',
                   key: const ValueKey('title-bestiary'),
                   onPressed: _busy ? null : _openBestiary),
-            ],
-            // Hazañas de la cuenta, solo lectura (achievements.md § 7).
-            // La Travesía no tiene hazañas (roguelike.md § 12.2).
-            if (!_travesia)
+              // Hazañas de la cuenta, solo lectura (achievements.md § 7).
               DsButton('HAZAÑAS',
                   key: const ValueKey('title-achievements'),
                   onPressed: _busy ? null : _openAchievements),
+            ],
             // Galería del sistema de diseño, solo en la versión de
             // desarrollo (design_system.md § 8).
             if (FeatureFlags.instance.devTools)
@@ -569,9 +647,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                         }),
           ],
         ),
-        // Party solo si este build la ofrece (FeatureFlags.soloParty).
-        if (sel != null && FeatureFlags.instance.soloParty) ...[
-          const SizedBox(height: 16),
+        // Party solo jugando solo y si este build la ofrece
+        // (FeatureFlags.soloParty).
+        if (sel != null &&
+            _path == _Path.solo &&
+            FeatureFlags.instance.soloParty) ...[
+          SizedBox(height: DsSpace.md),
           _party(a, sel),
         ],
       ],
@@ -582,34 +663,20 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   /// personajes de la cuenta; se guarda en la cuenta al tocar.
   Widget _party(Account a, CharacterSlot leader) {
     final party = a.companions;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PartyPicker(
-          candidates: [
-            for (final c in a.characters)
-              if (c.id != leader.id)
-                PartyCandidate(
-                  id: c.id,
-                  name: c.displayName,
-                  className: _className(_norm(c).classId),
-                  level: _norm(c).level,
-                ),
-          ],
-          selected: party,
-          enabled: !_busy,
-          onChanged: (ids) => unawaited(_update((a) => a.withParty(ids))),
-        ),
-        if (party.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-              retroText('La party es para JUGAR solo: en una sala va un '
-                  'personaje por jugador.'),
-              key: const ValueKey('party-solo-note'),
-              textAlign: TextAlign.center,
-              style: DsText.detail()),
-        ],
+    return PartyPicker(
+      candidates: [
+        for (final c in a.characters)
+          if (c.id != leader.id)
+            PartyCandidate(
+              id: c.id,
+              name: c.displayName,
+              className: _className(_norm(c).classId),
+              level: _norm(c).level,
+            ),
       ],
+      selected: party,
+      enabled: !_busy,
+      onChanged: (ids) => unawaited(_update((a) => a.withParty(ids))),
     );
   }
 
@@ -622,128 +689,114 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         classes.firstOrNull;
     final weapon =
         sel == null ? null : _rules.catalog.weapons[sel.startWeaponId];
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: RetroType.width(context, 1100)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
-              key: const ValueKey('char-creator'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontFamily: RetroType.titleFamily,
-                  fontSize: RetroType.title,
-                  color: RetroPalette.gold)),
-          const SizedBox(height: 4),
-          Text(
-              retroText(
-                  'Elige la clase (flechas o 1-9), escribe el nombre y CREA.'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: RetroPalette.muted)),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 5,
-                child: SectionPanel(
-                  icon: PixelIconKind.sword,
-                  title: '1 · CLASE',
-                  subtitle: 'cualquier clase equipa cualquier arma',
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(first ? 'CREÁ TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
+            key: const ValueKey('char-creator'),
+            textAlign: TextAlign.center,
+            style: DsText.subtitle()),
+        SizedBox(height: DsSpace.md),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: SectionPanel(
+                icon: PixelIconKind.sword,
+                title: '1 · CLASE',
+                subtitle: 'cualquier clase equipa cualquier arma',
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (var i = 0; i < classes.length; i++)
+                        ClassCard(
+                          def: classes[i],
+                          index: i < 9 ? i + 1 : null,
+                          weaponName: _rules.catalog
+                                  .weapons[classes[i].startWeaponId]?.name ??
+                              '',
+                          selected: sel?.id == classes[i].id,
+                          sprites: sprites,
+                          onTap: () =>
+                              setState(() => _newClass = classes[i].id),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (sel != null)
+                    SectionPanel(
+                      icon: PixelIconKind.star,
+                      title: 'DETALLE',
                       children: [
-                        for (var i = 0; i < classes.length; i++)
-                          ClassCard(
-                            def: classes[i],
-                            index: i < 9 ? i + 1 : null,
-                            weaponName: _rules.catalog
-                                    .weapons[classes[i].startWeaponId]?.name ??
-                                '',
-                            selected: sel?.id == classes[i].id,
-                            sprites: sprites,
-                            onTap: () =>
-                                setState(() => _newClass = classes[i].id),
-                          ),
+                        ClassDetail(
+                          def: sel,
+                          weaponName: weapon?.name ?? '',
+                          skills: weapon == null
+                              ? null
+                              : SkillChips(
+                                  rules: _rules,
+                                  item: ItemInstance.common('_new', weapon.id,
+                                      itemLevel: weapon.level)),
+                        ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (sel != null)
-                      SectionPanel(
-                        icon: PixelIconKind.star,
-                        title: 'DETALLE',
+                  SectionPanel(
+                    icon: PixelIconKind.check,
+                    title: '2 · NOMBRE',
+                    children: [
+                      RetroTextField(
+                        key: const ValueKey('title-name'),
+                        controller: _name,
+                        maxLength: ProgressionRules.maxNameLength,
+                        hint: Account.defaultName,
+                        onSubmitted: (_) => _create(),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          ClassDetail(
-                            def: sel,
-                            weaponName: weapon?.name ?? '',
-                            skills: weapon == null
-                                ? null
-                                : SkillChips(
-                                    rules: _rules,
-                                    item: ItemInstance.common('_new', weapon.id,
-                                        itemLevel: weapon.level)),
-                          ),
+                          if (!first)
+                            DsButton('CANCELAR',
+                                key: const ValueKey('char-create-cancel'),
+                                onPressed: () =>
+                                    setState(() => _creating = false)),
+                          DsButton('> CREAR',
+                              key: const ValueKey('char-create-confirm'),
+                              kind: DsButtonKind.primary,
+                              onPressed: _busy ? null : _create),
                         ],
                       ),
-                    SectionPanel(
-                      icon: PixelIconKind.check,
-                      title: '2 · NOMBRE',
-                      children: [
-                        RetroTextField(
-                          key: const ValueKey('title-name'),
-                          controller: _name,
-                          maxLength: ProgressionRules.maxNameLength,
-                          hint: Account.defaultName,
-                          onSubmitted: (_) => _create(),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.end,
-                          spacing: 8,
-                          runSpacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            KeyHints(
-                                confirm: 'Crear',
-                                back: first ? null : 'Cancelar'),
-                            if (!first)
-                              DsButton('CANCELAR',
-                                  key: const ValueKey('char-create-cancel'),
-                                  onPressed: () =>
-                                      setState(() => _creating = false)),
-                            DsButton('> CREAR',
-                                key: const ValueKey('char-create-confirm'),
-                                kind: DsButtonKind.primary,
-                                onPressed: _busy ? null : _create),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  /// `1`..`9`: en el creador, la clase N; en la selección, el personaje N.
+  /// `1`..`9` en el paso Personaje: en el creador, la clase N; si no, el
+  /// personaje N.
   bool _digit(int n) {
     final a = _account;
-    if (a == null) return false;
+    if (a == null || _step != _Step.characters) return false;
     if (_creating || a.characters.isEmpty) {
       final cs = _classes;
       if (n > cs.length) return false;
@@ -755,105 +808,60 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     return true;
   }
 
-  Widget _netRow(NetSessionFactory? factory) {
-    final netOk = factory != null &&
-        factory.available &&
-        !_busy &&
-        _account?.selected != null;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        DsButton(_travesia ? 'CREAR SALA' : 'ABRIR SALA',
-            key: const ValueKey('title-host'),
-            onPressed: netOk ? () => _connect(factory) : null),
-        Text('o', style: DsText.detail()),
-        SizedBox(
-          // Crece con el texto (el hint "CODIGO" nunca se corta).
-          width: RetroType.em(context, 8) + 2 * DsSpace.sm,
-          child: TextField(
-            key: const ValueKey('title-code'),
-            controller: _code,
-            enabled: netOk,
-            style: TextStyle(
-                fontFamily: RetroType.titleFamily,
-                fontSize: RetroType.label,
-                color: DsColors.textPrimary),
-            cursorColor: DsColors.focus,
-            onSubmitted: (_) {
-              if (netOk) _connect(factory, code: _code.text);
-            },
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: factory?.codeHint ?? 'CODIGO',
-              hintStyle: TextStyle(
-                  fontFamily: RetroType.titleFamily,
-                  fontSize: RetroType.label,
-                  color: DsColors.textSecondary),
-              contentPadding: EdgeInsets.all(DsSpace.sm),
-            ),
-          ),
-        ),
-        DsButton('UNIRSE',
-            key: const ValueKey('title-join'),
-            onPressed:
-                netOk ? () => _connect(factory, code: _code.text) : null),
-        Text(
-            retroText(factory == null
-                ? 'P2P: próximamente'
-                : factory.unavailableReason ?? 'Red: ${factory.label}'),
-            key: const ValueKey('title-p2p'),
-            maxLines: 1,
-            style: DsText.detail()),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final a = _account;
-    final sprites = ref.watch(gameSpritesProvider).valueOrNull;
-    final factory = ref.watch(netSessionFactoryProvider);
-    final creating = _creating || (a != null && a.characters.isEmpty);
-    // Teclado (menu_focus.dart): flechas / Tab / Enter, Esc cancela el
-    // creador y 1-9 eligen personaje o clase.
-    // Layout editado en Editor → PANTALLAS (screen_editor.md § 3); sin
-    // archivo, la pantalla armada en código de siempre.
-    final layout = ScreenLayoutCatalog.instance.get('title');
+    // Teclado (menu_focus.dart): flechas / Tab / Enter, Esc vuelve un
+    // paso y 1-9 eligen personaje o clase.
     return Scaffold(
       body: MenuKeyScope(
-        onBack: creating && a != null && a.characters.isNotEmpty
-            ? () => setState(() => _creating = false)
-            : null,
+        onBack: _step == _Step.menu ? null : _back,
         onDigit: _digit,
-        child: layout == null
-            ? _codeLayout(text, a, sprites, factory, creating)
-            : DefaultTextStyle.merge(
-                style: text.bodySmall,
-                child: DsScreenView(
-                  key: const ValueKey('title-screen-layout'),
-                  layout: layout,
-                  spec: titleBindings,
-                  bindings: _bindings(context, a, sprites, factory, creating),
-                ),
-              ),
+        child: DefaultTextStyle.merge(
+          style: text.bodySmall,
+          child: KeyedSubtree(
+            key: ValueKey('title-step-${_step.name}'),
+            child: _step == _Step.menu ? _menu() : _stepView(),
+          ),
+        ),
       ),
     );
   }
 
+  // ------------------------------------------------------------------
+  // Menú principal
+  // ------------------------------------------------------------------
+
+  void _openModes() => _go(_Step.mode);
+
+  /// Menú principal: el layout de datos (Editor → PANTALLAS,
+  /// screen_editor.md § 3) o, sin archivo, el armado en código.
+  Widget _menu() {
+    final layout = ScreenLayoutCatalog.instance.get('title');
+    if (layout == null) return _codeMenu();
+    return DsScreenView(
+      key: const ValueKey('title-screen-layout'),
+      layout: layout,
+      spec: titleBindings,
+      bindings: _bindings(),
+    );
+  }
+
   /// Lo que el layout de datos puede usar del título, por nombre.
-  ScreenRuntimeBindings _bindings(BuildContext context, Account? a,
-      GameSprites? sprites, NetSessionFactory? factory, bool creating) {
+  ScreenRuntimeBindings _bindings() {
+    final a = _account;
     final has = a?.selected != null && !_busy;
     final notice = _noticeText(), status = _netStatusText();
     return ScreenRuntimeBindings(
       actions: {
-        'nuevaPartida': ScreenAction(has ? _start : null),
+        'nuevaPartida': ScreenAction(_busy ? null : _openModes),
         'crearPersonaje': ScreenAction(_busy || a == null || a.isFull
             ? null
-            : () => setState(_openCreator)),
+            : () {
+                _path = _Path.solo;
+                _openCreator();
+                _go(_Step.characters);
+              }),
         'configuracion': ScreenAction(() => showSettingsDialog(context)),
         'salirDelJuego': ScreenAction(_quitGame),
         'ayudaTeclas': ScreenAction(() {}, tooltip: _keysHelp),
@@ -872,18 +880,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       },
       slots: {
         if (notice != null) 'avisos': SingleChildScrollView(child: notice),
-        // Versión y actualización, chico en la esquina (title_screen.md
-        // § 1): pegado abajo; si crece (versión nueva), se desplaza.
+        // Versión + BUSCAR o ACTUALIZAR, chico en la esquina
+        // (title_screen.md § 1).
         'version': const Align(
           alignment: Alignment.bottomLeft,
           child: SingleChildScrollView(child: UpdateBanner(compact: true)),
-        ),
-        'personajes': SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _mainBlock(a, sprites, factory, creating),
-          ),
         ),
         if (status != null)
           'estadoRed': Align(
@@ -915,147 +916,277 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             _netError ? DsColors.danger : DsColors.textSecondary));
   }
 
-  /// Mundo + personajes + sala, o el creador.
-  List<Widget> _mainBlock(Account? a, GameSprites? sprites,
-          NetSessionFactory? factory, bool creating) =>
-      [
-        if (a == null)
-          Text('Cargando...', style: DsText.detail())
-        else if (creating)
-          _creator(a, sprites)
-        else ...[
-          // Mundo + personaje (town_loop.md § 11c); la Travesía no tiene
-          // mundos.
-          if (!_travesia) ...[
-            Align(
-                alignment: Alignment.centerLeft,
-                child: WorldPicker(busy: _busy)),
-            const SizedBox(height: 16),
-          ],
-          _selector(a, sprites),
-          const SizedBox(height: 16),
-          _netRow(factory),
-        ],
-      ];
-
-  /// Columna de acciones del título (title_screen.md § 1), la del
-  /// fallback; el layout de datos tiene los mismos botones como elementos.
-  Widget _menuColumn(Account? a) {
-    final has = a?.selected != null && !_busy;
-    final full = a != null && a.isFull;
+  /// El menú principal armado en código (fallback sin layout de datos):
+  /// la misma disposición que el layout por defecto.
+  Widget _codeMenu() {
+    final notice = _noticeText(), status = _netStatusText();
+    final gap = DsSpace.lg;
     Widget item(Widget b) => Padding(
           padding: EdgeInsets.only(bottom: DsSpace.sm + DsSpace.xs),
           child: SizedBox(width: RetroType.width(context, 288), child: b),
         );
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // JUGAR es la acción principal (borde y texto dorados).
-        item(DsButton(_travesia ? '> JUGAR' : '> JUGAR SOLO',
-            key: const ValueKey('title-start'),
-            kind: DsButtonKind.primary,
-            onPressed: has ? _start : null)),
-        item(DsButton('NUEVO PERSONAJE',
-            key: const ValueKey('char-create'),
-            tooltip: full ? 'Máximo ${Account.maxCharacters} personajes' : null,
-            onPressed: _busy || a == null || full
-                ? null
-                : () => setState(_openCreator))),
-        item(DsButton('VER NOTAS DEL PARCHE',
-            key: const ValueKey('title-patch-notes'),
-            trailing: _notesBadge == null
-                ? null
-                : DsBadge(_notesBadge!,
-                    key: const ValueKey('title-patch-notes-badge')),
-            onPressed: _openPatchNotes)),
-        item(DsButton('CONFIGURACIÓN',
-            key: const ValueKey('title-settings'),
-            onPressed: () => showSettingsDialog(context))),
-        // Salida segura (v0.8.2): confirma y guarda todo (ExitGuard)
-        // antes de cerrar, como la pausa.
-        item(DsButton('SALIR DEL JUEGO',
-            key: const ValueKey('title-quit'),
-            accent: DsColors.danger,
-            onPressed: _quitGame)),
-      ],
-    );
-  }
-
-  /// La pantalla armada en código (fallback sin layout de datos): la
-  /// misma disposición que el layout por defecto.
-  Widget _codeLayout(TextTheme text, Account? a, GameSprites? sprites,
-      NetSessionFactory? factory, bool creating) {
-    final notice = _noticeText(), status = _netStatusText();
-    final gap = DsSpace.lg;
-    return DefaultTextStyle.merge(
-      style: text.bodySmall,
-      child: Padding(
-        padding: EdgeInsets.all(gap),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('ECOS DEL TIEMPO', style: DsText.display()),
-                        SizedBox(height: DsSpace.xl * 2),
-                        _menuColumn(a),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: gap * 2),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (notice != null) ...[
-                            notice,
-                            SizedBox(height: DsSpace.sm),
-                          ],
-                          ..._mainBlock(a, sprites, factory, creating),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+    return Padding(
+      padding: EdgeInsets.all(gap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (notice != null) Center(child: notice),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('ECOS DEL TIEMPO',
+                        textAlign: TextAlign.center, style: DsText.display()),
+                    SizedBox(height: DsSpace.xl * 2),
+                    // JUGAR es la acción principal (borde y texto dorados).
+                    item(DsButton('> JUGAR',
+                        key: const ValueKey('title-start'),
+                        kind: DsButtonKind.primary,
+                        autofocus: true,
+                        onPressed: _busy ? null : _openModes)),
+                    item(DsButton('VER NOTAS DEL PARCHE',
+                        key: const ValueKey('title-patch-notes'),
+                        trailing: _notesBadge == null
+                            ? null
+                            : DsBadge(_notesBadge!,
+                                key: const ValueKey('title-patch-notes-badge')),
+                        onPressed: _openPatchNotes)),
+                    item(DsButton('OPCIONES',
+                        key: const ValueKey('title-settings'),
+                        onPressed: () => showSettingsDialog(context))),
+                    // Salida segura (v0.8.2): confirma y guarda todo
+                    // (ExitGuard) antes de cerrar, como la pausa.
+                    item(DsButton('SALIR',
+                        key: const ValueKey('title-quit'),
+                        accent: DsColors.danger,
+                        onPressed: _quitGame)),
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: DsSpace.sm),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Versión y actualización (docs/specs/distribution.md).
-                const Flexible(
-                    child: Align(
-                        alignment: Alignment.bottomLeft,
-                        child: UpdateBanner(compact: true))),
-                SizedBox(width: gap),
-                Expanded(
+          ),
+          SizedBox(height: DsSpace.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Versión y actualización (docs/specs/distribution.md).
+              const Flexible(
                   child: Align(
-                      alignment: Alignment.bottomRight,
-                      child: status ?? const SizedBox.shrink()),
-                ),
-                SizedBox(width: DsSpace.sm),
-                // Atajos de teclado al "?" (design_system.md § 2,
-                // principio 0: nada de textos de ayuda fijos).
-                DsButton.icon(const Text('?'),
-                    key: const ValueKey('title-help'),
-                    tooltip: _keysHelp,
-                    onPressed: () {}),
-              ],
-            ),
-          ],
-        ),
+                      alignment: Alignment.bottomLeft,
+                      child: UpdateBanner(compact: true))),
+              SizedBox(width: gap),
+              Expanded(
+                child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: status ?? const SizedBox.shrink()),
+              ),
+              SizedBox(width: DsSpace.sm),
+              // Atajos de teclado al "?" (design_system.md § 2,
+              // principio 0: nada de textos de ayuda fijos).
+              DsButton.icon(const Text('?'),
+                  key: const ValueKey('title-help'),
+                  tooltip: _keysHelp,
+                  onPressed: () {}),
+            ],
+          ),
+        ],
       ),
     );
   }
+
+  // ------------------------------------------------------------------
+  // Pasos
+  // ------------------------------------------------------------------
+
+  /// Un paso del flujo: título arriba, contenido centrado (se desplaza si
+  /// no entra), VOLVER abajo a la izquierda y la acción para seguir abajo
+  /// a la derecha.
+  Widget _frame(
+      {required String title, required Widget body, Widget? action}) {
+    final notice = _noticeText(), status = _netStatusText();
+    final gap = DsSpace.lg;
+    return Padding(
+      padding: EdgeInsets.all(gap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title,
+              key: const ValueKey('title-step-title'),
+              textAlign: TextAlign.center,
+              style: DsText.title()),
+          if (notice != null) ...[
+            SizedBox(height: DsSpace.sm),
+            Center(child: notice),
+          ],
+          SizedBox(height: DsSpace.lg),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: RetroType.width(context, 1232)),
+                  child: body,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: DsSpace.sm),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              DsButton('VOLVER',
+                  key: const ValueKey('title-back'),
+                  onPressed: _busy ? null : _back),
+              SizedBox(width: gap),
+              Expanded(
+                child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: status ?? const SizedBox.shrink()),
+              ),
+              if (action != null) ...[SizedBox(width: gap), action],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Opción grande de un paso (nombre + qué hace).
+  Widget _option(String key, String label, String detail, VoidCallback? on,
+          {bool autofocus = false}) =>
+      Padding(
+        padding: EdgeInsets.only(bottom: DsSpace.md),
+        child: SizedBox(
+          width: RetroType.width(context, 420),
+          child: DsButton(label,
+              key: ValueKey(key),
+              details: [detail],
+              autofocus: autofocus,
+              onPressed: _busy ? null : on),
+        ),
+      );
+
+  Widget _stepView() {
+    final factory = ref.watch(netSessionFactoryProvider);
+    final netOk = factory != null && factory.available && !_busy;
+    switch (_step) {
+      case _Step.menu:
+        return _menu();
+      case _Step.mode:
+        return _frame(
+          title: 'JUGAR',
+          body: Column(mainAxisSize: MainAxisSize.min, children: [
+            _option('title-solo', 'SOLITARIO', 'Jugás vos solo.',
+                () => _choose(_Path.solo),
+                autofocus: true),
+            _option('title-coop', 'COOPERATIVO',
+                'Con amigos: creás una sala o te unís a una.',
+                () => _go(_Step.coop)),
+          ]),
+        );
+      case _Step.coop:
+        return _frame(
+          title: 'COOPERATIVO',
+          body: Column(mainAxisSize: MainAxisSize.min, children: [
+            _option('title-host', 'CREAR SALA',
+                'Abrís tu mundo y tus amigos se unen con el código.',
+                netOk ? () => _choose(_Path.host) : null,
+                autofocus: true),
+            _option('title-join-step', 'UNIRSE',
+                'Entrás a la sala de un amigo con su código.',
+                netOk ? () => _choose(_Path.join) : null),
+            Text(
+                retroText(factory == null
+                    ? 'P2P: próximamente'
+                    : factory.unavailableReason ?? 'Red: ${factory.label}'),
+                key: const ValueKey('title-p2p'),
+                textAlign: TextAlign.center,
+                style: DsText.detail()),
+          ]),
+        );
+      case _Step.join:
+        return _frame(
+          title: 'UNIRSE',
+          body: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('Código de la sala', style: DsText.detail()),
+            SizedBox(height: DsSpace.sm),
+            SizedBox(
+              // Crece con el texto (el hint nunca se corta).
+              width: RetroType.em(context, 12) + 2 * DsSpace.sm,
+              child: TextField(
+                key: const ValueKey('title-code'),
+                controller: _code,
+                autofocus: true,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontFamily: RetroType.titleFamily,
+                    fontSize: RetroType.label,
+                    color: DsColors.textPrimary),
+                cursorColor: DsColors.focus,
+                onSubmitted: (_) => _joinNext(),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: factory?.codeHint ?? 'CODIGO',
+                  hintStyle: TextStyle(
+                      fontFamily: RetroType.titleFamily,
+                      fontSize: RetroType.label,
+                      color: DsColors.textSecondary),
+                  contentPadding: EdgeInsets.all(DsSpace.sm),
+                ),
+              ),
+            ),
+          ]),
+          action: DsButton('> CONTINUAR',
+              key: const ValueKey('title-join-next'),
+              kind: DsButtonKind.primary,
+              onPressed: _busy ? null : _joinNext),
+        );
+      case _Step.worlds:
+        final book = ref.watch(worldBookProvider);
+        return _frame(
+          title: 'MUNDO',
+          body: WorldPicker(busy: _busy),
+          action: DsButton('> CONTINUAR',
+              key: const ValueKey('title-worlds-next'),
+              kind: DsButtonKind.primary,
+              onPressed: _busy || book?.selected == null
+                  ? null
+                  : () => _go(_Step.characters)),
+        );
+      case _Step.characters:
+        final a = _account;
+        final sprites = ref.watch(gameSpritesProvider).valueOrNull;
+        final creating = _creating || (a != null && a.characters.isEmpty);
+        final canPlay = a?.selected != null &&
+            !_busy &&
+            (_path == _Path.solo || netOk);
+        return _frame(
+          title: 'PERSONAJE',
+          body: a == null
+              ? Text('Cargando...', style: DsText.detail())
+              : creating
+                  ? _creator(a, sprites)
+                  : _selector(a, sprites),
+          action: creating
+              ? null
+              : DsButton(
+                  switch (_path) {
+                    _Path.solo => '> JUGAR',
+                    _Path.host => '> CREAR SALA',
+                    _Path.join => '> UNIRSE',
+                  },
+                  key: const ValueKey('char-play'),
+                  kind: DsButtonKind.primary,
+                  onPressed: canPlay ? _play : null),
+        );
+    }
+  }
 }
+
+/// Pasos del título (title_screen.md § 1.1).
+enum _Step { menu, mode, coop, join, worlds, characters }
+
+/// Camino elegido en el flujo de JUGAR.
+enum _Path { solo, host, join }

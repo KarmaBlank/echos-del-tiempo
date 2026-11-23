@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
+import 'title_flow.dart';
 
 /// Regresión v0.4 ("cuando jugó solo el personaje no guardó lo jugado
 /// conmigo"): el título, la sala como CLIENTE y después la partida solo
@@ -77,9 +78,8 @@ void main() {
     await tester.pump();
 
     // Se une a la sala.
-    await tester.enterText(
-        find.byKey(const ValueKey('title-code')), hn.roomCode!);
-    await tester.tap(find.text('UNIRSE'));
+    await goToJoinCharacters(tester, hn.roomCode!);
+    await tester.tap(find.byKey(const ValueKey('char-play')));
     for (var i = 0; i < 6; i++) {
       await tester.pump();
     }
@@ -114,7 +114,8 @@ void main() {
     expect(repo.current!.selected!.profile.points, 0,
         reason: 'la cuenta en memoria tiene lo jugado en la sala');
 
-    await tester.tap(find.text('> JUGAR SOLO'));
+    await goToSoloCharacters(tester);
+    await tester.tap(find.byKey(const ValueKey('char-play')));
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }
