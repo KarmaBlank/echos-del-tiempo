@@ -329,3 +329,93 @@ abstract final class FishingPalette {
   static const zoneIn = Color(0xAA4CD07D);
   static const zoneOut = Color(0xAAE0A040);
 }
+
+/// Forma del fruto maduro de un cultivo (farming.md § 2.3, v0.24.6).
+enum CropShape { root, grain, tuber, pumpkin, berries, bulb, flower, melon, rose, crystal }
+
+/// Aspecto de un cultivo en el mapa: semilla, planta y fruto.
+class CropLook {
+  const CropLook(this.shape,
+      {required this.seed,
+      required this.plant,
+      required this.fruit,
+      required this.accent,
+      this.glow = false});
+  final CropShape shape;
+  final Color seed, plant, fruit, accent;
+
+  /// Destella al madurar (legendarios).
+  final bool glow;
+}
+
+/// Aspecto de cada cultivo (id de `kCrops`) en la huerta del mapa.
+abstract final class CropPalette {
+  static const fallback = CropLook(CropShape.berries,
+      seed: FarmPalette.fert,
+      plant: FarmPalette.leaf,
+      fruit: Color(0xFFE8C170),
+      accent: Color(0xFFFFF3C4));
+
+  static const looks = <String, CropLook>{
+    'nabo_claro': CropLook(CropShape.root,
+        seed: Color(0xFFD8D0C0),
+        plant: Color(0xFF5DBB4E),
+        fruit: Color(0xFFF2EEE6),
+        accent: Color(0xFFB36FC2)),
+    'trigo_dorado': CropLook(CropShape.grain,
+        seed: Color(0xFFD9B45A),
+        plant: Color(0xFFA8B84A),
+        fruit: Color(0xFFE8B83A),
+        accent: Color(0xFFFFE9A0)),
+    'papa_piedra': CropLook(CropShape.tuber,
+        seed: Color(0xFF8E8478),
+        plant: Color(0xFF4F9A48),
+        fruit: Color(0xFFA89478),
+        accent: Color(0xFF6C6258)),
+    'calabaza_sendero': CropLook(CropShape.pumpkin,
+        seed: Color(0xFFEFDCA8),
+        plant: Color(0xFF3E9B45),
+        fruit: Color(0xFFF08A24),
+        accent: Color(0xFFB85A10)),
+    'frutilla_rocio': CropLook(CropShape.berries,
+        seed: Color(0xFFE88A8A),
+        plant: Color(0xFF46A24A),
+        fruit: Color(0xFFE8364A),
+        accent: Color(0xFFFFE680)),
+    'cebolla_cobre': CropLook(CropShape.bulb,
+        seed: Color(0xFFC87A44),
+        plant: Color(0xFF7BC66B),
+        fruit: Color(0xFFC8743A),
+        accent: Color(0xFFFFC08A)),
+    'flor_runica': CropLook(CropShape.flower,
+        seed: Color(0xFF8FA8FF),
+        plant: Color(0xFF3E9B6A),
+        fruit: Color(0xFF6FA0FF),
+        accent: Color(0xFFE0C8FF)),
+    'melon_engranaje': CropLook(CropShape.melon,
+        seed: Color(0xFFE6E0B0),
+        plant: Color(0xFF3E9B45),
+        fruit: Color(0xFF9CD86A),
+        accent: Color(0xFF4E7A2E)),
+    'trigo_manana': CropLook(CropShape.grain,
+        seed: Color(0xFFFFF3C4),
+        plant: Color(0xFFC8D8A0),
+        fruit: Color(0xFFFFF6D8),
+        accent: Color(0xFF9FE8FF),
+        glow: true),
+    'rosa_reloj': CropLook(CropShape.rose,
+        seed: Color(0xFFB03050),
+        plant: Color(0xFF2D6E32),
+        fruit: Color(0xFFD8203C),
+        accent: Color(0xFFFFD166),
+        glow: true),
+    'raiz_era': CropLook(CropShape.crystal,
+        seed: Color(0xFF3FD8C8),
+        plant: Color(0xFF3A8C7A),
+        fruit: Color(0xFF3FE0D0),
+        accent: Color(0xFFE0FFFA),
+        glow: true),
+  };
+
+  static CropLook of(String? id) => looks[id] ?? fallback;
+}

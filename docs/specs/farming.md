@@ -107,6 +107,19 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   (100 %, con brillo). Arado con surcos; regado, tierra oscura y una gota;
   abonado, granitos claros. Dibujado en `MapFarmLayer` (colores en
   `FarmPalette`); registrado como procedural.
+- Aspecto por cultivo (v0.24.6): la semilla es un puntito del color de
+  su tipo en un punto al azar del tile, determinista por parcela, cultivo
+  y quien plantó (`MapFarmLayer.seedOffset`), así todos los clientes lo
+  ven igual y no salta. El brote y la planta crecen desde ese punto; al
+  madurar muestran el fruto con forma y color propios (`CropPalette` en
+  `map_themes.dart`: semilla, planta, fruto, acento y forma `CropShape`):
+  nabo (raíz blanca con cuello violeta), trigo dorado (espigas doradas),
+  papa (tubérculos grises al pie), calabaza (naranja con gajos), frutilla
+  (bayas rojas), cebolla de cobre (bulbo cobrizo con tallos), flor rúnica
+  (flor azul), melón engranaje (melón verde rayado), trigo del Mañana
+  (espigas claras), rosa del Reloj Quieto (rosa roja) y raíz de la Era
+  Antigua (cristal turquesa). Los legendarios destellan; el brillo de lo
+  maduro se mantiene. Pixel art procedural, sin cambios de protocolo.
 - La cosecha "salta" del tile hacia quien cosechó con chispas (como el
   pez) y el nombre con la calidad arriba del personaje.
 
