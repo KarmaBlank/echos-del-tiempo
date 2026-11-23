@@ -17,11 +17,11 @@ Lienzo de diseño 1280×720 (todo escala igual hasta 2560×1440):
                                  │ selector de mundo              │
  > JUGAR            (principal)  │ PERSONAJES (n/8)               │
    NUEVO PERSONAJE               │ [tarjeta] [tarjeta] [tarjeta]  │
-   VER NOTAS DEL PARCHE          │ [tarjeta] [+ NUEVO]            │
+   VER NOTAS DEL PARCHE [NUEVO]  │ [tarjeta] [+ NUEVO]            │
    CONFIGURACIÓN                 │ RENOMBRAR BORRAR ALIJO ...     │
    SALIR DEL JUEGO               │ ABRIR SALA o [código] UNIRSE   │
                                  └────────────────────────────────┘
- v0.36.0 · al día [BUSCAR]       avisos de la cuenta     red ·  [?]
+ [ACTUALIZAR] (solo si hay)      avisos de la cuenta     red ·  [?]
 ```
 
 - Solo el nombre del juego, sin subtítulo.
@@ -31,8 +31,11 @@ Lienzo de diseño 1280×720 (todo escala igual hasta 2560×1440):
 - A la derecha, el hueco `personajes` (mundo + grilla de tarjetas +
   acciones del elegido + sala) sin panel con borde alrededor: las
   tarjetas ya son superficies. Si no entra, se desplaza (rueda / teclado).
-- Abajo a la izquierda, chico, el hueco `version` (versión y estado de la
-  actualización con BUSCAR). Nunca se pisa con otra caja.
+- Abajo a la izquierda, el hueco `version` (v0.37.1): vacío (sin
+  versión ni "buscando…" ni BUSCAR) salvo que haya una versión nueva;
+  ahí solo el botón ACTUALIZAR (la misma acción del actualizador; después
+  el progreso de la descarga o REINTENTAR si falla). Nunca se pisa con
+  otra caja.
 - Abajo a la derecha, el hueco `estadoRed` en texto Detalle, y el "?" de
   los atajos en la esquina.
 - El creador de personaje (cuenta vacía o NUEVO PERSONAJE) ocupa el
@@ -71,3 +74,14 @@ Botón **VER NOTAS DEL PARCHE** (acción `verNotasParche`) abre un panel:
   sin red; lo que baja el actualizador solo trae la versión nueva). El
   Mundo lista `vX.Y.Z.md`; la Travesía, `travesia-vX.Y.Z.md`. Archivos
   con otro nombre (notas sin numerar) se ignoran.
+
+### 4.1 Insignia NUEVO (v0.37.1)
+
+- El botón muestra la insignia `NUEVO` (`DsBadge`, al lado del texto)
+  cuando la versión más nueva de las notas empaquetadas es posterior a
+  la última vista (orden semántico; nunca vistas = hay nuevas).
+- Al tocar el botón, la versión más nueva queda como vista y la
+  insignia desaparece. Se guarda global (no por cuenta) en los ajustes
+  del juego (`game.json`, clave `seenPatchNotes`).
+- En el layout de datos, la acción lleva la insignia
+  (`ScreenAction.badge`) y el componente botón la dibuja.

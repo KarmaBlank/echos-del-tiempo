@@ -8,9 +8,12 @@ import 'ds_registry.dart';
 
 /// Handler de una acción con nombre (`null` = deshabilitado, gris).
 class ScreenAction {
-  const ScreenAction(this.onPressed, {this.tooltip});
+  const ScreenAction(this.onPressed, {this.tooltip, this.badge});
   final VoidCallback? onPressed;
   final String? tooltip;
+
+  /// Insignia al lado del texto del botón (p. ej. `NUEVO`); `null` = sin.
+  final String? badge;
 }
 
 /// Lo que una pantalla entrega a su layout en tiempo de ejecución: solo
@@ -70,6 +73,7 @@ Widget buildScreenElement(
           : action?.onPressed,
       tooltip: action?.tooltip ??
           (preview ? spec?.action(e.action)?.label : null),
+      badge: preview ? null : action?.badge,
       data: data,
       slot: preview ? null : bindings.slots[e.slot],
       slotLabel: spec?.slot(e.slot)?.label.toUpperCase(),

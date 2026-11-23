@@ -21,7 +21,13 @@ import 'update_controller.dart';
 ///   el instalador lo vuelve a abrir.
 /// - Sin red / error: el motivo en gris y `REINTENTAR`. Nunca bloquea.
 class UpdateBanner extends StatefulWidget {
-  const UpdateBanner({super.key, this.service, this.autoCheck});
+  const UpdateBanner(
+      {super.key, this.service, this.autoCheck, this.compact = false});
+
+  /// Esquina del título (title_screen.md § 1, v0.37.1): sin versión ni
+  /// estado; nada salvo que haya versión nueva, y ahí solo `ACTUALIZAR`
+  /// (y, después, el progreso o `REINTENTAR`).
+  final bool compact;
 
   /// `null`: GitHub Releases del repo con la versión y el canal del juego
   /// instalado (`GameEdition.current`).
@@ -65,6 +71,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
   Widget _body() {
     final current = 'v${_c.service.currentVersion}';
     final rel = _c.release;
+    if (widget.compact) return _compact(rel);
     switch (_c.phase) {
       case UpdatePhase.idle:
       case UpdatePhase.checking:
@@ -91,6 +98,23 @@ class _UpdateBannerState extends State<UpdateBanner> {
       case UpdatePhase.installing:
       case UpdatePhase.failed:
         return _available(rel!, current);
+    }
+  }
+
+  Widget _compact(ReleaseInfo? rel) {
+    switch (_c.phase) {
+      case UpdatePhase.available:
+        return _updateButton('ACTUALIZAR');
+      case UpdatePhase.failed when rel != null:
+        return _updateButton('REINTENTAR');
+      case UpdatePhase.downloading:
+      case UpdatePhase.installing:
+        return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _footer());
+      default:
+        return const SizedBox.shrink(key: ValueKey('update-hidden'));
     }
   }
 

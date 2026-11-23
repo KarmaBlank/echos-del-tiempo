@@ -248,6 +248,7 @@ class GameSettings {
     this.reduceMotion = false,
     this.turnTimer = TurnTimer.normal,
     this.combatMode = '',
+    this.seenPatchNotes = '',
     this.perfOverlay = false,
     this.perfCorner = OverlayCorner.topRight,
     this.uiTheme = InterfaceTheme.highContrast,
@@ -323,6 +324,10 @@ class GameSettings {
   /// (turn_modes.md § 1): el `name` de un `CombatMode`; vacío = el de por
   /// defecto.
   final String combatMode;
+
+  /// Versión más nueva de las notas del parche que el jugador ya abrió
+  /// (title_screen.md § 4.1): `0.37.1`; vacío = nunca las abrió.
+  final String seenPatchNotes;
 
   /// "FPS Y PING": indicador en una esquina (settings.md § 3.9).
   final bool perfOverlay;
@@ -414,6 +419,7 @@ class GameSettings {
     bool? reduceMotion,
     TurnTimer? turnTimer,
     String? combatMode,
+    String? seenPatchNotes,
     bool? perfOverlay,
     OverlayCorner? perfCorner,
     InterfaceTheme? uiTheme,
@@ -450,6 +456,7 @@ class GameSettings {
         reduceMotion: reduceMotion ?? this.reduceMotion,
         turnTimer: turnTimer ?? this.turnTimer,
         combatMode: combatMode ?? this.combatMode,
+        seenPatchNotes: seenPatchNotes ?? this.seenPatchNotes,
         perfOverlay: perfOverlay ?? this.perfOverlay,
         perfCorner: perfCorner ?? this.perfCorner,
         uiTheme: uiTheme ?? this.uiTheme,
@@ -493,6 +500,7 @@ class GameSettings {
         'reduceMotion': reduceMotion,
         'turnTimer': turnTimer.name,
         'combatMode': combatMode,
+        'seenPatchNotes': seenPatchNotes,
         'perfOverlay': perfOverlay,
         'perfCorner': perfCorner.name,
         'uiTheme': uiTheme.name,
@@ -541,6 +549,9 @@ class GameSettings {
       combatMode: json['combatMode'] is String
           ? json['combatMode'] as String
           : d.combatMode,
+      seenPatchNotes: json['seenPatchNotes'] is String
+          ? json['seenPatchNotes'] as String
+          : d.seenPatchNotes,
       perfOverlay: flag(json['perfOverlay'], d.perfOverlay),
       perfCorner: OverlayCorner.fromName(json['perfCorner'], d.perfCorner),
       uiTheme: InterfaceTheme.fromName(json['uiTheme'], d.uiTheme),
@@ -590,6 +601,7 @@ class GameSettings {
       other.reduceMotion == reduceMotion &&
       other.turnTimer == turnTimer &&
       other.combatMode == combatMode &&
+      other.seenPatchNotes == seenPatchNotes &&
       other.perfOverlay == perfOverlay &&
       other.perfCorner == perfCorner &&
       other.uiTheme == uiTheme &&
@@ -625,7 +637,7 @@ class GameSettings {
       colorVision,
       reduceMotion,
       turnTimer,
-      combatMode,
+      Object.hash(combatMode, seenPatchNotes),
       perfOverlay,
       perfCorner,
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,

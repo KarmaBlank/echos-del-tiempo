@@ -136,4 +136,36 @@ void main() {
     await tester.pump();
     expect(s.downloadGate, isNull);
   });
+
+  Future<void> pumpCompact(WidgetTester tester, FakeUpdateService s) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: RetroTheme.build(),
+      home: Scaffold(
+          body: Center(
+              child: UpdateBanner(service: s, autoCheck: true, compact: true))),
+    ));
+    await tester.pump();
+  }
+
+  testWidgets('compacto (título): al día no muestra nada', (tester) async {
+    await pumpCompact(
+        tester,
+        FakeUpdateService(const UpToDate(
+            current: SemVer(0, 1, 0), latest: SemVer(0, 1, 0))));
+    expect(find.textContaining('v0.1.0'), findsNothing);
+    expect(find.byKey(const ValueKey('update-check')), findsNothing);
+    expect(find.byKey(const ValueKey('update-apply')), findsNothing);
+  });
+
+  testWidgets('compacto (título): versión nueva = solo ACTUALIZAR',
+      (tester) async {
+    final s = FakeUpdateService(
+        UpdateAvailable(current: const SemVer(0, 1, 0), release: _release));
+    await pumpCompact(tester, s);
+    expect(find.text('ACTUALIZAR'), findsOneWidget);
+    expect(find.textContaining('Actualización disponible'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('update-apply')));
+    await tester.pump();
+    expect(s.downloadGate, isNotNull);
+  });
 }

@@ -43,6 +43,26 @@ List<PatchNoteEntry> patchNotesFrom(Iterable<String> assets,
   return out;
 }
 
+/// Compara versiones `X.Y.Z` (semántico); una inválida cuenta como 0.0.0.
+int comparePatchVersions(String a, String b) {
+  List<int> parts(String v) {
+    final p = v.split('.').map(int.tryParse).toList();
+    return [for (var i = 0; i < 3; i++) i < p.length ? p[i] ?? 0 : 0];
+  }
+
+  final x = parts(a), y = parts(b);
+  for (var i = 0; i < 3; i++) {
+    if (x[i] != y[i]) return x[i].compareTo(y[i]);
+  }
+  return 0;
+}
+
+/// Hay notas sin leer (title_screen.md § 4.1): la más nueva de [entries]
+/// es posterior a [seen] (vacío = nunca abrió las notas).
+bool hasUnseenPatchNotes(List<PatchNoteEntry> entries, String seen) =>
+    entries.isNotEmpty &&
+    (seen.isEmpty || comparePatchVersions(entries.first.version, seen) > 0);
+
 enum NoteBlockKind { heading, bullet, paragraph }
 
 /// Un bloque del markdown: encabezado (nivel 1-3), viñeta (sangría 0+) o

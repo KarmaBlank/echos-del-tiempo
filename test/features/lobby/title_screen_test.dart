@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/features/characters/domain/account.dart';
 import 'package:echos_del_tiempo/features/characters/domain/stash.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/characters_providers.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
+import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/lobby/presentation/title_screen.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -81,6 +82,28 @@ VoidCallback? _onPressed(WidgetTester tester, String key) => tester
     .onPressed;
 
 void main() {
+  testWidgets('notas del parche: NUEVO hasta abrirlas, y queda guardado',
+      (tester) async {
+    final repo = AccountRepository(InMemoryAccountStore(threeCharacters()));
+    await _pumpTitle(tester, repo: repo);
+    // El índice de notas sale del AssetManifest (IO real del bundle).
+    await tester.runAsync(() => Future<void>.delayed(
+        const Duration(milliseconds: 200)));
+    await tester.pump();
+    expect(find.text('NUEVO'), findsOneWidget);
+
+    final ctx = tester.element(find.byType(TitleScreen));
+    await tester.tap(find.text('VER NOTAS DEL PARCHE'));
+    await tester.pump();
+    final seen = ProviderScope.containerOf(ctx)
+        .read(gameSettingsProvider)
+        .seenPatchNotes;
+    expect(seen, isNotEmpty);
+    await tester.tapAt(const Offset(4, 4)); // cierra el panel
+    await tester.pumpAndSettle();
+    expect(find.text('NUEVO'), findsNothing);
+  });
+
   testWidgets('cuenta vacía: el creador arma el primer personaje y juega',
       (tester) async {
     final mem = InMemoryAccountStore();
