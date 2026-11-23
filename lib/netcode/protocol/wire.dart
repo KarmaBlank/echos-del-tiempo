@@ -136,7 +136,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// cliente recibe solo su instancia, `aw` con los que están en otro lugar.
 /// 58 (v0.34.0): mazmorras de zona persistentes por mundo y la acción
 /// `offer` (Ofrenda del jefe; persistent_dungeons.md).
-const kProtocolVersion = 58;
+/// 59 (v0.35.0): Ecos por zona (ecos_zone.md): portales de Ecos en los
+/// exteriores (cambia el plano de cada bioma), `travel` con `ez` y perfil
+/// con `ezt` (tier completado por zona).
+const kProtocolVersion = 59;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

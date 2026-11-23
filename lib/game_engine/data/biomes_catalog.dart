@@ -197,10 +197,28 @@ class BiomeLayout {
   /// Llegada desde el pueblo: el camino del sur.
   WorldPoint get spawn => const WorldPoint(17.0 * 16, 19.5 * 16);
 
+  /// Portales de Ecos (ecos_zone.md § 2): uno por zona de este exterior,
+  /// a la derecha de su entrada. (zona, x del tile del medio, y); el
+  /// portal ocupa 3 tiles (`x − 1 .. x + 1`), como el del pueblo, y el del
+  /// medio cumple `x % 3 == 1` para que el anillo se dibuje ahí.
+  List<(int, int, int)> get ecoPortals => [
+        for (final (zone, x, y) in entrances)
+          (zone, _ringX(x + 3), y),
+      ];
+
+  static int _ringX(int x) {
+    while (x % 3 != 1) {
+      x++;
+    }
+    return x;
+  }
+
   /// Carteles sobre el mapa (texto, tile).
   List<(String, int, int)> get labels => [
         ('CAMINO AL PUEBLO', 17, 20),
         (lakeName, lake.$1.round(), (lake.$2 - lake.$4 - 1).round()),
+        for (final (zone, x, y) in ecoPortals)
+          ('ECOS · ZONA $zone', x, y - 1),
       ];
 
   bool isLake(int x, int y) {
@@ -231,6 +249,12 @@ class BiomeLayout {
     for (final (zone, x, y) in entrances) {
       g[y][x] = Tile.entrance(zone);
       g[y + 1][x] = Tile.path;
+    }
+    for (final (_, x, y) in ecoPortals) {
+      for (var dx = -1; dx <= 1; dx++) {
+        g[y][x + dx] = Tile.portal;
+        g[y + 1][x + dx] = Tile.path;
+      }
     }
     for (final (x, y) in docks) {
       g[y][x] = Tile.fishing;

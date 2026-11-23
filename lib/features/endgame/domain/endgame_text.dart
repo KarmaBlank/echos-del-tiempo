@@ -7,17 +7,23 @@ import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
+import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 
 /// Textos del Portal del Eco y del Atlas (docs/specs/ecos_atlas.md).
 
 /// Ayuda `[?]` del portal.
 const kEcoPortalHelp = '<b>Portal del Eco</b><br>'
+    '<span class="k">ZONAS</span>: cada zona tiene su portal de Ecos en el '
+    'exterior de su bioma, con un tier por Eco. IR te lleva hasta ahí. T1 '
+    'se abre al vencer al jefe de la zona; cada Eco completado abre el tier '
+    'siguiente de esa zona.<br>'
     '<span class="k">ECOS</span>: mapas de endgame que caen como loot desde '
     'nivel 45. Cada uno tiene tier (monstruos nivel 50 a 80), zona, jefe y '
     'modificadores que lo hacen más difícil pero suman <b>cantidad</b> y '
-    '<b>rareza</b> de botín. ABRIR propone el Eco al grupo; se consume al '
-    'entrar, se complete o no.<br>'
+    '<b>rareza</b> de botín. Se abren en el portal de su zona '
+    '(este portal ya no abre Ecos); se consume al entrar, se complete o '
+    'no.<br>'
     'Crafteo: Esquirla (mods nuevos), Cristal (+1 mod), Prisma (rareza), '
     'Ancla Temporal (+1 tier; cae solo en Ecos).<br>'
     '<span class="k">ATLAS</span>: árbol de toda tu cuenta. La primera vez '
@@ -26,11 +32,17 @@ const kEcoPortalHelp = '<b>Portal del Eco</b><br>'
     'uno.<br>'
     '+10% de cantidad de botín por cada jugador extra en el Eco.';
 
-/// Por qué no se puede abrir [e] ahora (o `null`).
-String? ecoOpenBlocked(GameSession s, PlayerProfile p, EcoItem e) {
-  if (!p.ecosUnlocked) return 'Vencé al Devorador de Eras';
-  if (s.mode != SessionMode.lobby) return 'Solo en el pueblo';
+/// Por qué no se puede abrir [e] en el portal T[tier] de [zone] ahora
+/// (o `null`; ecos_zone.md § 4). [near]: el jugador sigue frente al portal.
+String? ecoZoneOpenBlocked(GameSession s, PlayerProfile p, EcoItem? e,
+    int zone, int tier,
+    {required bool near, String? zoneName}) {
+  final lock = EcoPortalRules.lockReason(p, zone, tier, zoneName: zoneName);
+  if (lock != null) return lock;
+  if (e == null) return 'Necesitás un Eco T$tier de esta zona';
+  if (s.mode != SessionMode.lobby) return 'Solo fuera de misión';
   if (s.vote != null) return 'Ya hay una votación';
+  if (!near) return 'Acercate al portal';
   return null;
 }
 

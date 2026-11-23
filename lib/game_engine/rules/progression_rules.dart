@@ -365,6 +365,11 @@ class ProgressionRules {
         for (final n in raw.abyssKills)
           if (n >= 1 && n <= 5) n
       },
+      // Ecos por zona (ecos_zone.md § 3): zonas 1..10, tiers 1..16.
+      ecoTiers: {
+        for (final e in raw.ecoTiers.entries)
+          if (e.key >= 1 && e.key <= 10) e.key: e.value.clamp(1, 16)
+      },
       // Marca NUEVO (perfil v4): solo de lo que existe.
       fresh: {
         for (final u in raw.fresh)
