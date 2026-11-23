@@ -44,12 +44,13 @@ void main() {
     expect(c.farmHandManual, isFalse);
     expect(find.textContaining('[E o clic] Arar'), findsOneWidget);
     expect(c.farmTarget!.ok, isTrue);
-    // El aviso va arriba de las pociones, en una línea.
+    // Barra abajo al centro (v0.24.4); el aviso, una línea arriba de ella.
     expect(find.byKey(const ValueKey('hud-prompt')), findsNothing);
     final prompt =
         tester.getRect(find.byKey(const ValueKey('hud-tool-prompt')));
-    final potions = tester.getRect(find.byKey(const ValueKey('hud-potions')));
-    expect(prompt.bottom, lessThanOrEqualTo(potions.top));
+    final bar = tester.getRect(find.byKey(const ValueKey('hud-farm-bar')));
+    expect(prompt.bottom, lessThanOrEqualTo(bar.top));
+    expect((prompt.center.dx - bar.center.dx).abs(), lessThan(1));
     final seed = c.session!.players[c.localId]!.profile.life.farm.activeSeed;
     c.cycleSeed();
     await h.frames(2);

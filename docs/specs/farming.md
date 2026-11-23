@@ -59,16 +59,24 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 ### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.24.1)
 - A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   también las que suma ampliar el pueblo, porque se mira el tile `soil`
-  del mapa) aparece el HUD de herramienta arriba de las pociones ([1]
-  Vida / [2] Maná). Cerca de la orilla manda la caña (fishing.md § 4.0).
-- Arriba, el aviso en una línea (nunca se parte; si no entra, termina en
-  "…"): "[E o clic] Arar", "[E o clic] Plantar Nabo del claro", "[E o
-  clic] Regar · 45 %", "[E o clic] Cosechar · 3 % legendaria" o el motivo
-  si la herramienta elegida no sirve ("Primero arala").
-- Abajo, una barra horizontal de tres casilleros de ancho fijo: Azada |
-  Semilla (carrusel: la elegida al medio, anterior y siguiente chicas a
-  los costados, cantidad abajo) | Regadera. Nombres cortos; el nombre
-  completo de la herramienta o semilla va en el tooltip (tamaño fijo). El
+  del mapa) aparece el HUD de herramienta. Desde v0.24.4 es una barra
+  abajo al centro de la pantalla (372 px), entre el chat (abajo a la
+  izquierda) y las pociones y la tarjeta del grupo (abajo a la derecha),
+  sin tapar ninguno a 1280×720 ni a 1024×640: con una herramienta en la
+  mano el chat se angosta para dejarle lugar. Cerca de la orilla manda la
+  caña (fishing.md § 4.0), en el mismo lugar: ícono de la caña (32 px) y
+  el botón con su nombre.
+- Justo arriba de la barra, centrado, el aviso en una línea (nunca se
+  parte; si no entra, termina en "…"): "[E o clic] Arar", "[E o clic]
+  Plantar Nabo del claro", "[E o clic] Regar · 45 %", "[E o clic]
+  Cosechar · 3 % legendaria" o el motivo si la herramienta elegida no
+  sirve ("Primero arala").
+- La barra: tres casilleros de ancho fijo, Azada | Semilla | Regadera.
+  Íconos de herramienta de 32 px; carrusel de semillas con la elegida de
+  40 px al medio y la anterior y la siguiente de 24 px a los costados, y
+  abajo el nombre de la semilla y la cantidad. Los rótulos se ven enteros
+  (bajan de línea antes que cortarse). El nombre completo de la
+  herramienta va en el tooltip (tamaño fijo). El
   elegido lleva el borde dorado de selección. Clic en un casillero lo deja
   en la mano (no hace la labor).
 - Controles: Tab (Mayús+Tab al revés) o la rueda del mouse cambian de
