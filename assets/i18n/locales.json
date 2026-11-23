@@ -1,0 +1,12 @@
+{
+  "source": "es-AR",
+  "locales": {
+    "es-AR": "published",
+    "en": "published",
+    "zh-Hans": "hidden"
+  },
+  "domains": [
+    "ui.title",
+    "ui.settings"
+  ]
+}

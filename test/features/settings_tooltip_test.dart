@@ -35,7 +35,7 @@ double _contrast(Color a, Color b) {
 /// caja oscura del tema).
 void main() {
   for (final tab in SettingsTab.values) {
-    testWidgets('tooltips "?" legibles en la pausa — ${tab.label}',
+    testWidgets('tooltips "?" legibles en la pausa — ${tab.name}',
         (tester) async {
       tester.view.physicalSize = const Size(1280, 720);
       tester.view.devicePixelRatio = 1;

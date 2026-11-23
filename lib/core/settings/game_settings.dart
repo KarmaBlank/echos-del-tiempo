@@ -266,6 +266,7 @@ class GameSettings {
     this.battleLog = BattleLogMode.normal,
     this.ultBrowse = const UltBrowsePrefs(),
     this.textDetail = TextDetail.summary,
+    this.locale = '',
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -390,6 +391,10 @@ class GameSettings {
   /// defecto, también para quien ya tenía `game.json`) o DETALLADO.
   final TextDetail textDetail;
 
+  /// IDIOMA (docs/specs/i18n.md § 3.1): tag del idioma elegido (`en`,
+  /// `es-AR`); vacío = automático (Steam / sistema).
+  final String locale;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -437,6 +442,7 @@ class GameSettings {
     BattleLogMode? battleLog,
     UltBrowsePrefs? ultBrowse,
     TextDetail? textDetail,
+    String? locale,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -474,6 +480,7 @@ class GameSettings {
         battleLog: battleLog ?? this.battleLog,
         ultBrowse: ultBrowse ?? this.ultBrowse,
         textDetail: textDetail ?? this.textDetail,
+        locale: locale ?? this.locale,
       );
 
   /// Versión del formato guardado. v2 (v0.13.1): `readingTitles` pasó a SÍ
@@ -518,6 +525,7 @@ class GameSettings {
         'battleLog': battleLog.name,
         'ultBrowse': ultBrowse.toJson(),
         'textDetail': textDetail.name,
+        'locale': locale,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -578,6 +586,7 @@ class GameSettings {
       battleLog: BattleLogMode.fromName(json['battleLog'], d.battleLog),
       ultBrowse: UltBrowsePrefs.fromJson(json['ultBrowse']),
       textDetail: TextDetail.fromName(json['textDetail'], d.textDetail),
+      locale: json['locale'] is String ? json['locale'] as String : d.locale,
     );
   }
 
@@ -618,7 +627,8 @@ class GameSettings {
       other.mapLabelBackdrop == mapLabelBackdrop &&
       other.battleLog == battleLog &&
       other.ultBrowse == ultBrowse &&
-      other.textDetail == textDetail;
+      other.textDetail == textDetail &&
+      other.locale == locale;
 
   @override
   int get hashCode => Object.hash(
@@ -644,7 +654,7 @@ class GameSettings {
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
           mapLabelBackdrop, battleLog, partyExpanded, ultBrowse, textDetail,
-          darkness));
+          darkness, locale));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

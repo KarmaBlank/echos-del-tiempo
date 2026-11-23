@@ -25,6 +25,7 @@ import '../../../core/edition/game_edition.dart';
 import '../../../game_engine/models/game_mode.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/class_def.dart';
@@ -848,7 +849,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       GameSprites? sprites, NetSessionFactory? factory, bool creating) {
     final has = a?.selected != null && !_busy;
     final notice = _noticeText(), status = _netStatusText();
+    final strings = ref.watch(stringsProvider);
     return ScreenRuntimeBindings(
+      // es-AR: el texto del layout (lo edita el Editor); otro idioma, el
+      // de la clave del elemento (docs/specs/i18n.md § 3).
+      translate: strings.isSource ? null : strings.lookup,
       actions: {
         'nuevaPartida': ScreenAction(has ? _start : null),
         'crearPersonaje': ScreenAction(_busy || a == null || a.isFull
@@ -952,29 +957,33 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // JUGAR es la acción principal (borde y texto dorados).
-        item(DsButton(_travesia ? '> JUGAR' : '> JUGAR SOLO',
+        item(DsButton(
+            ref.t(_travesia ? 'ui.title.start_arrow' : 'ui.title.start_solo'),
             key: const ValueKey('title-start'),
             kind: DsButtonKind.primary,
             onPressed: has ? _start : null)),
-        item(DsButton('NUEVO PERSONAJE',
+        item(DsButton(ref.t('ui.title.new_character'),
             key: const ValueKey('char-create'),
-            tooltip: full ? 'Máximo ${Account.maxCharacters} personajes' : null,
+            tooltip: full
+                ? ref.t('ui.title.character_limit',
+                    {'max': Account.maxCharacters})
+                : null,
             onPressed: _busy || a == null || full
                 ? null
                 : () => setState(_openCreator))),
-        item(DsButton('VER NOTAS DEL PARCHE',
+        item(DsButton(ref.t('ui.title.patch_notes'),
             key: const ValueKey('title-patch-notes'),
             trailing: _notesBadge == null
                 ? null
                 : DsBadge(_notesBadge!,
                     key: const ValueKey('title-patch-notes-badge')),
             onPressed: _openPatchNotes)),
-        item(DsButton('CONFIGURACIÓN',
+        item(DsButton(ref.t('ui.title.settings'),
             key: const ValueKey('title-settings'),
             onPressed: () => showSettingsDialog(context))),
         // Salida segura (v0.8.2): confirma y guarda todo (ExitGuard)
         // antes de cerrar, como la pausa.
-        item(DsButton('SALIR DEL JUEGO',
+        item(DsButton(ref.t('ui.title.quit'),
             key: const ValueKey('title-quit'),
             accent: DsColors.danger,
             onPressed: _quitGame)),

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 
 import '../../core/audio/sfx_files.dart';
@@ -6,6 +7,7 @@ import '../../core/data/build_template_loader.dart';
 import '../../core/data/npc_data_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
+import '../../core/i18n/string_tables.dart';
 import '../../core/layout/layout_catalog.dart';
 import '../../core/layout/layout_overrides.dart';
 import '../../core/persistence/exit_on_close.dart';
@@ -29,6 +31,8 @@ Future<void> main() async {
     showDebugOverlay: true,
     enableExperimentalFeatures: true,
     devTools: true,
+    showHiddenLocales: true,
+    allowMachineText: true,
     soloParty: true,
     useLocalOverrides: true,
   );
@@ -50,7 +54,8 @@ Future<void> main() async {
   await NpcDataLoader.load();
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
-      ults: await UltDataLoader.load());
+      ults: await UltDataLoader.load(),
+      strings: await StringTables.load(rootBundle.loadString));
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
   registerP2PNetcode(signaling: await resolveP2PSignaling());

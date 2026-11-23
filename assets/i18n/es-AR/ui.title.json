@@ -1,0 +1,10 @@
+{
+  "ui.title.start": "JUGAR",
+  "ui.title.start_arrow": "> JUGAR",
+  "ui.title.start_solo": "> JUGAR SOLO",
+  "ui.title.new_character": "NUEVO PERSONAJE",
+  "ui.title.character_limit": "Máximo {max} personajes",
+  "ui.title.patch_notes": "VER NOTAS DEL PARCHE",
+  "ui.title.settings": "CONFIGURACIÓN",
+  "ui.title.quit": "SALIR DEL JUEGO"
+}

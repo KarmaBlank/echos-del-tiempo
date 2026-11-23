@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 
 import '../../core/audio/sfx_files.dart';
@@ -7,6 +8,7 @@ import '../../core/data/npc_data_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/edition/game_edition.dart';
+import '../../core/i18n/string_tables.dart';
 import '../../core/layout/layout_catalog.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
@@ -39,6 +41,7 @@ Future<void> main() async {
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
       ults: await UltDataLoader.load(),
+      strings: await StringTables.load(rootBundle.loadString),
       edition: GameEdition.travesia);
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
