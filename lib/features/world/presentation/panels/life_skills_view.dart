@@ -54,22 +54,29 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
 
   @override
   Widget build(BuildContext context) {
+    // Tres columnas (v0.24.4): oficios | árbol | detalle del nodo, cada
+    // una con su ancho, sin cortar nada.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final k in LifeSkillKind.values) _skillRow(k),
-              SizedBox(height: DsSpace.sm),
-              Expanded(child: _detail()),
-            ],
+          width: 240,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final k in LifeSkillKind.values) ...[
+                  _skillRow(k),
+                  SizedBox(height: DsSpace.xs),
+                ],
+              ],
+            ),
           ),
         ),
         SizedBox(width: DsSpace.md),
         Expanded(child: _tree()),
+        SizedBox(width: DsSpace.md),
+        SizedBox(width: 260, child: SingleChildScrollView(child: _detail())),
       ],
     );
   }
@@ -83,24 +90,44 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final tool = k == LifeSkillKind.pesca
         ? kRods[p.life.rod]?.name ?? ''
         : '${kFarmTools[p.life.farm.hoe]?.name} · ${kFarmTools[p.life.farm.can]?.name}';
-    return DsListRow(
+    // Tarjeta del oficio (v0.24.4): nombre y puntos libres arriba, el
+    // nivel grande, la XP con lo que falta y la barra; todo entero.
+    return DsCard(
       key: ValueKey('life-row-${k.name}'),
       selected: _kind == k,
       onTap: () => setState(() {
         _kind = k;
         _sel = null;
       }),
-      title: '${k.label} · nivel $lvl',
-      trailing: free > 0
-          ? DsBadge('$free', key: ValueKey('life-free-${k.name}'))
-          : null,
-      detail: need > 0 ? '$cur / $need XP · $tool' : 'Nivel máximo · $tool',
-      subtitleWidget: Padding(
-        padding: EdgeInsets.only(top: DsSpace.xs),
-        child: DsPercent(need > 0 ? (cur * 100 ~/ need) : 100,
-            key: ValueKey('life-xp-${k.name}'),
-            label: 'XP de ${k.label}',
-            barWidth: 160),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Expanded(
+                child: Text(k.label.toUpperCase(), style: DsText.subtitle())),
+            if (free > 0)
+              DsBadge('$free libre${free == 1 ? '' : 's'}',
+                  key: ValueKey('life-free-${k.name}')),
+          ]),
+          SizedBox(height: DsSpace.xs),
+          Text('Nivel $lvl',
+              key: ValueKey('life-level-${k.name}'),
+              style: DsText.title(DsColors.reward)),
+          SizedBox(height: DsSpace.xs),
+          Text(
+              need > 0
+                  ? '$cur / $need XP · faltan ${need - cur}'
+                  : 'Nivel máximo',
+              style: DsText.body()),
+          SizedBox(height: DsSpace.xs),
+          DsPercent(need > 0 ? (cur * 100 ~/ need) : 100,
+              key: ValueKey('life-xp-${k.name}'),
+              label: 'XP de ${k.label}',
+              barWidth: 160),
+          SizedBox(height: DsSpace.xs),
+          Text(tool, style: DsText.detail()),
+        ],
       ),
     );
   }
@@ -128,8 +155,8 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
             '${LifeTreeRules.earned(p, k)}',
             key: const ValueKey('life-points'),
             style: DsText.detail()),
-        const Spacer(),
-        Row(children: [
+        SizedBox(height: DsSpace.md),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           DsButton('REINICIAR (GRATIS)',
               key: const ValueKey('life-reset'),
               size: DsButtonSize.compact,
@@ -137,7 +164,6 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
                       LifeTreeRules.taken(p, k).isEmpty
                   ? null
                   : () => widget.onReset(k)),
-          SizedBox(width: DsSpace.xs),
           if (!has)
             DsButton('TOMAR',
                 key: const ValueKey('life-take'),

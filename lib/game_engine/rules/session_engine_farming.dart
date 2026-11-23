@@ -276,7 +276,7 @@ extension _FarmingOp on _Op {
     say('${p.name} encontró en la tierra: $label.');
   }
 
-  // ---------------- comerciante ----------------
+  // ---------------- agropecuario ----------------
 
   bool _farmShop(SessionPlayer p, FarmShopAction a) {
     if (!_inTown(p)) return false;

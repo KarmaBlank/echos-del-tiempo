@@ -131,6 +131,9 @@ void main() {
     // Más nuevas: b antes que a.
     expect(tester.getRect(row(b.id)).top,
         lessThan(tester.getRect(row(a.id)).top));
+    // La barra de filtros se desliza de costado (v0.24.4).
+    await tester.ensureVisible(find.byKey(const ValueKey('ult-sort')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('ult-sort')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('ult-sort-alpha')));
@@ -142,6 +145,8 @@ void main() {
     expect(
         tester.getRect(row(a.id)).top < tester.getRect(row(b.id)).top,
         alphaFirst);
+    await tester.ensureVisible(find.byKey(const ValueKey('ult-filter-origin')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('ult-filter-origin')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('ult-filter-origin-boss')));

@@ -24,10 +24,10 @@ class FishCatch {
 /// Qué sale del agua en una captura (fishing.md § 8).
 enum WaterLootKind { fish, basura, materiales, cofre, arma }
 
-/// Resultado de vender en el comerciante.
+/// Resultado de vender en el agropecuario.
 typedef FishSale = ({PlayerProfile profile, int credits, int esquirlas, int sold});
 
-/// Reglas de Pesca y del comerciante (docs/specs/fishing.md). Puras: los
+/// Reglas de Pesca y del agropecuario (docs/specs/fishing.md). Puras: los
 /// números salen de `kTuning[TuningId.fishing]` (Editor → Balance → Pesca).
 abstract final class FishingRules {
   static TuningDef get t => tuning(TuningId.fishing);
@@ -210,7 +210,7 @@ abstract final class FishingRules {
                     : l.pity + 1));
   }
 
-  // ---------------- comerciante ----------------
+  // ---------------- agropecuario ----------------
 
   /// Vende [n] de [species] (todos con `null`), o con `species == null`
   /// toda la bolsa menos los legendarios ("Vender todo"). En oro o en
