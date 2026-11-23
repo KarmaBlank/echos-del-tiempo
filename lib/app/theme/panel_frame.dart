@@ -30,6 +30,7 @@ class PanelFrame extends StatelessWidget {
     this.titleTrailing,
     this.onClose,
     this.fill = false,
+    this.closeOnTab = false,
   });
 
   final String title;
@@ -53,6 +54,10 @@ class PanelFrame extends StatelessWidget {
 
   /// `Esc` cierra el panel. Sin [onClose] el `Esc` sigue de largo.
   final VoidCallback? onClose;
+
+  /// `Tab` (sin modificadores) también cierra (PERSONAJE, que se abre con
+  /// `Tab`); el foco se mueve con las flechas y `Shift+Tab`.
+  final bool closeOnTab;
 
   /// Ocupa el alto máximo y [child] llena el espacio sin scroll propio
   /// (para lista + detalle con scroll cada uno).
@@ -134,6 +139,7 @@ class PanelFrame extends StatelessWidget {
             ),
             child: _PanelKeys(
               onClose: onClose,
+              closeOnTab: closeOnTab,
               child: SizedBox(
                 height: fill ? maxH : null,
                 child: RetroPanel(
@@ -183,10 +189,12 @@ class _HelpChip extends StatelessWidget {
 /// Teclado común de los paneles. Un [FocusScope] que se enfoca solo al
 /// abrir el panel: así `Tab` no se escapa al chat ni al mapa.
 class _PanelKeys extends StatefulWidget {
-  const _PanelKeys({required this.child, this.onClose});
+  const _PanelKeys(
+      {required this.child, this.onClose, this.closeOnTab = false});
 
   final Widget child;
   final VoidCallback? onClose;
+  final bool closeOnTab;
 
   @override
   State<_PanelKeys> createState() => _PanelKeysState();
@@ -234,6 +242,10 @@ class _PanelKeysState extends State<_PanelKeys> {
         return KeyEventResult.ignored;
       }
       final back = HardwareKeyboard.instance.isShiftPressed;
+      if (!back && widget.closeOnTab && widget.onClose != null) {
+        if (e is KeyDownEvent) widget.onClose!();
+        return KeyEventResult.handled;
+      }
       final from = inside ? focused : _scope;
       back ? from.previousFocus() : from.nextFocus();
       return KeyEventResult.handled;

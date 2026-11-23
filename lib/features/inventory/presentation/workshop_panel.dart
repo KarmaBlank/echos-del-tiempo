@@ -58,7 +58,7 @@ class WorkshopPanel extends StatelessWidget {
         titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b>'),
         header: PartyMemberBar.header(view, controller, const SizedBox.shrink()),
         actions: [
-          PanelButton('PERSONAJE [C]',
+          PanelButton('PERSONAJE [TAB]',
               onPressed: () => controller.openPanel(WorldPanel.character)),
           PanelButton('CERRAR [ESC]', onPressed: close),
         ],

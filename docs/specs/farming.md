@@ -420,6 +420,9 @@ categoría).
   pueblo sin ampliar y sin parcelas.
 
 ## 11. Pestaña PESCA Y CULTIVO (PERSONAJE)
+
+> **v0.32.4:** reemplazada por PERSONAJE → OFICIOS → INVENTARIO, con
+> bolsas de 40 casillas por oficio. Ver docs/specs/oficio_storage.md.
 Desde v0.24.4 cada categoría es una grilla de casillas como el
 inventario (`LifeItemGrid`, la misma del agropecuario): ícono de 32 px
 con borde del color de la rareza o calidad, cantidad, marca "E" si está
