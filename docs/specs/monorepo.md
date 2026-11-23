@@ -30,7 +30,7 @@ Flutter porque no lo declara.
 | Nombre (español, al jugador) | Ecos del Tiempo | Ecos del Tiempo: Paradoja |
 | Carpeta | `games/echoes` | `games/paradox` |
 | Editor | `apps/echoes_editor` | `apps/paradox_editor` |
-| Reglas | `packages/adventures_rules` | `packages/paradox_rules` |
+| Reglas | `packages/echoes_rules` | `packages/paradox_rules` |
 | Tags | `vX.Y.Z` | `paradox-vX.Y.Z` |
 | Ejecutable | `echos_del_tiempo.exe` (sin cambio) | `echoes_paradox.exe` |
 
@@ -129,7 +129,7 @@ echos-del-tiempo/
 │  ├─ echoes_engine/            # Dart puro: modelos, reglas comunes, balance
 │  ├─ echoes_combat/            # Dart puro: BattleEngine y satélites
 │  ├─ echoes_worldgen/          # Dart puro: mapas, zonas, biomas
-│  ├─ adventures_rules/            # Dart puro: session_engine y sistemas del Mundo
+│  ├─ echoes_rules/            # Dart puro: session_engine y sistemas del Mundo
 │  ├─ paradox_rules/         # Dart puro: run_engine, mapa de piso, ofertas
 │  ├─ echoes_net/               # Dart puro: contratos + protocolo + loopback
 │  ├─ echoes_net_lan/           # Dart (dart:io): LanNetSession
@@ -151,7 +151,7 @@ Nombres con prefijo `echoes_` para que no choquen con paquetes de pub.dev.
 | `echoes_engine` | Dart | `game_engine/models`, `balance/`, `serialization/` comunes, `data/` compartida (elementos, armas, clases, skills, items, ULT, árbol de pasivas), `rules/` comunes (stats, pasivas, ítems, inventario, crafteo, progresión, `js_math`), `GameModeKind`, `GameCatalog`, `TuningCatalog` | `equatable`, `yaml`, `meta` |
 | `echoes_combat` | Dart | `battle_engine*`, break, summons, ult, combo, companion AI, status, reacciones, `fx/cinematic_durations` | `echoes_engine` |
 | `echoes_worldgen` | Dart | `world_engine`, `world_rules`, `zone_generators`, `biome_rules`, `light/sky/lantern`, `fog_of_war`, `game_map` | `echoes_engine` |
-| `adventures_rules` | Dart | `session_engine*` (overworld, misiones, cofres, estatuas, tutorial, pesca, granja, bioma), pueblo, oficios, abismo, ascensión, atlas, hazañas | `echoes_engine`, `echoes_combat`, `echoes_worldgen` |
+| `echoes_rules` | Dart | `session_engine*` (overworld, misiones, cofres, estatuas, tutorial, pesca, granja, bioma), pueblo, oficios, abismo, ascensión, atlas, hazañas | `echoes_engine`, `echoes_combat`, `echoes_worldgen` |
 | `paradox_rules` | Dart | `run_engine` (hoy `session_engine_run`), `run_map_generator`, `run_rules`, `run_tuning`, `reward_offer_rules`, `run_boons`, `travesia_meta`, `run_save`, `run_json` | `echoes_engine`, `echoes_combat` |
 | `echoes_net` | Dart | `netcode/contracts`, `protocol/` (`wire.dart`, `WireGame`, `ProtocolNetSession`), `loopback` | `echoes_engine` (DTO de acciones/eventos) |
 | `echoes_net_lan` | Dart | `netcode/lan` | `echoes_net` |
@@ -162,15 +162,15 @@ Nombres con prefijo `echoes_` para que no choquen con paquetes de pub.dev.
 | `echoes_features` | Flutter | features compartidas: `combat`, `inventory`, `characters`, `passive_tree`, `build_planner`, `bestiary`, `achievements`, `settings`, `lobby` (sala genérica), `tutorial` | `echoes_ui`, `echoes_engine`, `echoes_combat`, `echoes_net`, `echoes_platform` |
 | `echoes_editor_kit` | Flutter | `features/admin` sin lo específico de juego: balance, diff, impacto, sprites, fx, layouts, plantillas, monitoreo, release plan | `echoes_ui`, `echoes_engine`, `echoes_assets`, `archive`, `file_selector` |
 | `games/echoes` | app | flavors, `world`, `missions`, `endgame`, `ascension` (UI del Mundo), cableado | todo lo anterior salvo `paradox_rules` |
-| `games/paradox` | app | flavors, `features/run`, cableado | todo salvo `adventures_rules`, `echoes_worldgen` (si la run no usa mapas de mundo) |
+| `games/paradox` | app | flavors, `features/run`, cableado | todo salvo `echoes_rules`, `echoes_worldgen` (si la run no usa mapas de mundo) |
 | `apps/*_editor` | app | registra catálogo + tuning + balance de su juego en el kit | `echoes_editor_kit` + `<juego>_rules` |
 
 Grafo (sin ciclos; las flechas apuntan a la dependencia):
 
 ```
-echoes_engine ◄─ echoes_combat ◄─┬─ adventures_rules ◄──────────── games/echoes, apps/echoes_editor
+echoes_engine ◄─ echoes_combat ◄─┬─ echoes_rules ◄──────────── games/echoes, apps/echoes_editor
      ▲   ▲        ▲          └─ paradox_rules ◄───────── games/paradox, apps/paradox_editor
-     │   └─ echoes_worldgen ◄─ adventures_rules
+     │   └─ echoes_worldgen ◄─ echoes_rules
      ├─ echoes_net ◄─ echoes_net_lan, echoes_net_p2p ◄─ games/*
      ├─ echoes_platform ◄─ echoes_assets ◄─ echoes_ui ◄─ echoes_features ◄─ games/*
      │                                      ▲
@@ -179,11 +179,11 @@ echoes_engine ◄─ echoes_combat ◄─┬─ adventures_rules ◄────
 
 Reglas duras:
 
-1. `echoes_engine`, `echoes_combat`, `echoes_worldgen`, `adventures_rules`,
+1. `echoes_engine`, `echoes_combat`, `echoes_worldgen`, `echoes_rules`,
    `paradox_rules`, `echoes_net` no declaran `flutter` (hoy ya se cumple:
    `lib/game_engine` no importa Flutter ni nada fuera de sí).
 2. Ningún paquete importa `games/*` ni `apps/*`.
-3. `adventures_rules` y `paradox_rules` no se importan entre sí. Lo que ambos
+3. `echoes_rules` y `paradox_rules` no se importan entre sí. Lo que ambos
    necesiten baja a `echoes_engine`/`echoes_combat`.
 4. Un test de arquitectura en `echoes_engine` (o un script melos) recorre
    los pubspec y falla si aparece una arista prohibida.
@@ -194,18 +194,18 @@ Reglas duras:
 |---|---|
 | `lib/game_engine/models/*` (salvo los de abajo) | `echoes_engine` |
 | `models/run_save`, `run_state`, `travesia_meta` | `paradox_rules` |
-| `models/session_world`, `world_save`, `town_build`, `resident`, `farm_*`, `fish_line`, `atlas*`, `abyss`, `ascension`, `exploration` | `adventures_rules` |
+| `models/session_world`, `world_save`, `town_build`, `resident`, `farm_*`, `fish_line`, `atlas*`, `abyss`, `ascension`, `exploration` | `echoes_rules` |
 | `models/game_map`, `fog_of_war`, `sky`, `zone_def` | `echoes_worldgen` |
 | `game_engine/balance/*` | `echoes_engine` (el registro de juego se inyecta, § 5.2) |
 | `game_engine/data/*` comunes | `echoes_engine` |
 | `data/run_boons`, sección `TuningId.travesia` | `paradox_rules` |
-| `data/abyss_*`, `ascension_*`, `construction`, `farming`, `fishing`, `life_tree`, `town_layout`, `npc_talk`, `missions`, `trials`, `vaults`, `exploration`, `biomes`, `zones`, `zone_curve`, `eco` | `adventures_rules` (o `echoes_worldgen` si es generación) |
+| `data/abyss_*`, `ascension_*`, `construction`, `farming`, `fishing`, `life_tree`, `town_layout`, `npc_talk`, `missions`, `trials`, `vaults`, `exploration`, `biomes`, `zones`, `zone_curve`, `eco` | `echoes_rules` (o `echoes_worldgen` si es generación) |
 | `game_engine/rules/battle_engine*`, `break`, `summon`, `ult`, `combo_planner`, `companion_ai`, `revive`, `weapon_target*`, `consumable` | `echoes_combat` |
-| `rules/session_engine*` (salvo `_run`), pueblo, granja, pesca, oficios, misiones, abismo, ascensión, atlas, tutorial | `adventures_rules` |
+| `rules/session_engine*` (salvo `_run`), pueblo, granja, pesca, oficios, misiones, abismo, ascensión, atlas, tutorial | `echoes_rules` |
 | `rules/session_engine_run`, `run_*`, `reward_offer_rules` | `paradox_rules` |
 | `rules/world_*`, `zone_*`, `biome_*`, `light_*`, `sky_*`, `lantern_*` | `echoes_worldgen` |
 | resto de `rules/` (stats, pasivas, items, inventario, progresión, build*) | `echoes_engine` |
-| `game_engine/serialization/*` | `echoes_engine`; `run_json` → `paradox_rules`; partes de mundo de `session_json` → `adventures_rules` |
+| `game_engine/serialization/*` | `echoes_engine`; `run_json` → `paradox_rules`; partes de mundo de `session_json` → `echoes_rules` |
 | `game_engine/fx` | `echoes_combat` (duraciones) / `echoes_engine` (timeline) |
 | `lib/netcode/contracts`, `protocol`, `loopback` | `echoes_net` |
 | `lib/netcode/lan` | `echoes_net_lan` |
@@ -242,7 +242,7 @@ Reglas duras:
 `session_engine.dart` tiene 4 097 líneas y `session_engine_run.dart`
 (622) es un `part`/extensión del mismo motor: la run usa el estado, el
 despacho de acciones y el arranque de batalla del Mundo. Para que
-`paradox_rules` no dependa de `adventures_rules` hay que, **antes de mover
+`paradox_rules` no dependa de `echoes_rules` hay que, **antes de mover
 nada**, extraer lo común (armado de combatientes, botín, fin de batalla,
 tienda, inventario, despacho de acciones de combate) a un
 `CombatSessionCore` en `echoes_combat`/`echoes_engine`, y que
@@ -258,7 +258,7 @@ que ya pedía roguelike.md § 9.1 y es el paso más caro del plan.
   y `BalanceKind` mezcla tipos de ambos juegos. roguelike.md § 7 (datos
   separados por versión) **no está implementado**.
 - Destino: `echoes_engine` define los tipos y un `CatalogRegistry`; cada
-  `<juego>_rules` aporta su catálogo (`adventuresCatalog`, `paradoxCatalog`)
+  `<juego>_rules` aporta su catálogo (`echoesCatalog`, `paradoxCatalog`)
   y sus `TuningId`; el composition root inyecta catálogo + tuning +
   balance. Ningún paquete compartido lee `GameCatalog.standard` global.
 - `BalanceAssetLoader.assetPath` y `ReleasePlan.balancePath` están
@@ -273,7 +273,7 @@ también conoce ambos. En el monorepo el paquete común solo define la
 clase; cada juego declara su `GameEdition`, su `WireGame` y su canal.
 `service_locator.dart` importa `features/run`, `features/lobby`,
 `features/characters` y elige stores según `GameModeKind`: se parte en
-`registerPlatform()` (común) + `registerAdventures()` / `registerParadox()`
+`registerPlatform()` (común) + `registerEchoes()` / `registerParadox()`
 en cada juego.
 
 ### 5.4 `core` ↔ `app` ↔ `features`
@@ -436,7 +436,7 @@ como miembros del workspace y la app raíz los consume.
 | 1 | Workspace (**hecho**, rama `chore/monorepo-step1`) | Pubspec raíz con `workspace: []` + `melos:` (`useRootAsPackage: true`, la app no se mueve hasta el PR 10); SDK mínimo 3.6; scripts analyze/format/test/goldens/measure/arch (stub); borrar `test/**/failures` y `**/failures/` al `.gitignore`. Sin CI (§ 0.2) | 0,5 d |
 | 2 | `echoes_engine` + `echoes_net` (copia literal) | Mover `game_engine/` y `netcode/{contracts,protocol,loopback}` tal cual a paquetes; reemplazar imports relativos por `package:`; sin cambios de lógica. Script `arch` | 1–1,5 d |
 | 3 | Desacople del Mundo/Travesía en el motor | `CombatSessionCore` extraído de `session_engine`; `RunEngine` propio; `SessionPlayer` partido; catálogo y tuning por juego inyectados (§ 5.2). Tests de ida y vuelta de saves y protocolo sin cambios | 4–6 d (el grande; se puede partir en 3a combate común, 3b run engine, 3c catálogos) |
-| 4 | Partir el motor | `echoes_engine` → `echoes_engine` + `echoes_combat` + `echoes_worldgen` + `adventures_rules` + `paradox_rules` según § 4 | 1–1,5 d |
+| 4 | Partir el motor | `echoes_engine` → `echoes_engine` + `echoes_combat` + `echoes_worldgen` + `echoes_rules` + `paradox_rules` según § 4 | 1–1,5 d |
 | 5 | Red concreta | `echoes_net_lan`, `echoes_net_p2p` (+ firebase) | 0,5 d |
 | 6 | `echoes_platform` | `core/` sin assets; `GameEdition`, `WireGame` y `ReleaseChannel` dejan de nombrar juegos; `service_locator` partido | 1–1,5 d |
 | 7 | `echoes_assets` | Catálogos de sprites/fx/layouts/sfx + carpetas de assets + fuentes + shaders con prefijo `packages/echoes_assets`; Editor escribe en la ruta nueva; regenerar goldens | 1,5–2 d |
