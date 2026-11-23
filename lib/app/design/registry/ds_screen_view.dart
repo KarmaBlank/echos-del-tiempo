@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../theme/retro_type.dart';
+
 import '../../../core/screen_layout/screen_bindings.dart';
 import '../../../core/screen_layout/screen_layout.dart';
 import 'ds_registry.dart';
@@ -43,6 +45,13 @@ Widget buildScreenElement(
 }) {
   final c = (registry ?? DsRegistry.instance)[e.component];
   if (c == null) return const SizedBox.shrink();
+  // En el juego, un hueco que la pantalla no llenó (sin avisos, sin
+  // estado de red) no se ve; el marcador es solo del editor.
+  if (!preview &&
+      c.props.contains(DsProp.slot) &&
+      bindings.slots[e.slot] == null) {
+    return const SizedBox.shrink();
+  }
   final action = bindings.actions[e.action];
   final data = preview
       ? spec?.dataSource(e.dataSource)?.sample ?? const <ScreenDataEntry>[]
@@ -93,13 +102,19 @@ class DsScreenView extends StatelessWidget {
       final window = Size(
           box.maxWidth.isFinite ? box.maxWidth : layout.width,
           box.maxHeight.isFinite ? box.maxHeight : layout.height);
-      return FocusTraversalGroup(
-        policy: OrderedTraversalPolicy(),
-        child: Stack(clipBehavior: Clip.hardEdge, children: [
-          for (final e in layout.elements)
-            if (reg[e.component] != null)
-              _place(context, reg, e, layout.place(e, window)),
-        ]),
+      // El texto adentro va sin el factor de ventana: la escala `s` ya lo
+      // agranda con la ventana (screen_editor.md § 2.1).
+      return MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: RetroType.withoutWindow(context)),
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Stack(clipBehavior: Clip.hardEdge, children: [
+            for (final e in layout.elements)
+              if (reg[e.component] != null)
+                _place(context, reg, e, layout.place(e, window)),
+          ]),
+        ),
       );
     });
   }
