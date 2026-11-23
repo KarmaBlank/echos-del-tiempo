@@ -9,6 +9,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'life_tool_text.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 
 /// Puesto del AGROPECUARIO (fishing.md § 5, v0.23.2): primero COMPRAR o
@@ -238,12 +239,14 @@ class _TraderPanelState extends State<TraderPanel> {
                   (r.rarity.label.toUpperCase(), fishRarityColor(r.rarity)),
                 ],
                 lines: [
-                  'Nivel requerido: ${r.reqLevel}',
-                  'Rinde: ${(FishingRules.effectiveness(lvl, r.reqLevel) * 100).round()} %',
-                  if (r.rareBonus > 0)
-                    'Rareza: +${(r.rareBonus * 100).round()} %',
+                  ...rodLines(r, lvl),
                   'Precio: ${r.price} de oro',
                 ],
+                hoverTip: true,
+                compare: p == null
+                    ? null
+                    : rodCompare(
+                        r, kRods[p.life.rod] ?? kRods[kStarterRod]!, lvl),
                 actions: [_rodButton(r)],
               ),
             )),
@@ -443,12 +446,18 @@ class _TraderPanelState extends State<TraderPanel> {
                     (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
                   ],
                   lines: [
-                    'Nivel requerido: ${d.reqLevel}',
-                    'Rinde: ${(FarmingRules.effectiveness(lvl, d.reqLevel) * 100).round()} %',
-                    if (d.area > 0)
-                      'Área: ${d.area == 1 ? 'en cruz' : '3 × 3'}',
+                    ...farmToolLines(d, lvl),
                     'Precio: ${d.price} de oro',
                   ],
+                  hoverTip: true,
+                  compare: p == null
+                      ? null
+                      : farmToolCompare(
+                          d,
+                          d.kind == FarmToolKind.azada
+                              ? FarmingRules.hoeOf(p)
+                              : FarmingRules.canOf(p),
+                          lvl),
                   actions: [_toolButton(d)],
                 ),
               )),

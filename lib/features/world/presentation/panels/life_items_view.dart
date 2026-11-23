@@ -1,11 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../game_engine/data/farming_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
+import 'life_tool_text.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
@@ -117,8 +118,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
     final f = life.farm;
     switch (cat) {
       case LifeItemsCategory.herramientas:
+        final fishLv = FishingRules.level(widget.profile);
+        final farmLv = FarmingRules.level(widget.profile);
         LifeItemCellData tool(String id, String name, FishRarity r, String kind,
-                int reqLevel, bool equipped, VoidCallback onEquip) =>
+                int reqLevel, bool equipped, VoidCallback onEquip,
+                List<String> lines, List<(String, bool)> cmp) =>
             LifeItemCellData(
               id: 'life-tool-$id',
               icon: LifeIcon(id, LifeIconKind.herramienta, size: _icon),
@@ -133,7 +137,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   (kind.toUpperCase(), DsColors.textSecondary),
                   (r.label.toUpperCase(), fishRarityColor(r)),
                 ],
-                lines: ['Nivel requerido: $reqLevel'],
+                lines: lines,
+                compare: cmp,
+                hoverTip: true,
                 actions: [
                   equipped
                       ? const DsTag('EQUIPADA', color: DsColors.reward)
@@ -148,11 +154,19 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           for (final id in life.rods)
             if (kRods[id] case final r?)
               tool(id, r.name, r.rarity, 'Caña', r.reqLevel, life.rod == id,
-                  () => c.equipRod(id)),
+                  () => c.equipRod(id), rodLines(r, fishLv),
+                  rodCompare(r, kRods[life.rod] ?? kRods[kStarterRod]!, fishLv)),
           for (final id in [...f.hoes, ...f.cans])
             if (kFarmTools[id] case final d?)
               tool(id, d.name, d.rarity, d.kind.label, d.reqLevel,
-                  f.hoe == id || f.can == id, () => c.equipFarmTool(id)),
+                  f.hoe == id || f.can == id, () => c.equipFarmTool(id),
+                  farmToolLines(d, farmLv),
+                  farmToolCompare(
+                      d,
+                      d.kind == FarmToolKind.azada
+                          ? FarmingRules.hoeOf(widget.profile)
+                          : FarmingRules.canOf(widget.profile),
+                      farmLv)),
         ];
       case LifeItemsCategory.pescados:
         final lake = TownRules.lakeNear(c.town, c.local.x, c.local.y);
