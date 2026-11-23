@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/core/edition/game_edition.dart';
 import 'package:echos_del_tiempo/core/i18n/i18n_providers.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
@@ -82,6 +83,18 @@ Future<void> _pumpPlain(WidgetTester tester, Widget child,
 }
 
 void main() {
+  // La versión se dibuja en el título: fija para que el golden no cambie
+  // con cada release.
+  setUpAll(() => GameEdition.install(GameEdition(
+        mode: GameEdition.mundo.mode,
+        title: GameEdition.mundo.title,
+        version: '0.0.0',
+        dataFolder: GameEdition.mundo.dataFolder,
+        linuxDataFolder: GameEdition.mundo.linuxDataFolder,
+        releases: GameEdition.mundo.releases,
+        wire: GameEdition.mundo.wire,
+      )));
+  tearDownAll(() => GameEdition.install(GameEdition.mundo));
   testWidgets('título en inglés', (tester) async {
     final repo = AccountRepository(InMemoryAccountStore());
     await _pumpPlain(tester, TitleScreen(onStart: () {}), overrides: [
