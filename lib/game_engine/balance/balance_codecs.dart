@@ -94,6 +94,9 @@ enum BalanceKind {
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).
   town('town', 'Pueblo', 'Ajustes del pueblo'),
 
+  /// Pesca y pedido del día del pescador nativo (fishing.md, § 12).
+  fishing('fishing', 'Pesca', 'Ajustes de Pesca'),
+
   /// Puntos y valor de los nodos de oficios (life_skill_trees.md).
   lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios');
 
@@ -1532,6 +1535,17 @@ final farmingCodec =
     _tuningCodec(BalanceKind.farming, _autoFields('farming', _farmLabels));
 final townCodec =
     _tuningCodec(BalanceKind.town, _autoFields('town', _townLabels));
+final fishingCodec =
+    _tuningCodec(BalanceKind.fishing, _autoFields('fishing', _fishLabels));
+
+const _fishLabels = {
+  'fisherRarityLevels': 'Pescador: niveles por rareza',
+  'fisherXpBase': 'Pescador: XP de Pesca base',
+  'fisherXpStep': 'Pescador: XP de Pesca por nivel',
+  'fisherCharXpPerValue': 'Pescador: XP × valor',
+  'fisherGoldPerValue': 'Pescador: oro × valor',
+};
+
 final lifeTreeCodec = _tuningCodec(
     BalanceKind.lifeTree, _autoFields('lifeTree', _lifeTreeLabels()));
 
@@ -1567,6 +1581,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.exploration => explorationCodec,
       BalanceKind.farming => farmingCodec,
       BalanceKind.town => townCodec,
+      BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
     };
 
@@ -1584,5 +1599,6 @@ const kTuningKinds = [
   BalanceKind.exploration,
   BalanceKind.farming,
   BalanceKind.town,
+  BalanceKind.fishing,
   BalanceKind.lifeTree,
 ];
