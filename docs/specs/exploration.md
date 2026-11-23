@@ -983,6 +983,16 @@ Resumen:
 
 ## Rendimiento (v0.8.3)
 
+> v0.35.1: `TownPlan.landmarksOf` / `reserved` se memorizan por
+> instancia de `TownState` (inmutable) y por clave del plano (lados,
+> marcas, construcciones, faros). Con un lugar tardío tapado, ubicarlo
+> recorre todo el pueblo, y cofres, carteles y pescadores lo pedían
+> decenas de veces por cuadro (render del mapa ~14 ms → ~2 ms en el
+> arnés). `test/perf/town_soak_perf_test.dart` corre el pueblo un rato
+> y exige que el cuadro no crezca. Al entrar al mundo,
+> `WorldLoadingScreen` precarga sprites, catálogos, fuentes, shaders y
+> plano, y tapa el mundo unos cuadros para grabar tiles, etiquetas y luz.
+
 Caso reportado: 60 FPS quieto, ~40 caminando y ~30 al entrar a una parte
 del mapa que no estaba en pantalla, con o sin CRT. Causas y arreglos
 (sin cambiar lo que se ve):

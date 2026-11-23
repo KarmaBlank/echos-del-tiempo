@@ -7,6 +7,7 @@ import '../../../../core/audio/sfx_catalog.dart' show Sfx;
 import '../../../../core/fx/fx_catalog.dart';
 import '../field_editors.dart' show NumberStepper;
 import 'fx_editor_controller.dart';
+import 'fx_editor_selection.dart';
 import 'fx_preview.dart';
 
 /// Visuales → Animaciones (docs/specs/game_editor.md § 3.2 y § 6):
@@ -188,7 +189,8 @@ class _Stage extends StatelessWidget {
     }
     final cls = previewClassOf(t);
     final img = c.spriteImage;
-    final rows = t.tracks.length;
+    final rowList = fxRowsOf(t);
+    final rows = rowList.length;
     return Padding(
       padding: EdgeInsets.all(DsSpace.md),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -199,7 +201,20 @@ class _Stage extends StatelessWidget {
         SizedBox(height: DsSpace.sm),
         Expanded(
           // Solo el lienzo escucha el reloj (game_editor.md § 7.5).
-          child: RepaintBoundary(
+          // Arrastrar sobre la vista previa mueve el elemento elegido si
+          // su key tiene posición (dx/dy, § 7.7).
+          child: GestureDetector(
+            key: const ValueKey('fx-preview-drag'),
+            onPanStart: (_) => _dragFirst = true,
+            onPanUpdate: c.readOnly || !_canMoveSelected(c)
+                ? null
+                : (d) {
+                    final s = FxPreviewPainter.lastScale;
+                    c.moveSelected(d.delta.dx / s, d.delta.dy / s,
+                        record: _dragFirst);
+                    _dragFirst = false;
+                  },
+            child: RepaintBoundary(
             child: ClipRect(
               child: ValueListenableBuilder<double>(
                 valueListenable: c.clock,
@@ -217,11 +232,15 @@ class _Stage extends StatelessWidget {
                       for (final e in const ['slime', 'bat', 'golem', 'ghost'])
                         img?.call('enemies.$e.idle'),
                     ],
+                    selectedTrack: c.selectedTrack,
+                    selectedKey: c.selectedKey,
+                    onion: c.onion,
                   ),
                   size: Size.infinite,
                 ),
               ),
             ),
+          ),
           ),
         ),
         SizedBox(height: DsSpace.sm),
@@ -268,10 +287,17 @@ class _Stage extends StatelessWidget {
               size: DsButtonSize.compact,
               selected: !c.muted,
               onPressed: () => c.setMuted(!c.muted)),
+          DsButton('PIEL DE CEBOLLA',
+              key: const ValueKey('fx-onion'),
+              tooltip: 'Muestra tenue el key anterior y el siguiente del '
+                  'elemento elegido.',
+              size: DsButtonSize.compact,
+              selected: c.onion,
+              onPressed: () => c.setOnion(!c.onion)),
           ValueListenableBuilder<double>(
               valueListenable: c.clock,
               builder: (context, time, _) => Text(
-                  '${time.round()} / ${t.duration} ms',
+                  '${fxSeconds(time)} / ${fxSeconds(t.duration)}',
                   key: const ValueKey('fx-time'),
                   style: DsText.detail())),
         ]),
@@ -297,12 +323,13 @@ class _Stage extends StatelessWidget {
               onPressed: () => c.setSnap(!c.snap)),
           DsButton('+ KEY',
               key: const ValueKey('fx-add-key'),
-              tooltip: 'Agrega un key en el cabezal de la pista elegida '
+              tooltip: 'Agrega un key en el cabezal, en la fila elegida '
                   '(copia los valores del anterior).',
               size: DsButtonSize.compact,
               onPressed: c.readOnly || c.selectedTrack == null
                   ? null
-                  : () => c.addKey(c.selectedTrack!, c.time)),
+                  : () => c.addKey(c.selectedTrack!, c.time,
+                      field: c.selectedField)),
           DsButton('BORRAR KEY',
               key: const ValueKey('fx-del-key'),
               tooltip: 'Borra el key elegido (Supr).',
@@ -342,8 +369,28 @@ class _Stage extends StatelessWidget {
           Text('DOBLE CLIC: KEY NUEVO · ARRASTRAR: MOVER', style: DsText.detail()),
         ]),
         SizedBox(height: DsSpace.xs),
+        // Qué se está editando y dónde cayó el último key (§ 7.7).
+        Row(children: [
+          Expanded(
+            child: ValueListenableBuilder<double>(
+              valueListenable: c.clock,
+              builder: (context, time, _) => Text(
+                  _editingLine(c, t, time),
+                  key: const ValueKey('fx-editing'),
+                  style: DsText.detail(DsColors.editSelection)),
+            ),
+          ),
+          if (c.addedLabel != null)
+            Text(c.addedLabel!,
+                key: const ValueKey('fx-added'),
+                style: DsText.body(DsColors.editSelection)),
+        ]),
+        SizedBox(height: DsSpace.xs),
         // Línea de tiempo (scrub con clic/arrastre; clic en un rombo lo elige).
-        SizedBox(
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 280),
+          child: SingleChildScrollView(
+          child: SizedBox(
           height: FxTimelinePainter.rulerH + rows * FxTimelinePainter.rowH + 4,
           child: LayoutBuilder(builder: (context, box) => DsTooltip(
             card: const DsTooltipCard(
@@ -371,17 +418,19 @@ class _Stage extends StatelessWidget {
             FxKeyRef? keyAt(Offset p) {
               final row = rowAt(p);
               if (row == null) return null;
-              final tr = t.tracks[row];
+              final r = rowList[row];
+              final tr = t.tracks[r.track];
               FxKeyRef? best;
               var bestD = 7.0;
               for (final (fire, list) in [(false, tr.keys), (true, tr.fires)]) {
                 for (var k = 0; k < list.length; k++) {
+                  if (!fxRowShows(r, list[k], fire: fire)) continue;
                   final x = FxTimelinePainter.xOf(
                       list[k].t.toDouble(), t.duration.toDouble(), box.maxWidth);
                   final d = (x - p.dx).abs();
                   if (d < bestD) {
                     bestD = d;
-                    best = (track: row, fire: fire, index: k);
+                    best = (track: r.track, fire: fire, index: k);
                   }
                 }
               }
@@ -395,10 +444,11 @@ class _Stage extends StatelessWidget {
                 return;
               }
               final best = keyAt(p);
+              final r = rowList[row];
               if (best != null) {
-                c.selectKey(best);
+                c.selectKey(best, field: r.field);
               } else {
-                c.selectTrack(row);
+                c.selectTrack(r.track, field: r.field);
                 scrub(p);
               }
             }
@@ -411,13 +461,18 @@ class _Stage extends StatelessWidget {
               onDoubleTapDown: (d) {
                 final row = rowAt(d.localPosition);
                 if (row != null && keyAt(d.localPosition) == null) {
-                  c.addKey(row, msAt(d.localPosition));
+                  c.addKey(rowList[row].track, msAt(d.localPosition),
+                      field: rowList[row].field);
                 }
               },
               onDoubleTap: () {},
               onHorizontalDragStart: (d) {
                 final k = keyAt(d.localPosition);
-                if (k != null && !c.readOnly) c.beginDrag(k);
+                if (k != null && !c.readOnly) {
+                  c.beginDrag(k);
+                  final row = rowAt(d.localPosition);
+                  if (row != null) c.selectedField = rowList[row].field;
+                }
               },
               onHorizontalDragUpdate: (d) => c.dragging
                   ? c.dragTo(msAt(d.localPosition))
@@ -430,7 +485,9 @@ class _Stage extends StatelessWidget {
                     painter: FxTimelinePainter(
                         timeline: t,
                         time: time,
+                        rows: rowList,
                         selectedTrack: c.selectedTrack,
+                        selectedField: c.selectedField,
                         selectedKey: c.selectedKey),
                     size: Size.infinite,
                   ),
@@ -439,10 +496,35 @@ class _Stage extends StatelessWidget {
             );
           }))),
         ),
+        ),
+        ),
       ]),
     );
   }
+
+  /// "Editando: Sprite · Escala · key en 0.40 s · cabezal 0.52 s".
+  static String _editingLine(FxEditorController c, FxTimeline t, double time) {
+    final i = c.selectedTrack;
+    if (i == null || i >= t.tracks.length) {
+      return 'Clic en una fila para elegir qué editar · cabezal ${fxSeconds(time)}';
+    }
+    final what = fxTrackLabel(t.tracks[i].type) +
+        (c.selectedField == null ? '' : ' · ${fxFieldLabel(c.selectedField!)}');
+    final k = c.selectedKey == null ? null : c.keyOf(c.selectedKey!);
+    return 'Editando: $what'
+        '${k == null ? '' : ' · key en ${fxSeconds(k.t)}'}'
+        ' · cabezal ${fxSeconds(time)}';
+  }
+
+  static bool _canMoveSelected(FxEditorController c) {
+    final r = c.selectedKey;
+    final k = r == null ? null : c.keyOf(r);
+    return k != null && (k.data.containsKey('dx') || k.data.containsKey('dy'));
+  }
 }
+
+/// First update of a drag on the preview (one undo entry per drag).
+bool _dragFirst = true;
 
 class _Properties extends StatelessWidget {
   const _Properties({required this.c});
@@ -532,8 +614,14 @@ class _Properties extends StatelessWidget {
             ]),
             if (key != null) ...[
               DsSectionHeader(
-                  '${t.tracks[c.selectedKey!.track].type.toUpperCase()} · '
+                  '${fxTrackLabel(t.tracks[c.selectedKey!.track].type).toUpperCase()} · '
                   '${c.selectedKey!.fire ? 'DISPARO' : 'KEY'} ${c.selectedKey!.index + 1}'),
+              Text(fxKeyPlaceLabel(t, c.selectedKey!, field: c.selectedField),
+                  key: const ValueKey('fx-inspector-place'),
+                  style: DsText.body(DsColors.editSelection)),
+              SizedBox(height: DsSpace.xs),
+              ..._changes(t),
+              SizedBox(height: DsSpace.xs),
               _num('T (MS)', key.t, 10, (v) => c.setKeyTime(c.selectedKey!, v.toInt()),
                   integer: true,
                   tip: 'Momento del key en ms desde el inicio (también se '
@@ -545,8 +633,9 @@ class _Properties extends StatelessWidget {
                     const {'cue', 'vol', 'pitch'}.contains(e.key))
                   const SizedBox.shrink()
                 else if (e.value is num)
-                  _num(e.key.toUpperCase(), e.value! as num,
-                      _stepFor(e.key), (v) => c.setKeyField(c.selectedKey!, e.key, v))
+                  _num(_fieldTitle(t, e.key), e.value! as num,
+                      _stepFor(e.key), (v) => c.setKeyField(c.selectedKey!, e.key, v),
+                      changed: _changed(t, e.key))
                 else if (e.value is String && kFxFieldOptions[e.key] != null)
                   _choice(e.key, e.value! as String)
                 else
@@ -568,7 +657,7 @@ class _Properties extends StatelessWidget {
                 ]),
               ],
             ] else if (c.selectedTrack != null && c.selectedTrack! < t.tracks.length) ...[
-              DsSectionHeader('PISTA ${t.tracks[c.selectedTrack!].type.toUpperCase()}'),
+              DsSectionHeader('ELEMENTO ${fxTrackLabel(t.tracks[c.selectedTrack!].type).toUpperCase()}'),
               for (final e in t.tracks[c.selectedTrack!].props.entries)
                 _kv(e.key.toUpperCase(), '${e.value}'),
               Text('Clic en un rombo o marca para editarlo; doble clic agrega.',
@@ -653,6 +742,59 @@ class _Properties extends StatelessWidget {
       ),
     );
   }
+
+  /// Before → after table of the selected key (§ 7.7): marker = keyed
+  /// here, green = changes with respect to the previous key.
+  List<Widget> _changes(FxTimeline t) {
+    final list = fxKeyChanges(t, c.selectedKey!);
+    if (list.isEmpty) return const [];
+    String fmt(Object? v) => v == null
+        ? '—'
+        : v is double
+            ? v.toStringAsFixed(v == v.roundToDouble() ? 0 : 2)
+            : '$v';
+    return [
+      Row(children: [
+        SizedBox(width: 18, child: Text('', style: DsText.detail())),
+        Expanded(child: Text('PROPIEDAD', style: DsText.detail())),
+        SizedBox(width: 70, child: Text('ANTES', style: DsText.detail())),
+        SizedBox(width: 70, child: Text('EN ESTE KEY', style: DsText.detail())),
+      ]),
+      for (final ch in list)
+        Padding(
+          key: ValueKey('fx-change-${ch.field}'),
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: Row(children: [
+            SizedBox(
+                width: 18,
+                child: Text(ch.keyed ? '◆' : '◇',
+                    style: DsText.detail(
+                        ch.keyed ? DsColors.editSelection : DsColors.textSecondary))),
+            Expanded(
+                child: Text(fxFieldLabel(ch.field),
+                    style: DsText.body(
+                        ch.changed ? DsColors.editSelection : DsColors.textPrimary))),
+            SizedBox(width: 70, child: Text(fmt(ch.before), style: DsText.detail())),
+            SizedBox(
+                width: 70,
+                child: Text(ch.keyed ? fmt(ch.after) : 'sigue',
+                    style: DsText.body(
+                        ch.changed ? DsColors.editSelection : DsColors.textPrimary))),
+          ]),
+        ),
+      Text(
+          c.selectedKey!.fire
+              ? 'Disparo: ocurre una vez, sin interpolación.'
+              : 'Interpolación de llegada: ${_easeLabel(c.keyOf(c.selectedKey!)!.ease)}.',
+          style: DsText.detail()),
+    ];
+  }
+
+  bool _changed(FxTimeline t, String field) => fxKeyChanges(t, c.selectedKey!)
+      .any((ch) => ch.field == field && ch.changed);
+
+  String _fieldTitle(FxTimeline t, String field) =>
+      fxFieldLabel(field).toUpperCase();
 
   static String _easeLabel(FxEase e) => switch (e) {
         FxEase.linear => 'LINEAL',
@@ -781,11 +923,15 @@ class _Properties extends StatelessWidget {
   }
 
   Widget _num(String k, num v, double step, ValueChanged<num> on,
-          {bool integer = false, String? tip}) =>
+          {bool integer = false, String? tip, bool changed = false}) =>
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 1),
         child: Row(children: [
-          SizedBox(width: 100, child: Text(k, style: DsText.detail())),
+          SizedBox(
+              width: 100,
+              child: Text(k,
+                  style: DsText.detail(
+                      changed ? DsColors.editSelection : DsColors.textSecondary))),
           NumberStepper(
               key: ValueKey('fx-num-$k-${c.selectedId}-${c.selectedKey}'),
               value: v,

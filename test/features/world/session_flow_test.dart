@@ -54,6 +54,14 @@ void main() {
     await tester.tap(find.text('> JUGAR SOLO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    // "Cargando el mundo…" (v0.35.1): unos cuadros hasta mostrarlo.
+    for (var i = 0;
+        i < 60 && find.byKey(const ValueKey('world-loading')).evaluate().isNotEmpty;
+        i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 5)));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
     expect(find.byType(WorldScreen), findsOneWidget);
     expect(find.byType(GameWidget<MapGame>), findsOneWidget);
     final c = ProviderScope.containerOf(tester.element(find.byType(WorldScreen)))
