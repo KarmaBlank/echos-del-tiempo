@@ -128,9 +128,15 @@ orden). Si hay pedido u orden nuevos, el diálogo los menciona.
 
 Todo encargo, pedido u orden activo tiene SEGUIR / DEJAR DE SEGUIR
 (`TownAction(track, target: '<tipo>:<npc>')`, validado por el anfitrión;
-como mucho 5; JSON `trk` del perfil). El DIARIO (J en el pueblo, clic en
-el recuadro del HUD o la FUENTE) tiene la subpestaña SEGUIDOS y una por
-habitante, grilla con detalle a la derecha y avance "Tenés 1/2 X".
+como mucho 5; JSON `trk` del perfil). El DIARIO (J en el pueblo o en el
+campo, fuera de batalla y nunca mientras se escribe en el chat; botón
+`DIARIO [J]` de la barra de arriba, clic en el recuadro del HUD o la
+FUENTE) tiene la subpestaña SEGUIDOS y una por habitante conocido,
+grilla con detalle a la derecha y avance "Tenés 1/2 X". Conocido = ya
+habló con él al menos una vez (`QuestTrackRules.met`: tiene entrada en
+`npcSeen`, que el diálogo siempre escribe); los demás no tienen pestaña
+y la ganan al hablarles por primera vez (v0.32.2). Sin cambio de
+guardado ni de protocolo. En el campo los objetivos se pliegan con O.
 
 ### 8.3 HUD y avisos
 

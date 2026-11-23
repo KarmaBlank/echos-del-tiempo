@@ -228,7 +228,9 @@ la izquierda son el eje de caminos).
   las parcelas, semillas, ayudantes y cofre de las dos.
 - Opciones de una huerta o un lago: GRANJEROS / PESCADORES con CONTRATAR
   AYUDANTE y DESPEDIR (farming.md § 8.1). Cada construcción tiene un cofre
-  al lado del cartel. AGREGAR ESPECIES es una grilla: elegís el pez, ves
+  al lado del cartel, en la misma fila (nunca arriba ni abajo): del lado
+  de afuera y, si ahí no entra (borde, construcción, cartel o camino
+  fijo), del otro (`TownRules.chestOf`, v0.32.2). AGREGAR ESPECIES es una grilla: elegís el pez, ves
   el detalle y SOLTAR EN EL LAGO.
 
 ## 6. Carteles con el mouse

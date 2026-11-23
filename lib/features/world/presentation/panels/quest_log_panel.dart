@@ -17,7 +17,8 @@ import 'life_item_grid.dart';
 /// DIARIO (roles.md § 8.1, antes "registro de encargos"): la subpestaña
 /// SEGUIDOS con los encargos que seguís y una por habitante con su orden
 /// del día y los pasos de su cadena que ya pidió; el detalle a la
-/// derecha. Se abre con J en el pueblo, desde el HUD o la fuente.
+/// derecha. Solo hay pestaña para los
+/// habitantes que ya conoció. Se abre con J (pueblo o campo), desde el HUD o la fuente.
 class QuestLogPanel extends StatefulWidget {
   const QuestLogPanel(
       {super.key, required this.view, required this.controller});
@@ -37,7 +38,12 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
     final c = widget.controller;
     final town = c.town;
     final p = widget.view.me?.profile;
-    final npcs = kBiomeNpcs;
+    // Solo los habitantes con los que ya habló (los demás no aparecen).
+    final npcs = [
+      if (p != null)
+        for (final n in kBiomeNpcs)
+          if (QuestTrackRules.met(p, n.id)) n
+    ];
     final tab = _tab.clamp(0, npcs.length);
     final tracked = p == null
         ? const <ActiveQuest>[]
