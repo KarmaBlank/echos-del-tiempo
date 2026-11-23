@@ -34,19 +34,9 @@ PlayerProfile richWarrior({int credits = 1000}) =>
       equipped: 'espada_bronce',
     ));
 
-Future<void> _tab(WidgetTester tester, ArmoryTab t) =>
-    tapVisible(tester, find.byKey(ValueKey('tab-${t.index}')));
-
-/// Recorre el selector de familia de COMPRAR hasta [label].
-Future<void> _family(WidgetTester tester, String label) async {
-  for (var i = 0; i < 20 && plain(tester, 'buy-family-value') != label; i++) {
-    await tapVisible(tester, find.byKey(const ValueKey('buy-family-next')));
-  }
-  expect(plain(tester, 'buy-family-value'), label);
-}
 
 void main() {
-  testWidgets('armería: comprar (cualquier clase), equipar y forjar',
+  testWidgets('armería: comprar y vender en la grilla; forja aparte',
       (tester) async {
     final c = await pumpPanel(tester,
         profile: richWarrior(),
@@ -56,37 +46,38 @@ void main() {
     expect(find.textContaining('Armas base para cualquier clase'),
         findsOneWidget);
 
-    // COMPRAR: por defecto la familia propia; comprar la Ígnea ($300).
-    await tapVisible(tester, find.byKey(const ValueKey('shop-row-espada_ignea')));
-    expect(find.textContaining('Si la equipas'), findsOneWidget);
+    // COMPRAR: la Ígnea (\$300) desde su casilla.
+    await tapVisible(
+        tester, find.byKey(const ValueKey('armory-buy-cell-espada_ignea')));
     await tapVisible(tester, find.byKey(const ValueKey('buy-espada_ignea')));
     expect(me().items.any((i) => i.baseId == 'espada_ignea'), isTrue);
     expect(me().credits, 700);
-    // Otra familia (maga): se vende igual, con "Req" si no cumple.
-    await _family(tester, 'MAGA');
-    expect(find.byKey(const ValueKey('shop-row-baculo_fuego')), findsOneWidget);
-    expect(plain(tester, 'shop-row-baculo_fuego'), contains('Req'));
-    await tapVisible(tester, find.byKey(const ValueKey('shop-row-baculo_fuego')));
-    expect(button(tester, 'buy-baculo_fuego').reason, isNull);
-    // Una que no alcanza: motivo con lo que falta.
-    await _family(tester, 'TODAS');
-    await tapVisible(tester, find.byKey(const ValueKey('shop-row-mandoble_eco')));
-    expect(button(tester, 'buy-mandoble_eco').reason, 'Faltan \$700');
 
-    // FORJA: equipar la Ígnea (por uid) y forjar Poder.
-    final uid = me().items.firstWhere((i) => i.baseId == 'espada_ignea').uid;
-    await _tab(tester, ArmoryTab.forge);
+    // VENDER: la equipada no; otra sí.
+    await tapVisible(tester, find.byKey(const ValueKey('tab-1')));
+    final eq = me().equippedUid!;
+    await tapVisible(tester, find.byKey(ValueKey('armory-sell-cell-$eq')));
+    expect(tester.widget<DsButton>(find.byKey(ValueKey('sell-$eq'))).onPressed,
+        isNull);
+  });
+
+  testWidgets('forja: forjar la equipada', (tester) async {
+    final c = await pumpPanel(tester,
+        profile: richWarrior(),
+        build: (v, c) => ForgePanel(view: v, controller: c));
+    PlayerProfile me() => c.view!.me!.profile;
+    expect(find.text('FORJA'), findsWidgets);
+    // FORJA: la equipada (por uid), forjar Poder.
+    final uid = me().equippedUid!;
+    final base = me().itemByUid(uid)!.baseId;
     await tapVisible(tester, find.byKey(ValueKey('forge-row-$uid')));
-    await tapVisible(tester, find.byKey(ValueKey('equip-$uid')));
-    expect(me().equippedUid, uid);
     expect(button(tester, 'forge-confirm').reason, 'Elegí una mejora');
     await tapVisible(tester, find.byKey(ValueKey('up-$uid-pow')));
     expect(me().itemByUid(uid)!.forge.level(UpgradeStat.pow), 0);
     await tapVisible(tester, find.byKey(const ValueKey('forge-confirm')));
     expect(me().itemByUid(uid)!.forge.level(UpgradeStat.pow), 1);
     expect(me().credits,
-        700 - CraftRules.forgeCost(progression.catalog.weapons['espada_ignea']!, Rarity.comun, 0));
-    expect(find.textContaining('Espada Ignea +1'), findsWidgets);
+        1000 - CraftRules.forgeCost(progression.catalog.weapons[base]!, Rarity.comun, 0));
   });
 
   testWidgets('forja: tope por rareza con pips y la pasiva sube cada 2',
@@ -95,7 +86,7 @@ void main() {
     await pumpPanel(tester,
         profile: start,
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.upgrade));
     // Épico con forja 1: la próxima mejora sube Ímpetu I → II. Nivel de
     // objeto 10: tope min(8, 2 + 10/5) = 4 (combo_balance.md § 2).
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-e1')));
@@ -133,7 +124,7 @@ void main() {
     await pumpPanel(tester,
         profile: p,
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.upgrade));
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-x1')));
     expect(button(tester, 'up-x1-spd').reason, 'Tope de forja (3)');
     expect(find.text('Tope de forja (3)'), findsWidgets);
@@ -149,7 +140,7 @@ void main() {
     await pumpPanel(tester,
         profile: lootWarrior(credits: cost - 1),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.upgrade));
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
     expect(plain(tester, 'forge-cost-pow'), contains('$cost'));
     final tag = tester.widget<DsTag>(find.byKey(const ValueKey('forge-cost-pow')));
@@ -165,7 +156,7 @@ void main() {
     await pumpPanel(tester,
         profile: lootWarrior(credits: 5000),
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.upgrade));
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
     expect(button(tester, 'forge-confirm').reason, 'Elegí una mejora');
     await tapVisible(tester, find.byKey(const ValueKey('up-espada_bronce-crit')));

@@ -208,7 +208,9 @@ panel de preparación en vez de cerrar.
 |---|---|---|
 | WASD / flechas | lobby, campo | mover (se leen del estado del teclado cada frame) |
 | E / Espacio | lobby, frente al mostrador | abre el mostrador de misiones |
-| E / Espacio | lobby, frente a la armería | abre la armería |
+| E / Espacio | lobby, frente a la armería | abre la armería (comprar / vender; v0.32.3) |
+| E / Espacio | lobby, frente a la forja | abre la forja (MEJORAR, CONDENSAR, FUSIÓN; v0.32.3) |
+| E / Espacio | lobby, frente al taller de oficios | abre el taller de oficios (v0.32.3) |
 | Enter | fuera de batalla y resultado | despliega el chat (si está oculto) y enfoca el campo |
 | J | campo, sin panel | pliega / despliega la caja de objetivos (v0.8.1) |
 | M | campo o mapa del mundo (con o sin el mapa abierto) | abre / cierra el mapa en grande (v0.8.1) |

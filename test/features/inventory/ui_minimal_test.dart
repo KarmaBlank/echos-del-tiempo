@@ -31,16 +31,17 @@ void _expectPinned(String pinned, {String uidKey = ''}) {
   }
 }
 
-Future<void> _armory(WidgetTester tester, ArmoryTab tab, [PlayerProfile? p]) =>
+Future<void> _armory(WidgetTester tester, ForgeHallTab tab,
+        [PlayerProfile? p]) =>
     pumpPanel(tester,
         profile: p ?? lootWarrior(),
-        build: (v, c) => ArmoryPanel(view: v, controller: c, initialTab: tab));
+        build: (v, c) => ForgePanel(view: v, controller: c, initialTab: tab));
 
 void main() {
   group('listas de armas: buscador + equipada fija', () {
     testWidgets('FUSIÓN destino: la equipada queda fija al buscar',
         (tester) async {
-      await _armory(tester, ArmoryTab.fuse);
+      await _armory(tester, ForgeHallTab.fuse);
       expect(_k('bench-weapon-search'), findsOneWidget);
       _expectPinned('bench-weapon-pinned', uidKey: 'bench-weapon-espada_bronce');
       await tester.enterText(_k('bench-weapon-search'), 'hacha');
@@ -52,7 +53,7 @@ void main() {
 
     testWidgets('FUSIÓN origen: buscador y equipada fija con candado',
         (tester) async {
-      await _armory(tester, ArmoryTab.fuse);
+      await _armory(tester, ForgeHallTab.fuse);
       await _tap(tester, 'bench-weapon-r1');
       await _tap(tester, 'bench-next');
       await _tap(tester, 'bench-op-${CraftOp.transferAffix.name}');
@@ -65,7 +66,7 @@ void main() {
     });
 
     testWidgets('FORJA: buscador y equipada fija', (tester) async {
-      await _armory(tester, ArmoryTab.forge);
+      await _armory(tester, ForgeHallTab.upgrade);
       expect(_k('forge-search'), findsOneWidget);
       _expectPinned('forge-pinned', uidKey: 'forge-row-espada_bronce');
       await tester.enterText(_k('forge-search'), 'hacha');
@@ -75,25 +76,28 @@ void main() {
       expect(_k('forge-row-r1'), findsOneWidget);
     });
 
-    testWidgets('COMPRAR: buscador y equipada fija', (tester) async {
-      await _armory(tester, ArmoryTab.buy);
-      expect(_k('buy-search'), findsOneWidget);
-      _expectPinned('buy-pinned');
-      final rows = find.byWidgetPredicate((w) =>
+    testWidgets('ARMERÍA COMPRAR: grilla con buscador (v0.32.3)',
+        (tester) async {
+      await pumpPanel(tester,
+          profile: lootWarrior(),
+          build: (v, c) => ArmoryPanel(view: v, controller: c));
+      expect(_k('armory-buy-search'), findsOneWidget);
+      final cells = find.byWidgetPredicate((w) =>
           w.key is ValueKey<String> &&
-          (w.key as ValueKey<String>).value.startsWith('shop-row-'));
-      final before = rows.evaluate().length;
-      await tester.enterText(_k('buy-search'), 'zzz');
+          (w.key as ValueKey<String>).value.startsWith('armory-buy-cell-'));
+      final before = cells.evaluate().length;
+      expect(before, greaterThan(0));
+      expect(_k('armory-buy-detail'), findsOneWidget);
+      await tester.enterText(_k('armory-buy-search'), 'zzz');
       await tester.pump();
-      expect(rows.evaluate().length, lessThan(before));
-      _expectPinned('buy-pinned');
+      expect(cells.evaluate().length, lessThan(before));
     });
   });
 
   group('pasos', () {
     testWidgets('FUSIÓN: 1 DESTINO › 2 ACCIÓN › 3 PREVIA',
         (tester) async {
-      await _armory(tester, ArmoryTab.fuse);
+      await _armory(tester, ForgeHallTab.fuse);
       expect(plain(tester, 'bench-crumb-0'), '1 DESTINO');
       expect(plain(tester, 'bench-crumb-1'), startsWith('2 ACCI'));
       expect(plain(tester, 'bench-crumb-2'), '3 PREVIA');
@@ -111,8 +115,8 @@ void main() {
     testWidgets('FORJA: elegir mejora y después FORJAR', (tester) async {
       final c = await pumpPanel(tester,
           profile: lootWarrior(),
-          build: (v, c) => ArmoryPanel(
-              view: v, controller: c, initialTab: ArmoryTab.forge));
+          build: (v, c) => ForgePanel(
+              view: v, controller: c, initialTab: ForgeHallTab.upgrade));
       PlayerProfile me() => c.view!.me!.profile;
       expect(plain(tester, 'forge-crumb-0'), '1 ARMA');
       expect(plain(tester, 'forge-crumb-1'), '2 MEJORA');

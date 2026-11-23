@@ -89,15 +89,29 @@ la derecha.
   - Pie: `FORJAR` (`forge-confirm`, `DsButton` primario) gris con el
     motivo `Elegí una mejora` hasta elegir; `EQUIPAR` (`DsButton`) o la
     etiqueta `EQUIPADA`; teclas mínimas (`Enter Forjar`).
-- **CONDENSAR** (pestaña propia desde v0.20.25, entre FUSIÓN y
-  CONSUMIBLES): izquierda "Elegí material" (`DsActionRow` por receta,
+- **CONDENSAR** (pestaña propia desde v0.20.25; desde v0.32.3 en la
+  FORJA, entre MEJORAR y FUSIÓN): izquierda "Elegí material" (`DsActionRow` por receta,
   `condense-pick-<resultado>`, con lo que tenés), flecha, derecha "Se
   condensa en" (`condense-result`); con poco ancho, una debajo de la
   otra. Abajo: cantidad `×1` / `MÁX (n)` (`condense-<resultado>-1` /
   `-all`), la receta (`condense-summary`: `20 Esquirla + ₵100 → 1
   Cristal`), `Alcanza para n` (`condense-have-<resultado>`) y
   `CONDENSAR` (`condense-go`), gris con el motivo si no alcanza o en la
-  Travesía.
+  Travesía. Solo materiales de arma: desde v0.32.3 no tiene la sección
+  OFICIOS (pasó al TALLER DE OFICIOS, § 4.1).
+
+### 4.1 TALLER DE OFICIOS (v0.32.3)
+
+Panel propio (`WorkshopPanel`, town_loop.md § 2.1) con la plantilla
+`DsCraftGridTemplate` (`lib/app/design/ds_craft_template.dart`):
+chips de filtro por oficio (`workshop-filter-<i>`: TODOS · CULTIVO ·
+PESCA), grilla de casillas estilo INVENTARIO (`DsItemCell`,
+`workshop-cell-<id>`) y el detalle de la elegida a la derecha
+(`DsCraftDetail`, `workshop-detail`; arriba si la columna es angosta).
+Detalle: nombre, descripción, receta, `Tenés n · alcanza para m` y
+`×1` / `×5` / `MÁX` (`workshop-<id>-<botón>`), grises con el motivo si
+no alcanza o en la Travesía. Sin secciones apiladas ni listas
+verticales.
 
 ## 5. Acciones en lote del inventario: un solo lugar
 

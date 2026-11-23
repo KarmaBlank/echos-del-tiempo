@@ -25,7 +25,7 @@ Future<SessionController> _bench(WidgetTester tester, PlayerProfile p) =>
     pumpPanel(tester,
         profile: p,
         build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
+            ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
 
 Future<void> _tap(WidgetTester tester, String key) =>
     tapVisible(tester, find.byKey(ValueKey(key)));
@@ -305,8 +305,8 @@ void main() {
     final c = await pumpPanel(tester,
         profile: lootWarrior(
             materials: const {CraftMaterial.esquirla: 50}, credits: 1000),
-        build: (v, c) => ArmoryPanel(
-            view: v, controller: c, initialTab: ArmoryTab.condense));
+        build: (v, c) => ForgePanel(
+            view: v, controller: c, initialTab: ForgeHallTab.condense));
     PlayerProfile me() => c.view!.me!.profile;
     // FUSIÓN ya no tiene el botón.
     expect(find.byKey(const ValueKey('bench-condense')), findsNothing);

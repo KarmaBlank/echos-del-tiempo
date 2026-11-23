@@ -41,6 +41,7 @@ import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
 import '../domain/battle_impact.dart';
 import '../domain/skill_tip.dart';
+import 'armory_shop.dart';
 import 'condense_panel.dart';
 import 'craft_bench.dart';
 import 'craft_layout.dart';
@@ -102,25 +103,32 @@ class ShopContext {
   String itemName(ItemInstance it) => rules.items.displayName(it);
 }
 
-/// Pestañas de la tienda (armería del lobby y preparación). Ver
-/// docs/specs/panels.md § "Armería" (loot v2).
-enum ArmoryTab {
+/// Una pestaña de la ARMERÍA o la FORJA (rótulo, línea "qué hace" y su
+/// contenido).
+abstract interface class ShopTabDef {
+  String get label;
+  String get hint;
+  Widget build(ShopContext shop);
+}
+
+/// Pestañas de la ARMERÍA (v0.32.3: solo comprar y vender; panels.md §
+/// "Armería"). CONSUMIBLES sigue acá hasta que tenga su lugar.
+enum ArmoryTab implements ShopTabDef {
   buy('COMPRAR', 'Armas base para cualquier clase.'),
-  forge('FORJA', 'Arma, mejora, confirmar.'),
-  fuse('FUSIÓN', 'Destino, acción, vista previa, confirmar.'),
-  condense('CONDENSAR', 'Material, cantidad, condensar.'),
+  sell('VENDER', 'Tus armas a cambio de créditos.'),
   items('CONSUMIBLES',
       'Se usan en batalla. Máximo ${ProgressionRules.maxItems} de cada uno.');
 
   const ArmoryTab(this.label, this.hint);
+  @override
   final String label;
+  @override
   final String hint;
 
+  @override
   Widget build(ShopContext shop) => switch (this) {
-        ArmoryTab.buy => BuyTab(shop: shop),
-        ArmoryTab.forge => ForgeTab(shop: shop),
-        ArmoryTab.fuse => CraftBench(shop: shop),
-        ArmoryTab.condense => CondensePanel(shop: shop),
+        ArmoryTab.buy => ArmoryBuyGrid(shop: shop),
+        ArmoryTab.sell => ArmorySellGrid(shop: shop),
         ArmoryTab.items => ItemsTab(shop: shop),
       };
 
@@ -129,20 +137,51 @@ enum ArmoryTab {
       PanelTabSpec(label, hint, (_) => build(shop()));
 }
 
-/// Ayuda `[?]` de la tienda.
+/// Pestañas de la FORJA (v0.32.3; panels.md § "Forja"): MEJORAR,
+/// CONDENSAR (materiales de arma) y FUSIÓN.
+enum ForgeHallTab implements ShopTabDef {
+  upgrade('MEJORAR', 'Arma, mejora, confirmar.'),
+  condense('CONDENSAR', 'Material, cantidad, condensar.'),
+  fuse('FUSIÓN', 'Destino, acción, vista previa, confirmar.');
+
+  const ForgeHallTab(this.label, this.hint);
+  @override
+  final String label;
+  @override
+  final String hint;
+
+  @override
+  Widget build(ShopContext shop) => switch (this) {
+        ForgeHallTab.upgrade => ForgeTab(shop: shop),
+        ForgeHallTab.condense => CondensePanel(shop: shop),
+        ForgeHallTab.fuse => CraftBench(shop: shop),
+      };
+
+  PanelTabSpec spec(ShopContext Function() shop) =>
+      PanelTabSpec(label, hint, (_) => build(shop()));
+}
+
+/// Ayuda `[?]` de la ARMERÍA.
 const kShopHelp = '<b>Armería</b><br>'
     '<span class="k">COMPRAR</span>: bases Comunes de cualquier clase; '
-    'compara con la equipada antes de pagar.<br>'
-    '<span class="k">FORJA</span>: sube Poder, Crítico, Velocidad o Defensa '
-    '(5 c/u, tope total por rareza). Cada 2 niveles sube la pasiva.<br>'
+    'buscá por nombre o filtrá por clase.<br>'
+    '<span class="k">VENDER</span>: tus armas por créditos (la equipada '
+    'no se vende).<br>'
+    'Para mejorar, condensar o fusionar: la <b>FORJA</b>.<br>'
+    'Elegí una casilla; el botón de la acción está en el detalle de la '
+    'derecha.';
+
+/// Ayuda `[?]` de la FORJA.
+const kForgeHelp = '<b>Forja</b><br>'
+    '<span class="k">MEJORAR</span>: sube Poder, Crítico, Velocidad o '
+    'Defensa (5 c/u, tope total por rareza). Cada 2 niveles sube la '
+    'pasiva.<br>'
+    '<span class="k">CONDENSAR</span>: junta materiales de arma en uno más '
+    'alto (sin azar, no se deshace).<br>'
     '<span class="k">FUSIÓN</span>: 1 DESTINO → 2 ACCIÓN → 3 PREVIA → '
     'CONFIRMAR. '
     'Mejora con materiales, trae mods / pasiva / habilidades de otra arma '
     '(que se destruye), quita mods o reforja la base a otro tipo.<br>'
-    '<span class="k">CONDENSAR</span>: junta materiales en uno más alto '
-    '(sin azar, no se deshace).<br>'
-    'Para <b>desarmar</b> o <b>vender</b> lo que no te sirve: Personaje › '
-    'Inventario.<br>'
     'Elige en la lista de la izquierda; el botón de la acción está abajo a '
     'la derecha del detalle.';
 
