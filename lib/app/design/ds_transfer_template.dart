@@ -64,9 +64,13 @@ class DsItemCell extends StatelessWidget {
     this.count,
     this.selected = false,
     this.onTap,
+    this.dimension = size,
   });
 
   static const size = 48.0;
+
+  /// Side of the cell (default [size]).
+  final double dimension;
 
   final Widget icon;
   final Color border;
@@ -82,8 +86,8 @@ class DsItemCell extends StatelessWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          width: size,
-          height: size,
+          width: dimension,
+          height: dimension,
           decoration: BoxDecoration(
             color: DsColors.surfaceSunken,
             border: Border.all(
