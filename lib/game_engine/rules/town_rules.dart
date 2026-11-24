@@ -652,6 +652,23 @@ abstract final class TownRules {
     return ring[i % ring.length];
   }
 
+  /// Hacia dónde mira el pescador [i] de [b] (farming.md § 8.1): el paso
+  /// (dx, dy) de su lugar al tile de agua pegado por un lado (primero
+  /// izquierda/derecha, después abajo, después arriba). Se calcula en cada
+  /// cliente, no viaja por la red.
+  static (int, int) fisherFacing(TownState s, TownBuild b, int i) {
+    final (x, y) = fisherSpot(s, b, i);
+    for (final d in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+      if (b.contains(x + d.$1, y + d.$2)) return d;
+    }
+    // Sin agua al lado (no debería pasar): hacia el centro del lago.
+    final bb = b.bounds;
+    final cx = bb.x + bb.w / 2, cy = bb.y + bb.h / 2;
+    final dx = cx - (x + 0.5), dy = cy - (y + 0.5);
+    if (dx.abs() >= dy.abs()) return (dx < 0 ? -1 : 1, 0);
+    return (0, dy < 0 ? -1 : 1);
+  }
+
   /// Dónde está el ayudante [i] de [b] en el segundo [time] de la sala
   /// (px del mapa). Igual en todos los clientes: el granjero camina por
   /// su área, parcela por parcela; el pescador se queda en su lugar de la
