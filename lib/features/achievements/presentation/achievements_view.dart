@@ -5,9 +5,11 @@ import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
+import 'achievement_feed.dart' show achievementNameText;
 
 /// Filtro de la pestaña.
 enum AchievementFilter {
@@ -66,7 +68,8 @@ class _AchievementsViewState extends ConsumerState<AchievementsView> {
         return kAchievements.indexOf(a) - kAchievements.indexOf(b);
       });
       final got = list.where((d) => _p.isDone(d.id)).length;
-      rows.add(DsSectionHeader(cat.label,
+      rows.add(DsSectionHeader(
+          ref.strings.data(DataKeys.achievementCategory(cat.name), cat.label),
           key: ValueKey('ach-section-${cat.name}'),
           trailing: Text('$got/${list.length}', style: DsText.detail())));
       for (final d in list) {
@@ -134,6 +137,7 @@ class AchievementRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final name = achievementNameText(ref.strings, def);
     final done = progress.isDone(def.id);
     final c = def.counter;
     final count = c == null ? null : progress.count(c);
@@ -151,12 +155,12 @@ class AchievementRow extends ConsumerWidget {
                 border: Border.all(color: DsColors.textDisabled, width: 2)),
           );
     return Semantics(
-      label: '${def.name}, ${ref.t(done ? 'ui.achievements.state.done' : 'ui.achievements.state.pending')}',
+      label: '$name, ${ref.t(done ? 'ui.achievements.state.done' : 'ui.achievements.state.pending')}',
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: minHeight),
         child: DsListRow(
           key: ValueKey('ach-row-${def.id}'),
-          title: retroText(def.name),
+          title: retroText(name),
           titleColor: done ? DsColors.reward : DsColors.textPrimary,
           detail: progressText,
           leading: SizedBox(
@@ -174,10 +178,10 @@ class AchievementRow extends ConsumerWidget {
                     done ? DsColors.textSecondary : DsColors.reward)),
           ),
           tooltip: DsTooltipCard(
-            title: retroText(def.name),
+            title: retroText(name),
             titleColor: done ? DsColors.reward : DsColors.textPrimary,
             children: [
-              Text(retroText(def.how), style: DsText.detail(DsColors.text)),
+              Text(retroText(ref.strings.data(DataKeys.achievementHow(def.id), def.how)), style: DsText.detail(DsColors.text)),
               SizedBox(height: DsSpace.xs),
               Text(
                   retroText(ref.t('ui.achievements.reward',

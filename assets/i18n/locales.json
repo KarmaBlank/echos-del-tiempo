@@ -31,6 +31,10 @@
     "ui.battle_log",
     "data.items",
     "data.materials",
-    "data.crafting"
+    "data.crafting",
+    "data.zones",
+    "data.missions",
+    "data.enemies",
+    "data.achievements"
   ]
 }

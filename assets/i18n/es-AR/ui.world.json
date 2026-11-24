@@ -196,5 +196,9 @@
   "ui.world.prompt.farm": "[E] Huerta",
   "ui.world.prompt.entrance": "[E] Entrar",
   "ui.world.prompt.stairs": "[E] Escalera",
-  "ui.world.prompt.poi": "[E] Usar"
+  "ui.world.prompt.poi": "[E] Usar",
+  "ui.world.loot.found": "{name} encontró: ",
+  "ui.world.loot.legendary": "¡LEGENDARIO!",
+  "ui.world.loot.gave": "{from} le dio a {to}: ",
+  "ui.world.loot.gave_you": "Te dio {name}:"
 }

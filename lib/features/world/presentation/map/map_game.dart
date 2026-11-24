@@ -1407,10 +1407,17 @@ class MapGame extends Game {
                 m.missionId == TrialRules.missionId
             ? controller.engine.missionOf(view.session, m.missionId)?.name
             : null) ??
-        controller.engine.catalog.zone(m.zone)?.name ??
-        controller.engine.catalog.mission(m.missionId)?.name ??
+        switch (controller.engine.catalog.zone(m.zone)) {
+          final z? => zoneNameText(controller.strings, z),
+          null => null,
+        } ??
+        switch (controller.engine.catalog.mission(m.missionId)) {
+          final md? => missionNameText(controller.strings, md),
+          null => null,
+        } ??
         '';
-    actors.text(c, floorLabelText(name, m.floor, m.floors), vw / 2, vh / 2,
+    actors.text(
+        c, floorLabelText(controller.strings, name, m.floor, m.floors), vw / 2, vh / 2,
         const Color(0xFFFFD166), 8);
   }
 

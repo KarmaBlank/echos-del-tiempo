@@ -1,0 +1,16 @@
+{
+  "data.missions.m1.name": "Pradera Esmeralda",
+  "data.missions.type.exterminio": "Exterminio",
+  "data.missions.z2.name": "Bosque Hondo",
+  "data.missions.m2.name": "Ruinas Cronales",
+  "data.missions.type.recuperacion": "Recuperación",
+  "data.missions.z4.name": "Cavernas Heladas",
+  "data.missions.z5.name": "Fortaleza Caída",
+  "data.missions.type.urgente": "Urgente",
+  "data.missions.z6.name": "Laberinto Temporal",
+  "data.missions.z7.name": "Grieta Ígnea",
+  "data.missions.z8.name": "Cementerio de Eras",
+  "data.missions.z9.name": "Abismo del Tiempo",
+  "data.missions.z10.name": "Corazón del Tiempo",
+  "data.missions.m3.name": "Abismo del Tiempo"
+}

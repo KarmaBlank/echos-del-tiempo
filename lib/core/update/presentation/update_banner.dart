@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../edition/game_edition.dart';
+import '../../i18n/context_strings.dart';
+import '../../i18n/strings.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -68,6 +70,8 @@ class _UpdateBannerState extends State<UpdateBanner> {
         ),
       );
 
+  Strings get _s => contextStrings(context);
+
   Widget _body() {
     final current = 'v${_c.service.currentVersion}';
     final rel = _c.release;
@@ -77,20 +81,20 @@ class _UpdateBannerState extends State<UpdateBanner> {
       case UpdatePhase.checking:
       case UpdatePhase.upToDate:
         final status = switch (_c.phase) {
-          UpdatePhase.checking => 'buscando actualizaciones…',
-          UpdatePhase.upToDate => _c.message ?? 'al día',
+          UpdatePhase.checking => _s.t('ui.title.update.checking_long'),
+          UpdatePhase.upToDate => _c.message ?? _s.t('ui.title.update.up_to_date'),
           _ => null,
         };
         return _line(
           '$current${status == null ? '' : ' · ${protoEsc(status)}'}',
-          PanelButton('BUSCAR',
+          PanelButton(_s.t('ui.title.update.check'),
               key: const ValueKey('update-check'),
               onPressed: _c.busy ? null : _c.check),
         );
       case UpdatePhase.failed when rel == null:
         return _line(
-          '$current · ${protoEsc(_c.message ?? 'error')}',
-          PanelButton('REINTENTAR',
+          '$current · ${protoEsc(_c.message ?? _s.t('ui.title.update.error'))}',
+          PanelButton(_s.t('ui.title.update.retry'),
               key: const ValueKey('update-check'), onPressed: _c.check),
         );
       case UpdatePhase.available:
@@ -104,22 +108,24 @@ class _UpdateBannerState extends State<UpdateBanner> {
   Widget _compact(ReleaseInfo? rel) {
     switch (_c.phase) {
       case UpdatePhase.available:
-        return _updateButton('ACTUALIZAR');
+        return _updateButton(_s.t('ui.title.update.apply'));
       case UpdatePhase.failed when rel != null:
-        return _updateButton('REINTENTAR');
+        return _updateButton(_s.t('ui.title.update.retry'));
       case UpdatePhase.downloading:
         return _compactLine(
-            'Descargando ${(_c.progress * 100).floor()}%',
+            _s.t('ui.title.update.downloading',
+                {'pct': (_c.progress * 100).floor()}),
             const ValueKey('update-progress'));
       case UpdatePhase.installing:
         return _compactLine(
-            'Instalando', const ValueKey('update-installing'));
+            _s.t('ui.title.update.installing'), const ValueKey('update-installing'));
       case UpdatePhase.checking:
-        return _compactCheck('buscando', busy: true);
+        return _compactCheck(_s.t('ui.title.update.checking'), busy: true);
       case UpdatePhase.upToDate:
-        return _compactCheck(_c.message ?? 'al día');
+        return _compactCheck(_c.message ?? _s.t('ui.title.update.up_to_date'));
       case UpdatePhase.failed:
-        return _compactCheck(_c.message ?? 'error', retry: true);
+        return _compactCheck(_c.message ?? _s.t('ui.title.update.error'),
+            retry: true);
       case UpdatePhase.idle:
         return _compactCheck(null);
     }
@@ -138,7 +144,8 @@ class _UpdateBannerState extends State<UpdateBanner> {
         ProtoText(
             '$current${status == null ? '' : ' · ${protoEsc(status)}'}',
             style: const TextStyle(color: ProtoColors.dim)),
-        PanelButton(retry ? 'REINTENTAR' : 'BUSCAR',
+        PanelButton(
+            _s.t(retry ? 'ui.title.update.retry' : 'ui.title.update.check'),
             key: const ValueKey('update-check'),
             onPressed: busy ? null : _c.check),
       ],
@@ -164,7 +171,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
       );
 
   Widget _available(ReleaseInfo rel, String current) {
-    final notes = rel.notes.isEmpty ? 'Sin notas.' : rel.notes;
+    final notes = rel.notes.isEmpty ? _s.t('ui.title.update.no_notes') : rel.notes;
     return RetroPanel(
       key: const ValueKey('update-available'),
       selected: true,
@@ -173,8 +180,8 @@ class _UpdateBannerState extends State<UpdateBanner> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          ProtoText('Actualización disponible <b>v${rel.version}</b> '
-              '<span style="color:#7d8bc4">(tenés $current)</span>'),
+          ProtoText(_s.t('ui.title.update.available',
+              {'version': 'v${rel.version}', 'current': current})),
           const SizedBox(height: 8),
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 120),
@@ -195,26 +202,26 @@ class _UpdateBannerState extends State<UpdateBanner> {
       case UpdatePhase.downloading:
         final pct = (_c.progress * 100).floor();
         return [
-          ProtoText('Descargando… $pct%',
+          ProtoText(_s.t('ui.title.update.downloading_long', {'pct': pct}),
               key: const ValueKey('update-progress')),
           const SizedBox(height: 4),
           RetroBar(value: _c.progress, max: 1, color: ProtoColors.gold),
         ];
       case UpdatePhase.installing:
-        return const [
-          ProtoText('Instalando… el juego se cierra y se vuelve a abrir solo.',
-              key: ValueKey('update-installing'),
-              style: TextStyle(color: ProtoColors.green)),
+        return [
+          ProtoText(_s.t('ui.title.update.installing_long'),
+              key: const ValueKey('update-installing'),
+              style: const TextStyle(color: ProtoColors.green)),
         ];
       case UpdatePhase.failed:
         return [
-          ProtoText(protoEsc(_c.message ?? 'Error'),
+          ProtoText(protoEsc(_c.message ?? _s.t('ui.title.update.error_cap')),
               style: const TextStyle(color: ProtoColors.red)),
           const SizedBox(height: 8),
-          _updateButton('REINTENTAR'),
+          _updateButton(_s.t('ui.title.update.retry')),
         ];
       default:
-        return [_updateButton('ACTUALIZAR')];
+        return [_updateButton(_s.t('ui.title.update.apply'))];
     }
   }
 
@@ -225,7 +232,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
             accent: ProtoColors.gold,
             reason: _c.service.canInstall
                 ? null
-                : 'Solo en Windows: bajalo de la página del release',
+                : _s.t('ui.title.update.windows_only'),
             onPressed: _c.update),
       );
 }

@@ -22,5 +22,20 @@
   "ui.title.loading": "Loading...",
   "ui.title.start_play": "> PLAY",
   "ui.title.start_host": "> HOST ROOM",
-  "ui.title.start_join": "> JOIN"
+  "ui.title.start_join": "> JOIN",
+  "ui.title.update.checking_long": "checking for updates",
+  "ui.title.update.checking": "checking",
+  "ui.title.update.up_to_date": "up to date",
+  "ui.title.update.check": "CHECK",
+  "ui.title.update.retry": "RETRY",
+  "ui.title.update.apply": "UPDATE",
+  "ui.title.update.error": "error",
+  "ui.title.update.error_cap": "Error",
+  "ui.title.update.downloading": "Downloading {pct}%",
+  "ui.title.update.downloading_long": "Downloading: {pct}%",
+  "ui.title.update.installing": "Installing",
+  "ui.title.update.installing_long": "Installing: the game closes and reopens by itself.",
+  "ui.title.update.no_notes": "No notes.",
+  "ui.title.update.available": "Update available <b>{version}</b> <span style=\"color:#7d8bc4\">(you have {current})</span>",
+  "ui.title.update.windows_only": "Windows only: download it from the release page"
 }

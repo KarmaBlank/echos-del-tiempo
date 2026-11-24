@@ -13,5 +13,7 @@
   "ui.achievements.back": "BACK",
   "ui.achievements.loading": "Loading...",
   "ui.achievements.toast_head": "FEAT EARNED",
-  "ui.achievements.help": "<b>Feats</b><br>Once per account: each one pays credits, materials or potions to the character who earns it. They work as a guide: hover over a row (or press and hold it) to see how to get it.<br>Counter feats (II, III) count from when feats were added."
+  "ui.achievements.help": "<b>Feats</b><br>Once per account: each one pays credits, materials or potions to the character who earns it. They work as a guide: hover over a row (or press and hold it) to see how to get it.<br>Counter feats (II, III) count from when feats were added.",
+  "ui.achievements.toast_line": "FEAT · {name}",
+  "ui.achievements.toast_line_reward": "FEAT · {name} · {reward}"
 }

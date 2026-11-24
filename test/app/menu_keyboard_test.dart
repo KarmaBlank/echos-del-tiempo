@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/features/world/presentation/world_strings.dart';
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
 import '../features/lobby/title_flow.dart';
@@ -201,7 +202,7 @@ void main() {
         body: MissionBoardPanel(
           missions: cat.missions,
           voteOpen: false,
-          bossName: (m) => missionBossName(cat, m),
+          bossName: (m) => missionBossName(worldFallbackStrings(), cat, m),
           playerLevel: 1,
           onPropose: (_) {},
           onClose: () => closed++,

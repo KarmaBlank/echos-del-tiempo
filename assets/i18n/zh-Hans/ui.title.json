@@ -22,5 +22,20 @@
   "ui.title.loading": "",
   "ui.title.start_play": "",
   "ui.title.start_host": "",
-  "ui.title.start_join": ""
+  "ui.title.start_join": "",
+  "ui.title.update.checking_long": "",
+  "ui.title.update.checking": "",
+  "ui.title.update.up_to_date": "",
+  "ui.title.update.check": "",
+  "ui.title.update.retry": "",
+  "ui.title.update.apply": "",
+  "ui.title.update.error": "",
+  "ui.title.update.error_cap": "",
+  "ui.title.update.downloading": "",
+  "ui.title.update.downloading_long": "",
+  "ui.title.update.installing": "",
+  "ui.title.update.installing_long": "",
+  "ui.title.update.no_notes": "",
+  "ui.title.update.available": "",
+  "ui.title.update.windows_only": ""
 }
