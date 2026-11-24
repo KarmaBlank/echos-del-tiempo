@@ -7,6 +7,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../game_engine/models/custom_npc.dart';
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
@@ -785,6 +786,12 @@ class MapGame extends Game {
             TownPalette.label, 6, 899);
         continue;
       }
+      // Un NPC de datos vinculado protagoniza la visita (npc_editor.md
+      // § 6.4): se dibuja él, no el actor del evento.
+      if (kCustomNpcs.values.any((n) =>
+          n.spawn == CustomNpcSpawn.event && n.place == d.id)) {
+        continue;
+      }
       final im = sprites.lifeIcon(d.sprite, 'herramienta');
       final bottom = y + 8;
       if (im != null) {
@@ -1050,6 +1057,19 @@ class MapGame extends Game {
       // World event actors (world_events.md § 3): visitors, wanderers,
       // caravans and echo rift portals, for their days.
       _drawWorldEvents(c, s, map.place ?? kPueblo, t);
+      // NPC hechos con datos (npc_editor.md § 6): quietos, con su nombre.
+      for (final n in controller.customNpcsHere) {
+        final im = sprites.lifeIcon(n.def.sprite, 'herramienta');
+        final bottom = n.y + ts / 2;
+        if (im != null) {
+          final w = im.width.toDouble(), h = im.height.toDouble();
+          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+              Rect.fromLTWH(n.x - w / 2, bottom - h, w, h),
+              SpriteCatalog.pixelPaint());
+        }
+        _rankedText(c, n.def.name.text.toUpperCase(), n.x, bottom - ts - 6,
+            TownPalette.label, 6, 897);
+      }
       // PNJ de la mina (mining_smithing.md § 1.2): quieto, con su nombre.
       if (controller.mineLayout?.npc case (final id, final nx, final ny)?) {
         final im = sprites.lifeIcon('npc_mina_$id', 'herramienta');

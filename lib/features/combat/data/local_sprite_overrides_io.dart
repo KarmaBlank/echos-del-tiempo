@@ -32,7 +32,8 @@ Future<EditableSpriteOverrides?> createLocalSpriteOverrides([String? dir]) async
 /// `<root>/sprites/<id>.png` + `<root>/sprite_overrides.yaml`
 /// (`sprites: { <id>: sprites/<id>.png }`). Lo leen el Editor y
 /// `main_dev` (`useLocalOverrides`); el juego publicado no.
-class LocalSpriteOverrides implements EditableSpriteOverrides {
+class LocalSpriteOverrides
+    implements EditableSpriteOverrides, NpcVariantsOverrideSource {
   LocalSpriteOverrides(this.root) {
     if (isInsideGameData(root)) {
       throw StateError('Los overrides no van en la carpeta de datos del juego');
@@ -140,6 +141,22 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
           f.uri.pathSegments.last.replaceAll('.layout.yaml', ''):
               f.readAsStringSync(),
     };
+  }
+
+  // ------------------------------------- variantes de NPC (npc_variants.md)
+
+  static const npcVariantsName = 'npc_variants.yaml';
+
+  @override
+  Future<String?> readNpcVariants() async {
+    final f = _file(npcVariantsName);
+    return f.existsSync() ? f.readAsString() : null;
+  }
+
+  @override
+  Future<void> putNpcVariants(String yaml) async {
+    await Directory(root).create(recursive: true);
+    await _file(npcVariantsName).writeAsString(yaml, flush: true);
   }
 
   // ------------------------------------------------- perillas (§ 7.5)
