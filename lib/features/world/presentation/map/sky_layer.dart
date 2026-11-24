@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../core/settings/graphics.dart';
+import '../../../../game_engine/data/light_catalog.dart';
+import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import 'map_themes.dart';
 
@@ -24,6 +26,11 @@ class MapSkyLayer {
   static const boltMs = 420.0;
 
   final bolts = <SkyBolt>[];
+
+  /// Luces puestas del cuadro (centros en tiles): las luciérnagas se
+  /// apagan de a poco cerca de ellas (lighting.md § 3.4). La carga el
+  /// mapa antes de pedir las luciérnagas.
+  List<(double, double)> placedLights = const [];
 
   void addBolt(int tx, int ty, double t) {
     bolts.add(SkyBolt((tx + 0.5) * ts, (ty + 0.5) * ts, t));
@@ -52,7 +59,13 @@ class MapSkyLayer {
         final by = cy * cell + (h >> 14) % cell;
         final x = bx + math.sin(t / 2300 + ph) * 10;
         final y = by + math.cos(t / 1900 + ph * 1.3) * 6;
-        final blink = 0.5 + 0.5 * math.sin(t / 520 + ph * 3);
+        var blink = 0.5 + 0.5 * math.sin(t / 520 + ph * 3);
+        if (placedLights.isNotEmpty) {
+          blink *= LightRules.fireflyFade(x / ts, y / ts, placedLights,
+              radius: kLightDefs[LightId.faro]!.radius,
+              survivor: (h >> 20) % LightRules.fireflySurvivorEvery == 0);
+          if (blink <= 0.01) continue;
+        }
         out.add((Offset(x, y), blink));
       }
     }

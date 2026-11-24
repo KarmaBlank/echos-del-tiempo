@@ -542,14 +542,17 @@ detalle"). Donde difiere de la sección v0.2.0, manda esta:
   El detalle: `Gastas` (`craft-cost`) y `Pierdes` (`craft-lost`) arriba,
   `No se puede` (`craft-error`) y una tabla **ANTES │ DESPUÉS** de dos
   columnas: Arma (`craft-name`), Base (`craft-base`, al reforjar),
-  Rareza, Pasiva (`craft-passive`), Habilidades (`craft-skills`, la
-  nueva en verde con ▲), Mods (`craft-mods-title` con `[?]`
-  `craft-tier-help`; lista `craft-mods` con `(nuevo)` / `(se quita)`;
-  `=` si no cambia) y ATQ / MAG / VEL / CRÍT / DEF / HP con ▲ / ▼;
+  Rareza, Mods (`craft-mods-title` con `[?]` `craft-tier-help`; lista
+  `craft-mods` con `(nuevo)` en verde / `(se quita)` en rojo; `=` si no
+  cambia), Pasiva (`craft-passive`), Habilidades (`craft-skills`, la
+  nueva en verde con ▲, y debajo `Qué hacen`) y ATQ / MAG / VEL / CRÍT / DEF / HP con ▲ / ▼;
   `PUEDE SALIR` (`craft-outcomes`) en las al azar. Abajo `‹ OTRA ACCIÓN`
   y el `ConfirmButton` grande (`craft-confirm`: ✓ + verbo + chip de
   costo; deshabilitado con candado y `No se puede: <motivo>` arriba).
   `Enter Confirmar · Esc Volver` va debajo de la lista.
+  Mods va justo después de Rareza (pedido del dueño): al traer o quitar
+  un mod el cambio se ve sin bajar dentro de la previa; las secciones
+  largas (Habilidades, `Qué hacen`) quedan debajo.
 - **Teclado**: con el foco en la mesa (se toma al tocar una fila o
   cambiar de paso) `Esc` vuelve un paso (en el paso 1 cierra el panel) y
   `Enter` avanza / confirma si se puede.

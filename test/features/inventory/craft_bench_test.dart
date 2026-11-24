@@ -118,6 +118,11 @@ void main() {
     expect(plain(tester, 'craft-mods-title'), contains('Mods 3/4'));
     expect(plain(tester, 'craft-mods'), contains('(nuevo)'));
     expect(plain(tester, 'craft-lost'), contains('Katana de Escarcha'));
+    // Mods right after Rarity, above Skills: visible without scrolling.
+    double top(String k) =>
+        tester.getTopLeft(find.byKey(ValueKey(k))).dy;
+    expect(top('craft-mods'), lessThan(top('craft-skills')));
+    expect(top('craft-mods-title'), greaterThan(top('craft-name')));
     expect(plain(tester, 'craft-lost'), contains('se destruye'));
     final cost =
         CraftRules.transferAffixCost(magicKatana.affixes[0], Rarity.raro);

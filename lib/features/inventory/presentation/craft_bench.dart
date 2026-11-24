@@ -1452,6 +1452,28 @@ class _CraftBenchState extends State<CraftBench> {
             ? same
             : '<b style="color:${rarityHex(after.rarity)}">${after.rarity.text}</b> '
                 '${protoColor(ProtoColors.green, '▲')}'));
+    // Mods justo después de Rareza: el cambio se ve sin bajar (panels.md).
+    out.add(cmp(
+        _s.t('ui.inventory.craft.row.mods'),
+        _s.t('ui.inventory.craft.mods_count', {'n': target.modCount, 'max': target.rarity.maxMods}),
+        '${_s.t('ui.inventory.craft.mods_count', {'n': shown.modCount, 'max': shown.rarity.maxMods})} '
+            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.room_of', {'rarity': shown.rarity.text}))}',
+        key: const ValueKey('craft-mods-title'),
+        extra: RetroTooltip(
+          key: const ValueKey('craft-tier-help'),
+          message: '${tierHelp(_s)}<br><br>${affixSidesHelp(shown.rarity)}',
+          child: const Text('[?]', style: TextStyle(color: ProtoColors.sky)),
+        )));
+    out.add(cmp(
+        '',
+        _modList(target),
+        after == null
+            ? protoColor(ProtoColors.sky,
+                random ? _s.t('ui.inventory.craft.decided_on_confirm') : _s.t('ui.inventory.craft.no_changes'))
+            : _sameMods(target, after)
+                ? same
+                : _diffMods(target, after),
+        key: const ValueKey('craft-mods')));
     final pBefore = rules.items.passiveText(target);
     final pAfter = after == null ? pBefore : rules.items.passiveText(after);
     if (pBefore != null || pAfter != null) {
@@ -1488,27 +1510,6 @@ class _CraftBenchState extends State<CraftBench> {
           stats: shop.preview.withItem(p, shown),
           isNew: (id) => !sBefore.contains(id)),
     ));
-    out.add(cmp(
-        _s.t('ui.inventory.craft.row.mods'),
-        _s.t('ui.inventory.craft.mods_count', {'n': target.modCount, 'max': target.rarity.maxMods}),
-        '${_s.t('ui.inventory.craft.mods_count', {'n': shown.modCount, 'max': shown.rarity.maxMods})} '
-            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.room_of', {'rarity': shown.rarity.text}))}',
-        key: const ValueKey('craft-mods-title'),
-        extra: RetroTooltip(
-          key: const ValueKey('craft-tier-help'),
-          message: '${tierHelp(_s)}<br><br>${affixSidesHelp(shown.rarity)}',
-          child: const Text('[?]', style: TextStyle(color: ProtoColors.sky)),
-        )));
-    out.add(cmp(
-        '',
-        _modList(target),
-        after == null
-            ? protoColor(ProtoColors.sky,
-                random ? _s.t('ui.inventory.craft.decided_on_confirm') : _s.t('ui.inventory.craft.no_changes'))
-            : _sameMods(target, after)
-                ? same
-                : _diffMods(target, after),
-        key: const ValueKey('craft-mods')));
     if (after != null && rules.catalog.weapons.containsKey(after.baseId)) {
       final b = shop.preview.withItem(p, target);
       final a = shop.preview.withItem(p, after);

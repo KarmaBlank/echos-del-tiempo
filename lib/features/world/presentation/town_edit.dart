@@ -2,14 +2,12 @@ import '../../../game_engine/models/town_build.dart';
 
 /// Paso de la edición del pueblo (town_editor.md § 1.2).
 enum TownEditStep {
-  /// Mirando: clic en una franja, una construcción o un tile libre.
+  /// Mirando: la paleta a la derecha; clic en una franja o en algo
+  /// puesto.
   browse,
 
   /// Franja fantasma elegida: comprar la ampliación de ese lado.
   side,
-
-  /// Tile libre elegido: qué construir (HUERTA, LAGO, ...).
-  choose,
 
   /// Construcción elegida: sus opciones.
   options,
@@ -22,6 +20,9 @@ enum TownEditStep {
 
   /// El fantasma sigue al mouse; clic lo deja.
   moving,
+
+  /// Pieza de la paleta elegida: cada clic válido pone una
+  /// (town_editor.md § 1.2).
   placing,
 }
 
@@ -29,9 +30,6 @@ enum TownEditStep {
 /// pueblo va al anfitrión como `TownAction`).
 class TownEdit {
   TownEditStep step = TownEditStep.browse;
-
-  /// Tile libre elegido (paso `choose`), en coordenadas del mapa.
-  (int, int)? tile;
 
   /// Construcción elegida.
   String? selected;
@@ -65,7 +63,6 @@ class TownEdit {
 
   void reset() {
     step = TownEditStep.browse;
-    tile = null;
     selected = null;
     side = null;
     placeDef = null;
