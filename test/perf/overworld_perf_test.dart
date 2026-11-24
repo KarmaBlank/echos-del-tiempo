@@ -80,7 +80,7 @@ GameSprites? _sprites;
 
 /// Entra a la zona 1 con Ana + Leo, Mia y Cid.
 Future<SessionController> pumpField(WidgetTester tester,
-    {MoveInputReader? input}) async {
+    {MoveInputReader? input, bool keepEnemies = false}) async {
   tester.view.physicalSize = const Size(1280, 720);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -129,7 +129,10 @@ Future<SessionController> pumpField(WidgetTester tester,
   expect(c.view!.mode, SessionMode.field);
   expect(c.view!.session.playerList.length, 4);
   // Sin batallas en la medición: los grupos se quedan lejos.
-  c.session!.mission!.enemies.removeWhere((en) => !en.boss && !en.elite);
+  if (!keepEnemies) {
+    c.session!.mission!.enemies
+        .removeWhere((en) => !en.boss && !en.elite);
+  }
   // Loot con etiqueta alrededor del jugador.
   final s = c.session!;
   for (var i = 0; i < 10; i++) {
