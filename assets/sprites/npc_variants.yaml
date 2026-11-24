@@ -1,0 +1,237 @@
+# Variantes procedurales de NPC (docs/specs/npc_variants.md).
+# Solo lo lee SpriteCatalog; el Editor (Visuales → VARIANTES NPC) lo reescribe.
+#
+# bases:    cuerpo base = un sprite de `items:` del manifest + qué color
+#           suyo es de qué región (`<región>`, `<región>_dark`, `<región>_light`).
+#           Colores sin región (contorno, ojos, metal) no cambian.
+# palettes: colores curados por región (hair, skin, clothes, pants, accent).
+# parts:    partes en capas: grilla de caracteres anclada a `top`, `chin`,
+#           `back` o `hand` (anclas calculadas del cuerpo, no a mano).
+#           . vacío  o contorno  h pelo  s piel  c ropa  C ropa oscura
+#           p pantalón  a acento  A acento oscuro  m metal  M metal oscuro
+#           w madera  g brillo magitec. `under: true` = solo detrás.
+# variants: una por NPC; la clave es el id de sprite que usa el juego
+#           (`items.vida_<id>` queda de respaldo si la variante falla).
+schema: 1
+bases:
+  aldeano:
+    sprite: vida_npc_granjero
+    outline: '#1a1420'
+    regions:
+      '#e0c060': hair
+      '#e8b890': skin
+      '#6a8a3a': clothes
+      '#4a5a8a': pants
+      '#8a5a32': accent
+  pescador:
+    sprite: vida_npc_pescador
+    outline: '#1a1420'
+    regions:
+      '#2a4a7a': hair
+      '#e8b890': skin
+      '#3a6a9a': clothes
+      '#5a4a3a': pants
+      '#8a6a3a': accent
+  obrero:
+    sprite: vida_npc_granjero_trabajo
+    outline: '#1a1420'
+    regions:
+      '#e0c060': hair
+      '#e8b890': skin
+      '#6a8a3a': clothes
+      '#4a5a8a': pants
+  minero:
+    sprite: vida_npc_brann
+    outline: '#0d0d14'
+    regions:
+      '#4a2a14': hair
+      '#d9a07a': skin
+      '#a04030': clothes
+      '#6b4a2a': accent
+      '#3a2a20': pants
+      '#2a1a10': pants_dark
+  sabio:
+    sprite: vida_npc_oren
+    outline: '#0d0d14'
+    regions:
+      '#2e2350': hair
+      '#3b2a5a': hair_light
+      '#f2c29b': skin
+      '#4b3a78': clothes
+      '#2a1f45': pants
+      '#1a1230': pants_dark
+palettes:
+  aldea:
+    hair: ['#3a2418', '#6b4226', '#a8743a', '#d8b060', '#8a8a86', '#9a3a22']
+    skin: ['#f2c29b', '#e8b890', '#d9a07a', '#b07850', '#8a5a3a']
+    clothes: ['#6a8a3a', '#8a4a3a', '#4a6a8a', '#9a7a3a', '#5a4a6a', '#7a5a3a']
+    pants: ['#4a3a2a', '#3a4a6a', '#5a5a4a', '#4a2a2a']
+    accent: ['#8a5a32', '#c8a040', '#a03a3a', '#e8dcc0']
+  viajero:
+    hair: ['#2a1c14', '#5a3a22', '#b08848', '#c8c8c0', '#7a2a1a']
+    skin: ['#f2c29b', '#d9a07a', '#b07850', '#8a5a3a']
+    clothes: ['#7a5a3a', '#5a6a4a', '#6a4a5a', '#4a5a6a', '#8a6a4a']
+    pants: ['#3a2a20', '#4a4a3a', '#2a3a4a']
+    accent: ['#c8a040', '#a04030', '#3a7a6a', '#d8c8a0']
+  mina:
+    hair: ['#1a1410', '#3a2418', '#5a3a22', '#8a8a86', '#6a2a1a']
+    skin: ['#e8b890', '#d9a07a', '#b07850', '#8a5a3a']
+    clothes: ['#a04030', '#7a5a3a', '#5a5a5a', '#8a6a2a', '#4a4a5a']
+    pants: ['#3a2a20', '#2a2a30', '#4a3a2a']
+    accent: ['#6b4a2a', '#c8a040', '#8a8f98', '#a87a3a']
+  rio:
+    hair: ['#2a4a7a', '#3a2418', '#a8743a', '#c8c8c0', '#4a5a3a']
+    skin: ['#f2c29b', '#e8b890', '#d9a07a', '#b07850']
+    clothes: ['#3a6a9a', '#3a7a6a', '#5a7a8a', '#6a5a3a', '#4a5a7a']
+    pants: ['#5a4a3a', '#3a3a4a', '#4a4a3a']
+    accent: ['#8a6a3a', '#c8a040', '#e8dcc0', '#a04a3a']
+  erudito:
+    hair: ['#2e2350', '#3a4a2a', '#5a2a2a', '#2a3a5a', '#4a3a2a']
+    skin: ['#f2c29b', '#e8b890', '#d9a07a', '#b07850']
+    clothes: ['#4b3a78', '#3a5a4a', '#6a2a3a', '#2a4a6a', '#5a4a2a']
+    pants: ['#2a1f45', '#2a2a2a', '#3a2a1a']
+    accent: ['#c8a040', '#e8dcc0', '#8fd8ff', '#a03a3a']
+  magitec:
+    hair: ['#8a6a3a', '#a87a3a', '#5a6a7a', '#3a4a5a']
+    skin: ['#a8b0bc', '#c8b07a', '#8a9aa8', '#b8a080']
+    clothes: ['#8a6a2a', '#5a6a7a', '#7a4a2a', '#4a5a5a']
+    pants: ['#3a3a4a', '#4a3a2a', '#2a3a3a']
+    accent: ['#6fb6ff', '#8fd8ff', '#7affc8', '#ffd166']
+parts:
+  hat_wide:
+    slot: head
+    anchor: top
+    pivot: [4, 1]
+    rows:
+      - '..ooooo..'
+      - '.oaaaaao.'
+      - 'ooAAAAAoo'
+  hat_pointy:
+    slot: head
+    anchor: top
+    pivot: [3, 4]
+    rows:
+      - '...o...'
+      - '..oao..'
+      - '..oao..'
+      - '.oaaao.'
+      - 'ooooooo'
+  cap:
+    slot: head
+    anchor: top
+    pivot: [3, 1]
+    rows:
+      - '.ooooo..'
+      - 'oCCCCCo.'
+      - 'ooooooooo'
+  helmet:
+    slot: head
+    anchor: top
+    pivot: [3, 1]
+    rows:
+      - '.ooooo.'
+      - 'oMMaMMo'
+      - 'ooooooo'
+  hood:
+    slot: head
+    anchor: top
+    pivot: [4, 1]
+    rows:
+      - '..ooooo..'
+      - '.occccco.'
+      - 'occCCCcco'
+      - 'oco...oco'
+      - 'oCo...oCo'
+  beard:
+    slot: chin
+    anchor: chin
+    pivot: [2, 1]
+    rows:
+      - '.hhh.'
+      - 'ohhho'
+      - '.ooo.'
+  scarf:
+    slot: neck
+    anchor: chin
+    pivot: [3, 0]
+    rows:
+      - 'oaaaaao'
+      - '..oAo..'
+  backpack:
+    slot: back
+    anchor: back
+    pivot: [4, 0]
+    under: true
+    rows:
+      - 'oooo.'
+      - 'oaaAo'
+      - 'owwAo'
+      - 'oAAAo'
+      - 'oooo.'
+  lantern:
+    slot: hand
+    anchor: hand
+    pivot: [1, 0]
+    rows:
+      - '.o.'
+      - 'oao'
+      - 'oAo'
+      - '.o.'
+  staff:
+    slot: hand
+    anchor: hand
+    pivot: [0, 5]
+    rows:
+      - 'o'
+      - 'w'
+      - 'w'
+      - 'w'
+      - 'w'
+      - 'w'
+      - 'w'
+      - 'w'
+      - 'w'
+  pickaxe:
+    slot: hand
+    anchor: hand
+    pivot: [2, 2]
+    rows:
+      - 'oMMMo'
+      - '..w..'
+      - '..w..'
+      - '..w..'
+  magitec_antenna:
+    slot: magitec
+    anchor: top
+    pivot: [0, 3]
+    rows:
+      - 'g'
+      - 'm'
+      - 'M'
+  magitec_gear:
+    slot: magitec
+    anchor: back
+    pivot: [3, 0]
+    under: true
+    rows:
+      - '.o.o.'
+      - 'omMmo'
+      - '.MgM.'
+      - 'omMmo'
+      - '.o.o.'
+variants:
+  # Eventos del mundo (world_events.json, `sprite`).
+  npc_ev_visitante: { base: aldeano, seed: 1021, palette: viajero, parts: [hat_wide, cap, scarf, backpack, beard, lantern] }
+  npc_ev_cronista: { base: sabio, seed: 2207, palette: erudito, parts: [hat_pointy, beard, scarf, lantern] }
+  npc_ev_peregrina: { base: pescador, seed: 3313, palette: viajero, parts: [hood, scarf, backpack, staff] }
+  npc_ev_automata: { base: obrero, seed: 4409, palette: magitec, parts: [magitec_antenna, magitec_gear, cap] }
+  npc_ev_caravana: { base: obrero, seed: 5501, palette: viajero, parts: [hat_wide, backpack, scarf, beard] }
+  # PNJ de la mina (mining_smithing.md § 1.2, kMineNpcs).
+  npc_mina_miner: { base: minero, seed: 6607, palette: mina, parts: [helmet, beard, pickaxe, scarf] }
+  npc_mina_hermit: { base: sabio, seed: 7703, palette: mina, parts: [hood, beard, lantern, staff] }
+  # Pescadores de los campamentos de bioma (fishing.md § 12).
+  npc_pesc_bosque: { base: pescador, seed: 8101, palette: aldea, parts: [hat_wide, cap, scarf, beard, backpack] }
+  npc_pesc_ruinas: { base: pescador, seed: 8209, palette: viajero, parts: [hood, cap, scarf, beard, backpack] }
+  npc_pesc_cavernas: { base: pescador, seed: 8311, palette: mina, parts: [helmet, cap, scarf, beard, lantern] }
+  npc_pesc_grieta: { base: pescador, seed: 8429, palette: rio, parts: [hat_wide, hood, scarf, beard, backpack] }
+  npc_pesc_abismo: { base: pescador, seed: 8537, palette: erudito, parts: [hood, hat_pointy, scarf, beard, lantern] }

@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:yaml/yaml.dart';
 
+import '../../../core/procedural/npc_variants.dart';
 import '../../../core/procedural/procedural_art.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../domain/sprite_entry.dart';
@@ -60,7 +61,96 @@ class SpriteCatalog {
     final c = SpriteCatalog.fromYaml(raw,
         bundle: b, overrides: overrides ?? defaultOverrides);
     await c.loadProcedural();
+    await c.loadNpcVariants();
     return c;
+  }
+
+  /// Ruta de las variantes procedurales de NPC (npc_variants.md).
+  static const npcVariantsPath = 'assets/sprites/npc_variants.yaml';
+
+  /// Variantes de NPC efectivas: override local (si hay) o las del repo.
+  NpcVariantsDoc npcVariants = NpcVariantsDoc();
+  bool _variantsLoaded = false;
+  Future<Map<String, ui.Image>>? _variantImages;
+
+  /// Lee `npc_variants.yaml` (override → repo). Datos rotos = sin
+  /// variantes (el juego usa el sprite de respaldo del manifest).
+  Future<void> loadNpcVariants() async {
+    _variantsLoaded = true;
+    _variantImages = null;
+    final o = overrides;
+    if (o is NpcVariantsOverrideSource) {
+      try {
+        final raw = await (o as NpcVariantsOverrideSource).readNpcVariants();
+        if (raw != null) {
+          npcVariants = NpcVariantsDoc.parse(raw);
+          return;
+        }
+      } catch (_) {}
+    }
+    try {
+      npcVariants = NpcVariantsDoc.parse(await _bundle.loadString(npcVariantsPath));
+    } catch (_) {
+      npcVariants = NpcVariantsDoc();
+    }
+  }
+
+  /// Píxeles RGBA del cuerpo base [baseId] de las variantes, o `null`.
+  Future<Rgba?> npcBasePixels(String baseId, [NpcVariantsDoc? doc]) async {
+    final b = (doc ?? npcVariants).bases[baseId];
+    if (b == null) return null;
+    final e = entry('items.${b.sprite}.idle');
+    if (e == null) return null;
+    final img = await image(e);
+    if (img == null) return null;
+    final data = await img.toByteData(format: ui.ImageByteFormat.rawStraightRgba);
+    if (data == null) return null;
+    return Rgba(img.width, img.height,
+        Uint8List.fromList(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)));
+  }
+
+  /// Genera la variante [spec] (sin caché: la usa el Editor al tocar
+  /// perillas). `null` si su base no existe.
+  Future<ui.Image?> npcVariantImage(NpcVariantSpec spec, [NpcVariantsDoc? doc]) async {
+    final d = doc ?? npcVariants;
+    final base = await npcBasePixels(spec.base, d);
+    if (base == null) return null;
+    return rgbaImage(NpcVariantGenerator(d).generate(base, spec));
+  }
+
+  /// Todas las variantes del documento, generadas UNA vez y cacheadas
+  /// como `ui.Image` (clave: id de la variante = id de sprite del NPC).
+  /// Una que falla se omite (queda el sprite de respaldo del manifest).
+  Future<Map<String, ui.Image>> npcVariantImages() async {
+    if (!_variantsLoaded) await loadNpcVariants();
+    return _variantImages ??= () async {
+      final out = <String, ui.Image>{};
+      final bases = <String, Rgba?>{};
+      final gen = NpcVariantGenerator(npcVariants);
+      for (final spec in npcVariants.variants.values) {
+        try {
+          final base = bases.containsKey(spec.base)
+              ? bases[spec.base]
+              : bases[spec.base] = await npcBasePixels(spec.base);
+          if (base == null) continue;
+          out[spec.id] = await rgbaImage(gen.generate(base, spec));
+        } catch (_) {}
+      }
+      return out;
+    }();
+  }
+
+  /// `ui.Image` desde RGBA crudo, 1:1 (sin re-muestreo).
+  static Future<ui.Image> rgbaImage(Rgba px) async {
+    final buf = await ui.ImmutableBuffer.fromUint8List(px.pixels);
+    final desc = ui.ImageDescriptor.raw(buf,
+        width: px.width, height: px.height, pixelFormat: ui.PixelFormat.rgba8888);
+    final codec = await desc.instantiateCodec();
+    final frame = await codec.getNextFrame();
+    codec.dispose();
+    desc.dispose();
+    buf.dispose();
+    return frame.image;
   }
 
   /// Ruta de las perillas del arte procedural publicadas (§ 7.5).
@@ -163,6 +253,7 @@ class SpriteCatalog {
     if (id == null) {
       _cache.clear();
       await loadProcedural();
+      await loadNpcVariants();
     } else {
       _cache.remove(id);
     }

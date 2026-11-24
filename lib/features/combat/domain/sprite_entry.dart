@@ -111,6 +111,17 @@ abstract class ProceduralOverrideSource {
   Future<String?> readProcedural();
 }
 
+/// Override local de las variantes de NPC (`overrides/npc_variants.yaml`,
+/// docs/specs/npc_variants.md § 5). Lo implementa la carpeta de overrides
+/// del Editor; quien no lo implementa usa solo el del repo.
+abstract class NpcVariantsOverrideSource {
+  /// Texto del `npc_variants.yaml` del override, o `null`.
+  Future<String?> readNpcVariants();
+
+  /// Guarda el `npc_variants.yaml` del override.
+  Future<void> putNpcVariants(String yaml);
+}
+
 /// Overrides que el Editor puede escribir (game_editor.md § 3.1 y § 4).
 /// También guarda los overrides de animaciones (paso 2, § 4.2): misma
 /// carpeta, mismo paquete de arte.

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../core/i18n/game_text.dart';
 import 'admin_controller.dart';
 import 'balance_page.dart';
 import 'changes_page.dart';
@@ -12,6 +13,9 @@ import 'editor/climate_editor_controller.dart';
 import 'editor/climate_page.dart';
 import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
+import 'editor/npc_variants_controller.dart';
+import 'editor/npc_variants_page.dart';
+import '../../combat/domain/sprite_entry.dart' show NpcVariantsOverrideSource;
 import 'editor/events_editor_controller.dart';
 import 'editor/events_page.dart';
 import 'editor/renown_editor_controller.dart';
@@ -167,9 +171,24 @@ class _AdminShellState extends State<AdminShell> {
   late int visualTab = widget.initialVisualTab;
   final _search = TextEditingController();
 
+  /// Visuales → VARIANTES NPC (npc_variants.md § 5), creado al abrirlo.
+  NpcVariantsController? _variants;
+
+  NpcVariantsController? get variants {
+    final s = widget.sprites;
+    if (s == null) return null;
+    final o = s.overrides;
+    return _variants ??= NpcVariantsController(
+        catalog: s.catalog,
+        store: o is NpcVariantsOverrideSource
+            ? o as NpcVariantsOverrideSource
+            : null);
+  }
+
   @override
   void dispose() {
     _search.dispose();
+    _variants?.dispose();
     super.dispose();
   }
 
@@ -332,10 +351,18 @@ class _AdminShellState extends State<AdminShell> {
               visualTab = i;
               _search.clear();
             }),
-            tabs: const [DsTab('SPRITES'), DsTab('ANIMACIONES')],
+            tabs: [
+              const DsTab('SPRITES'),
+              const DsTab('ANIMACIONES'),
+              DsTab(GameText.t('ui.world.npcv.tab')),
+            ],
           ),
           Expanded(
-            child: visualTab == 1
+            child: visualTab == 2
+                ? variants == null
+                    ? const SizedBox.shrink()
+                    : NpcVariantsPage(c: variants!)
+                : visualTab == 1
                 ? widget.animations == null
                     ? Center(
                         child: Text('SIN CATÁLOGO DE ANIMACIONES',

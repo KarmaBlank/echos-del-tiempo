@@ -437,3 +437,14 @@ práctica), Brann (paladín, delantal y martillo), Oren (maga, capucha y
 orbe). Así no se confunden con los ayudantes. Cada uno exporta
 `items/vida_npc_<id>.png` (14×18) y `vida_npc_<id>_retrato.png` (14×12,
 cabeza y hombros) para el cuadro de diálogo.
+
+## Variantes procedurales de NPC (v0.46.x)
+
+Los NPC sin arte propio (eventos del mundo, PNJ de la mina, pescadores de
+bioma) no usan más el PNG provisorio compartido: `SpriteCatalog` genera
+una variante por NPC desde `assets/sprites/npc_variants.yaml` (cuerpo
+base del manifest + paleta curada por región + partes en capas + semilla)
+una sola vez al cargar, cacheada como `ui.Image` con el mismo id de
+sprite. La entrada `items.vida_<id>` del manifest queda de respaldo; un
+override PNG del Editor le gana a la variante. Los habitantes conservan su
+sprite a mano. Detalle, editor y tests: docs/specs/npc_variants.md.
