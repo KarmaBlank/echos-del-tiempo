@@ -448,7 +448,7 @@ class MapFarmLayer {
       // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo
       // para entregar.
       drawNpcMark(text, markOf?.call(n) ?? NpcMark.none, pos.$1,
-          pos.$2 - 21, t);
+          pos.$2 - 19.5, t);
     }
     final h = hover;
     if (h == null) return;

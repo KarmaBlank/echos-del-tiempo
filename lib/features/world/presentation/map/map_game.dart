@@ -938,7 +938,7 @@ class MapGame extends Game {
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 901),
             _npcMark(lay.npc),
             cx,
-            bottom - ts - 11,
+            bottom - ts - 9,
             t);
       } else if (biomeLayout(map.place) case final lay?) {
         // Se está mudando (§ 10.1): baja por el camino del sur y se
