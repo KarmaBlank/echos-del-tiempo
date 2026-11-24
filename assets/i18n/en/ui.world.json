@@ -73,6 +73,7 @@
   "ui.world.lost_loot.notice": "Cleared when the next mission starts.",
   "ui.world.lost_loot.empty": "Nothing here.",
   "ui.world.lost_loot.take": "TAKE",
+  "ui.world.lost_loot.take_all": "TAKE ALL",
   "ui.world.offering.not_in_dungeon": "You're not in the dungeon",
   "ui.world.offering.title": "OFFERING",
   "ui.world.offering.offer": "OFFER",
