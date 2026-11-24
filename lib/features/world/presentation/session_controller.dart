@@ -2287,8 +2287,21 @@ class SessionController extends StateNotifier<SessionView?> {
         ..reset()
         ..step = TownEditStep.placing
         ..placeDef = defId
-        ..ghost = ghost;
+        ..ghost = ghost
+        // Elegir una pieza cierra la ventana: el mapa queda libre.
+        ..buildOpen = false;
     }
+    _emit();
+  }
+
+  /// Abre o cierra la ventana CONSTRUIR (town_editor.md § 1.2); sin
+  /// [open], la alterna.
+  void setBuildOpen([bool? open]) {
+    final e = _edit;
+    if (e == null) return;
+    final v = open ?? !e.buildOpen;
+    if (v == e.buildOpen) return;
+    e.buildOpen = v;
     _emit();
   }
 
@@ -2812,7 +2825,14 @@ class SessionController extends StateNotifier<SessionView?> {
     if (s == null) return false;
     // Edición del pueblo: Esc vuelve un paso o sale; el resto no juega.
     if (editingTown) {
-      if (key == LogicalKeyboardKey.escape) editBack();
+      if (key == LogicalKeyboardKey.escape) {
+        // Esc cierra primero la ventana CONSTRUIR (town_editor.md § 1.2).
+        if (_edit?.buildShown ?? false) {
+          setBuildOpen(false);
+        } else {
+          editBack();
+        }
+      }
       return key == LogicalKeyboardKey.escape;
     }
     // Travesía: no hay pueblo ni campo; solo cerrar y abrir el personaje.
