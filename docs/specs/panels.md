@@ -1405,6 +1405,21 @@ tooltip de cada atributo en ATRIBUTOS (`attr-row-<attr>`: `+1 Agilidad:
 Tests: `test/app/menu_keyboard_test.dart`,
 `test/features/inventory/skill_tips_test.dart`.
 
+## Grillas de comercio de oficios y NPC (v0.41.9)
+
+AGROPECUARIO (fishing.md § 5.3), PESCA Y CULTIVO, la TIENDA y demás
+menús de los habitantes (overworld_biomes.md) y el PUESTO/PEDIDO del
+pescador del bioma usan el mismo organismo `LifeItemGrid`, cuya casilla
+(`LifeItemCell`) es la de INVENTARIO: 44 px con 4 px de separación,
+solo ícono y marco de rareza, cantidad abajo y E de equipada, sin texto
+debajo. Nombre y datos van en la ficha estándar al pasar el mouse
+(`DsTooltip` + `DsTooltipCard`, con el tope de ancho y fuente de todo
+tooltip). El detalle de la elegida va siempre a la derecha (ancho 45 %
+del espacio, entre 180 y 280 px; arriba solo por debajo de 420 px). Si
+hay varios grupos con título, se eligen con chips (TODO + cada grupo),
+nunca como secciones apiladas. Sin desbordes en 1280×720 ni 1920×1080
+(`test/features/world/trader_grid_test.dart`).
+
 ## Fuera de alcance
 
 Tienda ambulante (`merchant`): el mapa nunca genera mercader

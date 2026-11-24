@@ -170,9 +170,20 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 - Desde v0.24.4: grilla de casillas por categoría (farming.md § 11) con
   el detalle de la elegida a la derecha (tipo, rareza, nivel, rinde,
   rareza extra, precio y acciones). El nombre ya no repite el tipo.
+- Desde v0.41.9: la casilla es la misma de INVENTARIO (44 px, solo
+  ícono y marco de rareza, cantidad abajo, E de equipada); nada de texto
+  debajo del ícono. Al pasar el mouse, la ficha estándar (`DsTooltip`,
+  ancho y fuente tope) con nombre, tipo, rareza y datos: semillas →
+  tiempo de crecimiento, bioma de origen, afinidad horaria, precio;
+  herramientas → rinde y comparación con la equipada; peces/cultivos →
+  cantidad y valor. Una sola grilla (nunca secciones apiladas), en orden
+  de categoría; las semillas ordenadas por tiempo de crecimiento.
+- Filtros de semillas (COMPRAR · CULTIVO · SEMILLAS), en una sola fila
+  de chips: BIOMA (TODO + cada bioma con semillas a la venta) y
+  CRECIMIENTO (TODO, CORTO < 5 min, MEDIO 5–15 min, LARGO ≥ 15 min).
 - Primer nivel: COMPRAR o VENDER. Segundo: PESCA o CULTIVO. Tercero:
-  categorías (botones arriba de la lista, que también filtran; con TODO
-  la lista sale agrupada con un encabezado por categoría, nunca mezclada).
+  categorías (chips arriba de la grilla que filtran; con TODO salen
+  todas en la misma grilla, en orden de categoría).
   - COMPRAR · PESCA: Cañas (Carnada cuando exista).
   - COMPRAR · CULTIVO: Semillas, Abonos, Azadas, Regaderas.
   - VENDER · PESCA: Peces, Basura, Legendarios (VENDER o CANJEAR).

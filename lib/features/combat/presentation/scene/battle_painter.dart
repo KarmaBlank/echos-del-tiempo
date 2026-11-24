@@ -1098,6 +1098,13 @@ class BattleScenePainter extends CustomPainter {
         Offset(x + 4 * u, y - 6 * u), Offset(x, y));
   }
 
+  /// Tamaño de los textos flotantes (`txt`) y de los carteles chicos de
+  /// procs (`tag`): dos pasos (de `u` px) por debajo del de las
+  /// etiquetas (8·u → 6·u), nunca menos de 6 px. Los números de daño y
+  /// los carteles grandes no cambian (battle_presentation.md §
+  /// "Etiquetas").
+  static double floatTextSize(double u) => math.max(6.0, 6 * u);
+
   /// Números y textos flotantes (`num`, `txt`).
   void _floating(Canvas c, SceneViewport vp, double u,
       Map<String, Rect> labels, double margin) {
@@ -1161,10 +1168,11 @@ class BattleScenePainter extends CustomPainter {
           if (alpha < 1) c.restore();
         case FxKind.txt when age < BattleFx.txtMs:
           final p = vp.toScreen(Offset(f.x, f.y));
-          final y = clampY(p.dx, p.dy - age / 60 * 1.5 * u, 8 * u)
+          final size = floatTextSize(u);
+          final y = clampY(p.dx, p.dy - age / 60 * 1.5 * u, size)
               .roundToDouble();
-          mark(f.text ?? '', p.dx, y, 8 * u, 1);
-          _pen.text(c, f.text ?? '', p.dx, y, f.color, 8 * u);
+          mark(f.text ?? '', p.dx, y, size, 1);
+          _pen.text(c, f.text ?? '', p.dx, y, f.color, size);
         case FxKind.tag when age < BattleFx.tagMs:
           _tag(c, vp, f, age, u, labels[f.who], minTop);
         case FxKind.warn when age < BattleFx.warnMs:
@@ -1265,7 +1273,7 @@ class BattleScenePainter extends CustomPainter {
       Rect? label, double minTop) {
     final s = f.text ?? '';
     final p = vp.toScreen(Offset(f.x, f.y));
-    final size = (f.big ? 16 : 8) * u;
+    final size = f.big ? 16 * u : floatTextSize(u);
     final area = vp.area;
     var x = p.dx;
     var y = p.dy;

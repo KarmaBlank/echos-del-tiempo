@@ -11,6 +11,7 @@ import '../session_view.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'life_tool_text.dart';
+import 'seed_text.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import '../world_strings.dart';
 
@@ -44,6 +45,8 @@ class _TraderPanelState extends State<TraderPanel> {
   late int _mode = widget.mode;
   String _query = '';
   String? _kind;
+  String? _biome;
+  GrowBucket? _grow;
 
   /// Categorías de cada vista, en orden (nunca se mezclan).
   /// Label of a filter kind (`null`: all).
@@ -141,6 +144,10 @@ class _TraderPanelState extends State<TraderPanel> {
                   selected: _kind == k,
                   onPressed: () => setState(() => _kind = k)),
           ]),
+          if (_seedFilters) ...[
+            SizedBox(height: DsSpace.xs),
+            _seedFilterRow(),
+          ],
           if (_mode == 1) ...[
             SizedBox(height: DsSpace.xs),
             Row(children: [
@@ -191,22 +198,69 @@ class _TraderPanelState extends State<TraderPanel> {
     );
   }
 
-  /// Grupos del modo actual con lo que pasa el buscador y el filtro.
+  /// Seed filters (biome, grow time) only on BUY › CROPS › SEEDS.
+  bool get _seedFilters => _mode == 0 && _tab == 1 && _kind == 'semillas';
+
+  /// Biomes of the seeds on sale, in catalog order.
+  static List<String> get _seedBiomes => {
+        for (final s in kCrops.values)
+          if (s.seedPrice > 0) s.biome
+      }.toList();
+
+  /// One row of filter chips: biome, then grow time (never stacked).
+  Widget _seedFilterRow() => Wrap(
+        spacing: DsSpace.xs,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(context.t('ui.town.trader.biome'), style: DsText.detail()),
+          DsButton(context.t('ui.town.trader.kind.all'),
+              key: const ValueKey('trade-biome-all'),
+              size: DsButtonSize.compact,
+              selected: _biome == null,
+              onPressed: () => setState(() => _biome = null)),
+          for (final b in _seedBiomes)
+            DsButton(lifeBiomeLabel(context, b).toUpperCase(),
+                key: ValueKey('trade-biome-$b'),
+                size: DsButtonSize.compact,
+                selected: _biome == b,
+                onPressed: () => setState(() => _biome = b)),
+          SizedBox(width: DsSpace.sm),
+          Text(context.t('ui.town.trader.grow_time'), style: DsText.detail()),
+          DsButton(context.t('ui.town.trader.kind.all'),
+              key: const ValueKey('trade-grow-all'),
+              size: DsButtonSize.compact,
+              selected: _grow == null,
+              onPressed: () => setState(() => _grow = null)),
+          for (final g in GrowBucket.values)
+            DsButton(g.label(context),
+                key: ValueKey('trade-grow-${g.name}'),
+                size: DsButtonSize.compact,
+                selected: _grow == g,
+                onPressed: () => setState(() => _grow = g)),
+        ],
+      );
+
+  /// Cells of the current mode that pass the search and the filters, in
+  /// one inventory grid (kind order; seeds sorted by grow time).
   List<LifeItemGroup> _visible(List<_Row> rows) {
     final q = _query.toLowerCase();
+    bool seedOk(_Row r) =>
+        r.seed == null ||
+        !_seedFilters ||
+        ((_biome == null || r.seed!.biome == _biome) &&
+            (_grow == null || GrowBucket.of(r.seed!) == _grow));
     return [
-      for (final k in _kinds)
-        if (_kind == null || _kind == k)
-          LifeItemGroup(
-              k.toUpperCase(),
-              [
-                for (final r in rows)
-                  if (r.sell == (_mode == 1) &&
-                      r.kind == k &&
-                      (q.isEmpty || r.cell.search.toLowerCase().contains(q)))
-                    r.cell
-              ],
-              headerKey: ValueKey('trade-group-$k')),
+      LifeItemGroup(null, [
+        for (final k in _kinds)
+          if (_kind == null || _kind == k)
+            for (final r in rows)
+              if (r.sell == (_mode == 1) &&
+                  r.kind == k &&
+                  seedOk(r) &&
+                  (q.isEmpty || r.cell.search.toLowerCase().contains(q)))
+                r.cell
+      ]),
     ];
   }
 
@@ -345,7 +399,7 @@ class _TraderPanelState extends State<TraderPanel> {
     final seeds = [
       for (final s in kCrops.values)
         if (s.seedPrice > 0) s
-    ];
+    ]..sort((a, b) => a.growSec.compareTo(b.growSec));
     final crops = [
       for (final e in (f?.crops ?? const <String, int>{}).entries)
         if (parseCropKey(e.key) case final pc?) (e.key, pc.$1, pc.$2, e.value)
@@ -354,23 +408,24 @@ class _TraderPanelState extends State<TraderPanel> {
       for (final s in seeds)
         _Row(
             'semillas',
+            seed: s,
             LifeItemCellData(
               id: 'trade-seed-${s.id}',
               icon: LifeIcon('semilla_${s.id}', LifeIconKind.semilla,
                   size: _icon),
               border: fishRarityColor(s.rarity),
-              search: s.seedName,
+              search: s.seedText,
               count: (f?.seedCount(s.id) ?? 0) > 0 ? f!.seedCount(s.id) : null,
               caption: context.t('ui.town.trader.price_short', {'n': s.seedPrice}),
               detail: LifeItemDetail(
-                name: s.seedName,
+                name: s.seedText,
                 nameColor: fishRarityColor(s.rarity),
                 tags: [
                   (context.t('ui.town.trader.tag_seed'), DsColors.textSecondary),
                   (s.rarity.label.toUpperCase(), fishRarityColor(s.rarity)),
                 ],
                 lines: [
-                  context.t('ui.town.trader.grows_in', {'min': (s.growSec / 60).round()}),
+                  ...seedInfoLines(context, s),
                   context.t('ui.town.trader.have', {'n': f?.seedCount(s.id) ?? 0}),
                   context.t('ui.town.trader.price_each', {'n': s.seedPrice}),
                 ],
@@ -531,8 +586,11 @@ class _TraderPanelState extends State<TraderPanel> {
 
 /// Una casilla del puesto: tipo (filtro), modo y la casilla.
 class _Row {
-  const _Row(this.kind, this.cell, {this.sell = false});
+  const _Row(this.kind, this.cell, {this.sell = false, this.seed});
   final String kind;
   final LifeItemCellData cell;
   final bool sell;
+
+  /// Seed on sale (biome and grow-time filters).
+  final CropDef? seed;
 }

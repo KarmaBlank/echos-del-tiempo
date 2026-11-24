@@ -71,6 +71,11 @@ class EnemyDef {
   /// first.
   final bool tank;
 
+  /// Silencer (combat.md § "Silencio"): casts Silence on the player with
+  /// the highest skill power when it opens the fight before the party,
+  /// and every `silenceEvery` own actions.
+  final bool silencer;
+
   const EnemyDef({
     required this.id,
     required this.name,
@@ -97,6 +102,7 @@ class EnemyDef {
     this.markHit = 0,
     this.inflictCycle = const [],
     this.tank = false,
+    this.silencer = false,
   });
 
   /// "el Rey Limo" / "la Matriarca Araña".

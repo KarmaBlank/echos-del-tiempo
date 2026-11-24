@@ -118,6 +118,7 @@ class Combatant {
     this.stanceTurns = 0,
     this.ward = 0,
     this.wardTurns = 0,
+    this.silenced = 0,
     Map<String, int>? phaseDealt,
     this.lava = 0,
     this.voidMarked = false,
@@ -310,6 +311,12 @@ class Combatant {
 
   /// Own turns left on the ward (it drops at the start of its turn).
   int wardTurns;
+
+  // ---- enemy silence (combat.md § "Silencio") ----
+
+  /// Players: own turns left silenced (no skill / duo that costs MP,
+  /// nor ULT if `silenceUlt`). Ticks at the start of its own turn.
+  int silenced;
 
   /// Damage each character dealt to this enemy in the current phase
   /// (combat.md § "Nadie solo en una fase"): attacker id → damage.
@@ -558,6 +565,7 @@ class Combatant {
         stanceTurns: stanceTurns,
         ward: ward,
         wardTurns: wardTurns,
+        silenced: silenced,
         phaseDealt: {...phaseDealt},
         lava: lava,
         voidMarked: voidMarked,

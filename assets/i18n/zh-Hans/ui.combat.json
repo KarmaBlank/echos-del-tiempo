@@ -344,5 +344,15 @@
   "ui.combat.enemy.phase_hold": "",
   "ui.combat.tank.ward.short": "",
   "ui.combat.tank.ward.long": "",
-  "ui.combat.tank.ward.tip": ""
+  "ui.combat.tank.ward.tip": "",
+  "ui.combat.missing.silenced": "",
+  "ui.combat.chip.silence.short": "",
+  "ui.combat.chip.silence.long": "",
+  "ui.combat.chip.silence.tip": "",
+  "ui.combat.chip.pbroken.short": "",
+  "ui.combat.chip.pbroken.long": "",
+  "ui.combat.chip.pbroken.tip": "",
+  "ui.combat.hud.break_bar": "",
+  "ui.combat.ult.silenced": "",
+  "ui.combat.duo.silenced": ""
 }

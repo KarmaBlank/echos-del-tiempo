@@ -181,6 +181,43 @@ beneficio que daría en el pueblo y sus semillas en la grilla de oficios
   grupo está en el bioma de quien la vende (`BiomeRules.vendorPrice`).
   Sin cambio de red.
 
+### 9.2 Campamento y paseo (v0.41.9)
+
+Mientras vive en su bioma, cada habitante tiene un campamento chico
+al lado de `BiomeNpcDef.tile` (`kNpcCamps`, `lib/game_engine/data/npc_camp_catalog.dart`):
+
+- Una hoguera (`items.vida_camp_fire`) que da luz `campfire` (lighting.md
+  § 3, titila). Una sola luz por campamento; entra al mapa de luz solo
+  si el campamento cae cerca de la vista.
+- Un objeto de su oficio al lado, a la misma escala (16 × 16):
+
+| Habitante | Objeto (`items.vida_camp_<id>`) | Actividad |
+|---|---|---|
+| Ilda | `basket` (cesta de semillas) | se agacha a juntar semillas (chispas verdes) |
+| Velda | `scrolls` (rollos de notas) | se agacha a anotar (chispas azules) |
+| Kael | `dummy` (muñeco de práctica) | practica golpes (chispas blancas) |
+| Brann | `anvil` (yunque chiquito) | martilla (chispas de brasa) |
+| Oren | `orb` (orbe de vidente) | mira el orbe (chispas de eco) |
+
+Los dibujos son provisorios y se cambian en el manifest o el editor.
+Las cosas del campamento son decorado: no cortan el paso.
+
+**Paseo.** `NpcCampRules.state(npc, time)` (puro) da la posición en px
+y la pose a partir del reloj de la sala (`GameSession.time`), así todos
+los clientes ven lo mismo sin mandar nada por la red (sin cambio de
+protocolo). El tiempo se corta en tramos de `NpcCampRules.segment` (6 s);
+cada tramo tiene un destino dentro de un radio `NpcCampRules.radius`
+(1.25 tiles) del centro de su tile, sacado de un hash de (id, tramo).
+Los primeros `walk` (2 s) camina en línea recta del destino anterior al
+nuevo; el resto queda quieto. Uno de cada 3 tramos (por el hash) hace su
+actividad durante la pausa: pose agachada y chispas del color del
+oficio. Como los dos extremos caen dentro del círculo, toda la recta
+también.
+
+**Hablar.** E (26 px) y el clic usan la posición del paseo, no el tile
+fijo. Al mudarse al pueblo el campamento desaparece (§ 10.1) y allá se
+comporta como siempre.
+
 ## 10. Habitantes en el pueblo (v0.30.0)
 
 El ciclo central: biomas → botín → pueblo → partidas más fuertes. Las
@@ -193,7 +230,13 @@ Pantalla del habitante (en su bioma o en el pueblo, E cerca): cuadro de
 diálogo con HABLAR (§ 12) y el resto de las opciones; en cada ventana,
 relación, etapa (solo si vive en el pueblo y estás ahí, § 12.1) y "Beneficio: …" con el del nivel siguiente; pestañas
 TIENDA, ENCARGOS, PEDIDOS (orden del día y pedido), REGALOS y CASA, cada
-una una grilla con el detalle a la derecha.
+una una grilla con el detalle a la derecha. Desde v0.41.9 la grilla usa
+la casilla de INVENTARIO (44 px, solo ícono y marco de rareza, sin
+texto debajo) con la ficha estándar al pasar el mouse (semillas: tiempo
+de crecimiento, bioma, afinidad, precio); la TIENDA tiene la grilla a la
+izquierda y el detalle (cantidad, total, COMPRAR) a la derecha, con alto
+según la pantalla para entrar sin desbordes en 1280×720 y 1920×1080. Lo
+mismo el PUESTO y el PEDIDO del pescador del bioma.
 
 En el pueblo caminan frente a su casa de día (ida y vuelta por la fila de
 abajo, del reloj de la sala) y de noche están adentro. Un "!" encima si

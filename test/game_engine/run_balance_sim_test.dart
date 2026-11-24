@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_mode.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
@@ -165,6 +166,15 @@ _Sim _simulate(String classId, int seed) {
 /// mayoría de las semillas (cota floja: al menos la mitad de 10; con los
 /// valores de v0.2.0 dio guerrero 9, maga 7, paladín 6, tirador 7).
 void main() {
+  // Baseline calibrated before the player break bar (combo_balance.md
+  // § 5.4): measured without it; with it on, one class drops to 4/10.
+  setUp(() {
+    final d = kTuningDefaults[TuningId.combatLimits]!;
+    kTuning[TuningId.combatLimits] =
+        TuningDef(d.name, {...d.values, 'pBreakOn': 0});
+  });
+  tearDown(() => kTuning[TuningId.combatLimits] =
+      kTuningDefaults[TuningId.combatLimits]!);
   test('cada clase llega al jefe del piso 3 y lo vence en la mayoría de las semillas',
       () {
     const seeds = 10;

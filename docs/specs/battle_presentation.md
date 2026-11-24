@@ -321,6 +321,26 @@ En px de pantalla, encima del mundo (nunca escaladas ni pixeladas):
   a pantalla, suben `edad/40 · 1.5·u` px; los de ULT (`heavy`) entran
   con un rebote: escala `1 + 0.6·(1 − p)` con `p = min(1, edad/140)` y
   saltito `|sin(edad/80)|·6·u·e^(−edad/260)`, y duran 1400 ms.
+- **Tamaño de los textos flotantes** (`txt`) y de los carteles chicos
+  de procs (`tag` no `big`): dos pasos de `u` px por debajo de las
+  etiquetas, `6·u` px (mínimo 6; `floatTextSize`). Los números de daño
+  (`num`) y los carteles grandes (`¡OTRA VEZ!`, QUIEBRE, fase) no
+  cambian. Escala con el ajuste "Tamaño del texto" igual que `u`.
+
+### Flotantes sin duplicar
+
+Un flotante solo sale si suma algo que la escena no muestra ya de
+forma permanente:
+- `StatusAppliedEvent`: si la etiqueta del objetivo ya tiene la
+  insignia del estado (stacks > 0 en el estado final; héroe, o enemigo
+  vivo), **no** flota `letra+n`. Flota solo con debilidad (` (débil)`)
+  o si no hay insignia (p. ej. el objetivo murió).
+- `ShieldEvent` al subir un escudo a un **héroe**: ni `ESCUDO +n`
+  flotante ni sumado al cartel del proc (el chip `ESCUDO n` de su barra
+  ya lo muestra). En enemigos sigue flotando. `absorbe N` (golpe
+  absorbido) sigue.
+- Siguen: números de daño / cura, críticos, reacciones, carteles de
+  procs, `RETRASO`, `¡ATURDIDO!` / `¡CONGELADO!`, buffs con `%`.
 
 ## Escena
 
@@ -502,7 +522,7 @@ en los eventos de la acción); en un dúo, el impacto de su guion
 | `DamageEvent` de estado | `aura` (quemadura o veneno) y `num` en `y−20` `#ff9f43` (quemadura) / `#7bed9f` (resto) |
 | `HealEvent` en una acción | `num` `+n` `#7bed9f` en `y−18` (`y−26` y aura sagrada en la cura de Fe); `aura` de curación (sagrada en Baluarte); maná: `+n MP` `#74b9ff` y `aura` maná |
 | `HealEvent` de Regeneración | `num` `+n` `#55efc4` en `y−30`, `aura` de curación |
-| `StatusAppliedEvent` | `txt` `letra+n` (+ ` (débil)`) del color del estado en `y−46`, con el `dl` del golpe |
+| `StatusAppliedEvent` | `txt` `letra+n` (+ ` (débil)`) del color del estado en `y−46`, con el `dl` del golpe; no si la insignia ya lo muestra (§ "Flotantes sin duplicar") |
 | `DelayedEvent` (enemigo) | `txt` `RETRASO` `#a29bfe` en `y−44` |
 | `TurnSkippedEvent` | aturdido: `txt` `¡ATURDIDO!` `#ffeaa7`; congelado: `txt` `¡CONGELADO!` `#74b9ff` + `aura` hielo; en `y−34` |
 | `KnockedOutEvent` | jugador: `txt` `K.O.` `#ff4757` en `y−28`; enemigo: `poof` en `y−6` |
@@ -513,7 +533,7 @@ en los eventos de la acción); en un dúo, el impacto de su guion
 | Tipo | Duración | Dibujo |
 |---|---|---|
 | `num` | 1100 | texto con sombra en `y − a/40`; 12 px si `big`, si no 8 |
-| `txt` | 1400 | texto 7 px en `y − a/60` |
+| `txt` | 1400 | texto `6·u` px (`floatTextSize`) en `y − a/60` |
 | `slash` | 220 | dos trazos de 2 px: `(x−10+4p, y−10)→(x+10−4p, y+10)` y `(x+10, y−10+4p)→(x−10, y+10−4p)`, `p = a/220`. Según el arma del atacante (`slashStyleFor`): `lanza` = estocada horizontal de `14 + 10p` px a cada lado, trazo `3 − 2p`, con punta blanca 3×3; `dagas` = dos cortes paralelos de 18 px, el segundo 0.4 después |
 | `proj` | 280 | de `(x, y−10)` del atacante a `(x, y−10)` del objetivo, arco de 10 px (`− sin(pπ)·10`); `phys`: trazo blanco de 1.5 px y 7 de largo; otro elemento: 5 círculos de estela (radio `3.5 − 0.5i`, alfa `(1 − i/5)·0.8`, retraso `0.05i`) + núcleo blanco radio 1.5. Según el arma (`projStyleFor`): `ballesta` = virote recto (sin arco) `#dfe6e9` de 2 px y 9 de largo, punta `#ff9f43`, plumas `#d63031`; `varita` = misil arcano: rombo `#a29bfe` de 3×4 que zigzaguea (`sin(18p)·3` px) con 3 chispas del color |
 | `ring` | 450 | elipse sin relleno de radios `(big ? 60 : 34)·p × (big ? 30 : 17)·p`, trazo `big ? 3 : 2`, alfa `1 − p` |

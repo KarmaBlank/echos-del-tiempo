@@ -341,6 +341,15 @@ items:
   # Salida de la mazmorra (free_movement.md § 2.4): portal en la llegada
   # del piso 1. Placeholder de píxeles, reemplazable desde el editor.
   vida_salida_mazmorra: { idle: items/vida_salida_mazmorra.png, size: [16, 24] }
+  # Campamento de los habitantes de bioma (overworld_biomes.md § 9.2):
+  # hoguera (da luz `campfire`) y un objeto de su oficio. Placeholders de
+  # píxeles 16 × 16, reemplazables desde el editor.
+  vida_camp_fire: { idle: items/vida_camp_fire.png, size: [16, 16] }
+  vida_camp_basket: { idle: items/vida_camp_basket.png, size: [16, 16] }
+  vida_camp_scrolls: { idle: items/vida_camp_scrolls.png, size: [16, 16] }
+  vida_camp_dummy: { idle: items/vida_camp_dummy.png, size: [16, 16] }
+  vida_camp_anvil: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_camp_orb: { idle: items/vida_camp_orb.png, size: [16, 16] }
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }

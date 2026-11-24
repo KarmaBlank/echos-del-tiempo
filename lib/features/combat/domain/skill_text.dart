@@ -545,6 +545,8 @@ String needsLine(String list) =>
   ];
   return (
     all: [
+      if (SkillRequirements.silencedFor(sk, user))
+        CatalogText.of('ui.combat.missing.silenced', 'Silenciado'),
       if (user.mp < sk.mp)
         CatalogText.of('ui.combat.missing.mp',
             'Falta: ${sk.mp} MP (tenés ${user.mp})', {'n': sk.mp, 'have': user.mp}),
