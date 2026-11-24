@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../app/theme/proto_colors.dart';
+import '../../../../app/theme/retro_type.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/town_build.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
@@ -49,13 +49,22 @@ class TownPiece {
 
 /// Organismo: la paleta de la edición del pueblo (town_editor.md § 1.2).
 /// Grilla de casillas estilo INVENTARIO con filtros por categoría y el
-/// detalle arriba; elegir una pieza la deja lista para poner en el mapa.
+/// detalle a la derecha (tamaño fijo, sin parpadeo al pasar el mouse); elegir una pieza la deja lista para poner en el mapa.
 class TownBuildPalette extends StatefulWidget {
   const TownBuildPalette({super.key, required this.controller});
 
   final SessionController controller;
 
-  static const cell = 48.0;
+  static const cell = DsItemCell.size;
+
+  /// Ancho de una casilla con su nombre (fijo: el hover no la mueve).
+  static const cellWidth = 72.0;
+
+  /// Alto de una casilla: cuadro + dos renglones de nombre.
+  static const cellHeight = cell + 40.0;
+
+  /// Alto fijo de grilla + detalle (dos filas de casillas).
+  static const paneHeight = cellHeight * 2 + 24.0;
 
   /// Las piezas que se pueden poner, con su costo y motivo.
   static List<TownPiece> pieces(Strings s, SessionController c) {
@@ -120,10 +129,10 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
       };
 
   static Color _catColor(TownPieceCategory c) => switch (c) {
-        TownPieceCategory.farm => ProtoColors.green,
-        TownPieceCategory.water => ProtoColors.ice,
-        TownPieceCategory.home => ProtoColors.orange,
-        TownPieceCategory.light => ProtoColors.gold,
+        TownPieceCategory.farm => DsColors.success,
+        TownPieceCategory.water => DsColors.mp,
+        TownPieceCategory.home => DsColors.warning,
+        TownPieceCategory.light => DsColors.reward,
       };
 
   @override
@@ -151,8 +160,6 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
       mainAxisSize: MainAxisSize.min,
       children: [
         DsSectionHeader(s.t('ui.town.edit.build')),
-        _detail(s, focus, placing != null && focus?.id == placing),
-        SizedBox(height: DsSpace.xs),
         DsTabBar(
           key: const ValueKey('town-build-filters'),
           tabs: [
@@ -164,10 +171,39 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
           onChanged: (i) => setState(() => _filter = cats[i]),
         ),
         SizedBox(height: DsSpace.xs),
-        Wrap(
-          spacing: DsSpace.xs,
-          runSpacing: DsSpace.xs,
-          children: [for (final p in shown) _cell(s, c, p, p.id == placing)],
+        // Grilla a la izquierda y detalle a la derecha, de tamaño fijo:
+        // el hover cambia el CONTENIDO del detalle, nunca el tamaño ni la
+        // posición de una casilla (así no parpadea).
+        SizedBox(
+          height: TownBuildPalette.paneHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: TownBuildPalette.cellWidth * 2 + DsSpace.xs,
+                child: SingleChildScrollView(
+                  key: const ValueKey('town-build-grid'),
+                  child: Wrap(
+                    spacing: DsSpace.xs,
+                    runSpacing: DsSpace.xs,
+                    children: [
+                      for (final p in shown) _cell(s, c, p, p.id == placing)
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: DsSpace.xs),
+              Expanded(
+                child: DsDetailPane(
+                  key: const ValueKey('town-build-pane'),
+                  sunken: true,
+                  padding: EdgeInsets.all(DsSpace.sm),
+                  body: _detail(
+                      s, focus, placing != null && focus?.id == placing),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -204,44 +240,84 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
   }
 
   Widget _cell(Strings s, SessionController c, TownPiece p, bool selected) {
-    const size = TownBuildPalette.cell;
     final color = p.enabled ? _catColor(p.category) : DsColors.textDisabled;
-    final box = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: ProtoColors.input,
-        border: Border.all(
-            color: selected ? DsColors.selected : color,
-            width: selected ? 3 : 1),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        s.t('ui.town.edit.footprint', {'w': p.w, 'h': p.h}),
-        textAlign: TextAlign.center,
-        style: DsText.detail(color),
-      ),
-    );
+    // Casilla de tamaño fijo (DsItemCell + nombre): el hover solo cambia
+    // el detalle de la derecha, nunca mueve ni agranda la casilla.
     return MouseRegion(
       cursor: p.enabled ? SystemMouseCursors.click : MouseCursor.defer,
-      onEnter: (_) => setState(() => _hover = p.id),
+      onEnter: (_) {
+        if (_hover != p.id) setState(() => _hover = p.id);
+      },
       onExit: (_) {
         if (_hover == p.id) setState(() => _hover = null);
       },
       child: GestureDetector(
         key: ValueKey('town-edit-build-${p.id}'),
+        behavior: HitTestBehavior.opaque,
         onTap: p.enabled ? () => c.editChoose(p.id) : null,
         child: SizedBox(
-          width: size + DsSpace.md,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            box,
-            Text(p.name,
-                maxLines: 2,
+          width: TownBuildPalette.cellWidth,
+          height: TownBuildPalette.cellHeight,
+          child: Column(children: [
+            DsItemCell(
+              icon: Text(
+                s.t('ui.town.edit.footprint', {'w': p.w, 'h': p.h}),
                 textAlign: TextAlign.center,
-                style: DsText.detail(p.enabled ? null : DsColors.textDisabled)),
+                textScaler: RetroType.fixedScaler(context),
+                style: DsText.detail(color),
+              ),
+              border: color,
+              selected: selected,
+            ),
+            Expanded(child: _PieceName(p.name, enabled: p.enabled)),
           ]),
         ),
       ),
     );
+  }
+}
+
+/// Átomo: nombre de una casilla de la paleta. Hasta dos renglones,
+/// cortando solo entre palabras; si no entra, se acorta con "…" y el
+/// nombre completo va en un tooltip que no recibe el mouse.
+class _PieceName extends StatelessWidget {
+  const _PieceName(this.name, {required this.enabled});
+
+  final String name;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = DsText.detail(enabled ? null : DsColors.textDisabled);
+    final scaler = RetroType.fixedScaler(context);
+    final dir = Directionality.of(context);
+    return LayoutBuilder(builder: (context, box) {
+      bool fits(String text, int lines) {
+        final tp = TextPainter(
+            text: TextSpan(text: text, style: style),
+            maxLines: lines,
+            textScaler: scaler,
+            textDirection: dir)
+          ..layout(maxWidth: box.maxWidth);
+        final ok = !tp.didExceedMaxLines &&
+            tp.width <= box.maxWidth &&
+            tp.height <= box.maxHeight;
+        tp.dispose();
+        return ok;
+      }
+
+      final ok = fits(name, 2) && name.split(' ').every((w) => fits(w, 1));
+      final text = Text(name,
+          maxLines: ok ? 2 : 1,
+          softWrap: ok,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          textScaler: scaler,
+          style: style);
+      if (ok) return text;
+      return DsTooltip(
+          card: IgnorePointer(child: DsTooltipCard(title: name)),
+          child: text);
+    });
   }
 }

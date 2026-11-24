@@ -45,10 +45,19 @@ revés: clic en un tile libre y después la lista).
 
 - Al entrar, la columna de la derecha muestra enseguida la PALETA
   (`TownBuildPalette`): todo lo que se puede poner (`kConstructions` +
-  el faro) en una grilla de casillas estilo INVENTARIO, con el detalle
-  de la elegida (o la que está bajo el mouse) arriba de la grilla:
-  nombre, tamaño, para qué sirve y costo. Categorías con filtros
-  (TODO · CULTIVO · AGUA · HOGAR · LUZ), nunca secciones apiladas.
+  el faro) en una grilla de casillas estilo INVENTARIO (`DsItemCell`)
+  a la izquierda y el detalle (`DsDetailPane`) a la derecha, con la
+  elegida (o la que está bajo el mouse): nombre, tamaño, para qué sirve
+  y costo. Categorías con filtros (TODO · CULTIVO · AGUA · HOGAR · LUZ),
+  nunca secciones apiladas.
+- Cada casilla muestra el tamaño (p. ej. `6×4`) y el nombre completo
+  en hasta dos renglones, cortando solo entre palabras; si no entra se
+  acorta con "…" y el nombre va en un tooltip (ancho y letra fijos del
+  DS) que no recibe el mouse.
+- Sin parpadeo (v0.42.6): casillas y grilla + detalle tienen tamaño
+  FIJO; pasar el mouse cambia solo el contenido del detalle, nunca el
+  tamaño de la columna ni la posición de una casilla, así el clic
+  siempre elige la pieza.
 - Casilla que no se puede pagar: gris (sin tooltip: el motivo es común
   y el detalle ya muestra el costo en rojo).
 - Clic en una casilla habilitada → paso `placing`: el fantasma sigue al
