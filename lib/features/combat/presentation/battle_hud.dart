@@ -35,6 +35,7 @@ import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'game_sprites.dart';
+import 'scene/fx_style.dart' show immuneColor;
 import 'hero_figure.dart';
 import 'status_icons.dart';
 import 'combat_strings.dart';
@@ -214,7 +215,7 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
           s.t('ui.combat.tank.ward.short', {'t': t}),
           s.t('ui.combat.tank.ward.long',
               {'a': e.name, 't': t, 'n': e.wardTurns}),
-          const Color(0xFFB8C6FF),
+          immuneColor,
           '<b style="color:#b8c6ff">${protoEsc(s.t('ui.combat.tank.ward.short', {
                 'a': e.name,
                 't': t
@@ -309,7 +310,7 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                 ? (
                     s.t('ui.combat.boss.court.immune_short', {'n': n}),
                     '${s.t('ui.combat.boss.court.immune_long', {'n': n})}$when',
-                    const Color(0xFFB8C6FF),
+                    immuneColor,
                     '#b8c6ff'
                   )
                 : (
@@ -421,7 +422,7 @@ List<StatusChip> abyssChips(
             : s.t('ui.combat.abyss.phase_long',
                 {'n': n, 'of': of, 'name': ph.name}),
         immune
-            ? const Color(0xFFB8C6FF)
+            ? immuneColor
             : n >= d.phases.length
                 ? ProtoColors.crimson
                 : ProtoColors.pink,
