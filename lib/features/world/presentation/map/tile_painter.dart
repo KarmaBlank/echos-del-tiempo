@@ -11,12 +11,47 @@ typedef TileAt = String? Function(int tx, int ty);
 
 /// `drawTile` del prototipo (líneas 964-988). Dibuja un tile de 16 px en
 /// (px, py) del lienzo virtual. Ver docs/specs/exploration.md § "Tiles".
+/// Part of a glow tile that [TilePainter.draw] paints.
+enum TileGlowPass { all, base }
+
 class TilePainter {
   TilePainter();
 
   static const ts = 16.0;
 
   final _paint = Paint()..isAntiAlias = false;
+
+  /// Which part of a glow tile ([glowSplit]) [draw] paints: everything,
+  /// only the clock-free base (chunk cache) or only the glow on top.
+  TileGlowPass glowPass = TileGlowPass.all;
+
+  /// `true` when the only clock-dependent part of tile [ch] is a small
+  /// glow drawn last inside its own cell (the rift's basalt cracks and
+  /// ember floor): the base can go to the static chunk cache and the glow
+  /// is drawn on top each frame ([TileGlowPass]). Both tiles stay inside
+  /// their 16 × 16 cell.
+  static bool glowSplit(String ch, String themeId, {required bool lobby}) =>
+      themeId == 'grieta' && !lobby && (ch == Tile.wall || ch == Tile.floor);
+
+  /// Tiles whose real drawing stays inside their own cell in [themeId]
+  /// (their declared [overflow] is conservative): a later one never covers
+  /// a neighbour's glow.
+  static bool cellBound(String ch, String themeId) =>
+      themeId == 'grieta' &&
+      (ch == Tile.wall || ch == Tile.floor || ch == Tile.lava);
+
+  /// The glow of a [glowSplit] tile alone, exactly as [draw] paints it
+  /// last (plus the opaque ash fleck that [draw] paints over the ember).
+  void drawGlow(Canvas c, String ch, double px, double py, int tx, int ty,
+      {required double t}) {
+    final h = tileHash(tx, ty);
+    if (ch == Tile.wall) {
+      if (h % 3 == 0) _basaltGlow(c, px, py, h, t);
+      return;
+    }
+    if (h % 7 == 0) _emberGlow(c, px, py, h, t);
+    if (h % 4 == 1) _ashFleck(c, px, py, h);
+  }
 
   /// Hash por tile `((tx*73856093)^(ty*19349663))>>>0` con la aritmética
   /// de 32 bits de JS (sin signo).
@@ -989,20 +1024,10 @@ class TilePainter {
         }
       case 'grieta':
         // Ceniza con brasas que laten.
-        if (h % 7 == 0) {
-          final a = 0.45 + 0.35 * math.sin(t / 300 + h % 13);
-          _rect(
-              c,
-              Color.fromRGBO(255, 123, 41, a.clamp(0.0, 1.0)),
-              px + jsShiftMod(h, 4, 13).abs() + 1,
-              py + jsShiftMod(h, 8, 13).abs() + 1,
-              1,
-              1);
+        if (h % 7 == 0 && glowPass == TileGlowPass.all) {
+          _emberGlow(c, px, py, h, t);
         }
-        if (h % 4 == 1) {
-          _rect(c, const Color(0xFF26211F), px + jsShiftMod(h, 6, 12).abs(),
-              py + jsShiftMod(h, 12, 12).abs() + 2, 3, 1);
-        }
+        if (h % 4 == 1) _ashFleck(c, px, py, h);
       case 'cementerio':
         // Pasto seco y musgo.
         if (h % 5 == 0) {
@@ -1090,16 +1115,35 @@ class TilePainter {
     _rect(c, const Color(0xFF0F0C0D), px + 5, py + 3, 1, 13);
     _rect(c, const Color(0xFF0F0C0D), px + 11, py + 3, 1, 13);
     _rect(c, const Color(0xFF242022), px + 1, py + 3, 3, 13);
-    if (h % 3 == 0) {
-      final a = (0.5 + 0.35 * math.sin(t / 300 + h % 10)).clamp(0.0, 1.0);
-      final glow = Color.fromRGBO(255, 123, 41, a);
-      final x = px + 6 + jsShiftMod(h, 4, 4).abs();
-      _rect(c, glow, x, py + 4, 1, 3);
-      _rect(c, glow, x + 1, py + 7, 1, 3);
-      _rect(c, glow, x, py + 10, 1, 4);
-      _rect(c, Color.fromRGBO(255, 209, 102, a * 0.8), x + 1, py + 8, 1, 1);
+    if (h % 3 == 0 && glowPass == TileGlowPass.all) {
+      _basaltGlow(c, px, py, h, t);
     }
   }
+
+  void _basaltGlow(Canvas c, double px, double py, int h, double t) {
+    final a = (0.5 + 0.35 * math.sin(t / 300 + h % 10)).clamp(0.0, 1.0);
+    final glow = Color.fromRGBO(255, 123, 41, a);
+    final x = px + 6 + jsShiftMod(h, 4, 4).abs();
+    _rect(c, glow, x, py + 4, 1, 3);
+    _rect(c, glow, x + 1, py + 7, 1, 3);
+    _rect(c, glow, x, py + 10, 1, 4);
+    _rect(c, Color.fromRGBO(255, 209, 102, a * 0.8), x + 1, py + 8, 1, 1);
+  }
+
+  void _emberGlow(Canvas c, double px, double py, int h, double t) {
+    final a = 0.45 + 0.35 * math.sin(t / 300 + h % 13);
+    _rect(
+        c,
+        Color.fromRGBO(255, 123, 41, a.clamp(0.0, 1.0)),
+        px + jsShiftMod(h, 4, 13).abs() + 1,
+        py + jsShiftMod(h, 8, 13).abs() + 1,
+        1,
+        1);
+  }
+
+  void _ashFleck(Canvas c, double px, double py, int h) =>
+      _rect(c, const Color(0xFF26211F), px + jsShiftMod(h, 6, 12).abs(),
+          py + jsShiftMod(h, 12, 12).abs() + 2, 3, 1);
 
   /// Abismo / cementerio / corazón: pilar de roca (o cristal) flotante.
   void _floatingRock(Canvas c, MapTheme th, String themeId, double px,

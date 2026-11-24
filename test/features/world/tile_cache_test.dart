@@ -294,6 +294,49 @@ void main() {
     });
   });
 
+  testWidgets('rift glow tiles: cached base + glow = direct drawing',
+      (tester) async {
+    await tester.runAsync(() async {
+      // A lava-zone layout: mostly basalt walls and ember floor, some lava
+      // and a few tiles that overflow into their neighbours (portal,
+      // statue, bridge), so both glow and non-glow neighbours show up.
+      final rnd = math.Random(11);
+      final pool = [
+        for (var i = 0; i < 10; i++) Tile.floor,
+        for (var i = 0; i < 8; i++) Tile.wall,
+        for (var i = 0; i < 3; i++) Tile.lava,
+        Tile.portal,
+        Tile.statue,
+        Tile.bridge,
+      ];
+      const w = 70, h = 50;
+      final map = GameMap(
+        width: w,
+        height: h,
+        rows: [
+          for (var y = 0; y < h; y++)
+            String.fromCharCodes([
+              for (var x = 0; x < w; x++)
+                pool[rnd.nextInt(pool.length)].codeUnitAt(0)
+            ]),
+        ],
+        theme: 'grieta',
+        spawn: const WorldPoint(0, 0),
+      );
+      final cache = TileLayerCache(TilePainter())..animatedShareLimit = 1;
+      for (final view in views) {
+        for (final t in [0.0, 123.0, 777.0, 5000.0]) {
+          final a = await frame(map, view, t: t);
+          final b = await frame(map, view, cache: cache, t: t);
+          expect(cache.direct, isFalse);
+          final (_, maxDiff) = diff(a, b);
+          expect(maxDiff, lessThanOrEqualTo(2), reason: '$view t=$t');
+        }
+      }
+      cache.dispose();
+    });
+  });
+
   testWidgets(
       'bloques: se graban una vez, se reutilizan y solo se tiran '
       'los que tocan un tile que cambió', (tester) async {
