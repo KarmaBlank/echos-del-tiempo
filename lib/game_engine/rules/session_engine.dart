@@ -3728,10 +3728,10 @@ class _Op {
     if (s.mode != SessionMode.battle || b == null || b.endTimer != null) {
       return false;
     }
-    // Action queue (turn_modes.md § 3.1): in the party phase a command that
-    // arrives while another one resolves waits its turn (arrival order).
-    // Por rondas: a player whose block is not up yet (or that is busy
-    // animating) leaves an intent that runs when their turn comes.
+    // Action queue (turn_modes.md § 3.1): only in the party phase of Por
+    // fases / porBando with 2+ humans; a command that arrives while another
+    // one resolves waits its turn (arrival order). Por rondas, timeline
+    // and solo never queue: the command runs now or is refused.
     if (queueOpen(b, p.id) &&
         (b.wait > 0 ||
             b.queue.isNotEmpty ||
@@ -3743,29 +3743,33 @@ class _Op {
     return _runBattleCommand(p, cmd);
   }
 
-  /// [playerId] may put a command in the action queue now: Por fases /
-  /// porBando party phase, still pending and outside the TUTORIAL.
-  /// Por rondas: any living player still to act this round (the intent
-  /// resolves in the round's speed order, not in arrival order).
+  /// The battle uses the action queue at all: Por fases / porBando (not
+  /// Por rondas, not timeline) with 2+ human players in it (solo-party
+  /// companions don't count), outside the TUTORIAL.
+  bool queueEnabled(SessionBattle b) => battleQueueEnabled(s);
+
+  /// [playerId] may put a command in the action queue now: queue-enabled
+  /// battle ([queueEnabled]), party phase, still pending.
   bool queueOpen(SessionBattle b, String playerId) {
-    if (s.tutorial != null || b.endTimer != null || b.state.ended) {
+    if (b.endTimer != null || b.state.ended || !queueEnabled(b)) {
       return false;
     }
     final st = b.state;
-    if (st.porRonda) {
-      return st.roundRemaining.any((c) => c.id == playerId && c.isPlayer);
-    }
     return st.porBando &&
         st.awaitingGroup &&
         st.pendingGroup.any((c) => c.id == playerId);
   }
 
-  /// Next entry of the queue to resolve now, or -1: the head in Por fases /
-  /// porBando; in Por rondas the first entry whose player's block is up.
+  /// Next entry of the queue to resolve now, or -1: the current actor's
+  /// entry if a player holds the turn (e.g. after an INSTANT), else the
+  /// first entry whose player is still pending in the party phase.
   int _nextQueued(SessionBattle b) {
     final st = b.state;
+    final cur = st.current;
+    if (cur != null && cur.isPlayer) {
+      return b.queue.indexWhere((q) => q.playerId == cur.id);
+    }
     if (!st.awaitingGroup) return -1;
-    if (!st.porRonda) return 0;
     final block = {for (final c in st.pendingGroup) c.id};
     return b.queue.indexWhere((q) => block.contains(q.playerId));
   }
@@ -3958,7 +3962,8 @@ class _Op {
     if (b.queue.isNotEmpty) {
       // Entries whose player can no longer act (phase / round closed,
       // timeout, K.O.) drop out; the rest wait their turn.
-      b.queue.removeWhere((q) => !queueOpen(b, q.playerId));
+      b.queue.removeWhere((q) =>
+          !queueOpen(b, q.playerId) && b.state.currentId != q.playerId);
       final i = _nextQueued(b);
       if (i >= 0) {
         _drainQueue(b, i);
@@ -4359,4 +4364,22 @@ class _Op {
     }
     events.add(const ReturnedToLobbyEvent());
   }
+}
+
+/// The battle of [s] uses the action queue (turn_modes.md section 3.1):
+/// Por fases / porBando (never Por rondas or timeline) with 2+ human
+/// players in it (solo-party companions don't count), outside the
+/// TUTORIAL. Clients mirror it in `SessionView.canQueue`.
+bool battleQueueEnabled(GameSession s) {
+  final st = s.battle?.state;
+  if (st == null || s.tutorial != null || !st.porBando || st.porRonda) {
+    return false;
+  }
+  var humans = 0;
+  for (final c in st.party) {
+    if (!c.isPlayer || c.isSummon) continue;
+    final p = s.players[c.id];
+    if (p != null && !p.isCompanion) humans++;
+  }
+  return humans >= 2;
 }
