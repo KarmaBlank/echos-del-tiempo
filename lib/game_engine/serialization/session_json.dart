@@ -101,7 +101,7 @@ class SessionJson {
             for (final a in s.away)
               [a.id, a.name, a.where, a.placeId, if (a.busy) 1]
           ],
-        // v0.42.0 (protocol 63): open gathering (free_movement.md § 2.1).
+        // v0.41.4 (protocol 64): open gathering (free_movement.md § 2.1).
         if (s.gather case final g?)
           'gat': {
             'by': g.byId,
