@@ -44,6 +44,7 @@ class TalkTopic {
       {this.talks = 0,
       this.orders = 0,
       this.rep = 0,
+      this.renown = 0,
       this.where = TalkWhere.any,
       this.time = TalkTime.any,
       this.action = TalkAction.none,
@@ -55,6 +56,9 @@ class TalkTopic {
   final int talks;
   final int orders;
   final int rep;
+
+  /// Minimum world renown (renown_town_growth.md § 4.1).
+  final int renown;
   final TalkWhere where;
   final TalkTime time;
   final TalkAction action;

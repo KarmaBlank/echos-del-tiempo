@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
+import '../../../../game_engine/data/renown_catalog.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
+import '../../../../game_engine/rules/renown_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../world_strings.dart';
@@ -27,6 +29,16 @@ class WorldEventPanel extends StatelessWidget {
     final rift = d?.category == WorldEventCategory.echoPortal;
     final shop = d?.category == WorldEventCategory.visitor ||
         d?.category == WorldEventCategory.caravan;
+    // Recognition (renown_town_growth.md § 4.2).
+    final who = switch (d?.category) {
+      WorldEventCategory.visitor => RecognitionWho.visitor,
+      WorldEventCategory.overworldNpc => RecognitionWho.wanderer,
+      WorldEventCategory.caravan => RecognitionWho.caravan,
+      _ => null,
+    };
+    final known = who == null
+        ? null
+        : RenownRules.recognition(who, RenownRules.score(c.town));
     return PanelFrame(
       key: const ValueKey('panel-world-event'),
       title: d?.title.text.toUpperCase() ?? context.t('ui.town.journal.events'),
@@ -50,6 +62,13 @@ class WorldEventPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (known != null) ...[
+                  Text(known.text.text,
+                      key: const ValueKey('world-event-recognition'),
+                      softWrap: true,
+                      style: DsText.body(DsColors.reward)),
+                  SizedBox(height: DsSpace.sm),
+                ],
                 Text(d.notice.text,
                     key: const ValueKey('world-event-notice'),
                     softWrap: true,

@@ -2,7 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
-import '../../../../game_engine/models/town_build.dart';
+import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/renown_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -74,6 +75,10 @@ class FountainPanel extends StatelessWidget {
           children: [
             SizedBox(
               width: box.maxWidth,
+              child: _TownTier(town: town),
+            ),
+            SizedBox(
+              width: box.maxWidth,
               child: Text(summary,
                   key: const ValueKey('fountain-residents'),
                   softWrap: true,
@@ -95,6 +100,54 @@ class FountainPanel extends StatelessWidget {
           ],
         );
       }),
+    );
+  }
+}
+
+/// Town tier and renown (renown_town_growth.md § 5.1): a line and a bar
+/// toward the next town tier (molecule).
+class _TownTier extends StatelessWidget {
+  const _TownTier({required this.town});
+  final TownState town;
+
+  @override
+  Widget build(BuildContext context) {
+    final fame = RenownRules.score(town);
+    final rt = RenownRules.tier(town);
+    final tt = RenownRules.townTier(town);
+    final next = tt.next;
+    return Column(
+      key: const ValueKey('fountain-town-tier'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+            context.t('ui.town.renown.summary', {
+              'town': tt.tier?.name.text ?? '',
+              'tier': rt.tier?.name.text ?? '',
+              'n': fame,
+            }),
+            softWrap: true,
+            style: DsText.body()),
+        SizedBox(height: DsSpace.xs),
+        Wrap(
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            DsPercent((tt.fraction * 100).floor(),
+                key: const ValueKey('fountain-town-bar'),
+                label: context.t('ui.town.renown.bar'),
+                barWidth: 160),
+            Text(
+                next == null
+                    ? context.t('ui.town.renown.max')
+                    : context.t('ui.town.renown.next', {'name': next.name.text}),
+                softWrap: true,
+                style: DsText.detail(DsColors.textSecondary)),
+          ],
+        ),
+      ],
     );
   }
 }

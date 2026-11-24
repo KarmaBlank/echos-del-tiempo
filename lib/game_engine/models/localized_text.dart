@@ -26,6 +26,20 @@ class LocalizedText {
 
   static const empty = LocalizedText('');
 
+  /// Deed tokens (docs/specs/renown_town_growth.md § 3): `{name}` in a
+  /// shown text becomes its value. The game layer publishes them (like
+  /// [activeTag]); unknown tokens stay as written.
+  static Map<String, String> tokens = const {};
+
+  static final _token = RegExp(r'\{([A-Za-z]+)\}');
+
+  /// [s] with the [tokens] of [values] (default: [tokens]) filled in.
+  static String fill(String s, [Map<String, String>? values]) {
+    final v = values ?? tokens;
+    if (v.isEmpty || !s.contains('{')) return s;
+    return s.replaceAllMapped(_token, (m) => v[m[1]] ?? m[0]!);
+  }
+
   /// Text per locale tag (may lack locales or hold empty strings).
   Map<String, String> get byLocale =>
       _source != null ? {sourceTag: _source} : _map;
@@ -33,12 +47,12 @@ class LocalizedText {
   /// The es-AR text.
   String get source => byLocale[sourceTag] ?? '';
 
-  /// Text in [tag]; empty or missing = es-AR (the game never shows a
-  /// blank line).
+  /// Text in [tag] with the deed [tokens] filled; empty or missing =
+  /// es-AR (the game never shows a blank line).
   String resolve(String tag) {
     final own = byLocale[tag];
-    if (own != null && own.trim().isNotEmpty) return own;
-    return source;
+    if (own != null && own.trim().isNotEmpty) return fill(own);
+    return fill(source);
   }
 
   /// Text in the active language.

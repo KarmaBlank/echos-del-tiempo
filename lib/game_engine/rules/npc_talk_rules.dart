@@ -5,11 +5,12 @@ import '../data/fishing_catalog.dart';
 import '../data/npc_talk_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import 'renown_rules.dart';
 import 'resident_rules.dart';
 import 'sky_rules.dart';
 
 /// Un tema de HABLAR con lo que hace falta para verlo.
-typedef TalkProgress = ({int talks, int orders, int rep});
+typedef TalkProgress = ({int talks, int orders, int rep, int renown});
 
 /// Mercancía del arraigado: pez, precio por unidad y si es la novedad.
 typedef NativeGood = ({String species, int price, bool fresh});
@@ -60,9 +61,17 @@ abstract final class NpcTalkRules {
   /// Lo que lleva [npc] para abrir temas: charlas, pedidos y relación.
   static TalkProgress progress(TownState s, String npc) {
     final b = s.bond(npc);
-    if (npcRooted(npc)) return (talks: b.talks, orders: b.orders, rep: b.rep);
+    final fame = RenownRules.score(s);
+    if (npcRooted(npc)) {
+      return (talks: b.talks, orders: b.orders, rep: b.rep, renown: fame);
+    }
     final r = s.resident(npc);
-    return (talks: b.talks, orders: r.orders + r.quest, rep: r.rep);
+    return (
+      talks: b.talks,
+      orders: r.orders + r.quest,
+      rep: r.rep,
+      renown: fame
+    );
   }
 
   static bool open(TalkTopic t, TalkProgress g,
@@ -71,6 +80,7 @@ abstract final class NpcTalkRules {
       timeOk(t.time, night: night) &&
       g.orders >= t.orders &&
       g.rep >= t.rep &&
+      g.renown >= t.renown &&
       switch (t.where) {
         TalkWhere.any => true,
         TalkWhere.biome => !inTown,

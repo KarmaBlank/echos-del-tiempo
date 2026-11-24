@@ -9,7 +9,8 @@ los habitantes se escribe a mano acá; nada de la charla se genera.
   habitante:
   - `greet`: saludos (uno al azar al abrir).
   - `topics`: temas de HABLAR (recursivos en `sub`): `id`, `label`,
-    `lines`, condiciones `talks`, `orders`, `rep`, `where`
+    `lines`, condiciones `talks`, `orders`, `rep`, `renown` (renombre del
+    mundo, renown_town_growth.md § 4.1), `where`
     (`any` · `biome` · `town`) y `time` (`any` · `day` · `night`, § 3.2),
     y `action` (§ 3.3). Los valores en 0 / `any` / `none` se omiten.
   - `rooted`, `decline`, `gift` (arraigados, overworld_biomes.md § 12.3).
@@ -88,7 +89,9 @@ amistad:
   líneas que unen tema y sub-tema), FRASE DEL DÍA / ORILLA, y AL INVITARLO
   (arraigados) o NOCHE e INVITAR Y CASA (los que se mudan).
 - Cada texto muestra un campo por idioma; los vacíos se marcan en rojo.
-- Cada tema muestra sus condiciones: charlas, pedidos, amistad y lugar.
+- Cada tema muestra sus condiciones: charlas, pedidos, amistad, renombre y
+  lugar. Las líneas aceptan fichas de hazañas (`{lastBoss}`, `{townName}`,
+  …; renown_town_growth.md § 3).
 - Agregar, borrar, subir y bajar saludos, temas, sub-temas y líneas.
 - Cada línea con contador de caracteres; más de **90** (límite blando)
   se marca en naranja: el tono es lore en pinceladas, nunca historia

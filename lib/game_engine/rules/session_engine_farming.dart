@@ -174,8 +174,12 @@ extension _FarmingOp on _Op {
                 if (r.invited) r.npc
             },
             extraCondition:
-                WorldEventRules.climateCondition(s.town.sky.seed, day)));
+                WorldEventRules.climateCondition(s.town.sky.seed, day),
+            renown: RenownRules.score(s.town)));
     if (next != s.town.events) s.town = s.town.copyWith(events: next);
+    // Town events whose day passed unplayed (renown_town_growth.md § 6.1).
+    final rn = RenownRules.expire(s.town.renown, day);
+    if (!identical(rn, s.town.renown)) s.town = s.town.copyWith(renown: rn);
   }
 
   /// Misión ganada: los cultivos dan un salto y los peces pueden criar.

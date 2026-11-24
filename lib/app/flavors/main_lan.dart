@@ -6,6 +6,7 @@ import '../../core/balance/balance_asset_loader.dart';
 import '../../core/data/build_template_loader.dart';
 import '../../core/data/climate_data_loader.dart';
 import '../../core/data/npc_data_loader.dart';
+import '../../core/data/renown_loader.dart';
 import '../../core/data/world_events_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
@@ -37,6 +38,7 @@ Future<void> main() async {
   await WorldEventsLoader.load();
   // Climate rules (docs/specs/weather_seasons.md § 8).
   await ClimateDataLoader.load();
+  await RenownLoader.load();
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
       ults: await UltDataLoader.load(),
