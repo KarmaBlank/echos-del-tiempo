@@ -80,7 +80,7 @@ GameSprites? _sprites;
 
 /// Entra a la zona 1 con Ana + Leo, Mia y Cid.
 Future<SessionController> pumpField(WidgetTester tester,
-    {MoveInputReader? input, bool keepEnemies = false}) async {
+    {MoveInputReader? input, bool keepEnemies = false, int zone = 1}) async {
   tester.view.physicalSize = const Size(1280, 720);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -96,7 +96,7 @@ Future<SessionController> pumpField(WidgetTester tester,
       sessionEngineProvider.overrideWithValue(sessionEngine(zones: true)),
       profileStoreProvider.overrideWithValue(InMemoryProfileStore(
           zoneProgression.normalize(PlayerProfile(
-              name: 'Ana', classId: 'guerrero', unlockedZone: 1)))),
+              name: 'Ana', classId: 'guerrero', unlockedZone: zone)))),
       partyStoreProvider.overrideWithValue(InMemoryPartyStore(slots: {
         's2': zoneProgression
             .normalize(PlayerProfile(name: 'Leo', classId: 'maga')),
@@ -122,7 +122,7 @@ Future<SessionController> pumpField(WidgetTester tester,
       ProviderScope.containerOf(tester.element(find.byType(WorldScreen)));
   final c = container.read(sessionControllerProvider.notifier);
   // v0.21.0: sin overworld, la zona sale del tablero.
-  c.proposeMission(c.zoneStatus(1)!.mission!.id);
+  c.proposeMission(c.zoneStatus(zone)!.mission!.id);
   c.advance(0.05);
   c.setReady(true);
   c.advance(0.05);

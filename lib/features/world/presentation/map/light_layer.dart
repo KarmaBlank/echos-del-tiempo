@@ -114,20 +114,31 @@ class MapLightLayer {
     LightRules.accumulate(out, moving, block, tintOf);
 
     // Malla: un vértice por muestra (2 × 2 por tile) con el color final.
-    final sw = w * sub, sh = h * sub;
+    // Solo la parte de la grilla que cubre [view] (más una muestra por
+    // lado): el margen existe para que las luces de afuera iluminen
+    // adentro, pero dibujarlo (fuera del recorte) costaba rasterizar una
+    // malla ~6 veces más grande que la pantalla en cada cuadro.
+    final gw = w * sub, gh = h * sub;
+    int sample(double px, int o) => ((px / ts - o) * sub - 0.5).floor();
+    final sx0 = sample(view.left, x0).clamp(0, gw - 2);
+    final sy0 = sample(view.top, y0).clamp(0, gh - 2);
+    final sx1 = (sample(view.right, x0) + 1).clamp(sx0 + 1, gw - 1);
+    final sy1 = (sample(view.bottom, y0) + 1).clamp(sy0 + 1, gh - 1);
+    final sw = sx1 - sx0 + 1, sh = sy1 - sy0 + 1;
     final n = sw * sh;
+    final ox = x0 * sub + sx0, oy = y0 * sub + sy0;
     var pos = _pos;
-    if (pos == null || _px0 != x0 || _py0 != y0 || _pw != sw || _ph != sh) {
+    if (pos == null || _px0 != ox || _py0 != oy || _pw != sw || _ph != sh) {
       pos = _pos = Float32List(n * 2);
       for (var y = 0; y < sh; y++) {
         for (var x = 0; x < sw; x++) {
           final i = y * sw + x;
-          pos[i * 2] = (x0 + (x + 0.5) / sub) * ts;
-          pos[i * 2 + 1] = (y0 + (y + 0.5) / sub) * ts;
+          pos[i * 2] = (ox + x + 0.5) / sub * ts;
+          pos[i * 2 + 1] = (oy + y + 0.5) / sub * ts;
         }
       }
-      _px0 = x0;
-      _py0 = y0;
+      _px0 = ox;
+      _py0 = oy;
       _pw = sw;
       _ph = sh;
     }
@@ -139,15 +150,19 @@ class MapLightLayer {
     // closures: es el bucle más caliente de la capa (4 muestras por tile).
     final kk = 255 * k, base = 255 * (1 - k) + 0.5;
     final g = out.rgb;
-    for (var i = 0, j = 0; i < n; i++, j += 3) {
-      var r = ar + g[j], gg = ag + g[j + 1], b = ab + g[j + 2];
-      if (r > 1) r = 1;
-      if (gg > 1) gg = 1;
-      if (b > 1) b = 1;
-      col[i] = 0xFF000000 |
-          ((base + kk * r).toInt() << 16) |
-          ((base + kk * gg).toInt() << 8) |
-          (base + kk * b).toInt();
+    for (var y = 0, i = 0; y < sh; y++) {
+      for (var x = 0, j = ((sy0 + y) * gw + sx0) * 3;
+          x < sw;
+          x++, i++, j += 3) {
+        var r = ar + g[j], gg = ag + g[j + 1], b = ab + g[j + 2];
+        if (r > 1) r = 1;
+        if (gg > 1) gg = 1;
+        if (b > 1) b = 1;
+        col[i] = 0xFF000000 |
+            ((base + kk * r).toInt() << 16) |
+            ((base + kk * gg).toInt() << 8) |
+            (base + kk * b).toInt();
+      }
     }
     if (_iw != sw) {
       _indices.clear();
@@ -167,6 +182,7 @@ class MapLightLayer {
       verts.dispose();
     }
   }
+
 
   static Uint16List _bandIndices(int w, int h) {
     final idx = Uint16List((w - 1) * (h - 1) * 6);
