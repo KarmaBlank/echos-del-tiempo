@@ -15,7 +15,7 @@ import '../../../core/i18n/i18n_providers.dart';
 /// Mostrador de misiones (`board` del prototipo) en lista + detalle: una
 /// fila por zona / misión (rango, nombre y, a la derecha, el nivel o
 /// "Bloqueada") y, a la derecha, la tarjeta de la elegida con objetivo,
-/// recompensas y `PROPONER`. Ver docs/specs/panels.md § "Mostrador".
+/// recompensas y `ENTRAR`. Ver docs/specs/panels.md § "Mostrador".
 class MissionBoardPanel extends ConsumerStatefulWidget {
   const MissionBoardPanel({
     super.key,
@@ -242,7 +242,7 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
                 : null);
     return PanelDetail(
       footer: [
-        // Por qué no se puede: una línea a la izquierda de PROPONER (y en
+        // Por qué no se puede: una línea a la izquierda de ENTRAR (y en
         // su tooltip).
         if (reason != null)
           ConstrainedBox(
@@ -254,7 +254,7 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
                 textAlign: TextAlign.right,
                 style: DsText.detail(DsColors.danger)),
           ),
-        DsButton(ref.t('ui.missions.propose'),
+        DsButton(ref.t('ui.missions.enter'),
             key: ValueKey('propose-${m.id}'),
             kind: DsButtonKind.primary,
             tooltip: reason,

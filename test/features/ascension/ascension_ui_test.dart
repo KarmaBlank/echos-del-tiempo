@@ -51,7 +51,7 @@ class _DiskBundle extends CachingAssetBundle {
 }
 
 void main() {
-  testWidgets('PRUEBAS: requisitos, ficha y PROPONER', (tester) async {
+  testWidgets('PRUEBAS: requisitos, ficha y ENTRAR', (tester) async {
     final c = await pumpPanel(tester,
         profile: _hero(level: 29),
         engine: sessionEngine(zones: true),
@@ -69,7 +69,7 @@ void main() {
     expect(c.session!.vote, isNull);
   });
 
-  testWidgets('PRUEBAS: con nivel 30 PROPONER abre la votación',
+  testWidgets('PRUEBAS: con nivel 30 ENTRAR entra a la Prueba',
       (tester) async {
     final c = await pumpPanel(tester,
         profile: _hero(),

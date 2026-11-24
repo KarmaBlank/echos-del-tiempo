@@ -72,7 +72,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tutorial-glossary-toggle')));
     await tester.pump();
     expect(find.byKey(const ValueKey('tutorial-glossary')), findsOneWidget);
-    // Otra misión: PROPONER desactivado con el aviso.
+    // Otra misión: ENTRAR desactivado con el aviso.
     final m = cat.missions.first;
     await tester.tap(find.byKey(ValueKey('mission-${m.id}')));
     await tester.pump();

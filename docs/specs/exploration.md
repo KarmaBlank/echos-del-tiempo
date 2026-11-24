@@ -851,7 +851,7 @@ El contenido y las reglas de cada panel (mostrador, votación,
 preparación, armería, personaje y árbol) están en docs/specs/panels.md.
 Resumen:
 
-- **Mostrador** (`board`): misiones y `PROPONER` (cierra el panel), cambio
+- **Mostrador** (`board`): misiones y `ENTRAR` (cierra el panel), cambio
   de clase. Con un solo jugador la votación pasa sola en el siguiente
   tick (el que propone ya votó que sí).
 - **Preparación** (`prep`): listos, `¡LISTO!`, `PERSONAJE / EQUIPAR

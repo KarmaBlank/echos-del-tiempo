@@ -134,6 +134,11 @@ se cierra. El `pueblo` nunca.
 - El mapa de viaje: VIAJAR para todos (sin "Decide el anfitrión");
   gris solo si el bioma está cerrado para uno o si está en mazmorra.
 - La lista del grupo en el HUD suma "En otro lugar: Nombre (Bosque)".
+- Los botones de inicio dicen **ENTRAR** (`ui.missions.enter` en el
+  Mostrador, `ui.ascension.enter` en PRUEBAS de la Estatua del Tiempo),
+  nunca PROPONER: no hay nada que proponer, el jugador entra directo
+  como por el portal. Las acciones de red no cambian (siguen siendo
+  `Propose*Action`, el host las resuelve solas, § 2.1).
 - Las acciones del pueblo (pesca, huerta, forraje, habitantes) ya miran
   el `mode` / `place` de la instancia del jugador, o sea su propio lugar.
 
