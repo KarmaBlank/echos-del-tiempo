@@ -251,5 +251,10 @@
   "ui.settings.controls.menus.ctrl_arrows.keys": "",
   "ui.settings.controls.menus.ctrl_arrows.action": "",
   "ui.settings.controls.menus.inventory.keys": "",
-  "ui.settings.controls.menus.inventory.action": ""
+  "ui.settings.controls.menus.inventory.action": "",
+  "ui.settings.game.combat_mode.label": "",
+  "ui.settings.game.combat_mode.hint": "",
+  "ui.settings.game.combat_mode.timeline": "",
+  "ui.settings.game.combat_mode.rounds": "",
+  "ui.settings.game.combat_mode.phases": ""
 }

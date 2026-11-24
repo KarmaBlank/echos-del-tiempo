@@ -251,5 +251,10 @@
   "ui.settings.controls.menus.ctrl_arrows.keys": "Ctrl+← / Ctrl+→",
   "ui.settings.controls.menus.ctrl_arrows.action": "Party jugando solo: personaje anterior / siguiente (personaje, tiendas, Portal, Estatua)",
   "ui.settings.controls.menus.inventory.keys": "Inventario",
-  "ui.settings.controls.menus.inventory.action": "Flechas mueven la casilla; Enter otra vez equipa el arma"
+  "ui.settings.controls.menus.inventory.action": "Flechas mueven la casilla; Enter otra vez equipa el arma",
+  "ui.settings.game.combat_mode.label": "MODO DE COMBATE",
+  "ui.settings.game.combat_mode.hint": "Cómo se turnan las peleas en la sala que hosteás. Vale desde la próxima pelea.",
+  "ui.settings.game.combat_mode.timeline": "LÍNEA DE TIEMPO",
+  "ui.settings.game.combat_mode.rounds": "POR RONDAS",
+  "ui.settings.game.combat_mode.phases": "POR FASES"
 }

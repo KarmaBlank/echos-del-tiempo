@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_catalog.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_service.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
@@ -72,6 +73,7 @@ SessionSfx _sfx(_Recorder rec) => SessionSfx(rec, localId: 'mage')
   ]);
 
 void main() {
+  useRoundsDefault();
   SessionController? c;
 
   Future<SessionController> started() async {
