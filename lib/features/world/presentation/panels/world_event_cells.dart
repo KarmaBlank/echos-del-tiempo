@@ -4,6 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
 import '../../../../game_engine/data/zones_catalog.dart';
+import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/world_event_rules.dart';
 import '../world_strings.dart';
 import 'life_icon.dart';
@@ -23,7 +24,8 @@ String _x(double v) => v.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
 /// One cell of DIARIO → EVENTOS (world_events.md § 6): grid cell with
 /// the detail on the right.
 LifeItemCellData worldEventCell(
-    BuildContext context, ActiveWorldEvent a, int day) {
+    BuildContext context, ActiveWorldEvent a, TownState town) {
+  final day = town.sky.day;
   final d = kWorldEvents.def(a.def);
   final cat = d?.category ?? WorldEventCategory.visitor;
   final title = d?.title.text ?? a.def;
@@ -55,6 +57,10 @@ LifeItemCellData worldEventCell(
           'npc': biomeNpcName(q.npc),
           'objective': context.t('ui.town.events.obj.${q.objective.name}',
               {'target': q.target, 'n': q.n}),
+        }))
+        ..add(context.t('ui.town.events.progress', {
+          'have': WorldEventRules.progressOf(town.events, a),
+          'need': q.n
         }))
         ..add(context.t('ui.town.events.quest_reward',
             {'gold': q.gold, 'rep': q.rep}));
@@ -94,4 +100,18 @@ Widget? worldEventBadge(BuildContext context, WorldEventsState s, String place) 
         : context.t('ui.town.events.badge_n', {'n': here.length}),
     key: ValueKey('travel-event-$place'),
   ).tip(titles.join(' · '));
+}
+
+/// The trader banner while a visitor or caravan sells cheaper (§ 3.1),
+/// or `null`.
+String? eventSaleText(BuildContext context, WorldEventsState s) {
+  final disc = WorldEventRules.townDiscount(s, kWorldEvents);
+  if (disc <= 0) return null;
+  final who = [
+    for (final a in s.at(kPueblo))
+      if (kWorldEvents.def(a.def) case final d? when d.param('discount') > 0)
+        d.title.text
+  ].join(' · ');
+  return context.t(
+      'ui.town.events.trade_banner', {'name': who, 'n': (disc * 100).round()});
 }

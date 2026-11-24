@@ -440,5 +440,11 @@
   "ui.town.events.obj.escort": "escoltar a {target}",
   "ui.town.events.obj.talk": "hablar con {target}",
   "ui.town.events.obj.survive": "resistir {n} oleadas en {target}",
-  "ui.town.events.obj.puzzle": "resolver el mecanismo de {target}"
+  "ui.town.events.obj.puzzle": "resolver el mecanismo de {target}",
+  "ui.town.events.trade": "COMERCIAR",
+  "ui.town.events.enter": "ENTRAR",
+  "ui.town.events.close": "CERRAR",
+  "ui.town.events.prompt_rift": "[E] Grieta de eco",
+  "ui.town.events.progress": "Progreso: {have}/{need}",
+  "ui.town.events.trade_banner": "{name}: lo que compres sale {n}% menos (se devuelve al pagar)."
 }

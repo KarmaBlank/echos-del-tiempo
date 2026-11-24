@@ -27,7 +27,8 @@
       },
       "params": {
         "discount": 0.1
-      }
+      },
+      "sprite": "npc_ev_visitante"
     },
     {
       "id": "visitor_chronicler",
@@ -49,7 +50,8 @@
         "es-AR": "Dice que leyó estas páginas en un libro que todavía no se escribió.",
         "en": "He claims he read these pages in a book not yet written.",
         "zh-Hans": "他说自己在一本尚未写成的书里读过这些内容。"
-      }
+      },
+      "sprite": "npc_ev_cronista"
     },
     {
       "id": "wanderer_forest",
@@ -73,7 +75,8 @@
         "es-AR": "Se la ve cerca del lago del bosque unos días.",
         "en": "She can be seen near the forest lake for a few days.",
         "zh-Hans": "几天内可以在森林湖边见到她。"
-      }
+      },
+      "sprite": "npc_ev_peregrina"
     },
     {
       "id": "wanderer_automaton",
@@ -98,7 +101,8 @@
         "es-AR": "Sus engranajes todavía recuerdan el pasado magitec.",
         "en": "Its gears still remember the magitech past.",
         "zh-Hans": "它的齿轮仍记得魔导科技的过去。"
-      }
+      },
+      "sprite": "npc_ev_automata"
     },
     {
       "id": "echo_rift",
@@ -145,17 +149,17 @@
         "zh-Hans": "伊尔达的莓果记得一个尚未到来的冬天。"
       },
       "body": {
-        "es-AR": "Algo vino del futuro a buscarlas. Vencé al Eco de Raíz en el bosque.",
-        "en": "Something came from the future for them. Defeat the Root Echo in the forest.",
-        "zh-Hans": "有东西从未来来寻找它们。在森林中击败根之回声。"
+        "es-AR": "Algo vino del futuro a buscarlas: arañas que tejen con hilo de mañana. Vencé a tres.",
+        "en": "Something came from the future for them: spiders weaving with tomorrow's thread. Defeat three.",
+        "zh-Hans": "有东西从未来来寻找它们：用明日之丝织网的蜘蛛。击败三只。"
       },
       "params": {
         "gold": 120,
         "rep": 2
       },
       "objective": "defeat",
-      "target": "eco_raiz",
-      "n": 1
+      "target": "arana",
+      "n": 3
     },
     {
       "id": "lore_velda_order",
@@ -174,16 +178,16 @@
         "zh-Hans": "维尔达找到了自动人偶等待的顺序。"
       },
       "body": {
-        "es-AR": "Falta probarlo abajo: resolvé el mecanismo de las Ruinas Cronales.",
-        "en": "It must be tested below: solve the mechanism in the Chronal Ruins.",
-        "zh-Hans": "还需要在下面验证：解开时序废墟中的机关。"
+        "es-AR": "Un Guardián de Reloj no respeta el orden: vencelo y Velda podrá leer su mecanismo.",
+        "en": "A Clock Guardian breaks the order: defeat it so Velda can read its mechanism.",
+        "zh-Hans": "一具时钟守卫打乱了顺序：击败它，让维尔达读出它的机关。"
       },
       "params": {
         "gold": 150,
         "rep": 2
       },
-      "objective": "puzzle",
-      "target": "z3",
+      "objective": "defeat",
+      "target": "guardianReloj",
       "n": 1
     },
     {
@@ -203,17 +207,17 @@
         "zh-Hans": "那位在你到来前就开战的守护者留下了讯息：撑住。"
       },
       "body": {
-        "es-AR": "Resistí cinco oleadas en el Laberinto Temporal.",
-        "en": "Survive five waves in the Temporal Labyrinth.",
-        "zh-Hans": "在时间迷宫中坚持五波攻势。"
+        "es-AR": "Dos elementales de escarcha llegaron antes que vos. Aguantá y vencelos.",
+        "en": "Two frost elementals arrived before you did. Hold on and defeat them.",
+        "zh-Hans": "两个霜之元素比你先到。坚持住，击败它们。"
       },
       "params": {
         "gold": 180,
         "rep": 2
       },
-      "objective": "survive",
-      "target": "z6",
-      "n": 5
+      "objective": "defeat",
+      "target": "elementalEscarcha",
+      "n": 2
     },
     {
       "id": "lore_brann_forge",
@@ -232,16 +236,16 @@
         "zh-Hans": "一具自动人偶走出裂谷，朝布兰的熔炉走去。"
       },
       "body": {
-        "es-AR": "Hay que acompañarlo hasta el pueblo sin que lo rompan.",
-        "en": "Escort it to town before anything breaks it.",
-        "zh-Hans": "护送它到镇上，别让它被毁坏。"
+        "es-AR": "Andá a la Grieta a ver de dónde salió: la fragua vieja sigue encendida.",
+        "en": "Go to the Rift to see where it came from: the old forge is still lit.",
+        "zh-Hans": "去裂谷看看它从哪里来：古老的熔炉仍在燃烧。"
       },
       "params": {
         "gold": 200,
         "rep": 2
       },
-      "objective": "escort",
-      "target": "automata",
+      "objective": "explore",
+      "target": "grieta",
       "n": 1
     },
     {
@@ -262,9 +266,9 @@
         "zh-Hans": "奥伦看见了结局。它无法改变。"
       },
       "body": {
-        "es-AR": "Hay que llegar hasta ahí: bajá al fondo del Abismo y contáselo a Oren.",
-        "en": "Someone has to get there: reach the bottom of the Abyss and tell Oren.",
-        "zh-Hans": "总得有人到达那里：抵达深渊之底，然后告诉奥伦。"
+        "es-AR": "Hay que llegar hasta ahí: andá al Abismo, donde llegan los ecos del futuro.",
+        "en": "Someone has to get there: go to the Abyss, where the echoes of the future arrive.",
+        "zh-Hans": "总得有人到达那里：前往深渊，未来的回声在那里抵达。"
       },
       "params": {
         "gold": 250,
@@ -297,7 +301,8 @@
       },
       "params": {
         "discount": 0.15
-      }
+      },
+      "sprite": "npc_ev_caravana"
     }
   ]
 }

@@ -11,6 +11,7 @@ import '../session_view.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'life_tool_text.dart';
+import 'world_event_cells.dart' show eventSaleText;
 import 'seed_text.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import '../world_strings.dart';
@@ -102,6 +103,13 @@ class _TraderPanelState extends State<TraderPanel> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (eventSaleText(context, c.town.events) case final sale?) ...[
+            Text(sale,
+                key: const ValueKey('trade-event-sale'),
+                softWrap: true,
+                style: DsText.detail(DsColors.success)),
+            SizedBox(height: DsSpace.xs),
+          ],
           DsTabBar(
             tabs: [
               DsTab(context.t('ui.town.trader.buy'), key: const ValueKey('trade-mode-buy')),

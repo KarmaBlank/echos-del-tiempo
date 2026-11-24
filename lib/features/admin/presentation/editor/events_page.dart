@@ -387,7 +387,7 @@ class _Sheet extends StatelessWidget {
         ]),
         DsListRow(
           compact: true,
-          title: 'Objetivo (id de enemigo, lugar o zona)',
+          title: 'Objetivo (id de enemigo o de bioma)',
           trailing: SizedBox(
             width: 200,
             child: _TextBox(
@@ -403,48 +403,72 @@ class _Sheet extends StatelessWidget {
   }
 }
 
-/// TEXTOS: title, notice and body in every language.
-class _Texts extends StatelessWidget {
+/// TEXTOS: one sub-tab per field (title, notice, body), each in every
+/// language.
+class _Texts extends StatefulWidget {
   const _Texts({required this.c, required this.e});
   final EventsEditorController c;
   final Map<String, dynamic> e;
 
   @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (final (k, label) in const [
-          ('title', 'TÍTULO'),
-          ('notice', 'AVISO (CHAT)'),
-          ('body', 'DETALLE'),
-        ]) ...[
-          DsSectionHeader(label),
-          for (final tag in c.locales)
-            () {
-              final m = (e[k] ??= <String, dynamic>{}) as Map;
-              final v = '${m[tag] ?? ''}';
-              return Padding(
-                padding: EdgeInsets.only(bottom: DsSpace.xs),
-                child: Row(children: [
-                  SizedBox(
-                    width: 64,
-                    child: Text(tag,
-                        style: DsText.detail(
-                            v.trim().isEmpty ? DsColors.danger : null)),
-                  ).tip(v.trim().isEmpty
-                      ? 'Falta este idioma: no se puede guardar.'
-                      : 'Idioma $tag.'),
-                  Expanded(
-                    child: _TextBox(
-                        key: ValueKey('event-$k-$tag'),
-                        value: v,
-                        missing: v.trim().isEmpty,
-                        onChanged: (s) => c.edit(() => m[tag] = s)),
-                  ),
-                ]),
-              );
-            }(),
+  State<_Texts> createState() => _TextsState();
+}
+
+class _TextsState extends State<_Texts> {
+  int field = 0;
+
+  static const _fields = [
+    ('title', 'TÍTULO'),
+    ('notice', 'AVISO (CHAT)'),
+    ('body', 'DETALLE'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c, e = widget.e;
+    final (k, _) = _fields[field];
+    final m = (e[k] ??= <String, dynamic>{}) as Map;
+    bool missing(String key) => c.locales.any(
+        (t) => '${((e[key] as Map?) ?? const {})[t] ?? ''}'.trim().isEmpty);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      DsTabBar(
+        key: const ValueKey('event-text-tabs'),
+        index: field,
+        onChanged: (i) => setState(() => field = i),
+        tabs: [
+          for (final (key, label) in _fields)
+            DsTab(label,
+                badge: missing(key) ? '!' : null,
+                key: ValueKey('event-text-tab-$key')),
         ],
-      ]);
+      ),
+      SizedBox(height: DsSpace.sm),
+      for (final tag in c.locales)
+        () {
+          final v = '${m[tag] ?? ''}';
+          return Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.xs),
+            child: Row(children: [
+              SizedBox(
+                width: 64,
+                child: Text(tag,
+                    style: DsText.detail(
+                        v.trim().isEmpty ? DsColors.danger : null)),
+              ).tip(v.trim().isEmpty
+                  ? 'Falta este idioma: no se puede guardar.'
+                  : 'Idioma $tag.'),
+              Expanded(
+                child: _TextBox(
+                    key: ValueKey('event-$k-$tag'),
+                    value: v,
+                    missing: v.trim().isEmpty,
+                    onChanged: (s) => c.edit(() => m[tag] = s)),
+              ),
+            ]),
+          );
+        }(),
+    ]);
+  }
 }
 
 /// PARÁMETROS: the numbers of its category.

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/biomes_catalog.dart';
+import '../../../../game_engine/data/enemies_catalog.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
 import '../admin_controller.dart';
 import 'npc_editor_controller.dart' show NpcEditorController, npcLocaleTags;
@@ -78,7 +79,8 @@ class EventsEditorController extends ChangeNotifier {
     if (d == null) return [err ?? 'inválido'];
     return d.validate(locales,
         biomes: {for (final b in kBiomes) b.id},
-        residents: {for (final n in kBiomeNpcs) n.id});
+        residents: {for (final n in kBiomeNpcs) n.id},
+        enemies: kEnemies.keys.toSet());
   }
 
   void reload() {
@@ -116,7 +118,7 @@ class EventsEditorController extends ChangeNotifier {
           if (c == WorldEventCategory.lore) ...{
             'resident': kBiomeNpcs.first.id,
             'objective': LoreObjective.defeat.name,
-            'target': '',
+            'target': 'slime',
             'n': 1,
           },
         });

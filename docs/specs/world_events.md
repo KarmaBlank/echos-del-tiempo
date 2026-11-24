@@ -32,6 +32,8 @@ efectos de juego de cada categoría se conectan de a poco (§ 7).
     (grieta), `gold`, `rep` (historia), `discount` (visitante y caravana). Los que faltan valen su
     neutro (1 para multiplicadores, 0 el resto).
   - Solo `lore`: `objective` (`LoreObjective`) y `target` / `n`.
+  - `sprite`: id del NPC del evento en el manifest (`items.vida_<sprite>`;
+    visitante, campo y caravana). Arte provisorio: `vida_npc_ev_*`.
 - `WorldEventsConfig`: `interval` (días entre tiradas, ≥ 1, def. 5),
   `minPerRoll` / `maxPerRoll` (def. 1 / 2), `chance` (0–1, def. 1: si
   la tirada pasa) y la lista de `events`.
@@ -40,8 +42,10 @@ efectos de juego de cada categoría se conectan de a poco (§ 7).
   `end`). Uid estable `<def>@<start>`.
 - `WorldEventsState` (en `TownState`, JSON `wev`): `seed` (semilla del
   mundo para los eventos, la pone el anfitrión la primera vez y queda
-  guardada), `last` (día de la última tirada), `active` y `seen` (ids de
-  historias que ya salieron: cada historia sale una sola vez por mundo).
+  guardada), `last` (día de la última tirada), `active`, `seen` (ids de
+  historias que ya salieron: cada historia sale una sola vez por mundo),
+  `progress` (avance de cada historia por uid, JSON `pg`) y `cleared`
+  (grietas ya ganadas: uid → jugadores, JSON `cl`).
 
 ## 2. Tirada (determinista)
 
@@ -62,14 +66,26 @@ efectos de juego de cada categoría se conectan de a poco (§ 7).
 
 ## 3. Categorías
 
+### 3.0 Actores en el mapa
+Visitantes, gente del campo, caravanas y grietas tienen un lugar
+(`WorldEventRules.spot`): en el pueblo, alrededor de la FUENTE RÚNICA
+(sigue a la fuente si se mueve en EDITAR PUEBLO); en un exterior, en
+pasto libre junto al camino. El orden entre los actores del mismo lugar
+da el lugar. Se dibujan mientras dura el evento y con E (a menos de 26 px,
+`WorldEventRules.near`) se abre su panel (`WorldEventPanel`): lo que dice
+(aviso y detalle del catálogo) y, según la categoría, COMERCIAR o ENTRAR.
+
 ### 3.1 Visitante (pueblo)
-Un viajero llega al pueblo unos días. Usa el comerciante de siempre:
-`discount` (expuesto en `WorldEventRules.townDiscount`) va a bajar los precios del puesto mientras está (fase 2: conectarlo al comerciante, y actor en el
-pueblo con su charla del archivo NPC).
+Un viajero llega al pueblo unos días. COMERCIAR abre el puesto de
+siempre (la grilla del AGROPECUARIO) con un cartel del descuento.
+`discount` (`WorldEventRules.townDiscount`, el mayor de los eventos del
+pueblo) lo aplica el anfitrión: en cada compra del puesto (cañas,
+semillas, herramientas, abonos) devuelve `floor(oro gastado × discount)`.
+No toca precios de las tablas.
 
 ### 3.2 Habitante en el campo
-Alguien aparece en un bioma unos días (peregrinos, un autómata errante).
-Fase 2: actor en el exterior con su charla.
+Alguien aparece en un bioma unos días (peregrinos, un autómata errante)
+y se puede hablar con él (sus textos del catálogo).
 
 ### 3.3 Grieta de eco
 Una grieta en el exterior del bioma lleva a una versión más fuerte del
@@ -78,20 +94,41 @@ jefe del bioma: el jefe de la **última zona** de ese exterior
 Escala: `WorldEventRules.rift` devuelve `EchoRiftBoss` (jefe, zona,
 misión, `hpMult`, `atkMult`, `levelBonus`, `rewardMult`);
 `applyRiftBattle` multiplica vida y ataque de los jefes de una batalla
-recién creada (como `EcoRules.applyBattle`). Dura pocos días (def. 3) y
-la recompensa se multiplica por `rewardMult`. Fase 2: el portal en el
-exterior y la entrada a la misión (hoy están las reglas y la escala).
+recién creada (como `EcoRules.applyBattle`). Dura pocos días (def. 3).
+
+- Portal visible en el exterior del bioma (§ 3.0). ENTRAR manda
+  `ProposeRiftAction(uid)` (`rift`): el anfitrión valida lobby del
+  bioma, frente al portal y que el jugador no la haya ganado; abre la
+  votación de misión `rift` (con amigos en el mundo, convocatoria
+  `GatherKind.rift`, igual que las misiones; `_joinable` suma a quien
+  entre a una grieta en curso).
+- Pelea directa con el jefe (como el Jefe del Abismo): arena de un piso
+  del tipo de la zona, nivel `maxLevel` de la zona + `levelBonus`,
+  `applyRiftBattle` al crear la batalla. No desbloquea zonas.
+- Al ganar: cada jugador recibe `riftGold` = oro del jefe × `rewardMult`,
+  el loot de fin de misión suma `rewardMult − 1` al bonus de rareza, y
+  el portal se cierra para todos los que pelearon (`cleared`). Los
+  demás lo siguen viendo hasta que vence.
 
 ### 3.4 Historia de un habitante
 Atada al lore de un habitante que vive en el pueblo: desbloquea una
 misión de historia nueva para él (`LoreQuest`). **Nunca es de traer
-cosas.** Objetivos permitidos (`LoreObjective`): `defeat` (vencer a un
-eco concreto), `explore` (llegar o explorar un lugar), `escort`
-(escoltar), `talk` (hablar con alguien), `survive` (resistir o defender),
-`puzzle` (resolver algo en una mazmorra). Se basa en docs/lore.md: ecos
-que llegan del futuro o del pasado, futuro que no se puede cambiar,
-pasado magitec. Fase 2: el seguimiento del objetivo en el DIARIO y la
-entrega.
+cosas.** Se basa en docs/lore.md: ecos que llegan del futuro o del
+pasado, futuro que no se puede cambiar, pasado magitec.
+
+Objetivos que hoy se siguen (`LoreObjective`):
+
+- `defeat`: vencer `n` enemigos de tipo `target` (id de `kEnemies`). Lo
+  cuenta el anfitrión en cada batalla ganada (`_loreDefeat`).
+- `explore`: llegar al exterior `target` (id de bioma). Se cumple cuando
+  un humano está en el lobby de ese bioma (`_loreExplore`, en el tick).
+
+Escoltar, hablar, resistir y resolver quedan para cuando existan sus
+sistemas: se sacaron del enum y del catálogo.
+
+Al cumplirse: `gold` de oro para cada humano de la instancia, `rep` de
+relación con el habitante, aviso en el chat y el evento sale de la
+lista. El avance se ve en DIARIO → EVENTOS (`Progreso: x/n`).
 
 ### 3.5 Caravana
 Mercaderes con restos del pasado magitec en el pueblo; `discount` como
@@ -110,11 +147,11 @@ reescribe.
 | `wanderer_forest` | campo | 3 | 3 | bosque | — |
 | `wanderer_automaton` | campo | 2 | 3 | ruinas, día ≥ 10 | — |
 | `echo_rift` | grieta | 3 | 3 | día ≥ 5 | hp ×1.6, atk ×1.3, +3 niv, premio ×1.75 |
-| `lore_ilda_roots` | historia | 2 | 6 | vive Ilda | defeat `eco_raiz` ×1, 120 oro, +2 rel |
-| `lore_velda_order` | historia | 2 | 6 | vive Velda | puzzle zona 3, 150 oro, +2 rel |
-| `lore_kael_guardian` | historia | 2 | 6 | vive Kael | survive 5 oleadas, 180 oro, +2 rel |
-| `lore_brann_forge` | historia | 2 | 6 | vive Brann | escort `autómata` a la fragua, 200 oro, +2 rel |
-| `lore_oren_future` | historia | 1 | 6 | vive Oren, día ≥ 15 | explore `abismo` + talk, 250 oro, +3 rel |
+| `lore_ilda_roots` | historia | 2 | 6 | vive Ilda | defeat `arana` ×3, 120 oro, +2 rel |
+| `lore_velda_order` | historia | 2 | 6 | vive Velda | defeat `guardianReloj` ×1, 150 oro, +2 rel |
+| `lore_kael_guardian` | historia | 2 | 6 | vive Kael | defeat `elementalEscarcha` ×2, 180 oro, +2 rel |
+| `lore_brann_forge` | historia | 2 | 6 | vive Brann | explore `grieta`, 200 oro, +2 rel |
+| `lore_oren_future` | historia | 1 | 6 | vive Oren, día ≥ 15 | explore `abismo`, 250 oro, +3 rel |
 | `caravan_relics` | caravana | 2 | 3 | día ≥ 10 | discount 0.15 |
 
 Líneas es-AR (BORRADOR):
@@ -128,22 +165,27 @@ Líneas es-AR (BORRADOR):
   quien lo dio cuerda."
 - Grieta de eco: "Se abrió una grieta de eco: del otro lado espera un
   jefe que ya ganó una vez."
-- Ilda: "Las moras de Ilda recuerdan un invierno que todavía no llegó.
-  Algo vino del futuro a buscarlas." (vencer al Eco de Raíz)
-- Velda: "Velda encontró el orden que esperan los autómatas. Falta
-  probarlo abajo." (resolver el mecanismo en las Ruinas Cronales)
+- Ilda: "Las moras de Ilda recuerdan un invierno que todavía no llegó."
+  / "Algo vino del futuro a buscarlas: arañas que tejen con hilo de
+  mañana. Vencé a tres."
+- Velda: "Velda encontró el orden que esperan los autómatas." / "Un
+  Guardián de Reloj no respeta el orden: vencelo y Velda podrá leer su
+  mecanismo."
 - Kael: "El guardián que pelea antes de que llegues dejó un mensaje:
-  aguantá." (resistir 5 oleadas)
+  aguantá." / "Dos elementales de escarcha llegaron antes que vos.
+  Aguantá y vencelos."
 - Brann: "Un autómata salió de la Grieta caminando hacia la fragua de
-  Brann. Hay que acompañarlo." (escoltar)
-- Oren: "Oren vio el final. No se puede cambiar, pero hay que llegar
-  hasta ahí." (llegar al fondo del Abismo y hablar con Oren)
+  Brann." / "Andá a la Grieta a ver de dónde salió: la fragua vieja
+  sigue encendida."
+- Oren: "Oren vio el final. No se puede cambiar." / "Hay que llegar
+  hasta ahí: andá al Abismo, donde llegan los ecos del futuro."
 - Caravana: "Llegó una caravana con restos del pasado magitec."
 
 ## 5. Red y guardado
 
 - `WorldEventsState` viaja en `TownState.farmJson` (`wev`): todos ven los
-  mismos eventos. Sube `kProtocolVersion` (69 → 70).
+  mismos eventos. Sube `kProtocolVersion` (69 → 70): `wev` (con
+  `pg` / `cl`), la acción `rift` y `rift` en la sala.
 - Se guarda con el mundo (`TownState.toJson`). Un save viejo sin `wev`
   arranca vacío.
 - El catálogo (`assets/data/events/world_events.json`) no viaja: cada par
@@ -157,7 +199,12 @@ Líneas es-AR (BORRADOR):
   `EVENTO` (o `EVENTOS ×n`) con tooltip de los títulos.
 - **DIARIO → EVENTOS:** subpestaña nueva del DIARIO (J): grilla de los
   eventos activos con el detalle a la derecha (título, categoría, lugar,
-  días que quedan, cuerpo y, si corresponde, la grieta o la misión).
+  días que quedan, cuerpo y, si corresponde, la grieta, la misión con su
+  progreso o el descuento).
+- **Actores:** NPCs y portales en el mapa (§ 3.0) con su prompt de E y
+  `WorldEventPanel`. El portal ganado se ve apagado para quien lo ganó.
+- **Puesto:** cartel verde con el descuento mientras hay visitante o
+  caravana.
 
 ## 7. Editor → EVENTOS
 
@@ -167,8 +214,10 @@ Líneas es-AR (BORRADOR):
 - Botón GENERAL arriba de la grilla: intervalo, mínimo y máximo por
   tirada y probabilidad.
 - Detalle con subpestañas FICHA (habilitado, peso, duración, día mínimo,
-  biomas, habitante, objetivo de historia), TEXTOS (título, aviso,
-  cuerpo en todos los idiomas) y PARÁMETROS (números de § 1).
+  biomas, habitante, objetivo de historia: solo vencer o explorar),
+  TEXTOS (una subpestaña por campo: TÍTULO, AVISO, DETALLE; cada una con
+  todos los idiomas y un ! si le falta alguno) y PARÁMETROS (números de
+  § 1). Valida también que el enemigo o el bioma del objetivo existan.
 - GUARDAR EVENTOS escribe `assets/data/events/world_events.json` y lo
   aplica. Bloqueado si falta un idioma o el archivo no valida
   (`WorldEventsConfig.validate`).

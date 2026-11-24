@@ -78,5 +78,5 @@ Ninguno es recadero: son de construcción (town_editor.md § 3.4).
 | Pedido del pescador | 1 generador | 1 | 0 |
 
 Las historias de los eventos del mundo (world_events.md) ya nacen sin
-recadero: el editor solo ofrece objetivos de vencer, explorar, escoltar,
-hablar, resistir o resolver.
+recadero: el editor solo ofrece vencer o explorar (escoltar, hablar,
+resistir y resolver se suman cuando existan sus sistemas).

@@ -122,7 +122,7 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
               LifeItemGroup(null, [
                 if (events)
                   for (final a in town.events.active)
-                    worldEventCell(context, a, town.sky.day),
+                    worldEventCell(context, a, town),
                 if (n == null && !events)
                   for (final a in tracked) _trackedCell(a, p),
                 if (n != null && r != null) ...[

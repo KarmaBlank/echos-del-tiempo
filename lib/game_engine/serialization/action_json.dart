@@ -146,6 +146,7 @@ abstract final class ActionJson {
         DevGrantTrialAction() => {'t': 'devTrial', 'n': a.trial},
         // Jefes del Abismo v0.8 (abyss_bosses.md § 5).
         ProposeAbyssAction() => {'t': 'abyss', 'n': a.boss},
+        ProposeRiftAction() => {'t': 'rift', 'u': a.uid},
         // TUTORIAL v0.9 (combat_tutorial.md § 6).
         StartTutorialAction() => {'t': 'tut', 'cmp': a.companions},
         TutorialAckAction() => {'t': 'tutOk'},
@@ -398,6 +399,8 @@ abstract final class ActionJson {
         return DevGrantTrialAction(j.integer('n'));
       case 'abyss':
         return ProposeAbyssAction(j.integer('n'));
+      case 'rift':
+        return ProposeRiftAction(j.str('u'));
       case 'tut':
         return StartTutorialAction(companions: j['cmp'] != false);
       case 'tutOk':

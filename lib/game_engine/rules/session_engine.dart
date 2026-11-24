@@ -202,6 +202,15 @@ class SessionEngine {
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
 
   /// La pelea de un Jefe del Abismo: el mapa de su zona base, 1 piso.
+  /// The arena of a rift fight (world_events.md § 3.3).
+  GameMap _riftMap(EchoRiftBoss r, int seed) {
+    final key = 'rift:${r.bossId}:$seed';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] = MapGenerator.zone(WorldEventRules.riftZone(r), seed);
+  }
+
   GameMap _abyssMap(AbyssBossDef d, int seed) {
     final key = 'abyss:${d.number}:$seed';
     final hit = _maps[key];
@@ -236,6 +245,10 @@ class SessionEngine {
     if (id == AbyssRules.missionId) {
       final d = abyssRules.def(s.abyss);
       return d == null ? null : abyssRules.missionDef(d);
+    }
+    if (id == WorldEventRules.riftMissionId) {
+      final r = WorldEventRules.riftOf(s.town.events, s.rift);
+      return r == null ? null : WorldEventRules.riftMission(r.$2);
     }
     return catalog.mission(id);
   }
@@ -477,6 +490,10 @@ class SessionEngine {
     final abyss = abyssRules.def(s.abyss);
     if (m.missionId == AbyssRules.missionId && abyss != null) {
       return _abyssMap(abyss, m.seed);
+    }
+    if (m.missionId == WorldEventRules.riftMissionId) {
+      final r = WorldEventRules.riftOf(s.town.events, s.rift);
+      if (r != null) return _riftMap(r.$2, m.seed);
     }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
   }
@@ -780,6 +797,13 @@ class _Op {
   /// La Prueba que se está jugando (`null` fuera de una).
   TrialDef? get _trial =>
       s.mission?.missionId == TrialRules.missionId ? trialDef(s.trial) : null;
+
+  /// The echo rift being fought (`null` outside one; world_events.md
+  /// § 3.3).
+  (ActiveWorldEvent, EchoRiftBoss)? get _rift =>
+      s.mission?.missionId == WorldEventRules.riftMissionId
+          ? WorldEventRules.riftOf(s.town.events, s.rift)
+          : null;
 
   /// El Jefe del Abismo que se está peleando (`null` fuera de uno).
   AbyssBossDef? get _abyss => s.mission?.missionId == AbyssRules.missionId
@@ -1349,13 +1373,20 @@ class _Op {
             ExchangeFishAction() ||
             BuyRodAction() ||
             EquipRodAction():
-        return fishingAction(p, a);
+        return _withEventDiscount(
+            p, a is BuyRodAction, () => fishingAction(p, a));
 
       case FarmTileAction() ||
             FarmShopAction() ||
             TownAction() ||
             LifeTreeAction():
-        return farmingAction(p, a);
+        return _withEventDiscount(
+            p,
+            a is FarmShopAction &&
+                (a.op == FarmShopOp.buySeed ||
+                    a.op == FarmShopOp.buyTool ||
+                    a.op == FarmShopOp.buyAbono),
+            () => farmingAction(p, a));
 
       // Salir solo de la mazmorra lo resuelve WorldEngine (free_movement.md).
       case LeaveDungeonAction():
@@ -1524,6 +1555,8 @@ class _Op {
       // ---- Jefes del Abismo v0.8 (abyss_bosses.md) ----
       case ProposeAbyssAction():
         return !tutorialLocked && _proposeAbyss(p, a.boss);
+      case ProposeRiftAction():
+        return !tutorialLocked && _proposeRift(p, a.uid);
 
       // TUTORIAL (combat_tutorial.md).
       case StartTutorialAction():
@@ -1640,6 +1673,150 @@ class _Op {
         events.add(AchievementUnlockedEvent(p.id, u.id));
       }
     }
+  }
+
+  /// A purchase at the town stall while a visitor or caravan is in town
+  /// (world_events.md § 3.1): `townDiscount` of the gold spent comes back.
+  bool _withEventDiscount(SessionPlayer p, bool buy, bool Function() f) {
+    final before = p.profile.credits;
+    final ok = f();
+    if (!ok || !buy) return ok;
+    final disc = WorldEventRules.townDiscount(s.town.events, kWorldEvents);
+    final spent = before - p.profile.credits;
+    final back = (spent * disc).floor();
+    if (back > 0) {
+      p.profile = p.profile.copyWith(credits: p.profile.credits + back);
+      say('Precio de evento: ${p.name} ahorró $back de oro.');
+    }
+    return ok;
+  }
+
+  // ---------------- Grietas de eco (world_events.md § 3.3) ----------------
+
+  /// `ProposeRiftAction`: in the lobby of the rift's biome, in front of
+  /// its portal, if the player did not beat it yet.
+  bool _proposeRift(SessionPlayer p, String uid) {
+    final r = WorldEventRules.riftOf(s.town.events, uid);
+    if (s.mode != SessionMode.lobby ||
+        s.vote != null ||
+        r == null ||
+        p.isCompanion ||
+        (s.place ?? kPueblo) != r.$1.biome ||
+        WorldEventRules.near(s.town, r.$1.biome, p.x, p.y, player: p.id)
+                ?.uid !=
+            uid) {
+      return false;
+    }
+    s
+      ..rift = uid
+      ..vote = MissionVote(WorldEventRules.riftMissionId, p.name, {p.id});
+    final boss = catalog.zone(r.$2.zone)?.bossName ?? r.$2.bossId;
+    say('${p.name} abre la grieta de eco (jefe: $boss).$_voteCall');
+    return true;
+  }
+
+  /// Starts the voted rift: straight into the scaled boss fight.
+  void _startRift() {
+    final r = WorldEventRules.riftOf(s.town.events, s.rift);
+    if (r == null) {
+      say('La grieta de eco se cerró.');
+      s
+        ..rift = null
+        ..mode = SessionMode.lobby;
+      return;
+    }
+    final rb = r.$2;
+    final seed = e._seeds();
+    final map = e._riftMap(rb, seed);
+    final def = WorldEventRules.riftMission(rb);
+    final z = WorldEventRules.riftZone(rb);
+    final sp = map.floors.first.spawn;
+    final boss = FieldEnemy(
+      id: 0,
+      x: sp.x + 24,
+      y: sp.y,
+      homeX: sp.x + 24,
+      homeY: sp.y,
+      group: [rb.bossId],
+      boss: true,
+    );
+    s.mission = MissionRun(
+      missionId: def.id,
+      seed: seed,
+      goal: 0,
+      objectives: [],
+      enemies: [boss],
+      items: [],
+      open: true,
+      zoneLevel: z.maxLevel,
+      zone: def.zone,
+      floors: 1,
+      levels: [z.maxLevel],
+    );
+    _enterField(def, seed);
+    final first = players.firstOrNull;
+    if (first != null) {
+      startBattle(boss, first, kind: EncounterKind.firstStrike);
+    }
+  }
+
+  /// Rift won: the reward multiplier on the boss's gold, and the portal
+  /// closes for everyone who fought it.
+  void _riftCompleted(ActiveWorldEvent a, EchoRiftBoss r) {
+    final gold = WorldEventRules.riftGold(r);
+    for (final p in players) {
+      if (p.isCompanion) continue;
+      p.profile = p.profile.copyWith(credits: p.profile.credits + gold);
+    }
+    s.town = s.town.copyWith(
+        events: WorldEventRules.riftCleared(s.town.events, a.uid,
+            [for (final p in players) if (!p.isCompanion) p.id]));
+    say('¡Grieta de eco cerrada! +$gold de oro para cada uno.');
+  }
+
+  // ---------------- Historias de eventos (world_events.md § 3.4) --------
+
+  /// A won battle counts for the `defeat` lore quests.
+  void _loreDefeat(BattleState b) {
+    var ev = s.town.events;
+    for (final (a, d) in WorldEventRules.loreOf(ev, LoreObjective.defeat)) {
+      final k = b.enemies.where((x) => x.enemyType == d.target).length;
+      final (next, done) = WorldEventRules.advance(ev, a, d, k);
+      ev = next;
+      if (done) _loreDone(d);
+    }
+    if (!identical(ev, s.town.events)) s.town = s.town.copyWith(events: ev);
+  }
+
+  /// A human in the place of an `explore` lore quest completes it.
+  void _loreExplore() {
+    final place = s.place;
+    if (place == null || s.mode != SessionMode.lobby) return;
+    var ev = s.town.events;
+    if (ev.active.isEmpty) return;
+    if (!players.any((p) => !p.isCompanion)) return;
+    for (final (a, d) in WorldEventRules.loreOf(ev, LoreObjective.explore)) {
+      if (d.target != place) continue;
+      final (next, done) = WorldEventRules.advance(ev, a, d, d.n);
+      ev = next;
+      if (done) _loreDone(d);
+    }
+    if (!identical(ev, s.town.events)) s.town = s.town.copyWith(events: ev);
+  }
+
+  /// Lore quest done: gold for the humans here, friendship for the
+  /// resident.
+  void _loreDone(WorldEventDef d) {
+    final q = WorldEventRules.loreQuest(d);
+    if (q == null) return;
+    for (final p in players) {
+      if (p.isCompanion) continue;
+      p.profile = p.profile.copyWith(credits: p.profile.credits + q.gold);
+    }
+    final r = s.town.resident(q.npc);
+    s.town = s.town.withResident(r.copyWith(rep: r.rep + q.rep));
+    say('Historia cumplida: ${d.title.source}. +${q.gold} de oro y '
+        '+${q.rep} de relación con ${biomeNpcName(q.npc)}.');
   }
 
   // ---------------- Jefes del Abismo (abyss_bosses.md § 1–3) ------------
@@ -2414,6 +2591,7 @@ class _Op {
   int? _lootCap() {
     final abyss = _abyss;
     if (abyss != null) return abyss.level;
+    if (_rift case final r?) return WorldEventRules.riftZone(r.$2).maxLevel;
     return _zoneDef()?.maxLevel;
   }
 
@@ -2434,6 +2612,7 @@ class _Op {
   int _levelFor(FieldEnemy en) {
     final abyss = _abyss;
     if (abyss != null) return abyss.level;
+    if (_rift case final r?) return WorldEventRules.riftZone(r.$2).maxLevel;
     final z = _zoneDef();
     if (z == null) return 0;
     if (en.boss) return ZoneRules.bossLevel(z);
@@ -2459,6 +2638,7 @@ class _Op {
     s.town = ResidentRules.settleDepartures(s.town, s.time);
     if (world) farmTick(dt);
     autoFishTick();
+    _loreExplore();
     final m = s.mission;
     if (m != null &&
         s.result == null &&
@@ -2533,6 +2713,10 @@ class _Op {
     }
     if (missionId == AbyssRules.missionId) {
       _startAbyss();
+      return;
+    }
+    if (missionId == WorldEventRules.riftMissionId) {
+      _startRift();
       return;
     }
     final m = catalog.mission(missionId);
@@ -3709,6 +3893,7 @@ class _Op {
     if (eco != null) {
       EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
     }
+    if (_rift case final r?) WorldEventRules.applyRiftBattle(step.state, r.$2);
     // Zone / Eco scaling may move enemy turns: keep the opener first.
     EncounterRules.applyTimelineOpener(
         step.state,
@@ -3922,6 +4107,7 @@ class _Op {
     // Travesía: sin XP ni créditos de batalla (las recompensas los
     // reemplazan; roguelike.md § 4).
     if (s.run != null) return;
+    _loreDefeat(b.state);
     final m = s.mission;
     // Kael (overworld_biomes.md § 10.6): +% de XP para toda la sala.
     final xp =
@@ -4149,23 +4335,33 @@ class _Op {
     final eco = _eco;
     final trial = _trial;
     final abyss = _abyss;
-    // Un Eco, una Prueba o un Jefe del Abismo usan el tipo de zona solo
-    // para el mapa: no desbloquean zonas.
-    final zone = eco != null || trial != null || abyss != null || def.zone == 0
+    final rift = _rift;
+    // Un Eco, una Prueba, un Jefe del Abismo o una grieta usan el tipo de
+    // zona solo para el mapa: no desbloquean zonas.
+    final zone = eco != null ||
+            trial != null ||
+            abyss != null ||
+            rift != null ||
+            def.zone == 0
         ? null
         : catalog.zone(def.zone);
     final unlocked = <String, int>{};
     if (ok) {
       final firsts = _lootAll(LootSource.mission, null, null,
           chance: dropChance[rank] ?? 0,
-          extraBonus: rankBonus[rank] ?? 0,
+          extraBonus: (rankBonus[rank] ?? 0) +
+              (rift == null ? 0 : math.max(0.0, rift.$2.rewardMult - 1)),
           level: eco?.monsterLevel ??
               trial?.monsterLevel ??
               abyss?.level ??
+              (rift == null
+                  ? null
+                  : WorldEventRules.riftZone(rift.$2).maxLevel) ??
               zone?.maxLevel);
       if (eco != null) _ecoCompleted(eco);
       if (trial != null) _trialCompleted(trial);
       if (abyss != null) _abyssCompleted(abyss);
+      if (rift != null) _riftCompleted(rift.$1, rift.$2);
       // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
       if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
       if (zone != null) residentWin(zone.index);
@@ -4355,6 +4551,7 @@ class _Op {
       ..trial = null
       ..abyss = null
       ..abyssOwner = null
+      ..rift = null
       ..mode = SessionMode.lobby
       // De una mazmorra se vuelve siempre al pueblo (overworld_biomes.md
       // § 4): ahí está el comerciante.

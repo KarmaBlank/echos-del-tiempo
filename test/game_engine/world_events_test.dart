@@ -1,8 +1,9 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/world_events_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/zones_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/localized_text.dart';
@@ -219,7 +220,8 @@ void main() {
       expect(
           cfg.validate(_tags,
               biomes: {for (final b in kBiomes) b.id},
-              residents: {for (final n in kBiomeNpcs) n.id}),
+              residents: {for (final n in kBiomeNpcs) n.id},
+              enemies: kEnemies.keys.toSet()),
           isEmpty);
     });
   });

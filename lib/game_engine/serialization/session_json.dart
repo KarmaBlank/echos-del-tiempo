@@ -76,6 +76,7 @@ class SessionJson {
         // Jefes del Abismo v0.8 (abyss_bosses.md § 5): opcionales.
         if (s.abyss != null) 'abyss': s.abyss,
         if (s.abyssOwner != null) 'abyssBy': s.abyssOwner,
+        if (s.rift != null) 'rift': s.rift,
         // TUTORIAL v0.9 (combat_tutorial.md § 6): opcionales.
         if (s.tutorial != null) 'tut': s.tutorial!.toJson(),
         if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
@@ -170,6 +171,7 @@ class SessionJson {
       combatMode: CombatMode.fromName(j['cm']),
       abyss: j.intOrNull('abyss'),
       abyssOwner: j.strOrNull('abyssBy'),
+      rift: j.strOrNull('rift'),
       tutorial: j.objOrNull('tut') == null
           ? null
           : TutorialState.fromJson(j.objOrNull('tut')!),

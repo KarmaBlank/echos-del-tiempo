@@ -480,6 +480,13 @@ class ProposeAbyssAction extends SessionAction {
   const ProposeAbyssAction(this.boss);
 }
 
+/// `rift` (protocol 70, world_events.md § 3.3): open the echo rift
+/// [uid] (a world event) in front of its portal.
+class ProposeRiftAction extends SessionAction {
+  final String uid;
+  const ProposeRiftAction(this.uid);
+}
+
 /// Solo desarrollo (`FeatureFlags.devTools`): [kind] `frag` da 5 de cada
 /// Fragmento y 3 Esencias; `kills` marca los 4 jefes como vencidos.
 class DevAbyssAction extends SessionAction {

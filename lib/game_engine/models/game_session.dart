@@ -713,6 +713,7 @@ class GameSession {
     this.combatMode,
     this.abyss,
     this.abyssOwner,
+    this.rift,
     this.tutorial,
     this.tutorialRuns = 0,
     this.run,
@@ -807,6 +808,10 @@ class GameSession {
 
   /// Quien lo abrió (se le consumen los Fragmentos al empezar).
   String? abyssOwner;
+
+  /// The echo rift (world event uid) being voted, prepared or fought
+  /// (world_events.md § 3.3).
+  String? rift;
 
   /// El guion del TUTORIAL en curso (docs/specs/combat_tutorial.md § 4.1):
   /// viaja en el snapshot. `null` = no se está jugando.
@@ -949,6 +954,7 @@ class GameSession {
         combatMode: combatMode,
         abyss: abyss,
         abyssOwner: abyssOwner,
+        rift: rift,
         tutorial: tutorial?.copy(),
         tutorialRuns: tutorialRuns,
         run: run?.copy(),
@@ -1002,7 +1008,7 @@ class AwayPlayer {
 }
 
 /// What a gathering starts (free_movement.md § 2.1).
-enum GatherKind { mission, trial, abyss }
+enum GatherKind { mission, trial, abyss, rift }
 
 /// An open gathering ("convocatoria", free_movement.md § 2.1): someone
 /// proposed a mission / Trial / Abyss Boss and waits for friends before

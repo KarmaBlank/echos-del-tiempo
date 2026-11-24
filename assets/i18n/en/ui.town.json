@@ -440,5 +440,11 @@
   "ui.town.events.obj.escort": "escort {target}",
   "ui.town.events.obj.talk": "talk with {target}",
   "ui.town.events.obj.survive": "survive {n} waves in {target}",
-  "ui.town.events.obj.puzzle": "solve the mechanism of {target}"
+  "ui.town.events.obj.puzzle": "solve the mechanism of {target}",
+  "ui.town.events.trade": "TRADE",
+  "ui.town.events.enter": "ENTER",
+  "ui.town.events.close": "CLOSE",
+  "ui.town.events.prompt_rift": "[E] Echo rift",
+  "ui.town.events.progress": "Progress: {have}/{need}",
+  "ui.town.events.trade_banner": "{name}: purchases cost {n}% less (refunded at checkout)."
 }

@@ -20,14 +20,14 @@ enum WorldEventCategory {
 }
 
 /// Objective of a lore quest (§ 3.4). There is no fetch/gather kind on
-/// purpose.
+/// purpose. Only kinds the host can track live here (escort, talk,
+/// survive and puzzle wait for their own systems).
 enum LoreObjective {
+  /// Defeat [WorldEventDef.n] enemies of type [WorldEventDef.target].
   defeat,
-  explore,
-  escort,
-  talk,
-  survive,
-  puzzle;
+
+  /// Reach the place [WorldEventDef.target] (a biome exterior).
+  explore;
 
   static LoreObjective fromName(Object? n) {
     for (final v in values) {
@@ -55,7 +55,12 @@ class WorldEventDef {
     this.objective,
     this.target = '',
     this.n = 1,
+    this.sprite = '',
   });
+
+  /// Sprite of the event's NPC (`items.vida_<sprite>` of the manifest;
+  /// visitors, wanderers and caravans). Empty = none.
+  final String sprite;
 
   final String id;
   final WorldEventCategory category;
@@ -105,6 +110,7 @@ class WorldEventDef {
         'notice': notice.toJson(),
         'body': body.toJson(),
         if (params.isNotEmpty) 'params': params,
+        if (sprite.isNotEmpty) 'sprite': sprite,
         if (objective != null) ...{
           'objective': objective!.name,
           'target': target,
@@ -145,6 +151,7 @@ class WorldEventDef {
           : LoreObjective.fromName(raw['objective']),
       target: raw['target'] is String ? raw['target'] as String : '',
       n: i(raw['n'], 1),
+      sprite: raw['sprite'] is String ? raw['sprite'] as String : '',
     );
   }
 }
@@ -209,7 +216,7 @@ class WorldEventsConfig {
 
   /// Everything that blocks saving (§ 7), empty = valid.
   List<String> validate(List<String> tags,
-      {Set<String>? biomes, Set<String>? residents}) {
+      {Set<String>? biomes, Set<String>? residents, Set<String>? enemies}) {
     final out = <String>[];
     if (interval < 1) out.add('El intervalo tiene que ser 1 o más.');
     if (minPerRoll < 0) out.add('El mínimo por tirada no puede ser negativo.');
@@ -223,6 +230,17 @@ class WorldEventsConfig {
       if (e.category == WorldEventCategory.lore) {
         if (e.resident == null) out.add('${e.id}: la historia necesita habitante.');
         if (e.objective == null) out.add('${e.id}: la historia necesita objetivo.');
+        if (e.objective == LoreObjective.defeat &&
+            enemies != null &&
+            !enemies.contains(e.target)) {
+          out.add('${e.id}: enemigo desconocido ${e.target}.');
+        }
+        if (e.objective == LoreObjective.explore &&
+            biomes != null &&
+            !biomes.contains(e.target)) {
+          out.add('${e.id}: lugar desconocido ${e.target}.');
+        }
+        if (e.n < 1) out.add('${e.id}: la cantidad tiene que ser 1 o más.');
       }
       if (biomes != null) {
         for (final b in e.biomes) {
@@ -286,7 +304,19 @@ class WorldEventsState {
       {this.seed = 0,
       this.last = 0,
       this.active = const [],
-      this.seen = const {}});
+      this.seen = const {},
+      this.progress = const {},
+      this.cleared = const {}});
+
+  /// Lore quest progress by event uid (§ 3.4).
+  final Map<String, int> progress;
+
+  /// Rift portals closed after a win (§ 3.3): event uid → player ids.
+  final Map<String, Set<String>> cleared;
+
+  /// [player] already beat the rift [uid].
+  bool clearedBy(String uid, String player) =>
+      cleared[uid]?.contains(player) ?? false;
 
   /// Seed for the rolls (0 = not set yet; the host sets it once).
   final int seed;
@@ -298,7 +328,19 @@ class WorldEventsState {
   /// Lore events that already happened (once per world).
   final Set<String> seen;
 
-  bool get isEmpty => seed == 0 && last == 0 && active.isEmpty && seen.isEmpty;
+  bool get isEmpty =>
+      seed == 0 &&
+      last == 0 &&
+      active.isEmpty &&
+      seen.isEmpty &&
+      progress.isEmpty &&
+      cleared.isEmpty;
+
+  /// Without [uid] (and its progress / portal closures).
+  WorldEventsState without(String uid) => copyWith(
+      active: [for (final a in active) if (a.uid != uid) a],
+      progress: {...progress}..remove(uid),
+      cleared: {...cleared}..remove(uid));
 
   /// Active events at [place].
   List<ActiveWorldEvent> at(String place) =>
@@ -308,18 +350,27 @@ class WorldEventsState {
           {int? seed,
           int? last,
           List<ActiveWorldEvent>? active,
-          Set<String>? seen}) =>
+          Set<String>? seen,
+          Map<String, int>? progress,
+          Map<String, Set<String>>? cleared}) =>
       WorldEventsState(
           seed: seed ?? this.seed,
           last: last ?? this.last,
           active: active ?? this.active,
-          seen: seen ?? this.seen);
+          seen: seen ?? this.seen,
+          progress: progress ?? this.progress,
+          cleared: cleared ?? this.cleared);
 
   Map<String, Object?> toJson() => {
         's': seed,
         'l': last,
         if (active.isNotEmpty) 'a': [for (final a in active) a.toJson()],
         if (seen.isNotEmpty) 'sn': (seen.toList()..sort()),
+        if (progress.isNotEmpty) 'pg': progress,
+        if (cleared.isNotEmpty)
+          'cl': {
+            for (final e in cleared.entries) e.key: (e.value.toList()..sort())
+          },
       };
 
   static WorldEventsState fromJson(Object? raw) {
@@ -338,6 +389,21 @@ class WorldEventsState {
           for (final s in l)
             if (s is String) s
       },
+      progress: {
+        if (raw['pg'] case final Map m)
+          for (final e in m.entries)
+            if (e.key is String && e.value is num)
+              e.key as String: (e.value as num).round()
+      },
+      cleared: {
+        if (raw['cl'] case final Map m)
+          for (final e in m.entries)
+            if (e.key is String && e.value is List)
+              e.key as String: {
+                for (final x in e.value as List)
+                  if (x is String) x
+              }
+      },
     );
   }
 
@@ -352,7 +418,21 @@ class WorldEventsState {
     for (var k = 0; k < active.length; k++) {
       if (o.active[k] != active[k]) return false;
     }
-    return o.seen.containsAll(seen);
+    if (!o.seen.containsAll(seen)) return false;
+    if (o.progress.length != progress.length ||
+        o.cleared.length != cleared.length) {
+      return false;
+    }
+    for (final e in progress.entries) {
+      if (o.progress[e.key] != e.value) return false;
+    }
+    for (final e in cleared.entries) {
+      final x = o.cleared[e.key];
+      if (x == null || x.length != e.value.length || !x.containsAll(e.value)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override

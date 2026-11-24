@@ -1,10 +1,16 @@
 import 'dart:math' as math;
 
 import '../data/biomes_catalog.dart';
+import '../data/enemies_catalog.dart';
+import '../data/town_layout.dart';
 import '../data/world_events_catalog.dart';
 import '../data/zones_catalog.dart';
 import '../models/battle_state.dart';
+import '../models/game_map.dart';
 import '../models/localized_text.dart';
+import '../models/mission_def.dart';
+import '../models/world_save.dart';
+import '../models/zone_def.dart';
 import 'js_math.dart';
 import 'mulberry32.dart';
 
@@ -219,6 +225,180 @@ abstract final class WorldEventRules {
         text: d.body,
         gold: d.param('gold').round(),
         rep: d.param('rep').round());
+  }
+
+  // ---------------- actors on the map (§ 3) ----------------
+
+  /// Mission id of a rift fight (§ 3.3).
+  static const riftMissionId = 'rift';
+
+  /// Talk / use range (px), like the residents.
+  static const range = 26.0;
+
+  /// Event NPCs and rift portals have a place to stand.
+  static bool hasActor(WorldEventCategory c) => c != WorldEventCategory.lore;
+
+  static const _biomeSlots = [
+    (14, 10), (19, 10), (14, 13), (19, 13), (13, 16), (20, 16), (14, 7),
+    (19, 7),
+  ];
+  static const _townSlots = [(-2, 3), (3, 3), (-2, -1), (3, -1)];
+
+  /// Where the actor of [a] stands (px), or `null` (§ 3): town events
+  /// around the fountain, biome events on free grass by the path. The
+  /// slot is the event's order among the actors of its place.
+  static (double, double)? spot(TownState town, ActiveWorldEvent a,
+      [WorldEventsConfig? cfg]) {
+    final c = cfg ?? kWorldEvents;
+    final here = [
+      for (final o in town.events.at(a.biome))
+        if (hasActor(c.def(o.def)?.category ?? WorldEventCategory.lore)) o
+    ];
+    final i = here.indexWhere((o) => o.uid == a.uid);
+    if (i < 0) return null;
+    if (a.biome == kPueblo) {
+      final f = TownLayout.landmark(TownSpot.fountain);
+      final (fx, fy) = town.marks[f.id] ?? (f.x, f.y);
+      final (ox, oy) = town.origin;
+      final (dx, dy) = _townSlots[i % _townSlots.length];
+      return ((fx + ox + dx + 0.5) * 16, (fy + oy + dy + 0.5) * 16);
+    }
+    final lay = biomeLayout(a.biome);
+    if (lay == null) return null;
+    final rows = lay.rows(const {});
+    final free = [
+      for (final (x, y) in _biomeSlots)
+        if (rows[y][x] == Tile.grass) (x, y)
+    ];
+    if (free.isEmpty) return null;
+    final (x, y) = free[i % free.length];
+    return ((x + 0.5) * 16, (y + 0.5) * 16);
+  }
+
+  /// The event actor in reach of ([x], [y]) at [place] (`pueblo` for the
+  /// town), or `null`. Rift portals a player already beat are closed for
+  /// them ([player]).
+  static ActiveWorldEvent? near(TownState town, String place, double x,
+      double y,
+      {String? player, WorldEventsConfig? cfg}) {
+    final c = cfg ?? kWorldEvents;
+    for (final a in town.events.at(place)) {
+      final d = c.def(a.def);
+      if (d == null || !hasActor(d.category)) continue;
+      if (d.category == WorldEventCategory.echoPortal &&
+          player != null &&
+          town.events.clearedBy(a.uid, player)) {
+        continue;
+      }
+      final p = spot(town, a, c);
+      if (p == null) continue;
+      final dx = p.$1 - x, dy = p.$2 - y;
+      if (math.sqrt(dx * dx + dy * dy) <= range) return a;
+    }
+    return null;
+  }
+
+  // ---------------- rift fight (§ 3.3) ----------------
+
+  /// The zone of a rift fight: the biome boss's zone, one floor, the
+  /// level raised by `levelBonus`.
+  static ZoneDef riftZone(EchoRiftBoss r) {
+    final z = kZones.firstWhere((k) => k.index == r.zone);
+    final lv = z.maxLevel + r.levelBonus;
+    return ZoneDef(
+      index: z.index,
+      id: riftMissionId,
+      name: z.bossName,
+      gen: z.gen,
+      minLevel: lv,
+      maxLevel: lv,
+      floors: 1,
+      bossId: r.bossId,
+      bossName: z.bossName,
+      theme: z.theme,
+      missionId: riftMissionId,
+    );
+  }
+
+  /// The mission of a rift: only the boss.
+  static MissionDef riftMission(EchoRiftBoss r) {
+    final z = riftZone(r);
+    return MissionDef(
+      id: riftMissionId,
+      name: z.bossName,
+      type: 'Grieta',
+      rank: 'A',
+      recommendedLevel: z.maxLevel,
+      theme: z.theme,
+      goal: 0,
+      groups: [
+        [r.bossId]
+      ],
+      boss: [r.bossId],
+      sTime: 300,
+      elite: r.bossId,
+      extra: 0,
+      zone: z.index,
+      floors: 1,
+      floorGoal: 0,
+    );
+  }
+
+  /// The active rift [uid] and its boss, or `null`.
+  static (ActiveWorldEvent, EchoRiftBoss)? riftOf(
+      WorldEventsState s, String? uid,
+      [WorldEventsConfig? cfg]) {
+    if (uid == null) return null;
+    final a = s.active.where((x) => x.uid == uid).firstOrNull;
+    final d = a == null ? null : (cfg ?? kWorldEvents).def(a.def);
+    if (a == null || d == null || d.category != WorldEventCategory.echoPortal) {
+      return null;
+    }
+    final r = rift(d, a.biome);
+    return r == null ? null : (a, r);
+  }
+
+  /// Gold per player for a rift win: the boss's gold times
+  /// `rewardMult`.
+  static int riftGold(EchoRiftBoss r) =>
+      jsRound((kEnemies[r.bossId]?.credits ?? 0) * r.rewardMult);
+
+  /// Rift [uid] beaten by [players]: its portal closes for them.
+  static WorldEventsState riftCleared(
+          WorldEventsState s, String uid, Iterable<String> players) =>
+      s.copyWith(cleared: {
+        ...s.cleared,
+        uid: {...?s.cleared[uid], ...players},
+      });
+
+  // ---------------- lore quests (§ 3.4) ----------------
+
+  /// Lore events whose quest uses [o], with their def.
+  static List<(ActiveWorldEvent, WorldEventDef)> loreOf(
+      WorldEventsState s, LoreObjective o,
+      [WorldEventsConfig? cfg]) {
+    final c = cfg ?? kWorldEvents;
+    return [
+      for (final a in s.active)
+        if (c.def(a.def) case final d?
+            when d.category == WorldEventCategory.lore && d.objective == o)
+          (a, d)
+    ];
+  }
+
+  /// Progress of the lore quest [a] (0..n).
+  static int progressOf(WorldEventsState s, ActiveWorldEvent a) =>
+      s.progress[a.uid] ?? 0;
+
+  /// Adds [k] to the quest [a]; returns the new state and whether it is
+  /// done now (then the event leaves the active list).
+  static (WorldEventsState, bool) advance(
+      WorldEventsState s, ActiveWorldEvent a, WorldEventDef d, int k) {
+    if (k <= 0) return (s, false);
+    final n = math.max(1, d.n);
+    final v = math.min(n, progressOf(s, a) + k);
+    if (v >= n) return (s.without(a.uid), true);
+    return (s.copyWith(progress: {...s.progress, a.uid: v}), false);
   }
 
   /// Best price discount of the town events running (0–0.9).
