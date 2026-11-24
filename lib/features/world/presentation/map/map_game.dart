@@ -685,6 +685,10 @@ class MapGame extends Game {
   @visibleForTesting
   static void Function(int micros)? debugRenderTiming;
 
+  /// Perf harness (tests): treat any mission map as a dark dungeon.
+  @visibleForTesting
+  static bool debugForceDark = false;
+
   @override
   void render(Canvas canvas) {
     final timing = debugRenderTiming;
@@ -960,7 +964,9 @@ class MapGame extends Game {
     // Mazmorra oscura (lighting.md § 5): solo con misión en curso.
     final darkMap = !map.lobby &&
         s.mission != null &&
-        LightRules.isDark(map.theme, floor: currentFloor(view)?.index ?? 0);
+        (debugForceDark ||
+            LightRules.isDark(map.theme,
+                floor: currentFloor(view)?.index ?? 0));
     final movingLights = <LightSource>[];
     final placed = <(double, double)>[];
     sky.placedLights = placed;
