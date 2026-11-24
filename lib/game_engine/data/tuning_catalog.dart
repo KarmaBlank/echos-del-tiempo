@@ -294,6 +294,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'boltChance': 0.4,
     'stormBite': 0.3,
     'stormFisher': 0.35,
+    // Auto-fishing (fishing.md § 6): × bite wait, × rod / tree bonuses,
+    // × epic weight and × XP (Fishing and character).
+    'autoWaitMult': 2.0,
+    'autoPassiveMult': 0.5,
+    'autoEpicMult': 0.25,
+    'autoXpMult': 0.5,
     'faroCost': 300,
     // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
     // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo

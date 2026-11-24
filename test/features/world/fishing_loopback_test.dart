@@ -2,11 +2,13 @@ import 'package:echos_del_tiempo/features/world/presentation/session_controller.
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/models/fish_line.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
 import 'package:echos_del_tiempo/netcode/contracts/net_session.dart';
 import 'package:echos_del_tiempo/netcode/loopback/loopback_net_session.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../game_engine/session_test_helpers.dart';
@@ -120,5 +122,70 @@ void main() {
     expect(chat.any((t) => t.contains('Ana pescó')), isTrue);
     // El host también lo ve en su copia del perfil del cliente.
     expect(host.session!.players[me.localId]!.profile.life.bagTotal, 1);
+  });
+
+  test('loopback: R toggles auto-fishing; the host fishes for the client',
+      () async {
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub), cn = LoopbackNetSession(hub);
+    final hp = progression.normalize(PlayerProfile(name: 'Host', classId: 'maga'));
+    final cp = progression.normalize(PlayerProfile(name: 'Ana', classId: 'guerrero'));
+    await hn.connect(SessionConfig(profile: hp));
+    final host = make(hn, hp);
+    await host.start();
+    await cn.connect(SessionConfig(profile: cp, roomCode: hn.roomCode));
+    final me = make(cn, cp);
+    await me.start();
+    for (var i = 0; i < 3; i++) {
+      await tick(host, me);
+    }
+    final stops = <FishAutoStoppedEvent>[];
+    me.events.listen((e) {
+      if (e is FishAutoStoppedEvent) stops.add(e);
+    });
+    final spot = TownLayout.fishingSpots.first;
+    // ignore: invalid_use_of_visible_for_testing_member
+    me.teleport((spot.$1 + 1) * 16.0 + 4, (spot.$2 + 0.5) * 16.0);
+    await tick(host, me);
+    // Without the rod R is not auto-fishing.
+    expect(me.toggleAutoFish(), isFalse);
+    expect(me.startFishing(), isTrue);
+    me.updateLocal(0.05, 0, 0);
+    await tick(host, me);
+    expect(me.handleKey(LogicalKeyboardKey.keyR), isTrue);
+    expect(me.autoFishing, isTrue);
+    for (var i = 0; i < 3; i++) {
+      me.updateLocal(0.05, 0, 0);
+      await tick(host, me);
+    }
+    expect(host.session!.players[me.localId]!.fishLine?.auto, isTrue);
+    expect(me.view!.session.players[me.localId]!.fishLine?.auto, isTrue);
+    // Standing still for a while: the host catches fish for the client.
+    for (var i = 0; i < 400; i++) {
+      me.updateLocal(0.05, 0, 0);
+      await tick(host, me, 0.5);
+    }
+    expect(me.autoFishCaught, greaterThan(0));
+    final bag = host.session!.players[me.localId]!.profile.life.bagTotal;
+    expect(bag, me.autoFishCaught);
+    expect(host.session!.players[me.localId]!.profile.life.pity, 0);
+    // R again stops it, with the reason and the count.
+    expect(me.handleKey(LogicalKeyboardKey.keyR), isTrue);
+    expect(me.autoFishing, isFalse);
+    for (var i = 0; i < 3; i++) {
+      await tick(host, me);
+    }
+    expect(stops.single.reason, AutoFishStop.key);
+    expect(stops.single.caught, me.autoFishCaught);
+    expect(host.session!.players[me.localId]!.fishLine?.auto, isFalse);
+    // On again, then walking stops it.
+    expect(me.toggleAutoFish(), isTrue);
+    await tick(host, me);
+    me.updateLocal(0.05, 1, 0);
+    for (var i = 0; i < 3; i++) {
+      await tick(host, me);
+    }
+    expect(me.autoFishing, isFalse);
+    expect(stops.last.reason, AutoFishStop.moved);
   });
 }

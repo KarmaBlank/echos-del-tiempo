@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/models/fish_line.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
@@ -285,6 +286,136 @@ void main() {
       final b = ej.fromJson(ej.toJson(const FishCaughtEvent('p0', 'pez_reloj', 50, auto: true)))
           as FishCaughtEvent;
       expect((b.species, b.sizeCm, b.auto), ('pez_reloj', 50, true));
+    });
+  });
+
+  group('auto-pesca (fishing.md § 6)', () {
+    final spot = TownLayout.fishingSpots.first;
+    final x = (spot.$1 + 1) * 16.0 + 4, y = (spot.$2 + 0.5) * 16.0;
+    tearDown(() => kTuning[TuningId.town] = kTuningDefaults[TuningId.town]!);
+
+    void townTuning(Map<String, num> v) =>
+        kTuning[TuningId.town] = TuningDef('Pueblo', {
+          ...kTuningDefaults[TuningId.town]!.values,
+          ...v,
+        });
+
+    GameSession rodOut(SessionEngine e, {int pity = 0}) {
+      final prof = newProfile('Ana', 'guerrero');
+      var s = e
+          .addPlayer(e.create(), 'p0',
+              prof.copyWith(life: prof.life.copyWith(pity: pity)))!
+          .state;
+      s = moveTo(e, s, 'p0', x, y);
+      return act(e, s, 'p0', const FishLineAction(FishLine(FishLineStage.rod)));
+    }
+
+    (GameSession, List<SessionEvent>) autoFor(SessionEngine e, double sec,
+        {int pity = 0}) {
+      var s = rodOut(e, pity: pity);
+      s = act(e, s, 'p0', const FishAutoAction(true));
+      expect(s.players['p0']!.fishLine?.auto, isTrue);
+      final log = <SessionEvent>[];
+      s = wait(e, s, sec, log: log);
+      return (s, log);
+    }
+
+    test('needs the rod out; no manual bite while on', () {
+      final e = sessionEngine();
+      var s = e.addPlayer(e.create(), 'p0', newProfile('Ana', 'guerrero'))!.state;
+      s = moveTo(e, s, 'p0', x, y);
+      expect(e.apply(s, 'p0', const FishAutoAction(true)), isNull);
+      s = act(e, s, 'p0', const FishLineAction(FishLine(FishLineStage.rod)));
+      s = act(e, s, 'p0', const FishAutoAction(true));
+      expect(e.apply(s, 'p0', const FishBiteAction(1)), isNull);
+      expect(e.apply(s, 'p0', const FishAutoAction(true)), isNull);
+    });
+
+    test('catches with penalties: no legendary, pity untouched, less XP', () {
+      // Pity already full: a manual cast would be a sure legendary.
+      final after = FishingRules.t.i('pityAfter');
+      final (s, log) = autoFor(sessionEngine(), 600, pity: after);
+      final caught = log.whereType<FishCaughtEvent>().toList();
+      expect(caught, isNotEmpty);
+      expect(caught.every((c) => c.auto), isTrue);
+      expect(
+          caught.every((c) => kFish[c.species]!.rarity != FishRarity.legendario),
+          isTrue);
+      final p = s.players['p0']!.profile;
+      expect(p.life.pity, after);
+      expect(p.life.bagTotal, caught.length);
+      expect(p.life.dry, 0);
+      // XP of one auto catch = round(manual × autoXpMult).
+      final c = FishCatch(caught.first.species, caught.first.sizeCm);
+      final one = FishingRules.addCatch(newProfile('Ana', 'guerrero'), c,
+          keepPity: true, xpMult: 0.5, treeMult: 0.5);
+      final manual =
+          FishingRules.addCatch(newProfile('Ana', 'guerrero'), c);
+      expect(one.life.fishXp, lessThan(manual.life.fishXp));
+      expect(one.life.pity, 0);
+    });
+
+    test('autoWaitMult slows it down', () {
+      townTuning({'autoWaitMult': 1.0});
+      final fast = autoFor(sessionEngine(), 300)
+          .$2
+          .whereType<FishCaughtEvent>()
+          .length;
+      townTuning({'autoWaitMult': 4.0});
+      final slow = autoFor(sessionEngine(), 300)
+          .$2
+          .whereType<FishCaughtEvent>()
+          .length;
+      expect(slow, lessThan(fast));
+    });
+
+    test('epic weight × autoEpicMult; never legendary', () {
+      expect(FishingRules.rollRarity(0.9999, noLegend: true), FishRarity.epico);
+      // With epics at 0 the top roll is a rare.
+      expect(FishingRules.rollRarity(0.9999, noLegend: true, epicMult: 0),
+          FishRarity.raro);
+      expect(FishingRules.rollRarity(0.9999, pity: 1 << 20, noLegend: true),
+          isNot(FishRarity.legendario));
+    });
+
+    test('moving stops it with the reason and the count', () {
+      final e = sessionEngine();
+      var (s, log) = autoFor(e, 120);
+      final n = log.whereType<FishCaughtEvent>().length;
+      final step = e.apply(s, 'p0',
+          MoveAction(x + 3, y, epoch: s.players['p0']!.epoch, moving: true))!;
+      final stop = step.events.whereType<FishAutoStoppedEvent>().single;
+      expect((stop.reason, stop.caught), (AutoFishStop.moved, n));
+      s = step.state;
+      expect(s.players['p0']!.fishLine, isNull);
+      final after = <SessionEvent>[];
+      wait(e, s, 120, log: after);
+      expect(after.whereType<FishCaughtEvent>(), isEmpty);
+    });
+
+    test('R again (fAuto off) stops it; JSON round trip', () {
+      final e = sessionEngine();
+      var s = rodOut(e);
+      s = act(e, s, 'p0', const FishAutoAction(true));
+      final step =
+          e.apply(s, 'p0', const FishAutoAction(false, AutoFishStop.key))!;
+      expect(step.events.whereType<FishAutoStoppedEvent>().single.reason,
+          AutoFishStop.key);
+      expect(step.state.players['p0']!.fishLine?.auto, isFalse);
+      for (final a in const <SessionAction>[
+        FishAutoAction(true),
+        FishAutoAction(false, AutoFishStop.menu),
+      ]) {
+        expect(ActionJson.toJson(ActionJson.fromJson(ActionJson.toJson(a))),
+            ActionJson.toJson(a));
+      }
+      const ej = EventJson();
+      final b = ej.fromJson(ej.toJson(
+          const FishAutoStoppedEvent('p0', AutoFishStop.battle, 4)))
+          as FishAutoStoppedEvent;
+      expect((b.reason, b.caught), (AutoFishStop.battle, 4));
+      const l = FishLine(FishLineStage.rod, auto: true);
+      expect(FishLine.fromJson(l.toJson()), l);
     });
   });
 }

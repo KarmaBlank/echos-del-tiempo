@@ -1,6 +1,7 @@
 import '../models/ascension.dart' show TrapKind;
 import '../models/battle_event.dart';
 import '../models/elements.dart';
+import '../models/fish_line.dart' show AutoFishStop;
 import '../models/game_map.dart' show PoiKind, QuestKind;
 import '../models/game_session.dart';
 import '../models/item.dart' show CraftOp;
@@ -114,6 +115,12 @@ class EventJson {
             'x': e.tx,
             'y': e.ty,
             if (e.lost) 'l': true,
+          },
+        FishAutoStoppedEvent() => {
+            't': 'fAutoOff',
+            'id': e.playerId,
+            'r': e.reason.index,
+            'n': e.caught,
           },
         FishCaughtEvent() => {
             't': 'fCaught',
@@ -275,6 +282,10 @@ class EventJson {
       case 'bolt':
         return LightningEvent(j.integer('x'), j.integer('y'),
             lost: j['l'] == true);
+      case 'fAutoOff':
+        final r = j.integer('r').clamp(0, AutoFishStop.values.length - 1);
+        return FishAutoStoppedEvent(
+            j.str('id'), AutoFishStop.values[r], j.integer('n'));
       case 'fCaught':
         return FishCaughtEvent(j.str('id'), j.str('sp'), j.integer('cm'),
             auto: j['auto'] == true);

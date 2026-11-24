@@ -87,17 +87,24 @@ abstract final class FishingRules {
   // ---------------- tiradas ----------------
 
   /// Rareza: pesos del Balance; los no comunes × (1 + [rareBonus]).
-  /// [auto]: nunca legendario. [pity] alcanzado: legendario seguro.
+  /// [auto] / [noLegend]: nunca legendario (ni pity). [pity] alcanzado:
+  /// legendario seguro. [epicMult]: × peso del épico (auto-pesca, § 6).
   static FishRarity rollRarity(double roll,
-      {double rareBonus = 0, bool auto = false, int pity = 0}) {
+      {double rareBonus = 0,
+      bool auto = false,
+      bool noLegend = false,
+      double epicMult = 1,
+      int pity = 0}) {
+    final noLeg = auto || noLegend;
     final after = t.i('pityAfter');
-    if (!auto && after > 0 && pity >= after) return FishRarity.legendario;
+    if (!noLeg && after > 0 && pity >= after) return FishRarity.legendario;
     final w = {
       for (final r in FishRarity.values)
-        r: r == FishRarity.legendario && auto
+        r: r == FishRarity.legendario && noLeg
             ? 0.0
             : t.d('weight${r.key}') *
-                (r == FishRarity.comun ? 1 : 1 + math.max(0, rareBonus)),
+                (r == FishRarity.comun ? 1 : 1 + math.max(0, rareBonus)) *
+                (r == FishRarity.epico ? math.max(0.0, epicMult) : 1),
     };
     final total = w.values.fold(0.0, (a, b) => a + b);
     var x = roll.clamp(0.0, 0.999999) * total;
@@ -111,8 +118,17 @@ abstract final class FishingRules {
   /// El pez completo (rareza, especie del lago y tamaño). Si el lago no
   /// tiene especies de esa rareza baja a la de abajo.
   static FishCatch roll(double Function() rand, List<String> lake,
-      {double rareBonus = 0, bool auto = false, int pity = 0}) {
-    var r = rollRarity(rand(), rareBonus: rareBonus, auto: auto, pity: pity);
+      {double rareBonus = 0,
+      bool auto = false,
+      bool noLegend = false,
+      double epicMult = 1,
+      int pity = 0}) {
+    var r = rollRarity(rand(),
+        rareBonus: rareBonus,
+        auto: auto,
+        noLegend: noLegend,
+        epicMult: epicMult,
+        pity: pity);
     final pool = [for (final id in lake) if (kFish[id] != null) kFish[id]!];
     if (pool.isEmpty) return const FishCatch('mojarra_claro', 10);
     while (true) {
@@ -194,16 +210,23 @@ abstract final class FishingRules {
   static int charXp(FishCatch c, {bool auto = false}) =>
       (t.d('charXp${c.rarity.key}') * (auto ? t.d('autoMult') : 1)).round();
 
-  /// Suma la captura a [p]: bolsa, XP de Pesca y pity.
+  /// Suma la captura a [p]: bolsa, XP de Pesca y pity. [keepPity]: no
+  /// toca el pity (auto-pesca, § 6); [xpMult] × la XP de Pesca y
+  /// [treeMult] × el bonus de XP del árbol.
   static PlayerProfile addCatch(PlayerProfile p, FishCatch c,
-      {bool auto = false}) {
+      {bool auto = false,
+      bool keepPity = false,
+      double xpMult = 1,
+      double treeMult = 1}) {
     final l = p.life;
     return p.copyWith(
         life: l.addFish(c.species).copyWith(
             fishXp: l.fishXp +
-                (fishXp(c, auto: auto) * (1 + LifeTreeRules.fish(p, LifeFx.xp)))
+                (fishXp(c, auto: auto) *
+                        xpMult *
+                        (1 + LifeTreeRules.fish(p, LifeFx.xp) * treeMult))
                     .round(),
-            pity: auto
+            pity: auto || keepPity
                 ? l.pity
                 : c.rarity == FishRarity.legendario
                     ? 0

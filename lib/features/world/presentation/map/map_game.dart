@@ -1105,6 +1105,16 @@ class MapGame extends Game {
         // Solo el nombre, un paso más chico (v0.37.3).
         actors.text(c, p.name, px, py - 22,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 5);
+        // Auto-fishing tag with this session's catches (fishing.md § 6).
+        final auto = line != null &&
+            (mine ? controller.autoFishing : line.auto);
+        if (auto) {
+          final tag = mine
+              ? controller.strings.t('ui.world.ctl.autofish.tag',
+                  {'n': controller.autoFishCaught})
+              : controller.strings.t('ui.world.ctl.autofish.label');
+          actors.text(c, tag, px, py - 29, const Color(0xFF7FD8FF), 4);
+        }
       });
     }
 

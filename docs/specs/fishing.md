@@ -97,7 +97,9 @@ Pesca, `rods` cañas propias, `rod` la equipada, `bag` bolsa de Pescados
   La boya vuela 1 .. `maxCastTiles` (5) tiles en la dirección que mira y
   cae en ese tile del lago; si el tile no es agua (pasó el lago) el lance
   se pierde ("Cayó en la orilla."). E / clic clava la picada y, en la
-  pelea, mantener sube la zona. R: auto-pesca con la caña afuera.
+  pelea, mantener sube la zona. R con la caña afuera (sin lance o con la
+  boya esperando): prende / apaga la auto-pesca (§ 6). Con la caña
+  guardada, R sigue siendo "otra mano" en la huerta.
   Caminar o Esc guarda la caña (en plena pelea cuenta como escapado).
 - En el mapa: sombras de peces que nadan solo por tiles de agua (las
   cercanas se acercan a la boya), la boya tiembla con los señuelos, en la
@@ -198,18 +200,54 @@ Con tormenta (day_night_weather.md § 3.3) cada lance pica con chance
 `stormBite` (0.3, Pueblo en Editor → Balance); si no, se pierde al llegar
 la hora de la picada con "Con la tormenta no pica nada".
 
-## 6. Auto-pesca (se fue en v0.25.5)
+## 6. Auto-pesca (vuelve, protocolo 67)
 
-Ya no hay botón AUTO-PESCA ni tecla R: la reemplaza el PESCADOR de cada
-lago (farming.md § 8): saca peces solo, al cofre del lago, con la tabla
-de ese lago, nunca legendarios y poca XP para quien recoge.
+Se fue en v0.25.5 (la reemplazó el PESCADOR de cada lago, farming.md
+§ 8, que sigue igual). Vuelve como modo del jugador:
 
-## 7. Red (protocolo 43)
+- **Cuándo.** Con la caña afuera en una orilla (donde anda la pesca a
+  mano: lago del pueblo o agua de un bioma), sin lance o con la boya
+  esperando, R la prende. El personaje pesca solo mientras esté quieto.
+- **Qué la corta.** Caminar, abrir un menú o panel, entrar en pelea,
+  alejarse del agua / salir del pueblo, guardar la caña (Esc) o R de
+  nuevo. Con la caña guardada R no hace nada de pesca (cerca de la
+  huerta es "otra mano", farming.md § 4): sin conflicto, la caña afuera
+  tiene prioridad.
+- **Castigo** (Editor → Balance → Pueblo):
+  - `autoWaitMult` (2.0): × la espera de la picada (`biteDelay`).
+  - `autoPassiveMult` (0.5): × los bonus de la caña y del árbol de Pesca
+    (picada, rareza, XP del árbol). Muelle, lago y agua brillante igual.
+  - Nunca legendarios; `autoEpicMult` (0.25) × el peso de épico.
+  - `autoXpMult` (0.5): × XP de Pesca y de personaje (con el tope por
+    estadía de siempre). La primera captura de una especie da su extra.
+  - No suma ni consume pity (ni el de legendario ni el del botín).
+  - Solo peces: sin botín del agua (§ 8). Tamaño normal.
+  - Tormenta: cada picada pasa por `stormBite` como a mano (§ 5.4).
+- **Botín.** Cada pez va a la bolsa del jugador como a mano (y al
+  bestiario). La bolsa no tiene tope; si algún día lo tiene, la
+  auto-pesca para con aviso.
+- **HUD.** Arriba del personaje "AUTO-PESCA · N" (N = peces de esta
+  tanda) para uno; los demás ven "AUTO-PESCA". El aviso de abajo dice
+  que pesca sola y R para parar. Al cortarse, una línea en el registro
+  con el motivo y los peces.
+- **Red.** El anfitrión decide todo: `fAuto {on}` la prende si hay
+  `fl` (caña afuera), está en el pueblo / bioma, cerca del agua y no la
+  tenía; marca `fl` con auto y tira las picadas en su tick. El cliente
+  manda `fAuto {r}` (motivo) al cortarla; el anfitrión manda
+  `fAutoOff {id, r, n}` siempre (también cuando la corta él: pelea,
+  caminar, `fLn` vacío). Cada uno de la sala tiene la suya.
+- Estado no persistido (`FishingHostState.auto`).
+
+## 7. Red (protocolo 43; auto-pesca en 67)
 
 - Acciones: `fBite {pw}` (clavó; carga del lance), `fRes {ok}`,
-  `fAuto`, `fSell {sp?, mat?}`, `fSwap {sp}`, `rodBuy {r}`, `rodEq {r}`.
+  `fAuto {on?, r?}` (§ 6; `r` = motivo al apagarla: 0 R, 1 caminó,
+  2 menú, 3 pelea, 4 se fue), `fSell {sp?, mat?}`, `fSwap {sp}`,
+  `rodBuy {r}`, `rodEq {r}`.
 - Eventos: `fBite {id, sp, cm}` (el pez que tiró el anfitrión),
-  `fCaught {id, sp, cm, auto?}`.
+  `fCaught {id, sp, cm, auto?}`, `fAutoOff {id, r, n}` (§ 6).
+- `fl` lleva un 4.º campo `1` con la auto-pesca prendida (con `bx, by`
+  aunque no haya boya).
 - `fLn {l?}` (v0.22.2): lo que se ve de la pesca (`FishLine`: etapa
   caña / carga / boya / picada / pelea y la boya en px). El host lo
   valida (pueblo, agua cerca, boya en un tile del lago al alcance) y lo

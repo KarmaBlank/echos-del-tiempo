@@ -18,22 +18,46 @@ enum FishLineStage {
   reel,
 }
 
+/// Why auto-fishing stopped (fishing.md § 6).
+enum AutoFishStop {
+  /// R pressed again.
+  key,
+
+  /// The player walked (or put the rod away).
+  moved,
+
+  /// A menu or panel opened.
+  menu,
+
+  /// Pulled into a battle.
+  battle,
+
+  /// Left the town or the shore.
+  left,
+}
+
 class FishLine {
-  const FishLine(this.stage, {this.bx = 0, this.by = 0});
+  const FishLine(this.stage, {this.bx = 0, this.by = 0, this.auto = false});
 
   final FishLineStage stage;
 
   /// Boya en px del mapa (solo con [hasBobber]).
   final double bx, by;
 
+  /// Auto-fishing on (fishing.md § 6). Only the host sets it.
+  final bool auto;
+
   bool get hasBobber =>
       stage == FishLineStage.line ||
       stage == FishLineStage.bite ||
       stage == FishLineStage.reel;
 
+  FishLine withAuto(bool on) => FishLine(stage, bx: bx, by: by, auto: on);
+
   List<Object> toJson() => [
         stage.index,
-        if (hasBobber) ...[bx, by]
+        if (hasBobber || auto) ...[bx, by],
+        if (auto) 1,
       ];
 
   static FishLine? fromJson(Object? raw) {
@@ -43,7 +67,8 @@ class FishLine {
     final st = FishLineStage.values[i];
     double at(int k) =>
         raw.length > k && raw[k] is num ? (raw[k] as num).toDouble() : 0;
-    return FishLine(st, bx: at(1), by: at(2));
+    return FishLine(st,
+        bx: at(1), by: at(2), auto: raw.length > 3 && raw[3] == 1);
   }
 
   @override
@@ -51,8 +76,9 @@ class FishLine {
       other is FishLine &&
       other.stage == stage &&
       other.bx == bx &&
-      other.by == by;
+      other.by == by &&
+      other.auto == auto;
 
   @override
-  int get hashCode => Object.hash(stage, bx, by);
+  int get hashCode => Object.hash(stage, bx, by, auto);
 }
