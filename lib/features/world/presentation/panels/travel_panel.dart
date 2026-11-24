@@ -9,6 +9,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../endgame/presentation/eco_zone_hub.dart';
 import '../world_strings.dart';
+import 'world_event_cells.dart';
 
 /// MAPA DE VIAJE (overworld_biomes.md § 1): el pueblo y los biomas; cada
 /// uno viaja por su cuenta. Los biomas que faltan se ven en gris
@@ -86,6 +87,11 @@ class _TravelPanelState extends State<TravelPanel> {
                 softWrap: true,
                 style: DsText.detail(b.open ? null : DsColors.textDisabled)),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (worldEventBadge(context, c.town.events, b.id)
+                  case final ev?) ...[
+                ev,
+                SizedBox(width: DsSpace.sm),
+              ],
               if (at[b.id] case final names? when names.isNotEmpty) ...[
                 PlayersHereBadge(
                     key: ValueKey('travel-players-${b.id}'),

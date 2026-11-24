@@ -17,11 +17,13 @@ import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
 import '../../../../game_engine/data/biomes_catalog.dart'
-    show BiomeNpcDef, biomeLayout;
+    show BiomeNpcDef, biomeLayout, kPueblo;
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart' show kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/data/world_events_catalog.dart';
+import '../../../../game_engine/rules/world_event_rules.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -752,6 +754,44 @@ class MapGame extends Game {
 
   /// Etiqueta con [priority] (no se pisa con las otras con prioridad).
   /// Marca del habitante [n] para el jugador local (roles.md § 8.4).
+  void _drawWorldEvents(Canvas c, GameSession s, String place, double t) {
+    for (final a in s.town.events.at(place)) {
+      final d = kWorldEvents.def(a.def);
+      if (d == null || !WorldEventRules.hasActor(d.category)) continue;
+      final at = WorldEventRules.spot(s.town, a);
+      if (at == null) continue;
+      final (x, y) = at;
+      if (d.category == WorldEventCategory.echoPortal) {
+        final closed = s.town.events.clearedBy(a.uid, controller.localId);
+        final pulse = 0.5 + 0.5 * math.sin(t / 260);
+        final color = (closed ? DsColors.textSecondary : DsColors.danger)
+            .withValues(alpha: closed ? 0.35 : 0.55 + 0.4 * pulse);
+        c.drawOval(
+            Rect.fromCenter(center: Offset(x, y), width: 18, height: 24),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2
+              ..color = color);
+        c.drawOval(
+            Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
+            Paint()..color = color.withValues(alpha: 0.25));
+        _rankedText(c, d.title.text.toUpperCase(), x, y - 18,
+            TownPalette.label, 6, 899);
+        continue;
+      }
+      final im = sprites.lifeIcon(d.sprite, 'herramienta');
+      final bottom = y + 8;
+      if (im != null) {
+        final w = im.width.toDouble(), h = im.height.toDouble();
+        c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+            Rect.fromLTWH(x - w / 2, bottom - h, w, h),
+            SpriteCatalog.pixelPaint());
+      }
+      _rankedText(c, d.title.text.toUpperCase(), x, bottom - 20,
+          TownPalette.label, 6, 899);
+    }
+  }
+
   NpcMark _npcMark(BiomeNpcDef n) {
     final v = controller.view;
     final p = v?.me?.profile;
@@ -975,6 +1015,9 @@ class MapGame extends Game {
               c, f.name.toUpperCase(), fx, fy - 12, TownPalette.label, 6, 898);
         }
       }
+      // World event actors (world_events.md § 3): visitors, wanderers,
+      // caravans and echo rift portals, for their days.
+      _drawWorldEvents(c, s, map.place ?? kPueblo, t);
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);

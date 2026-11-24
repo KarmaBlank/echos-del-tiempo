@@ -164,7 +164,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// start on the room clock) in each resident.
 /// 69: Prisa in the round modes (turn_modes.md § 4.2): `hn` in the
 /// battle snapshot; Por fases may send `ro`.
-const kProtocolVersion = 69;
+/// 70: world events (world_events.md § 5): `wev` in the town, the
+/// `riftGo` action and lore quest progress.
+const kProtocolVersion = 70;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

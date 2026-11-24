@@ -53,6 +53,7 @@ import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/biome_npc_panel.dart';
 import 'panels/biome_fisher_panel.dart';
+import 'panels/world_event_panel.dart';
 import 'panels/quest_log_panel.dart';
 import 'panels/travel_panel.dart';
 import 'panels/helper_panel.dart';
@@ -1095,6 +1096,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return BiomeNpcPanel(view: view, controller: controller);
       case WorldPanel.biomeFisher:
         return BiomeFisherPanel(view: view, controller: controller);
+      case WorldPanel.worldEvent:
+        return WorldEventPanel(view: view, controller: controller);
       case WorldPanel.questLog:
         return QuestLogPanel(view: view, controller: controller);
       case WorldPanel.helper:

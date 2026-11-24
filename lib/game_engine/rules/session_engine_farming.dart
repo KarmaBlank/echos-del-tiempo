@@ -132,6 +132,7 @@ extension _FarmingOp on _Op {
         for (final e in s.town.daily.entries)
           if (e.key.endsWith(':${sky.day}')) e.key: e.value,
       });
+      _worldEventsDay(sky.day);
     }
     if (SkyRules.now(sky) != Weather.tormenta) {
       _fa.boltAcc = 0;
@@ -155,6 +156,23 @@ extension _FarmingOp on _Op {
             '${kCrops[hit.seed]?.name.toLowerCase() ?? 'un cultivo'}.');
       }
     }
+  }
+
+  /// World events (world_events.md § 2): expiry and the deterministic
+  /// roll on a new world day. Host only; the state travels in the town.
+  void _worldEventsDay(int day) {
+    var ev = s.town.events;
+    if (ev.seed == 0) {
+      ev = ev.copyWith(seed: 1 + (_rand() * 0x7FFFFFFE).floor());
+    }
+    // The notice line is added by every peer in its own language when
+    // the event shows up in the town (SessionController).
+    final (next, _) = WorldEventRules.onDay(ev, day, kWorldEvents,
+        ctx: WorldEventContext(residents: {
+          for (final r in s.town.residents.values)
+            if (r.invited) r.npc
+        }));
+    if (next != s.town.events) s.town = s.town.copyWith(events: next);
   }
 
   /// Misión ganada: los cultivos dan un salto y los peces pueden criar.

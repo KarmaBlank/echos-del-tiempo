@@ -32,6 +32,8 @@ import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
+import '../../../game_engine/data/world_events_catalog.dart';
+import '../../../game_engine/rules/world_event_rules.dart';
 import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
 import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
@@ -1445,6 +1447,34 @@ class SessionController extends StateNotifier<SessionView?> {
     openPanel(WorldPanel.biomeNpc);
   }
 
+  /// The world event actor in reach (visitor, wanderer, caravan or an
+  /// open rift portal; world_events.md § 3), or `null`.
+  ActiveWorldEvent? get nearWorldEvent {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby || editingTown) return null;
+    return WorldEventRules.near(s.town, s.place ?? kPueblo, local.x, local.y,
+        player: localId);
+  }
+
+  /// The event whose panel is open.
+  String? worldEventUid;
+
+  ActiveWorldEvent? get worldEvent => town.events.active
+      .where((a) => a.uid == worldEventUid)
+      .firstOrNull;
+
+  void openWorldEvent(ActiveWorldEvent a) {
+    worldEventUid = a.uid;
+    openPanel(WorldPanel.worldEvent);
+  }
+
+  /// ENTRAR to the rift [uid] (host decides; gathers like missions).
+  bool enterRift(String uid) {
+    closePanel();
+    stopFishing();
+    return _apply(ProposeRiftAction(uid));
+  }
+
   /// El pescador nativo cerca del jugador local (fishing.md § 12).
   BiomeFisherDef? get nearFisher {
     final s = _s;
@@ -2780,6 +2810,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
         openPanel(WorldPanel.travel);
+      } else if (nearWorldEvent case final a?) {
+        openWorldEvent(a);
       } else if (nearNpc case final n?) {
         talkNpc = n;
         openPanel(WorldPanel.biomeNpc);
@@ -3879,7 +3911,23 @@ class SessionController extends StateNotifier<SessionView?> {
   // Estado
   // ------------------------------------------------------------------
 
+  /// World events (world_events.md § 6): every peer adds the notice of a
+  /// new event in its own language. Nothing on the first state (joining).
+  void _announceWorldEvents(WorldEventsState? before, WorldEventsState now) {
+    if (before == null) return;
+    final old = {for (final a in before.active) a.uid};
+    for (final a in now.active) {
+      if (old.contains(a.uid)) continue;
+      final text = kWorldEvents.def(a.def)?.notice.text;
+      if (text == null || text.isEmpty) continue;
+      _messages.add(text);
+      if (_messages.length > maxMessages) _messages.removeAt(0);
+      _addChat(ChatLine.system(text));
+    }
+  }
+
   void _step(SessionStep step) {
+    _announceWorldEvents(_s?.town.events, step.state.town.events);
     _s = step.state;
     _saveRun();
     _settleRun();
@@ -4366,6 +4414,16 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));
+    if (nearWorldEvent case final a?) {
+      final d = kWorldEvents.def(a.def);
+      return (
+        WorldPrompt.poi,
+        d?.category == WorldEventCategory.echoPortal
+            ? strings.t('ui.town.events.prompt_rift')
+            : strings.t('ui.world.ctl.prompt_talk',
+                {'name': d?.title.text ?? a.def})
+      );
+    }
     if (nearNpc case final n?) {
       return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': n.name}));
     }
