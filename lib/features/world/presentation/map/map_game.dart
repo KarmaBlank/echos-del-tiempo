@@ -961,6 +961,7 @@ class MapGame extends Game {
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
         farm.drawPlots(c, s.town, worldView, t);
+        farm.drawSigns(c, s.town);
         farm.drawHelpers(
             c,
             s.town,
@@ -1495,11 +1496,28 @@ class MapGame extends Game {
             : w == Weather.lluvia
                 ? 'Llueve'
                 : w.label;
-    if (txt == null) return;
+    if (txt != _skyNoticeTxt) {
+      _skyNoticeTxt = txt;
+      _skyNoticeT0 = txt == null ? null : _now;
+    }
+    final t0 = _skyNoticeT0;
+    if (txt == null || t0 == null) return;
+    // Like a snackbar: 3 s, the last 0.5 s fading out.
+    final q = (_now - t0) / skyNoticeMs;
+    if (q >= 1) return;
+    final a = (q < 5 / 6 ? 1.0 : (1 - q) * 6).clamp(0.0, 1.0);
     c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
-        Paint()..color = SkyPalette.forecastBack);
-    actors.text(c, txt, vw / 2, 40, SkyPalette.forecast, 6);
+        Paint()..color = SkyPalette.forecastBack.withValues(
+            alpha: SkyPalette.forecastBack.a * a));
+    actors.text(c, txt, vw / 2, 40,
+        SkyPalette.forecast.withValues(alpha: a), 6);
   }
+
+  /// How long the weather / forecast notice stays up (ms).
+  static const skyNoticeMs = 3000.0;
+  String? _skyNoticeTxt;
+  double? _skyNoticeT0;
+  double get _now => DateTime.now().millisecondsSinceEpoch.toDouble();
 
   /// Llama errante por jugador: posición suavizada y estela.
   final _wisps = <String, _Wisp>{};
