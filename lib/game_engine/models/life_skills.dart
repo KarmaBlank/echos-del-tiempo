@@ -1,3 +1,4 @@
+import '../data/bait_catalog.dart';
 import '../data/fishing_catalog.dart';
 import 'farm_skills.dart';
 
@@ -24,7 +25,14 @@ class LifeSkills {
     this.smithXp = 0,
     List<String> smithTree = const [],
     Map<String, int> log = const {},
-  })  : farm = farm ?? FarmSkills.initial,
+    Map<String, int> baits = const {},
+    String? bait,
+  })  : baits = Map.unmodifiable({
+          for (final e in baits.entries)
+            if (e.value > 0 && kBaits.containsKey(e.key)) e.key: e.value,
+        }),
+        bait = bait != null && kBaits.containsKey(bait) ? bait : null,
+        farm = farm ?? FarmSkills.initial,
         crafts = Map.unmodifiable({
           for (final e in crafts.entries)
             if (e.value > 0 && kLifeMaterialIds.contains(e.key)) e.key: e.value,
@@ -93,6 +101,16 @@ class LifeSkills {
 
   bool discovered(String species) => log.containsKey(species);
 
+  /// Baits (fishing.md § 14): id → count, and the one picked on the
+  /// CEBO slot (`null` = the best owned).
+  final Map<String, int> baits;
+  final String? bait;
+  int baitCount(String id) => baits[id] ?? 0;
+  LifeSkills addBait(String id, [int n = 1]) {
+    final left = baitCount(id) + n;
+    return copyWith(baits: {...baits, id: left < 0 ? 0 : left});
+  }
+
   int count(String species) => bag[species] ?? 0;
   int get bagTotal => bag.values.fold(0, (a, b) => a + b);
 
@@ -109,6 +127,8 @@ class LifeSkills {
     int? smithXp,
     List<String>? smithTree,
     Map<String, int>? log,
+    Map<String, int>? baits,
+    String? bait,
   }) =>
       LifeSkills(
           fishXp: fishXp ?? this.fishXp,
@@ -122,7 +142,9 @@ class LifeSkills {
           crafts: crafts ?? this.crafts,
           smithXp: smithXp ?? this.smithXp,
           smithTree: smithTree ?? this.smithTree,
-          log: log ?? this.log);
+          log: log ?? this.log,
+          baits: baits ?? this.baits,
+          bait: bait ?? this.bait);
 
   /// Anota la captura en el bestiario (récord de tamaño).
   LifeSkills logCatch(String species, int cm) =>
@@ -144,6 +166,8 @@ class LifeSkills {
         if (smithXp > 0) 'sx': smithXp,
         if (smithTree.isNotEmpty) 'st': smithTree,
         if (log.isNotEmpty) 'lg': log,
+        if (baits.isNotEmpty) 'bt': baits,
+        if (bait != null) 'bs': bait,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -182,6 +206,13 @@ class LifeSkills {
                 '${e.key}': n(e.value)
             }
           : const {},
+      baits: raw['bt'] is Map
+          ? {
+              for (final e in (raw['bt'] as Map).entries)
+                '${e.key}': n(e.value)
+            }
+          : const {},
+      bait: raw['bs'] is String ? raw['bs'] as String : null,
     );
   }
 
@@ -202,7 +233,10 @@ class LifeSkills {
       other.log.length == log.length &&
       log.entries.every((e) => other.log[e.key] == e.value) &&
       other.crafts.length == crafts.length &&
-      crafts.entries.every((e) => other.crafts[e.key] == e.value);
+      crafts.entries.every((e) => other.crafts[e.key] == e.value) &&
+      other.bait == bait &&
+      other.baits.length == baits.length &&
+      baits.entries.every((e) => other.baits[e.key] == e.value);
 
   @override
   int get hashCode => Object.hash(fishXp, rod, pity, rods.length, bag.length);

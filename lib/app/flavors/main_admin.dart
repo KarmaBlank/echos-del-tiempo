@@ -13,6 +13,7 @@ import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
 import '../../features/admin/presentation/editor/fx_editor_controller.dart';
 import '../../features/admin/presentation/editor/layout_editor_controller.dart';
+import '../../features/admin/presentation/editor/climate_editor_controller.dart';
 import '../../features/admin/presentation/editor/npc_editor_controller.dart';
 import '../../features/admin/presentation/editor/sprite_editor_controller.dart';
 import '../../features/combat/presentation/scene/fx_bridge.dart';
@@ -101,7 +102,9 @@ Future<void> main() async {
       screens: screens,
       // NPC (docs/specs/npc_editor.md).
       npcs: NpcEditorController(
-          balance: controller, spriteImage: sprites.imageOf)));
+          balance: controller, spriteImage: sprites.imageOf),
+      // CLIMA (docs/specs/weather_seasons.md § 8).
+      climate: ClimateEditorController(balance: controller)));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

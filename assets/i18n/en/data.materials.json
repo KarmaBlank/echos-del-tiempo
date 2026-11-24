@@ -1,4 +1,9 @@
 {
+  "data.materials.bait.cebo_escarcha.name": "Frost bait",
+  "data.materials.bait.cebo_tormenta.name": "Storm bait",
+  "data.materials.bait.larva_brillante.name": "Glowing larva",
+  "data.materials.bait.lombriz.name": "Worm",
+  "data.materials.bait.senuelo_eco.name": "Echo lure",
   "data.materials.crop.arandano_sombra.name": "Shadow blueberry",
   "data.materials.crop.arandano_sombra.seed": "Shadow blueberry seed",
   "data.materials.crop.arbol_paradoja.lore": "You already harvested it. Planting it just makes it true.",

@@ -684,7 +684,13 @@ enum FarmShopOp {
   sell,
   sellAll,
   exchange,
-  selectSeed
+  selectSeed,
+  // Cebos (fishing.md § 14): buy at the trader, pick / cycle on the CEBO
+  // slot and craft from pressed bait.
+  buyBait,
+  selectBait,
+  cycleBait,
+  craftBait
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.

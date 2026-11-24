@@ -133,10 +133,9 @@ void main() {
     });
 
     test('installing overrides fish and crop seasons and biome rules', () {
-      ClimateData(biomes: {
-        ...kBiomeClimateDefaults,
+      ClimateData(biomes: Map.of(kBiomeClimateDefaults)..addAll({
         kBosque: const BiomeClimate(exposure: Exposure.sheltered),
-      }, fishSeasons: {
+      }), fishSeasons: {
         'mojarra_claro': {Season.summer},
       }, cropSeasons: {
         'nabo_claro': {Season.winter},

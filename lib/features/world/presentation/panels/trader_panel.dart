@@ -1,11 +1,16 @@
 import '../../../inventory/domain/item_names.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/i18n/catalog_text.dart';
+import '../../../../game_engine/rules/bait_rules.dart';
+
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
+import '../../domain/town_names.dart';
+import 'bait_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
@@ -52,6 +57,7 @@ class _TraderPanelState extends State<TraderPanel> {
   /// Label of a filter kind (`null`: all).
   String _kindLabel(String? k) => context.t(switch (k) {
         'cañas' => 'ui.town.trader.kind.rods',
+        'cebos' => 'ui.town.trader.kind.baits',
         'semillas' => 'ui.town.trader.kind.seeds',
         'abonos' => 'ui.town.trader.kind.ferts',
         'azadas' => 'ui.town.trader.kind.hoes',
@@ -64,7 +70,7 @@ class _TraderPanelState extends State<TraderPanel> {
       });
 
   List<String> get _kinds => switch ((_mode, _tab)) {
-        (0, 0) => const ['cañas'],
+        (0, 0) => const ['cañas', 'cebos'],
         (0, _) => const ['semillas', 'abonos', 'azadas', 'regaderas'],
         (_, 0) => const ['peces', 'basura', 'legendarios'],
         _ => const ['cultivos', 'legendarios'],
@@ -315,6 +321,47 @@ class _TraderPanelState extends State<TraderPanel> {
                     : rodCompare(
                         r, kRods[p.life.rod] ?? kRods[kStarterRod]!, lvl),
                 actions: [_rodButton(r)],
+              ),
+            )),
+      // Cebos (fishing.md § 14.4).
+      for (final b in kBaits.values)
+        _Row(
+            'cebos',
+            LifeItemCellData(
+              id: 'trade-bait-${b.id}',
+              icon: LifeIcon('cebo_${b.id}', LifeIconKind.pescado, size: _icon),
+              border: fishRarityColor(b.rarity),
+              search: CatalogText.of(baitNameKey(b.id), b.name),
+              count: (p?.life.baitCount(b.id) ?? 0) > 0
+                  ? p!.life.baitCount(b.id)
+                  : null,
+              caption: context.t('ui.town.trader.price_short',
+                  {'n': BaitRules.price(b.id)}),
+              detail: LifeItemDetail(
+                name: CatalogText.of(baitNameKey(b.id), b.name),
+                nameColor: fishRarityColor(b.rarity),
+                tags: [
+                  (context.t('ui.town.trader.tag_bait'), DsColors.textSecondary),
+                  (b.rarity.text.toUpperCase(), fishRarityColor(b.rarity)),
+                ],
+                lines: [
+                  ...baitLines(context, b.id),
+                  context.t('ui.town.trader.have',
+                      {'n': p?.life.baitCount(b.id) ?? 0}),
+                  context.t('ui.town.trader.price_each',
+                      {'n': BaitRules.price(b.id)}),
+                ],
+                actions: [
+                  for (final q in const [1, 5])
+                    DsButton(
+                        context.t('ui.town.trader.buy_qty',
+                            {'qty': q, 'n': BaitRules.price(b.id) * q}),
+                        key: ValueKey('trade-bait-buy$q-${b.id}'),
+                        size: DsButtonSize.compact,
+                        onPressed: (p?.credits ?? 0) >= BaitRules.price(b.id) * q
+                            ? () => c.buyBait(b.id, q)
+                            : null),
+                ],
               ),
             )),
       for (final f in species)

@@ -469,6 +469,18 @@ extension _FarmingOp on _Op {
       case FarmShopOp.selectSeed:
         return id != null &&
             _profileChange(p, FarmingRules.selectSeed(prof, id));
+      case FarmShopOp.buyBait:
+        return id != null && _profileChange(p, BaitRules.buy(prof, id, a.n));
+      case FarmShopOp.selectBait:
+        return id != null && _profileChange(p, BaitRules.select(prof, id));
+      case FarmShopOp.cycleBait:
+        return _profileChange(p, BaitRules.cycle(prof));
+      case FarmShopOp.craftBait:
+        if (id == null || !_profileChange(p, BaitRules.craft(prof, id))) {
+          return false;
+        }
+        say('${p.name} preparó ${kBaits[id]!.name}.');
+        return true;
       case FarmShopOp.buyAbono:
         return id != null &&
             _profileChange(p, FarmingRules.buyFert(prof, id, a.n));

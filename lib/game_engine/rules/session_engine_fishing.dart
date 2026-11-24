@@ -133,7 +133,9 @@ extension _FishingOp on _Op {
     switch (kind) {
       case WaterLootKind.fish:
         fish = FishingRules.roll(_rand, w.table,
-            rareBonus: w.rare, pity: p.profile.life.pity);
+            rareBonus: w.rare,
+            pity: p.profile.life.pity,
+            sizeBonus: w.size);
       case WaterLootKind.basura:
         final junk = w.junk;
         final id = junk[(_rand() * junk.length).floor() % junk.length];
@@ -153,6 +155,7 @@ extension _FishingOp on _Op {
   /// [passive] scales the rod / tree bonuses (auto-fishing, § 6).
   ({
     List<String> table,
+    double size,
     List<String> junk,
     double rare,
     double dock,
@@ -176,7 +179,9 @@ extension _FishingOp on _Op {
         FishingCast.nearHiddenSpot(map, s.place!, math.max(1, s.town.sky.day),
             p.x, p.y, _ft.i('spotRadius'));
     final spotRare = spot ? _ft.d('spotRare') : 0.0;
-    final rare = bonus.rare +
+    final bait = BaitRules.active(p.profile);
+    final rare = (bait == null ? 0.0 : BaitRules.rare(bait)) +
+        bonus.rare +
         dock +
         spotRare +
         (wild ? 0.0 : TownRules.lakeRare(s.town, lake)) +
@@ -191,9 +196,12 @@ extension _FishingOp on _Op {
         _rand,
         biome: wild ? s.place : kTownStartBiome,
         weather: SkyRules.nowIn(s.town.sky, s.place));
+    // Cebo (fishing.md § 14): the fish it attracts weigh more, plus its
+    // rarity and size bonuses. Same rule for manual and auto.
     final junk = wild ? biome.junk : kWaterJunk;
     return (
-      table: table,
+      table: BaitRules.weighted(table, bait),
+      size: bait == null ? 0.0 : BaitRules.size(bait),
       junk: junk,
       rare: rare,
       dock: dock,
@@ -209,8 +217,10 @@ extension _FishingOp on _Op {
   /// Seconds until the next auto bite: the manual wait with the bonuses
   /// at `autoPassiveMult`, × `autoWaitMult`.
   double _autoWait(SessionPlayer p) {
+    final bait = BaitRules.active(p.profile);
     final bite =
-        FishingRules.rodBonus(p.profile).bite * _at.d('autoPassiveMult');
+        FishingRules.rodBonus(p.profile).bite * _at.d('autoPassiveMult') +
+            (bait == null ? 0.0 : BaitRules.bite(bait));
     return FishingRules.biteDelay(_rand(), bite) *
         math.max(0.1, _at.d('autoWaitMult'));
   }
@@ -266,7 +276,8 @@ extension _FishingOp on _Op {
       final fish = FishingRules.roll(_rand, w.table,
           rareBonus: w.rare,
           noLegend: true,
-          epicMult: _at.d('autoEpicMult'));
+          epicMult: _at.d('autoEpicMult'),
+          sizeBonus: w.size);
       st.caught++;
       _grantFish(p, fish, auto: true, log: true);
     }
@@ -323,6 +334,12 @@ extension _FishingOp on _Op {
         final n = cristal ? 1 : lo + (_rand() * (hi - lo + 1)).floor();
         drops.add(LootDrop.stack(k, n));
         label = '$n ${k.label}';
+        // Sometimes a bait comes up with it (fishing.md § 14.4).
+        if (_rand() < _ft.d('baitWaterChance')) {
+          final b = BaitRules.foundBait(_rand());
+          p.profile = p.profile.copyWith(life: p.profile.life.addBait(b));
+          label = '$label y ${kBaits[b]!.name}';
+        }
         rarity = cristal ? Rarity.epico : Rarity.raro;
       case WaterLootKind.cofre:
         final tier = _rand() < 0.15 ? ChestTier.plata : ChestTier.madera;
@@ -380,6 +397,9 @@ extension _FishingOp on _Op {
         treeMult: auto ? _at.d('autoPassiveMult') : 1.0);
     if (log) {
       prof = prof.copyWith(life: prof.life.logCatch(c.species, c.sizeCm));
+      // One bait per catch (fishing.md § 14.3), manual or auto.
+      final bait = BaitRules.active(prof);
+      if (bait != null) prof = BaitRules.consume(prof, bait);
     }
     // Primera captura de la especie (fishing.md § 10): XP de Pesca y de
     // personaje extra, sin el tope por estadía.

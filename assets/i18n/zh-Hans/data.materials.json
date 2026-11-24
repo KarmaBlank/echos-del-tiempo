@@ -1,4 +1,9 @@
 {
+  "data.materials.bait.cebo_escarcha.name": "霜饵",
+  "data.materials.bait.cebo_tormenta.name": "风暴饵",
+  "data.materials.bait.larva_brillante.name": "发光幼虫",
+  "data.materials.bait.lombriz.name": "蚯蚓",
+  "data.materials.bait.senuelo_eco.name": "回响拟饵",
   "data.materials.crop.arandano_sombra.name": "",
   "data.materials.crop.arandano_sombra.seed": "",
   "data.materials.crop.arbol_paradoja.lore": "",

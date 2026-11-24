@@ -131,6 +131,25 @@ void main() {
     expect(c.farmHandManual, isFalse);
   });
 
+  testWidgets('CEBO slot with the rod out: count, best by default, cycle',
+      (tester) async {
+    final base = _profile();
+    final h = await FishingMapHarness.pump(tester,
+        profile: base.copyWith(
+            life: base.life.addBait('lombriz', 7).addBait('cebo_tormenta', 2)));
+    final c = h.c;
+    expect(c.activeTool, ActiveTool.rod);
+    expect(find.byKey(const ValueKey('hud-tool-bait')), findsOneWidget);
+    expect(find.byKey(const ValueKey('hud-bait-icon')), findsOneWidget);
+    // Best (rarest) owned bait by default.
+    expect(c.activeBait, 'cebo_tormenta');
+    expect(find.text('×2'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('hud-tool-bait')));
+    await h.frames(2);
+    expect(c.activeBait, 'lombriz');
+    expect(find.text('×7'), findsOneWidget);
+  });
+
   testWidgets('en una misión no hay HUD de herramienta', (tester) async {
     final h = await FishingMapHarness.pump(tester, profile: _profile());
     final c = h.c;

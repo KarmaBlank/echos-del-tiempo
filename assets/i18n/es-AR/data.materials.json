@@ -1,4 +1,9 @@
 {
+  "data.materials.bait.cebo_escarcha.name": "Cebo de escarcha",
+  "data.materials.bait.cebo_tormenta.name": "Cebo de tormenta",
+  "data.materials.bait.larva_brillante.name": "Larva brillante",
+  "data.materials.bait.lombriz.name": "Lombriz común",
+  "data.materials.bait.senuelo_eco.name": "Señuelo del eco",
   "data.materials.crop.arandano_sombra.name": "Arándano de sombra",
   "data.materials.crop.arandano_sombra.seed": "Semilla de arándano de sombra",
   "data.materials.crop.arbol_paradoja.lore": "Ya lo cosechaste. Plantarlo es solo cumplirlo.",
