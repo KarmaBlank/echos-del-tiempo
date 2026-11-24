@@ -110,7 +110,12 @@ class Minimap extends StatelessWidget {
     this.view,
     this.center,
     this.fog,
+    this.exit,
   });
+
+  /// Salida de la mazmorra (free_movement.md § 2.4), en píxeles del mapa;
+  /// se marca como una escalera. `null` = no hay.
+  final Offset? exit;
 
   /// Niebla de una mazmorra oscura (lighting.md § 5.4): sin explorar no
   /// se ve; los enemigos, solo a la vista. `null` o inactiva = sin niebla.
@@ -342,6 +347,9 @@ class _MinimapPainter extends CustomPainter {
             break;
         }
       }
+      if (w.exit case final ex?) {
+        dot(ex.dx, ex.dy, MapPalette.mark(MapMark.stairs), 3);
+      }
       // Puntos de interés descubiertos (worldgen.md § 11.7).
       for (final (poi, c) in minimapPois(map.floor(m.floor), m)) {
         if (!known(poi.center.x, poi.center.y)) continue;
@@ -411,8 +419,8 @@ class _MinimapPainter extends CustomPainter {
           x++;
         }
         c.drawRect(
-            Rect.fromLTWH(start.toDouble(), y.toDouble(),
-                (x - start).toDouble(), 1),
+            Rect.fromLTWH(
+                start.toDouble(), y.toDouble(), (x - start).toDouble(), 1),
             p);
       }
     }

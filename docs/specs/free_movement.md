@@ -93,7 +93,13 @@ solo; los demás siguen adentro.
 - Dónde: caminando a la entrada del piso 1 (a `exitReach` = 28 px del
   punto de llegada del piso 0) o junto a una piedra de paso activada del
   piso actual (la misma mecánica de viaje rápido, worldgen.md § 11.4).
-  La UI muestra SALIR DE LA MAZMORRA ahí (`canLeaveDungeon`).
+  La UI muestra SALIR DE LA MAZMORRA ahí (`canLeaveDungeon`), arriba al
+  centro del HUD, sin pisar nada (exploration.md § "HUD").
+- Se ve en el mapa (v0.42.0): un portal de salida en la llegada del piso
+  1 (`MapGame.dungeonExitAt`), sprite `items.vida_salida_mazmorra` del
+  manifest (placeholder de píxeles, se cambia desde el editor), y una
+  marca de escalera en el minimapa. Solo con movimiento libre, fuera del
+  TUTORIAL y de la Travesía.
 - Cuándo: solo en el campo (`field`), vivo, sin resultado. **No en
   batalla** ni repartiendo puntos (`levelUp`): primero se termina la
   pelea. Tampoco en el TUTORIAL ni en la Travesía.
@@ -109,6 +115,16 @@ solo; los demás siguen adentro.
   ENTRAR la restaura; Ecos, Pruebas y Abismo arman una nueva.
 - Sus compañeros de solitario salen con él.
 
+### 2.5 IR CON otro jugador (v0.42.0, protocolo 63)
+
+`JoinPlayerAction` (`joinP`, `{p: id}`): pasa al jugador (y sus
+compañeros) a la instancia de otro jugador humano, a su misma posición.
+Pueblo, bioma o mazmorra, sin revisar zonas desbloqueadas (es ir con un
+amigo). Solo si las dos instancias están en `lobby` o `field`, sin
+resultado, fuera del TUTORIAL y de la Travesía
+(`WorldEngine.canJoin`); si no, se rechaza. El cliente lo sabe por
+`AwayPlayer.busy`.
+
 ### 2.3 Cerrar
 
 Una instancia de mazmorra que vuelve a `lobby` sin misión (`toLobby`)
@@ -122,7 +138,9 @@ se cierra. El `pueblo` nunca.
   ella. Los perfiles que van en `pp` son solo los de esa instancia. El
   ancho de banda es el de una sala con los que están en el mismo lugar.
 - `GameSession.away` (`aw`): los que están en otro lugar, `[id, nombre,
-  dónde]`, para la lista del grupo. Se recalcula solo cuando alguien se
+  dónde, clave, ocupado?]`, para la lista del grupo. `clave` (protocolo
+  63): `pueblo`, el id del bioma o `m:<misión>` (vacía en el TUTORIAL);
+  `ocupado` (`1`, se omite si no): su instancia no admite IR CON. Se recalcula solo cuando alguien se
   mueve, entra o sale.
 - Protocolo 57: un cliente viejo no entiende salas partidas; hay que
   actualizar.
@@ -133,7 +151,19 @@ se cierra. El `pueblo` nunca.
   (`SessionController.session` = la instancia del jugador local).
 - El mapa de viaje: VIAJAR para todos (sin "Decide el anfitrión");
   gris solo si el bioma está cerrado para uno o si está en mazmorra.
-- La lista del grupo en el HUD suma "En otro lugar: Nombre (Bosque)".
+- Cajas del grupo (v0.42.0): siempre están todos. Los que están en otro
+  lugar salen con una caja atenuada con su nombre, dónde está y
+  `IR CON <nombre>` (§ 2.5; gris si no se puede).
+
+### 4.1 Dónde están los demás (v0.42.0)
+
+`playersByPlace` (`features/world/domain/player_locations.dart`) junta
+los de la propia instancia y `away` por clave de destino. En el
+MOSTRADOR, cada fila de zona / misión con gente muestra una insignia
+(ícono de persona + cantidad, `PlayersHereBadge`) y en el MAPA DE VIAJE
+cada bioma igual; al pasar el mouse, un tooltip de tamaño fijo con
+"Jugadores acá" y los nombres. Sin datos nuevos en la red aparte de la
+clave del § 3.
 - Las acciones del pueblo (pesca, huerta, forraje, habitantes) ya miran
   el `mode` / `place` de la instancia del jugador, o sea su propio lugar.
 

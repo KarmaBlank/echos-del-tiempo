@@ -9,6 +9,7 @@ import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../app/widgets/menu_focus.dart';
+import '../../../app/widgets/players_here_badge.dart';
 import 'mission_card.dart';
 import '../../../core/i18n/i18n_providers.dart';
 
@@ -30,7 +31,12 @@ class MissionBoardPanel extends ConsumerStatefulWidget {
     this.tutorial,
     this.lockText,
     this.tutorialDone = true,
+    this.playersAt = const {},
   });
+
+  /// Other players in each mission / zone dungeon, by mission id
+  /// (free_movement.md § 4.1): a badge with their names on the row.
+  final Map<String, List<String>> playersAt;
 
   /// Las 10 zonas con su estado para el jugador local
   /// (`ZoneRules.zoneList`). Con zonas, el mostrador lista las zonas en
@@ -99,9 +105,8 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
               ref.t(widget.tutorialDone
                   ? 'ui.missions.board.done'
                   : 'ui.missions.board.pending'),
-              style: DsText.detail(widget.tutorialDone
-                  ? DsColors.success
-                  : DsColors.warning)),
+              style: DsText.detail(
+                  widget.tutorialDone ? DsColors.success : DsColors.warning)),
         ),
       );
 
@@ -191,8 +196,8 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
                           SizedBox(height: 420, child: w.tutorial),
                         ])
                       : sel == null
-                      ? const PanelDetail(children: [])
-                      : _detail(sel.$1, sel.$2),
+                          ? const PanelDetail(children: [])
+                          : _detail(sel.$1, sel.$2),
                 ),
               ),
             ],
@@ -217,15 +222,26 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
         autofocus: selected,
         onTap: () => setState(() => _sel = m.id),
         leading: Text(m.rank, style: DsText.subtitle(DsColors.warning)),
-        trailing: Text(
-            locked
-                ? ref.t('ui.missions.locked')
-                : ref.t('ui.missions.level_short', {'level': m.recommendedLevel}),
-            style: DsText.detail(locked
-                ? DsColors.textSecondary
-                : low
-                    ? DsColors.danger
-                    : DsColors.success)),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (widget.playersAt[m.id] case final names?
+              when names.isNotEmpty) ...[
+            PlayersHereBadge(
+                key: ValueKey('mission-players-${m.id}'),
+                names: names,
+                title: ref.t('ui.world.players_here.title')),
+            SizedBox(width: DsSpace.sm),
+          ],
+          Text(
+              locked
+                  ? ref.t('ui.missions.locked')
+                  : ref.t(
+                      'ui.missions.level_short', {'level': m.recommendedLevel}),
+              style: DsText.detail(locked
+                  ? DsColors.textSecondary
+                  : low
+                      ? DsColors.danger
+                      : DsColors.success)),
+        ]),
       ),
     );
   }
@@ -260,7 +276,6 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
             tooltip: reason,
             onPressed: reason == null ? () => w.onPropose(m.id) : null),
       ],
-
       children: [
         MissionCard(
           key: ValueKey('mission-card-${m.id}'),

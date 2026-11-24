@@ -154,7 +154,8 @@ class WorldHud extends StatelessWidget {
       final rightWidth = partyWidth < RetroType.width(context, 280)
           ? RetroType.width(context, 280)
           : partyWidth;
-      final toolRoom = controller.activeTool == null ? 0.0 : ToolHud.width + _gap;
+      final toolRoom =
+          controller.activeTool == null ? 0.0 : ToolHud.width + _gap;
       var chatWidth = (box.maxWidth - rightWidth - _gap * 3 - toolRoom)
           .clamp(chatMin, RetroType.width(context, 520));
       // Con herramienta, el chat termina antes de la barra centrada.
@@ -178,16 +179,24 @@ class WorldHud extends StatelessWidget {
                 children: [
                   LayoutId(
                     id: _TopSlot.bar,
-                    child: Memo(
-                      deps: [
-                        _MissionBar.textFor(view, _missionName(s, worldStrings(context)),
-                            worldStrings(context)),
-                        turnTimerNote(view),
+                    // Sin banner de misión en la mazmorra (exploration.md § "HUD"): el
+                    // resumen de objetivos ya lo dice. Arriba al centro queda
+                    // `SALIR DE LA MAZMORRA`, sin pisar nada.
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (controller.canLeaveDungeon)
+                          DsButton(context.t('ui.world.hud.leave_dungeon'),
+                              key: const ValueKey('hud-leave-dungeon'),
+                              onPressed: controller.leaveDungeon),
+                        Memo(
+                          deps: [
+                            _MissionBar.textFor(view, worldStrings(context)),
+                            turnTimerNote(view),
+                          ],
+                          builder: (_) => _MissionBar(view: view),
+                        ),
                       ],
-                      builder: (_) => _MissionBar(
-                        view: view,
-                        missionName: _missionName(s, worldStrings(context)),
-                      ),
                     ),
                   ),
                   // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
@@ -210,67 +219,69 @@ class WorldHud extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (s.mode == SessionMode.lobby &&
-                              onExit != null) ...[
-                            DsButton(context.t('ui.world.hud.to_title'),
-                                key: const ValueKey('hud-exit'),
-                                size: DsButtonSize.compact,
-                                onPressed: onExit),
-                            const SizedBox(width: 8),
-                          ],
-                          if (onMenu != null)
-                            PauseMenuButton(onPressed: onMenu!),
-                          // Alijo de la cuenta, fuera de batalla (characters.md
-                          // § 3.2).
-                          if (controller.stashBlock == null) ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              key: const ValueKey('hud-stash'),
-                              style: RetroTheme.compactButton(),
-                              onPressed: controller.toggleStash,
-                              child: Text(context.t('ui.world.hud.stash')),
-                            ),
-                          ],
-                          // DIARIO de encargos (roles.md § 8.1), fuera de la
-                          // Travesía.
-                          if (!controller.isRun &&
-                              s.mode != SessionMode.battle) ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              key: const ValueKey('hud-journal'),
-                              style: RetroTheme.compactButton(),
-                              onPressed: controller.toggleJournal,
-                              child: Text(context.t('ui.world.hud.journal')),
-                            ),
-                          ],
-                          // Party jugando solo, en el pueblo (solo_party.md § 2.3).
-                          if (controller.canEditParty) ...[
-                            const SizedBox(width: 8),
-                            DsButton(
-                                context.t('ui.world.hud.party',
-                                    {'n': view.companions.length + 1}),
-                                key: const ValueKey('hud-party'),
-                                size: DsButtonSize.compact,
-                                onPressed: controller.toggleParty),
-                          ],
-                          // Puntos sin usar: `PERSONAJE [TAB]` con `+N` (solo si hay;
-                          // passive_tree_v4.md § 7).
-                          if (_unused(s).any) ...[
-                            const SizedBox(width: 8),
-                            Consumer(
-                              builder: (context, ref, _) => UnusedPointsButton(
-                                points: _unused(s),
-                                reduceMotion: ref.watch(gameSettingsProvider
-                                    .select((g) => g.reduceMotion)),
-                                onPressed: controller.toggleCharacter,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (s.mode == SessionMode.lobby &&
+                                  onExit != null) ...[
+                                DsButton(context.t('ui.world.hud.to_title'),
+                                    key: const ValueKey('hud-exit'),
+                                    size: DsButtonSize.compact,
+                                    onPressed: onExit),
+                                const SizedBox(width: 8),
+                              ],
+                              if (onMenu != null)
+                                PauseMenuButton(onPressed: onMenu!),
+                              // Alijo de la cuenta, fuera de batalla (characters.md
+                              // § 3.2).
+                              if (controller.stashBlock == null) ...[
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  key: const ValueKey('hud-stash'),
+                                  style: RetroTheme.compactButton(),
+                                  onPressed: controller.toggleStash,
+                                  child: Text(context.t('ui.world.hud.stash')),
+                                ),
+                              ],
+                              // DIARIO de encargos (roles.md § 8.1), fuera de la
+                              // Travesía.
+                              if (!controller.isRun &&
+                                  s.mode != SessionMode.battle) ...[
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  key: const ValueKey('hud-journal'),
+                                  style: RetroTheme.compactButton(),
+                                  onPressed: controller.toggleJournal,
+                                  child:
+                                      Text(context.t('ui.world.hud.journal')),
+                                ),
+                              ],
+                              // Party jugando solo, en el pueblo (solo_party.md § 2.3).
+                              if (controller.canEditParty) ...[
+                                const SizedBox(width: 8),
+                                DsButton(
+                                    context.t('ui.world.hud.party',
+                                        {'n': view.companions.length + 1}),
+                                    key: const ValueKey('hud-party'),
+                                    size: DsButtonSize.compact,
+                                    onPressed: controller.toggleParty),
+                              ],
+                              // Puntos sin usar: `PERSONAJE [TAB]` con `+N` (solo si hay;
+                              // passive_tree_v4.md § 7).
+                              if (_unused(s).any) ...[
+                                const SizedBox(width: 8),
+                                Consumer(
+                                  builder: (context, ref, _) =>
+                                      UnusedPointsButton(
+                                    points: _unused(s),
+                                    reduceMotion: ref.watch(gameSettingsProvider
+                                        .select((g) => g.reduceMotion)),
+                                    onPressed: controller.toggleCharacter,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                           // Hay versión nueva (update_notice.md).
                           const UpdateNotice(),
                         ],
@@ -321,6 +332,14 @@ class WorldHud extends StatelessWidget {
                                 child: hudMinimap(view, controller, zoom: zoom),
                               ),
                             ),
+                            // Tiempo en la mazmorra bajo el minimapa
+                            // (exploration.md § "HUD").
+                            if (field && s.mission != null) ...[
+                              const SizedBox(height: 4),
+                              Text(retroText(clockText(s.mission!.elapsed)),
+                                  key: const ValueKey('hud-mission-time'),
+                                  style: DsText.body(DsColors.textPrimary)),
+                            ],
                             const SizedBox(height: 4),
                             // Los botones no toman el foco (el teclado sigue en
                             // el juego).
@@ -332,7 +351,8 @@ class WorldHud extends StatelessWidget {
                                   children: [
                                     DsButton.icon(const Text('-'),
                                         key: const ValueKey('minimap-zoom-out'),
-                                        tooltip: context.t('ui.world.hud.minimap_out'),
+                                        tooltip: context
+                                            .t('ui.world.hud.minimap_out'),
                                         size: DsButtonSize.compact,
                                         onPressed: zoom > 1
                                             ? () =>
@@ -341,7 +361,8 @@ class WorldHud extends StatelessWidget {
                                     SizedBox(width: DsSpace.xs),
                                     DsButton.icon(const Text('+'),
                                         key: const ValueKey('minimap-zoom-in'),
-                                        tooltip: context.t('ui.world.hud.minimap_in'),
+                                        tooltip: context
+                                            .t('ui.world.hud.minimap_in'),
                                         size: DsButtonSize.compact,
                                         onPressed: zoom <
                                                 GameSettings.minimapZooms
@@ -454,18 +475,6 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
-            // Salir solo de la mazmorra (free_movement.md § 2.4).
-            if (controller.canLeaveDungeon)
-              Positioned(
-                top: _gap + 48,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: DsButton(context.t('ui.world.hud.leave_dungeon'),
-                      key: const ValueKey('hud-leave-dungeon'),
-                      onPressed: controller.leaveDungeon),
-                ),
-              ),
             if (_voteBox(s) case final vote?)
               Positioned(
                 top: _gap + 48,
@@ -480,9 +489,11 @@ class WorldHud extends StatelessWidget {
                 when controller.activeTool != null)
               Positioned(
                 left: toolSide(box.maxWidth, _gap * 2 + chatWidth,
-                    _gap * 2 + rightWidth).$1,
+                        _gap * 2 + rightWidth)
+                    .$1,
                 right: toolSide(box.maxWidth, _gap * 2 + chatWidth,
-                    _gap * 2 + rightWidth).$2,
+                        _gap * 2 + rightWidth)
+                    .$2,
                 bottom: _gap,
                 child: Align(
                   alignment: Alignment.bottomCenter,
@@ -508,25 +519,6 @@ class WorldHud extends StatelessWidget {
                         child:
                             PotionShortcuts(controller: controller, player: me),
                       ),
-                  // Los que están en otro lugar (free_movement.md § 4).
-                  if (s.away.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: SizedBox(
-                        key: const ValueKey('hud-away'),
-                        width: rightWidth,
-                        child: Text(
-                          context.t('ui.world.hud.away', {
-                            'names': s.away
-                                .map((a) => '${a.name} (${a.where})')
-                                .join(', ')
-                          }),
-                          textAlign: TextAlign.end,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
                   SizedBox(
                     key: const ValueKey('hud-party-boxes'),
                     width: partyWidth,
@@ -537,6 +529,16 @@ class WorldHud extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
+                        // Los que están en otro lugar: caja atenuada con
+                        // dónde y IR CON (free_movement.md § 4, § 2.5).
+                        for (final a in s.away)
+                          _AwayBox(
+                              key: ValueKey('hud-away-${a.id}'),
+                              player: a,
+                              width: boxW,
+                              onJoin: controller.canJoinPlayer(a)
+                                  ? () => controller.joinPlayer(a)
+                                  : null),
                         // Cada caja se arma solo si cambió lo que muestra.
                         for (final p in players)
                           Memo(
@@ -932,42 +934,22 @@ class _TopRowLayout extends MultiChildLayoutDelegate {
 }
 
 class _MissionBar extends StatelessWidget {
-  const _MissionBar({required this.view, required this.missionName});
+  const _MissionBar({required this.view});
 
   final SessionView view;
-  final String missionName;
 
-  /// El texto de la barra (también es la clave de su [Memo]); `null` en
-  /// el pueblo (v0.10.1: sin barra de ayuda, los `[E]` salen al acercarse
-  /// y los atajos están en la pausa).
-  static String? textFor(SessionView view, String missionName, Strings str) {
-    final s = view.session;
-    final m = s.mission;
-    final String? text;
-    if (m != null &&
-        s.mode != SessionMode.lobby &&
-        s.mode != SessionMode.prep) {
-      final goals = m.open
-          ? str.t('ui.missions.hud.defeat_boss')
-          : m.objectives
-              .map((o) =>
-                  '${objectiveShortText(str, o.kind)} ${o.count.clamp(0, o.goal)}/${o.goal}')
-              .join(' · ');
-      final name = m.floors > 1
-          ? floorLabelText(str, missionName, m.floor, m.floors)
-          : missionName;
-      text = '$name · $goals · ${clockText(m.elapsed)}';
-    } else if (s.mode == SessionMode.prep) {
-      text = str.t('ui.missions.hud.prep');
-    } else {
-      text = null;
-    }
-    return text;
-  }
+  /// El texto de la barra (también es la clave de su [Memo]): solo la
+  /// preparación. En misión no hay banner (exploration.md § "HUD": zona, piso y
+  /// objetivos van en el resumen de la izquierda; el tiempo, bajo el
+  /// minimapa).
+  static String? textFor(SessionView view, Strings str) =>
+      view.session.mode == SessionMode.prep
+          ? str.t('ui.missions.hud.prep')
+          : null;
 
   @override
   Widget build(BuildContext context) {
-    final text = textFor(view, missionName, worldStrings(context));
+    final text = textFor(view, worldStrings(context));
     // Tiempo de turno de la sala si no es el normal (en co-op lo fija el
     // anfitrión; accessibility.md § 7).
     final turns = turnTimerNote(view);
@@ -1051,6 +1033,11 @@ Minimap hudMinimap(SessionView view, SessionController controller,
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
+    exit: switch (MapGame.dungeonExitAt(view,
+        freeMovement: controller.engine.freeMovement, run: controller.isRun)) {
+      (final x, final y) => Offset(x, y),
+      null => null,
+    },
     cell: cell,
     view: zoom <= 1
         ? null
@@ -1256,7 +1243,9 @@ class CompactPlayerBox extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(children: [
                       TextSpan(
-                          text: ' ${context.t('ui.world.hud.level', {'n': prof.level})}',
+                          text: ' ${context.t('ui.world.hud.level', {
+                                'n': prof.level
+                              })}',
                           style: const TextStyle(color: DsColors.textPrimary)),
                       // Chips de estado: texto de color (sin caja: no
                       // agranda la línea).
@@ -1346,7 +1335,9 @@ String objectivesSummaryText(MissionRun m, MapFloor? floor, [Strings? str]) {
         '${o.count.clamp(0, o.goal)}/${o.goal}');
   }
   if (optionalSummary(m, floor) case final opt?) parts.add(opt);
-  if (m.open && (!floors || m.isLastFloor)) parts.add(s.t('ui.missions.hud.boss_star'));
+  if (m.open && (!floors || m.isLastFloor)) {
+    parts.add(s.t('ui.missions.hud.boss_star'));
+  }
   return parts.join(' · ');
 }
 
@@ -1447,9 +1438,8 @@ class _Objectives extends StatelessWidget {
                     color: ProtoColors.crimson,
                     key: const ValueKey('hud-boss-floor')),
               objectiveLine(
-                  str.t('ui.missions.hud.floor_groups', {
-                    'n': '${mission.floorKills(f).clamp(0, goal)}/$goal'
-                  }),
+                  str.t('ui.missions.hud.floor_groups',
+                      {'n': '${mission.floorKills(f).clamp(0, goal)}/$goal'}),
                   done: floorDone),
               if (!mission.isLastFloor)
                 mission.floorOpen(f)
@@ -1544,15 +1534,21 @@ class _PlayerBox extends StatelessWidget {
               final a? => ', ${protoColor(Color(a.color), protoEsc(a.name))}',
               null => '',
             }} '
-            '<span class="k">$cls ${context.t('ui.world.hud.level', {'n': prof.level})}</span>'),
+            '<span class="k">$cls ${context.t('ui.world.hud.level', {
+                  'n': prof.level
+                })}</span>'),
         ProtoText(protoColor(
             ProtoColors.orange,
             '⚔ ${protoEsc(weapon)}'
-            '${prof.points > 0 ? ' ${protoColor(ProtoColors.gold, context.t('ui.world.hud.points', {'n': prof.points}))}' : ''}')),
+            '${prof.points > 0 ? ' ${protoColor(ProtoColors.gold, context.t('ui.world.hud.points', {
+                      'n': prof.points
+                    }))}' : ''}')),
         hpBar(p.hp, p.maxHp),
-        Text(context.t('ui.world.hud.hp_value', {'hp': p.hp.ceil(), 'max': p.maxHp})),
+        Text(context
+            .t('ui.world.hud.hp_value', {'hp': p.hp.ceil(), 'max': p.maxHp})),
         mpBar(p.mp, p.maxMp),
-        Text(context.t('ui.world.hud.mp_value', {'mp': p.mp.floor(), 'max': p.maxMp})),
+        Text(context
+            .t('ui.world.hud.mp_value', {'mp': p.mp.floor(), 'max': p.maxMp})),
         // Con nivel 50 la XP llena la Maestría (ecos_atlas.md § 6).
         if (prof.level >= ProgressionRules.maxLevel) ...[
           RetroBar(
@@ -1619,7 +1615,9 @@ class _LevelUpBanner extends StatelessWidget {
           children: [
             Text(context.t('ui.world.hud.level_up'), style: DsText.title()),
             SizedBox(height: DsSpace.sm),
-            Text(retroText(context.t('ui.world.hud.waiting', {'names': waiting})),
+            Text(
+                retroText(
+                    context.t('ui.world.hud.waiting', {'names': waiting})),
                 style: DsText.body(DsColors.textPrimary)),
           ],
         ),
@@ -1636,4 +1634,45 @@ class _LevelUpBanner extends StatelessWidget {
   final c = (w - ToolHud.width) / 2;
   if (c >= minL && c >= minR) return (c, c);
   return (minL, minR);
+}
+
+/// Caja de un jugador que está en otro lugar (free_movement.md § 4):
+/// atenuada, con su nombre, dónde está e IR CON (gris si no se puede).
+class _AwayBox extends StatelessWidget {
+  const _AwayBox(
+      {super.key, required this.player, required this.width, this.onJoin});
+
+  final AwayPlayer player;
+  final double width;
+  final VoidCallback? onJoin;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+        opacity: 0.6,
+        child: Container(
+          width: width,
+          color: DsColors.surface,
+          padding: EdgeInsets.all(DsSpace.xs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(retroText(player.name),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DsText.body(DsColors.textPrimary)),
+              Text(retroText(player.where),
+                  key: ValueKey('hud-away-where-${player.id}'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DsText.detail()),
+              SizedBox(height: DsSpace.xs),
+              DsButton(context.t('ui.world.hud.join', {'name': player.name}),
+                  key: ValueKey('hud-join-${player.id}'),
+                  size: DsButtonSize.compact,
+                  onPressed: onJoin),
+            ],
+          ),
+        ),
+      );
 }

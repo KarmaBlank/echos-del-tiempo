@@ -1327,6 +1327,7 @@ class _Op {
 
       // Salir solo de la mazmorra lo resuelve WorldEngine (free_movement.md).
       case LeaveDungeonAction():
+      case JoinPlayerAction():
         return false;
       case OfferBossAction():
         return _offerBoss(p);
