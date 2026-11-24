@@ -51,6 +51,13 @@ class LeaveDungeonAction extends SessionAction {
   const LeaveDungeonAction({this.poiId});
 }
 
+/// `joinP` (protocolo 63, free_movement.md § 2.5): IR CON otro jugador,
+/// a su instancia (pueblo, bioma o mazmorra) y a su posición.
+class JoinPlayerAction extends SessionAction {
+  final String targetId;
+  const JoinPlayerAction(this.targetId);
+}
+
 /// `offer` (protocolo 58, persistent_dungeons.md § 4): pagar la Ofrenda
 /// en el altar del jefe vencido de una mazmorra de zona para revivirlo.
 class OfferBossAction extends SessionAction {

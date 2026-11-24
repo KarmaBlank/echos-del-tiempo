@@ -87,7 +87,7 @@ void main() {
         ));
     final b = tester.widget<DsButton>(find.byKey(ValueKey('propose-${cat.missions.first.id}')));
     expect(b.tooltip, 'Ya hay una votación');
-    // Un solo PROPONER (el de la elegida), con el motivo al lado.
+    // Un solo ENTRAR (el de la elegida), con el motivo al lado.
     expect(find.text('Ya hay una votación'), findsOneWidget);
     // Elegir otra fila cambia el detalle.
     final m2 = cat.missions[1];

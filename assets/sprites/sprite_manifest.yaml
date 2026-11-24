@@ -338,6 +338,9 @@ items:
   vida_armeria: { idle: items/vida_armeria.png, size: [48, 48] }
   # FORJA del pueblo: fragua con yunque, 5 tiles de ancho (mismo tool).
   vida_forja: { idle: items/vida_forja.png, size: [80, 32] }
+  # Salida de la mazmorra (free_movement.md § 2.4): portal en la llegada
+  # del piso 1. Placeholder de píxeles, reemplazable desde el editor.
+  vida_salida_mazmorra: { idle: items/vida_salida_mazmorra.png, size: [16, 24] }
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }

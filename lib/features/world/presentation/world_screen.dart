@@ -73,6 +73,7 @@ import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
 import 'hud/map_hover_tip.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../domain/player_locations.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
 /// HUD + paneles, batalla o resultado) y reparte el teclado. Ver
@@ -395,7 +396,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     } else if (view == null || !sprites.hasValue) {
       body = Center(
         child: Text(
-          sprites.hasError ? ref.t('ui.world.screen.sprites_error') : ref.t('ui.world.screen.loading'),
+          sprites.hasError
+              ? ref.t('ui.world.screen.sprites_error')
+              : ref.t('ui.world.screen.loading'),
           style: const TextStyle(color: RetroPalette.gold),
         ),
       );
@@ -483,24 +486,25 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   }
                 },
                 child: MouseRegion(
-                opaque: false,
-                hitTestBehavior: HitTestBehavior.translucent,
-                onExit: (_) => setState(() => _hover = null),
-                onHover: (e) {
-                  final tile = game.tileAtScreen(e.localPosition);
-                  if (tile != null) controller.editHover(tile.$1, tile.$2);
-                  final helper =
-                      tile == null ? null : controller.helperAt(tile.$1, tile.$2);
-                  controller.hoverHelper = helper;
-                  final next = tile != null &&
-                          (helper != null ||
-                              controller.chestAt(tile.$1, tile.$2) != null ||
-                              controller.signAt(tile.$1, tile.$2) != null)
-                      ? (tile, e.localPosition)
-                      : null;
-                  if (next?.$1 != _hover?.$1) setState(() => _hover = next);
-                },
-              ),
+                  opaque: false,
+                  hitTestBehavior: HitTestBehavior.translucent,
+                  onExit: (_) => setState(() => _hover = null),
+                  onHover: (e) {
+                    final tile = game.tileAtScreen(e.localPosition);
+                    if (tile != null) controller.editHover(tile.$1, tile.$2);
+                    final helper = tile == null
+                        ? null
+                        : controller.helperAt(tile.$1, tile.$2);
+                    controller.hoverHelper = helper;
+                    final next = tile != null &&
+                            (helper != null ||
+                                controller.chestAt(tile.$1, tile.$2) != null ||
+                                controller.signAt(tile.$1, tile.$2) != null)
+                        ? (tile, e.localPosition)
+                        : null;
+                    if (next?.$1 != _hover?.$1) setState(() => _hover = next);
+                  },
+                ),
               ),
             ),
           if (controller.editingTown)
@@ -571,20 +575,21 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: MapHoverTip(
                 cursor: h.$2,
                 child: IgnorePointer(
-                child: switch (controller.hoverHelper) {
-                  (:final build, :final index)? => () {
-                      final (title, lines) =
-                          controller.helperInfo(build, index);
-                      return DsTooltipCard(
-                        title: title,
-                        children: [
-                          for (final l in lines) Text(l, style: DsText.detail())
-                        ],
-                      );
-                    }(),
-                  null => const SizedBox.shrink(),
-                },
-              ),
+                  child: switch (controller.hoverHelper) {
+                    (:final build, :final index)? => () {
+                        final (title, lines) =
+                            controller.helperInfo(build, index);
+                        return DsTooltipCard(
+                          title: title,
+                          children: [
+                            for (final l in lines)
+                              Text(l, style: DsText.detail())
+                          ],
+                        );
+                      }(),
+                    null => const SizedBox.shrink(),
+                  },
+                ),
               ),
             )
           else if (_hover case final h?
@@ -596,23 +601,23 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: MapHoverTip(
                 cursor: h.$2,
                 child: IgnorePointer(
-                child: switch ((
-                  controller.chestAt(h.$1.$1, h.$1.$2),
-                  controller.signAt(h.$1.$1, h.$1.$2)
-                )) {
-                  (final chest?, _) => DsTooltipCard(
-                      key: const ValueKey('chest-tooltip'),
-                      title: HelperRules.chestText(chest),
-                      children: const [],
-                    ),
-                  (_, (final title, final text)?) => DsTooltipCard(
-                      key: const ValueKey('sign-tooltip'),
-                      title: title,
-                      children: [Text(text, style: DsText.detail())],
-                    ),
-                  _ => const SizedBox.shrink(),
-                },
-              ),
+                  child: switch ((
+                    controller.chestAt(h.$1.$1, h.$1.$2),
+                    controller.signAt(h.$1.$1, h.$1.$2)
+                  )) {
+                    (final chest?, _) => DsTooltipCard(
+                        key: const ValueKey('chest-tooltip'),
+                        title: HelperRules.chestText(chest),
+                        children: const [],
+                      ),
+                    (_, (final title, final text)?) => DsTooltipCard(
+                        key: const ValueKey('sign-tooltip'),
+                        title: title,
+                        children: [Text(text, style: DsText.detail())],
+                      ),
+                    _ => const SizedBox.shrink(),
+                  },
+                ),
               ),
             ),
           // Hazaña lograda: arriba a la derecha, sobre el mapa y la batalla.
@@ -877,7 +882,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final mine = s.leaveReady.contains(view.localId);
     return DsButton(
       mine
-          ? ref.t('ui.world.screen.ready_cancel', {'n': n, 'total': humans.length})
+          ? ref.t(
+              'ui.world.screen.ready_cancel', {'n': n, 'total': humans.length})
           : ref.t('ui.world.screen.ready', {'n': n, 'total': humans.length}),
       key: const ValueKey('leave-ready'),
       kind: mine ? DsButtonKind.secondary : DsButtonKind.primary,
@@ -908,8 +914,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           victoryLap: s.victoryLap,
           zoneProgress: _zoneProgress(ref.strings, s, r, controller),
           unlocked: switch (r.unlocked[view.localId]) {
-            final z? =>
-              zoneUnlockedText(ref.strings, z, switch (controller.engine.catalog.zone(z)) { final zd? => zoneNameText(ref.strings, zd), null => null }),
+            final z? => zoneUnlockedText(
+                ref.strings,
+                z,
+                switch (controller.engine.catalog.zone(z)) {
+                  final zd? => zoneNameText(ref.strings, zd),
+                  null => null
+                }),
             null => null,
           },
           othersUnlocked: _othersUnlocked(ref.strings, s, r, view.localId),
@@ -970,15 +981,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de
   /// zona (piso alcanzado; todos en una victoria).
-  static String? _zoneProgress(Strings str,
-      GameSession s, MissionResult r, SessionController controller) {
+  static String? _zoneProgress(Strings str, GameSession s, MissionResult r,
+      SessionController controller) {
     final z = controller.engine.catalog.zone(r.zone);
     if (z == null) return null;
     final floors = s.mission?.floors ?? ZoneRules.missionFloors(z);
     final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
     final eco = s.eco;
     if (r.missionId == TrialRules.missionId) {
-      return str.t('ui.world.screen.trial_progress', {'zone': z.name, 'n': reached, 'floors': floors});
+      return str.t('ui.world.screen.trial_progress',
+          {'zone': z.name, 'n': reached, 'floors': floors});
     }
     if (r.missionId == EcoRules.missionId && eco != null) {
       return str.t('ui.world.screen.eco_progress', {
@@ -989,25 +1001,23 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         'floors': floors
       });
     }
-    return str.t('ui.world.screen.zone_progress', {
-      'index': z.index,
-      'zone': z.name,
-      'n': reached,
-      'floors': floors
-    });
+    return str.t('ui.world.screen.zone_progress',
+        {'index': z.index, 'zone': z.name, 'n': reached, 'floors': floors});
   }
 
   /// Los demás jugadores que desbloquearon una zona (`Bo: Zona 3`).
-  static String? _othersUnlocked(Strings str,
-      GameSession s, MissionResult r, String localId) {
+  static String? _othersUnlocked(
+      Strings str, GameSession s, MissionResult r, String localId) {
     final others = [
       for (final e in r.unlocked.entries)
         if (e.key != localId)
-          str.t('ui.world.screen.unlocked_zone', {'name': s.players[e.key]?.name ?? e.key, 'n': e.value}),
+          str.t('ui.world.screen.unlocked_zone',
+              {'name': s.players[e.key]?.name ?? e.key, 'n': e.value}),
     ];
     return others.isEmpty
         ? null
-        : str.t('ui.world.screen.others_unlocked', {'list': others.join(' · ')});
+        : str
+            .t('ui.world.screen.others_unlocked', {'list': others.join(' · ')});
   }
 
   Widget _panel(
@@ -1046,6 +1056,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           },
           onClose: controller.closePanel,
           onCharacter: () => controller.openPanel(WorldPanel.character),
+          // Dónde están los demás (free_movement.md § 4.1).
+          playersAt: {
+            for (final e in playersByPlace(s, view.localId).entries)
+              if (e.key.startsWith('m:')) e.key.substring(2): e.value,
+          },
         );
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
@@ -1076,7 +1091,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:
-        return fullMapPanel(view, controller, strings: ref.strings,
+        return fullMapPanel(view, controller,
+            strings: ref.strings,
             reduceMotion:
                 ref.watch(gameSettingsProvider.select((g) => g.reduceMotion)));
       case WorldPanel.ecoPortal:

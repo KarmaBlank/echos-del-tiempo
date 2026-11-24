@@ -104,7 +104,9 @@ void main() {
     expect(c.view!.mode, SessionMode.field);
     expect(find.byType(GameWidget<MapGame>), findsOneWidget);
     expect(find.textContaining('Grupos derrotados 0/'), findsOneWidget);
-    expect(find.textContaining('Pradera Esmeralda · Grupos'), findsOneWidget);
+    // Sin banner de misión (exploration.md § "HUD"): el tiempo, bajo el minimapa.
+    expect(find.textContaining('Pradera Esmeralda · Grupos'), findsNothing);
+    expect(find.byKey(const ValueKey('hud-mission-time')), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 100));
 
     // ---- batalla: el comando con la tecla 1 se acepta ----

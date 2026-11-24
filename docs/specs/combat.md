@@ -224,6 +224,12 @@ antes; no hay regla de "turnos cercanos": cualquier aliado vivo sirve,
 y pierde su próximo turno). Si un par habilita varios dúos, se ofrecen
 **todos** (DÚOS lista cada uno). Vale igual para co-op y para los
 compañeros de la party en solitario (su turno manual usa el mismo menú).
+En los modos de turno agrupados (Por fases, Por bando, Por rondas) el
+aliado que **ya actuó** en este turno del grupo no puede sumarse: el
+motor lo rechaza y la UI muestra esa fila deshabilitada con el motivo
+("X ya actuó en este turno."); si no queda ningún dúo posible, la
+categoría DÚOS se ve gris (antes se ofrecía habilitada y el toque no
+hacía nada o, en un cliente, solo reiniciaba el menú).
 
 Comando: `DualCommand(partnerId, dualId?)`. `dualId == null` = el dúo de
 clase del par (exactamente v0.8.2); si no, ese dúo, y el comando se

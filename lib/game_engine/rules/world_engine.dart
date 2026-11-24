@@ -23,8 +23,7 @@ class WorldStep {
   WorldStep(this.events);
   final Map<String, List<SessionEvent>> events;
 
-  List<SessionEvent> eventsFor(String playerId) =>
-      events[playerId] ?? const [];
+  List<SessionEvent> eventsFor(String playerId) => events[playerId] ?? const [];
 }
 
 /// Movimiento libre por jugador (docs/specs/free_movement.md): enruta las
@@ -55,8 +54,8 @@ class WorldEngine {
     if (w.allPlayers.length >= engine.maxPlayers || w.roomOf(id) != null) {
       return null;
     }
-    final step = engine.addPlayer(w.town, id, profile,
-        tutorialVersion: tutorialVersion);
+    final step =
+        engine.addPlayer(w.town, id, profile, tutorialVersion: tutorialVersion);
     if (step == null) return null;
     final op = _W(this, w);
     step.state.ownerId ??= id;
@@ -87,6 +86,9 @@ class WorldEngine {
       final p = s.players[senderId]!;
       if (action is LeaveDungeonAction) {
         return op.leave(key, p, action.poiId) ? op.finish() : null;
+      }
+      if (action is JoinPlayerAction) {
+        return op.join(key, p, action.targetId) ? op.finish() : null;
       }
       if (action is TravelAction) {
         return op.travel(key, p, action.place, ecoZone: action.ecoZone)
@@ -153,6 +155,18 @@ class WorldEngine {
       a is ProposeAbyssAction ||
       a is StartTutorialAction;
 
+  /// IR CON (free_movement.md § 2.5): desde [from] a [to] solo fuera de
+  /// batalla y de la Travesía / TUTORIAL; a una mazmorra, solo si está en
+  /// el campo sin resultado.
+  static bool canJoin(GameSession from, GameSession to) {
+    bool calm(GameSession s) =>
+        (s.mode == SessionMode.lobby || s.mode == SessionMode.field) &&
+        s.result == null &&
+        s.run == null &&
+        s.tutorial == null;
+    return calm(from) && calm(to);
+  }
+
   /// Dónde está la instancia [key], listo para mostrar.
   String placeLabel(SessionWorld w, String key) {
     if (key == kTownRoom) return 'Pueblo';
@@ -162,6 +176,16 @@ class WorldEngine {
     if (r.tutorial != null) return 'Tutorial';
     final id = r.mission?.missionId ?? r.vote?.missionId ?? r.prep?.missionId;
     return (id == null ? null : engine.missionOf(r, id)?.name) ?? 'Mazmorra';
+  }
+
+  /// Clave de destino de la instancia [key] (free_movement.md § 3):
+  /// `pueblo`, el id del bioma o `m:<misión>`; vacía si no hay misión.
+  String placeId(SessionWorld w, String key) {
+    if (!SessionWorld.isDungeon(key)) return key;
+    final r = w.rooms[key];
+    if (r == null || r.tutorial != null) return '';
+    final id = r.mission?.missionId ?? r.vote?.missionId ?? r.prep?.missionId;
+    return id == null ? '' : 'm:$id';
   }
 }
 
@@ -273,8 +297,8 @@ class _W {
     ];
     for (final q in group) {
       final first = identical(q, p);
-      final r = engine.release(w.rooms[from]!, q.id,
-          text: first ? leave : null);
+      final r =
+          engine.release(w.rooms[from]!, q.id, text: first ? leave : null);
       if (r != null) put(from, r, also: [q.id]);
       var dst = w.rooms[to]!;
       if (dst.seq < src.seq) dst = dst.copy()..seq = src.seq;
@@ -326,6 +350,29 @@ class _W {
       w.rooms[to] = n;
     }
     _emit([p.id], [SystemMessageEvent('Volviste a $label.')]);
+    return true;
+  }
+
+  /// IR CON [targetId] (free_movement.md § 2.5): pasa a [p] (y sus
+  /// compañeros) a la instancia del otro, a su posición.
+  bool join(String key, SessionPlayer p, String targetId) {
+    final to = w.roomOf(targetId);
+    if (to == null || to == key || p.isCompanion) return false;
+    if (!WorldEngine.canJoin(w.rooms[key]!, w.rooms[to]!)) return false;
+    final target = w.rooms[to]!.players[targetId];
+    if (target == null || target.isCompanion) return false;
+    _move(p, key, to,
+        leave: '${p.name} fue con ${target.name}.', arrive: '${p.name} llegó.');
+    final dst = w.rooms[to]!;
+    if (!dst.players.containsKey(p.id)) return false;
+    final n = dst.copy();
+    for (final q in n.playerList) {
+      if (q.id != p.id && q.leaderId != p.id) continue;
+      q
+        ..x = target.x
+        ..y = target.y;
+    }
+    w.rooms[to] = n;
     return true;
   }
 
@@ -414,7 +461,8 @@ class _W {
       final r = w.rooms[key]!;
       if (r.mode == SessionMode.prep) {
         for (final h in r.playerList.where((q) => !q.isCompanion)) {
-          final ready = engine.apply(w.rooms[key]!, h.id, const ReadyAction(true));
+          final ready =
+              engine.apply(w.rooms[key]!, h.id, const ReadyAction(true));
           if (ready != null) put(key, ready);
         }
       }
@@ -487,13 +535,18 @@ class _W {
   void _away() {
     if (!we.split) return;
     final where = <String, String>{};
+    final ids = <String, String>{};
+    final busy = <String, bool>{};
     final sig = StringBuffer();
     for (final e in w.rooms.entries) {
       final label = we.placeLabel(w, e.key);
       where[e.key] = label;
+      ids[e.key] = we.placeId(w, e.key);
+      busy[e.key] = !WorldEngine.canJoin(e.value, e.value);
       for (final p in e.value.playerList) {
         if (p.isCompanion) continue;
-        sig.write('${p.id}\u0001${p.name}\u0001$label\u0002');
+        sig.write(
+            '${p.id}\u0001${p.name}\u0001$label\u0001${ids[e.key]}\u0001${busy[e.key]}\u0002');
       }
     }
     final key = sig.toString();
@@ -505,7 +558,9 @@ class _W {
         for (final e in w.rooms.entries)
           if (e.key != k)
             for (final p in e.value.playerList)
-              if (!p.isCompanion) AwayPlayer(p.id, p.name, where[e.key]!),
+              if (!p.isCompanion)
+                AwayPlayer(
+                    p.id, p.name, where[e.key]!, ids[e.key]!, busy[e.key]!),
       ];
       w.rooms[k] = r.copy()..away = away;
     }

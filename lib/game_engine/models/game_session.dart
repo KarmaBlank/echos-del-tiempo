@@ -937,9 +937,20 @@ class GameSession {
 /// Un jugador en otra instancia (pueblo, exterior o mazmorra): solo para
 /// la lista del grupo (free_movement.md § 3).
 class AwayPlayer {
-  const AwayPlayer(this.id, this.name, this.where);
+  const AwayPlayer(this.id, this.name, this.where,
+      [this.placeId = '', this.busy = false]);
+
+  /// Su instancia no admite IR CON ahora (en batalla, con resultado...;
+  /// free_movement.md § 2.5).
+  final bool busy;
   final String id;
   final String name;
+
+  /// Clave del destino (free_movement.md § 3, protocolo 63): `pueblo`, el
+  /// id del bioma o `m:<misión>` en una mazmorra; vacía si no se sabe
+  /// (tutorial, cliente viejo). Para las marcas del mostrador y del mapa
+  /// de viaje.
+  final String placeId;
 
   /// Dónde está, listo para mostrar (`Pueblo`, `Bosque`, nombre de la
   /// misión).
@@ -950,8 +961,10 @@ class AwayPlayer {
       other is AwayPlayer &&
       other.id == id &&
       other.name == name &&
-      other.where == where;
+      other.where == where &&
+      other.placeId == placeId &&
+      other.busy == busy;
 
   @override
-  int get hashCode => Object.hash(id, name, where);
+  int get hashCode => Object.hash(id, name, where, placeId, busy);
 }

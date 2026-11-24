@@ -2550,6 +2550,21 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(LeaveDungeonAction(poiId: travelOrigin?.id));
   }
 
+  /// IR CON [a] (free_movement.md § 2.5): se puede si los dos lugares
+  /// están fuera de batalla. El host lo vuelve a validar.
+  bool canJoinPlayer(AwayPlayer a) {
+    final s = _s;
+    if (s == null || isRun || !engine.freeMovement || a.busy) return false;
+    return WorldEngine.canJoin(s, s);
+  }
+
+  /// IR CON [a]: viaja a la instancia del otro jugador, a su posición.
+  bool joinPlayer(AwayPlayer a) {
+    if (!canJoinPlayer(a)) return false;
+    closePanel();
+    return _apply(JoinPlayerAction(a.id));
+  }
+
   /// Las piedras a las que se puede viajar desde [travelOrigin].
   List<MapPoi> get travelDestinations {
     final from = travelOrigin;

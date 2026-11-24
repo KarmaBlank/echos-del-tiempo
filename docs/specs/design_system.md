@@ -452,7 +452,7 @@ claves de test se mantienen:
   foco de teclado sigue eligiendo (el detalle sigue al cursor). Detalle
   (`MissionCard`, también en la preparación): rango y nombre en Título,
   `tipo · Lv`, zona y bloqueo en una línea; OBJETIVO y RECOMPENSAS con
-  `DsSectionHeader`; RANGO S en `DsFold`. PROPONER principal, con el
+  `DsSectionHeader`; RANGO S en `DsFold`. ENTRAR principal, con el
   motivo en su tooltip y en una línea roja al lado. La línea "Propón…"
   pasó al "?". Preparación: `¡LISTO!` principal, GRUPO con
   `DsSectionHeader` y una línea por jugador.

@@ -478,6 +478,14 @@ build, chat plegado) como `DsToast`. Mismo orden, mismas teclas, misma
   debajo de los botones) y los objetivos debajo de los botones y de la
   línea si le queda encima. Test de rects con todos los tamaños de
   texto (`hud_top_row_v0101_test.dart`).
+- **Sin banner de misión (v0.42.0)**: en una misión ya no hay línea
+  `zona · piso · grupos · tiempo` arriba al centro; zona, piso y
+  objetivos los dice el resumen de la izquierda (`hud-objectives`) y el
+  tiempo en la mazmorra va justo debajo del minimapa (`hud-mission-time`).
+  El hueco de arriba al centro (`_TopSlot.bar`) queda para `SALIR DE LA
+  MAZMORRA` (free_movement.md § 2.4) y, debajo, el aviso de preparación
+  o el tiempo de turno; los objetivos bajan si se le superponen. Test:
+  `dungeon_hud_exit_test.dart`.
 - **Objetivos** (arriba a la izquierda, solo campo; `drawObjectives`):
   una línea por objetivo `Etiqueta n/goal` y la línea del jefe
   (`* ¡Ve por el JEFE!` / `Jefe: completa los objetivos`).
@@ -851,7 +859,7 @@ El contenido y las reglas de cada panel (mostrador, votación,
 preparación, armería, personaje y árbol) están en docs/specs/panels.md.
 Resumen:
 
-- **Mostrador** (`board`): misiones y `PROPONER` (cierra el panel), cambio
+- **Mostrador** (`board`): misiones y `ENTRAR` (cierra el panel), cambio
   de clase. Con un solo jugador la votación pasa sola en el siguiente
   tick (el que propone ya votó que sí).
 - **Preparación** (`prep`): listos, `¡LISTO!`, `PERSONAJE / EQUIPAR

@@ -94,7 +94,7 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 | pesca | puntos de pesca | 2 | 0.3 | no |
 | botín | objetos legendarios en el piso | 2.5 | 0.5 | no |
 | jugador_pueblo | cada jugador vivo, de noche al aire libre (v0.36.2, antes 3.5 / 0.5) | 4.5 | 0.6 | no |
-| jugador_oscuro | cada jugador vivo en mazmorra oscura (v0.36.2, antes 9) | 11 | 1 | 4 % |
+| jugador_oscuro | cada jugador vivo en mazmorra oscura sin Llama errante (v0.41.3, antes 11; con la Llama: 11 / 1.5, § 3.1.1) | 5.5 | 1 | 4 % |
 | hongo / cristal / magitec / fatuo / ascua / enjambre | luz natural del tema (§ 3.3) | 4–5 | 0.55–0.7 | ascua 10 % |
 | guía | llegada y escaleras de cada piso (§ 3.3) | 6 | 0.9 | 5 % |
 | farol | faroles encendidos de las mazmorras oscuras (§ 5.5; v0.36.2, antes 11) | 13 | 1 | 4 % |
@@ -104,12 +104,10 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 `LightRules.carried(dark:, bonus:)`. `bonus` (tiles extra de radio) es el
 gancho para linternas, pasivas o beneficios de habitantes: hoy siempre 0.
 
-En la oscuridad el radio es 11 (v0.36.2; 9 en v0.32.2, 6 antes). Con la
-caída de § 2 y el umbral de § 5.3 (0.12) se ve a un enemigo hasta ~7.2
-tiles (`r × (1 − √0.12)`) y la luz se apaga del todo a los 11: se lee la
-sala en la que estás con comodidad sin ver la siguiente (y con las
-sombras de § 2.1 lo de atrás de las esquinas sigue oculto). De noche al
-aire libre: radio 4.5, intensidad 0.6.
+En la oscuridad, sin la Llama errante, el radio es 5.5 (v0.41.3; 11 en
+v0.36.2, 9 en v0.32.2, 6 antes): se ve a un enemigo hasta ~3.6 tiles
+(`r × (1 − √0.12)`). Con la Llama errante (§ 3.1.1) vuelve al radio 11 y
+más brillante. De noche al aire libre: radio 4.5, intensidad 0.6.
 
 ### 3.1.1 Llama errante (v0.37.0, v0.37.2)
 
@@ -121,8 +119,14 @@ se encendió: alumbra más, pero en lo profundo también se deja ver.
   (`SkyRules.isNight`) y se apaga de día; L no hace nada ahí. En
   mazmorras nunca es automática: se prende y se apaga con L (fuera de
   batalla), como en v0.37.0.
-- Luz: `carried(dark:, wisp: true)` suma `LightRules.wispBonus`
-  (5 tiles) al radio y sube la intensidad a `wispIntensity` (1) como
+- Luz en mazmorra oscura (v0.41.3): `carried(dark: true, wisp: true)`
+  multiplica el radio por `wispDarkRadiusFactor` (2: 5.5 → 11) y sube la
+  intensidad a `wispDarkIntensity` (1.5; sin la Llama, 1). Antes la Llama
+  sumaba 5 tiles a un radio de 11 con la misma intensidad: lo cercano ya
+  saturaba (mín(1, luz), § 4) y la ganancia quedaba fuera de pantalla o
+  tras las paredes; prendida o apagada se veía igual.
+- Luz al aire libre: `carried(dark: false, wisp: true)` suma
+  `LightRules.wispBonus` (5 tiles) al radio y sube la intensidad a `wispIntensity` (1) como
   mínimo. v0.37.2: antes solo sumaba 3 tiles al radio con la misma
   intensidad; con la caída cuadrática la ganancia quedaba en la franja
   tenue, bajo el umbral de penumbra (`seenLum` = 0.12), y en el pueblo

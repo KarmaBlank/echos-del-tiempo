@@ -8,7 +8,11 @@ void main() {
     for (final dark in [true, false]) {
       final base = LightRules.carried(dark: dark);
       final lit = LightRules.carried(dark: dark, wisp: true);
-      expect(lit.radius, base.radius + LightRules.wispBonus);
+      expect(
+          lit.radius,
+          dark
+              ? base.radius * LightRules.wispDarkRadiusFactor
+              : base.radius + LightRules.wispBonus);
       expect(lit.intensity, greaterThanOrEqualTo(base.intensity));
       // Lo que se ve de verdad (sobre el umbral de penumbra) crece claro.
       expect(LightRules.visibleRadius(lit),

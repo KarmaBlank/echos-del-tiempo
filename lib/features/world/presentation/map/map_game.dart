@@ -92,6 +92,10 @@ class _Disp {
   double x, y;
 }
 
+/// Logical sprite id of the dungeon exit portal (`items.vida_salida_mazmorra`
+/// in sprite_manifest.yaml; free_movement.md § 2.4).
+const kDungeonExitSprite = 'salida_mazmorra';
+
 /// El mapa del prototipo (`render`, líneas 1019-1091) como juego Flame:
 /// dibuja la sesión del [controller] a resolución virtual 480×288 y la
 /// escala con vecino más cercano. Mueve al jugador local en cada frame
@@ -616,6 +620,19 @@ class MapGame extends Game {
   }
 
   /// El piso actual de la misión dentro del atlas (o `null`).
+  /// Dónde dibujar el portal de salida de la mazmorra (free_movement.md
+  /// § 2.4): la llegada del piso 1, solo en el Mundo con movimiento libre,
+  /// fuera del TUTORIAL y de la Travesía. `null` = no hay.
+  static (double, double)? dungeonExitAt(SessionView view,
+      {required bool freeMovement, required bool run}) {
+    final s = view.session;
+    final m = s.mission;
+    if (!freeMovement || run || m == null || m.floor != 0) return null;
+    if (s.tutorial != null || s.run != null) return null;
+    final sp = currentFloor(view)?.spawn ?? view.map.spawn;
+    return (sp.x, sp.y);
+  }
+
   static MapFloor? currentFloor(SessionView view) {
     final m = view.session.mission;
     if (m == null || view.map.floors.isEmpty) return null;
@@ -741,7 +758,8 @@ class MapGame extends Game {
   /// Opacidad del cartel de lugar en ([x], [y]) según lo cerca que esté
   /// el jugador local: 1 adentro de [placeLabelRange], 0 pasando la franja.
   double _placeAlpha(double x, double y) {
-    final dx = (x - controller.local.x) / ts, dy = (y - controller.local.y) / ts;
+    final dx = (x - controller.local.x) / ts,
+        dy = (y - controller.local.y) / ts;
     final d = math.sqrt(dx * dx + dy * dy);
     return (1 - (d - placeLabelRange) / placeLabelFade).clamp(0.0, 1.0);
   }
@@ -751,8 +769,8 @@ class MapGame extends Game {
       double size, int priority) {
     final a = _placeAlpha(x, y);
     if (a <= 0) return;
-    _rankedText(c, s, x, y, color.withValues(alpha: color.a * a), size,
-        priority);
+    _rankedText(
+        c, s, x, y, color.withValues(alpha: color.a * a), size, priority);
   }
 
   /// Etiqueta del mundo con prioridad. Todas van un paso más chicas que
@@ -1093,6 +1111,24 @@ class MapGame extends Game {
         final cx = p.center.x, cy = p.center.y;
         add(cy, () => actors.relic(c, cx, cy, t));
       }
+      // Salida de la mazmorra (free_movement.md § 2.4): portal en la
+      // llegada del piso 1, donde aparece SALIR DE LA MAZMORRA.
+      if (dungeonExitAt(view,
+              freeMovement: controller.engine.freeMovement,
+              run: controller.isRun)
+          case (final ex, final ey)) {
+        if (sprites.lifeIcon(kDungeonExitSprite, '') case final im?) {
+          add(ey - 1, () {
+            final w = im.width.toDouble(), h = im.height.toDouble();
+            c.drawImageRect(
+                im,
+                Rect.fromLTWH(0, 0, w, h),
+                Rect.fromLTWH((ex - w / 2).roundToDouble(),
+                    (ey + ts / 2 - h).roundToDouble(), w, h),
+                SpriteCatalog.pixelPaint());
+          });
+        }
+      }
       // Altar de la Ofrenda en la sala del jefe vencido
       // (persistent_dungeons.md § 4).
       if (DungeonRules.persistent(view.session, zone: mission.zone) &&
@@ -1240,8 +1276,8 @@ class MapGame extends Game {
       final cx = e.center.x, cy = e.center.y;
       final col = z.open ? zoneColor(e.zone) : const Color(0xFF9AA0AC);
       if (!z.open) {
-        _placeText(c, z.playable ? 'BLOQUEADA' : 'PRÓXIMAMENTE', cx,
-            cy - 56, const Color(0xFFFF6B81), 6, 950);
+        _placeText(c, z.playable ? 'BLOQUEADA' : 'PRÓXIMAMENTE', cx, cy - 56,
+            const Color(0xFFFF6B81), 6, 950);
       }
       _placeText(c, z.zone.name, cx, cy - 47, col, 7, 951);
       _placeText(c, z.zone.levelText, cx, cy - 38, col, 6, 952);
@@ -1431,9 +1467,8 @@ class MapGame extends Game {
           null => null,
         } ??
         '';
-    actors.text(
-        c, floorLabelText(controller.strings, name, m.floor, m.floors), vw / 2, vh / 2,
-        const Color(0xFFFFD166), 8);
+    actors.text(c, floorLabelText(controller.strings, name, m.floor, m.floors),
+        vw / 2, vh / 2, const Color(0xFFFFD166), 8);
   }
 
   /// Haces de Legendarios recién caídos al inventario en curso (tests).

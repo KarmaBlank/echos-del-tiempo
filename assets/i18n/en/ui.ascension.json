@@ -17,7 +17,7 @@
   "ui.ascension.trial.level_short": "Lv {level}",
   "ui.ascension.hint.choose": "Choose",
   "ui.ascension.hint.close": "Close",
-  "ui.ascension.propose": "PROPOSE",
+  "ui.ascension.enter": "ENTER",
   "ui.ascension.trial.spike_damage": "−{pct}% HP",
   "ui.ascension.trial.pulses": "Pulses",
   "ui.ascension.trial.prize": "+2 ascension points",
