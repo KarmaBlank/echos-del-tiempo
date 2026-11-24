@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/i18n/catalog_names.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -158,10 +159,13 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-                retroText(s.t('ui.combat.enemy.mechanic', {'name': mech.name})),
+                retroText(s.t('ui.combat.enemy.mechanic', {
+                  'name': s.data(DataKeys.mechanicName(mech.id), mech.name)
+                })),
                 style: DsText.body(DsColors.warning)),
             if (open)
-              ProtoText(mech.counter, style: DsText.detail())
+              ProtoText(s.data(DataKeys.mechanicCounter(mech.id), mech.counter),
+                  style: DsText.detail())
             else
               Text(retroText(s.t('ui.combat.enemy.counter_hint')),
                   style: DsText.detail(DsColors.textSecondary)),
