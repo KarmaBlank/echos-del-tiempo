@@ -65,11 +65,14 @@ abstract final class TownEditLayer {
     final w = map.width * ts, h = map.height * ts;
     // Elegir dónde contratar (farming.md § 8): solo las huertas o los
     // lagos, dorados si se puede contratar, grises si no.
-    if (e.hire case final kind?) {
+    // Elegir la casa de un habitante (overworld_biomes.md § 10.1): igual,
+    // con las CASAS libres resaltadas.
+    if (e.pick case final kind?) {
       for (final b in town.builds) {
         if (b.kind != kind) continue;
-        final ok = ctl.hireWhy(b) == null;
-        final hot = ok && b.id == e.hoverBuild;
+        final ok = ctl.pickWhy(b) == null;
+        final hot =
+            ok && (b.id == e.hoverBuild || b.id == e.selected);
         for (final p in b.parts) {
           final r = Rect.fromLTWH(
               (p.x + ox) * ts, (p.y + oy) * ts, p.w * ts, p.h * ts);

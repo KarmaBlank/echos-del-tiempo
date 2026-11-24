@@ -399,5 +399,17 @@
   "ui.town.fish_rarity.raro": "raro",
   "ui.town.helper_task.cosechar": "Cosechar",
   "ui.town.helper_task.plantar": "Plantar",
-  "ui.town.helper_task.regar": "Regar"
+  "ui.town.helper_task.regar": "Regar",
+  "ui.town.npc.invite_accept": "Sí, acepto. Me gustaría ir a tu pueblo.",
+  "ui.town.npc.assign_house": "Asignar casa",
+  "ui.town.npc.no_free_house": "No hay casas libres: poné una CASA en EDITAR PUEBLO.",
+  "ui.town.npc.house_thanks_day": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+  "ui.town.npc.house_thanks_night": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+  "ui.town.edit.house_pick_title": "ASIGNAR CASA",
+  "ui.town.edit.hint_house": "¿Qué casa le das a {name}?",
+  "ui.town.edit.house_free": "Libre. Clic para elegirla.",
+  "ui.town.edit.house_taken": "Ya vive alguien.",
+  "ui.town.edit.house_not_house": "No es una casa.",
+  "ui.town.edit.house_confirm_text": "{name} se va a mudar a esta casa.",
+  "ui.town.edit.house_confirm": "Asignar casa a {name}"
 }

@@ -194,6 +194,13 @@ verde / rojo; la esquina va en el tile del mouse.
   casa). Subir de nivel la casa (desde la pantalla del habitante) es el
   pedido más común del habitante y abre mejores servicios.
   JSON de la construcción: `k: casa`, `lv`, `rs` (habitante).
+- v0.42.6: también se asigna desde el diálogo del habitante sin casa
+  (ASIGNAR CASA, overworld_biomes.md § 10.1.1): modo de elegir con la
+  cámara de la edición, sin paleta ni franjas; las CASAS libres en
+  verde, las ocupadas en gris; clic elige y el panel de la derecha
+  confirma "Asignar casa a <NPC>" (Esc deselecciona / sale). Una CASA
+  habitada muestra junto a la puerta el prop del campamento del oficio
+  de quien vive ahí.
 - Los pedidos de camino, faro, huerta o muelle se cumplen construyendo
   eso a menos de 6 tiles de su casa.
 

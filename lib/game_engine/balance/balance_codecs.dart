@@ -1502,6 +1502,8 @@ const _townLabels = {
   'reinforceDelay': 'Refuerzo: turnos de espera al entrar a una pelea',
   'absentWeight': 'Dificultad: peso de cada ausente de la sala',
   'resInviteRep': 'Habitantes: relación para invitarlo al pueblo',
+  'resWalkSpeed': 'Habitantes: velocidad al mudarse (px/s)',
+  'resNightOwlChance': 'Habitantes: chance de que un trasnochador salga de noche',
   'resSettledRep': 'Habitantes: relación para Asentado',
   'resRootedRep': 'Habitantes: relación para Arraigado',
   'resMaxTier': 'Habitantes: nivel máximo del beneficio',

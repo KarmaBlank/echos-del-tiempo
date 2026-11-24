@@ -31,7 +31,13 @@ class ResidentState {
       this.orderN = 0,
       this.orderQ = 0,
       this.orderDay = 0,
-      this.orders = 0});
+      this.orders = 0,
+      this.leftAt = 0});
+
+  /// Reloj de la sala (`GameSession.time`) en que salió de su bioma
+  /// caminando hacia el pueblo (overworld_biomes.md § 10.1); 0 = no está
+  /// saliendo. Lo limpia el anfitrión cuando llega al borde.
+  final double leftAt;
 
   /// Orden de entrega (§ 10.5): producto, cultivo o pez que pide, cuántos
   /// y calidad mínima (índice de `CropQuality`; peces 0). `null` = nada.
@@ -89,7 +95,8 @@ class ResidentState {
           int? orderN,
           int? orderQ,
           int? orderDay,
-          int? orders}) =>
+          int? orders,
+          double? leftAt}) =>
       ResidentState(npc,
           house: house ?? this.house,
           rep: rep ?? this.rep,
@@ -105,7 +112,8 @@ class ResidentState {
           orderN: clearOrder ? 0 : (orderN ?? this.orderN),
           orderQ: clearOrder ? 0 : (orderQ ?? this.orderQ),
           orderDay: orderDay ?? this.orderDay,
-          orders: orders ?? this.orders);
+          orders: orders ?? this.orders,
+          leftAt: leftAt ?? this.leftAt);
 
   Map<String, Object?> toJson() => {
         'n': npc,
@@ -122,6 +130,7 @@ class ResidentState {
         if (order != null) 'o': [order, orderN, orderQ],
         if (orderDay > 0) 'od': orderDay,
         if (orders > 0) 'os': orders,
+        if (leftAt > 0) 'la': leftAt,
       };
 
   static ResidentState? fromJson(Object? j) {
@@ -146,7 +155,11 @@ class ResidentState {
         orderN: ord == null ? 0 : ((ord[1] as num?)?.toInt() ?? 1).clamp(1, 99),
         orderQ: ord == null ? 0 : ((ord[2] as num?)?.toInt() ?? 0).clamp(0, 3),
         orderDay: i('od'),
-        orders: i('os'));
+        orders: i('os'),
+        leftAt: switch (j['la']) {
+          final num v when v.isFinite && v > 0 => v.toDouble(),
+          _ => 0,
+        });
   }
 
   @override
@@ -167,10 +180,11 @@ class ResidentState {
       other.orderN == orderN &&
       other.orderQ == orderQ &&
       other.orderDay == orderDay &&
-      other.orders == orders;
+      other.orders == orders &&
+      other.leftAt == leftAt;
 
   @override
   int get hashCode => Object.hash(npc, house, rep, quest, progress, request,
       requestDay, unhappy, invited, giftDay, relic, order, orderN, orderDay,
-      orders);
+      orders, leftAt);
 }

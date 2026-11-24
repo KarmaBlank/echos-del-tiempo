@@ -160,7 +160,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `brkN`, `vul`, `brkS`.
 /// 67: auto-fishing is back (fishing.md § 6): `fAuto {on?, r?}` action,
 /// `fAutoOff {id, r, n}` event and the auto flag (4th field) in `fl`.
-const kProtocolVersion = 67;
+/// 68: residents move in (overworld_biomes.md § 10.1): `la` (walk-out
+/// start on the room clock) in each resident.
+const kProtocolVersion = 68;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

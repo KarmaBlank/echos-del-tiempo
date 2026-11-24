@@ -15,6 +15,7 @@ import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
+import '../../../../game_engine/rules/sky_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
@@ -210,6 +211,33 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
   String? _spokenTo;
   NpcTalk? _talk;
 
+  /// Aceptó la invitación (overworld_biomes.md § 10.1): dice que sí y, al
+  /// cerrar el diálogo, se manda la invitación y sale caminando.
+  /// Id del habitante que aceptó (o `null`).
+  String? _acceptedBy;
+  bool get _accepted => _acceptedBy != null;
+
+  /// Manda la invitación aceptada (una vez).
+  void _sendInvite() {
+    final id = _acceptedBy;
+    if (id == null) return;
+    _acceptedBy = null;
+    widget.controller.residentOp(TownOp.invite, id);
+  }
+
+  /// Cierra el diálogo; si aceptó, recién ahí se muda.
+  void _close(SessionController c, BiomeNpcDef n) {
+    _sendInvite();
+    c.closePanel();
+  }
+
+  @override
+  void dispose() {
+    // Cerrado por otro lado (Esc, cambio de panel): igual se muda.
+    _sendInvite();
+    super.dispose();
+  }
+
   /// Lo que dice al hablarle (roles.md § 8.4): si tiene un paso nuevo de
   /// su cadena que todavía no te contó, lo pide con sus palabras; si no,
   /// su frase del día. Suma el pedido o la orden nuevos.
@@ -249,6 +277,14 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       _spokenTo = n.id;
       _spoken = _line(c, n, r, p);
       _talk = NpcTalk(n.id);
+      _sendInvite();
+      // Recién le asignaron casa: agradece (frase según la hora).
+      if (c.thanksNpc == n.id) {
+        c.thanksNpc = null;
+        _spoken = _s.t(SkyRules.isNight(town.sky)
+            ? 'ui.town.npc.house_thanks_night'
+            : 'ui.town.npc.house_thanks_day');
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) => c.npcTalked(n.id));
       if (p != null && !QuestTrackRules.seen(p, r)) {
         WidgetsBinding.instance
@@ -269,6 +305,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       {required bool home}) {
     final tier = ResidentRules.tier(r);
     final inviteWhy = ResidentRules.cannotInvite(town, n.id);
+    final houseWhy = home && r.invited && town.houseOf(n.id) == null
+        ? (ResidentRules.cannotAssignFree(town, n.id) != null
+            ? _s.t('ui.town.npc.no_free_house')
+            : c.cannotEditTown)
+        : null;
+    final offerHouse = home && r.invited && town.houseOf(n.id) == null;
     void open(NpcMenu m) => setState(() {
           _menu = m;
           _sel = null;
@@ -292,9 +334,17 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             portrait: _portrait(n),
             name: n.name,
             role: n.role.label,
-            text: talk.text(_spoken ?? c.npcLine(n)),
-            onCancel: c.closePanel,
-            choices: talk.active
+            text: _accepted
+                ? _s.t('ui.town.npc.invite_accept')
+                : talk.text(_spoken ?? c.npcLine(n)),
+            onCancel: () => _close(c, n),
+            choices: _accepted
+                ? [
+                    DsChoice(_s.t('ui.town.npc.bye'),
+                        key: const ValueKey('npc-close'),
+                        onSelected: () => _close(c, n)),
+                  ]
+                : talk.active
                 ? talk.choices(town, refresh, inTown: home)
                 : [
                     talk.entry(town, refresh, inTown: home),
@@ -324,12 +374,20 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                             : null),
                     opt(NpcMenu.casa, _s.t('ui.town.npc.menu_house'),
                         r.invited ? null : _s.t('ui.town.npc.invite_first')),
-                    DsChoice(_s.t('ui.town.npc.invite'),
-                        key: const ValueKey('npc-invite'),
-                        reason: inviteWhy,
-                        onSelected: inviteWhy == null
-                            ? () => c.residentOp(TownOp.invite, n.id)
-                            : null),
+                    if (offerHouse)
+                      DsChoice(_s.t('ui.town.npc.assign_house'),
+                          key: const ValueKey('npc-assign-house'),
+                          reason: houseWhy,
+                          onSelected: houseWhy == null
+                              ? () => c.enterHousePick(n.id)
+                              : null)
+                    else
+                      DsChoice(_s.t('ui.town.npc.invite'),
+                          key: const ValueKey('npc-invite'),
+                          reason: inviteWhy,
+                          onSelected: inviteWhy == null
+                              ? () => setState(() => _acceptedBy = n.id)
+                              : null),
                     DsChoice(_s.t('ui.town.npc.bye'),
                         key: const ValueKey('npc-close'),
                         onSelected: c.closePanel),

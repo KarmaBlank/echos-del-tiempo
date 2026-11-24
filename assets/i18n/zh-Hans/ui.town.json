@@ -399,5 +399,17 @@
   "ui.town.fish_rarity.raro": "",
   "ui.town.helper_task.cosechar": "",
   "ui.town.helper_task.plantar": "",
-  "ui.town.helper_task.regar": ""
+  "ui.town.helper_task.regar": "",
+  "ui.town.npc.invite_accept": "",
+  "ui.town.npc.assign_house": "",
+  "ui.town.npc.no_free_house": "",
+  "ui.town.npc.house_thanks_day": "",
+  "ui.town.npc.house_thanks_night": "",
+  "ui.town.edit.house_pick_title": "",
+  "ui.town.edit.hint_house": "",
+  "ui.town.edit.house_free": "",
+  "ui.town.edit.house_taken": "",
+  "ui.town.edit.house_not_house": "",
+  "ui.town.edit.house_confirm_text": "",
+  "ui.town.edit.house_confirm": ""
 }
