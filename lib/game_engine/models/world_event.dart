@@ -12,6 +12,9 @@ enum WorldEventCategory {
   /// Happens in town (not in a biome).
   bool get inTown => this == visitor || this == caravan;
 
+  /// A person to talk to (§ 3.6).
+  bool get isNpc => this == visitor || this == overworldNpc || this == caravan;
+
   static WorldEventCategory fromName(Object? n) {
     for (final v in values) {
       if (v.name == n) return v;
@@ -60,7 +63,20 @@ class WorldEventDef {
     this.sprite = '',
     this.season,
     this.weather,
+    this.greeting = LocalizedText.empty,
+    this.topics = const [],
+    this.actions = const [],
   });
+
+  /// Event NPCs only (visitor, wanderer, caravan; § 3.6): the first
+  /// line of their dialogue box (empty = the notice).
+  final LocalizedText greeting;
+
+  /// Talk topics of the event NPC (§ 3.6): question and answer.
+  final List<EventTopic> topics;
+
+  /// The 1–2 concrete things the event NPC offers (§ 3.6).
+  final List<EventNpcAction> actions;
 
   /// Climate condition (weather_seasons.md, world_events.md § 1): the
   /// event only rolls in this season (`Season.name`; `null` = any) …
@@ -112,6 +128,9 @@ class WorldEventDef {
 
   Iterable<LocalizedText> get texts => [title, notice, body];
 
+  /// Has a dialogue box (§ 3.6): visitor, wanderer or caravan.
+  bool get isNpc => category.isNpc;
+
   Map<String, Object?> toJson() => {
         'id': id,
         'category': category.name,
@@ -134,6 +153,10 @@ class WorldEventDef {
           'target': target,
           'n': n,
         },
+        if (greeting.byLocale.values.any((v) => v.isNotEmpty)) 'greeting': greeting.toJson(),
+        if (topics.isNotEmpty) 'topics': [for (final t in topics) t.toJson()],
+        if (actions.isNotEmpty)
+          'actions': [for (final a in actions) a.toJson()],
       };
 
   static WorldEventDef fromJson(Object? raw) {
@@ -178,7 +201,126 @@ class WorldEventDef {
           raw['weather'] is String && (raw['weather'] as String).isNotEmpty
               ? raw['weather'] as String
               : null,
+      greeting: LocalizedText.fromJson(raw['greeting']),
+      topics: [
+        if (raw['topics'] case final List l)
+          for (final t in l) EventTopic.fromJson(t)
+      ],
+      actions: [
+        if (raw['actions'] case final List l)
+          for (final a in l) EventNpcAction.fromJson(a)
+      ],
     );
+  }
+}
+
+/// A talk topic of an event NPC (§ 3.6): the question the player picks
+/// and the NPC's answer.
+class EventTopic {
+  const EventTopic(
+      {required this.id,
+      this.label = LocalizedText.empty,
+      this.line = LocalizedText.empty});
+  final String id;
+  final LocalizedText label, line;
+
+  Map<String, Object?> toJson() =>
+      {'id': id, 'label': label.toJson(), 'line': line.toJson()};
+
+  static EventTopic fromJson(Object? raw) {
+    if (raw is! Map || raw['id'] is! String) {
+      throw FormatException('tema inválido: $raw');
+    }
+    return EventTopic(
+        id: raw['id'] as String,
+        label: LocalizedText.fromJson(raw['label']),
+        line: LocalizedText.fromJson(raw['line']));
+  }
+}
+
+/// What an event NPC can do for a player (§ 3.6). Fixed whitelist over
+/// existing systems.
+enum EventActionKind {
+  /// One-time present per player: `item` × `qty` and/or `gold`.
+  gift,
+
+  /// A useful tip with a map marker on `target` (`rift` = the active
+  /// echo rift, or a biome id).
+  rumor,
+
+  /// A single scaled fight against `target` (an enemy id), through the
+  /// rift battle path; a win pays and adds renown.
+  duel,
+
+  /// The town stall with the event discount (visitor / caravan).
+  trade;
+
+  static EventActionKind fromName(Object? n) {
+    for (final v in values) {
+      if (v.name == n) return v;
+    }
+    throw FormatException('acción de evento inválida: $n');
+  }
+
+  /// Something the player still has to do once (drives the "!" mark).
+  bool get once => this != trade;
+}
+
+/// One action of an event NPC (§ 3.6). Immutable.
+class EventNpcAction {
+  const EventNpcAction(this.kind,
+      {this.label = LocalizedText.empty,
+      this.line = LocalizedText.empty,
+      this.item = '',
+      this.target = '',
+      this.params = const {}});
+
+  final EventActionKind kind;
+
+  /// The option in the dialogue box and the NPC's line when picked.
+  final LocalizedText label, line;
+
+  /// Gift: item id (smithing material, bait or seed; empty = gold only).
+  final String item;
+
+  /// Rumor: `rift` or a biome id. Duel: enemy id.
+  final String target;
+
+  /// Numbers: gift `qty` / `gold`; duel `hpMult`, `atkMult`,
+  /// `levelBonus`, `rewardMult`.
+  final Map<String, num> params;
+
+  /// Rumor target meaning "wherever the echo rift is now".
+  static const rift = 'rift';
+
+  static const _neutralOne = {'hpMult', 'atkMult', 'rewardMult', 'qty'};
+
+  double param(String key) =>
+      (params[key] ?? (_neutralOne.contains(key) ? 1 : 0)).toDouble();
+
+  Map<String, Object?> toJson() => {
+        'kind': kind.name,
+        'label': label.toJson(),
+        'line': line.toJson(),
+        if (item.isNotEmpty) 'item': item,
+        if (target.isNotEmpty) 'target': target,
+        if (params.isNotEmpty) 'params': params,
+      };
+
+  static EventNpcAction fromJson(Object? raw) {
+    if (raw is! Map) throw FormatException('acción inválida: $raw');
+    final p = raw['params'];
+    return EventNpcAction(EventActionKind.fromName(raw['kind']),
+        label: LocalizedText.fromJson(raw['label']),
+        line: LocalizedText.fromJson(raw['line']),
+        item: raw['item'] is String ? raw['item'] as String : '',
+        target: raw['target'] is String ? raw['target'] as String : '',
+        params: {
+          if (p is Map)
+            for (final e in p.entries)
+              if (e.key is String && e.value is num)
+                e.key as String: e.value as num
+        });
   }
 }
 
@@ -231,18 +373,36 @@ class WorldEventsConfig {
 
   /// Text paths lacking a language (`<event>.<field>:<tag>`).
   List<String> missingLocales(List<String> tags) => [
-        for (final e in events)
+        for (final e in events) ...[
           for (final (f, t) in [
             ('title', e.title),
             ('notice', e.notice),
             ('body', e.body)
           ])
-            for (final m in t.missing(tags)) '${e.id}.$f:$m'
+            for (final m in t.missing(tags)) '${e.id}.$f:$m',
+          if (e.isNpc &&
+              (e.actions.isNotEmpty ||
+                  e.topics.isNotEmpty ||
+                  e.greeting.byLocale.values.any((v) => v.trim().isNotEmpty)))
+            for (final m in e.greeting.missing(tags)) '${e.id}.greeting:$m',
+          for (final t in e.topics)
+            for (final (f, x) in [('label', t.label), ('line', t.line)])
+              for (final m in x.missing(tags)) '${e.id}.topic.${t.id}.$f:$m',
+          for (var i = 0; i < e.actions.length; i++)
+            for (final (f, x) in [
+              ('label', e.actions[i].label),
+              ('line', e.actions[i].line)
+            ])
+              for (final m in x.missing(tags)) '${e.id}.action.$i.$f:$m',
+        ]
       ];
 
   /// Everything that blocks saving (§ 7), empty = valid.
   List<String> validate(List<String> tags,
-      {Set<String>? biomes, Set<String>? residents, Set<String>? enemies}) {
+      {Set<String>? biomes,
+      Set<String>? residents,
+      Set<String>? enemies,
+      Set<String>? items}) {
     final out = <String>[];
     if (interval < 1) out.add('El intervalo tiene que ser 1 o más.');
     if (minPerRoll < 0) out.add('El mínimo por tirada no puede ser negativo.');
@@ -286,12 +446,74 @@ class WorldEventsConfig {
           !Weather.values.any((w) => w.name == e.weather)) {
         out.add('${e.id}: clima desconocido ${e.weather}.');
       }
+      out.addAll(
+          validateNpc(e, biomes: biomes, enemies: enemies, items: items));
     }
     for (final m in missingLocales(tags)) {
       out.add('Falta idioma: $m');
     }
     return out;
   }
+}
+
+/// Problems of the event NPC part of [e] (§ 3.6, § 7).
+List<String> validateNpc(WorldEventDef e,
+    {Set<String>? biomes, Set<String>? enemies, Set<String>? items}) {
+  final out = <String>[];
+  if (!e.isNpc) {
+    if (e.topics.isNotEmpty || e.actions.isNotEmpty) {
+      out.add('${e.id}: solo visitantes, viajeros y caravanas hablan.');
+    }
+    return out;
+  }
+  if (e.actions.length > 2) out.add('${e.id}: máximo 2 acciones.');
+  final topicIds = <String>{};
+  for (final t in e.topics) {
+    if (t.id.isEmpty || !topicIds.add(t.id)) {
+      out.add('${e.id}: tema sin id o repetido (${t.id}).');
+    }
+  }
+  final kinds = <EventActionKind>{};
+  for (final a in e.actions) {
+    final w = '${e.id} (${a.kind.name})';
+    if (!kinds.add(a.kind)) out.add('$w: acción repetida.');
+    switch (a.kind) {
+      case EventActionKind.gift:
+        if (a.item.isEmpty && a.param('gold') <= 0) {
+          out.add('$w: el regalo necesita objeto u oro.');
+        }
+        if (a.item.isNotEmpty && items != null && !items.contains(a.item)) {
+          out.add('$w: objeto desconocido ${a.item}.');
+        }
+        if (a.item.isNotEmpty && a.param('qty') < 1) {
+          out.add('$w: la cantidad tiene que ser 1 o más.');
+        }
+        if (a.param('gold') < 0) out.add('$w: oro negativo.');
+      case EventActionKind.rumor:
+        if (a.target != EventNpcAction.rift &&
+            (a.target.isEmpty ||
+                (biomes != null && !biomes.contains(a.target)))) {
+          out.add('$w: rumor sin lugar conocido (${a.target}).');
+        }
+      case EventActionKind.duel:
+        if (e.category != WorldEventCategory.overworldNpc) {
+          out.add('$w: el duelo es solo para viajeros del campo.');
+        }
+        if (a.target.isEmpty ||
+            (enemies != null && !enemies.contains(a.target))) {
+          out.add('$w: enemigo desconocido ${a.target}.');
+        }
+        for (final k in const ['hpMult', 'atkMult', 'rewardMult']) {
+          if (a.param(k) <= 0) out.add('$w: $k tiene que ser mayor a 0.');
+        }
+        if (a.param('levelBonus') < 0) out.add('$w: nivel + negativo.');
+      case EventActionKind.trade:
+        if (!e.category.inTown) {
+          out.add('$w: comerciar es solo para visitantes y caravanas.');
+        }
+    }
+  }
+  return out;
 }
 
 /// A running event (§ 1). Immutable.
@@ -340,7 +562,27 @@ class WorldEventsState {
       this.active = const [],
       this.seen = const {},
       this.progress = const {},
-      this.cleared = const {}});
+      this.cleared = const {},
+      this.done = const {}});
+
+  /// Event NPC actions already used (§ 3.6): `<uid>#<index>` → player
+  /// ids (gift taken, rumor heard). Duels use [cleared].
+  final Map<String, Set<String>> done;
+
+  static String doneKey(String uid, int i) => '$uid#$i';
+
+  /// [player] already used action [i] of the event [uid].
+  bool doneBy(String uid, int i, String player) =>
+      done[doneKey(uid, i)]?.contains(player) ?? false;
+
+  /// With action [i] of [uid] used by [player].
+  WorldEventsState markDone(String uid, int i, String player) {
+    final k = doneKey(uid, i);
+    return copyWith(done: {
+      ...done,
+      k: {...?done[k], player},
+    });
+  }
 
   /// Lore quest progress by event uid (§ 3.4).
   final Map<String, int> progress;
@@ -368,13 +610,18 @@ class WorldEventsState {
       active.isEmpty &&
       seen.isEmpty &&
       progress.isEmpty &&
-      cleared.isEmpty;
+      cleared.isEmpty &&
+      done.isEmpty;
 
   /// Without [uid] (and its progress / portal closures).
   WorldEventsState without(String uid) => copyWith(
       active: [for (final a in active) if (a.uid != uid) a],
       progress: {...progress}..remove(uid),
-      cleared: {...cleared}..remove(uid));
+      cleared: {...cleared}..remove(uid),
+      done: {
+        for (final e in done.entries)
+          if (!e.key.startsWith('$uid#')) e.key: e.value
+      });
 
   /// Active events at [place].
   List<ActiveWorldEvent> at(String place) =>
@@ -386,14 +633,16 @@ class WorldEventsState {
           List<ActiveWorldEvent>? active,
           Set<String>? seen,
           Map<String, int>? progress,
-          Map<String, Set<String>>? cleared}) =>
+          Map<String, Set<String>>? cleared,
+          Map<String, Set<String>>? done}) =>
       WorldEventsState(
           seed: seed ?? this.seed,
           last: last ?? this.last,
           active: active ?? this.active,
           seen: seen ?? this.seen,
           progress: progress ?? this.progress,
-          cleared: cleared ?? this.cleared);
+          cleared: cleared ?? this.cleared,
+          done: done ?? this.done);
 
   Map<String, Object?> toJson() => {
         's': seed,
@@ -405,11 +654,24 @@ class WorldEventsState {
           'cl': {
             for (final e in cleared.entries) e.key: (e.value.toList()..sort())
           },
+        if (done.isNotEmpty)
+          'dn': {
+            for (final e in done.entries) e.key: (e.value.toList()..sort())
+          },
       };
 
   static WorldEventsState fromJson(Object? raw) {
     if (raw is! Map) return const WorldEventsState();
     int i(Object? v) => v is num ? v.round() : 0;
+    Map<String, Set<String>> sets(Object? r) => {
+          if (r case final Map m)
+            for (final e in m.entries)
+              if (e.key is String && e.value is List)
+                e.key as String: {
+                  for (final x in e.value as List)
+                    if (x is String) x
+                }
+        };
     return WorldEventsState(
       seed: i(raw['s']),
       last: i(raw['l']),
@@ -429,15 +691,8 @@ class WorldEventsState {
             if (e.key is String && e.value is num)
               e.key as String: (e.value as num).round()
       },
-      cleared: {
-        if (raw['cl'] case final Map m)
-          for (final e in m.entries)
-            if (e.key is String && e.value is List)
-              e.key as String: {
-                for (final x in e.value as List)
-                  if (x is String) x
-              }
-      },
+      cleared: sets(raw['cl']),
+      done: sets(raw['dn']),
     );
   }
 
@@ -454,9 +709,17 @@ class WorldEventsState {
     }
     if (!o.seen.containsAll(seen)) return false;
     if (o.progress.length != progress.length ||
-        o.cleared.length != cleared.length) {
+        o.cleared.length != cleared.length ||
+        o.done.length != done.length) {
       return false;
     }
+    for (final e in done.entries) {
+      final x = o.done[e.key];
+      if (x == null || x.length != e.value.length || !x.containsAll(e.value)) {
+        return false;
+      }
+    }
+
     for (final e in progress.entries) {
       if (o.progress[e.key] != e.value) return false;
     }

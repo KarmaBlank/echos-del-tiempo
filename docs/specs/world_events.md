@@ -142,6 +142,58 @@ lista. El avance se ve en DIARIO → EVENTOS (`Progreso: x/n`).
 Mercaderes con restos del pasado magitec en el pueblo; `discount` como
 el visitante.
 
+### 3.6 NPCs de evento: diálogo y acciones
+
+Visitantes, viajeros del campo y caravanas hablan en el cuadro de
+diálogo de siempre (`DsDialogueBox`: escribe letra a letra, Saltar y
+VOLVER, ui_minimal.md § 10.1) dentro de `EventNpcDialogue`. La grieta
+sigue con su panel y ENTRAR.
+
+- **Datos** (en `WorldEventDef`, todos `LocalizedText` con todos los
+  idiomas obligatorios): `greeting` (primera línea; vacío = `notice`),
+  `topics` (`id`, `label` = la pregunta, `line` = la respuesta) y
+  `actions` (1–2, `EventNpcAction`: `kind`, `label`, `line`, `item`,
+  `target`, `params`).
+- **Saludo:** si aplica el reconocimiento por renombre
+  (renown_town_growth.md § 4.2), esa línea reemplaza al saludo. Lugar y
+  días que quedan van en la línea chica bajo el nombre.
+- **Temas:** pila de nodos; la respuesta tiene solo VOLVER; los temas ya
+  preguntados se ven atenuados.
+- **Acciones** (lista fija, `EventActionKind`):
+  - `gift` (REGALO): una vez por jugador, `item` × `qty` (material de
+    forja, cebo o semilla; `WorldEventRules.giftItems`) y/o `gold`.
+  - `rumor`: la respuesta del NPC y una insignia RUMOR en el mapa de
+    viaje (`WorldEventRules.rumorMarks`) sobre `target`: `rift` = el
+    bioma de la grieta activa, o un id de bioma. Dura lo que el evento.
+  - `duel` (DUELO, solo viajeros del campo): pelea única contra el
+    enemigo `target` por el camino de la grieta (`ProposeRiftAction`
+    con el uid del evento; `WorldEventRules.duel` arma el `EchoRiftBoss`
+    con la arena de la última zona del bioma y `hpMult`, `atkMult`,
+    `levelBonus`, `rewardMult`). Cooperativo igual que la grieta. Al
+    ganar: oro × `rewardMult`, +1 grieta de renombre y queda ganado en
+    `cleared`.
+  - `trade` (COMERCIAR, solo pueblo): el puesto con el descuento.
+  - Pedidos (mostrar un arma, vencer al jefe) quedan para cuando haya
+    seguimiento con sistemas existentes.
+- **Estado por jugador** (anfitrión manda): `WorldEventsState.done`
+  (JSON `dn`, `<uid>#<índice>` → jugadores) para regalo y rumor; el
+  duelo usa `cleared`. Lo hecho se ve atenuado con "(hecho)".
+  `EventNpcActAction(uid, índice)` (`wevAct`): el anfitrión valida
+  lobby, lugar, frente al NPC y que no lo haya hecho.
+- **Marca:** "!" sobre el NPC (mismo `NpcMark` y lugar que los
+  habitantes) mientras le quede un regalo, rumor o duelo por hacer
+  (`WorldEventRules.mark`). Comerciar no cuenta.
+
+Valores del catálogo (BORRADOR es-AR, en, zh-Hans):
+
+| evento | acciones |
+|---|---|
+| `visitor_clockmaker` | COMERCIAR + rumor `rift` |
+| `visitor_chronicler` | rumor `cavernas` (una veta escondida) |
+| `wanderer_forest` | regalo 3 × `larva_brillante` + rumor `rift` |
+| `wanderer_automaton` | regalo 1 × `rare_cog` + duelo `guardianReloj` (vida ×1.4, ataque ×1.2, +2 niv, premio ×1.5); su tema habla de la mina de las ruinas |
+| `caravan_relics` | COMERCIAR + rumor `ruinas` (reliquia magitec en la mina) |
+
 ## 4. Catálogo inicial (BORRADOR: textos del dueño pendientes)
 
 Todos los textos de abajo son **BORRADOR**: es-AR, en y zh-Hans
@@ -193,7 +245,8 @@ Líneas es-AR (BORRADOR):
 
 - `WorldEventsState` viaja en `TownState.farmJson` (`wev`): todos ven los
   mismos eventos. Sube `kProtocolVersion` (69 → 70): `wev` (con
-  `pg` / `cl`), la acción `rift` y `rift` en la sala.
+  `pg` / `cl`), la acción `rift` y `rift` en la sala. 73 → 74: `dn` en
+  `wev` y la acción `wevAct` (§ 3.6).
 - Se guarda con el mundo (`TownState.toJson`). Un save viejo sin `wev`
   arranca vacío.
 - El catálogo (`assets/data/events/world_events.json`) no viaja: cada par
@@ -226,8 +279,13 @@ Líneas es-AR (BORRADOR):
   biomas, estación, clima del pueblo, habitante, objetivo de historia:
   solo vencer o explorar),
   TEXTOS (una subpestaña por campo: TÍTULO, AVISO, DETALLE; cada una con
-  todos los idiomas y un ! si le falta alguno) y PARÁMETROS (números de
-  § 1). Valida también que el enemigo o el bioma del objetivo existan y
+  todos los idiomas y un ! si le falta alguno), PARÁMETROS (números de
+  § 1) y, en visitantes, viajeros y caravanas, DIÁLOGO con subpestañas
+  SALUDO, TEMAS y ACCIONES (§ 3.6: hasta 2, de la lista fija; regalo
+  con objeto, cantidad y oro; rumor con lugar; duelo con enemigo y
+  escala). Valida idiomas, que el objeto, bioma o enemigo existan, el
+  máximo de 2, duelo solo en el campo y comerciar solo en el pueblo.
+ Valida también que el enemigo o el bioma del objetivo existan y
   que `season` / `weather` sean una estación o un clima conocidos.
 - GUARDAR EVENTOS escribe `assets/data/events/world_events.json` y lo
   aplica. Bloqueado si falta un idioma o el archivo no valida

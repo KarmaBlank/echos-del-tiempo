@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
+import '../data/bait_catalog.dart';
 import '../data/biomes_catalog.dart';
+import '../data/farming_catalog.dart';
+import '../data/smithing_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/town_layout.dart';
 import '../data/world_events_catalog.dart';
@@ -9,10 +12,12 @@ import '../models/battle_state.dart';
 import '../models/game_map.dart';
 import '../models/localized_text.dart';
 import '../models/mission_def.dart';
+import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import '../models/zone_def.dart';
 import 'js_math.dart';
 import 'mulberry32.dart';
+import 'quest_track_rules.dart' show NpcMark;
 import 'weather_rules.dart';
 
 /// What the roll needs to know about the world (world_events.md § 2).
@@ -222,7 +227,8 @@ abstract final class WorldEventRules {
   /// `EcoRules.applyBattle`). Mutates [state].
   static void applyRiftBattle(BattleState state, EchoRiftBoss r) {
     for (final en in state.enemies) {
-      if (!en.boss) continue;
+      // A duel foe (§ 3.6) may not be a boss type: match it by id too.
+      if (!en.boss && en.enemyType != r.bossId) continue;
       final (hp, atk) = r.scale(en.maxHp, en.attack);
       en
         ..maxHp = hp
@@ -372,12 +378,128 @@ abstract final class WorldEventRules {
     if (uid == null) return null;
     final a = s.active.where((x) => x.uid == uid).firstOrNull;
     final d = a == null ? null : (cfg ?? kWorldEvents).def(a.def);
-    if (a == null || d == null || d.category != WorldEventCategory.echoPortal) {
-      return null;
-    }
-    final r = rift(d, a.biome);
+    if (a == null || d == null) return null;
+    final r = switch (d.category) {
+      WorldEventCategory.echoPortal => rift(d, a.biome),
+      WorldEventCategory.overworldNpc => duel(d, a.biome),
+      _ => null,
+    };
     return r == null ? null : (a, r);
   }
+
+  // ---------------- event NPCs (§ 3.6) ----------------
+
+  /// The duel of a wanderer at [biome] (§ 3.6): its enemy in the arena
+  /// of the biome's last zone, scaled like a rift. `null` = no duel.
+  static EchoRiftBoss? duel(WorldEventDef d, String biome) {
+    final a = d.actions
+        .where((x) => x.kind == EventActionKind.duel && x.target.isNotEmpty)
+        .firstOrNull;
+    final zones = biomeDef(biome)?.zones ?? const <int>[];
+    if (a == null || zones.isEmpty || !kEnemies.containsKey(a.target)) {
+      return null;
+    }
+    final z = kZones.where((k) => k.index == zones.last).firstOrNull;
+    if (z == null) return null;
+    return EchoRiftBoss(
+        bossId: a.target,
+        zone: z.index,
+        missionId: z.missionId ?? z.id,
+        hpMult: a.param('hpMult'),
+        atkMult: a.param('atkMult'),
+        levelBonus: a.param('levelBonus').round(),
+        rewardMult: a.param('rewardMult'));
+  }
+
+  /// Every item id a gift can carry: smithing materials, baits, seeds.
+  static Set<String> get giftItems =>
+      {...kSmithMaterials.keys, ...kBaits.keys, ...kCrops.keys};
+
+  /// [action] (a gift) given to [p]; `null` if the item is unknown.
+  static PlayerProfile? gift(PlayerProfile p, EventNpcAction action) {
+    var out = p;
+    final id = action.item;
+    if (id.isNotEmpty) {
+      final n = math.max(1, action.param('qty').round());
+      final life = p.life;
+      if (kSmithMaterials.containsKey(id)) {
+        out = out.copyWith(life: life.addOres({id: n}));
+      } else if (kBaits.containsKey(id)) {
+        out = out.copyWith(life: life.addBait(id, n));
+      } else if (kCrops.containsKey(id)) {
+        out = out.copyWith(life: life.copyWith(farm: life.farm.addSeed(id, n)));
+      } else {
+        return null;
+      }
+    }
+    final gold = action.param('gold').round();
+    if (gold > 0) out = out.copyWith(credits: out.credits + gold);
+    return out;
+  }
+
+  /// Whether [player] already did action [i] of the event [a] (§ 3.6):
+  /// gift taken / rumor heard (`done`), duel won (`cleared`). Trade is
+  /// never "done".
+  static bool actionDone(
+      WorldEventsState s, ActiveWorldEvent a, WorldEventDef d, int i,
+      String player) {
+    if (i < 0 || i >= d.actions.length) return false;
+    return switch (d.actions[i].kind) {
+      EventActionKind.gift || EventActionKind.rumor =>
+        s.doneBy(a.uid, i, player),
+      EventActionKind.duel => s.clearedBy(a.uid, player),
+      EventActionKind.trade => false,
+    };
+  }
+
+  /// The event NPC [a] still has something for [player] (§ 3.6).
+  static bool pending(WorldEventsState s, ActiveWorldEvent a,
+      WorldEventDef d, String player) {
+    if (!d.isNpc) return false;
+    for (var i = 0; i < d.actions.length; i++) {
+      final k = d.actions[i].kind;
+      if (!k.once) continue;
+      if (k == EventActionKind.duel && duel(d, a.biome) == null) continue;
+      if (!actionDone(s, a, d, i, player)) return true;
+    }
+    return false;
+  }
+
+  /// The mark over the event NPC [a] for [player] (same as residents).
+  static NpcMark mark(WorldEventsState s, ActiveWorldEvent a,
+          WorldEventDef d, String player) =>
+      pending(s, a, d, player) ? NpcMark.news : NpcMark.none;
+
+  /// Where a rumor points now (§ 3.6): a biome id, or `null` (no rift
+  /// open for `rift`).
+  static String? rumorPlace(WorldEventsState s, EventNpcAction action,
+      [WorldEventsConfig? cfg]) {
+    if (action.kind != EventActionKind.rumor) return null;
+    if (action.target != EventNpcAction.rift) {
+      return action.target.isEmpty ? null : action.target;
+    }
+    final c = cfg ?? kWorldEvents;
+    return s.active
+        .where((x) => c.def(x.def)?.category == WorldEventCategory.echoPortal)
+        .firstOrNull
+        ?.biome;
+  }
+
+  /// Places marked on the travel map for [player]: the rumors they heard
+  /// from events still running (§ 3.6).
+  static Set<String> rumorMarks(WorldEventsState s, String player,
+      [WorldEventsConfig? cfg]) {
+    final c = cfg ?? kWorldEvents;
+    return {
+      for (final a in s.active)
+        if (c.def(a.def) case final d?)
+          for (var i = 0; i < d.actions.length; i++)
+            if (d.actions[i].kind == EventActionKind.rumor &&
+                s.doneBy(a.uid, i, player))
+              if (rumorPlace(s, d.actions[i], c) case final p?) p
+    };
+  }
+
 
   /// Gold per player for a rift win: the boss's gold times
   /// `rewardMult`.

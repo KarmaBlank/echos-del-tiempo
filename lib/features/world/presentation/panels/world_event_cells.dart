@@ -102,6 +102,16 @@ Widget? worldEventBadge(BuildContext context, WorldEventsState s, String place) 
   ).tip(titles.join(' · '));
 }
 
+/// RUMOR badge on the travel map: a place an event NPC told [player]
+/// about (world_events.md § 3.6), or `null`.
+Widget? rumorBadge(
+    BuildContext context, WorldEventsState s, String place, String player) {
+  if (!WorldEventRules.rumorMarks(s, player).contains(place)) return null;
+  return DsBadge(context.t('ui.town.events.rumor_badge'),
+          key: ValueKey('travel-rumor-$place'))
+      .tip(context.t('ui.town.events.rumor_tip'));
+}
+
 /// The trader banner while a visitor or caravan sells cheaper (§ 3.1),
 /// or `null`.
 String? eventSaleText(BuildContext context, WorldEventsState s) {

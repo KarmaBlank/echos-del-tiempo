@@ -510,6 +510,15 @@ class ProposeRiftAction extends SessionAction {
   const ProposeRiftAction(this.uid);
 }
 
+/// `wevAct` (protocol 74, world_events.md § 3.6): use action [index]
+/// (a gift or a rumor) of the event NPC [uid] in front of it. Duels go
+/// through [ProposeRiftAction].
+class EventNpcActAction extends SessionAction {
+  final String uid;
+  final int index;
+  const EventNpcActAction(this.uid, this.index);
+}
+
 /// `tev` (protocol 71, renown_town_growth.md § 6.1): accept the town
 /// event [id] a resident proposed (it is scheduled a few days ahead).
 class ScheduleTownEventAction extends SessionAction {

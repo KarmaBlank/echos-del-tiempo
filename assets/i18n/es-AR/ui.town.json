@@ -501,5 +501,10 @@
   "ui.town.trader.tag_bait": "CEBO",
   "ui.town.events.editor.season": "ESTACIÓN (NINGUNA = CUALQUIERA)",
   "ui.town.events.editor.weather": "CLIMA DEL PUEBLO (NINGUNO = CUALQUIERA)",
-  "ui.town.events.editor.any": "CUALQUIERA"
+  "ui.town.events.editor.any": "CUALQUIERA",
+  "ui.town.events.done": "(hecho)",
+  "ui.town.events.duel_go": "¡En guardia!",
+  "ui.town.events.duel_none": "Acá no hay dónde pelear.",
+  "ui.town.events.rumor_badge": "RUMOR",
+  "ui.town.events.rumor_tip": "Te contaron algo de este lugar."
 }

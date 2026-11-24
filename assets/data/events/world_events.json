@@ -28,7 +28,56 @@
       "params": {
         "discount": 0.1
       },
-      "sprite": "npc_ev_visitante"
+      "sprite": "npc_ev_visitante",
+      "greeting": {
+        "es-AR": "¿Se te atrasó el reloj? A todos se nos atrasa algo.",
+        "en": "Is your clock running late? Something always is.",
+        "zh-Hans": "你的钟慢了吗？总有什么会慢下来。"
+      },
+      "topics": [
+        {
+          "id": "trade",
+          "label": {
+            "es-AR": "¿Qué arreglás?",
+            "en": "What do you mend?",
+            "zh-Hans": "你修什么？"
+          },
+          "line": {
+            "es-AR": "Relojes, cerraduras, engranajes. Lo que el tiempo gasta.",
+            "en": "Clocks, locks, gears. Whatever time wears down.",
+            "zh-Hans": "钟表、锁、齿轮。凡是被时间磨损的。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "trade",
+          "label": {
+            "es-AR": "Comerciar",
+            "en": "Trade",
+            "zh-Hans": "交易"
+          },
+          "line": {
+            "es-AR": "Mirá lo que traje.",
+            "en": "Have a look at what I brought.",
+            "zh-Hans": "看看我带来了什么。"
+          }
+        },
+        {
+          "kind": "rumor",
+          "label": {
+            "es-AR": "¿Algún rumor?",
+            "en": "Any rumors?",
+            "zh-Hans": "有什么传闻吗？"
+          },
+          "line": {
+            "es-AR": "Mis relojes tiemblan cerca de una grieta de eco. Te la marco en el mapa.",
+            "en": "My clocks shiver near an echo rift. I marked it on your map.",
+            "zh-Hans": "我的钟在回声裂隙附近会颤动。我在你的地图上标出来了。"
+          },
+          "target": "rift"
+        }
+      ]
     },
     {
       "id": "visitor_chronicler",
@@ -51,7 +100,43 @@
         "en": "He claims he read these pages in a book not yet written.",
         "zh-Hans": "他说自己在一本尚未写成的书里读过这些内容。"
       },
-      "sprite": "npc_ev_cronista"
+      "sprite": "npc_ev_cronista",
+      "greeting": {
+        "es-AR": "Ah, sos vos. Ya te había anotado.",
+        "en": "Ah, it is you. I already wrote you down.",
+        "zh-Hans": "啊，是你。我早就把你记下了。"
+      },
+      "topics": [
+        {
+          "id": "book",
+          "label": {
+            "es-AR": "¿Qué libro?",
+            "en": "Which book?",
+            "zh-Hans": "哪本书？"
+          },
+          "line": {
+            "es-AR": "Uno que todavía no se escribió. Las últimas páginas no se pueden cambiar.",
+            "en": "One not yet written. Its last pages cannot be changed.",
+            "zh-Hans": "一本尚未写成的书。最后几页无法改变。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "rumor",
+          "label": {
+            "es-AR": "¿Algún rumor?",
+            "en": "Any rumors?",
+            "zh-Hans": "有什么传闻吗？"
+          },
+          "line": {
+            "es-AR": "En mis páginas, las Cavernas guardan una veta que nadie encontró todavía. Te la marco.",
+            "en": "In my pages, the Caverns hold a vein no one has found yet. I marked it.",
+            "zh-Hans": "在我的书页里，洞窟藏着一条还没人发现的矿脉。我替你标出来了。"
+          },
+          "target": "cavernas"
+        }
+      ]
     },
     {
       "id": "wanderer_forest",
@@ -76,7 +161,60 @@
         "en": "She can be seen near the forest lake for a few days.",
         "zh-Hans": "几天内可以在森林湖边见到她。"
       },
-      "sprite": "npc_ev_peregrina"
+      "sprite": "npc_ev_peregrina",
+      "greeting": {
+        "es-AR": "¿Lo oís? No... claro que no.",
+        "en": "Do you hear it? No... of course not.",
+        "zh-Hans": "你听见了吗？不……当然听不见。"
+      },
+      "topics": [
+        {
+          "id": "echo",
+          "label": {
+            "es-AR": "¿Qué eco seguís?",
+            "en": "What echo do you follow?",
+            "zh-Hans": "你在追随什么回声？"
+          },
+          "line": {
+            "es-AR": "Una voz que todavía no habló. Me dice por dónde ir.",
+            "en": "A voice that has not spoken yet. It tells me where to go.",
+            "zh-Hans": "一个还没开口的声音。它告诉我该往哪走。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "gift",
+          "label": {
+            "es-AR": "¿Tenés algo para mí?",
+            "en": "Do you have something for me?",
+            "zh-Hans": "你有东西给我吗？"
+          },
+          "line": {
+            "es-AR": "Tomá: brillan cuando el agua recuerda. Los peces no se resisten.",
+            "en": "Here: they glow when the water remembers. Fish cannot resist.",
+            "zh-Hans": "拿着：水记起往事时它们会发光。鱼抵挡不住。"
+          },
+          "item": "larva_brillante",
+          "params": {
+            "qty": 3
+          }
+        },
+        {
+          "kind": "rumor",
+          "label": {
+            "es-AR": "¿Algún rumor?",
+            "en": "Any rumors?",
+            "zh-Hans": "有什么传闻吗？"
+          },
+          "line": {
+            "es-AR": "El eco viene de una grieta. Te marco dónde está.",
+            "en": "The echo comes from a rift. I marked where it is.",
+            "zh-Hans": "回声来自一道裂隙。我标出了它的位置。"
+          },
+          "target": "rift"
+        }
+      ]
     },
     {
       "id": "wanderer_automaton",
@@ -102,7 +240,66 @@
         "en": "Its gears still remember the magitech past.",
         "zh-Hans": "它的齿轮仍记得魔导科技的过去。"
       },
-      "sprite": "npc_ev_automata"
+      "sprite": "npc_ev_automata",
+      "greeting": {
+        "es-AR": "Clic. ¿Sos. Quien. Me. Dio. Cuerda?",
+        "en": "Click. Are. You. The. One. Who. Wound. Me?",
+        "zh-Hans": "咔哒。是。你。给。我。上。的。发条。吗？"
+      },
+      "topics": [
+        {
+          "id": "mine",
+          "label": {
+            "es-AR": "¿De dónde venís?",
+            "en": "Where do you come from?",
+            "zh-Hans": "你从哪里来？"
+          },
+          "line": {
+            "es-AR": "De abajo. La mina de las ruinas. Ahí quedó la fragua que me armó.",
+            "en": "From below. The ruins mine. The forge that built me is still there.",
+            "zh-Hans": "从下面。遗迹的矿坑。造我的熔炉还在那里。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "gift",
+          "label": {
+            "es-AR": "Te ayudo a buscarlo",
+            "en": "I will help you look",
+            "zh-Hans": "我帮你找"
+          },
+          "line": {
+            "es-AR": "Gracias. Tomá. Me sobra. Un engranaje.",
+            "en": "Thanks. Take. A spare. Cog.",
+            "zh-Hans": "谢谢。拿着。多余的。齿轮。"
+          },
+          "item": "rare_cog",
+          "params": {
+            "qty": 1
+          }
+        },
+        {
+          "kind": "duel",
+          "label": {
+            "es-AR": "Probemos fuerzas",
+            "en": "Let us test our strength",
+            "zh-Hans": "比试一下"
+          },
+          "line": {
+            "es-AR": "Protocolo. De. Prueba. Iniciado.",
+            "en": "Test. Protocol. Engaged.",
+            "zh-Hans": "测试。协议。启动。"
+          },
+          "target": "guardianReloj",
+          "params": {
+            "hpMult": 1.4,
+            "atkMult": 1.2,
+            "levelBonus": 2,
+            "rewardMult": 1.5
+          }
+        }
+      ]
     },
     {
       "id": "echo_rift",
@@ -130,6 +327,9 @@
         "atkMult": 1.3,
         "levelBonus": 3,
         "rewardMult": 1.75
+      },
+      "greeting": {
+        "es-AR": ""
       }
     },
     {
@@ -159,7 +359,10 @@
       },
       "objective": "defeat",
       "target": "arana",
-      "n": 3
+      "n": 3,
+      "greeting": {
+        "es-AR": ""
+      }
     },
     {
       "id": "lore_velda_order",
@@ -188,7 +391,10 @@
       },
       "objective": "defeat",
       "target": "guardianReloj",
-      "n": 1
+      "n": 1,
+      "greeting": {
+        "es-AR": ""
+      }
     },
     {
       "id": "lore_kael_guardian",
@@ -217,7 +423,10 @@
       },
       "objective": "defeat",
       "target": "elementalEscarcha",
-      "n": 2
+      "n": 2,
+      "greeting": {
+        "es-AR": ""
+      }
     },
     {
       "id": "lore_brann_forge",
@@ -246,7 +455,10 @@
       },
       "objective": "explore",
       "target": "grieta",
-      "n": 1
+      "n": 1,
+      "greeting": {
+        "es-AR": ""
+      }
     },
     {
       "id": "lore_oren_future",
@@ -276,7 +488,10 @@
       },
       "objective": "explore",
       "target": "abismo",
-      "n": 1
+      "n": 1,
+      "greeting": {
+        "es-AR": ""
+      }
     },
     {
       "id": "caravan_relics",
@@ -302,7 +517,56 @@
       "params": {
         "discount": 0.15
       },
-      "sprite": "npc_ev_caravana"
+      "sprite": "npc_ev_caravana",
+      "greeting": {
+        "es-AR": "¡Restos del pasado, recién desenterrados!",
+        "en": "Relics of the past, freshly dug up!",
+        "zh-Hans": "刚出土的往昔遗物！"
+      },
+      "topics": [
+        {
+          "id": "relics",
+          "label": {
+            "es-AR": "¿De dónde sacan esto?",
+            "en": "Where do you find these?",
+            "zh-Hans": "这些是从哪找到的？"
+          },
+          "line": {
+            "es-AR": "De la época magitec. Cada pieza todavía recuerda para qué servía.",
+            "en": "From the magitec age. Every piece still remembers its purpose.",
+            "zh-Hans": "来自魔导时代。每一件都还记得自己的用途。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "trade",
+          "label": {
+            "es-AR": "Comerciar",
+            "en": "Trade",
+            "zh-Hans": "交易"
+          },
+          "line": {
+            "es-AR": "Mirá lo que traje.",
+            "en": "Have a look at what I brought.",
+            "zh-Hans": "看看我带来了什么。"
+          }
+        },
+        {
+          "kind": "rumor",
+          "label": {
+            "es-AR": "¿Algún rumor?",
+            "en": "Any rumors?",
+            "zh-Hans": "有什么传闻吗？"
+          },
+          "line": {
+            "es-AR": "En la mina de las Ruinas hay una reliquia magitec enterrada. Te la marco.",
+            "en": "There is a magitec relic buried in the Ruins mine. I marked it.",
+            "zh-Hans": "遗迹的矿坑里埋着一件魔导遗物。我替你标出来了。"
+          },
+          "target": "ruinas"
+        }
+      ]
     }
   ]
 }

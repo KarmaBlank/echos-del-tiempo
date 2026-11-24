@@ -501,5 +501,10 @@
   "ui.town.trader.tag_bait": "BAIT",
   "ui.town.events.editor.season": "SEASON (NONE = ANY)",
   "ui.town.events.editor.weather": "TOWN WEATHER (NONE = ANY)",
-  "ui.town.events.editor.any": "ANY"
+  "ui.town.events.editor.any": "ANY",
+  "ui.town.events.done": "(done)",
+  "ui.town.events.duel_go": "En garde!",
+  "ui.town.events.duel_none": "There is no place to fight here.",
+  "ui.town.events.rumor_badge": "RUMOR",
+  "ui.town.events.rumor_tip": "Someone told you about this place."
 }
