@@ -77,6 +77,16 @@ class ProposeMissionAction extends SessionAction {
   const ProposeMissionAction(this.missionId);
 }
 
+/// What [GatherAction] does with the open gathering.
+enum GatherOp { join, leave, go, cancel }
+
+/// `gather` (protocol 63, free_movement.md § 2.1): join / leave the open
+/// gathering, or (its proposer) IR / cancel. Only the world routes it.
+class GatherAction extends SessionAction {
+  final GatherOp op;
+  const GatherAction(this.op);
+}
+
 /// `vote`.
 class VoteMissionAction extends SessionAction {
   final bool yes;

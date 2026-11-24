@@ -13,10 +13,11 @@ Cada jugador decide solo dónde está:
 - Viajar por el mapa de viaje es instantáneo y de a uno: sin votación,
   sin "decide el anfitrión", sin pantalla de espera. Cada uno usa su
   propia zona desbloqueada para saber qué biomas puede abrir.
-- **ENTRAR** en una entrada (o abrir un Eco en el portal de su zona,
+- **PROPONER** en el mostrador (o abrir un Eco en el portal de su zona,
   ecos_zone.md § 4, una Prueba, un Jefe del
   Abismo, el TUTORIAL) mete solo a ese jugador (y a sus compañeros de
-  party de solitario). Sin votación ni LISTO de preparación.
+  party de solitario). Sin votación ni LISTO de preparación. Con amigos
+  en el mundo, antes abre una convocatoria para entrar juntos (§ 2.1.1).
 - Si ya hay amigos jugando esa misma misión (o esa misma Prueba / ese
   mismo Jefe del Abismo), el que entra se suma a su instancia: aparece en
   la entrada del piso actual, y si están peleando entra a la pelea como
@@ -73,6 +74,34 @@ alguien en el pueblo o en un exterior:
    pasa el jugador, se aplica la acción ahí y se resuelve sola la
    votación y la preparación (es el único humano). Si la acción no vale,
    vuelve a donde estaba y la instancia se descarta.
+
+### 2.1.1 Convocatoria (v0.42.0, protocolo 63)
+
+Con **otros humanos** en el mundo, una `ProposeMissionAction` /
+`ProposeTrialAction` / `ProposeAbyssAction` desde el pueblo o un exterior
+no entra: abre una **convocatoria** (`Gathering`: quién, qué, quiénes se
+sumaron). Una sola por mundo, igual en todas las instancias (`gat` en el
+snapshot). Chat a todos: `X convoca a <misión> — UNIRSE para ir juntos.`
+(la línea avisa con el chat plegado).
+
+- Quien propone ve una tarjeta en el HUD con los que se sumaron, **IR**
+  (habilitado al instante, sin espera mínima) y **CANCELAR**.
+- Los demás ven la tarjeta con **UNIRSE** / **SALIR** (desde el pueblo o un
+  exterior; desde una mazmorra no), y en el mostrador la misión dice
+  `UNIRSE (nombre)`. Proponer lo mismo que está convocado = UNIRSE.
+- `GatherAction(join | leave | go | cancel)`. IR: quien propone entra
+  como en § 2.1 y, en el mismo paso, todos los sumados que siguen en el
+  pueblo o un exterior (en lobby) pasan a esa misma instancia. La
+  convocatoria se cierra.
+- Si nadie se suma, IR entra igual. Los que no se sumaron pueden entrar
+  después cuando quieran (se suman a la instancia, § 1).
+- Sin convocatoria (entra directo): jugando solo (un humano), si ya hay
+  amigos jugando eso (se suma a su instancia), si hay otra convocatoria
+  abierta de otra cosa, y para Ecos y el TUTORIAL.
+- Se cierra sola si quien propone se va de la sala o entra a una
+  mazmorra; los sumados que se van salen de la lista.
+- Fuera del Mundo con movimiento libre (Travesía) se sigue votando
+  (`¡Voten!`).
 
 `VoteMissionAction`, `ReadyAction` y `CancelPrepAction` quedan sin uso
 en el Mundo (el motor las sigue aceptando dentro de una instancia).

@@ -2919,6 +2919,10 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool vote(bool yes) => _apply(VoteMissionAction(yes));
 
+  /// Open gathering (free_movement.md § 2.1): UNIRSE / SALIR / IR /
+  /// CANCELAR.
+  bool gather(GatherOp op) => _apply(GatherAction(op));
+
   /// Bajar (`>`) o subir (`<`) de piso con todo el grupo.
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 

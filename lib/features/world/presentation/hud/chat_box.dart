@@ -15,13 +15,14 @@ import '../world_strings.dart';
 
 /// Línea de sistema que merece aviso con el chat plegado (v0.8.1): las
 /// que empiezan con `¡` (misión aceptada, piso despejado, subida de
-/// nivel, Eco completado…), las de misión opcional y las propuestas que
-/// piden votar. Ver docs/specs/exploration.md § "Chat".
+/// nivel, Eco completado…), las de misión opcional, las propuestas que
+/// piden votar y las convocatorias (free_movement.md § 2.1). Ver docs/specs/exploration.md § "Chat".
 bool isImportantChat(ChatLine l) =>
     l.system &&
     (l.text.startsWith('¡') ||
         l.text.startsWith('Misión opcional') ||
-        l.text.endsWith('¡Voten!'));
+        l.text.endsWith('¡Voten!') ||
+        l.text.endsWith('— UNIRSE para ir juntos.'));
 
 /// Chat (`#chatbox` del prototipo, líneas 103-106 y 1376-1379): las
 /// últimas 5 líneas (`#chatlog` en `#c8d2ff`; sistema `.sys` en verde

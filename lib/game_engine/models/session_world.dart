@@ -25,6 +25,11 @@ class SessionWorld {
   /// Firma de quién está dónde (para recalcular `away` solo si cambia).
   String awaySig = '';
 
+  /// The open gathering (free_movement.md § 2.1), copied to every
+  /// instance when it changes.
+  Gathering? gather;
+  String gatherSig = '';
+
   GameSession get town => rooms[kTownRoom]!;
 
   /// La clave de la instancia donde está [playerId], o `null`.

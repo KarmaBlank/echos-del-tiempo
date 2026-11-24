@@ -18,6 +18,13 @@ void main() {
     return (we, w);
   }
 
+  /// PROPONER and, if a gathering opened (friends around), IR alone.
+  WorldStep? enter(WorldEngine we, SessionWorld w, String id, String m) {
+    final s = we.apply(w, id, ProposeMissionAction(m));
+    if (s == null || w.gather?.byId != id) return s;
+    return we.apply(w, id, const GatherAction(GatherOp.go));
+  }
+
   test('cada uno viaja solo, sin anfitrión ni votación', () {
     final (we, w) = world();
     expect(we.apply(w, 'p1', const TravelAction(kBosque)), isNotNull);
@@ -33,7 +40,7 @@ void main() {
 
   test('ENTRAR mete solo a uno; otro amigo se suma a su instancia', () {
     final (we, w) = world();
-    expect(we.apply(w, 'p0', const ProposeMissionAction('m1')), isNotNull);
+    expect(enter(we, w, 'p0', 'm1'), isNotNull);
     final d = w.roomOf('p0')!;
     expect(SessionWorld.isDungeon(d), isTrue);
     expect(w.rooms[d]!.mode, SessionMode.field);
@@ -54,8 +61,8 @@ void main() {
 
   test('dos mazmorras distintas a la vez', () {
     final (we, w) = world();
-    we.apply(w, 'p0', const ProposeMissionAction('m1'));
-    we.apply(w, 'p1', const ProposeMissionAction('m2'));
+    enter(we, w, 'p0', 'm1');
+    enter(we, w, 'p1', 'm2');
     final a = w.roomOf('p0'), b = w.roomOf('p1');
     expect(a, isNot(b));
     expect(SessionWorld.isDungeon(b!), isTrue);
@@ -72,7 +79,7 @@ void main() {
 
   test('salir solo: los demás siguen; el último cierra la instancia', () {
     final (we, w) = world();
-    we.apply(w, 'p0', const ProposeMissionAction('m1'));
+    enter(we, w, 'p0', 'm1');
     we.apply(w, 'p1', const ProposeMissionAction('m1'));
     final d = w.roomOf('p0')!;
     // Lejos de la entrada no se puede.
@@ -94,5 +101,74 @@ void main() {
     w.rooms[d] = w.rooms[d]!.copy()..mode = SessionMode.field;
     expect(we.apply(w, 'p1', const LeaveDungeonAction()), isNotNull);
     expect(w.rooms.containsKey(d), isFalse);
+  });
+
+  group('gathering (free_movement.md § 2.1.1)', () {
+    test('PROPONER with friends opens a gathering; IR takes the joined', () {
+      final (we, w) = world();
+      expect(we.apply(w, 'p0', const ProposeMissionAction('m1')), isNotNull);
+      expect(w.roomOf('p0'), kTownRoom, reason: 'waits for IR');
+      final g = w.town.gather!;
+      expect((g.byId, g.target, g.kind), ('p0', 'm1', GatherKind.mission));
+      // Every instance carries it (p1 is in the forest).
+      we.apply(w, 'p1', const TravelAction(kBosque));
+      expect(w.rooms[kBosque]!.gather?.byId, 'p0');
+      expect(we.apply(w, 'p1', const GatherAction(GatherOp.join)), isNotNull);
+      expect(w.town.gather!.joined.map((j) => j.id), ['p1']);
+      // Only the proposer goes / cancels.
+      expect(we.apply(w, 'p1', const GatherAction(GatherOp.go)), isNull);
+      final step = we.apply(w, 'p0', const GatherAction(GatherOp.go))!;
+      final d = w.roomOf('p0')!;
+      expect(SessionWorld.isDungeon(d), isTrue);
+      expect(w.roomOf('p1'), d, reason: 'same instance at once');
+      expect(w.roomOf('p2'), kTownRoom);
+      expect(w.rooms[d]!.mode, SessionMode.field);
+      expect(w.town.gather, isNull);
+      expect(step.eventsFor('p2'), isNotNull);
+      // Who did not join can still enter later.
+      expect(we.apply(w, 'p2', const ProposeMissionAction('m1')), isNotNull);
+      expect(w.roomOf('p2'), d);
+    });
+
+    test('IR with nobody joined enters alone; cancel closes it', () {
+      final (we, w) = world();
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      expect(we.apply(w, 'p1', const GatherAction(GatherOp.cancel)), isNull);
+      expect(we.apply(w, 'p0', const GatherAction(GatherOp.cancel)), isNotNull);
+      expect(w.town.gather, isNull);
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      expect(we.apply(w, 'p0', const GatherAction(GatherOp.go)), isNotNull);
+      expect(SessionWorld.isDungeon(w.roomOf('p0')!), isTrue);
+      expect(w.town.players.keys, ['p1', 'p2']);
+    });
+
+    test('proposing the gathered mission joins; the proposer leaving drops it',
+        () {
+      final (we, w) = world();
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      expect(we.apply(w, 'p2', const ProposeMissionAction('m1')), isNotNull);
+      expect(w.roomOf('p2'), kTownRoom);
+      expect(w.town.gather!.has('p2'), isTrue);
+      we.removePlayer(w, 'p0');
+      expect(w.town.gather, isNull);
+    });
+
+    test('solo: PROPONER goes straight in', () {
+      final we = WorldEngine(sessionEngine(freeMovement: true));
+      final w = we.create(we.engine.create());
+      we.addPlayer(w, 'p0', newProfile('Ana', 'guerrero'));
+      expect(we.apply(w, 'p0', const ProposeMissionAction('m1')), isNotNull);
+      expect(SessionWorld.isDungeon(w.roomOf('p0')!), isTrue);
+      expect(w.town.gather, isNull);
+    });
+
+    test('gat travels in the snapshot', () {
+      final (we, w) = world();
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      we.apply(w, 'p1', const GatherAction(GatherOp.join));
+      final codec = SessionJson(we.engine.catalog);
+      final back = codec.fromJson(codec.toJson(w.town)).gather!;
+      expect(back.signature, w.town.gather!.signature);
+    });
   });
 }
