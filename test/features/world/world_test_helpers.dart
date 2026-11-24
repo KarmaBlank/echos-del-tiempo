@@ -11,7 +11,9 @@ void startBattleWithFirstGroup(SessionController c) {
   if (graceLeft > 0) c.advance(graceLeft + 0.1);
   final en = c.session!.mission!.enemies
       .firstWhere((e) => e.alive && !e.boss && !e.elite);
-  c.teleport(en.x, en.y);
+  // Walk into it (first strike, combat.md § "Iniciativa del encuentro").
+  c.teleport(en.x - 20, en.y);
+  c.teleport(en.x, en.y, moving: true);
   c.advance(0.05);
 }
 

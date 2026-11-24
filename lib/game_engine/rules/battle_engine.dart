@@ -24,6 +24,7 @@ import '../data/abyss_catalog.dart';
 import 'abyss_rules.dart';
 import 'display_names.dart';
 import 'dual_rules.dart';
+import 'encounter_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
 import 'skill_requirements.dart';
@@ -287,6 +288,7 @@ class BattleEngine {
     required List<String> enemyTypes,
     bool elite = false,
     String? triggeredBy,
+    EncounterKind? encounter,
     TurnRule turnRule = TurnRule.velocidad,
     double roomExtra = 0,
   }) {
@@ -403,10 +405,14 @@ class BattleEngine {
           ? _l('start_boss', {'a': first.name})
           : elite
               ? _l('start_elite', {'a': first.name})
-              : _l('start_ambush'),
+              : encounter == EncounterKind.firstStrike
+                  ? _l('start_first_strike')
+                  : _l('start_ambush'),
     );
-    applyOpeningWards(state);
     assignCombatantTags(state);
+    if (encounter != null) _applyInitiative(state, encounter, triggeredBy);
+    // After the initiative: opening wards read the opening order.
+    applyOpeningWards(state);
     return BattleStep(state, const []);
   }
 
@@ -483,6 +489,65 @@ class BattleEngine {
       return v != 0 ? v : a.index.compareTo(b.index);
     });
     return weak.first;
+  }
+
+  /// Encounter initiative (combat.md § "Encounter initiative"): who opens
+  /// round 1. FIRST STRIKE: the party, [triggeredBy] first; AMBUSH: the
+  /// enemies, the touching enemy (`e0`, the group leader) first.
+  void _applyInitiative(
+      BattleState state, EncounterKind kind, String? triggeredBy) {
+    final ambush = kind == EncounterKind.ambush;
+    final opener = ambush
+        ? state.enemies.firstOrNull?.id
+        : (state.party.any((p) => p.id == triggeredBy)
+            ? triggeredBy
+            : state.party.firstOrNull?.id);
+    if (state.porFases) {
+      // Default opens with the enemy phase; first strike skips the enemy
+      // phase of round 1 (the party phase comes first).
+      if (!ambush) {
+        state
+          ..round = 1
+          ..groupPhase = false
+          ..acted.addAll([for (final e in state.enemies) e.id]);
+      }
+    } else if (state.porBando) {
+      // Default opens with the party turn; an ambush opens round 1 with
+      // the enemies (in list order: the touching enemy first).
+      if (ambush) {
+        state
+          ..round = 1
+          ..groupPhase = false
+          ..clock = 1;
+      }
+    } else if (state.porRonda) {
+      // Round 1 order: by speed, with the opener moved to the front.
+      final all = [
+        for (final c in [...state.party, ...state.summons, ...state.enemies])
+          if (c.alive &&
+              !(!c.isPlayer &&
+                  (catalog.enemies[c.enemyType]?.passive ?? false)))
+            c
+      ];
+      if (all.isEmpty) return;
+      final idx = {for (var i = 0; i < all.length; i++) all[i].id: i};
+      final iv = {for (final c in all) c.id: interval(c)};
+      all.sort((a, b) {
+        if (a.id == opener) return -1;
+        if (b.id == opener) return 1;
+        final d = iv[a.id]!.compareTo(iv[b.id]!);
+        return d != 0 ? d : idx[a.id]!.compareTo(idx[b.id]!);
+      });
+      state
+        ..round = 1
+        ..clock = 1
+        ..acted.clear()
+        ..waited.clear()
+        ..roundOrder.replaceRange(
+            0, state.roundOrder.length, [for (final c in all) c.id]);
+    } else {
+      EncounterRules.applyTimelineOpener(state, opener);
+    }
   }
 
   /// Le da el turno al próximo actor y procesa sus estados alterados.
