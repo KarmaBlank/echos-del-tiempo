@@ -183,10 +183,14 @@ extension _FishingOp on _Op {
         _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
     // Horario y clima de cada pez (fishing.md § 13): fuera de su franja
     // casi nunca pica.
+    // Estación y clima del lugar (weather_seasons.md § 4): fuera de
+    // estación no pica; se suman los visitantes de la estación / clima.
     final table = LifeTimeRules.activeTable(
         wild ? biome.fish : TownRules.lakeRoll(s.town, lake),
         s.town.sky,
-        _rand);
+        _rand,
+        biome: wild ? s.place : kTownStartBiome,
+        weather: SkyRules.nowIn(s.town.sky, s.place));
     final junk = wild ? biome.junk : kWaterJunk;
     return (
       table: table,
@@ -257,7 +261,7 @@ extension _FishingOp on _Op {
       }
       if (s.time < st.nextAt) continue;
       st.nextAt = s.time + _autoWait(p);
-      if (_rand() >= SkyRules.biteChance(s.town.sky)) continue;
+      if (_rand() >= SkyRules.biteChance(s.town.sky, s.place)) continue;
       final w = _waterSpot(p, 0, passive: _at.d('autoPassiveMult'));
       final fish = FishingRules.roll(_rand, w.table,
           rareBonus: w.rare,

@@ -6,6 +6,7 @@ import '../../core/audio/audioplayers_sfx_player.dart';
 import '../../core/audio/sfx_files.dart';
 import '../../core/audio/sfx_service.dart';
 import '../../core/data/build_template_loader.dart';
+import '../../core/data/climate_data_loader.dart';
 import '../../core/data/npc_data_loader.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
@@ -38,6 +39,8 @@ Future<void> main() async {
   await BuildTemplateLoader.load();
   // Textos y encargos de los habitantes (docs/specs/npc_editor.md § 1).
   await NpcDataLoader.load();
+  // Climate rules (docs/specs/weather_seasons.md § 8).
+  await ClimateDataLoader.load();
   // Mismas opciones que la señalización REST de escritorio (solo lectura).
   const firebase = DefaultFirebaseOptions.windows;
   final controller = AdminController(

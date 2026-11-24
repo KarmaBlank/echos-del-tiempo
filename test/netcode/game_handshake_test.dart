@@ -12,7 +12,7 @@ import '../game_engine/session_test_helpers.dart';
 void main() {
   test('Mundo en 68 (mudanza de habitantes) y Travesía arranca su secuencia en 1', () {
     expect(WireGame.mundo.protocol, 68);
-    expect(kProtocolVersion, 68);
+    expect(kProtocolVersion, 69);
     expect(WireGame.travesia.protocol, 6);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });

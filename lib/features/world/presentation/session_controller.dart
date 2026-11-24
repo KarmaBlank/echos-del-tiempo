@@ -2419,7 +2419,7 @@ class SessionController extends StateNotifier<SessionView?> {
         rand: _fishRand.nextDouble,
         biteBonus: b.bite,
         zoneBonus: b.zone,
-        biteChance: SkyRules.biteChance(s.town.sky));
+        biteChance: SkyRules.biteChance(s.town.sky, s.place));
     if (f == null) return false;
     _fishing = f;
     _fishPrev = f.phase;

@@ -463,6 +463,22 @@ abstract final class CropPalette {
       accent: Color(0xFFFFF3C4));
 
   static const looks = <String, CropLook>{
+    // Winter crops (weather_seasons.md § 5).
+    'rabano_nieve': CropLook(CropShape.root,
+        seed: Color(0xFFCFD8E0),
+        plant: Color(0xFF6FA89A),
+        fruit: Color(0xFFE85A7A),
+        accent: Color(0xFFF4F8FC)),
+    'col_invierno': CropLook(CropShape.pumpkin,
+        seed: Color(0xFF9DB0A0),
+        plant: Color(0xFF4E8C6A),
+        fruit: Color(0xFF8FC7A0),
+        accent: Color(0xFFE6F2EC)),
+    'puerro_helado': CropLook(CropShape.bulb,
+        seed: Color(0xFFB8C8D4),
+        plant: Color(0xFF5A9A7C),
+        fruit: Color(0xFFE8F0F4),
+        accent: Color(0xFF9CC8E8)),
     'nabo_claro': CropLook(CropShape.root,
         seed: Color(0xFFD8D0C0),
         plant: Color(0xFF5DBB4E),
@@ -687,6 +703,19 @@ abstract final class LifeLevelPalette {
   static const farm = Color(0xFF7BE07B);
 }
 
+/// Ground marks of the seasons and the weather (weather_seasons.md
+/// § 6.3).
+abstract final class GroundPalette {
+  static const snowTint = Color(0x1FE8F0FF);
+  static const frost = Color(0xD9F4F8FF);
+  static const wetTint = Color(0x14284878);
+  static const puddle = Color(0x996A8CB8);
+  static const leaf = Color(0xFFC8702A);
+  static const leafDark = Color(0xFF8A4A1E);
+  static const petal = Color(0xFFF2A0C8);
+  static const petalAlt = Color(0xFFF4E07A);
+}
+
 /// Colores del cielo (day_night_weather.md § 4): la noche, la luz de los
 /// faros y luciérnagas, la lluvia y el rayo.
 abstract final class SkyPalette {
@@ -705,6 +734,10 @@ abstract final class SkyPalette {
   static const fireflyGlow = Color(0x66C8FF5A);
 
   static const rain = Color(0x99A8C8FF);
+
+  /// Snowflakes and the fog veil (weather_seasons.md § 6).
+  static const snow = Color(0xE6F4F8FF);
+  static const fog = Color(0xFFC8D0DA);
   static const bolt = Color(0xFFF4F7FF);
   static const boltGlow = Color(0x88B5C8FF);
   static const flash = Color(0xFFFFFFFF);

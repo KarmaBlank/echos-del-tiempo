@@ -418,5 +418,17 @@
   "ui.town.edit.house_taken": "Ya vive alguien.",
   "ui.town.edit.house_not_house": "No es una casa.",
   "ui.town.edit.house_confirm_text": "{name} se va a mudar a esta casa.",
-  "ui.town.edit.house_confirm": "Asignar casa a {name}"
+  "ui.town.edit.house_confirm": "Asignar casa a {name}",
+  "ui.town.season.spring": "Primavera",
+  "ui.town.season.summer": "Verano",
+  "ui.town.season.autumn": "Otoño",
+  "ui.town.season.winter": "Invierno",
+  "ui.town.season.all_year": "Todo el año",
+  "ui.town.weather.despejado": "Despejado",
+  "ui.town.weather.lluvia": "Lluvia",
+  "ui.town.weather.tormenta": "Tormenta",
+  "ui.town.weather.fog": "Niebla",
+  "ui.town.weather.snow": "Nieve",
+  "ui.town.bag.seasons": "Estaciones: {list}",
+  "ui.town.bag.winter_only": "Solo se cosecha en invierno"
 }

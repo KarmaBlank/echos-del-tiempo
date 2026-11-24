@@ -354,7 +354,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     lines: [
                       context.t('ui.town.bag.record', {'n': rec}),
                       context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
-                      context.t('ui.town.bag.bites', {'time': LifeTimeRules.fishTimeText(d.id)}),
+                      context.t('ui.town.bag.bites', {'time': fishWhenText(d.id)}),
+                      context.t('ui.town.bag.seasons',
+                          {'list': seasonsText(d.seasons)}),
                       context.t('ui.town.bag.worth', {'n': d.price}),
                     ],
                   ),
@@ -377,6 +379,8 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     lines: [
                       context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
                       context.t('ui.town.bag.bites', {'time': '???'}),
+                      context.t('ui.town.bag.seasons',
+                          {'list': seasonsText(d.seasons)}),
                       context.t('ui.town.bag.catch_in', {'place': _biomeLabel(d.biome).toLowerCase()}),
                       context.t('ui.town.bag.first_catch'),
                     ],
@@ -408,6 +412,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     context.t('ui.town.trader.grows_in', {'min': (d.growSec / 60).round()}),
                     context.t('ui.town.bag.origin', {'place': _biomeLabel(d.biome).toLowerCase()}),
                     LifeTimeRules.cropAffinity(d.id).text,
+                    ...seedSeasonLines(context, d),
                     context.t('ui.town.bag.yields', {'n': d.price}),
                   ],
                   actions: [

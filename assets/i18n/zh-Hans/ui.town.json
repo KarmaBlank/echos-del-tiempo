@@ -418,5 +418,17 @@
   "ui.town.edit.house_taken": "",
   "ui.town.edit.house_not_house": "",
   "ui.town.edit.house_confirm_text": "",
-  "ui.town.edit.house_confirm": ""
+  "ui.town.edit.house_confirm": "",
+  "ui.town.season.spring": "春",
+  "ui.town.season.summer": "夏",
+  "ui.town.season.autumn": "秋",
+  "ui.town.season.winter": "冬",
+  "ui.town.season.all_year": "全年",
+  "ui.town.weather.despejado": "晴朗",
+  "ui.town.weather.lluvia": "下雨",
+  "ui.town.weather.tormenta": "暴风雨",
+  "ui.town.weather.fog": "雾",
+  "ui.town.weather.snow": "下雪",
+  "ui.town.bag.seasons": "季节：{list}",
+  "ui.town.bag.winter_only": "只能在冬季收获"
 }

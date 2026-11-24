@@ -418,5 +418,17 @@
   "ui.town.edit.house_taken": "Someone already lives here.",
   "ui.town.edit.house_not_house": "Not a house.",
   "ui.town.edit.house_confirm_text": "{name} will move into this house.",
-  "ui.town.edit.house_confirm": "Assign house to {name}"
+  "ui.town.edit.house_confirm": "Assign house to {name}",
+  "ui.town.season.spring": "Spring",
+  "ui.town.season.summer": "Summer",
+  "ui.town.season.autumn": "Autumn",
+  "ui.town.season.winter": "Winter",
+  "ui.town.season.all_year": "All year",
+  "ui.town.weather.despejado": "Clear",
+  "ui.town.weather.lluvia": "Rain",
+  "ui.town.weather.tormenta": "Storm",
+  "ui.town.weather.fog": "Fog",
+  "ui.town.weather.snow": "Snow",
+  "ui.town.bag.seasons": "Seasons: {list}",
+  "ui.town.bag.winter_only": "Can only be harvested in winter"
 }

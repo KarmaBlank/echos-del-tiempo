@@ -217,5 +217,9 @@
   "ui.world.hud.mp_value": "",
   "ui.world.hud.points": "",
   "ui.world.hud.potion.hp": "",
-  "ui.world.hud.potion.mp": ""
+  "ui.world.hud.potion.mp": "",
+  "ui.world.clock.season": "{season} · 第 {day}/{len} 天",
+  "ui.world.clock.next_season": "{n} 天后进入{season}",
+  "ui.world.clock.forecast": "明天：{weather}",
+  "ui.world.clock.season_left": "{season} · 还剩 {n} 天"
 }

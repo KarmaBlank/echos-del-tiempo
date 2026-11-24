@@ -272,6 +272,15 @@ items:
   vida_carpa_manana: { idle: items/vida_carpa_manana.png, size: [16, 16] }
   vida_esturion_era: { idle: items/vida_esturion_era.png, size: [16, 16] }
   vida_pez_reloj: { idle: items/vida_pez_reloj.png, size: [16, 16] }
+  vida_mojarra_primavera: { idle: items/vida_mojarra_primavera.png, size: [16, 16] }
+  vida_carpa_nevada: { idle: items/vida_carpa_nevada.png, size: [16, 16] }
+  vida_pez_copo: { idle: items/vida_pez_copo.png, size: [16, 16] }
+  vida_pez_bruma: { idle: items/vida_pez_bruma.png, size: [16, 16] }
+  vida_perca_hojas: { idle: items/vida_perca_hojas.png, size: [16, 16] }
+  vida_trucha_tormenta: { idle: items/vida_trucha_tormenta.png, size: [16, 16] }
+  vida_anguila_niebla: { idle: items/vida_anguila_niebla.png, size: [16, 16] }
+  vida_dorado_estival: { idle: items/vida_dorado_estival.png, size: [16, 16] }
+  vida_raya_relampago: { idle: items/vida_raya_relampago.png, size: [16, 16] }
   vida_botas_viejas: { idle: items/vida_botas_viejas.png, size: [16, 16] }
   vida_rama_empapada: { idle: items/vida_rama_empapada.png, size: [16, 16] }
   vida_bulto_hundido: { idle: items/vida_bulto_hundido.png, size: [16, 16] }
@@ -297,6 +306,12 @@ items:
   vida_cosecha_rosa_reloj: { idle: items/vida_cosecha_rosa_reloj.png, size: [16, 16] }
   vida_semilla_raiz_era: { idle: items/vida_semilla_raiz_era.png, size: [16, 16] }
   vida_cosecha_raiz_era: { idle: items/vida_cosecha_raiz_era.png, size: [16, 16] }
+  vida_semilla_rabano_nieve: { idle: items/vida_semilla_rabano_nieve.png, size: [16, 16] }
+  vida_cosecha_rabano_nieve: { idle: items/vida_cosecha_rabano_nieve.png, size: [16, 16] }
+  vida_semilla_col_invierno: { idle: items/vida_semilla_col_invierno.png, size: [16, 16] }
+  vida_cosecha_col_invierno: { idle: items/vida_cosecha_col_invierno.png, size: [16, 16] }
+  vida_semilla_puerro_helado: { idle: items/vida_semilla_puerro_helado.png, size: [16, 16] }
+  vida_cosecha_puerro_helado: { idle: items/vida_cosecha_puerro_helado.png, size: [16, 16] }
   vida_cat_herramienta: { idle: items/vida_cat_herramienta.png, size: [16, 16] }
   vida_cat_pescado: { idle: items/vida_cat_pescado.png, size: [16, 16] }
   vida_cat_semilla: { idle: items/vida_cat_semilla.png, size: [16, 16] }

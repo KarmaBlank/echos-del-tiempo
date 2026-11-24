@@ -217,5 +217,9 @@
   "ui.world.hud.mp_value": "MP {mp}/{max}",
   "ui.world.hud.points": "+{n} pts",
   "ui.world.hud.potion.hp": "Health",
-  "ui.world.hud.potion.mp": "Mana"
+  "ui.world.hud.potion.mp": "Mana",
+  "ui.world.clock.season": "{season} · day {day} of {len}",
+  "ui.world.clock.next_season": "{season} in {n} d",
+  "ui.world.clock.forecast": "Tomorrow: {weather}",
+  "ui.world.clock.season_left": "{season} · {n, plural, one{1 day left} other{{n} days left}}"
 }

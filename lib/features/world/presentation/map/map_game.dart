@@ -32,6 +32,7 @@ import '../../../../game_engine/rules/dungeon_rules.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
+import '../../../../game_engine/rules/weather_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../combat/presentation/game_sprites.dart';
@@ -43,6 +44,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_labels.dart';
 import 'map_themes.dart';
+import 'ground_layer.dart';
 import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
@@ -153,6 +155,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
+
+  /// Ground marks of the seasons and the weather.
+  final ground = MapGroundLayer();
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -837,6 +842,18 @@ class MapGame extends Game {
         gateOpen: s.gateOpen,
         density: particleDensity,
         pulse: pulse);
+    // Season and weather marks on the ground (weather_seasons.md § 6.3).
+    if (map.lobby && s.town.sky.started && !controller.editingTown) {
+      ground.draw(
+          c,
+          map,
+          worldView,
+          MapGroundLayer.markFor(
+              lobby: true,
+              place: map.place,
+              season: WeatherRules.season(s.town.sky.day),
+              weather: SkyRules.nowIn(s.town.sky, map.place)));
+    }
     _prefetchMap = map;
     _prefetchView = worldView;
     // Arcos de las entradas de zona (sobresalen de su tile).
@@ -1242,12 +1259,14 @@ class MapGame extends Game {
     if ((outdoor || darkMap) && !controller.editingTown) {
       // Luz por tile multiplicada sobre el mapa (lighting.md § 4).
       final dk = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
-      final w = SkyRules.now(s.town.sky);
+      final w = SkyRules.nowIn(s.town.sky, s.place);
       final overcast = !outdoor
           ? 0.0
           : switch (w) {
               Weather.tormenta => 1.0,
               Weather.lluvia => 0.5,
+              Weather.fog => 0.35,
+              Weather.snow => 0.25,
               Weather.despejado => 0.0,
             };
       final ambient = darkMap
@@ -1316,7 +1335,9 @@ class MapGame extends Game {
             density: particleDensity,
             flash: flashFactor,
             motion: !reduceMotion,
-            tint: false);
+            tint: false,
+            weather: SkyRules.nowIn(s.town.sky, s.place),
+            precipitation: climateOf(s.place).showsPrecipitation);
       }
     }
 
@@ -1369,7 +1390,9 @@ class MapGame extends Game {
           worldSize: labelPx(p.loot.style.size)));
     }
     c.restore();
-    if (outdoor && !controller.editingTown) _drawSkyNotice(c, s.town.sky);
+    if (outdoor && !controller.editingTown) {
+      _drawSkyNotice(c, s.town.sky, SkyRules.nowIn(s.town.sky, s.place));
+    }
     if (showingFallToast) {
       final q = (t - _myFallT0!) / fallToastMs;
       final a = q < 0.8 ? 1.0 : (1 - q) / 0.2;
@@ -1393,16 +1416,15 @@ class MapGame extends Game {
 
   /// Cartel chico arriba (day_night_weather.md § 3.4): de noche, el
   /// pronóstico de mañana; de día con lluvia o tormenta, el clima.
-  void _drawSkyNotice(Canvas c, SkyState sky) {
+  void _drawSkyNotice(Canvas c, SkyState sky, Weather w) {
     if (!sky.started) return;
-    final w = SkyRules.now(sky);
     final txt = SkyRules.isNight(sky)
         ? 'Noche · ${SkyRules.forecast(sky)}'
         : w == Weather.despejado
             ? null
-            : w == Weather.tormenta
-                ? 'Tormenta'
-                : 'Llueve';
+            : w == Weather.lluvia
+                ? 'Llueve'
+                : w.label;
     if (txt == null) return;
     c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
         Paint()..color = SkyPalette.forecastBack);

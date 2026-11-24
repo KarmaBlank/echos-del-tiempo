@@ -84,6 +84,7 @@ flutter:
     - assets/data/ults/
     - assets/data/enemy_ults/
     - assets/data/npcs/
+    - assets/data/climate/
     # Textos por idioma (docs/specs/i18n.md § 3): locales.json + una
     # carpeta por idioma (no recursivo: cada una listada).
     - assets/i18n/

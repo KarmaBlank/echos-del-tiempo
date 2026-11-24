@@ -162,7 +162,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `fAutoOff {id, r, n}` event and the auto flag (4th field) in `fl`.
 /// 68: residents move in (overworld_biomes.md § 10.1): `la` (walk-out
 /// start on the room clock) in each resident.
-const kProtocolVersion = 68;
+/// 69: seasons and weather per biome (weather_seasons.md § 3): `sd`
+/// (weather seed) in the sky; new weathers `fog` and `snow`.
+const kProtocolVersion = 69;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
