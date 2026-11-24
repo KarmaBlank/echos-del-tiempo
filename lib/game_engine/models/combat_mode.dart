@@ -7,9 +7,9 @@ enum CombatMode {
   timeline(TurnRule.velocidad, 'Línea de tiempo',
       'En prueba: el más rápido juega más seguido; más táctico pero menos '
           'parejo en cooperativo.'),
-  rounds(TurnRule.porRonda, 'Por rondas (recomendado)',
+  rounds(TurnRule.porRonda, 'Por rondas',
       'Todos actúan una vez por ronda; la velocidad decide quién va primero.'),
-  phases(TurnRule.porFases, 'Por fases',
+  phases(TurnRule.porFases, 'Por fases (recomendado)',
       'En prueba: todos los enemigos y después todos ustedes; más simple, '
           'la velocidad pesa menos.');
 

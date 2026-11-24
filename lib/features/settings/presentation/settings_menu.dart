@@ -1,4 +1,5 @@
 import '../../../core/edition/game_edition.dart';
+import '../../../game_engine/models/combat_mode.dart';
 import '../../../game_engine/models/game_mode.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -1374,6 +1375,22 @@ class _GameTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(turnTimer: v)),
           ),
         ),
+        // MODO DE COMBATE (turn_modes.md § 1): lo usa la sala que hosteás.
+        if (!_travesia)
+          _SettingRow(
+            label: t.t('ui.settings.game.combat_mode.label'),
+            hint: t.t('ui.settings.game.combat_mode.hint'),
+            control: _Choice<CombatMode>(
+              keyPrefix: 'game-combat-mode',
+              options: {
+                for (final m in CombatMode.values)
+                  m: t.t('ui.settings.game.combat_mode.${m.name}'),
+              },
+              value: CombatMode.fromName(s.combatMode) ??
+                  CombatMode.defaultFor(coop: false),
+              onChanged: (v) => c.update(s.copyWith(combatMode: v.name)),
+            ),
+          ),
         // Travesía: solo lo del Mundo (campo, plan de build, chat).
         if (!_travesia)
           _SettingRow(

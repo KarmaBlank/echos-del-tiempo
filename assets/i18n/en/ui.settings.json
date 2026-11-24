@@ -251,5 +251,10 @@
   "ui.settings.controls.menus.ctrl_arrows.keys": "Ctrl+← / Ctrl+→",
   "ui.settings.controls.menus.ctrl_arrows.action": "Solo party: previous / next character (character, shops, Portal, Statue)",
   "ui.settings.controls.menus.inventory.keys": "Inventory",
-  "ui.settings.controls.menus.inventory.action": "Arrows move the slot; Enter again equips the weapon"
+  "ui.settings.controls.menus.inventory.action": "Arrows move the slot; Enter again equips the weapon",
+  "ui.settings.game.combat_mode.label": "COMBAT MODE",
+  "ui.settings.game.combat_mode.hint": "How turns work in fights in the room you host. Applies from the next fight.",
+  "ui.settings.game.combat_mode.timeline": "TIMELINE",
+  "ui.settings.game.combat_mode.rounds": "ROUNDS",
+  "ui.settings.game.combat_mode.phases": "PHASES"
 }

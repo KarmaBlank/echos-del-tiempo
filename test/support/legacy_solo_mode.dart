@@ -12,3 +12,15 @@ void useTimelineSoloDefault() {
   tearDown(() =>
       kTuning[TuningId.combatLimits] = kTuningDefaults[TuningId.combatLimits]!);
 }
+
+/// Desde v0.41.2 el de por defecto es "Por fases". Estos tests se
+/// escribieron con "Por rondas": la fijan para su grupo.
+void useRoundsDefault() {
+  setUp(() {
+    final d = kTuningDefaults[TuningId.combatLimits]!;
+    kTuning[TuningId.combatLimits] =
+        TuningDef(d.name, {...d.values, 'modeSolo': 1, 'modeCoop': 1});
+  });
+  tearDown(() =>
+      kTuning[TuningId.combatLimits] = kTuningDefaults[TuningId.combatLimits]!);
+}

@@ -1,3 +1,4 @@
+import '../../support/legacy_solo_mode.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
@@ -97,6 +98,7 @@ Future<void> _tap(WidgetTester tester, String key) async {
 }
 
 void main() {
+  useRoundsDefault();
   testWidgets('Esc abre y cierra la pausa en el lobby; botón ≡ MENÚ',
       (tester) async {
     final w = await _pumpWorld(tester);
