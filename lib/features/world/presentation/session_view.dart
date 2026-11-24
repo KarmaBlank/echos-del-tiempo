@@ -278,20 +278,54 @@ class SessionView {
   /// Turnos porBando (Travesía, roguelike.md § 6): en el turno del grupo
   /// nadie tiene el turno; manda el primero de los que faltan que maneja
   /// este dispositivo (el local primero, después sus compañeros sin AUTO).
+  /// Action queue (turn_modes.md § 3.1): players with a queued command
+  /// are skipped; in Por rondas anyone still to act this round can leave
+  /// an intent, so the menu stays up while others animate.
   String? get groupActor {
-    final st = session.battle?.state;
-    if (st == null || !st.awaitingGroup) return null;
-    final ids = [for (final p in st.pendingGroup) p.id];
-    if (ids.contains(localId) && !auto.contains(localId)) return localId;
+    final b = session.battle;
+    final st = b?.state;
+    if (b == null || st == null) return null;
+    final ids = st.porRonda && session.tutorial == null
+        ? [
+            for (final p in st.roundRemaining)
+              if (p.isPlayer && !p.isSummon) p.id
+          ]
+        : st.awaitingGroup
+            ? [for (final p in st.pendingGroup) p.id]
+            : const <String>[];
+    bool free(String id) => !auto.contains(id) && !b.queued(id);
+    if (ids.contains(localId) && free(localId)) return localId;
     for (final id in ids) {
-      if (controls(id) && !auto.contains(id)) return id;
+      if (controls(id) && free(id)) return id;
     }
     return null;
   }
 
   /// Quien actúa ahora desde este dispositivo (el del turno, o en el
   /// turno del grupo [groupActor]).
-  String? get turnActor => session.battle?.state.currentId ?? groupActor;
+  String? get turnActor {
+    final st = session.battle?.state;
+    final cur = st?.current;
+    if (cur != null && cur.isPlayer) return cur.id;
+    return groupActor ?? st?.currentId;
+  }
+
+  /// [id] may confirm a command now even if the host is animating (it
+  /// goes to the action queue; mirrors `SessionEngine.queueOpen`).
+  bool canQueue(String? id) {
+    final b = session.battle;
+    if (id == null || b == null || session.tutorial != null) return false;
+    final st = b.state;
+    if (b.endTimer != null || st.ended || b.queued(id)) return false;
+    if (st.porRonda) return st.roundRemaining.any((c) => c.id == id);
+    return st.porBando &&
+        st.awaitingGroup &&
+        st.pendingGroup.any((c) => c.id == id);
+  }
+
+  /// Entries of the action queue, in resolution order for Por fases.
+  List<QueuedBattleCommand> get battleQueue =>
+      session.battle?.queue ?? const [];
 
   /// El estado de batalla que se dibuja: en el turno del grupo, con
   /// [groupActor] como el de turno (solo vista; el host no cambia).
@@ -299,6 +333,8 @@ class SessionView {
     final st = session.battle?.state;
     final g = groupActor;
     if (st == null || g == null) return st;
+    final cur = st.current;
+    if (cur != null && cur.isPlayer) return st;
     return st.copy()..currentId = g;
   }
 
@@ -306,7 +342,7 @@ class SessionView {
     final b = session.battle;
     final cur = turnActor;
     return b != null &&
-        b.waitingForPlayer &&
+        (b.waitingForPlayer && !b.queued(cur ?? '') || canQueue(cur)) &&
         controls(cur) &&
         !auto.contains(cur) &&
         (session.players[cur]?.alive ?? false);

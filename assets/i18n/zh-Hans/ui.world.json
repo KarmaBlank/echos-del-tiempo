@@ -73,6 +73,7 @@
   "ui.world.lost_loot.notice": "",
   "ui.world.lost_loot.empty": "",
   "ui.world.lost_loot.take": "",
+  "ui.world.lost_loot.take_all": "",
   "ui.world.offering.not_in_dungeon": "",
   "ui.world.offering.title": "",
   "ui.world.offering.offer": "",

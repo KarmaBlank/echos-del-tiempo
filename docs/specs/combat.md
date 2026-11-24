@@ -930,3 +930,15 @@ invocación) pasa por `_bonusUlt`, con tope:
 La carga base (golpes, Defender, daño recibido, ganancia de la
 habilidad) no tiene tope. La ayuda de ULT lo dice: "Las cargas extra de
 ULT tienen un tope de 50% por turno."
+
+## Menú de batalla
+
+- El estado del menú de cada jugador (categoría, cursor, página, objetivo)
+  solo vuelve al principio cuando cambia el que actúa en ese dispositivo,
+  cuando empieza otra batalla o después de mandar su propio comando.
+- Que otro jugador resuelva su acción (estado nuevo, pausa de animación)
+  no lo toca, en ningún modo de turno. Si sus opciones cambiaron, la
+  categoría se mantiene si existe y el cursor se acota al último ítem.
+- En Por fases / porBando y Por rondas el menú sigue abierto mientras
+  otro anima: el comando confirmado entra a la cola de acciones
+  (turn_modes.md § 3.1).

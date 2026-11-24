@@ -1119,7 +1119,10 @@ class SessionController extends StateNotifier<SessionView?> {
     // porBando: en el turno del grupo, el primer compañero con AUTO que
     // falta (roguelike.md § 6).
     final cur = b.state.currentId ??
-        b.state.pendingGroup.map((p) => p.id).where(_auto.contains).firstOrNull;
+        b.state.pendingGroup
+            .map((p) => p.id)
+            .where((id) => _auto.contains(id) && !b.queued(id))
+            .firstOrNull;
     if (cur == null || !_auto.contains(cur) || b.turnTime < autoDelay) {
       return;
     }
@@ -3071,10 +3074,14 @@ class SessionController extends StateNotifier<SessionView?> {
   /// (el local o un compañero; solo_party.md § 4); si no, del local.
   bool battleCommand(BattleCommand command) {
     // porBando: en el turno del grupo, el que muestra la vista.
-    final cur = _s?.battle?.state.currentId ?? view?.groupActor;
+    final cur = view?.turnActor;
     return _applyFor(
         _companions.containsKey(cur) ? cur! : localId, BattleAction(command));
   }
+
+  /// Withdraws [actorId]'s queued command (turn_modes.md § 3.1).
+  bool cancelQueued(String actorId) =>
+      _applyFor(actorId, const CancelQueuedBattleAction());
 
   /// Comando de batalla de [actorId] (el local o un compañero).
   bool battleCommandFor(String actorId, BattleCommand command) =>
