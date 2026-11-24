@@ -448,7 +448,7 @@ class MapFarmLayer {
       // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo
       // para entregar.
       drawNpcMark(text, markOf?.call(n) ?? NpcMark.none, pos.$1,
-          pos.$2 - 22, t);
+          pos.$2 - 21, t);
     }
     final h = hover;
     if (h == null) return;
@@ -511,6 +511,6 @@ class MapFarmLayer {
 /// rebote chico. [t]: ms de animación.
 void drawNpcMark(MapText text, NpcMark mark, double x, double y, double t) {
   if (mark == NpcMark.none) return;
-  final bob = (math.sin(t / 150) * 1.5).roundToDouble();
-  text(mark == NpcMark.news ? '!' : '?', x, y + bob, TownPalette.request, 10);
+  // Fija sobre el nombre (sin rebote) y chica.
+  text(mark == NpcMark.news ? '!' : '?', x, y, TownPalette.request, 7);
 }
