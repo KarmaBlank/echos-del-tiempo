@@ -17,8 +17,8 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
         await loadRealFonts(tester);
-        // Winter, last-but-two day, foggy: the longest strings.
-        final day = 3 * WeatherRules.seasonDays + 5;
+        // Winter, last day, foggy: the longest strings.
+        final day = 4 * WeatherRules.seasonDays;
         final sky = SkyState(
             day: day,
             clock: 100,
@@ -53,7 +53,15 @@ void main() {
         expect(box.left, greaterThanOrEqualTo(0));
         final txt = tester.widget<Text>(
             find.byKey(const ValueKey('hud-season-text')));
-        expect(txt.data, contains('faltan 3 días'));
+        expect(txt.data, contains('Último día de'));
+        expect(txt.data, contains('mañana'));
+        // The toggle opens the detail: now, next and after.
+        await tester.tap(find.byKey(const ValueKey('hud-season-toggle')));
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+        for (final k in ['hud-season-now', 'hud-season-next', 'hud-season-after']) {
+          expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
+        }
       });
     }
   }

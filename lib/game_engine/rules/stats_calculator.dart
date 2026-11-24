@@ -9,6 +9,7 @@ import '../models/item.dart';
 import '../models/player_state.dart';
 import '../models/status.dart';
 import '../models/weapon.dart';
+import 'cooking_rules.dart';
 import 'js_math.dart';
 import 'passive_tree_rules.dart';
 
@@ -128,6 +129,14 @@ class StatsCalculator {
     if (build.lifeAtk != 0) {
       tree.add('atk', build.lifeAtk);
       tree.add('mag', build.lifeAtk);
+    }
+    // Comida (farming.md § 17).
+    final mealHp = CookingRules.hp(build.meal);
+    final mealAtk = CookingRules.atk(build.meal);
+    if (mealHp != 0) tree.add('hp', mealHp);
+    if (mealAtk != 0) {
+      tree.add('atk', mealAtk);
+      tree.add('mag', mealAtk);
     }
     maxHp = math.max(1, jsRound(maxHp * (1 + tree['hp'])));
     maxMp = jsRound(maxMp * (1 + tree['mp']));

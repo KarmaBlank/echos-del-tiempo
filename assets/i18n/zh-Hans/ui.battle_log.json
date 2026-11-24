@@ -321,5 +321,6 @@
   "ui.battle_log.mod.tank_guard": "",
   "ui.battle_log.silence_cast": "",
   "ui.battle_log.silence_ends": "",
-  "ui.battle_log.player_break": ""
+  "ui.battle_log.player_break": "",
+  "ui.battle_log.mod.meal": "料理"
 }

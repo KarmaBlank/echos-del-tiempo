@@ -7,6 +7,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/action_box.dart';
+import '../../../../game_engine/rules/cooking_rules.dart' show MealBuff, MealDef;
+import '../../../inventory/domain/item_names.dart' show MealDefText;
+import '../panels/cooking_view.dart' show activeMealLines;
 import '../../../../app/theme/panel_frame.dart' show RetroTooltip;
 import '../../../../app/theme/party_box.dart';
 import '../../../../app/theme/proto_colors.dart';
@@ -1604,6 +1607,18 @@ class _PlayerBox extends StatelessWidget {
           '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',
           style: const TextStyle(color: DsColors.textSecondary),
         ),
+        // Comida activa (farming.md § 17).
+        if (prof.life.farm.meal case final MealBuff b?)
+          if (b.def case final MealDef d?)
+            RetroTooltip(
+              message: activeMealLines(context, b).map(retroText).join('<br>'),
+              child: Text(
+                key: ValueKey('hud-meal-${p.id}'),
+                retroText(context.t('ui.world.hud.meal',
+                    {'meal': d.text, 'n': b.left})),
+                style: const TextStyle(color: DsColors.reward),
+              ),
+            ),
       ],
     );
   }

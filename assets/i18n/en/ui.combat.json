@@ -357,5 +357,6 @@
   "ui.combat.chip.pbroken.tip": "Enemy hits filled their break bar: loses their next turn and takes +{p}% damage until they recover.",
   "ui.combat.hud.break_bar": "BRK",
   "ui.combat.ult.silenced": "Silenced: cannot cast the ULT.",
-  "ui.combat.duo.silenced": "Silenced: duos cost MP."
+  "ui.combat.duo.silenced": "Silenced: duos cost MP.",
+  "ui.combat.chip.meal.short": "MEAL"
 }

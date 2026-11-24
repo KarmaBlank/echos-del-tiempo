@@ -357,5 +357,6 @@
   "ui.combat.chip.pbroken.tip": "Los golpes enemigos llenaron su barra de quiebre: pierde su próximo turno y recibe +{p}% de daño hasta recuperarse.",
   "ui.combat.hud.break_bar": "QB",
   "ui.combat.ult.silenced": "Silenciado: no puede lanzar la ULT.",
-  "ui.combat.duo.silenced": "Silenciado: los dúos cuestan MP."
+  "ui.combat.duo.silenced": "Silenciado: los dúos cuestan MP.",
+  "ui.combat.chip.meal.short": "COMIDA"
 }

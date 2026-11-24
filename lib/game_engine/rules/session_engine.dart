@@ -1,4 +1,5 @@
 import 'oficio_storage_rules.dart';
+import 'cooking_rules.dart';
 import 'weather_rules.dart';
 import 'bait_rules.dart';
 import 'renown_rules.dart';
@@ -4503,6 +4504,13 @@ class _Op {
     final drops = <String, String>{};
     for (final p in players) {
       p.profile = p.profile.copyWith(credits: p.profile.credits + bonus);
+      // Comida (farming.md § 17): cada misión, ganada o no, gasta una.
+      if (s.run == null &&
+          s.tutorial == null &&
+          p.profile.life.farm.meal != null) {
+        p.profile = CookingRules.afterMission(p.profile);
+        refresh(p);
+      }
       if (p.hp <= 0) p.hp = 1;
       // Oren: vida llena al volver de la misión.
       if (ResidentRules.bonus(s.town, NpcRole.vidente) > 0) {

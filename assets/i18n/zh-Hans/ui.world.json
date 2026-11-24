@@ -273,8 +273,14 @@
   "ui.world.clock.season": "{season} · 第 {day}/{len} 天",
   "ui.world.clock.next_season": "{n} 天后进入{season}",
   "ui.world.clock.forecast": "明天：{weather}",
+  "ui.world.clock.season_last": "{season}的最后一天 · 明天{next}",
+  "ui.world.clock.season_next": "下一个：{season}（{n} 天后）",
+  "ui.world.clock.season_after": "之后：{season}",
+  "ui.world.clock.season_more": "查看接下来的季节",
+  "ui.world.clock.season_hide": "收起",
   "ui.world.clock.season_left": "{season} · 还剩 {n} 天",
   "ui.world.tools.bait": "鱼饵 [F]",
   "ui.world.tools.no_bait_tip": "没有鱼饵：购买或制作。",
-  "ui.world.tools.bait_tip_more": "{name} · 点击或 F：切换鱼饵"
+  "ui.world.tools.bait_tip_more": "{name} · 点击或 F：切换鱼饵",
+  "ui.world.hud.meal": "料理：{meal}（{n}）"
 }

@@ -734,7 +734,11 @@ enum FarmShopOp {
   buyBait,
   selectBait,
   cycleBait,
-  craftBait
+  craftBait,
+  // Cocina (farming.md § 17, protocol 73): cook recipe [id] with crops of
+  // quality index [n] at the town pot, and eat the meal key [id].
+  cook,
+  eat
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.

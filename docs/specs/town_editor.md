@@ -47,13 +47,26 @@ revés: clic en un tile libre y después la lista).
   centrada en la pantalla, como el INVENTARIO, con la PALETA
   (`TownBuildPalette`): todo lo que se puede poner (`kConstructions` +
   el faro) en una grilla de casillas amplias (`DsItemCell` + nombre) a
-  la izquierda y el detalle (`DsDetailPane`, columna fija de 300 px) a
-  la derecha, con la elegida (o la que está bajo el mouse): nombre,
-  tamaño, para qué sirve y costo, legible sin scroll. Categorías con
-  filtros arriba (TODO · CULTIVO · AGUA · HOGAR · LUZ), nunca secciones
-  apiladas. Tamaño: ancho de la pantalla − 64 (320–900) por alto − 48
-  (240–540).
-- Elegir una pieza CIERRA la ventana: el mapa queda libre para ponerla.
+  la izquierda y el detalle (`DsDetailPane`, ~42 % del ancho, 280–460 px)
+  a la derecha. Casillas de 80 px (miniatura + nombre en Cuerpo). El
+  detalle usa la tipografía del sistema: nombre en Título, tamaño y costo
+  en Detalle, descripción en Cuerpo; entra sin scroll desde 1280×720 a
+  escala 1.0 (el scroll queda solo de reserva para escalas enormes).
+  Categorías con filtros arriba (TODO · CULTIVO · AGUA · HOGAR · LUZ),
+  nunca secciones apiladas. Tamaño: ancho de la pantalla − 64
+  (320–1100) por alto − 48 (240–680).
+- Elegir → detalle → acción fija (v0.46.1, design_system.md § "Grilla +
+  detalle"): un clic ELIGE la pieza (casilla marcada) y NO cierra la
+  ventana; el detalle muestra la elegida y queda fijo (mover el mouse a
+  otras casillas o a la barra del detalle no lo cambia). El hover solo
+  previsualiza mientras no hay nada elegido. Se coloca con el botón
+  primario COLOCAR fijo abajo del detalle; atajos: doble clic en la
+  casilla o Enter. Flechas mueven la elección, Esc cierra. Si no se
+  puede pagar, COLOCAR queda gris y el motivo va en el detalle.
+- Miniaturas (`TownPiecePreview`): nunca dibujan fuera de su caja
+  (recorte), con margen, sin deformar y a escala entera si es ≥ 1; el
+  faro (brasero + resplandor 11 px sobre su tile) se achica para entrar.
+- COLOCAR CIERRA la ventana: el mapa queda libre para poner la pieza.
   En el borde derecho, arriba, queda un botón fijo `CONSTRUIR ▸` (con la
   pieza en curso: `CONSTRUIR ▸ Huerta chica`) que la vuelve a abrir. El
   jugador la abre o cierra cuando quiere: el botón, CERRAR, un clic

@@ -1,4 +1,5 @@
 import '../../../core/i18n/catalog_text.dart';
+import '../../../game_engine/data/cooking_catalog.dart' show MealDef;
 import '../../../game_engine/data/farming_catalog.dart';
 import '../../../game_engine/data/fishing_catalog.dart';
 import '../../../game_engine/i18n/item_keys.dart';
@@ -51,6 +52,11 @@ extension CropDefText on CropDef {
   String get text => CatalogText.of(ItemKeys.cropName(id), name);
   String get seedText => CatalogText.of(ItemKeys.seedName(id), seedName);
   String get loreText => CatalogText.of(ItemKeys.cropLore(id), lore);
+}
+
+extension MealDefText on MealDef {
+  String get text => CatalogText.of(ItemKeys.mealName(id), name);
+  String get loreText => CatalogText.of(ItemKeys.mealLore(id), lore);
 }
 
 extension FertDefText on FertDef {

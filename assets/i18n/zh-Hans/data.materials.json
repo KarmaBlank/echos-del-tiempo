@@ -272,5 +272,25 @@
   "data.materials.smith.guardian_core.name": {
     "text": "守护者核心",
     "status": "draft"
-  }
+  },
+  "data.materials.meal.sopa_nabo.name": "芜菁汤",
+  "data.materials.meal.sopa_nabo.lore": "镇上最古老、也最暖心的食谱。",
+  "data.materials.meal.pan_dorado.name": "金麦面包",
+  "data.materials.meal.pan_dorado.lore": "结实的外皮，结实的臂膀。",
+  "data.materials.meal.guiso_calabaza.name": "南瓜炖菜",
+  "data.materials.meal.guiso_calabaza.lore": "浓稠得让水都滑开。",
+  "data.materials.meal.tarta_frutilla.name": "草莓挞",
+  "data.materials.meal.tarta_frutilla.lore": "果上的露水留住了清晨的凉意。",
+  "data.materials.meal.sopa_cebolla.name": "铜洋葱汤",
+  "data.materials.meal.sopa_cebolla.lore": "洋葱里的铜能引走火花。",
+  "data.materials.meal.caldo_invierno.name": "冬日高汤",
+  "data.materials.meal.caldo_invierno.lore": "喝下的人感觉不到霜冻。",
+  "data.materials.meal.melon_glaseado.name": "糖霜齿轮瓜",
+  "data.materials.meal.melon_glaseado.lore": "每一瓣都与下一瓣严丝合缝。",
+  "data.materials.meal.ensalada_runica.name": "符文沙拉",
+  "data.materials.meal.ensalada_runica.lore": "花瓣上的符文在手中隐隐可感。",
+  "data.materials.meal.mojarra_nabo.name": "芜菁配银鱼",
+  "data.materials.meal.mojarra_nabo.lore": "钓鱼与耕种同在一盘。",
+  "data.materials.meal.trucha_cebolla.name": "洋葱鳟鱼",
+  "data.materials.meal.trucha_cebolla.lore": "两种铜色相得益彰。"
 }

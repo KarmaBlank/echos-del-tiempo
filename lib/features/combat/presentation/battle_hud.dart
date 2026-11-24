@@ -29,6 +29,9 @@ import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
+import '../../../game_engine/rules/cooking_rules.dart'
+    show CookingRules, MealBuff, MealDef, MealStat;
+import '../../inventory/domain/item_names.dart' show MealDefText;
 import '../../../game_engine/rules/display_names.dart';
 import '../../../game_engine/rules/enemy_combo_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
@@ -136,6 +139,25 @@ List<StatusChip> combatantChips(Strings s, Combatant p,
           '<br>${statusDescriptionOf(k)}',
       icon: statusIconOf(k),
     ));
+  }
+  // Comida activa (farming.md § 17): one chip with its effect.
+  final meal = p.isPlayer ? p.build?.meal : null;
+  if (meal case final MealBuff b) {
+    if (b.def case final MealDef d) {
+      final n = (CookingRules.buffOf(b) * 100).round();
+      final effect = switch (d.stat) {
+        MealStat.hp => s.t('ui.town.cook.effect.hp', {'n': n}),
+        MealStat.atk => s.t('ui.town.cook.effect.atk', {'n': n}),
+        MealStat.res => s.t('ui.town.cook.effect.res',
+            {'n': n, 'el': s.t('ui.town.cook.el.${d.element?.name ?? 'fire'}')}),
+      };
+      chips.add(StatusChip(
+          s.t('ui.combat.chip.meal.short'),
+          s.t('ui.combat.chip.meal.short'),
+          DsColors.reward,
+          '<b>${retroText(d.text)}</b><br>$effect<br>'
+          '${s.t('ui.town.cook.left', {'n': b.left})}'));
+    }
   }
   if (p.defending) {
     chips.add(StatusChip(

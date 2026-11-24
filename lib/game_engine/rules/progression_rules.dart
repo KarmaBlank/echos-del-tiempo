@@ -187,6 +187,7 @@ class ProgressionRules {
           p, sel ?? UltRules.baseUlt(p.classId, catalog)?.id ?? ''),
       lifeHp: LifeTreeRules.power(p, LifeFx.hp),
       lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
+      meal: p.life.farm.meal,
     );
   }
 
@@ -212,6 +213,7 @@ class ProgressionRules {
       ascension: p.ascension,
       lifeHp: LifeTreeRules.power(p, LifeFx.hp),
       lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
+      meal: p.life.farm.meal,
     ));
   }
 

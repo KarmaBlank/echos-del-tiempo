@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
-import 'farming_rules.dart';
 import 'life_craft_rules.dart';
 import 'town_rules.dart';
 
@@ -206,21 +205,14 @@ abstract final class HelperRules {
     ];
     final seeds = b.seedTotal > 0;
     final empty = plots.any((p) => p == null || !p.planted);
-    final growing =
-        plots.any((p) => p != null && p.planted && !FarmingRules.ripe(p));
     final anyPlanted = plots.any((p) => p != null && p.planted);
-    // Llega a madurar solo: ya está madura, regada o crece seca.
-    final dryGrows = FarmingRules.t.d('dryRate') > 0;
-    final regar = on(HelperTask.regar);
-    final ripens = plots.any((p) =>
-        p != null &&
-        p.planted &&
-        (FarmingRules.ripe(p) || p.watered || dryGrows || regar));
-    final harvest = on(HelperTask.cosechar) && !full && ripens;
-    // Algo que puede hacer ahora o más adelante solo.
-    final can = (on(HelperTask.plantar) && seeds && (empty || harvest)) ||
-        (regar && growing) ||
-        harvest;
+    // Llega a madurar sola: el granjero riega solo en cada vuelta
+    // (farming.md § 8.2), así que todo lo plantado madura.
+    final harvest = on(HelperTask.cosechar) && !full && anyPlanted;
+    // Algo que puede hacer ahora o más adelante solo (regar solo no
+    // cuenta: lo hace siempre, pero sin cosechar no avanza).
+    final can =
+        (on(HelperTask.plantar) && seeds && (empty || harvest)) || harvest;
     if (can) return const [];
     final out = <String>[];
     if (on(HelperTask.plantar) && !seeds) out.add('Sin semillas para plantar');

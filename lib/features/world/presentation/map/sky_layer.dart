@@ -211,22 +211,47 @@ class MapSkyLayer {
     return _view!;
   }
 
-  /// A cheap fog veil: one translucent fill over the view plus two slow
-  /// drifting bands (only the visible area is drawn).
+  /// Pixelated fog (weather_seasons.md § 6): a faint veil plus two
+  /// layers of soft noise patches drawn as world-anchored 8 px cells,
+  /// each layer at its own scale and drift, so it reads as drifting
+  /// mist rather than solid bands. Only visible cells are drawn.
   void _fog(Canvas c, Rect view, double t, bool motion) {
-    _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.22);
+    _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.08);
     c.drawRect(view, _fogPaint);
-    final drift = motion ? t / 80 : 0.0;
-    for (var i = 0; i < 2; i++) {
-      final hb = view.height * 0.18;
-      final y = view.top +
-          ((view.height * (0.25 + 0.45 * i) + drift * (i == 0 ? 1 : 0.6)) %
-              view.height);
-      _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.14);
-      c.drawRect(
-          Rect.fromLTRB(view.left, y, view.right, math.min(view.bottom, y + hb)),
-          _fogPaint);
+    const cell = 8.0;
+    for (var layer = 0; layer < 2; layer++) {
+      final scale = layer == 0 ? 7.0 : 4.0;
+      final dx = motion ? t / (layer == 0 ? 260 : 170) : 0.0;
+      final dy = motion ? t / (layer == 0 ? 900 : 640) : 0.0;
+      final maxA = layer == 0 ? 0.16 : 0.10;
+      final x0 = (view.left / cell).floor(), x1 = (view.right / cell).ceil();
+      final y0 = (view.top / cell).floor(), y1 = (view.bottom / cell).ceil();
+      for (var cy = y0; cy < y1; cy++) {
+        for (var cx = x0; cx < x1; cx++) {
+          final n = _noise((cx + dx / cell) / scale,
+              (cy + dy / cell) / scale, 31 + layer);
+          final k = ((n - 0.45) / 0.55).clamp(0.0, 1.0);
+          if (k <= 0) continue;
+          // Quantised alpha keeps the pixel look (no smooth gradient).
+          final a = (k * 3).round() / 3 * maxA;
+          if (a <= 0) continue;
+          _fogPaint.color = SkyPalette.fog.withValues(alpha: a);
+          c.drawRect(Rect.fromLTWH(cx * cell, cy * cell, cell, cell),
+              _fogPaint);
+        }
+      }
     }
+  }
+
+  // Smooth value noise in 0–1 from the integer lattice hash.
+  static double _noise(double x, double y, int seed) {
+    final xi = x.floor(), yi = y.floor();
+    final fx = x - xi, fy = y - yi;
+    double v(int a, int b) => _hash(a * 7919 + b * 104729, seed) % 1000 / 1000;
+    final sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    final top = v(xi, yi) + (v(xi + 1, yi) - v(xi, yi)) * sx;
+    final bot = v(xi, yi + 1) + (v(xi + 1, yi + 1) - v(xi, yi + 1)) * sx;
+    return top + (bot - top) * sy;
   }
 
   /// Cuánto ilumina ahora el último rayo (0–1, lighting.md § 5.2).

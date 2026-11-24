@@ -11,6 +11,7 @@ import '../models/fish_line.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
+import '../models/meal_buff.dart';
 import '../models/loot.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
@@ -942,6 +943,8 @@ class SessionJson {
         // ULT activa (ultimates_v2.md § 5.2): opcional.
         if (b.ultSel != null) 'us': b.ultSel,
         if (b.ultLevel > 1) 'ulv': b.ultLevel,
+        // Comida activa (farming.md § 17): HUD y resistencia.
+        if (b.meal != null) 'meal': b.meal!.toJson(),
       };
 
   PlayerBuild buildFromJson(Json j) {
@@ -976,6 +979,7 @@ class SessionJson {
       ascension: AscensionProgress.fromJson(j['asc']),
       ultSel: j.strOrNull('us'),
       ultLevel: j.intOrNull('ulv') ?? 1,
+      meal: MealBuff.fromJson(j['meal']),
     );
   }
 }
