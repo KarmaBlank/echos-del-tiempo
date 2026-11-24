@@ -79,5 +79,9 @@ String poiPromptText(MapPoi p, MissionRun m, MapFloor f, double time) {
       return '[E] Elegir destino en el mapa';
     case PoiKind.relic:
       return '';
+    // Ore veins: the controller shows the i18n prompt
+    // (`ui.world.mine.prompt_mine`) before calling this.
+    case PoiKind.ore:
+      return '';
   }
 }

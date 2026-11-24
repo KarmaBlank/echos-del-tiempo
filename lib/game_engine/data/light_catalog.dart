@@ -122,6 +122,12 @@ const Map<String, AmbientLight> kAmbientLights = {
   'abismo': AmbientLight(LightId.cristal, 18),
   'abismo_ext': AmbientLight(LightId.cristal, 22),
   'corazon': AmbientLight(LightId.magitec, 20),
+  // Minas (mining_smithing.md § 1.2): pocas luces sueltas.
+  'mina_bosque': AmbientLight(LightId.hongo, 30),
+  'mina_ruinas': AmbientLight(LightId.magitec, 34),
+  'mina_cavernas': AmbientLight(LightId.cristal, 30),
+  'mina_grieta': AmbientLight(LightId.ascua, 30),
+  'mina_abismo': AmbientLight(LightId.cristal, 30),
 };
 
 /// Tile que emite luz → clave del catálogo.
@@ -134,6 +140,7 @@ const Map<String, String> kTileLights = {
   Tile.armory: LightId.forja,
   Tile.fishing: LightId.pesca,
   Tile.forage: LightId.flora,
+  Tile.ore: LightId.flora,
 };
 
 /// Tiles que cortan la luz del todo (la luz los ilumina pero no pasa;
@@ -167,7 +174,11 @@ const Set<String> kAttenuatingTiles = {Tile.tree, Tile.tombstone};
 const double kAttenuationCost = 2.5;
 
 /// Temas siempre oscuros (lighting.md § 5).
-const Set<String> kDarkThemes = {'cavernas'};
+const Set<String> kDarkThemes = {
+  'cavernas',
+  // Minas (mining_smithing.md § 1.2).
+  'mina_bosque', 'mina_ruinas', 'mina_cavernas', 'mina_grieta', 'mina_abismo',
+};
 
 /// Temas con pisos oscuros alternados (los pisos impares, 0-based).
 const Set<String> kDarkFloorThemes = {'abismo'};

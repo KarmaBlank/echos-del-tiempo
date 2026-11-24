@@ -162,7 +162,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// `fAutoOff {id, r, n}` event and the auto flag (4th field) in `fl`.
 /// 68: residents move in (overworld_biomes.md § 10.1): `la` (walk-out
 /// start on the room clock) in each resident.
-const kProtocolVersion = 68;
+/// 69: mining and smithing (mining_smithing.md § 6): `ore` in the
+/// profile life skills, `mine` and `smith` actions, `PoiKind.ore` and
+/// mine places `mine:<biome>:<i>`.
+const kProtocolVersion = 69;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

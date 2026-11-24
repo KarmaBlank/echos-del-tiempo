@@ -74,6 +74,7 @@ Color? poiMinimapColor(MapPoi p, MissionRun m) {
     PoiKind.brazier => used ? mk(MapMark.brazierLit) : mk(MapMark.brazier),
     PoiKind.relic => used ? null : mk(MapMark.relic),
     PoiKind.lantern => used ? mk(MapMark.brazierLit) : mk(MapMark.brazier),
+    PoiKind.ore => used ? spent : mk(MapMark.relic),
   };
 }
 

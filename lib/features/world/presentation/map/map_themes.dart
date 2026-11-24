@@ -193,6 +193,56 @@ const Map<String, MapTheme> kMapThemes = {
     tree2: Color(0xFF1D5A2A),
     trunk: Color(0xFF3A2414),
   ),
+  // Mina de bosque (mining_smithing.md § 1.2): cueva oscura.
+  'mina_bosque': MapTheme(
+    ground: Color(0xFF3A3328),
+    ground2: Color(0xFF473E31),
+    wall: Color(0xFF1E1A14),
+    wall2: Color(0xFF5C4A30),
+    path: Color(0xFF473E31),
+    path2: Color(0xFF3A3328),
+    water: Color(0xFF2A4A6A),
+  ),
+  // Mina de ruinas (mining_smithing.md § 1.2): cueva oscura.
+  'mina_ruinas': MapTheme(
+    ground: Color(0xFF3B3A40),
+    ground2: Color(0xFF48464F),
+    wall: Color(0xFF1F1E24),
+    wall2: Color(0xFFB08A3A),
+    path: Color(0xFF48464F),
+    path2: Color(0xFF3B3A40),
+    water: Color(0xFF2A4A6A),
+  ),
+  // Mina de cavernas (mining_smithing.md § 1.2): cueva oscura.
+  'mina_cavernas': MapTheme(
+    ground: Color(0xFF3A4658),
+    ground2: Color(0xFF46546A),
+    wall: Color(0xFF1C2433),
+    wall2: Color(0xFF9FDCF5),
+    path: Color(0xFF46546A),
+    path2: Color(0xFF3A4658),
+    water: Color(0xFF2A4A6A),
+  ),
+  // Mina de grieta (mining_smithing.md § 1.2): cueva oscura.
+  'mina_grieta': MapTheme(
+    ground: Color(0xFF332A28),
+    ground2: Color(0xFF40342F),
+    wall: Color(0xFF1A1414),
+    wall2: Color(0xFFFF7B29),
+    path: Color(0xFF40342F),
+    path2: Color(0xFF332A28),
+    water: Color(0xFF2A4A6A),
+  ),
+  // Mina de abismo (mining_smithing.md § 1.2): cueva oscura.
+  'mina_abismo': MapTheme(
+    ground: Color(0xFF2E2A40),
+    ground2: Color(0xFF3A3550),
+    wall: Color(0xFF16131F),
+    wall2: Color(0xFFC08AFF),
+    path: Color(0xFF3A3550),
+    path2: Color(0xFF2E2A40),
+    water: Color(0xFF2A4A6A),
+  ),
   // Zona 4: hielo — suelo azul grisáceo, roca helada, agua cian.
   'cavernas': MapTheme(
     ground: Color(0xFF4A5A70),
@@ -424,6 +474,25 @@ abstract final class FishingPalette {
 
 /// Colores de los recolectables de los exteriores (overworld_biomes.md
 /// § 3.2): la mata y el fruto de cada tipo (índice de `kForageKinds`).
+/// Mine art (mining_smithing.md § 1): entrance, vein rock and the ore
+/// colour of each biome's mines.
+abstract final class MinePalette {
+  static const rock = Color(0xFF55505A);
+  static const rockLight = Color(0xFF6E6875);
+  static const mouth = Color(0xFF0C0A10);
+  static const timber = Color(0xFF7A5230);
+  static const _veins = {
+    'mina_bosque': Color(0xFFD9824A),
+    'mina_ruinas': Color(0xFFE0B860),
+    'mina_cavernas': Color(0xFFBFE8FF),
+    'mina_grieta': Color(0xFFFF6A2A),
+    'mina_abismo': Color(0xFFC08AFF),
+  };
+
+  /// Ore colour of a theme (dungeon veins: rare gold).
+  static Color vein(String theme) => _veins[theme] ?? const Color(0xFFFFD166);
+}
+
 abstract final class ForagePalette {
   static const bush = Color(0xFF2E6B30);
   static const bushLight = Color(0xFF3F8A3E);

@@ -29,6 +29,9 @@ import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
+import '../../../game_engine/rules/mine_generator.dart' show MineLayout;
+import '../../../game_engine/rules/mining_rules.dart';
+import '../../../game_engine/data/smithing_catalog.dart' show kMineNpcLines;
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
@@ -1485,6 +1488,97 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(TravelAction(id));
   }
 
+  // ---------------- mining (mining_smithing.md § 1) ----------------
+
+  /// The mine the room is in, or `null`.
+  MineLayout? get mineLayout {
+    final s = _s;
+    if (s == null) return null;
+    return MiningRules.layout(s.place,
+        worldId: s.worldId, day: s.town.sky.day);
+  }
+
+  static double _tileDist(double x, double y, int tx, int ty) =>
+      WorldRules.distance(x, y, (tx + 0.5) * 16, (ty + 0.5) * 16);
+
+  /// The mine entrance (index) in front of the local player, in a biome.
+  int? get nearMineEntrance {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    for (var i = 0; i < lay.mines.length; i++) {
+      final (x, y) = lay.mines[i];
+      if (_tileDist(local.x, local.y, x, y) < 26) return i;
+    }
+    return null;
+  }
+
+  /// In a mine, in front of its exit.
+  bool get nearMineExit {
+    final m = mineLayout;
+    if (m == null || _s?.mode != SessionMode.lobby) return false;
+    return _tileDist(local.x, local.y, m.exit.$1, m.exit.$2) < 24;
+  }
+
+  /// The vein (index) in front of the local player, or `null`.
+  int? get nearVein {
+    final m = mineLayout;
+    if (m == null || _s?.mode != SessionMode.lobby) return null;
+    final reach = MiningRules.t.d('mineReach') - 2;
+    for (var i = 0; i < m.nodes.length; i++) {
+      final (x, y) = m.nodes[i];
+      if (_tileDist(local.x, local.y, x, y) < reach) return i;
+    }
+    return null;
+  }
+
+  /// The mine NPC (`kMineNpcs` id) in front of the local player.
+  String? get nearMineNpc {
+    final npc = mineLayout?.npc;
+    if (npc == null) return null;
+    return _tileDist(local.x, local.y, npc.$2, npc.$3) < 26 ? npc.$1 : null;
+  }
+
+  /// Enters mine [i] of this biome (or leaves the mine with [i] `null`).
+  bool travelMine(int? i) {
+    if (cannotTravel != null) return false;
+    final s = _s;
+    if (s == null) return false;
+    final String to;
+    if (i == null) {
+      final m = mineLayout;
+      if (m == null) return false;
+      to = m.biome;
+    } else {
+      if (biomeLayout(s.place) == null) return false;
+      to = MiningRules.placeOf(s.place!, i);
+    }
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(to));
+  }
+
+  String veinHint(int i) {
+    final s = _s;
+    if (s == null || s.place == null) return '';
+    final left = MiningRules.regrowIn(s.town, s.place!, i, s.time).ceil();
+    return left > 0
+        ? strings.t('ui.world.mine.vein_regrow', {'n': left})
+        : strings.t('ui.world.mine.prompt_mine');
+  }
+
+  bool mineVein() {
+    final i = nearVein;
+    return i != null && _apply(MineAction(i));
+  }
+
+  /// A line of the mine NPC [id] (changes with the world day): BORRADOR.
+  void talkMineNpc(String id) {
+    final n = (town.sky.day + id.length) % kMineNpcLines;
+    addLocalNotice('${strings.t('ui.world.mine.npc.$id.name')}: '
+        '${strings.t('ui.world.mine.npc.$id.$n')}');
+  }
+
   /// La mata del exterior frente al jugador local (índice), o `null`.
   int? get nearForage {
     final s = _s;
@@ -2787,6 +2881,14 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.biomeFisher);
       } else if (nearForage != null) {
         forage();
+      } else if (nearMineEntrance case final i?) {
+        travelMine(i);
+      } else if (nearMineExit) {
+        travelMine(null);
+      } else if (nearMineNpc case final n?) {
+        talkMineNpc(n);
+      } else if (nearVein != null) {
+        mineVein();
       } else if (nearChest case final b? when b.chest.isNotEmpty) {
         collectChest(b.id);
       } else if (farmTile != null) {
@@ -3262,6 +3364,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Forja y fusión libre (solo lobby / preparación).
   bool craft(CraftAction a) => _applyFor(actingId, a);
+
+  /// Smelt or forge (mining_smithing.md § 3–5).
+  bool smith(SmithAction a) => _applyFor(actingId, a);
 
   /// Dar [count] de [token] (`uid`, `pot`, `eter`, `mat:<material>`) a
   /// otro jugador de la sala.
@@ -4373,6 +4478,20 @@ class SessionController extends StateNotifier<SessionView?> {
       return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': f.name}));
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
+    if (nearMineEntrance != null) {
+      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_enter'));
+    }
+    if (nearMineExit) {
+      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit'));
+    }
+    if (nearMineNpc case final n?) {
+      return (
+        WorldPrompt.poi,
+        strings.t('ui.world.ctl.prompt_talk',
+            {'name': strings.t('ui.world.mine.npc.$n.name')})
+      );
+    }
+    if (nearVein case final i?) return (WorldPrompt.poi, veinHint(i));
     final helperTip = nearHelper == null
         ? ''
         : ' · ${strings.t(WorldPrompt.helper.key)}';
@@ -4392,6 +4511,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearOffering) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_offering'));
+    if (nearPoi case final p? when p.kind == PoiKind.ore) {
+      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_mine'));
+    }
     if (nearPoi case final p?) {
       final s = _s!;
       final m = s.mission!;

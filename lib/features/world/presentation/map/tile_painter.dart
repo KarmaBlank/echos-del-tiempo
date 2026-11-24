@@ -97,7 +97,11 @@ class TilePainter {
       if (lobby) themeId = 'lobby';
     }
     // El pueblo v0.21.0 es al aire libre (town_loop.md § 2.1).
-    if (themeId == 'pueblo' || themeId.endsWith('_ext')) lobby = false;
+    if (themeId == 'pueblo' ||
+        themeId.endsWith('_ext') ||
+        themeId.startsWith('mina_')) {
+      lobby = false;
+    }
     final th = mapTheme(themeId);
     final h = tileHash(tx, ty);
 
@@ -405,6 +409,13 @@ class TilePainter {
       case Tile.lantern || Tile.lanternLit:
         floor();
         faro(c, px, py, t, lit: ch == Tile.lanternLit);
+      // Minería (mining_smithing.md § 1): boca de mina y vetas.
+      case Tile.mineEntrance:
+        _grass(c, th, px, py, h);
+        _mineMouth(c, px, py);
+      case Tile.ore || Tile.oreUsed:
+        floor();
+        _oreVein(c, themeId, px, py, h, used: ch == Tile.oreUsed);
       // Recolectable de un exterior (overworld_biomes.md § 3.2).
       case Tile.forage || Tile.forageUsed:
         _grass(c, th, px, py, h);
@@ -451,7 +462,11 @@ class TilePainter {
       lobby = inTown(tx, ty);
       if (lobby) themeId = 'lobby';
     }
-    if (themeId == 'pueblo' || themeId.endsWith('_ext')) lobby = false;
+    if (themeId == 'pueblo' ||
+        themeId.endsWith('_ext') ||
+        themeId.startsWith('mina_')) {
+      lobby = false;
+    }
     // Niebla del cementerio: sobre todo lo que no es vacío.
     if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
     final h = tileHash(tx, ty);
@@ -476,8 +491,11 @@ class TilePainter {
             Tile.workshop ||
             Tile.shop ||
             Tile.forage ||
-            Tile.forageUsed:
+            Tile.forageUsed ||
+            Tile.mineEntrance:
         return false;
+      case Tile.ore || Tile.oreUsed:
+        return floorAnim;
       case Tile.floor ||
             Tile.merchant ||
             Tile.armory ||
@@ -540,6 +558,7 @@ class TilePainter {
           (0, 0, 0, 0),
         Tile.tree => (0, 1, 0, 0),
         Tile.sign || Tile.house || Tile.workshop || Tile.shop => (0, 0, 0, 0),
+        Tile.mineEntrance => (0, 0, 0, 0),
         _ when Tile.entranceZone(ch) != null => (0, 0, 0, 0),
         _ when !handles(ch) => (0, 0, 0, 0),
         // Suelo y todo lo que se apoya en él (muros, PdI, mostradores...).
@@ -585,6 +604,9 @@ class TilePainter {
         Tile.tombstone,
         Tile.forage,
         Tile.forageUsed,
+        Tile.mineEntrance,
+        Tile.ore,
+        Tile.oreUsed,
         Tile.gear,
         ...Tile.poiTiles,
       }.contains(ch) ||
@@ -764,6 +786,30 @@ class TilePainter {
     if (used) return;
     final col = ForagePalette.fruit[kind % ForagePalette.fruit.length];
     for (final (fx, fy) in const [(4, 9), (9, 5), (11, 11), (7, 12)]) {
+      _rect(c, col, px + fx, py + fy, 2, 2);
+    }
+  }
+
+  /// Mine entrance: a dark arch in a rock face with timber props.
+  void _mineMouth(Canvas c, double px, double py) {
+    _rect(c, MinePalette.rock, px, py, ts, ts);
+    _rect(c, MinePalette.rockLight, px, py, ts, 2);
+    _rect(c, MinePalette.mouth, px + 3, py + 5, ts - 6, ts - 5);
+    _rect(c, MinePalette.timber, px + 2, py + 4, 2, ts - 4);
+    _rect(c, MinePalette.timber, px + ts - 4, py + 4, 2, ts - 4);
+    _rect(c, MinePalette.timber, px + 2, py + 3, ts - 4, 2);
+  }
+
+  /// Ore vein: a rock lump with ore flecks (the colour of the mine's
+  /// biome); spent, only the bare rock.
+  void _oreVein(Canvas c, String themeId, double px, double py, int h,
+      {required bool used}) {
+    _rect(c, MinePalette.rock, px + 2, py + 4, 12, 11);
+    _rect(c, MinePalette.rock, px + 4, py + 2, 8, 2);
+    _rect(c, MinePalette.rockLight, px + 4, py + 4, 4, 3);
+    if (used) return;
+    final col = MinePalette.vein(themeId);
+    for (final (fx, fy) in const [(4, 8), (9, 5), (11, 10), (6, 12), (8, 9)]) {
       _rect(c, col, px + fx, py + fy, 2, 2);
     }
   }

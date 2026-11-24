@@ -217,5 +217,18 @@
   "ui.world.hud.mp_value": "MP {mp}/{max}",
   "ui.world.hud.points": "+{n} pts",
   "ui.world.hud.potion.hp": "Vida",
-  "ui.world.hud.potion.mp": "Maná"
+  "ui.world.hud.potion.mp": "Maná",
+  "ui.world.mine.label": "MINA",
+  "ui.world.mine.prompt_enter": "[E] Entrar a la mina",
+  "ui.world.mine.prompt_exit": "[E] Salir de la mina",
+  "ui.world.mine.prompt_mine": "[E] Picar la veta",
+  "ui.world.mine.vein_regrow": "Veta gastada: vuelve en {n} s",
+  "ui.world.mine.npc.miner.name": "Minera",
+  "ui.world.mine.npc.miner.0": "Acá abajo el tiempo pasa más lento. O eso parece.",
+  "ui.world.mine.npc.miner.1": "Si la piedra brilla, pegale de costado.",
+  "ui.world.mine.npc.miner.2": "Estas vetas ya estaban cuando no había pueblo.",
+  "ui.world.mine.npc.hermit.name": "Ermitaño",
+  "ui.world.mine.npc.hermit.0": "Vine a escuchar el eco de la roca. Dice cosas.",
+  "ui.world.mine.npc.hermit.1": "Los antiguos fundían metal con luz. Yo uso fuego.",
+  "ui.world.mine.npc.hermit.2": "No hay apuro. Lo que tiene que pasar, pasa."
 }

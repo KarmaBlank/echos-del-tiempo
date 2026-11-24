@@ -155,6 +155,14 @@ abstract final class Tile {
   static const lantern = 'l';
   static const lanternLit = 'n';
 
+  // ---- minería v0.44.0 (docs/specs/mining_smithing.md) ----
+  /// Mine entrance in a biome exterior (solid; E enters).
+  static const mineEntrance = 'm';
+
+  /// Ore vein (solid; E mines it) and a spent vein waiting to regrow.
+  static const ore = 'r';
+  static const oreUsed = 'j';
+
   /// Tiles de los puntos de interés de v0.6 (todos sólidos).
   static const poiTiles = {
     cracked, secretFloor, shrine, shrineUsed, waystone, waystoneOn, wind,
@@ -169,7 +177,7 @@ abstract final class Tile {
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit, lantern, lanternLit, forage, forageUsed, house,
-    workshop, shop,
+    workshop, shop, mineEntrance, ore, oreUsed,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).
@@ -215,6 +223,9 @@ enum PoiKind {
   /// Farol de una mazmorra oscura: se enciende con E y alumbra fuerte
   /// toda la misión (lighting.md § 5.5).
   lantern,
+
+  /// Rare ore vein (mining_smithing.md § 1.4): mined once per visit.
+  ore,
 }
 
 /// Un punto de interés de un piso. Coordenadas del atlas (tiles).

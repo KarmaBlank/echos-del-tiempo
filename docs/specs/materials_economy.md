@@ -280,3 +280,9 @@ nivel 1 a 5 cuesta ₵10000, 10 Cristales y 3 Prismas (las 4 de jefe con
 Abismo, además 2 Fragmentos de ese jefe). Con ~50 ULT posibles es un
 sumidero de largo plazo que no compite con la forja temprana (los
 Prismas recién desde el nivel 3).
+## 9. Materiales de herrería (v0.44.0)
+
+Aparte de Esquirlas, Cristales y Prismas (que siguen siendo solo para
+mejorar armas encontradas) hay menas, lingotes y materiales raros por
+bioma para forjar armas desde cero: ver mining_smithing.md § 2. No se
+condensan entre sí ni con los de mejora.

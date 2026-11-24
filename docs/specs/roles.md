@@ -75,6 +75,9 @@ en una casa:
   con Brann arraigado, su objeto único y el oficio en `comLegendLevel`:
   la cadena larga.
 - Uno por jugador y día del mundo. Lo valida el anfitrión.
+- v0.44.0 (mining_smithing.md § 5): además, con Brann en su casa, la
+  FORJA → HERRERÍA → BRANN arma un arma de la base que elijas con tus
+  lingotes y materiales, por oro; la rareza tope es la de este encargo.
 
 ## 5. Poder de aventurero en los oficios (v0.31.0)
 
@@ -104,6 +107,12 @@ Tercer oficio con árbol chico (8 nodos), en la pestaña OFICIOS.
   .forgeDiscount`, tope 75 %); la forja lo muestra y valida igual que el
   anfitrión.
 - El nivel de Herrería cuenta para la rareza del encargo de Brann.
+- v0.44.0 (mining_smithing.md): la Herrería es un oficio de jugador
+  completo. XP también por picar vetas (`mineXp`), fundir (`smeltXp`) y
+  forjar armas desde cero (`craftXp`); misma curva y misma XP de
+  personaje por nivel que los otros oficios (§ 2), así sube igual de
+  rápido. El nivel abre rarezas (Mágico 4, Raro 10, Épico 18,
+  Legendario 25).
 
 ## 7. Roles de exploración (v0.31.0)
 

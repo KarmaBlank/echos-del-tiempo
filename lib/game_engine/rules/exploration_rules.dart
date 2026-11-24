@@ -53,6 +53,7 @@ abstract final class ExplorationRules {
           PoiKind.shortcut => Tile.path,
           PoiKind.brazier => Tile.brazierLit,
           PoiKind.lantern => Tile.lanternLit,
+          PoiKind.ore => Tile.oreUsed,
           PoiKind.wind || PoiKind.relic => null,
         };
         if (to == null) continue;

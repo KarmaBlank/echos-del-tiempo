@@ -13,6 +13,7 @@ import 'dungeon_rules.dart';
 import 'eco_portal_rules.dart';
 import 'session_engine.dart';
 import 'trial_rules.dart';
+import 'mining_rules.dart';
 import 'zone_rules.dart';
 
 export '../models/session_world.dart';
@@ -178,7 +179,7 @@ class WorldEngine {
   String placeLabel(SessionWorld w, String key) {
     if (key == kTownRoom) return 'Pueblo';
     final r = w.rooms[key];
-    if (!SessionWorld.isDungeon(key)) return biomeDef(key)?.name ?? key;
+    if (!SessionWorld.isDungeon(key)) return MiningRules.placeName(key);
     if (r == null) return 'Mazmorra';
     if (r.tutorial != null) return 'Tutorial';
     final id = r.mission?.missionId ?? r.vote?.missionId ?? r.prep?.missionId;
@@ -391,18 +392,34 @@ class _W {
         s.run != null ||
         p.isCompanion ||
         SessionWorld.isDungeon(key) ||
-        !BiomeRules.canTravelTo(place,
-            unlockedZone: ZoneRules.unlockedZone(p.profile))) {
+        !(MiningRules.isMine(place) || MiningRules.isMine(s.place)
+            ? MiningRules.canTravel(s.place, place)
+            : BiomeRules.canTravelTo(place,
+                unlockedZone: ZoneRules.unlockedZone(p.profile)))) {
       return false;
     }
+    final fromMine = MiningRules.parse(s.place);
     final to = place == kPueblo ? kTownRoom : place;
     if (to == key && portal == null) return false;
     if (to != key) {
       w.rooms.putIfAbsent(
           to, () => _fresh(to == kTownRoom ? null : to)..instance = to);
-      final name = biomeDef(place)?.name ?? place;
+      final name = MiningRules.placeName(place);
       _move(p, key, to,
           leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
+      // Out of a mine: in front of its entrance (mining_smithing.md § 1.1).
+      if (fromMine != null && w.rooms[to]!.players.containsKey(p.id)) {
+        final n = w.rooms[to]!.copy();
+        final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
+        for (final q in n.playerList) {
+          if (q.id != p.id && q.leaderId != p.id) continue;
+          q
+            ..x = f.x
+            ..y = f.y
+            ..moving = false;
+        }
+        w.rooms[to] = n;
+      }
     }
     // ECOS: frente al portal de esa zona (ecos_zone.md § 5).
     if (portal != null && w.rooms[to]!.players.containsKey(p.id)) {
