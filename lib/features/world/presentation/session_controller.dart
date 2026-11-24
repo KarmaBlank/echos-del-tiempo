@@ -1486,6 +1486,10 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(ProposeTourneyAction(id));
   }
 
+  /// Gift or rumor [i] of the event NPC [uid] (world_events.md § 3.6;
+  /// the host checks and keeps it once per player).
+  bool eventNpcAct(String uid, int i) => _apply(EventNpcActAction(uid, i));
+
   /// ENTRAR to the rift [uid] (host decides; gathers like missions).
   bool enterRift(String uid) {
     closePanel();

@@ -13,6 +13,19 @@ const _seasonHeader = 'ESTACIÓN (NINGUNA = CUALQUIERA)';
 const _weatherHeader = 'CLIMA DEL PUEBLO (NINGUNO = CUALQUIERA)';
 const _anyLabel = 'CUALQUIERA';
 
+// Editor-only labels of the DIÁLOGO tab (world_events.md § 7).
+const _dialogueTab = 'DIÁLOGO';
+const _greetingTab = 'SALUDO';
+const _topicsTab = 'TEMAS';
+const _actionsTab = 'ACCIONES';
+const _plus = '+ ';
+const _addTopic = '+ TEMA';
+const _removeLabel = 'QUITAR';
+const _optionHeader = 'OPCIÓN (LO QUE ELIGE EL JUGADOR)';
+const _answerHeader = 'RESPUESTA';
+const _idLabel = 'Id';
+const _tradeInfo = 'Abre el puesto con el descuento del evento.';
+
 String _catLabel(WorldEventCategory c) => switch (c) {
       WorldEventCategory.visitor => 'VISITANTE',
       WorldEventCategory.overworldNpc => 'CAMPO',
@@ -290,10 +303,12 @@ class _EventDetailState extends State<_EventDetail> {
           key: const ValueKey('event-tabs'),
           index: tab,
           onChanged: (i) => setState(() => tab = i),
-          tabs: const [
-            DsTab('FICHA', key: ValueKey('event-tab-ficha')),
-            DsTab('TEXTOS', key: ValueKey('event-tab-textos')),
-            DsTab('PARÁMETROS', key: ValueKey('event-tab-params')),
+          tabs: [
+            const DsTab('FICHA', key: ValueKey('event-tab-ficha')),
+            const DsTab('TEXTOS', key: ValueKey('event-tab-textos')),
+            const DsTab('PARÁMETROS', key: ValueKey('event-tab-params')),
+            if (cat.isNpc)
+              const DsTab(_dialogueTab, key: ValueKey('event-tab-dialogue')),
           ],
         ),
         Expanded(
@@ -302,6 +317,7 @@ class _EventDetailState extends State<_EventDetail> {
             child: switch (tab) {
               0 => _Sheet(c: c, e: e, cat: cat),
               1 => _Texts(c: c, e: e),
+              3 when cat.isNpc => _Dialogue(c: c, e: e, cat: cat),
               _ => _Params(c: c, e: e, cat: cat),
             },
           ),
@@ -548,7 +564,217 @@ class _Params extends StatelessWidget {
   }
 }
 
+/// Molecule: one text in every language (red when missing).
+class _LocaleFields extends StatelessWidget {
+  const _LocaleFields(
+      {required this.c, required this.m, required this.keyPrefix});
+  final EventsEditorController c;
+  final Map m;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final tag in c.locales)
+            Padding(
+              padding: EdgeInsets.only(bottom: DsSpace.xs),
+              child: Row(children: [
+                SizedBox(
+                  width: 64,
+                  child: Text(tag,
+                      style: DsText.detail(
+                          '${m[tag] ?? ''}'.trim().isEmpty
+                              ? DsColors.danger
+                              : null)),
+                ),
+                Expanded(
+                  child: _TextBox(
+                      key: ValueKey('$keyPrefix-$tag'),
+                      value: '${m[tag] ?? ''}',
+                      missing: '${m[tag] ?? ''}'.trim().isEmpty,
+                      onChanged: (s) => c.edit(() => m[tag] = s)),
+                ),
+              ]),
+            ),
+        ],
+      );
+}
+
+String _actLabel(EventActionKind k) => switch (k) {
+      EventActionKind.gift => 'REGALO',
+      EventActionKind.rumor => 'RUMOR',
+      EventActionKind.duel => 'DUELO',
+      EventActionKind.trade => 'COMERCIAR',
+    };
+
+/// DIÁLOGO (world_events.md § 3.6, § 7): sub-tabs SALUDO, TEMAS and
+/// ACCIONES (at most 2, from the fixed list).
+class _Dialogue extends StatefulWidget {
+  const _Dialogue({required this.c, required this.e, required this.cat});
+  final EventsEditorController c;
+  final Map<String, dynamic> e;
+  final WorldEventCategory cat;
+
+  @override
+  State<_Dialogue> createState() => _DialogueState();
+}
+
+class _DialogueState extends State<_Dialogue> {
+  int sub = 0;
+  int pick = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c, e = widget.e;
+    final topics = (e['topics'] ??= <dynamic>[]) as List;
+    final actions = (e['actions'] ??= <dynamic>[]) as List;
+    final list = sub == 1 ? topics : actions;
+    final i = pick.clamp(0, list.isEmpty ? 0 : list.length - 1);
+    final Map? cur = list.isEmpty ? null : list[i] as Map;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      DsTabBar(
+        key: const ValueKey('event-dialogue-tabs'),
+        index: sub,
+        onChanged: (v) => setState(() {
+          sub = v;
+          pick = 0;
+        }),
+        tabs: const [
+          DsTab(_greetingTab, key: ValueKey('event-dialogue-greeting')),
+          DsTab(_topicsTab, key: ValueKey('event-dialogue-topics')),
+          DsTab(_actionsTab, key: ValueKey('event-dialogue-actions')),
+        ],
+      ),
+      SizedBox(height: DsSpace.sm),
+      if (sub == 0)
+        _LocaleFields(
+            c: c,
+            m: (e['greeting'] ??= c.fullText(null)) as Map,
+            keyPrefix: 'event-greeting')
+      else ...[
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          for (var k = 0; k < list.length; k++)
+            DsButton(
+                sub == 1
+                    ? '${(list[k] as Map)['id']}'
+                    : _actLabel(EventActionKind.fromName(
+                        (list[k] as Map)['kind'])),
+                key: ValueKey('event-dialogue-item-$k'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.ghost,
+                selected: k == i,
+                onPressed: () => setState(() => pick = k)),
+          if (sub == 1)
+            DsButton(_addTopic,
+                key: const ValueKey('event-topic-add'),
+                size: DsButtonSize.compact,
+                onPressed: () => c.addTopic(e)),
+          if (sub == 2 && actions.length < 2)
+            for (final k in EventActionKind.values)
+              if (k != EventActionKind.duel ||
+                  widget.cat == WorldEventCategory.overworldNpc)
+                if (k != EventActionKind.trade || widget.cat.inTown)
+                  DsButton(_plus + _actLabel(k),
+                      key: ValueKey('event-action-add-${k.name}'),
+                      size: DsButtonSize.compact,
+                      onPressed: () => c.addAction(e, k)),
+        ]),
+        if (cur != null) ...[
+          Row(children: [
+            const Expanded(child: SizedBox()),
+            DsButton(_removeLabel,
+                key: const ValueKey('event-dialogue-remove'),
+                size: DsButtonSize.compact,
+                onPressed: () => c.edit(() => list.removeAt(i))),
+          ]),
+          if (sub == 1)
+            DsListRow(
+              compact: true,
+              title: _idLabel,
+              trailing: SizedBox(
+                width: 200,
+                child: _TextBox(
+                    key: const ValueKey('event-topic-id'),
+                    value: '${cur['id'] ?? ''}',
+                    onChanged: (v) => c.edit(() => cur['id'] = v)),
+              ),
+            ),
+          if (sub == 2) _ActionFields(c: c, a: cur),
+          const DsSectionHeader(_optionHeader),
+          _LocaleFields(
+              c: c,
+              m: (cur['label'] ??= c.fullText(null)) as Map,
+              keyPrefix: 'event-dialogue-label'),
+          const DsSectionHeader(_answerHeader),
+          _LocaleFields(
+              c: c,
+              m: (cur['line'] ??= c.fullText(null)) as Map,
+              keyPrefix: 'event-dialogue-line'),
+        ],
+      ],
+    ]);
+  }
+}
+
+/// The parameters of one action (§ 3.6): gift item and amounts, rumor
+/// place, duel enemy and scaling.
+class _ActionFields extends StatelessWidget {
+  const _ActionFields({required this.c, required this.a});
+  final EventsEditorController c;
+  final Map a;
+
+  @override
+  Widget build(BuildContext context) {
+    final kind = EventActionKind.fromName(a['kind']);
+    final p = (a['params'] ??= <String, dynamic>{}) as Map;
+    final model = EventNpcAction(kind);
+    Widget text(String label, String k, String key) => DsListRow(
+          compact: true,
+          title: label,
+          trailing: SizedBox(
+            width: 200,
+            child: _TextBox(
+                key: ValueKey(key),
+                value: '${a[k] ?? ''}',
+                onChanged: (v) => c.edit(() => a[k] = v)),
+          ),
+        );
+    Widget num0(String k, String label, {bool integer = false}) => _Num(
+        label,
+        p[k] is num ? p[k] as num : model.param(k),
+        (v) => c.edit(() => p[k] = v),
+        integer: integer);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      ...switch (kind) {
+        EventActionKind.gift => [
+            text('Objeto (material, cebo o semilla; vacío = solo oro)',
+                'item', 'event-action-item'),
+            num0('qty', 'Cantidad', integer: true),
+            num0('gold', 'Oro', integer: true),
+          ],
+        EventActionKind.rumor => [
+            text('Lugar (rift = la grieta activa, o id de bioma)', 'target',
+                'event-action-target'),
+          ],
+        EventActionKind.duel => [
+            text('Enemigo (id)', 'target', 'event-action-target'),
+            num0('hpMult', 'Vida ×'),
+            num0('atkMult', 'Ataque ×'),
+            num0('levelBonus', 'Nivel +', integer: true),
+            num0('rewardMult', 'Premio ×'),
+          ],
+        EventActionKind.trade => [
+            Text(_tradeInfo,
+                style: DsText.detail()),
+          ],
+      },
+    ]);
+  }
+}
+
 /// Atom: square text field that follows [value].
+
 class _TextBox extends StatefulWidget {
   const _TextBox(
       {super.key,

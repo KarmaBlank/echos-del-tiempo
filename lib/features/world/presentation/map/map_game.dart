@@ -795,6 +795,14 @@ class MapGame extends Game {
       }
       _rankedText(c, d.title.text.toUpperCase(), x, bottom - 20,
           TownPalette.label, 6, 899);
+      // Same mark and place as residents (world_events.md § 3.6).
+      drawNpcMark(
+          (txt, mx, my, col, size) =>
+              _rankedText(c, txt, mx, my, col, size, 901),
+          WorldEventRules.mark(s.town.events, a, d, controller.localId),
+          x,
+          bottom - 23,
+          t);
     }
   }
 

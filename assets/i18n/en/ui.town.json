@@ -529,5 +529,10 @@
   "ui.town.cook.left": "{n} missions left",
   "ui.town.cook.empty": "You have not cooked anything yet.",
   "ui.town.cook.unknown_hint": "Cook it to log it.",
-  "ui.town.trader.in_season": "In season: +{n}% price"
+  "ui.town.trader.in_season": "In season: +{n}% price",
+  "ui.town.events.done": "(done)",
+  "ui.town.events.duel_go": "En garde!",
+  "ui.town.events.duel_none": "There is no place to fight here.",
+  "ui.town.events.rumor_badge": "RUMOR",
+  "ui.town.events.rumor_tip": "Someone told you about this place."
 }

@@ -175,7 +175,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `tourney` session state, `tev`/`tourney` actions.
 /// 74: cooking and meals (farming.md § 17): `ml`/`mlg`/`mb` in the farm
 /// profile, `meal` in the battle build, FarmShopOp.cook/eat.
-const kProtocolVersion = 74;
+/// 75: event NPCs (world_events.md § 3.6): `dn` in `wev` and the
+/// `wevAct` action.
+const kProtocolVersion = 75;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

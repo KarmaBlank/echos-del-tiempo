@@ -529,5 +529,10 @@
   "ui.town.cook.left": "剩余{n}次任务",
   "ui.town.cook.empty": "还没有烹饪任何料理。",
   "ui.town.cook.unknown_hint": "烹饪后即可记录。",
-  "ui.town.trader.in_season": "当季：价格+{n}%"
+  "ui.town.trader.in_season": "当季：价格+{n}%",
+  "ui.town.events.done": "（已完成）",
+  "ui.town.events.duel_go": "准备迎战！",
+  "ui.town.events.duel_none": "这里没有地方战斗。",
+  "ui.town.events.rumor_badge": "传闻",
+  "ui.town.events.rumor_tip": "有人跟你提起过这个地方。"
 }

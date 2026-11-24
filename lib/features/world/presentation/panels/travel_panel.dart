@@ -87,6 +87,11 @@ class _TravelPanelState extends State<TravelPanel> {
                 softWrap: true,
                 style: DsText.detail(b.open ? null : DsColors.textDisabled)),
             trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              if (rumorBadge(context, c.town.events, b.id, c.localId)
+                  case final r?) ...[
+                r,
+                SizedBox(width: DsSpace.sm),
+              ],
               if (worldEventBadge(context, c.town.events, b.id)
                   case final ev?) ...[
                 ev,

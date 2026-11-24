@@ -529,5 +529,10 @@
   "ui.town.cook.left": "Quedan {n} misiones",
   "ui.town.cook.empty": "Todavía no cocinaste nada.",
   "ui.town.cook.unknown_hint": "Cocinala para anotarla.",
-  "ui.town.trader.in_season": "De estación: +{n}% de precio"
+  "ui.town.trader.in_season": "De estación: +{n}% de precio",
+  "ui.town.events.done": "(hecho)",
+  "ui.town.events.duel_go": "¡En guardia!",
+  "ui.town.events.duel_none": "Acá no hay dónde pelear.",
+  "ui.town.events.rumor_badge": "RUMOR",
+  "ui.town.events.rumor_tip": "Te contaron algo de este lugar."
 }
