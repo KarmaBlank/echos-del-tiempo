@@ -47,6 +47,9 @@ class TileLayerCache {
   /// Animado por tile (`null` = sin calcular).
   List<bool?> _anim = const [];
 
+  /// Glow tile whose base lives in the chunks (`null` = not computed).
+  List<bool?> _glow = const [];
+
   /// Bloques grabados, del menos al más usado.
   final _chunks = <int, ui.Image>{};
 
@@ -92,6 +95,7 @@ class TileLayerCache {
     } else {
       dispose();
       _anim = List<bool?>.filled(map.width * map.height, null);
+      _glow = List<bool?>.filled(map.width * map.height, null);
     }
     _map = map;
     _theme = theme;
@@ -101,9 +105,13 @@ class TileLayerCache {
   /// El tile (x, y) cambió: él y sus vecinos (bordes, puentes, orillas)
   /// pueden dibujarse distinto.
   void _invalidateAround(int x, int y, GameMap map) {
-    for (var yy = y - 1; yy <= y + 1; yy++) {
+    // Glow eligibility looks up to 2 rows below ([_isGlow]).
+    for (var yy = y - 2; yy <= y + 1; yy++) {
       for (var xx = x - 1; xx <= x + 1; xx++) {
-        if (map.contains(xx, yy)) _anim[yy * map.width + xx] = null;
+        if (map.contains(xx, yy)) {
+          _anim[yy * map.width + xx] = null;
+          _glow[yy * map.width + xx] = null;
+        }
       }
     }
     final (l, t, r, _) = TilePainter.maxOverflow;
@@ -118,8 +126,37 @@ class TileLayerCache {
 
   bool _isAnimated(GameMap map, int x, int y) {
     final i = y * map.width + x;
-    return _anim[i] ??= TilePainter.animated(map.tileAt(x, y), _theme, x, y,
-        lobby: map.lobby, voidBackdrop: _backdrop);
+    return _anim[i] ??= !_isGlow(map, x, y) &&
+        TilePainter.animated(map.tileAt(x, y), _theme, x, y,
+            lobby: map.lobby, voidBackdrop: _backdrop);
+  }
+
+  /// [TilePainter.glowSplit] tile whose glow no later-drawn neighbour can
+  /// cover (the ones to its right and up to [TilePainter.maxOverflow]
+  /// rows below stay in their cell): its base goes to the chunk and the
+  /// glow is drawn on top each frame, same pixels as drawing it whole.
+  bool _isGlow(GameMap map, int x, int y) {
+    final i = y * map.width + x;
+    return _glow[i] ??= () {
+      if (!TilePainter.glowSplit(map.tileAt(x, y), _theme, lobby: map.lobby)) {
+        return false;
+      }
+      bool ok(int xx, int yy) =>
+          !map.contains(xx, yy) ||
+          TilePainter.cellBound(map.tileAt(xx, yy), _theme);
+      final (ml, mt, mr, _) = TilePainter.maxOverflow;
+      final dl = (mr / _ts).ceil(), dr = (ml / _ts).ceil();
+      final dy = (mt / _ts).ceil();
+      for (var xx = x + 1; xx <= x + dr; xx++) {
+        if (!ok(xx, y)) return false;
+      }
+      for (var yy = y + 1; yy <= y + dy; yy++) {
+        for (var xx = x - dl; xx <= x + dr; xx++) {
+          if (!ok(xx, yy)) return false;
+        }
+      }
+      return true;
+    }();
   }
 
   static int _key(int cx, int cy) => cy * 4096 + cx;
@@ -179,9 +216,15 @@ class TileLayerCache {
     final c = Canvas(rec, Offset.zero & r.size);
     c.translate(-r.left, -r.top);
     c.clipRect(r, doAntiAlias: false);
-    // Los estáticos no dependen del reloj ni del estado de la sala.
-    _drawTiles(c, map, r,
-        only: false, t: 0, gateOpen: false, density: 1, pulse: 0);
+    // Los estáticos no dependen del reloj ni del estado de la sala (los
+    // de brillo, solo su base).
+    tiles.glowPass = TileGlowPass.base;
+    try {
+      _drawTiles(c, map, r,
+          only: false, t: 0, gateOpen: false, density: 1, pulse: 0);
+    } finally {
+      tiles.glowPass = TileGlowPass.all;
+    }
     final pic = rec.endRecording();
     final img = pic.toImageSync(r.width.ceil(), r.height.ceil());
     pic.dispose();
@@ -253,6 +296,15 @@ class TileLayerCache {
         final key = _key(cx, cy);
         c.drawImage(
             _chunkImage(key, map), Offset(cx * _chunkPx, cy * _chunkPx), paint);
+      }
+    }
+    // Glow of the glow tiles on top of their cached base; the animated
+    // zones below repaint whole tiles over it where they touch.
+    for (var y = vy0; y <= vy1; y++) {
+      for (var x = vx0; x <= vx1; x++) {
+        if (_isGlow(map, x, y)) {
+          tiles.drawGlow(c, map.tileAt(x, y), x * _ts, y * _ts, x, y, t: t);
+        }
       }
     }
     // Zonas animadas: tramos seguidos de una fila (y los de más abajo que
