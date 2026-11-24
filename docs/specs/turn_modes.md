@@ -66,6 +66,40 @@ Es la fase de grupo de `porBando` con los enemigos primero:
   cada jugador. (La ULT por daño recibido sigue como siempre.)
 - Tiempo agotado: los que faltan se defienden solos.
 
+### 3.1 Cola de acciones (protocolo Mundo 65)
+
+- En la fase de jugadores cada uno elige y confirma su acción cuando
+  quiera, aunque otra acción se esté animando. Si el host está en una
+  pausa (animación, cinemática) o ya hay cola, el comando entra a la
+  **cola de acciones** (`SessionBattle.queue`) en orden de llegada al
+  host; si no, se resuelve en el acto como siempre.
+- El host resuelve la cola de a uno, cada acción con su pausa. El que
+  está en cola puede cambiar su acción (se reemplaza en su lugar) o
+  sacarla (`CancelQueuedBattleAction`, vuelve al final si confirma de
+  nuevo) hasta que empiece a resolverse.
+- Un objetivo enemigo que murió antes: el motor redirige al primer
+  enemigo vivo. Un comando que ya no vale se salta con la línea
+  `ui.battle_log.queue_skipped`.
+- Dúo: el compañero tiene que estar libre (sin actuar y sin acción en
+  cola, tampoco como compañero del dúo de otro).
+- Si la fase se cierra (tiempo agotado, fin de la pelea), la cola se
+  vacía. Nadie solo en una fase y el Pulso no cambian: cada acción se
+  resuelve como un comando normal.
+- Solo con compañeros: las órdenes del líder para cada compañero usan la
+  misma cola; la IA con AUTO no elige por un compañero que ya está en
+  cola.
+- Por rondas: el jugador que todavía no actuó en la ronda puede dejar su
+  acción confirmada (intención) aunque no sea su bloque; se resuelve
+  cuando le toca, en el orden de velocidad de la ronda (no en orden de
+  llegada).
+- No en el TUTORIAL (valida paso a paso).
+- HUD: fila "En cola" debajo de la franja, con nombre e ícono de acción
+  en orden; las propias llevan ✕ para sacarlas.
+- El menú de batalla nunca se cierra ni vuelve al principio porque otro
+  resolvió su acción (combat.md § "Menú de batalla").
+- Red: `q` en la batalla del snapshot (`[{p, a, ...}]`, mismas claves que
+  `cmd`) y la acción `{"t":"uncmd"}`.
+
 ## 4. Por rondas
 
 Cada combatiente vivo (jugadores, invocaciones, enemigos) actúa

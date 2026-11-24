@@ -22,7 +22,8 @@ void waitForMyTurn(SessionController c, {int maxTicks = 2000}) {
   for (var i = 0;
       i < maxTicks &&
           c.view!.mode == SessionMode.battle &&
-          !c.view!.myTurn;
+          !(c.view!.myTurn &&
+              (c.session!.battle?.waitingForPlayer ?? false));
       i++) {
     c.advance(0.05);
   }

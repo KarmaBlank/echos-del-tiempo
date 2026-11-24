@@ -212,6 +212,12 @@ class BattleAction extends SessionAction {
   const BattleAction(this.command);
 }
 
+/// `uncmd`: withdraws the player's queued party-phase command before it
+/// starts resolving (turn_modes.md § 3.1, protocol 65).
+class CancelQueuedBattleAction extends SessionAction {
+  const CancelQueuedBattleAction();
+}
+
 /// `chat`: un mensaje de texto para la sala. El host lo recorta (espacios
 /// y [maxLength] caracteres) y rechaza los vacíos.
 class ChatAction extends SessionAction {

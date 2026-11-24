@@ -775,6 +775,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           battleKey: _battleKey,
           onCommand: controller.battleCommand,
           onAuto: controller.setAuto,
+          onCancelQueued: controller.cancelQueued,
           sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
           actionGate: tut == null || tb == null
               ? null

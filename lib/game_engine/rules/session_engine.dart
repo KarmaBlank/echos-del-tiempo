@@ -363,6 +363,7 @@ class SessionEngine {
   /// interactuar, levantar, pausa, chat, dev) sigue siendo del líder.
   static bool companionAction(SessionAction a) => switch (a) {
         BattleAction() ||
+        CancelQueuedBattleAction() ||
         SetBuildWantsAction() ||
         SetLootFilterAction() ||
         ClaimAchievementAction() ||
@@ -1378,6 +1379,13 @@ class _Op {
 
       case BattleAction():
         return _battleCommand(p, a.command);
+
+      case CancelQueuedBattleAction():
+        final b = s.battle;
+        if (s.mode != SessionMode.battle || b == null) return false;
+        final n = b.queue.length;
+        b.queue.removeWhere((q) => q.playerId == p.id);
+        return b.queue.length != n;
 
       case PauseAction():
         // Pausa de grupo: cualquiera pausa, cualquiera reanuda.
@@ -3717,12 +3725,91 @@ class _Op {
 
   bool _battleCommand(SessionPlayer p, BattleCommand cmd) {
     final b = s.battle;
-    if (s.mode != SessionMode.battle ||
-        b == null ||
-        b.endTimer != null ||
-        b.wait > 0) {
+    if (s.mode != SessionMode.battle || b == null || b.endTimer != null) {
       return false;
     }
+    // Action queue (turn_modes.md § 3.1): in the party phase a command that
+    // arrives while another one resolves waits its turn (arrival order).
+    // Por rondas: a player whose block is not up yet (or that is busy
+    // animating) leaves an intent that runs when their turn comes.
+    if (queueOpen(b, p.id) &&
+        (b.wait > 0 ||
+            b.queue.isNotEmpty ||
+            !b.state.awaitingGroup ||
+            !b.state.pendingGroup.any((c) => c.id == p.id))) {
+      return _enqueue(b, p.id, cmd);
+    }
+    if (b.wait > 0) return false;
+    return _runBattleCommand(p, cmd);
+  }
+
+  /// [playerId] may put a command in the action queue now: Por fases /
+  /// porBando party phase, still pending and outside the TUTORIAL.
+  /// Por rondas: any living player still to act this round (the intent
+  /// resolves in the round's speed order, not in arrival order).
+  bool queueOpen(SessionBattle b, String playerId) {
+    if (s.tutorial != null || b.endTimer != null || b.state.ended) {
+      return false;
+    }
+    final st = b.state;
+    if (st.porRonda) {
+      return st.roundRemaining.any((c) => c.id == playerId && c.isPlayer);
+    }
+    return st.porBando &&
+        st.awaitingGroup &&
+        st.pendingGroup.any((c) => c.id == playerId);
+  }
+
+  /// Next entry of the queue to resolve now, or -1: the head in Por fases /
+  /// porBando; in Por rondas the first entry whose player's block is up.
+  int _nextQueued(SessionBattle b) {
+    final st = b.state;
+    if (!st.awaitingGroup) return -1;
+    if (!st.porRonda) return 0;
+    final block = {for (final c in st.pendingGroup) c.id};
+    return b.queue.indexWhere((q) => block.contains(q.playerId));
+  }
+
+  /// Adds (or replaces in place) [playerId]'s queued command. A duo needs
+  /// its partner free: not acted and not queued (nor queued as someone
+  /// else's duo partner).
+  bool _enqueue(SessionBattle b, String playerId, BattleCommand cmd) {
+    if (cmd is WaitCommand) return false;
+    bool busy(String id) => b.queue.any((q) {
+          if (q.playerId == playerId) return false;
+          final c = q.command;
+          return q.playerId == id || (c is DualCommand && c.partnerId == id);
+        });
+    if (busy(playerId)) return false;
+    if (cmd is DualCommand &&
+        (!queueOpen(b, cmd.partnerId) ||
+            busy(cmd.partnerId))) {
+      return false;
+    }
+    final entry = QueuedBattleCommand(playerId, cmd);
+    final i = b.queue.indexWhere((q) => q.playerId == playerId);
+    if (i >= 0) {
+      b.queue[i] = entry;
+    } else {
+      b.queue.add(entry);
+    }
+    return true;
+  }
+
+  /// Resolves the head of the action queue (one per step, each with its
+  /// own pause). A command that is no longer valid is skipped with a log
+  /// line; dead enemy targets retarget in the engine (first living foe).
+  void _drainQueue(SessionBattle b, int i) {
+    final q = b.queue.removeAt(i);
+    final p = players.where((x) => x.id == q.playerId).firstOrNull;
+    if (p != null && _runBattleCommand(p, q.command)) return;
+    final name = b.state.byId(q.playerId)?.name ?? q.playerId;
+    b.state = b.state.copy()
+      ..logLine = LogLine('ui.battle_log.queue_skipped', {'a': name});
+  }
+
+  bool _runBattleCommand(SessionPlayer p, BattleCommand cmd) {
+    final b = s.battle!;
     // TUTORIAL: el host valida contra el paso (combat_tutorial.md § 6).
     if (tutorialAllows(p, cmd) == false) return false;
     final before = b.state;
@@ -3867,6 +3954,16 @@ class _Op {
     if (b.wait > 0) {
       b.wait -= dt;
       return;
+    }
+    if (b.queue.isNotEmpty) {
+      // Entries whose player can no longer act (phase / round closed,
+      // timeout, K.O.) drop out; the rest wait their turn.
+      b.queue.removeWhere((q) => !queueOpen(b, q.playerId));
+      final i = _nextQueued(b);
+      if (i >= 0) {
+        _drainQueue(b, i);
+        return;
+      }
     }
     final cur = b.state.current;
     if (cur != null && cur.isPlayer && !cur.alive) b.state.currentId = null;

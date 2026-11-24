@@ -208,6 +208,7 @@
   "ui.battle_log.ult_weaken": "{s}: la ULT de {a} pierde {p} de poder",
   "ui.battle_log.victory": "¡Victoria! +{xp} XP · +{c} créditos para cada uno",
   "ui.battle_log.victory_credits": "¡Victoria! +{x} XP · +{c} créditos para cada uno",
+  "ui.battle_log.queue_skipped": "{a} no pudo hacer su acción en cola",
   "ui.battle_log.void_mark_x": "(MARCA ×{x})",
   "ui.battle_log.wait_round": "{a} espera al final de la ronda",
   "ui.battle_log.weapon_regen": "{a} regenera {h} HP (arma)",
