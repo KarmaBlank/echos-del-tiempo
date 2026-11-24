@@ -421,7 +421,7 @@ class MapFarmLayer {
           }
         }
         // Bloqueado (farming.md § 8.6): quieto y con el "!" dorado.
-        if (stuck) drawNpcMark(text, NpcMark.news, pos.x, pos.y - 22, t);
+        if (stuck) drawNpcMark(text, NpcMark.news, pos.x, pos.y - 14, t);
       }
     }
     // Habitantes (overworld_biomes.md § 10.1): caminan frente a su casa
@@ -448,7 +448,7 @@ class MapFarmLayer {
       // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo
       // para entregar.
       drawNpcMark(text, markOf?.call(n) ?? NpcMark.none, pos.$1,
-          pos.$2 - 19.5, t);
+          pos.$2 - 17.5, t);
     }
     final h = hover;
     if (h == null) return;
