@@ -919,8 +919,9 @@ class MapGame extends Game {
         final cx = at.x, bottom = at.y + ts / 2;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
-          // Agachado mientras hace lo suyo; un saltito al caminar.
-          final dh = at.busy ? h * 0.82 : h;
+          // Sin aplastar el sprite: lo suyo se nota con las chispas;
+          // un saltito al caminar.
+          final dh = h;
           final hop = at.walking ? ((t / 120).floor().isEven ? 1.0 : 0.0) : 0.0;
           c.drawImageRect(
               im,
