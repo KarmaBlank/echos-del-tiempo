@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../inventory/domain/item_names.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
@@ -18,6 +17,7 @@ import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'seed_text.dart';
 import '../world_strings.dart';
 
 /// OFICIOS → INVENTARIO de PERSONAJE (docs/specs/oficio_storage.md,
@@ -91,9 +91,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   /// filtran por hora: su horario es "???").
   DayTime? _logTime;
 
-  String _biomeLabel(String id) => id == 'zona1'
-      ? context.t('ui.town.bag.town')
-      : kBiomes.where((b) => b.id == id).firstOrNull?.name ?? id.toUpperCase();
+  String _biomeLabel(String id) => lifeBiomeLabel(context, id);
 
   static List<String> get _logBiomes => {
         for (final d in kFish.values)
