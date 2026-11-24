@@ -26,6 +26,7 @@ import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:echos_del_tiempo/netcode/protocol/wire.dart';
 import 'package:echos_del_tiempo/game_engine/data/summoner_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Elementos y reacciones v0.7 (docs/specs/elemental_reactions.md). Los
 // combatientes se arman a mano; el azar es una lista fija (0.99 cuando se

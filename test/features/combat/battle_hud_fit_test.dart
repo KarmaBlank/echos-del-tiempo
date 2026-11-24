@@ -51,16 +51,20 @@ void _fitsIn(WidgetTester tester, Finder text, Finder box) {
 void main() {
   for (final hp in [126, 1200, 10000]) {
     testWidgets('caja del objetivo: $hp/$hp entra', (tester) async {
-      await _pump(tester, Align(
-          alignment: Alignment.topLeft, child: TargetBar(enemy: _foe(hp))));
+      await _pump(
+          tester,
+          Align(
+              alignment: Alignment.topLeft, child: TargetBar(enemy: _foe(hp))));
       _fitsIn(tester, find.text('$hp/$hp'),
           find.byKey(const ValueKey('target-bar')));
     });
   }
 
   testWidgets('caja del objetivo: 3 cifras sin achicar', (tester) async {
-    await _pump(tester, Align(
-        alignment: Alignment.topLeft, child: TargetBar(enemy: _foe(126))));
+    await _pump(
+        tester,
+        Align(
+            alignment: Alignment.topLeft, child: TargetBar(enemy: _foe(126))));
     // Escala 1: lo dibujado mide lo mismo que el párrafo.
     final t = find.text('126/126');
     expect(tester.getRect(t).width,
@@ -85,9 +89,10 @@ void main() {
         _foe(54)
       ])
         ..currentId = 'p1'
-        ..log = 'Caro · Flecha Venenosa → Limo: 9 = ATQ 13 × 0.7 · +3 Veneno · '
+        ..logLine = const LogLine.raw(
+            'Caro · Flecha Venenosa → Limo: 9 = ATQ 13 × 0.7 · +3 Veneno · '
             '¡COMBUSTIÓN! 10 Quemadura × 2.5% = 25% → 14 a Limo · Instante: '
-            'una acción más';
+            'una acción más');
       await _pump(tester, BattleView(battle: b, onCommand: (_) => true),
           dpr: dpr);
       final text = find.textContaining('Flecha Venenosa');

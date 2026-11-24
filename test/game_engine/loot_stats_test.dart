@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
+import '../helpers/battle_log_helper.dart';
 
 /// Sin árbol: los números del arma se ven solos.
 const _bare = StatsCalculator(

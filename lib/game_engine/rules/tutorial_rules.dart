@@ -241,7 +241,8 @@ class TrainingKit {
 
 const List<TrainingKit> kTrainingKits = [
   TrainingKit([_fuego, _area]), // Quemadura (y área)
-  TrainingKit([_instante, _detonaVeneno]), // Instante + Veneno; Explosión tóxica
+  TrainingKit(
+      [_instante, _detonaVeneno]), // Instante + Veneno; Explosión tóxica
   TrainingKit([_hielo, _fisico], ult: true), // Congelación; ULT
   TrainingKit([_detonaQuemadura, kQuebrarId]), // Combustión; Quebrar
 ];
@@ -286,7 +287,6 @@ class TutorialRules {
   static const missionId = 'tutorial';
   static const name = 'TUTORIAL: Ecos de práctica';
 
-
   /// Lo que espera un compañero (IA) antes de hacer su rol.
   static const companionDelay = 0.8;
 
@@ -308,8 +308,10 @@ class TutorialRules {
 
   /// Los que votan: los humanos de la sala (los compañeros IA no votan;
   /// quien se desconecta sale de la sala y deja de contarse).
-  List<SessionPlayer> voters(GameSession s) =>
-      [for (final p in s.playerList) if (!p.isCompanion) p];
+  List<SessionPlayer> voters(GameSession s) => [
+        for (final p in s.playerList)
+          if (!p.isCompanion) p
+      ];
 
   /// Los humanos que todavía no tocaron SIGUIENTE en el cartel abierto.
   List<SessionPlayer> waiting(GameSession s) {
@@ -457,8 +459,8 @@ class TutorialRules {
   /// la batalla se descarta al salir.
   Combatant kitOf(Combatant c, TutorialState t, Set<String> present) {
     const k = kTutorialKit;
-    final train = t.phase == TutorialPhase.train ||
-        t.phase == TutorialPhase.trainOver;
+    final train =
+        t.phase == TutorialPhase.train || t.phase == TutorialPhase.trainOver;
     final kit = train ? trainingKitFor(t, c.id, present) : null;
     return Combatant(
       id: c.id,
@@ -500,7 +502,8 @@ class TutorialRules {
     for (var j = 0; j < kTrainingKits.length; j++) {
       if (j % n != i) continue;
       for (final sk in kTrainingKits[j].skills) {
-        final real = sk == kQuebrarId ? quebrarSkillFor(kTutorialKit.weaponType) : sk;
+        final real =
+            sk == kQuebrarId ? quebrarSkillFor(kTutorialKit.weaponType) : sk;
         if (!skills.contains(real)) skills.add(real);
       }
       ult = ult || kTrainingKits[j].ult;
@@ -530,8 +533,8 @@ class TutorialRules {
     started.enemies
       ..clear()
       ..add(automaton(n));
-    started.log = '$name: un autómata de entrenamiento, reliquia de una '
-        'magia tecnológica del pasado.';
+    started.logLine =
+        const LogLine('ui.battle_log.tutorial_automaton', {'a': name});
   }
 
   /// El Autómata de entrenamiento: mucha vida, débil al Fuego, resiste lo
@@ -583,8 +586,8 @@ class TutorialRules {
   void setUpStage(BattleState b, TutorialStage st) {
     // Cada etapa arranca limpia (v0.9.6, § 4.2): el autómata, la línea de
     // tiempo y los recursos vuelven a cero, así el caso siempre es claro.
-    b.enemies.removeWhere(
-        (e) => e.id != bossId && st.setup != TutorialSetup.adds);
+    b.enemies
+        .removeWhere((e) => e.id != bossId && st.setup != TutorialSetup.adds);
     final hasAdds = b.enemies.length > 1;
     resetCombatants(b);
     applySetup(b, st.setup, hasAdds: hasAdds);
@@ -708,10 +711,9 @@ class TutorialRules {
           TutorialMove.attack => cmd is AttackCommand,
           TutorialMove.defend => cmd is DefendCommand,
           TutorialMove.pass => cmd is PassCommand,
-          TutorialMove.skill =>
-            cmd is SkillCommand &&
-                (cmd.skillId == skillFor(step, actor) ||
-                    (step.alt != null && cmd.skillId == step.alt)),
+          TutorialMove.skill => cmd is SkillCommand &&
+              (cmd.skillId == skillFor(step, actor) ||
+                  (step.alt != null && cmd.skillId == step.alt)),
         };
   }
 
@@ -785,7 +787,8 @@ class TutorialRules {
             yourTurn: mine.contains(b.currentId),
             stage: 'ENTRENAR');
       case TutorialPhase.trainOver:
-        return const TutorialBanner('¡El autómata cayó! Votá: Reiniciar o Salir.',
+        return const TutorialBanner(
+            '¡El autómata cayó! Votá: Reiniciar o Salir.',
             stage: 'ENTRENAR');
       case TutorialPhase.script:
         break;
@@ -853,9 +856,7 @@ class TutorialRules {
     if (idx == 1 && t.fromVersion > 0 && t.fromVersion < version) {
       lines.add('Ya hiciste el tutorial. Esta pelea de prueba muestra lo que '
           'cambió en v$version: '
-          '${[
-        for (final n in t.stages) stageDef(n).title
-      ].join(', ')}.');
+          '${[for (final n in t.stages) stageDef(n).title].join(', ')}.');
     }
     lines.addAll(stageIntro(st.number));
     if (st.kind == TutorialStageKind.pairs) {
@@ -1142,9 +1143,13 @@ class TutorialRules {
           TutorialArrow.timeline,
           actorId);
     }
-    if (lines.isEmpty) lines.add(after.log.isEmpty ? 'Listo.' : after.log);
+    if (lines.isEmpty && after.logLine.isEmpty) lines.add('Listo.');
     return TutorialCard(lines.take(3).toList(),
-        arrow: arrow, targetId: target, actorId: actorId, effect: true);
+        arrow: arrow,
+        targetId: target,
+        actorId: actorId,
+        effect: true,
+        log: lines.isEmpty ? after.logLine : LogLine.empty);
   }
 
   /// Una línea mecánica por estado (sin números a mano: los que hay salen
@@ -1358,8 +1363,7 @@ class TutorialRules {
   }
 
   /// El autómata de ENTRENAR: el mismo, pero puede caer.
-  Combatant trainingBoss(int players) =>
-      automaton(players)..practice = false;
+  Combatant trainingBoss(int players) => automaton(players)..practice = false;
 
   // ---------------------------------------------------------------
   // Narrador de ENTRENAR (§ 4.4)
@@ -1462,8 +1466,7 @@ class TutorialRules {
       }
     }
     return [
-      for (final l in out)
-        actor == null ? l : '${actor.name}: $l',
+      for (final l in out) actor == null ? l : '${actor.name}: $l',
     ];
   }
 

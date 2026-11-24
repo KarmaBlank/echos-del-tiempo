@@ -536,7 +536,7 @@ class SessionJson {
           'sum': [for (final c in s.summons) combatantToJson(c)],
         'clock': s.clock,
         'cur': s.currentId,
-        'log': s.log,
+        'log': s.logLine.toJson(),
         'out': s.outcome == null
             ? null
             : {
@@ -576,7 +576,7 @@ class SessionJson {
           : [for (final raw in j.list('sum')) combatantFromJson(asJson(raw))],
       clock: j.dbl('clock'),
       currentId: j.strOrNull('cur'),
-      log: j.str('log'),
+      logLine: LogLine.fromJson(j['log']),
       outcome: out == null
           ? null
           : BattleOutcome(

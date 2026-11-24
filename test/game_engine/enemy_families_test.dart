@@ -17,6 +17,7 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Familias de enemigos (docs/specs/bestiary.md § 1): un escenario
 // determinístico por regla. Azar fijo 0.99 (nunca crítico ni esquiva).

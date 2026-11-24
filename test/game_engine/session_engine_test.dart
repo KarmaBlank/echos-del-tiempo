@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
+import '../helpers/battle_log_helper.dart';
 
 /// Guerrero de nivel [level] con los puntos repartidos en VIT y FUE.
 PlayerProfile _strong(int level, {int vit = 18, String name = 'Fuerte'}) {

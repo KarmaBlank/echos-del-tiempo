@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/i18n/catalog_names.dart';
 import '../../../core/procedural/weapon_look.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -114,12 +115,14 @@ List<StatusChip> combatantChips(Strings s, Combatant p) {
     // Mojado / Cargado: el valor son turnos que quedan, no stacks.
     final count = k.timed
         ? s.t('ui.combat.turns', {'n': n})
-        : '×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {'n': p.holyTurns})}' : ''}';
+        : '×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {
+                'n': p.holyTurns
+              })}' : ''}';
     chips.add(StatusChip(
       '${statusLetterOf(k)}$n',
-      '${k.label} $n',
+      '${k.tr} $n',
       _hex(hex),
-      '<b style="color:$hex">${k.label}</b> '
+      '<b style="color:$hex">${k.tr}</b> '
           '<span class="k">$count</span>'
           '<br>${statusDescriptionOf(k)}',
       icon: statusIconOf(k),
@@ -162,8 +165,11 @@ List<StatusChip> combatantChips(Strings s, Combatant p) {
         freezeSlowTip(ice)));
   }
   if (p.brittle && ice > 0 && p.alive) {
-    chips.add(StatusChip(s.t('ui.combat.chip.brittle.short'),
-        s.t('ui.combat.chip.brittle.long'), const Color(0xFF81ECEC), brittleTip()));
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.brittle.short'),
+        s.t('ui.combat.chip.brittle.long'),
+        const Color(0xFF81ECEC),
+        brittleTip()));
   }
   if (p.freezeResist > 0 && p.alive) {
     chips.add(StatusChip(
@@ -203,7 +209,9 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
         final n = b.party.where((p) => p.alive && p.webbed).length;
         chips.add(StatusChip(
             '${m.name}${n > 0 ? ' ×$n' : ''}',
-            '${m.name}${n > 0 ? ' · ${s.t('ui.combat.boss.web_caught', {'n': n})}' : ''}',
+            '${m.name}${n > 0 ? ' · ${s.t('ui.combat.boss.web_caught', {
+                    'n': n
+                  })}' : ''}',
             const Color(0xFFEDEFF5),
             '<b style="color:#edeff5">${m.name}</b> '
                 '<span class="k">(${protoEsc(e.name)})</span><br>${m.counter}'));
@@ -222,8 +230,10 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                 {'name': m.name, 'n': n, 'slow': slowPct}),
             const Color(0xFF9FE3F0),
             '<b style="color:#9fe3f0">${m.name}</b> '
-                '<span class="k">(${s.t('ui.combat.boss.frost.alive', {'n': n})})</span>'
-                '<br>${m.counter}'));
+            '<span class="k">(${s.t('ui.combat.boss.frost.alive', {
+                  'n': n
+                })})</span>'
+            '<br>${m.counter}'));
       case BossMechanicKind.stance:
         final shield = e.stance == 1;
         final pct = jsRound(m.value * 100);
@@ -247,8 +257,10 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                 : shield
                     ? ProtoColors.ice
                     : const Color(0xFFFF6B6B),
-            '<b style="color:$hex">${s.t('ui.combat.boss.stance.tip_title', {'stance': stance})}</b> '
-                '<span class="k">($when)</span><br>${m.counter}'));
+            '<b style="color:$hex">${s.t('ui.combat.boss.stance.tip_title', {
+                  'stance': stance
+                })}</b> '
+            '<span class="k">($when)</span><br>${m.counter}'));
 
       // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
       case BossMechanicKind.echo || BossMechanicKind.summon:
@@ -257,13 +269,15 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
             b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
         final max = b.party.length == 1 ? m.soloAdds : m.adds;
         final back = m.every - e.mechTurns;
-        final when = n >= max
-            ? ''
-            : ' · ${s.t('ui.combat.boss.back_in', {'n': back})}';
+        final when =
+            n >= max ? '' : ' · ${s.t('ui.combat.boss.back_in', {'n': back})}';
         final (String short, String long, Color col, String hex) = echo
             ? (
                 s.t('ui.combat.boss.echo.short', {'n': n}),
-                '${s.t('ui.combat.boss.echo.long', {'n': n, 'x': fm(m.value)})}$when',
+                '${s.t('ui.combat.boss.echo.long', {
+                      'n': n,
+                      'x': fm(m.value)
+                    })}$when',
                 const Color(0xFF7FF3FF),
                 '#7ff3ff'
               )
@@ -299,7 +313,11 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                     {'name': m.name, 'n': next}),
             up ? const Color(0xFFFF7B29) : const Color(0xFFFFB142),
             '<b style="color:#ff7b29">${m.name}</b> '
-            '<span class="k">(${up ? s.t('ui.combat.boss.lava.up_tip', {'n': e.lava}) : s.t('ui.combat.boss.lava.down_tip', {'n': next})})</span>'
+            '<span class="k">(${up ? s.t('ui.combat.boss.lava.up_tip', {
+                    'n': e.lava
+                  }) : s.t('ui.combat.boss.lava.down_tip', {
+                    'n': next
+                  })})</span>'
             '<br>${m.counter}'));
       case BossMechanicKind.mark:
         final marked =
@@ -317,7 +335,9 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                     {'name': m.name, 'who': marked.name, 'x': x}),
             const Color(0xFFB57BFF),
             '<b style="color:#b57bff">${m.name}</b> '
-            '<span class="k">(${marked == null ? s.t('ui.combat.boss.mark.nobody') : s.t('ui.combat.boss.mark.marked', {'who': protoEsc(marked.name)})})</span>'
+            '<span class="k">(${marked == null ? s.t('ui.combat.boss.mark.nobody') : s.t('ui.combat.boss.mark.marked', {
+                    'who': protoEsc(marked.name)
+                  })})</span>'
             '<br>${m.counter}'));
       case BossMechanicKind.phases:
         final two = e.phase >= 2;
@@ -331,7 +351,9 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                     {'pct': jsRound(m.value * 100)}),
             two ? ProtoColors.crimson : ProtoColors.pink,
             '<b style="color:#d63031">${m.name}</b> '
-            '<span class="k">(${s.t('ui.combat.boss.phase.tip', {'n': two ? 2 : 1})})</span><br>${m.counter}'));
+            '<span class="k">(${s.t('ui.combat.boss.phase.tip', {
+                  'n': two ? 2 : 1
+                })})</span><br>${m.counter}'));
 
       // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 4) ----
       case BossMechanicKind.abyss:
@@ -351,7 +373,11 @@ List<StatusChip> abyssChips(
   final n = AbyssRules.phaseIndex(d, e) + 1;
   final of = d.phases.length;
   final tip = '<b style="color:#c39bff">${protoEsc(d.name)}</b> '
-      '<span class="k">(${s.t('ui.combat.abyss.tip_phase', {'n': n, 'of': of, 'name': protoEsc(ph.name)})})</span>'
+      '<span class="k">(${s.t('ui.combat.abyss.tip_phase', {
+        'n': n,
+        'of': of,
+        'name': protoEsc(ph.name)
+      })})</span>'
       '<br>${m.counter}';
   const violet = Color(0xFFC39BFF);
   final next = AbyssRules.nextMove(d, e);
@@ -399,8 +425,8 @@ List<StatusChip> abyssChips(
         final el = GameElement.values[
             (e.abyssAspect - 1).clamp(0, GameElement.values.length - 1)];
         return StatusChip(
-            s.t('ui.combat.abyss.aspect_short', {'el': el.label}),
-            s.t('ui.combat.abyss.aspect_long', {'el': el.label}),
+            s.t('ui.combat.abyss.aspect_short', {'el': el.tr}),
+            s.t('ui.combat.abyss.aspect_long', {'el': el.tr}),
             ProtoColors.ice,
             tip);
       }(),
@@ -474,9 +500,12 @@ List<StatusChip> treeEffectChips(Strings s, Combatant p) {
             s.t('ui.combat.tree.attack.long', {'dir': dir, 'pct': pct}),
             up ? ProtoColors.orange : ProtoColors.ice,
             '<b style="color:${up ? '#ff9f43' : '#74b9ff'}">'
-                '${s.t('ui.combat.tree.attack.title', {'dir': dir, 'pct': pct})}</b> '
-                '<span class="k">($from · ${turns(e)})</span><br>'
-                '${s.t('ui.combat.tree.attack.body', {'dir': dir})}'));
+            '${s.t('ui.combat.tree.attack.title', {
+                  'dir': dir,
+                  'pct': pct
+                })}</b> '
+            '<span class="k">($from · ${turns(e)})</span><br>'
+            '${s.t('ui.combat.tree.attack.body', {'dir': dir})}'));
       case BuffStat.damageTaken:
         chips.add(StatusChip(
             s.t('ui.combat.tree.mark.short'),
@@ -564,7 +593,9 @@ List<StatusChip> treeEffectChips(Strings s, Combatant p) {
         m.name,
         ProtoColors.crimson,
         '<b style="color:#ff4757">${m.name}</b> '
-        '<span class="k">(${s.t('ui.combat.tree.low_life', {'pct': jsRound(m.threshold * 100)})})</span>'
+        '<span class="k">(${s.t('ui.combat.tree.low_life', {
+              'pct': jsRound(m.threshold * 100)
+            })})</span>'
         '<br>${m.description}'));
   }
   return chips;
@@ -732,8 +763,7 @@ class HudHighlight extends InheritedWidget {
       false;
 
   /// [child] con borde si [part] está resaltado (la key va solo entonces).
-  static Widget wrap(
-      BuildContext context, String part, Key key, Widget child,
+  static Widget wrap(BuildContext context, String part, Key key, Widget child,
       {bool tight = false}) {
     if (!on(context, part)) return child;
     final box = Container(
@@ -775,7 +805,9 @@ class PulsePips extends StatelessWidget {
             decoration: BoxDecoration(
               color: i < n ? ProtoColors.gold : ProtoColors.barBg,
               border: Border.all(
-                  color: player.chained ? ProtoColors.sky : ProtoColors.panelBorder,
+                  color: player.chained
+                      ? ProtoColors.sky
+                      : ProtoColors.panelBorder,
                   width: 1),
             ),
           ),
@@ -855,10 +887,21 @@ String heroStatsMarkup(Strings s, Combatant p, {int points = 0}) {
     if (weapon.isNotEmpty) hexSpan('#ff9f43', '⚔ ${protoEsc(weapon)}$pts'),
     'HP ${p.hp}/${p.maxHp} · MP ${p.mp.floor()}/${p.maxMp} · '
         'ULT ${p.ult.floor()}% · '
-        '${hexSpan('#ffb142', s.t('ui.combat.hud.pulse_value', {'n': p.pulse, 'max': BattleEngine.pulseMax}))}'
+        '${hexSpan('#ffb142', s.t('ui.combat.hud.pulse_value', {
+                  'n': p.pulse,
+                  'max': BattleEngine.pulseMax
+                }))}'
         '${p.chained ? ' ${hexSpan('#9fe8ff', s.t('ui.combat.hud.chained'))}' : ''}',
-    '<span class="k">${s.t('ui.combat.hud.stats', {'atk': p.attack, 'mag': p.magic, 'def': p.defense})}</span>',
-    '<span class="k">${s.t('ui.combat.hud.crit_speed', {'crit': jsRound(p.critChance * 100), 'x': fm(p.critMultiplier), 'spd': speed.toStringAsFixed(1)})}</span>',
+    '<span class="k">${s.t('ui.combat.hud.stats', {
+          'atk': p.attack,
+          'mag': p.magic,
+          'def': p.defense
+        })}</span>',
+    '<span class="k">${s.t('ui.combat.hud.crit_speed', {
+          'crit': jsRound(p.critChance * 100),
+          'x': fm(p.critMultiplier),
+          'spd': speed.toStringAsFixed(1)
+        })}</span>',
   ].join('<br>');
 }
 
@@ -1102,15 +1145,16 @@ class _PartyCard extends StatelessWidget {
                               maxLines: compact ? 1 : null,
                               overflow: compact ? TextOverflow.ellipsis : null,
                               TextSpan(children: [
-                            TextSpan(
-                                text: p.name,
-                                style: DsText.body(local
-                                    ? DsColors.textTitle
-                                    : DsColors.textPrimary)),
-                            TextSpan(
-                                text: ' Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}',
-                                style: DsText.detail()),
-                          ])),
+                                TextSpan(
+                                    text: p.name,
+                                    style: DsText.body(local
+                                        ? DsColors.textTitle
+                                        : DsColors.textPrimary)),
+                                TextSpan(
+                                    text:
+                                        ' Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}',
+                                    style: DsText.detail()),
+                              ])),
                         ),
                         if (turn.isNotEmpty)
                           Text(turn, style: DsText.detail(turnColor)),
@@ -1122,11 +1166,12 @@ class _PartyCard extends StatelessWidget {
                         context,
                         HudHighlight.mp,
                         ValueKey('hl-mp-${p.id}'),
-                        _BarRow(mpBar(p.mp, p.maxMp),
-                            '${p.mp.floor()}/${p.maxMp}',
+                        _BarRow(
+                            mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
                             label: 'MP', valueChars: 9, stack: narrow)),
                     if (local || companion)
-                      _BarRow(ultBar(p.ult),
+                      _BarRow(
+                          ultBar(p.ult),
                           ultReady(p)
                               ? s.t('ui.combat.hud.ult_ready')
                               : '${p.ult.floor()}%',
@@ -1138,11 +1183,8 @@ class _PartyCard extends StatelessWidget {
                     // cifras como HP y MP, con los pips en lugar de barra
                     // (pedido del dueño: "que se vea que tenés Pulso").
                     if (p.alive && (!compact || local))
-                      HudHighlight.wrap(
-                          context,
-                          HudHighlight.pulse,
-                          ValueKey('hl-pulse-${p.id}'),
-                          _PulseRow(p)),
+                      HudHighlight.wrap(context, HudHighlight.pulse,
+                          ValueKey('hl-pulse-${p.id}'), _PulseRow(p)),
                     if (summons.isNotEmpty && (!compact || local)) ...[
                       const SizedBox(height: 2),
                       SummonsRow(summons: summons),
@@ -1192,12 +1234,11 @@ class TargetBar extends StatelessWidget {
     // Sigue al modo daltónico (accessibility.md § 3).
     const breakColor = VisionColor(VisionSlot.breakBar);
     final hpText = '${e.hp}/${e.maxHp}';
-    final breakText =
-        e.broken
-            ? s.t('ui.combat.target.broken')
-            : e.fissured
-                ? s.t('ui.combat.target.fissured')
-                : '${e.breakGauge.floor()}/${e.breakMax.round()}';
+    final breakText = e.broken
+        ? s.t('ui.combat.target.broken')
+        : e.fissured
+            ? s.t('ui.combat.target.fissured')
+            : '${e.breakGauge.floor()}/${e.breakMax.round()}';
     // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
     final chars =
         math.max(9, math.max(hpText.length, breakText.length)).toDouble();
@@ -1228,7 +1269,10 @@ class TargetBar extends StatelessWidget {
               ),
               if (e.elite || e.boss) ...[
                 const SizedBox(width: 4),
-                DsTag(s.t(e.boss ? 'ui.combat.target.boss' : 'ui.combat.target.elite'),
+                DsTag(
+                    s.t(e.boss
+                        ? 'ui.combat.target.boss'
+                        : 'ui.combat.target.elite'),
                     key: const ValueKey('target-rank'),
                     color: DsColors.reward),
               ],
@@ -1329,16 +1373,13 @@ class BattleAllyList extends StatelessWidget {
       final Widget body = members.length > maxRows
           ? SingleChildScrollView(child: col)
           : FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topRight,
-              child: col);
+              fit: BoxFit.scaleDown, alignment: Alignment.topRight, child: col);
       return Align(
         key: const ValueKey('ally-list'),
         alignment: Alignment.topRight,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxWidth: math.min(w, cons.maxWidth),
-              maxHeight: cons.maxHeight),
+              maxWidth: math.min(w, cons.maxWidth), maxHeight: cons.maxHeight),
           child: body,
         ),
       );
@@ -1417,7 +1458,10 @@ class BattleAllyList extends StatelessWidget {
                 ]),
                 const SizedBox(height: 2),
                 RetroBar(
-                    value: p.hp, max: p.maxHp, color: ProtoColors.hp, height: 6),
+                    value: p.hp,
+                    max: p.maxHp,
+                    color: ProtoColors.hp,
+                    height: 6),
                 const SizedBox(height: 2),
                 RetroBar(
                     value: p.mp.floor(),

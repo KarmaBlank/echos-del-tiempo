@@ -7,6 +7,7 @@ import '../../../game_engine/data/summoner_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import 'combat_strings.dart';
 import 'scene/summon_sprite.dart';
+import '../../../core/i18n/catalog_names.dart';
 
 /// Fila compacta de las invocaciones de un jugador en su tarjeta de la
 /// barra del grupo (docs/specs/summoner.md § 8): color del elemento,
@@ -37,7 +38,7 @@ class SummonsRow extends StatelessWidget {
             'max': s.maxHp,
             'power': s.attack
           })}'
-          '${d == null ? '' : ' · ${d.element.label}'}\n'
+          '${d == null ? '' : ' · ${d.element.tr}'}\n'
           '${t.t('ui.combat.summon.turns', {'turns': summonTurnsText(s)})}',
       child: Row(
         mainAxisSize: MainAxisSize.min,

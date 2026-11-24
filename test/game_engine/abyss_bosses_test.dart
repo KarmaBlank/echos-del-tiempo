@@ -26,6 +26,7 @@ import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Jefes del Abismo v0.8 en el motor de batalla: docs/specs/abyss_bosses.md
 // § 2 (fases, movimientos, furia, sello, aspecto, inmunidad, curas que

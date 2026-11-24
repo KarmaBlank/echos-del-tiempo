@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/i18n/catalog_names.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -51,12 +52,11 @@ class EnemyLiveInfo extends StatefulWidget {
 
   /// "Quemadura ×3", "Mojado · 2 turnos", "Sagrado ×1 · 2 turnos".
   static List<String> statusLines(Strings s, Combatant e) =>
-      [for (final (k, rest) in statusEntries(s, e)) '${k.label}$rest'];
+      [for (final (k, rest) in statusEntries(s, e)) '${k.tr}$rest'];
 
   /// Los estados de [e] en orden, con lo que sigue al nombre
   /// (" ×3", " · 2 turnos").
-  static List<(StatusKind, String)> statusEntries(Strings s, Combatant e) =>
-      [
+  static List<(StatusKind, String)> statusEntries(Strings s, Combatant e) => [
         for (final k in StatusKind.values)
           if (e.stacks(k) case final n when n > 0)
             (
@@ -64,13 +64,18 @@ class EnemyLiveInfo extends StatefulWidget {
               k.timed
                   ? ' · ${s.t('ui.combat.turns', {'n': n})}'
                   : ' ×$n'
-                      '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {'n': e.holyTurns})}' : ''}'
+                      '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {
+                              'n': e.holyTurns
+                            })}' : ''}'
             ),
       ];
 
   /// Qué hace la ULT [u] y cómo cancelarla (markup corto).
   static String ultDetail(Strings s, EnemyUltDef u) => [
-        s.t(u.allTargets ? 'ui.combat.enemy.ult_power_all' : 'ui.combat.enemy.ult_power_one',
+        s.t(
+            u.allTargets
+                ? 'ui.combat.enemy.ult_power_all'
+                : 'ui.combat.enemy.ult_power_one',
             {'x': fm(u.power)}),
         if (u.status case final st?) statusApplicationMarkup(st),
         if (u.delayAll > 0) s.t('ui.combat.enemy.ult_delay_all'),
@@ -133,7 +138,9 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText(s.t('ui.combat.enemy.ult_prepares', {'name': ult.name})),
+            Text(
+                retroText(
+                    s.t('ui.combat.enemy.ult_prepares', {'name': ult.tr})),
                 style: DsText.body(DsColors.danger)),
             if (open)
               ProtoText(EnemyLiveInfo.ultDetail(s, ult),
@@ -150,7 +157,8 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText(s.t('ui.combat.enemy.mechanic', {'name': mech.name})),
+            Text(
+                retroText(s.t('ui.combat.enemy.mechanic', {'name': mech.name})),
                 style: DsText.body(DsColors.warning)),
             if (open)
               ProtoText(mech.counter, style: DsText.detail())

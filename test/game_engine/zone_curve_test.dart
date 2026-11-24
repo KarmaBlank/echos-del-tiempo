@@ -23,6 +23,7 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/zone_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 final _stats = StatsCalculator(
     classes: kClasses, treeRules: PassiveTreeRules(kPassiveTree));

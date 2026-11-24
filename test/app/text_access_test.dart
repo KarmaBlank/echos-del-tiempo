@@ -109,10 +109,11 @@ void main() {
     test('migración v1 → v2: TÍTULOS CON LA FUENTE DE LECTURA', () {
       // v1 (sin versión) guardaba siempre el default viejo NO: no se sabe
       // si el jugador lo eligió, así que pasa al default nuevo SÍ.
-      expect(GameSettings.fromJson(const {'readingTitles': false})
-          .readingTitles, isTrue);
-      expect(GameSettings.fromJson(const {'readingTitles': true})
-          .readingTitles, isTrue);
+      expect(
+          GameSettings.fromJson(const {'readingTitles': false}).readingTitles,
+          isTrue);
+      expect(GameSettings.fromJson(const {'readingTitles': true}).readingTitles,
+          isTrue);
       // Desde v2 se respeta lo elegido a mano.
       expect(
           GameSettings.fromJson(const {'version': 2, 'readingTitles': false})
@@ -184,8 +185,8 @@ void main() {
       expect(vt.scale(RetroType.title), 24); // 16 × 1.5
       expect(vt.scale(RetroType.label), 16); // 10 × 1.6
       expect(vt.scale(RetroType.glyph), 8); // Press Start
-      const at = RetroTextScaler(1,
-          readingTitles: true, font: ReadingFont.atkinson);
+      const at =
+          RetroTextScaler(1, readingTitles: true, font: ReadingFont.atkinson);
       expect(at.scale(RetroType.title), 20);
       expect(at.scale(RetroType.label), 13);
       // Sin la opción, la grilla de siempre.
@@ -193,8 +194,8 @@ void main() {
       expect(off.scale(RetroType.title), 16);
       expect(off.scale(RetroType.label), 8);
       // CLÁSICA ignora la opción.
-      const cl = RetroTextScaler(1,
-          readingTitles: true, font: ReadingFont.classic);
+      const cl =
+          RetroTextScaler(1, readingTitles: true, font: ReadingFont.classic);
       expect(cl.scale(RetroType.title), 16);
     });
 
@@ -234,8 +235,9 @@ void main() {
       // cambiar; acá lo armó el test antes de medir).
       expect(RetroType.letterSpacing, 1);
       expect(RetroType.smallStyle.letterSpacing, 1);
-      final title = tester.widget<Text>(find.descendant(
-          of: find.byType(PanelFrame), matching: find.byType(Text)).first);
+      final title = tester.widget<Text>(find
+          .descendant(of: find.byType(PanelFrame), matching: find.byType(Text))
+          .first);
       expect(title.style!.fontFamily, RetroType.atkinsonFamily);
       expect(tester.takeException(), isNull);
     });
@@ -311,8 +313,8 @@ void main() {
       expect(find.byKey(const ValueKey('chat-toast-0')), findsNothing);
       // LARGA: 8 s, sin ×.
       const c = ChatLine.system('¡Voten!');
-      await tester.pumpWidget(
-          chat(const [a, b, c], d: NoticeDuration.long.scale(ChatBox.toastDuration)));
+      await tester.pumpWidget(chat(const [a, b, c],
+          d: NoticeDuration.long.scale(ChatBox.toastDuration)));
       expect(find.byKey(const ValueKey('chat-toast-close-2')), findsNothing);
       expect(find.byKey(const ValueKey('chat-toast-close-0')), findsNothing);
       await tester.pump(const Duration(seconds: 5));
@@ -328,8 +330,8 @@ void main() {
       final rec = ui.PictureRecorder();
       MapLabelSamplePainter(backdrop: b).paint(Canvas(rec), size);
       final img = rec.endRecording().toImageSync(170, 24);
-      final data = (await tester.runAsync(
-          () => img.toByteData(format: ui.ImageByteFormat.rawRgba)))!;
+      final data = (await tester
+          .runAsync(() => img.toByteData(format: ui.ImageByteFormat.rawRgba)))!;
       Color at(int x, int y) {
         final i = (y * 170 + x) * 4;
         return Color.fromARGB(data.getUint8(i + 3), data.getUint8(i),
@@ -343,7 +345,8 @@ void main() {
       return [at(r.left.toInt() + 1, r.top.toInt() + 1), at(1, 1)];
     }
 
-    testWidgets('NINGUNO: tiles; SOMBREADO: fondo del tema al 60 %; CAJA: '
+    testWidgets(
+        'NINGUNO: tiles; SOMBREADO: fondo del tema al 60 %; CAJA: '
         'fondo del tema opaco', (tester) async {
       UiTheme.kind = InterfaceTheme.dark;
       addTearDown(UiTheme.reset);
@@ -356,7 +359,8 @@ void main() {
       // NINGUNO deja ver el tile; SOMBREADO lo oscurece; CAJA es el
       // fondo del tema (adentro del borde de 1 px).
       expect(none[0], isNot(shaded[0]));
-      expect(shaded[0].computeLuminance(), lessThan(none[0].computeLuminance()));
+      expect(
+          shaded[0].computeLuminance(), lessThan(none[0].computeLuminance()));
       expect(box[0], UiTheme.of(UiSlot.bg));
     });
 
@@ -387,7 +391,8 @@ void main() {
       addTearDown(tester.view.reset);
       final b = _battle();
       for (final l in ['Uno', 'Dos', 'Tres', 'Cuatro']) {
-        await tester.pumpWidget(view(b.copy()..log = l, extended: true));
+        await tester.pumpWidget(
+            view(b.copy()..logLine = LogLine.raw(l), extended: true));
       }
       final st = tester.state<BattleViewState>(find.byType(BattleView));
       expect(st.logHistory, ['Dos', 'Tres']);
@@ -406,7 +411,8 @@ void main() {
       addTearDown(tester.view.reset);
       final b = _battle();
       for (final l in ['Uno', 'Dos', 'Tres']) {
-        await tester.pumpWidget(view(b.copy()..log = l, extended: false));
+        await tester.pumpWidget(
+            view(b.copy()..logLine = LogLine.raw(l), extended: false));
       }
       expect(tester.state<BattleViewState>(find.byType(BattleView)).logHistory,
           isEmpty);
@@ -423,7 +429,8 @@ void main() {
       for (final titles in [false, true]) {
         for (final size in [TextSize.normal, TextSize.enormous]) {
           final name = '${font.name}${titles ? ' +títulos' : ''} ${size.name}';
-          testWidgets('$name: ficha, FUSIÓN 2/3, ATRIBUTOS, bestiario, comandos',
+          testWidgets(
+              '$name: ficha, FUSIÓN 2/3, ATRIBUTOS, bestiario, comandos',
               (tester) async {
             Future<void> pump(Widget Function(SessionView, dynamic) b) =>
                 pumpPanel(tester,
@@ -461,8 +468,8 @@ void main() {
             await mouse.moveTo(Offset.zero);
             await tester.pumpWidget(const SizedBox());
 
-            await pump((v, c) =>
-                ForgePanel(view: v, controller: c, initialTab: ForgeHallTab.fuse));
+            await pump((v, c) => ForgePanel(
+                view: v, controller: c, initialTab: ForgeHallTab.fuse));
             await tapVisible(
                 tester, find.byKey(const ValueKey('bench-weapon-r1')));
             await tapVisible(tester, find.byKey(const ValueKey('bench-next')));
@@ -478,8 +485,8 @@ void main() {
             expect(tester.takeException(), isNull, reason: 'ATRIBUTOS');
             await tester.pumpWidget(const SizedBox());
 
-            await pump((v, c) =>
-                BestiaryView(bestiary: BestiaryProgress({'slime': 5, 'lobo': 3})));
+            await pump((v, c) => BestiaryView(
+                bestiary: BestiaryProgress({'slime': 5, 'lobo': 3})));
             expect(find.byKey(const ValueKey('bestiary-detail-slime')),
                 findsOneWidget);
             expect(tester.takeException(), isNull, reason: 'bestiario');

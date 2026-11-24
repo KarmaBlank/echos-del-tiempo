@@ -5,6 +5,8 @@
 // resaltado. Mutable como el resto de `GameSession` (el motor trabaja
 // sobre una copia).
 
+import 'battle_log.dart';
+
 /// Versión vigente del tutorial: el máximo de las `desde` de
 /// `kTutorialStages` (combat_tutorial.md § 2). Solo se sube cuando cambia
 /// el combate básico (un ajuste de números no la cambia). 2 desde v0.9.6:
@@ -144,7 +146,12 @@ class TutorialCard {
       this.targetId,
       this.actorId,
       this.effect = false,
-      this.heading});
+      this.heading,
+      this.log = LogLine.empty});
+
+  /// The battle log line shown when the card has no [lines] of its own
+  /// (formatted by the UI in the active language).
+  final LogLine log;
 
   /// Rótulo del cartel en el panel ("ATENCIÓN" antes de que actúe el
   /// autómata); `null` = el de siempre.
@@ -171,6 +178,7 @@ class TutorialCard {
         if (actorId != null) 'by': actorId,
         if (effect) 'e': true,
         if (heading != null) 'h': heading,
+        if (!log.isEmpty) 'lg': log.toJson(),
       };
 
   static TutorialCard fromJson(Map<String, Object?> j) => TutorialCard(
@@ -180,6 +188,7 @@ class TutorialCard {
         actorId: j['by'] as String?,
         effect: j['e'] == true,
         heading: j['h'] as String?,
+        log: j['lg'] == null ? LogLine.empty : LogLine.fromJson(j['lg']),
       );
 }
 

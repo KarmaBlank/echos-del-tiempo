@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
+import '../../../core/i18n/catalog_names.dart';
+import '../../../core/i18n/battle_log_text.dart';
 import '../../../core/layout/layout_catalog.dart';
 import '../../../core/layout/layout_doc.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -243,8 +245,7 @@ class BattleViewState extends State<BattleView>
   bool get _picking => _potMode != null || _healMode != null;
 
   /// Hay un aliado caído (el Éter solo sirve así).
-  bool get _anyDown =>
-      widget.battle.party.any((q) => !q.alive && !q.isSummon);
+  bool get _anyDown => widget.battle.party.any((q) => !q.alive && !q.isSummon);
 
   /// Categoría elegida en la ventana de comandos.
   BattleCategory _category = BattleCategory.weapon;
@@ -319,8 +320,8 @@ class BattleViewState extends State<BattleView>
     if (line.isEmpty) return;
     _logHistory.add(line);
     late final Timer timer;
-    timer = Timer(
-        Duration(milliseconds: (kBattleLogHistoryS * 1000).round()), () {
+    timer =
+        Timer(Duration(milliseconds: (kBattleLogHistoryS * 1000).round()), () {
       _logTimers.remove(timer);
       if (!mounted) return;
       setState(() => _logHistory.remove(line));
@@ -378,8 +379,8 @@ class BattleViewState extends State<BattleView>
     if (oldWidget.battleId != widget.battleId ||
         !widget.sceneOptions.extendedLog) {
       _clearLogHistory();
-    } else if (oldWidget.battle.log != widget.battle.log) {
-      _pushLog(oldWidget.battle.log);
+    } else if (oldWidget.battle.logLine != widget.battle.logLine) {
+      _pushLog(battleLogText(oldWidget.battle.logLine, strings: _s));
     }
     // Turno nuevo (u otro actor) o sin poder actuar: el menú vuelve al
     // principio (nunca queda elegida una acción del turno anterior).
@@ -537,7 +538,9 @@ class BattleViewState extends State<BattleView>
   /// descripción.
   String _est(Combatant p, num v, {bool all = false, bool crit = true}) =>
       ' <span style="color:#ffd166">${jsRound(v)}${all ? _s.t('ui.combat.menu.each') : ''}</span>'
-      '${crit ? '<span style="color:#7d8bc4"> ${_s.t('ui.combat.menu.crit_est', {'n': jsRound(v * p.critMultiplier)})}</span>' : ''}';
+      '${crit ? '<span style="color:#7d8bc4"> ${_s.t('ui.combat.menu.crit_est', {
+              'n': jsRound(v * p.critMultiplier)
+            })}</span>' : ''}';
 
   /// `+N` / `P%` y la letra del estado en su color.
   static String _stTag(StatusApplication st) => hexSpan(
@@ -559,14 +562,20 @@ class BattleViewState extends State<BattleView>
       case SkillKind.haste:
         return ' ${hexSpan('#ffd166', _s.t('ui.combat.menu.info.haste'))}';
       case SkillKind.taunt:
-        return ' ${hexSpan('#ff7675', _s.t('ui.combat.menu.info.taunt', {'n': tk.amount}))}';
+        return ' ${hexSpan('#ff7675', _s.t('ui.combat.menu.info.taunt', {
+                  'n': tk.amount
+                }))}';
       case SkillKind.guard:
         return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.guard'))}';
       case SkillKind.regen:
         return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 4)}${tk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}${_s.t('ui.combat.menu.info.regen')}')}';
       case SkillKind.defenseUp:
         // Fortaleza del Guardián: también escudo al grupo.
-        return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.defense_up', {'n': tk.amount, 'now': p.defense, 'shield': '${tk.partyShield > 0}'}))}';
+        return ' ${hexSpan('#74b9ff', _s.t('ui.combat.menu.info.defense_up', {
+                  'n': tk.amount,
+                  'now': p.defense,
+                  'shield': '${tk.partyShield > 0}'
+                }))}';
       case SkillKind.protect:
         return ' ${hexSpan('#ffeaa7', _s.t('ui.combat.menu.info.protect'))}';
       case SkillKind.bulwark:
@@ -580,7 +589,10 @@ class BattleViewState extends State<BattleView>
             variantTagMarkup(tk).isNotEmpty) {
           return '';
         }
-        return ' ${hexSpan('#ffb142', b != null ? _s.t('ui.combat.menu.info.party_buff', {'stat': b.stat.label, 'pct': jsRound(b.value * 100)}) : _s.t(tk.partyShield > 0 ? 'ui.combat.menu.info.party_shield' : tk.advanceAllies > 0 ? 'ui.combat.menu.info.haste' : tk.trap > 0 ? 'ui.combat.menu.info.traps' : tk.selfBuff != null ? 'ui.combat.menu.info.sure_crit' : 'ui.combat.menu.info.support'))}';
+        return ' ${hexSpan('#ffb142', b != null ? _s.t('ui.combat.menu.info.party_buff', {
+                'stat': b.stat.label,
+                'pct': jsRound(b.value * 100)
+              }) : _s.t(tk.partyShield > 0 ? 'ui.combat.menu.info.party_shield' : tk.advanceAllies > 0 ? 'ui.combat.menu.info.haste' : tk.trap > 0 ? 'ui.combat.menu.info.traps' : tk.selfBuff != null ? 'ui.combat.menu.info.sure_crit' : 'ui.combat.menu.info.support'))}';
       case SkillKind.physical || SkillKind.magical:
         final st = tk.status;
         return _est(p,
@@ -588,17 +600,22 @@ class BattleViewState extends State<BattleView>
                 all: tk.allTargets, crit: crit) +
             (st != null ? ' ${_stTag(st)}' : '') +
             (tk.critBonus > 0
-                ? hexSpan('#ff6b81',
-                    _s.t('ui.combat.menu.info.crit_bonus', {'pct': jsRound(tk.critBonus * 100)}))
+                ? hexSpan(
+                    '#ff6b81',
+                    _s.t('ui.combat.menu.info.crit_bonus',
+                        {'pct': jsRound(tk.critBonus * 100)}))
                 : '');
     }
   }
 
   /// Descripción de Atacar.
-  String _attackDesc(Combatant cur) =>
-      '${_s.t('ui.combat.attack.desc', {'atk': cur.attack})}${_est(cur, cur.attack, crit: false)}'
+  String _attackDesc(Combatant cur) => '${_s.t('ui.combat.attack.desc', {
+            'atk': cur.attack
+          })}${_est(cur, cur.attack, crit: false)}'
       '<br>${critLineMarkup(cur, cur.attack)}'
-      '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', _s.t('ui.combat.attack.stun', {'pct': jsRound(cur.stunOnAttackChance * 100)}))}' : ''}'
+      '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', _s.t('ui.combat.attack.stun', {
+                'pct': jsRound(cur.stunOnAttackChance * 100)
+              }))}' : ''}'
       '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', _s.t('ui.combat.attack.believer'))}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', _s.t('ui.combat.attack.inherent'))}' : ''}';
 
   /// Una fila de DÚOS: [cur] con [q] haciendo el dúo [id]. Id estable:
@@ -607,8 +624,9 @@ class BattleViewState extends State<BattleView>
   BattleAction _duoAction(Combatant cur, Combatant q, String id, DualDef du) {
     const mp = BattleEngine.dualMpCost;
     final ok = cur.mp >= mp && q.mp >= mp;
-    final sum = (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) *
-        du.power;
+    final sum =
+        (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) *
+            du.power;
     final el = elementOfDual(du);
     final w = du.weapons;
     final pair = w == null
@@ -625,19 +643,33 @@ class BattleViewState extends State<BattleView>
       reach: SkillReach.allFoes,
       summary: [
         hexSpan(SkillReach.allFoes.hex, _s.t('ui.combat.duo.all')),
-        el.label,
+        el.tr,
         hexSpan('#ffd166', '${jsRound(sum)}${_s.t('ui.combat.menu.each')}'),
         _stTag(du.status),
         _s.t('ui.combat.duo.mp_each', {'n': mp}),
       ].join(' · '),
       dual: true,
       description: '<b>★ ${du.name}</b> <span class="k">'
-          '${_s.t('ui.combat.duo.kind', {'kind': w == null ? 'class' : 'weapon', 'a': protoEsc(cur.name), 'b': protoEsc(q.name)})}</span><br>'
-          '${_s.t('ui.combat.duo.pair', {'kind': w == null ? 'class' : 'weapon', 'pair': pair, 'el': el.label})}<br>'
-          '${_s.t('ui.combat.duo.formula', {'x': fm(du.power), 'sum': jsRound(sum)})}<br>'
+          '${_s.t('ui.combat.duo.kind', {
+            'kind': w == null ? 'class' : 'weapon',
+            'a': protoEsc(cur.name),
+            'b': protoEsc(q.name)
+          })}</span><br>'
+          '${_s.t('ui.combat.duo.pair', {
+            'kind': w == null ? 'class' : 'weapon',
+            'pair': pair,
+            'el': el.tr
+          })}<br>'
+          '${_s.t('ui.combat.duo.formula', {
+            'x': fm(du.power),
+            'sum': jsRound(sum)
+          })}<br>'
           '${critLineMarkup(cur, sum, all: true)}<br>'
           '${statusApplicationMarkup(du.status)}<br>'
-          '${_s.t('ui.combat.duo.cost_line', {'n': mp, 'who': protoEsc(q.name)})}',
+          '${_s.t('ui.combat.duo.cost_line', {
+            'n': mp,
+            'who': protoEsc(q.name)
+          })}',
       reason: ok ? null : _s.t('ui.combat.duo.need_mp', {'n': mp}),
       onSelect: ok
           ? () => _send(DualCommand(q.id, dualId: w == null ? null : id))
@@ -663,7 +695,7 @@ class BattleViewState extends State<BattleView>
     return BattleAction(
       disabledHint: special.isEmpty ? null : special.join('\n'),
       id: 'skill-${sk.id}',
-      name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
+      name: '${sk.tr}${sk.delay > 0 ? ' ⏳' : ''}',
       // Fila: etiquetas (INSTANTE, alcance) y costos del sistema de
       // diseño; la cifra va en el resumen del detalle.
       value: _skillInfo(sk, cur, crit: false).trim(),
@@ -702,15 +734,15 @@ class BattleViewState extends State<BattleView>
     return [
       BattleAction(
         id: 'heal-lowest',
-        name: _s.t(sk.lowestAlly
-            ? 'ui.combat.heal.lowest'
-            : 'ui.combat.heal.party'),
-        value: hexSpan('#7bed9f', '+$a${sk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}'),
+        name: _s.t(
+            sk.lowestAlly ? 'ui.combat.heal.lowest' : 'ui.combat.heal.party'),
+        value: hexSpan('#7bed9f',
+            '+$a${sk.lowestAlly ? '' : _s.t('ui.combat.menu.each')}'),
         description: _s.t(
             sk.lowestAlly
                 ? 'ui.combat.heal.lowest_desc'
                 : 'ui.combat.heal.party_desc',
-            {'skill': protoEsc(sk.name), 'n': a}),
+            {'skill': protoEsc(sk.tr), 'n': a}),
         onSelect: () => _send(SkillCommand(sk.id)),
       ),
       for (final q in b.party)
@@ -723,7 +755,7 @@ class BattleViewState extends State<BattleView>
             value: hexSpan('#7bed9f', '+$a'),
             cost: hexSpan('#9fb4ff', '${q.hp}/${q.maxHp} HP'),
             description: _s.t('ui.combat.heal.ally_desc', {
-              'skill': protoEsc(sk.name),
+              'skill': protoEsc(sk.tr),
               'who': protoEsc(q.name),
               'hp': q.hp,
               'max': q.maxHp,
@@ -736,11 +768,10 @@ class BattleViewState extends State<BattleView>
           BattleAction(
             id: 'heal-foe-${e.id}',
             name: protoEsc(e.name),
-            value: hexSpan('#ff6b81',
-                '−${healOnFoeDamage(a, e, mult: mult)}'),
+            value: hexSpan('#ff6b81', '−${healOnFoeDamage(a, e, mult: mult)}'),
             cost: hexSpan('#9fb4ff', '${e.hp}/${e.maxHp} HP'),
             description: _s.t('ui.combat.heal.foe_desc', {
-              'skill': protoEsc(sk.name),
+              'skill': protoEsc(sk.tr),
               'who': protoEsc(e.name),
               'n': healOnFoeDamage(a, e, mult: mult)
             }),
@@ -772,7 +803,9 @@ class BattleViewState extends State<BattleView>
       value: hexSpan('#74b9ff', _s.t('ui.combat.defend.half')),
       cost: hexSpan(kPulseHex, _s.t('ui.combat.defend.pulse', {'n': pulse})),
       summary: '${hexSpan('#74b9ff', _s.t('ui.combat.defend.half'))} · '
-          '${hexSpan(kPulseHex, _s.t('ui.combat.defend.pulse', {'n': pulse}))} · '
+          '${hexSpan(kPulseHex, _s.t('ui.combat.defend.pulse', {
+                    'n': pulse
+                  }))} · '
           '${hexSpan('#ee70ad', '+$ult ULT')}',
       description: _s.t('ui.combat.defend.desc', {
         'pulse': pulse,
@@ -863,7 +896,7 @@ class BattleViewState extends State<BattleView>
           [
             BattleAction(
               id: 'ult',
-              name: '★ ${ult.name}',
+              name: '★ ${ult.tr}',
               value: ult.dealsDamage
                   ? _est(
                       cur,
@@ -876,9 +909,7 @@ class BattleViewState extends State<BattleView>
               summary: skillSummaryMarkup(ult, cur),
               dual: true,
               description: describeSkillMarkup(ult, cur, ultimate: true),
-              reason: ready
-                  ? null
-                  : _s.t('ui.combat.ult.not_ready'),
+              reason: ready ? null : _s.t('ui.combat.ult.not_ready'),
               onSelect:
                   ready ? () => _send(UltimateCommand(targetId: tg)) : null,
             ),
@@ -896,7 +927,8 @@ class BattleViewState extends State<BattleView>
             value: hexSpan('#7bed9f', '+45%'),
             count: cur.potions,
             reach: SkillReach.ally,
-            summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
+            summary:
+                '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
                 '${hexSpan('#7bed9f', '+45% HP')} · ${_s.t('ui.combat.item.revives')}',
             description: _s.t('ui.combat.item.potion_desc', {
               'burn': statusNameMarkup(StatusKind.burn),
@@ -916,7 +948,8 @@ class BattleViewState extends State<BattleView>
             value: hexSpan('#74b9ff', '+50%'),
             count: cur.ethers,
             reach: SkillReach.ally,
-            summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
+            summary:
+                '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_ally'))} · '
                 '${hexSpan('#74b9ff', '+50% MP')}',
             description: _s.t('ui.combat.item.ether_desc'),
             reason: cur.ethers > 0 ? null : _s.t('ui.combat.item.none_left'),
@@ -935,7 +968,8 @@ class BattleViewState extends State<BattleView>
               value: hexSpan('#ffd166', '100%'),
               count: cur.aethers,
               reach: SkillReach.ally,
-              summary: '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_fallen'))} · '
+              summary:
+                  '${hexSpan(SkillReach.ally.hex, _s.t('ui.combat.item.to_fallen'))} · '
                   '${hexSpan('#ffd166', _s.t('ui.combat.item.full_revive'))}',
               description: _s.t('ui.combat.item.aether_desc', {
                 'burn': statusNameMarkup(StatusKind.burn),
@@ -950,8 +984,8 @@ class BattleViewState extends State<BattleView>
                   : null,
             ),
         ],
-        badge: hexSpan(
-            '#9fb4ff', 'x${cur.potions + cur.ethers + cur.aethers}')));
+        badge:
+            hexSpan('#9fb4ff', 'x${cur.potions + cur.ethers + cur.aethers}')));
 
     // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
     // Después de una Instante, la misma tecla termina el turno sin el
@@ -1041,8 +1075,8 @@ class BattleViewState extends State<BattleView>
             BattleAction(
               id: 'give-${q.id}',
               name: protoEsc(q.name),
-              value: hexSpan('#ffd166',
-                  '+${q.maxHp}${_s.t('ui.combat.item.revive_tag')}'),
+              value: hexSpan(
+                  '#ffd166', '+${q.maxHp}${_s.t('ui.combat.item.revive_tag')}'),
               cost: hexSpan('#9fb4ff', '0/${q.maxHp} HP'),
               description: _s.t('ui.combat.item.aether_for',
                   {'who': protoEsc(q.name), 'max': q.maxHp}),
@@ -1207,8 +1241,7 @@ class BattleViewState extends State<BattleView>
               // ficha todavía dice "???", las muestra el estado en vivo.
               live: EnemyLiveInfo(
                   enemy: hv,
-                  affinities:
-                      !hv.practice && !best.knows(hv.enemyType))),
+                  affinities: !hv.practice && !best.knows(hv.enemyType))),
         ),
       ),
     );
@@ -1381,9 +1414,9 @@ class BattleViewState extends State<BattleView>
         return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);
       }
 
-      BattleLayout layoutFor(SceneGeometry g) => BattleLayout.compute(
-          b, widget.arena,
-          vw: g.virtualWidth, enemySize: enemySize);
+      BattleLayout layoutFor(SceneGeometry g) =>
+          BattleLayout.compute(b, widget.arena,
+              vw: g.virtualWidth, enemySize: enemySize);
       // Perillas de Editor → LAYOUT (battle_presentation.md § "Cámara y
       // encuadre", § "Textos flotantes").
       final doc = _layoutDoc;
@@ -1457,8 +1490,8 @@ class BattleViewState extends State<BattleView>
                 top: g.stripPx,
                 left: g.virtualWidth * s * 0.25,
                 width: g.virtualWidth * s * 0.5,
-                child: IgnorePointer(
-                    child: BattleLogHistory(lines: _logHistory)),
+                child:
+                    IgnorePointer(child: BattleLogHistory(lines: _logHistory)),
               ),
             // Grupo compacto: los demás aliados, a la derecha.
             if (compactParty && _others(b).isNotEmpty)
@@ -1494,7 +1527,10 @@ class BattleViewState extends State<BattleView>
   /// Los aliados de la lista compacta: todos menos el propio.
   List<Combatant> _others(BattleState b) {
     final me = _me?.id;
-    return [for (final p in b.party) if (p.id != me) p];
+    return [
+      for (final p in b.party)
+        if (p.id != me) p
+    ];
   }
 
   /// La barra de abajo: la ventana de comandos (o de quién es el turno)
@@ -1536,25 +1572,24 @@ class BattleViewState extends State<BattleView>
           key: const ValueKey('battle-card'),
           builder: (context, box) => SingleChildScrollView(
               child: _partyBarOf(b, me,
-                  stackBars: box.maxWidth <
-                      RetroType.em(context, 12) + 150)));
+                  stackBars: box.maxWidth < RetroType.em(context, 12) + 150)));
     }
     return _partyBarOf(b, me);
   }
 
   Widget _partyBarOf(BattleState b, Combatant? me, {bool stackBars = false}) {
     return BattlePartyBar(
-          stackBars: stackBars,
-          battle: b,
-          localId: me?.id,
-          sprites: widget.sprites,
-          turnTimeLeft: widget.turnTimeLeft,
-          points: me == null ? 0 : widget.pendingPoints[me.id] ?? 0,
-          companions: widget.companions,
-          auto: widget.auto,
-          onAuto: widget.onAuto,
-          onlyLocal: compactParty,
-        );
+      stackBars: stackBars,
+      battle: b,
+      localId: me?.id,
+      sprites: widget.sprites,
+      turnTimeLeft: widget.turnTimeLeft,
+      points: me == null ? 0 : widget.pendingPoints[me.id] ?? 0,
+      companions: widget.companions,
+      auto: widget.auto,
+      onAuto: widget.onAuto,
+      onlyLocal: compactParty,
+    );
   }
 
   /// Fuera de mi turno: de quién es el turno y cuándo me toca.
@@ -1574,7 +1609,9 @@ class BattleViewState extends State<BattleView>
     } else if (cur.isPlayer) {
       who = '<b>${_s.t('ui.combat.turn.of', {'name': protoEsc(cur.name)})}</b>';
     } else {
-      who = '<b style="color:#ff6b81">${_s.t('ui.combat.turn.of', {'name': protoEsc(cur.name)})}</b>';
+      who = '<b style="color:#ff6b81">${_s.t('ui.combat.turn.of', {
+            'name': protoEsc(cur.name)
+          })}</b>';
     }
     var mine = '';
     if (me != null && cur?.id != me.id) {
@@ -1594,8 +1631,7 @@ class BattleViewState extends State<BattleView>
             children: [
               bossMechanicRow(_s, b),
               ProtoText(who,
-                  style: DsText.title(),
-                  textAlign: TextAlign.center),
+                  style: DsText.title(), textAlign: TextAlign.center),
               if (mine.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 ProtoText(mine, textAlign: TextAlign.center),
@@ -1704,12 +1740,12 @@ class _LogBand extends StatelessWidget {
       data: MediaQuery.of(context)
           .copyWith(textScaler: RetroType.fixedScaler(context)),
       child: LayoutBuilder(builder: (context, box) {
-        final log = retroText(battle.log);
+        final log = retroText(battleLogText(battle.logLine));
         // La caja del reloj crece si el texto no entra (tamaño del texto).
         // Press Start al múltiplo de 8 que entra en la banda (el reloj y,
         // si cabe en una línea, el log).
-        final bandPx = math.max(
-            8.0, ((box.maxHeight - 2) / 1.25 / 8).floor() * 8.0);
+        final bandPx =
+            math.max(8.0, ((box.maxHeight - 2) / 1.25 / 8).floor() * 8.0);
         final timerPx = math.max(RetroType.em(context, 1), bandPx);
         final timerW = math.max(82 * scale, 7 * timerPx + 8);
         final labelW = showTimer ? timerW + 2 * scale : 0.0;

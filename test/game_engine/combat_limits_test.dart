@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Límites de combate (docs/specs/combat.md § "Límites"): efectos
 // encadenados, tope por golpe, aguanta una ronda, velocidad y carga de
