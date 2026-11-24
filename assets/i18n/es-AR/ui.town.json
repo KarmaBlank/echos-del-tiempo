@@ -364,7 +364,6 @@
   "ui.town.trades.vs_equipped": "VS EQUIPADA",
   "ui.town.trades.tab.habilidades": "HABILIDADES",
   "ui.town.trades.tab.inventario": "INVENTARIO",
-<<<<<<< HEAD
   "ui.town.edit.cat_all": "TODO",
   "ui.town.edit.cat_farm": "CULTIVO",
   "ui.town.edit.cat_water": "AGUA",
@@ -376,8 +375,7 @@
   "ui.town.edit.free": "Gratis (lo que se paga es el terreno)",
   "ui.town.edit.lamp_info": "Alumbra fuerte de noche, mucho más que una antorcha.",
   "ui.town.edit.placing_info": "Clic en el mapa para ponerla; queda elegida para poner otra. Esc o clic en la casilla para soltarla.",
-  "ui.town.edit.footprint": "{w}×{h}"
-=======
+  "ui.town.edit.footprint": "{w}×{h}",
   "ui.town.build_kind.casa": "CASA",
   "ui.town.build_kind.huerta": "HUERTA",
   "ui.town.build_kind.lago": "LAGO",
@@ -397,5 +395,4 @@
   "ui.town.helper_task.cosechar": "Cosechar",
   "ui.town.helper_task.plantar": "Plantar",
   "ui.town.helper_task.regar": "Regar"
->>>>>>> origin/main
 }
