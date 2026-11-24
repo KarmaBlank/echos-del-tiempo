@@ -255,7 +255,7 @@ pedidos y órdenes.
 
 #### 10.1.1 Mudanza (v0.42.6, protocolo 68)
 - **Aceptar.** Al elegir INVITAR, el habitante contesta en el diálogo
-  `ui.town.npc.invite_accept` ("Sí, acepto. Me gustaría ir a tu
+  `invite_accept` de npcs.json (npc_editor.md § 1; "Sí, acepto. Me gustaría ir a tu
   pueblo.", texto del dueño) y queda solo ADIÓS. La invitación
   (`TownOp.invite`) se manda recién al cerrar el diálogo (ADIÓS, Esc o
   cerrar el panel por otro lado).
@@ -278,8 +278,8 @@ pedidos y órdenes.
   las casas libres resaltadas; clic en una y confirmar "Asignar casa a
   <NPC>" (`TownOp.assign`, mismo candado de edición). Al confirmar se
   reabre su diálogo agradeciendo, según la hora:
-  `ui.town.npc.house_thanks_day` (texto del dueño) o
-  `ui.town.npc.house_thanks_night` (**BORRADOR**, a revisar por el
+  `house_thanks.day` de npcs.json (texto del dueño) o
+  `house_thanks.night` (**BORRADOR**, a revisar por el
   dueño).
 - **Rutina.** De día camina frente a su casa; de noche entra (no se ve).
   Salidas nocturnas: cualquier habitante con casa puede salir de noche
@@ -307,7 +307,7 @@ pedidos y órdenes.
   motivo (en vez del saludo del día). El agradecimiento por la casa
   recién asignada tiene prioridad.
 
-| Habitante | Motivo (clave `ui.town.npc.night.*`) | Lugar |
+| Habitante | Motivo (`night.<id>` de npcs.json) | Lugar |
 |---|---|---|
 | Ilda | `ilda_garden`: espanta plagas y revisa los brotes | HUERTA |
 | Ilda | `ilda_dew`: junta rocío curativo antes del alba | Fuente |

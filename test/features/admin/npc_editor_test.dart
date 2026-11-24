@@ -48,12 +48,21 @@ void main() {
   test('editar, guardar y aplicar; ejemplos con el borrador', () async {
     final (b, host) = await admin(null);
     final c = NpcEditorController(balance: b);
-    c.edit(() =>
-        (NpcEditorController.listOf(c.npc('ilda'), 'greet'))[0] = 'Hola.');
+    c.edit(() => (NpcEditorController.listOf(c.npc('ilda'), 'greet'))[0] = {
+          for (final l in c.locales) l: 'Hola.'
+        });
     expect(c.dirty, isTrue);
+    // The migrated file lacks languages: saving is blocked until filled.
+    expect(c.missing, isNotEmpty);
+    expect(await c.save(), isFalse);
+    expect(c.message, contains('faltan idiomas'));
+    for (final id in [...(c.draft.$1!.talks.keys)]) {
+      c.edit(() => fillAll(c.npc(id), c.locales));
+    }
+    expect(c.missing, isEmpty);
     expect(await c.save(), isTrue);
     expect(host.files['repo/${NpcData.assetPath}'], contains('Hola.'));
-    expect(npcTalk('ilda')!.greet.first, 'Hola.');
+    expect(npcTalk('ilda')!.greet.first.text, 'Hola.');
     expect(c.dirty, isFalse);
 
     c.select('ilda');
@@ -96,7 +105,10 @@ void main() {
     expect(find.text('UMBRALES DE AMISTAD'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('npc-tab-dialogo')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('npc-greet-0')), findsOneWidget);
+    for (final l in c.locales) {
+      expect(find.byKey(ValueKey('npc-greet-0-$l')), findsOneWidget);
+    }
+    expect(find.byKey(const ValueKey('npc-missing')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('npc-greet-add')));
     await tester.pump();
     expect(c.dirty, isTrue);
@@ -104,8 +116,20 @@ void main() {
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
+    await tester.tap(find.byKey(const ValueKey('npc-preview-talk')));
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.text('¿Qué hacés?'), findsWidgets);
-    await tester.tap(find.text('Chau').last);
+    await tester.tap(find.byKey(const ValueKey('npc-preview-locale-en')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('npc-preview-time')));
+    await tester.pump();
+    expect(find.text('DE NOCHE'), findsOneWidget);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.byKey(const ValueKey('npc-preview-bye')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('npc-tab-pedidos')));
     await tester.pumpAndSettle();
@@ -117,4 +141,24 @@ void main() {
     expect(find.textContaining('Día 1', findRichText: true), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+/// Fills every empty language of every text in [m] (a draft NPC) with
+/// the es-AR text.
+void fillAll(Object? m, List<String> locales) {
+  if (m is Map) {
+    if (m.containsKey('es-AR')) {
+      for (final l in locales) {
+        if ('${m[l] ?? ''}'.trim().isEmpty) m[l] = '${m['es-AR']}';
+      }
+      return;
+    }
+    for (final v in m.values) {
+      fillAll(v, locales);
+    }
+  } else if (m is List) {
+    for (final v in m) {
+      fillAll(v, locales);
+    }
+  }
 }
