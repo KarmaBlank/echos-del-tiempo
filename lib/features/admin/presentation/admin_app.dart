@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../core/i18n/game_text.dart';
 import 'admin_controller.dart';
 import 'balance_page.dart';
 import 'changes_page.dart';
@@ -12,6 +13,9 @@ import 'editor/climate_editor_controller.dart';
 import 'editor/climate_page.dart';
 import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
+import 'editor/npc_variants_controller.dart';
+import 'editor/npc_variants_page.dart';
+import '../../combat/domain/sprite_entry.dart' show NpcVariantsOverrideSource;
 import 'editor/events_editor_controller.dart';
 import 'editor/events_page.dart';
 import 'editor/renown_editor_controller.dart';
@@ -167,9 +171,55 @@ class _AdminShellState extends State<AdminShell> {
   late int visualTab = widget.initialVisualTab;
   final _search = TextEditingController();
 
+  /// Visuales → VARIANTES NPC (npc_variants.md § 5), creado al abrirlo.
+  NpcVariantsController? _variants;
+
+  NpcVariantsController? get variants {
+    final s = widget.sprites;
+    if (s == null) return null;
+    final o = s.overrides;
+    return _variants ??= NpcVariantsController(
+        catalog: s.catalog,
+        repoPath: s.repoPath,
+        store: o is NpcVariantsOverrideSource
+            ? o as NpcVariantsOverrideSource
+            : null);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // El editor NPC ve las variantes (npc_editor.md § 6.2) y los eventos
+    // (el evento vinculado, § 6.4).
+    final n = widget.npcs;
+    if (n != null) {
+      n.events = widget.events;
+      n.variantImage = (id) => variants?.previews[id];
+      n.variantIds = () => variants?.doc.variants.keys ?? const [];
+    }
+  }
+
+  /// NUEVO NPC / USAR EN NPC (npc_variants.md § 5): crea o abre el NPC de
+  /// datos con esa variante y va al área NPC.
+  void _useInNpc(String variant) {
+    final n = widget.npcs;
+    if (n == null) return;
+    n.createCustom(variant);
+    setState(() => area = EditorArea.npcs);
+  }
+
+  /// Abre el evento vinculado de un NPC de datos en EVENTOS.
+  void _openEvent(String id) {
+    final ev = widget.events;
+    if (ev == null) return;
+    ev.select(id);
+    setState(() => area = EditorArea.events);
+  }
+
   @override
   void dispose() {
     _search.dispose();
+    _variants?.dispose();
     super.dispose();
   }
 
@@ -278,7 +328,7 @@ class _AdminShellState extends State<AdminShell> {
         final n = widget.npcs;
         return n == null
             ? Center(child: Text('SIN ÁREA DE NPC', style: DsText.detail()))
-            : NpcsPage(c: n);
+            : NpcsPage(c: n, onOpenEvent: _openEvent);
       case EditorArea.events:
         final ev = widget.events;
         return ev == null
@@ -332,10 +382,18 @@ class _AdminShellState extends State<AdminShell> {
               visualTab = i;
               _search.clear();
             }),
-            tabs: const [DsTab('SPRITES'), DsTab('ANIMACIONES')],
+            tabs: [
+              const DsTab('SPRITES'),
+              const DsTab('ANIMACIONES'),
+              DsTab(GameText.t('ui.world.npcv.tab')),
+            ],
           ),
           Expanded(
-            child: visualTab == 1
+            child: visualTab == 2
+                ? variants == null
+                    ? const SizedBox.shrink()
+                    : NpcVariantsPage(c: variants!, onUseInNpc: _useInNpc)
+                : visualTab == 1
                 ? widget.animations == null
                     ? Center(
                         child: Text('SIN CATÁLOGO DE ANIMACIONES',

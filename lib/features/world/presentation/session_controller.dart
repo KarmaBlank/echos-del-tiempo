@@ -44,6 +44,7 @@ import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
 import '../../../game_engine/rules/resident_rules.dart';
 import '../../../game_engine/rules/biome_fisher_rules.dart';
+import '../../../game_engine/rules/custom_npc_rules.dart';
 import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
@@ -1520,6 +1521,45 @@ class SessionController extends StateNotifier<SessionView?> {
         ((y / 16).floor() - ty).abs() <= 1;
   }
 
+  // ------------- NPC hechos con datos (npc_editor.md § 6) -------------
+
+  /// Los NPC de datos que están en esta sala ahora.
+  List<CustomNpcSpot> get customNpcsHere {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby) return const [];
+    return CustomNpcRules.here(s.town, s.place);
+  }
+
+  /// El NPC de datos en el tile ([tx], [ty]) o al lado.
+  CustomNpcSpot? customNpcAt(int tx, int ty) {
+    for (final n in customNpcsHere) {
+      if (((n.x / 16).floor() - tx).abs() <= 1 &&
+          ((n.y / 16).floor() - ty).abs() <= 1) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  /// El NPC de datos frente al jugador local.
+  CustomNpcSpot? get nearCustomNpc {
+    for (final n in customNpcsHere) {
+      if (WorldRules.distance(local.x, local.y, n.x, n.y) < 26) return n;
+    }
+    return null;
+  }
+
+  /// Con quién se habla en [WorldPanel.customNpc].
+  String? talkCustom;
+
+  void openCustomNpc(String id) {
+    talkCustom = id;
+    openPanel(WorldPanel.customNpc);
+  }
+
+  /// INVITAR de un NPC de datos (se muda al pueblo).
+  bool customInvite(String id) => residentOp(TownOp.invite, id);
+
   bool fisherDeliver() {
     final b = place;
     return _apply(TownAction(TownOp.fisherReq, id: b));
@@ -2957,6 +2997,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
         openPanel(WorldPanel.travel);
+      } else if (nearCustomNpc case final n?) {
+        // Antes que el evento: un NPC de datos vinculado a una visita es
+        // quien la protagoniza (npc_editor.md § 6.4).
+        openCustomNpc(n.def.id);
       } else if (nearWorldEvent case final a?) {
         openWorldEvent(a);
       } else if (nearNpc case final n?) {
@@ -4582,6 +4626,10 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));
+    if (nearCustomNpc != null) {
+      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk',
+          {'name': nearCustomNpc!.def.name.text}));
+    }
     if (nearWorldEvent case final a?) {
       final d = kWorldEvents.def(a.def);
       return (

@@ -150,7 +150,67 @@ amistad:
   siete días seguidos con las reglas del borrador y muestra qué pediría
   y qué paga.
 
-## 5. Pendiente
+## 6. NPCs hechos con datos
+
+Un NPC nuevo sin código ni arte a mano, como un habitante: aspecto
+procedural (npc_variants.md), nombre, lore, lugar, hora y charla.
+
+### 6.1 Crear
+
+- Visuales → VARIANTES NPC → **NUEVO NPC** (crea la variante) o **USAR EN
+  NPC** (variante existente): abre el área NPC con una entrada nueva
+  (`id` = la variante sin `npc_`, libre) o la que ya usa ese sprite.
+- Cada NPC nuevo nace con un **evento de visita vinculado** en
+  `world_events.json` (`visitor_<id>`, categoría `visitor`, `enabled:
+  false`, `duration: 3`, `sprite` = la variante). Queda apagado hasta que
+  el dueño lo prenda (en la ficha o en EVENTOS). Las otras ubicaciones
+  siguen disponibles.
+
+### 6.2 Datos y ficha
+
+- `npcs.json`, entrada del NPC con `def` (y su `greet` / `topics` /
+  `invite_accept` de siempre):
+  - `name` y `bio` por idioma. El lore es **BORRADOR** mientras no tenga
+    `bio_final: true`: en borrador, sus idiomas faltantes no bloquean
+    GUARDAR NPC; el nombre siempre los exige.
+  - `sprite`: cualquier variante (grilla con vista previa) o sprite del
+    manifest.
+  - `spawn`: `town` (pueblo, tile `x`,`y`), `biome` (bioma `place`, tile),
+    `event` (junto al actor del evento `place` mientras está activo; `x`,`y`
+    = desplazamiento en tiles), `mine` (minas del bioma `place`, vacío =
+    todas; tile).
+  - `time`: `any` / `day` / `night` (reloj del mundo).
+  - `invitable` (solo `biome`): el tema con acción INVITAR lo muda al
+    pueblo (queda en el pueblo en su tile).
+- Un `def` con id de un NPC del código se ignora (nunca lo pisa).
+- Ficha del editor: NOMBRE y LORE por idioma (con BORRADOR / FINAL),
+  SPRITE, DÓNDE APARECE (+ bioma), EVENTO VINCULADO (prendido/apagado,
+  DÍAS, ABRIR EVENTO), tile o desplazamiento, HORA, INVITABLE. DIÁLOGO:
+  SALUDOS, TEMAS y AL ACEPTAR. PEDIDOS: no piden encargos.
+- Lector: `NpcData` instala los `def` en `kCustomNpcs` y su charla en
+  `kNpcTalks`.
+
+### 6.3 En el juego
+
+- `CustomNpcRules.here(town, place)` (puro: todos los pares ven lo mismo)
+  dice quién está en la sala. El mapa los dibuja quietos con su nombre;
+  E o clic abre el cuadro de diálogo (`CustomNpcPanel`): saludo, HABLAR
+  con los temas (mismas condiciones de charlas, amistad, lugar y hora) y
+  la acción INVITAR si es invitable. Cuenta una charla por día como los
+  habitantes.
+- INVITAR viaja como `TownOp.invite` con el id (sin cambio de protocolo);
+  el anfitrión lo valida con `CustomNpcRules.invite` y marca
+  `residents[id].invited`. Los NPC de datos no generan pedidos ni órdenes.
+
+### 6.4 Evento vinculado
+
+- Un NPC con `spawn: event` protagoniza la visita: mientras el evento está
+  activo se dibuja él en lugar del actor del evento y E habla con él
+  (antes que con el evento).
+- La duración en días y el prendido se editan desde la ficha del NPC (o
+  EVENTOS) y se guardan con GUARDAR EVENTOS.
+
+## 7. Pendiente
 
 - No hay condiciones de estación u hora del día en los generadores (el
   motor no las tiene); se agregan cuando existan.

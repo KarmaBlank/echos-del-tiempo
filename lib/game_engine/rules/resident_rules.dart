@@ -627,6 +627,8 @@ abstract final class ResidentRules {
     Map<String, ResidentState>? res;
     for (final r in s.residents.values) {
       if (!r.invited) continue;
+      // Los NPC hechos con datos no piden nada (npc_editor.md § 6.3).
+      if (biomeNpc(r.npc) == null) continue;
       final next =
           newOrder(onDay(r, day), day, fishLv: fishLv, farmLv: farmLv);
       if (next == r) continue;

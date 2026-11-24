@@ -18,6 +18,7 @@ import '../../../../game_engine/rules/npc_talk_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/serialization/npc_data_json.dart';
 import '../admin_controller.dart';
+import 'events_editor_controller.dart';
 
 /// Un habitante en la grilla del editor NPC (npc_editor.md § 2).
 class NpcEntry {
@@ -28,7 +29,8 @@ class NpcEntry {
       required this.biome,
       required this.rooted,
       required this.sprite,
-      required this.portrait});
+      required this.portrait,
+      this.custom = false});
   final String id;
   final String name;
   final String role;
@@ -36,6 +38,9 @@ class NpcEntry {
   final bool rooted;
   final String sprite;
   final String portrait;
+
+  /// Hecho solo con datos (npc_editor.md § 6): `def` en npcs.json.
+  final bool custom;
 
   /// Los que se mudan (con cadena y órdenes).
   bool get mover => !rooted;
@@ -82,6 +87,24 @@ class NpcEditorController extends ChangeNotifier {
               rooted: npcRooted(n.id),
               sprite: n.sprite,
               portrait: n.portrait),
+        for (final MapEntry(key: id, value: m)
+            in (_doc['npcs'] as Map<String, dynamic>).entries)
+          if (m is Map && m['def'] is Map)
+            () {
+              final d = m['def'] as Map;
+              final sprite = '${d['sprite'] ?? id}';
+              final label =
+                  '${(d['name'] as Map?)?[LocalizedText.sourceTag] ?? id}';
+              return NpcEntry(
+                  id: id,
+                  name: label,
+                  role: '${d['spawn'] ?? 'town'}',
+                  biome: '${d['place'] ?? ''}',
+                  rooted: false,
+                  sprite: sprite,
+                  portrait: sprite,
+                  custom: true);
+            }(),
         for (final f in kBiomeFishersDefaults.values)
           NpcEntry(
               id: nativeId(f.biome),
@@ -105,9 +128,66 @@ class NpcEditorController extends ChangeNotifier {
   /// usan `LifeIcon` y el retrato del cuadro de diálogo).
   static String manifestId(String sprite) => 'items.vida_$sprite';
 
-  /// Miniatura (id de `SpriteEntry`: sección.clave.animación).
+  /// Miniatura: la variante procedural [sprite] si hay, si no el sprite
+  /// del manifest (id de `SpriteEntry`: sección.clave.animación).
   ui.Image? imageOf(String sprite) =>
+      variantImage?.call(sprite) ??
       spriteImage?.call('${manifestId(sprite)}.idle');
+
+  /// Variantes de NPC (npc_variants.md): imagen e ids. Los pone el shell
+  /// del Editor (`null`: sin catálogo).
+  ui.Image? Function(String id)? variantImage;
+  Iterable<String> Function()? variantIds;
+
+  /// Eventos del Editor: para el evento vinculado (npc_editor.md § 6.4).
+  EventsEditorController? events;
+
+  /// El `def` del NPC de datos [id], o `null`.
+  Map<String, dynamic>? defOf(String id) {
+    final m = (_doc['npcs'] as Map<String, dynamic>)[id];
+    return m is Map && m['def'] is Map
+        ? (m['def'] as Map).cast<String, dynamic>()
+        : null;
+  }
+
+  /// NUEVO NPC desde la variante [sprite] (npc_editor.md § 6.1): entrada
+  /// nueva con nombre, lore BORRADOR, saludo y un evento de visita
+  /// vinculado (apagado). Devuelve el id; si ya hay uno con ese sprite,
+  /// lo abre.
+  String createCustom(String sprite) {
+    final npcs = _doc['npcs'] as Map<String, dynamic>;
+    for (final e in entries) {
+      if (e.custom && e.sprite == sprite) {
+        select(e.id);
+        return e.id;
+      }
+    }
+    final base = sprite.startsWith('npc_') ? sprite.substring(4) : sprite;
+    final taken = {...npcs.keys, ...NpcData.knownIds};
+    var id = base;
+    for (var n = 2; taken.contains(id); n++) {
+      id = '${base}_$n';
+    }
+    final ev = events?.addLinked(id, sprite, id);
+    edit(() {
+      // El def queda en el borrador ya decodificado (como json).
+      npcs[id] = <String, dynamic>{
+        'def': <String, dynamic>{
+          'name': newText(id, locales),
+          'bio': newText('', locales),
+          'sprite': sprite,
+          'spawn': ev == null ? 'town' : 'event',
+          if (ev != null) 'place': ev,
+          'x': ev == null ? 10 : 0,
+          'y': ev == null ? 10 : 0,
+        },
+        'greet': <dynamic>[newText('…', locales)],
+        'topics': <dynamic>[],
+      };
+      selectedId = id;
+    });
+    return id;
+  }
 
   // ------------------------------------------------------------------
   // Borrador

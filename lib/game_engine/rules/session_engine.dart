@@ -46,6 +46,8 @@ import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
 import '../data/npc_talk_catalog.dart' show kNpcTalks, nativeId;
 import 'npc_talk_rules.dart';
+import 'custom_npc_rules.dart';
+import '../models/custom_npc.dart' show kCustomNpcs;
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
 import 'dungeon_rules.dart';
 import 'eco_portal_rules.dart';

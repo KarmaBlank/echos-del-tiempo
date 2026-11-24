@@ -59,6 +59,15 @@ class GameSprites {
             if (img != null) life[e.key.substring(5)] = img;
           }),
     ]);
+    // Variantes procedurales de NPC (npc_variants.md): generadas una vez
+    // y guardadas como un ícono `vida_<id>` más. Pisan el sprite de
+    // respaldo del manifest salvo que el Editor tenga un override de él.
+    try {
+      for (final MapEntry(:key, :value)
+          in (await catalog.npcVariantImages()).entries) {
+        if (!catalog.hasOverride('items.vida_$key.idle')) life[key] = value;
+      }
+    } catch (_) {}
     // Íconos de armas e ítems (`items.<forma>` y `<forma>_acento`): si
     // falta un PNG, PixelIcon usa el dibujo procedural.
     await Future.wait([

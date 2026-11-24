@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../data/npc_talk_catalog.dart';
+import '../models/custom_npc.dart';
 import '../rules/biome_fisher_rules.dart';
 import '../rules/resident_rules.dart';
 
@@ -8,7 +9,8 @@ import '../rules/resident_rules.dart';
 /// (docs/specs/npc_editor.md § 1): `assets/data/npcs/npcs.json`. Puro;
 /// el lector de assets vive en `lib/core/data/npc_data_loader.dart`.
 class NpcData {
-  const NpcData({required this.talks, required this.quests});
+  const NpcData(
+      {required this.talks, required this.quests, this.customs = const {}});
 
   static const assetPath = 'assets/data/npcs/npcs.json';
 
@@ -23,13 +25,19 @@ class NpcData {
   /// Cadena de encargos escrita a mano por id (solo los que se mudan).
   final Map<String, List<QuestStepDef>> quests;
 
+  /// NPCs hechos solo con datos (npc_editor.md § 6): `def` de su entrada.
+  final Map<String, CustomNpcDef> customs;
+
   /// Los valores del código (el respaldo).
   static NpcData get defaults =>
       const NpcData(talks: kNpcTalksDefaults, quests: kResidentQuestsDefaults);
 
   /// Lo que usa el juego ahora.
   static NpcData get current =>
-      NpcData(talks: Map.of(kNpcTalks), quests: Map.of(kResidentQuests));
+      NpcData(
+          talks: Map.of(kNpcTalks),
+          quests: Map.of(kResidentQuests),
+          customs: Map.of(kCustomNpcs));
 
   /// Ids que el juego conoce (los otros se ignoran al instalar).
   static Set<String> get knownIds => {
@@ -67,6 +75,10 @@ class NpcData {
       }
     }
 
+    for (final d in customs.values) {
+      check(d.id, 'nombre', d.name);
+      if (!d.bioDraft) check(d.id, 'lore', d.bio);
+    }
     for (final MapEntry(key: id, value: t) in talks.entries) {
       lines(id, 'saludo', t.greet);
       topics(id, t.topics, '');
@@ -93,12 +105,13 @@ class NpcData {
   // ------------------------------------------------------------------
 
   Map<String, Object?> toJson() {
-    final ids = <String>{...talks.keys, ...quests.keys};
+    final ids = <String>{...customs.keys, ...talks.keys, ...quests.keys};
     return {
       'version': version,
       'npcs': {
         for (final id in ids)
           id: {
+            if (customs[id] case final d?) 'def': d.toJson(),
             if (talks[id] case final t?) ...talkToJson(t),
             if (quests[id] case final q?)
               'quests': [for (final s in q) stepToJson(s)],
@@ -118,9 +131,13 @@ class NpcData {
     }
     final talks = <String, NpcTalkDef>{};
     final quests = <String, List<QuestStepDef>>{};
+    final customs = <String, CustomNpcDef>{};
     for (final MapEntry(key: id, value: v) in (j['npcs'] as Map).entries) {
       if (id is! String || v is! Map) {
         throw FormatException('habitante inválido: $id');
+      }
+      if (v.containsKey('def')) {
+        customs[id] = CustomNpcDef.fromJson(id, v['def']);
       }
       if (v.containsKey('greet') ||
           v.containsKey('topics') ||
@@ -131,7 +148,7 @@ class NpcData {
         quests[id] = [for (final s in v['quests'] as List) stepFromJson(s)];
       }
     }
-    return NpcData(talks: talks, quests: quests);
+    return NpcData(talks: talks, quests: quests, customs: customs);
   }
 
   static NpcData decode(String raw) => fromJson(jsonDecode(raw));
@@ -261,8 +278,17 @@ class NpcData {
   /// conocidos). Devuelve los ids ignorados.
   List<String> install() {
     restore();
-    final known = knownIds;
+    final defaults = knownIds;
     final skipped = <String>[];
+    for (final MapEntry(key: id, value: d) in customs.entries) {
+      // Un NPC de datos nunca pisa a uno del código.
+      if (defaults.contains(id)) {
+        skipped.add(id);
+        continue;
+      }
+      kCustomNpcs[id] = d;
+    }
+    final known = {...defaults, ...kCustomNpcs.keys};
     for (final MapEntry(key: id, value: t) in talks.entries) {
       if (!known.contains(id)) {
         skipped.add(id);
@@ -282,6 +308,7 @@ class NpcData {
 
   /// Vuelve a los valores del código.
   static void restore() {
+    kCustomNpcs.clear();
     kNpcTalks
       ..clear()
       ..addAll(kNpcTalksDefaults);

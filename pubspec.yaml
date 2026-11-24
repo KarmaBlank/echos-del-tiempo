@@ -61,6 +61,7 @@ flutter:
     - docs/release_notes/
     - assets/sprites/sprite_manifest.yaml
     - assets/sprites/procedural.yaml
+    - assets/sprites/npc_variants.yaml
     # Animaciones como datos (docs/specs/game_editor.md § 2.1): una carpeta
     # por categoría de kFxCategories, todas registradas de antemano (el
     # Editor publica ahí sin tocar este archivo; test fx_assets_test).
