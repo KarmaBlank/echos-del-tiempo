@@ -61,6 +61,13 @@ class TownEdit {
   /// (granjero) o lago (pescador). `null` = edición normal.
   BuildKind? hire;
 
+  /// Elegir la casa de un habitante (overworld_biomes.md § 10.1): id del
+  /// habitante. Misma cámara que [hire], sin paleta; resalta las CASAS.
+  String? houseFor;
+
+  /// Lo que se elige con un clic (`null` = edición normal).
+  BuildKind? get pick => hire ?? (houseFor != null ? BuildKind.casa : null);
+
   void reset() {
     step = TownEditStep.browse;
     selected = null;

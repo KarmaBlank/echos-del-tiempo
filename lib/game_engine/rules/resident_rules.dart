@@ -6,7 +6,9 @@ import '../data/fishing_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import '../data/town_layout.dart';
 import 'helper_rules.dart';
+import 'npc_camp_rules.dart';
 import 'life_tree_rules.dart';
 import 'town_plan.dart';
 
@@ -393,12 +395,86 @@ abstract final class ResidentRules {
     return sync(s.copyWith(builds: builds));
   }
 
-  /// Invita a [npc] a vivir en el pueblo.
-  static TownState? invite(TownState s, String npc) {
+  /// Invita a [npc] a vivir en el pueblo. [time] = reloj de la sala: desde
+  /// ahí sale caminando de su bioma hacia el camino del sur (§ 10.1).
+  static TownState? invite(TownState s, String npc, {double time = 0}) {
     if (cannotInvite(s, npc) != null) return null;
     final r = s.resident(npc);
-    return sync(s.withResident(
-        r.copyWith(invited: true, requestDay: math.max(1, s.sky.day))));
+    return sync(s.withResident(r.copyWith(
+        invited: true,
+        requestDay: math.max(1, s.sky.day),
+        leftAt: time.isFinite && time > 0 ? time : 0.001)));
+  }
+
+  // ---------------- mudanza y rutina (§ 10.1) ----------------
+
+  /// Casas (CASA) sin habitante.
+  static List<TownBuild> freeHouses(TownState s) => [
+        for (final b in s.builds)
+          if (b.kind == BuildKind.casa && b.resident == null) b
+      ];
+
+  /// Por qué no se le puede asignar una casa a [npc] desde el diálogo
+  /// (o `null`): tiene que vivir en el pueblo, no tener casa y haber una
+  /// libre.
+  static String? cannotAssignFree(TownState s, String npc) {
+    final r = s.resident(npc);
+    if (!r.invited) return 'No vive en el pueblo';
+    if (s.houseOf(npc) != null) return 'Ya tiene casa';
+    if (freeHouses(s).isEmpty) return 'No hay casas libres';
+    return null;
+  }
+
+  /// Sin casa: le falta algo (marca de pendiente sobre la cabeza).
+  static bool homeless(TownState s, String npc) =>
+      s.resident(npc).invited && s.houseOf(npc) == null;
+
+  /// Dónde va [n] mientras sale de su bioma: del punto de su paseo al
+  /// salir, al camino (x = 17) y por él hasta el borde sur, donde se
+  /// desvanece ([alpha] baja en los últimos 24 px). `null` = no está
+  /// saliendo (ya llegó o nunca salió).
+  static ({double x, double y, double alpha})? departure(
+      BiomeNpcDef n, ResidentState r, double time) {
+    if (!r.invited || r.leftAt <= 0) return null;
+    final dt = time - r.leftAt;
+    if (dt < 0) return null;
+    final start = NpcCampRules.state(n, r.leftAt);
+    const pathX = 17.0 * 16;
+    const endY = BiomeLayout.height * 16.0 + 8;
+    final leg1 = (pathX - start.x).abs();
+    final leg2 = math.max(0.0, endY - start.y);
+    final total = leg1 + leg2;
+    final d = dt * t.d('resWalkSpeed');
+    if (d >= total) return null;
+    final (x, y) = d < leg1
+        ? (start.x + (pathX > start.x ? d : -d), start.y)
+        : (pathX, start.y + (d - leg1));
+    return (x: x, y: y, alpha: ((total - d) / 24).clamp(0.0, 1.0).toDouble());
+  }
+
+  /// Limpia [ResidentState.leftAt] de quien ya llegó al borde (o si el
+  /// reloj volvió atrás: otra sesión). Lo corre el anfitrión cada tick.
+  static TownState settleDepartures(TownState s, double time) {
+    Map<String, ResidentState>? res;
+    for (final r in s.residents.values) {
+      if (r.leftAt <= 0) continue;
+      final n = biomeNpc(r.npc);
+      if (n != null && time >= r.leftAt && departure(n, r, time) != null) {
+        continue;
+      }
+      (res ??= {...s.residents})[r.npc] = r.copyWith(leftAt: 0);
+    }
+    return res == null ? s : s.copyWith(residents: res);
+  }
+
+  /// Un trasnochador que esta noche sale a pasear (`resNightOwlChance`,
+  /// determinista por habitante y día del mundo).
+  static bool nightOut(TownState s, String npc) {
+    if (biomeNpc(npc)?.nightOwl != true) return false;
+    final seed = npc.codeUnits.fold<int>(0, (a, c) => a * 31 + c) +
+        s.sky.day * 7919;
+    final roll = math.Random(seed & 0x7fffffff).nextDouble();
+    return roll < t.d('resNightOwlChance');
   }
 
   // ---------------- relación ----------------
@@ -834,8 +910,12 @@ abstract final class ResidentRules {
   /// (`null`). Igual en todos (sale del reloj de la sala).
   static (double, double)? position(TownState s, String npc, double time,
       {required bool night}) {
+    if (!s.resident(npc).invited) return null;
     final h = s.houseOf(npc);
-    if (h == null || night) return null;
+    // Sin casa: da vueltas por la plaza de la fuente, de día y de noche.
+    if (h == null) return _plaza(s, npc, time);
+    // De noche entra a su casa (no se ve), salvo el trasnochador que sale.
+    if (night && !nightOut(s, npc)) return null;
     final (ox, oy) = s.origin;
     final b = h.bounds;
     final span = (b.w + 1) * 16.0;
@@ -845,5 +925,16 @@ abstract final class ResidentRules {
     final x = (b.x + ox) * 16.0 - 8 + span * f;
     final y = (b.bottom + oy) * 16.0 + 8;
     return (x, y);
+  }
+
+  /// Paseo de quien todavía no tiene casa: un círculo alrededor de la
+  /// fuente rúnica (sobre el anillo de camino de la plaza).
+  static (double, double) _plaza(TownState s, String npc, double time) {
+    final f = TownPlan.landmarkOf(s, TownSpot.fountain);
+    final (ox, oy) = s.origin;
+    final cx = (f.x + ox + f.w / 2) * 16.0, cy = (f.y + oy + f.h / 2) * 16.0;
+    final seed = npc.codeUnits.fold<int>(0, (a, c) => a + c) % 7;
+    final a = time * 0.15 + seed;
+    return (cx + 40 * math.cos(a), cy + 40 * math.sin(a));
   }
 }

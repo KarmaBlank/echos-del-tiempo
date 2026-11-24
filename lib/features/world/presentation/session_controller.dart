@@ -2046,6 +2046,49 @@ class SessionController extends StateNotifier<SessionView?> {
     return true;
   }
 
+  /// ASIGNAR CASA desde el diálogo de [npc] (overworld_biomes.md § 10.1):
+  /// la cámara de la edición, sin paleta, con las casas libres resaltadas.
+  bool enterHousePick(String npc) {
+    if (cannotEditTown != null) return false;
+    if (ResidentRules.cannotAssignFree(town, npc) != null) return false;
+    if (!enterTownEdit()) return false;
+    _edit!
+      ..houseFor = npc
+      ..center = true;
+    _emit();
+    return true;
+  }
+
+  /// Habitante que acaba de recibir casa: su diálogo abre agradeciendo.
+  String? thanksNpc;
+
+  /// Confirma la casa elegida ([TownEdit.selected]) para el habitante.
+  bool confirmHouse() {
+    final e = _edit;
+    final npc = e?.houseFor, id = e?.selected;
+    if (e == null || npc == null || id == null) return false;
+    if (!residentOp(TownOp.assign, npc, target: id)) return false;
+    exitTownEdit();
+    final n = biomeNpc(npc);
+    if (n != null) {
+      thanksNpc = npc;
+      openResident(n);
+    }
+    return true;
+  }
+
+  /// Por qué no se puede elegir [b] en el modo de elegir (o `null`).
+  String? pickWhy(TownBuild b) {
+    if (_edit?.houseFor != null) {
+      return b.kind != BuildKind.casa
+          ? strings.t('ui.town.edit.house_not_house')
+          : b.resident != null
+              ? strings.t('ui.town.edit.house_taken')
+              : null;
+    }
+    return hireWhy(b);
+  }
+
   /// Por qué no se puede contratar en [b] en el modo de elegir (o `null`).
   String? hireWhy(TownBuild b) {
     final p = _s?.players[localId]?.profile;
@@ -2066,7 +2109,12 @@ class SessionController extends StateNotifier<SessionView?> {
   void editBack() {
     final e = _edit;
     if (e == null) return;
-    if (e.step == TownEditStep.browse || e.hire != null) {
+    if (e.houseFor != null && e.selected != null) {
+      e.selected = null;
+      _emit();
+      return;
+    }
+    if (e.step == TownEditStep.browse || e.pick != null) {
       return exitTownEdit();
     }
     e.reset();
@@ -2166,6 +2214,13 @@ class SessionController extends StateNotifier<SessionView?> {
   void editClick(int tx, int ty) {
     final e = _edit;
     if (e == null) return;
+    if (e.houseFor != null) {
+      final b = TownRules.buildAt(town, tx, ty) ??
+          TownRules.buildAtSign(town, tx, ty);
+      e.selected = b != null && pickWhy(b) == null ? b.id : null;
+      _emit();
+      return;
+    }
     if (e.hire case final kind?) {
       final b = TownRules.buildAt(town, tx, ty) ??
           TownRules.buildAtSign(town, tx, ty);
@@ -2222,7 +2277,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// otra vez la suelta.
   void editChoose(String defId) {
     final e = _edit;
-    if (e == null || e.hire != null) return;
+    if (e == null || e.pick != null) return;
     if (e.step == TownEditStep.placing && e.placeDef == defId) {
       e.reset();
     } else {

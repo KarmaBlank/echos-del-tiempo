@@ -127,9 +127,14 @@ class BiomeNpcDef {
       required this.tile,
       required this.lines,
       required this.seeds,
-      required this.benefit});
+      required this.benefit,
+      this.nightOwl = false});
 
   final String id;
+
+  /// Trasnochador (overworld_biomes.md § 10.1): algunas noches sale a
+  /// pasear en vez de quedarse en su casa (`resNightOwlChance`).
+  final bool nightOwl;
   final String name;
   final NpcRole role;
   final String biome;
@@ -324,7 +329,8 @@ const _oren = BiomeNpcDef('oren', 'Oren', NpcRole.vidente,
       'Lo que tiene que pasar, pasa. Mejor llegar sanos.',
     ],
     seeds: {'trigo_eco': 150, 'rosa_futuro': 420},
-    benefit: 'Vida llena al volver al pueblo y +{v} % de vida máxima.');
+    benefit: 'Vida llena al volver al pueblo y +{v} % de vida máxima.',
+    nightOwl: true);
 
 /// Los exteriores por id (el pueblo no está).
 const kBiomeLayouts = <String, BiomeLayout>{

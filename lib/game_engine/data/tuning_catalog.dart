@@ -314,6 +314,10 @@ const Map<String, TuningDef> kTuningDefaults = {
     // edificio, pedidos y beneficio permanente de cada rol (base + paso
     // por nivel).
     'resInviteRep': 3,
+    // v0.42.6: mudanza (px/s al salir caminando del bioma) y chance por
+    // noche de que un trasnochador salga a pasear.
+    'resWalkSpeed': 40,
+    'resNightOwlChance': 0.25,
     'resSettledRep': 5,
     'resRootedRep': 12,
     'resMaxTier': 5,

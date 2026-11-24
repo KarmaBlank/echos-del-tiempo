@@ -253,6 +253,43 @@ pedidos y órdenes.
   asigna. Vive cerca de su casa (camina de día, adentro de noche) y
   conserva su servicio (su grilla de comercio, sus semillas).
 
+#### 10.1.1 Mudanza (v0.42.6, protocolo 68)
+- **Aceptar.** Al elegir INVITAR, el habitante contesta en el diálogo
+  `ui.town.npc.invite_accept` ("Sí, acepto. Me gustaría ir a tu
+  pueblo.", texto del dueño) y queda solo ADIÓS. La invitación
+  (`TownOp.invite`) se manda recién al cerrar el diálogo (ADIÓS, Esc o
+  cerrar el panel por otro lado).
+- **Salir del bioma.** El anfitrión marca `ResidentState.leftAt` (`la`,
+  reloj de la sala). Desde ahí `ResidentRules.departure` lo lleva del
+  punto de su paseo al camino (x = 17) y por él hasta el borde sur, a
+  `resWalkSpeed` px/s; se desvanece en los últimos 24 px. Sale del reloj
+  de la sala, así que todos lo ven igual. Al llegar (o si el reloj volvió
+  atrás, otra sesión) el anfitrión limpia `leftAt` en cada tick
+  (`settleDepartures`).
+- **En el pueblo sin casa.** Aparece apenas se lo invita: sin casa da
+  vueltas alrededor de la fuente rúnica (de día y de noche) y lleva la
+  marca de pendiente "!" (`QuestTrackRules.mark`) hasta tener casa.
+  *Causa del bug de v0.42.5:* `ResidentRules.position` devolvía `null`
+  sin casa, y el bioma ya no lo dibujaba por estar invitado: desaparecía
+  de los dos lados aunque la invitación sí se guardaba.
+- **Asignar casa.** Si hay una CASA libre, su diálogo en el pueblo
+  ofrece ASIGNAR CASA (si no, la opción sale gris con el motivo). Abre la
+  cámara de EDITAR PUEBLO sin paleta (como contratar desde la fuente) con
+  las casas libres resaltadas; clic en una y confirmar "Asignar casa a
+  <NPC>" (`TownOp.assign`, mismo candado de edición). Al confirmar se
+  reabre su diálogo agradeciendo, según la hora:
+  `ui.town.npc.house_thanks_day` (texto del dueño) o
+  `ui.town.npc.house_thanks_night` (**BORRADOR**, a revisar por el
+  dueño).
+- **Rutina.** De día camina frente a su casa; de noche entra (no se ve).
+  Trasnochadores (`BiomeNpcDef.nightOwl`, hoy Oren): cada noche, con
+  `resNightOwlChance` (determinista por habitante y día del mundo), sale
+  a pasear frente a su casa.
+- **Casa con su oficio.** Al lado de la puerta de una CASA habitada se
+  dibuja el prop de su campamento (§ 9.2: canasta, pergaminos, yunque…).
+- Textos nuevos de la edición (`ui.town.edit.house_*`, `hint_house`) y
+  `ui.town.npc.assign_house` / `no_free_house`: **BORRADOR**.
+
 ### 10.2 Encargos
 - Cadena de 2 a 4 pasos por habitante (`kResidentQuests`): recolectar,
   pescar, cultivar, bajar a una mazmorra de su bioma, vencer un élite.

@@ -399,5 +399,17 @@
   "ui.town.fish_rarity.raro": "rare",
   "ui.town.helper_task.cosechar": "Harvest",
   "ui.town.helper_task.plantar": "Plant",
-  "ui.town.helper_task.regar": "Water"
+  "ui.town.helper_task.regar": "Water",
+  "ui.town.npc.invite_accept": "Yes, I accept. I'd like to go to your town.",
+  "ui.town.npc.assign_house": "Assign house",
+  "ui.town.npc.no_free_house": "No free houses: place a HOUSE in EDIT TOWN.",
+  "ui.town.npc.house_thanks_day": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+  "ui.town.npc.house_thanks_night": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+  "ui.town.edit.house_pick_title": "ASSIGN HOUSE",
+  "ui.town.edit.hint_house": "Which house do you give {name}?",
+  "ui.town.edit.house_free": "Free. Click to choose it.",
+  "ui.town.edit.house_taken": "Someone already lives here.",
+  "ui.town.edit.house_not_house": "Not a house.",
+  "ui.town.edit.house_confirm_text": "{name} will move into this house.",
+  "ui.town.edit.house_confirm": "Assign house to {name}"
 }

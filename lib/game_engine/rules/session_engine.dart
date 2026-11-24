@@ -2453,6 +2453,8 @@ class _Op {
   void tick(double dt, {bool world = true}) {
     s.time += dt;
     releaseTownLock();
+    // Mudanzas (overworld_biomes.md § 10.1): quien ya llegó al borde.
+    s.town = ResidentRules.settleDepartures(s.town, s.time);
     if (world) farmTick(dt);
     autoFishTick();
     final m = s.mission;

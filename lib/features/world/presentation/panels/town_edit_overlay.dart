@@ -66,7 +66,8 @@ class TownEditOverlay extends StatelessWidget {
               horizontal: DsSpace.md, vertical: DsSpace.xs),
           child: Row(children: [
             Text(
-                switch (e.hire) {
+                switch (e.pick) {
+                  BuildKind.casa => s.t('ui.town.edit.house_pick_title'),
                   BuildKind.huerta => s.t('ui.town.edit.hire_farmer'),
                   BuildKind.lago => s.t('ui.town.edit.hire_fisher'),
                   _ => s.t('ui.town.edit.title'),
@@ -80,9 +81,9 @@ class TownEditOverlay extends StatelessWidget {
                     softWrap: true,
                     style: DsText.subtitle())),
             SizedBox(width: DsSpace.md),
-            DsButton(e.hire == null ? s.t('ui.town.edit.done') : s.t('ui.town.edit.cancel_esc'),
+            DsButton(e.pick == null ? s.t('ui.town.edit.done') : s.t('ui.town.edit.cancel_esc'),
                 key: ValueKey(
-                    e.hire == null ? 'town-edit-done' : 'town-hire-cancel'),
+                    e.pick == null ? 'town-edit-done' : 'town-hire-cancel'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,
                 onPressed: c.exitTownEdit),
@@ -132,6 +133,21 @@ class TownEditOverlay extends StatelessWidget {
     final town = c.town;
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
+    if (e.houseFor != null) {
+      if (e.selected != null || b == null || b.kind != BuildKind.casa) {
+        return null;
+      }
+      final why = c.pickWhy(b);
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSectionHeader(s.t('ui.town.edit.house_title', {'level': b.level})),
+            Text(why ?? s.t('ui.town.edit.house_free'),
+                key: const ValueKey('town-house-info'),
+                style: DsText.detail(why == null ? null : DsColors.textDisabled)),
+          ]);
+    }
     if (e.hire case final kind?) {
       if (b == null || b.kind != kind) return null;
       final why = c.hireWhy(b);
@@ -190,6 +206,8 @@ class TownEditOverlay extends StatelessWidget {
 
   static String _hint(Strings s, SessionController c, TownEdit e) =>
       switch (e.step) {
+        _ when e.houseFor != null => s.t('ui.town.edit.hint_house',
+            {'name': biomeNpc(e.houseFor!)?.name ?? e.houseFor!}),
         _ when e.hire == BuildKind.huerta =>
           s.t('ui.town.edit.hint_hire_farmer'),
         _ when e.hire == BuildKind.lago => s.t('ui.town.edit.hint_hire_fisher'),
@@ -210,10 +228,32 @@ class TownEditOverlay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: ch);
+    // Casa elegida para el habitante: confirmar (overworld_biomes.md § 10.1).
+    if (e.houseFor case final npc?) {
+      if (e.selected == null) return null;
+      final name = biomeNpc(npc)?.name ?? npc;
+      return col([
+        DsSectionHeader(s.t('ui.town.edit.house_pick_title')),
+        Text(s.t('ui.town.edit.house_confirm_text', {'name': name}),
+            style: DsText.detail()),
+        SizedBox(height: DsSpace.xs),
+        Row(children: [
+          Expanded(
+            child: DsButton(s.t('ui.town.edit.house_confirm', {'name': name}),
+                key: const ValueKey('town-house-confirm'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.primary,
+                onPressed: c.confirmHouse),
+          ),
+          SizedBox(width: DsSpace.xs),
+          cancel(),
+        ]),
+      ]);
+    }
     switch (e.step) {
       case TownEditStep.browse:
         // Paleta: elegir qué poner y después dónde (§ 1.2).
-        return e.hire == null ? TownBuildPalette(controller: c) : null;
+        return e.pick == null ? TownBuildPalette(controller: c) : null;
       case TownEditStep.side:
         final side = e.side!;
         final why = c.cannotExpandTown(side);
