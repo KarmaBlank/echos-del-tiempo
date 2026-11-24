@@ -1150,10 +1150,18 @@ class SessionController extends StateNotifier<SessionView?> {
     // menú de pausa abierto tampoco se camina.
     if (typing || menuOpen || s.paused) ix = iy = 0;
     if (_fishing case final f?) {
-      // Caminar, salir del pueblo o abrir un panel guarda la caña.
-      if (ix != 0 || iy != 0 || s.mode != SessionMode.lobby || _panel != null) {
-        stopFishing();
-      } else {
+      // Caminar, salir del pueblo o abrir un panel guarda la caña. With
+      // auto-fishing a menu also stops it (fishing.md § 6).
+      final moving = ix != 0 || iy != 0;
+      final away = s.mode != SessionMode.lobby;
+      if (moving || away || _panel != null || (_autoFish && menuOpen)) {
+        stopFishing(
+            why: moving
+                ? AutoFishStop.moved
+                : away
+                    ? AutoFishStop.battle
+                    : AutoFishStop.menu);
+      } else if (!_autoFish) {
         _tickFishing(f, dt);
       }
     }
@@ -2357,7 +2365,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Mantener E / clic: cargar, clavar, subir la zona.
   void fishPress() {
     final f = _fishing;
-    if (f == null) return;
+    if (f == null || _autoFish) return;
     f.press();
     _fishFx(f);
     _emit();
@@ -2366,16 +2374,61 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Soltar E / clic: tirar el lance, bajar la zona.
   void fishRelease() {
     final f = _fishing;
-    if (f == null) return;
+    if (f == null || _autoFish) return;
     f.release();
     _fishFx(f);
     _emit();
   }
 
+  // ---- Auto-fishing (fishing.md § 6): the host fishes; R toggles ----
+
+  bool _autoFish = false;
+  int _autoCaught = 0;
+
+  /// Auto-fishing on for the local player.
+  bool get autoFishing => _autoFish;
+
+  /// Fish auto-caught since it was turned on.
+  int get autoFishCaught => _autoCaught;
+
+  /// R with the rod out: turn auto-fishing on (rod idle or line waiting)
+  /// or off. Returns whether something changed.
+  bool toggleAutoFish() {
+    final f = _fishing;
+    if (f == null) return false;
+    if (_autoFish) {
+      _stopAutoFish(AutoFishStop.key);
+      _emit();
+      return true;
+    }
+    if (f.phase != FishPhase.idle && f.phase != FishPhase.waiting) {
+      return false;
+    }
+    if (!_apply(const FishAutoAction(true))) return false;
+    _autoFish = true;
+    _autoCaught = 0;
+    _emit();
+    return true;
+  }
+
+  /// Local side of stopping; the host's `fAutoOff` brings the log line.
+  /// A battle is detected by the host itself.
+  void _stopAutoFish(AutoFishStop why) {
+    if (!_autoFish) return;
+    _autoFish = false;
+    if (why != AutoFishStop.battle) _apply(FishAutoAction(false, why));
+  }
+
+  /// Log text for a stop reason.
+  String autoFishStopText(AutoFishStop why, int n) => strings.t(
+      'ui.world.ctl.autofish.stop.${why.name}', {'n': n});
+
   /// Guarda la caña (caminar o Esc). En plena pelea cuenta como escapado.
-  void stopFishing() {
+  /// [why]: reason given to the host if auto-fishing was on.
+  void stopFishing({AutoFishStop why = AutoFishStop.moved}) {
     final f = _fishing;
     if (f == null) return;
+    _stopAutoFish(why);
     if (f.phase == FishPhase.reel && !_fishSent) {
       _fishSent = true;
       fishResult(false);
@@ -2447,7 +2500,9 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   /// Texto del aviso de abajo mientras pesca.
-  String fishingHint(MapFishing f) => switch (f.phase) {
+  String fishingHint(MapFishing f) => _autoFish
+      ? strings.t('ui.world.ctl.fish.auto')
+      : switch (f.phase) {
         FishPhase.idle =>
           strings.t('ui.world.ctl.fish.idle'),
         FishPhase.charging => strings.t('ui.world.ctl.fish.charging'),
@@ -2730,7 +2785,14 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
       if (key == LogicalKeyboardKey.escape) {
-        stopFishing();
+        stopFishing(why: AutoFishStop.key);
+        return true;
+      }
+      // R with the rod out at the water: auto-fishing (fishing.md § 6).
+      // Takes precedence over R near the farm (other hand), which only
+      // applies with the rod away.
+      if (key == LogicalKeyboardKey.keyR) {
+        toggleAutoFish();
         return true;
       }
     }
@@ -3805,8 +3867,19 @@ class SessionController extends StateNotifier<SessionView?> {
           if (_messages.length > maxMessages) _messages.removeAt(0);
         case LightningEvent():
           fishSfx?.call(Sfx.impactBolt);
-        case FishCaughtEvent(:final playerId, :final species, :final sizeCm)
+        case FishAutoStoppedEvent(:final playerId, :final reason, :final caught)
             when playerId == localId:
+          _autoFish = false;
+          _messages.add(autoFishStopText(reason, caught));
+          if (_messages.length > maxMessages) _messages.removeAt(0);
+        case FishCaughtEvent(
+              :final playerId,
+              :final species,
+              :final sizeCm,
+              :final auto
+            )
+            when playerId == localId:
+          if (auto) _autoCaught++;
           final name = kFish[species]?.name ?? species;
           _messages.add(strings.t('ui.world.ctl.caught_cm', {'what': name, 'cm': sizeCm}));
           if (_messages.length > maxMessages) _messages.removeAt(0);

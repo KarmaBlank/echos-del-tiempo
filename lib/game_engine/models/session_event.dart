@@ -1,6 +1,7 @@
 import 'ascension.dart' show TrapKind;
 import 'battle_command.dart';
 import 'battle_event.dart';
+import 'fish_line.dart' show AutoFishStop;
 import 'game_map.dart' show PoiKind, QuestKind;
 import 'game_session.dart';
 import 'item.dart' show CraftOp;
@@ -364,6 +365,15 @@ class LightningEvent extends SessionEvent {
   final int tx, ty;
   final bool lost;
   const LightningEvent(this.tx, this.ty, {this.lost = false});
+}
+
+/// `fAutoOff`: [playerId]'s auto-fishing stopped ([reason]) after
+/// [caught] fish (fishing.md § 6).
+class FishAutoStoppedEvent extends SessionEvent {
+  final String playerId;
+  final AutoFishStop reason;
+  final int caught;
+  const FishAutoStoppedEvent(this.playerId, this.reason, this.caught);
 }
 
 /// [playerId] sacó [species] ([sizeCm] cm); [auto]: por auto-pesca.

@@ -185,6 +185,12 @@ abstract final class ActionJson {
             't': 'fLn',
             if (a.line case final l?) 'l': l.toJson(),
           },
+        // Protocol 67: auto-fishing (fishing.md § 6).
+        FishAutoAction() => {
+            't': 'fAuto',
+            if (a.on) 'on': true,
+            if (!a.on) 'r': a.reason.index,
+          },
         // Protocolo 60 (v0.37.0): Llama errante.
         WispAction() => {'t': 'wisp', if (a.on) 'on': true},
         SellFishAction() => {
@@ -442,6 +448,10 @@ abstract final class ActionJson {
         return FishBiteAction(j.dbl('pw'));
       case 'fRes':
         return FishResultAction(j.boolean('ok'));
+      case 'fAuto':
+        final r = (j.intOrNull('r') ?? 0)
+            .clamp(0, AutoFishStop.values.length - 1);
+        return FishAutoAction(j['on'] == true, AutoFishStop.values[r]);
       case 'fLn':
         return FishLineAction(FishLine.fromJson(j['l']));
 

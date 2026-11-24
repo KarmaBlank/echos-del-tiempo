@@ -1119,7 +1119,11 @@ class _Op {
         p.dir = a.dir > 0 ? 1 : -1;
         p.moving = a.moving;
         // Caminar guarda la caña (fishing.md § 4).
-        if (a.moving) p.fishLine = null;
+        // Also stops auto-fishing (§ 6).
+        if (a.moving) {
+          stopAutoFish(p, AutoFishStop.moved);
+          p.fishLine = null;
+        }
         return true;
 
       case ProposeMissionAction():
@@ -1338,6 +1342,7 @@ class _Op {
       case FishBiteAction() ||
             FishResultAction() ||
             FishLineAction() ||
+            FishAutoAction() ||
             SellFishAction() ||
             ExchangeFishAction() ||
             BuyRodAction() ||
@@ -2449,6 +2454,7 @@ class _Op {
     s.time += dt;
     releaseTownLock();
     if (world) farmTick(dt);
+    autoFishTick();
     final m = s.mission;
     if (m != null &&
         s.result == null &&
