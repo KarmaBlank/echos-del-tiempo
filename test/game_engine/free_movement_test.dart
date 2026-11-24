@@ -72,14 +72,14 @@ void main() {
   test('away lleva la clave del destino (protocolo 63)', () {
     final (we, w) = world();
     we.apply(w, 'p1', const TravelAction(kBosque));
-    we.apply(w, 'p0', const ProposeMissionAction('m1'));
+    enter(we, w, 'p0', 'm1');
     final ids = {for (final a in w.town.away) a.id: a.placeId};
     expect(ids, {'p1': kBosque, 'p0': 'm:m1'});
   });
 
   test('IR CON: va a la instancia del otro, a su posición', () {
     final (we, w) = world();
-    we.apply(w, 'p0', const ProposeMissionAction('m1'));
+    enter(we, w, 'p0', 'm1');
     final d = w.roomOf('p0')!;
     final target = w.rooms[d]!.players['p0']!;
     expect(we.apply(w, 'p2', const JoinPlayerAction('p0')), isNotNull);
@@ -92,7 +92,7 @@ void main() {
 
   test('IR CON: no a una instancia en batalla', () {
     final (we, w) = world();
-    we.apply(w, 'p0', const ProposeMissionAction('m1'));
+    enter(we, w, 'p0', 'm1');
     final d = w.roomOf('p0')!;
     w.rooms[d] = w.rooms[d]!.copy()..mode = SessionMode.battle;
     expect(we.apply(w, 'p2', const JoinPlayerAction('p0')), isNull);

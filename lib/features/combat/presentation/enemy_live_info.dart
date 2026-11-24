@@ -48,6 +48,19 @@ class EnemyLiveInfo extends StatefulWidget {
     return s.t('ui.combat.enemy.hit_cap', {'pct': jsRound(f * 100)});
   }
 
+  /// Tank and "nobody alone in one phase" (combat.md § "Tanques" and §
+  /// "Nadie solo en una fase"), or empty.
+  static String toughText(Strings s, Combatant e) {
+    if (e.isPlayer) return '';
+    final out = <String>[
+      if (kEnemies[e.enemyType]?.tank ?? false) s.t('ui.combat.enemy.tank'),
+      if (BattleEngine.phaseHold > 0)
+        s.t('ui.combat.enemy.phase_hold',
+            {'pct': jsRound(BattleEngine.phaseHold * 100)}),
+    ];
+    return out.join(' ');
+  }
+
   /// Fuerza el pliegue (tests, capturas); `null` = sigue a Alt/Shift.
   final bool? open;
 
@@ -125,10 +138,15 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
     final states = EnemyLiveInfo.statusEntries(s, e);
     final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
     final cap = EnemyLiveInfo.hitCapText(s, e);
+    final tough = EnemyLiveInfo.toughText(s, e);
     final sections = <Widget>[
       if (cap.isNotEmpty)
         Text(retroText(cap),
             key: const ValueKey('enemy-live-hitcap'),
+            style: DsText.detail(DsColors.textSecondary)),
+      if (tough.isNotEmpty)
+        Text(retroText(tough),
+            key: const ValueKey('enemy-live-tough'),
             style: DsText.detail(DsColors.textSecondary)),
       if (aff.isNotEmpty)
         ProtoText(aff,

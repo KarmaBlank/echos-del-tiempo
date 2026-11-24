@@ -616,6 +616,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     // de que actúen todos los jugadores vivos lo deja en 1 de vida.
     'holdCoop': 1,
     'holdSolo': 0,
+    // Nobody alone kills it in one phase (combat.md § "Nadie solo en una
+    // fase"): an enemy at or above this fraction of its max HP when a
+    // character's phase began survives that character's lethal hit at 1
+    // HP if another living ally can still finish it (0 = off).
+    'phaseHold': 0.5,
+    // Tanks (combat.md § "Tanques"): elemental ward (× damage of that
+    // element), its duration in own turns and Defense (× damage taken).
+    'wardMult': 0.5,
+    'wardTurns': 3,
+    'tankGuard': 0.7,
     // Turnos como máximo por cada turno del aliado vivo más lento
     // (0 = sin tope).
     'turnsPerSlowest': 2,

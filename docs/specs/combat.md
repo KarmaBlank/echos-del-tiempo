@@ -792,6 +792,9 @@ fracción de su vida máxima, siempre:
 | `capElite` | 0.60 |
 | `capCommon` | 0 (sin tope) |
 
+Otros ajustes de Límites de combate: `phaseHold` 0.5 (§ "Nadie solo en una
+fase"), `wardMult` 0.5, `wardTurns` 3 y `tankGuard` 0.7 (§ "Tanques").
+
 Vale para golpes, daño de efectos, reacciones, daño crudo y estados por
 turno. La ficha del enemigo en combate lo dice: "No cae de un golpe: cada
 golpe le saca como máximo el N% de su vida."
@@ -807,6 +810,56 @@ jugadores), `holdSolo` = 0.
 Ronda: en `porBando` la de siempre; en `velocidad` termina cuando actuaron
 todos los jugadores vivos (`state.acted` / `state.round` también se usan
 en la línea de tiempo; la marca del enemigo es `!aguanta:<id>`).
+
+### Nadie solo en una fase
+
+Un solo personaje no puede tumbar a un enemigo (común, élite, jefe o
+tanque: todos) dentro de su fase si el enemigo tenía al menos `phaseHold`
+(0.5) de su vida máxima cuando esa fase empezó: el golpe letal lo deja en
+1 ("{a} aguanta: {b} solo no lo puede tumbar en una fase"). Bajarlo de la
+mitad está bien; el que lo remata tiene que ser otro personaje (o el
+mismo en su fase siguiente).
+
+- Fase de un personaje: en `porBando` / `porFases` / `porRonda`, su turno
+  dentro de la fase de jugadores (o de la ronda); en `velocidad`, la ronda
+  de § "Aguanta una ronda" (termina cuando actuaron todos los vivos).
+- Se cuenta el daño que ese personaje ya le sacó en la fase
+  (`Combatant.phaseDealt`, viaja como `phd`): vida al empezar la fase =
+  vida actual + lo que le sacó. Cubre golpes, efectos, reacciones,
+  remates y daño crudo del jugador que tiene el turno (no las
+  invocaciones en su propio turno ni el daño por turno del enemigo).
+- Vale en cooperativo y en solitario si queda otro aliado vivo
+  (compañeros incluidos), aunque ya haya actuado (lo remata en la fase
+  siguiente). Sin ningún otro aliado vivo no aplica: nada de peleas
+  trabadas.
+- `phaseHold` = 0 lo apaga (Balance → Límites de combate).
+
+### Tanques
+
+Los comunes pesados son tanques (`EnemyDef.tank`): Gólem, Elemental de
+Escarcha, Caballero Caído, Guardián del Reloj y Gólem de Magma.
+
+- Escudo elemental: resiste un elemento al que el tanque es débil. Elige,
+  entre sus debilidades elementales de familia, la que más usa el grupo
+  (tipos de daño de las habilidades de los jugadores vivos); empate: la
+  debilidad más alta. Sin debilidades elementales no alza escudo (solo
+  defiende). Mientras dura, ese elemento le pega × `wardMult` (0.5) y no
+  cuenta como debilidad (no salta el tope sin debilidad ni da puntos de
+  quiebre de debilidad).
+- En su turno, si no tiene escudo, usa la acción en DEFENDER y alzarlo:
+  recibe × `tankGuard` (0.7) hasta su próximo turno y el escudo dura
+  `wardTurns` (3) turnos propios. Si tiene escudo, ataca normal.
+- Al empezar la pelea, si el tanque no actúa primero (el grupo abre la
+  pelea: `porBando`, golpe primero en la línea de tiempo, o algún jugador
+  antes que él en `porRonda`), ya trae el escudo puesto (`wardTurns`
+  turnos). En `porFases` abre la fase enemiga, así que no. Se calcula con
+  el estado ya armado (`BattleEngine.applyOpeningWards`), así sirve con
+  cualquier regla de iniciativa.
+- El escudo se ve como chip "ESCUDO <elemento>" con tooltip (cuánto
+  resiste y turnos que quedan) y en el log (sube, ya lo trae, cae). La
+  ficha del enemigo dice que es tanque.
+- Viaja en el estado de batalla (`wrd` = [elemento, turnos]); protocolo
+  Mundo 63.
 
 ### Velocidad
 

@@ -151,6 +151,8 @@ import '../../game_engine/serialization/session_json.dart';
 /// `joinP` (IR CON otro jugador, § 2.5).
 /// 64 (v0.41.4): mission gatherings (free_movement.md § 2.1): `gat` in
 /// the snapshot and the `gather` action (join / leave / go / cancel).
+/// Also tank wards and per-phase damage on enemies (`wrd`, `phd`;
+/// combat.md § "Tanques" and § "Nadie solo en una fase").
 const kProtocolVersion = 64;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
