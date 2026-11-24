@@ -657,10 +657,13 @@ class BattleEngine {
           t.state.clock + interval(e) + math.max(0.0, e.nextTurn - before);
       // Distorsión de un Jefe del Abismo: su próximo turno llega antes.
       final haste = _abyssHaste[t];
-      if (haste != null) e.nextTurn -= interval(e) * haste;
+      if (haste != null) {
+        e.nextTurn -= interval(e) * haste;
+        t._hasted.add(e.id);
+      }
     }
     t.endTurn();
-    return t.result;
+    return _roundHaste(state, t, e.id);
   }
 
   /// El jugador [playerId] actúa. `null` si el comando no es válido
@@ -678,7 +681,7 @@ class BattleEngine {
       if (!state.pendingGroup.any((p) => p.id == playerId)) return null;
       final t = _Turn(this, state.copy()..currentId = playerId);
       return t.command(t.state.current!, cmd)
-          ? _roundDelays(state, t.result, playerId)
+          ? _roundDelays(state, _roundHaste(state, t, playerId), playerId)
           : null;
     }
     if (state.ended ||
@@ -690,8 +693,72 @@ class BattleEngine {
     }
     final t = _Turn(this, state.copy());
     return t.command(t.state.current!, cmd)
-        ? _roundDelays(state, t.result, playerId)
+        ? _roundDelays(state, _roundHaste(state, t, playerId), playerId)
         : null;
+  }
+
+  /// Prisa in `porRonda` / `porFases` (turn_modes.md § 4.2). A hasted unit
+  /// that still has to act this round (or phase) acts next: right after
+  /// the actor (after the actor's whole party block in `porRonda`, so the
+  /// block stays intact; a hasted player then joins it). The actor itself,
+  /// or a unit that already acted, opens the next round instead
+  /// (`hasteNext`). The timeline ignores this.
+  BattleStep _roundHaste(BattleState before, _Turn t, String actor) {
+    final s = t.state;
+    if (t._hasted.isEmpty || !(s.porRonda || s.porFases) || s.ended) {
+      return t.result;
+    }
+    final now = <String>[];
+    for (final id in t._hasted) {
+      final c = s.byId(id);
+      if (c == null || !c.alive) continue;
+      if (id == actor || s.acted.contains(id)) {
+        if (!s.hasteNext.contains(id)) s.hasteNext.add(id);
+      } else {
+        now.add(id);
+      }
+    }
+    if (now.isEmpty) return t.result;
+    if (s.porFases) {
+      // Players share their phase already: only enemies and summons queue.
+      final q = [
+        for (final id in now)
+          if (s.byId(id) case final c? when !c.isPlayer || c.isSummon) id
+      ];
+      s.roundOrder
+        ..removeWhere(q.contains)
+        ..insertAll(0, q);
+      return t.result;
+    }
+    // porRonda: keep their speed order (the round order), insert after
+    // the actor and the rest of its block.
+    now.sort(
+        (a, b) => s.roundOrder.indexOf(a).compareTo(s.roundOrder.indexOf(b)));
+    final block = {for (final p in before.pendingGroup) p.id};
+    s.roundOrder.removeWhere(now.contains);
+    var at = -1;
+    for (final (i, id) in s.roundOrder.indexed) {
+      if (id == actor || block.contains(id)) at = i;
+    }
+    s.roundOrder.insertAll(at + 1, now);
+    // A player now at the front of the block starts its turn right away
+    // (two adjacent players form a block and share the coop queue).
+    if (s.groupPhase) {
+      final log = s.logLine, cur = s.currentId;
+      var began = false;
+      for (final p in s.roundBlock) {
+        if (block.contains(p.id) || s.waited.contains(p.id)) continue;
+        t._beginTurn(p);
+        s.currentId = null;
+        began = true;
+        if (s.ended) break;
+      }
+      if (began) {
+        s.logLine = LogLine.join([log, s.logLine]);
+        if (!s.ended) s.currentId = cur;
+      }
+    }
+    return t.result;
   }
 
   /// `porRonda` (turn_modes.md § 4.1): a combatant still to act this round
@@ -1060,6 +1127,10 @@ class _Turn {
   /// (elemental_reactions.md § 9).
   ({Combatant target, int damage, bool reacted})? _hitNow;
 
+  /// Hasted in this step (Prisa and every "next turn sooner" effect):
+  /// reorders `porRonda` / `porFases` (turn_modes.md § 4.2).
+  final _hasted = <String>{};
+
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
   double _rand() => engine._random();
@@ -1135,6 +1206,14 @@ class _Turn {
   /// de `porBando`); cuando todos los jugadores terminaron, actúan las
   /// invocaciones y empieza la ronda siguiente. Los efectos y cargas del
   /// grupo cuentan en sus propios turnos, nunca en la fase enemiga.
+  /// `porFases`: the hasted of [side] (`roundOrder` holds Prisa's queue in
+  /// this mode, turn_modes.md § 4.2), in queue order.
+  List<Combatant> _hastedFirst(List<Combatant> side) => [
+        for (final id in state.roundOrder)
+          for (final c in side)
+            if (c.id == id) c
+      ];
+
   void _nextFases() {
     if (state.round == 0) {
       state
@@ -1144,7 +1223,7 @@ class _Turn {
     }
     if (state.groupPhase) {
       if (state.pendingGroup.isNotEmpty) return;
-      for (final c in state.summons) {
+      for (final c in [..._hastedFirst(state.summons), ...state.summons]) {
         if (c.alive && !state.acted.contains(c.id)) {
           _beginTurn(c);
           return;
@@ -1155,8 +1234,18 @@ class _Turn {
         ..acted.clear()
         ..groupPhase = false
         ..clock += 1;
+      // Prisa on itself / after acting (§ 4.2): first in its phase, in
+      // speed order.
+      final next = [
+        for (final id in state.hasteNext)
+          if (state.byId(id) case final c? when c.alive) c
+      ]..sort((a, b) => engine.interval(a).compareTo(engine.interval(b)));
+      state.hasteNext.clear();
+      state.roundOrder
+        ..clear()
+        ..addAll([for (final c in next) c.id]);
     }
-    for (final c in state.enemies) {
+    for (final c in [..._hastedFirst(state.enemies), ...state.enemies]) {
       if (c.alive && !_passive(c) && !state.acted.contains(c.id)) {
         _beginTurn(c);
         return;
@@ -1198,10 +1287,16 @@ class _Turn {
       ];
       final idx = {for (var i = 0; i < all.length; i++) all[i].id: i};
       final iv = {for (final c in all) c.id: engine.interval(c)};
+      // Prisa on itself / after acting (§ 4.2): opens this round.
+      final first = state.hasteNext.toSet();
       all.sort((a, b) {
+        final h = (first.contains(a.id) ? 0 : 1)
+            .compareTo(first.contains(b.id) ? 0 : 1);
+        if (h != 0) return h;
         final d = iv[a.id]!.compareTo(iv[b.id]!);
         return d != 0 ? d : idx[a.id]!.compareTo(idx[b.id]!);
       });
+      state.hasteNext.clear();
       state
         ..round += 1
         ..acted.clear()
@@ -2086,10 +2181,12 @@ class _Turn {
       if (act == null || act.extraTurn) return;
       final f = math.min(frac, soloCap);
       act.turnFactor = math.min(act.turnFactor, 1 - f);
+      _hasted.add(owner.id);
       _notes.add(_l('next_turn_sooner', {'m': name, 'p': _pct(f)}));
       return;
     }
     for (final (i, q) in allies.indexed) {
+      _hasted.add(q.id);
       // 100% o más: actúa ya (en orden, después del reloj).
       q.nextTurn = frac >= 1
           ? math.min(q.nextTurn, state.clock + 0.01 * (i + 1))
@@ -2330,7 +2427,10 @@ class _Turn {
     }
     if (sk.selfTurn < 1) {
       final act = _act;
-      if (act != null) act.turnFactor = math.min(act.turnFactor, sk.selfTurn);
+      if (act != null) {
+        act.turnFactor = math.min(act.turnFactor, sk.selfTurn);
+        _hasted.add(p.id);
+      }
     }
     if (sk.protect) p.protecting = true;
     // Pulso Magitec: +Pulso a todo el grupo.
@@ -4082,6 +4182,7 @@ class _Turn {
         if (act == null) return;
         events.add(ProcEvent(owner.id, m.id));
         act.turnFactor = math.min(act.turnFactor, 1 - fx.value);
+        _hasted.add(owner.id);
         _notes
             .add(_l('next_turn_sooner', {'m': _mech(m), 'p': _pct(fx.value)}));
       case ProcEffectKind.extraTurn:
@@ -5928,6 +6029,7 @@ class _Turn {
       case SkillKind.haste:
         for (final q in allies.where((q) => q != p)) {
           q.nextTurn = math.max(state.clock + 0.01, q.nextTurn - _iv(q) * 0.5);
+          _hasted.add(q.id);
         }
         if (state.party.length == 1) {
           p.mp += tk.mp;

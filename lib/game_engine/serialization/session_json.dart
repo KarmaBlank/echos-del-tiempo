@@ -603,7 +603,9 @@ class SessionJson {
           'gp': s.groupPhase,
           'act': s.acted.toList(),
           'rd': s.round,
+          if (s.hasteNext.isNotEmpty) 'hn': s.hasteNext,
         },
+        if (s.porFases && s.roundOrder.isNotEmpty) 'ro': s.roundOrder,
         if (s.porRonda) ...{
           'ro': s.roundOrder,
           'wt': s.waited.toList(),
@@ -640,6 +642,7 @@ class SessionJson {
       round: j.intOrNull('rd') ?? 0,
       roundOrder: j['ro'] == null ? null : j.strings('ro'),
       waited: j['wt'] == null ? null : j.strings('wt').toSet(),
+      hasteNext: j['hn'] == null ? null : j.strings('hn'),
     );
   }
 
