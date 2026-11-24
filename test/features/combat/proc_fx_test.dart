@@ -254,7 +254,9 @@ void main() {
         ShieldEvent('p1', 10),
       ], s);
       final tag = _of(fx, FxKind.tag).single;
-      expect(tag.text, 'Égida Eterna · ESCUDO +10');
+      // El chip ESCUDO de la barra del héroe ya muestra el valor.
+      expect(tag.text, 'Égida Eterna');
+      expect(_of(fx, FxKind.txt), isEmpty);
       expect(tag.color, procKeystoneColor);
       expect(tag.delayMs, 0);
       final bubble = _of(fx, FxKind.bubble).single;
@@ -333,8 +335,9 @@ void main() {
     expect(stream.x, 100); // e0, el caído
     expect(stream.tx, isNot(100));
     final arrive = stream.delayMs + ProcTiming.streamMs;
-    final v = _of(fx, FxKind.txt).singleWhere((t) => t.text == 'V+3');
-    expect(v.delayMs, arrive);
+    expect(arrive, greaterThan(stream.delayMs));
+    // V3 ya está en la insignia del nuevo huésped: sin `V+3` flotante.
+    expect(_of(fx, FxKind.txt).where((t) => t.text == 'V+3'), isEmpty);
   });
 
   test('Choque Térmico: vapor y ¡ATURDIDO! con el estado', () {
@@ -451,13 +454,13 @@ void main() {
       ProcEvent('p1', 'guardian'),
     ], s);
     final tags = _of(fx, FxKind.tag).toList();
-    // El escudo propio de p1 va en su cartel; el de p2, sobre p2.
+    // Escudos de héroes: sin valor flotante (lo muestra su chip).
     expect(tags.map((t) => '${t.who}:${t.text}'), [
-      'p1:Mano Sanadora · ESCUDO +2',
+      'p1:Mano Sanadora',
       'p2:Guardián · +8 ULT',
       'p1:Guardián · +8 ULT',
     ]);
-    expect(_txt(fx, 'ESCUDO +2').x, 100);
+    expect(_of(fx, FxKind.txt).where((t) => t.text == 'ESCUDO +2'), isEmpty);
     // p2 tiene su primer cartel en la base; p1 el segundo, escalonado.
     expect(tags.map((t) => t.delayMs), [
       ProcTiming.tagAt(_base, 0),
@@ -513,6 +516,45 @@ void main() {
       expect(scene.activeOn(FxKind.afterimage, 'p2'), isNull);
       scene.advance(BattleFx.afterimageMs.toDouble());
       expect(scene.activeOn(FxKind.afterimage, 'p1'), isNull);
+    });
+  });
+
+  group('flotantes sin duplicar (battle_presentation.md)', () {
+    test('estado ya en la insignia de la etiqueta: sin `C+1` flotante', () {
+      final s = _battle([_hero()], st: {StatusKind.freeze: 1});
+      final fx = _map(const [
+        ActionEvent('p1', BattleActionKind.attack, targetId: 'e0'),
+        DamageEvent('e0', 20),
+        StatusAppliedEvent('e0', StatusKind.freeze, 1),
+      ], s);
+      final letter = statusLetter(StatusKind.freeze);
+      expect(_of(fx, FxKind.txt).where((t) => t.text!.startsWith(letter)),
+          isEmpty);
+      // El número de daño sigue.
+      expect(_of(fx, FxKind.num), hasLength(1));
+    });
+
+    test('debilidad: flota igual (suma información)', () {
+      final s = _battle([_hero()], st: {StatusKind.freeze: 1});
+      final fx = _map(const [
+        StatusAppliedEvent('e0', StatusKind.freeze, 1, weakness: true),
+      ], s);
+      expect(_of(fx, FxKind.txt).single.text,
+          startsWith('${statusLetter(StatusKind.freeze)}+1'));
+    });
+
+    test('sin insignia (el objetivo no tiene el estado): flota', () {
+      final s = _battle([_hero()]);
+      final fx = _map(const [
+        StatusAppliedEvent('e0', StatusKind.freeze, 1),
+      ], s);
+      expect(_of(fx, FxKind.txt), hasLength(1));
+    });
+
+    test('escudo en un enemigo: el valor flota (no tiene chip)', () {
+      final s = _battle([_hero()]);
+      final fx = _map(const [ShieldEvent('e0', 5)], s);
+      expect(_of(fx, FxKind.txt).single.text, 'ESCUDO +5');
     });
   });
 }

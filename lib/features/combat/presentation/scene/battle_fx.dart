@@ -566,6 +566,14 @@ List<BattleFx> mapBattleEvents(
   var segOffset = 0;
 
   bool isPlayer(String id) => state.byId(id)?.isPlayer ?? false;
+
+  /// La etiqueta de [id] ya muestra la insignia de [kind] (stacks > 0;
+  /// los enemigos caídos no tienen etiqueta).
+  bool stackShown(String id, StatusKind kind) {
+    final c = state.byId(id);
+    if (c == null || c.stacks(kind) <= 0) return false;
+    return c.isPlayer || c.alive;
+  }
   Iterable<Combatant> aliveParty() => state.party.where((p) => p.alive);
 
   /// Momento de batalla desde datos (§ 7.4 de game_editor.md): cada
@@ -1162,6 +1170,8 @@ List<BattleFx> mapBattleEvents(
     if (!moment('shield_up', caster: id, dl: dl)) {
       at(FxKind.bubble, id, color: ProcColors.shield, dl: dl);
     }
+    // Héroe: el chip ESCUDO N de su barra ya lo muestra; sin flotante.
+    if (isPlayer(id)) return;
     final lp = lastProc;
     final label = s.t('ui.combat.fx.shield_up', {'n': e.amount});
     // Escudo propio: el valor va en el cartel; si no, sobre el aliado.
@@ -1876,12 +1886,17 @@ List<BattleFx> mapBattleEvents(
             status: statusColor(kind),
             el: elementOfStatus(kind),
             dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
-        txt(
-            targetId,
-            -46,
-            '${statusLetter(kind)}+$stacks${e.weakness ? s.t('ui.combat.fx.weak_tag') : ''}',
-            statusColor(kind),
-            dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
+        // Sin flotante duplicado: la insignia de la etiqueta ya muestra
+        // `letra+stacks`; solo flota si suma algo (débil) o si no hay
+        // insignia (battle_presentation.md § "Flotantes sin duplicar").
+        if (e.weakness || !stackShown(targetId, kind)) {
+          txt(
+              targetId,
+              -46,
+              '${statusLetter(kind)}+$stacks${e.weakness ? s.t('ui.combat.fx.weak_tag') : ''}',
+              statusColor(kind),
+              dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
+        }
       case DelayedEvent(:final targetId):
         final a = action;
         if (!isPlayer(targetId)) {

@@ -160,11 +160,10 @@ void main() {
     expect(nums.map((n) => n.delayMs),
         [script.impactFor(0), script.impactFor(1)]);
     expect(nums.every((n) => n.heavy), isTrue);
-    // Estados aplicados con el mismo retraso que el golpe.
-    final st = _of(fx, FxKind.txt).where((f) => f.text!.startsWith('Q+'));
-    expect(st, hasLength(2));
-    expect(st.map((f) => f.delayMs),
-        [script.impactFor(0), script.impactFor(1)]);
+    // Estados aplicados: la insignia Q de la etiqueta ya los muestra,
+    // sin flotante duplicado.
+    expect(_of(fx, FxKind.txt).where((f) => f.text!.startsWith('Q+')),
+        isEmpty);
     // El lanzador se lanza al descargar.
     expect(_of(fx, FxKind.act).single.delayMs, script.buildMs);
   });
