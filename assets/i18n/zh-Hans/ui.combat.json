@@ -173,6 +173,7 @@
   "ui.combat.duo.formula": "",
   "ui.combat.duo.cost_line": "",
   "ui.combat.duo.need_mp": "",
+  "ui.combat.duo.partner_acted": "",
   "ui.combat.heal.lowest": "",
   "ui.combat.heal.party": "",
   "ui.combat.heal.lowest_desc": "",

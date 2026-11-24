@@ -173,6 +173,7 @@
   "ui.combat.duo.formula": "(máx(ATQ, MAG) tuyo + suyo) × {x} = <b>{sum}</b> a TODOS los enemigos",
   "ui.combat.duo.cost_line": "{n} MP cada uno · {who} pierde su próximo turno",
   "ui.combat.duo.need_mp": "Hace falta {n} MP cada uno.",
+  "ui.combat.duo.partner_acted": "{who} ya actuó en este turno.",
   "ui.combat.heal.lowest": "Al más herido",
   "ui.combat.heal.party": "Al grupo",
   "ui.combat.heal.lowest_desc": "{skill} al aliado con menos vida: +{n} HP",
