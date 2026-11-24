@@ -230,7 +230,13 @@ Pantalla del habitante (en su bioma o en el pueblo, E cerca): cuadro de
 diálogo con HABLAR (§ 12) y el resto de las opciones; en cada ventana,
 relación, etapa (solo si vive en el pueblo y estás ahí, § 12.1) y "Beneficio: …" con el del nivel siguiente; pestañas
 TIENDA, ENCARGOS, PEDIDOS (orden del día y pedido), REGALOS y CASA, cada
-una una grilla con el detalle a la derecha.
+una una grilla con el detalle a la derecha. Desde v0.41.9 la grilla usa
+la casilla de INVENTARIO (44 px, solo ícono y marco de rareza, sin
+texto debajo) con la ficha estándar al pasar el mouse (semillas: tiempo
+de crecimiento, bioma, afinidad, precio); la TIENDA tiene la grilla a la
+izquierda y el detalle (cantidad, total, COMPRAR) a la derecha, con alto
+según la pantalla para entrar sin desbordes en 1280×720 y 1920×1080. Lo
+mismo el PUESTO y el PEDIDO del pescador del bioma.
 
 En el pueblo caminan frente a su casa de día (ida y vuelta por la fila de
 abajo, del reloj de la sala) y de noche están adentro. Un "!" encima si

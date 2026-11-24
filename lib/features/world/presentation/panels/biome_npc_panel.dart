@@ -21,6 +21,7 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import 'seed_text.dart';
 import '../world_strings.dart';
 
 /// Nombre de un producto, cultivo o pez.
@@ -475,39 +476,56 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final qty = _qty.clamp(1, maxQ);
     final owned = f?.seedCount(s.id) ?? 0;
     return SizedBox(
-      height: 340,
+      height: (MediaQuery.sizeOf(context).height * 0.42).clamp(200.0, 340.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Same cell as INVENTARIO; name and data in the hover card.
           Expanded(
-            child: GridView.extent(
-              maxCrossAxisExtent: 300,
-              mainAxisExtent: 64,
-              crossAxisSpacing: DsSpace.sm,
-              mainAxisSpacing: DsSpace.sm,
-              children: [
-                for (final (g, pr) in goods)
-                  DsGoodsCell(
-                    key: ValueKey('npc-seed-${g.id}'),
-                    icon: LifeIcon('semilla_${g.id}', LifeIconKind.semilla,
-                        size: 32),
-                    name: g.seedName,
-                    nameColor: fishRarityColor(g.rarity),
-                    price: _s.t('ui.town.npc.gold_short', {'n': pr}),
-                    owned: f?.seedCount(g.id) ?? 0,
-                    selected: g.id == s.id,
-                    affordable: gold >= pr,
-                    onTap: () => setState(() {
-                      _sel = g.id;
-                      _qty = 1;
-                    }),
-                  ),
-              ],
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: LifeItemGrid.gap,
+                runSpacing: LifeItemGrid.gap,
+                children: [
+                  for (final (g, pr) in goods)
+                    LifeItemCell(
+                      key: ValueKey('npc-seed-${g.id}'),
+                      selected: g.id == s.id,
+                      onTap: () => setState(() {
+                        _sel = g.id;
+                        _qty = 1;
+                      }),
+                      data: LifeItemCellData(
+                        id: 'npc-seed-cell-${g.id}',
+                        icon: LifeIcon('semilla_${g.id}', LifeIconKind.semilla,
+                            size: LifeItemGrid.iconSize),
+                        border: fishRarityColor(g.rarity),
+                        search: g.seedText,
+                        count: (f?.seedCount(g.id) ?? 0) > 0
+                            ? f!.seedCount(g.id)
+                            : null,
+                        detail: LifeItemDetail(
+                          name: g.seedText,
+                          nameColor: fishRarityColor(g.rarity),
+                          tags: [
+                            (_s.t('ui.town.npc.seed'), DsColors.textSecondary),
+                            (g.rarity.text.toUpperCase(),
+                                fishRarityColor(g.rarity)),
+                          ],
+                          lines: [
+                            ...seedInfoLines(context, g),
+                            _s.t('ui.town.npc.gold_each', {'n': pr}),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           SizedBox(width: DsSpace.md),
           Container(
-            width: 320,
+            width: LifeItemGrid.detailWidth,
             padding: EdgeInsets.all(DsSpace.md),
             decoration: BoxDecoration(
                 color: DsColors.surfaceSunken,

@@ -84,9 +84,11 @@ class LifeItemGroup {
   final Key? headerKey;
 }
 
-/// Organismo: grilla de casillas de oficio (pesca, cultivo) estilo
-/// inventario, con el detalle de la elegida a la derecha (o arriba si la
-/// columna es angosta). Lo usan el AGROPECUARIO y PESCA Y CULTIVO.
+/// Organismo: grilla de casillas de oficio (pesca, cultivo) con la misma
+/// casilla que INVENTARIO (44 px, solo ícono y marco de rareza, ficha al
+/// pasar el mouse) y el detalle de la elegida a la derecha. Varios grupos
+/// con título se eligen con filtros arriba (nunca secciones apiladas).
+/// Lo usan el AGROPECUARIO, PESCA Y CULTIVO y los menús de los NPC.
 class LifeItemGrid extends StatefulWidget {
   const LifeItemGrid({
     super.key,
@@ -98,18 +100,22 @@ class LifeItemGrid extends StatefulWidget {
 
   final List<LifeItemGroup> groups;
 
-  /// Texto cuando no hay casillas.
+  /// Text shown when there are no cells.
   final String empty;
   final Key? emptyKey;
 
-  /// Fila extra arriba de la grilla (p. ej. el granero).
+  /// Extra row above the grid (e.g. the barn).
   final Widget? extra;
 
-  /// Casilla, ícono y ancho del detalle.
-  static const cell = 48.0, iconSize = 32.0, detailWidth = 280.0;
+  /// Cell (same as INVENTARIO), icon, gap and max detail width.
+  static const cell = 44.0, iconSize = 32.0, gap = 4.0, detailWidth = 280.0;
 
-  /// Desde este ancho el detalle va al costado.
-  static const wideFrom = 560.0;
+  /// From this width on the detail goes to the right.
+  static const wideFrom = 420.0;
+
+  /// Detail column width for a given available width.
+  static double detailFor(double maxWidth) =>
+      (maxWidth * 0.45).clamp(180.0, detailWidth);
 
   @override
   State<LifeItemGrid> createState() => _LifeItemGridState();
@@ -118,9 +124,21 @@ class LifeItemGrid extends StatefulWidget {
 class _LifeItemGridState extends State<LifeItemGrid> {
   String? _sel;
 
+  /// Title of the group filter (`null`: all).
+  String? _group;
+
   @override
   Widget build(BuildContext context) {
-    final all = [for (final g in widget.groups) ...g.cells];
+    final titled = [
+      for (final g in widget.groups)
+        if (g.title != null && g.cells.isNotEmpty) g
+    ];
+    final filters = titled.length > 1;
+    final group =
+        filters ? titled.where((g) => g.title == _group).firstOrNull : null;
+    final all = group != null
+        ? group.cells
+        : [for (final g in widget.groups) ...g.cells];
     final sel = all.where((c) => c.id == _sel).firstOrNull ?? all.firstOrNull;
     final grid = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -129,25 +147,40 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           widget.extra!,
           SizedBox(height: DsSpace.xs)
         ],
+        if (filters) ...[
+          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            DsButton(context.t('ui.town.trader.kind.all'),
+                key: const ValueKey('life-group-all'),
+                size: DsButtonSize.compact,
+                selected: group == null,
+                onPressed: () => setState(() => _group = null)),
+            for (final g in titled)
+              DsButton(g.title!,
+                  key: g.headerKey,
+                  size: DsButtonSize.compact,
+                  selected: group == g,
+                  onPressed: () => setState(() => _group = g.title)),
+          ]),
+          SizedBox(height: DsSpace.xs),
+        ],
         if (all.isEmpty)
           Padding(
             padding: EdgeInsets.all(DsSpace.sm),
             child: Text(widget.empty,
                 key: widget.emptyKey, style: DsText.detail()),
+          )
+        else
+          Wrap(
+            spacing: LifeItemGrid.gap,
+            runSpacing: LifeItemGrid.gap,
+            children: [
+              for (final c in all)
+                LifeItemCell(
+                    data: c,
+                    selected: c.id == sel?.id,
+                    onTap: () => setState(() => _sel = c.id)),
+            ],
           ),
-        for (final g in widget.groups)
-          if (g.cells.isNotEmpty) ...[
-            if (g.title != null)
-              DsSectionHeader(g.title!,
-                  key: g.headerKey,
-                  trailing: DsBadge(g.cells.length.toString(), neutral: true)),
-            Wrap(
-              spacing: DsSpace.xs,
-              runSpacing: DsSpace.xs,
-              children: [for (final c in g.cells) _cell(c, c.id == sel?.id)],
-            ),
-            SizedBox(height: DsSpace.sm),
-          ],
       ],
     );
     final detail = sel == null ? null : _detail(sel);
@@ -159,7 +192,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           if (detail != null) ...[
             SizedBox(width: DsSpace.sm),
             SizedBox(
-                width: LifeItemGrid.detailWidth,
+                width: LifeItemGrid.detailFor(box.maxWidth),
                 child: SingleChildScrollView(child: detail)),
           ],
         ]);
@@ -174,8 +207,88 @@ class _LifeItemGridState extends State<LifeItemGrid> {
     });
   }
 
-  Widget _cell(LifeItemCellData c, bool selected) {
+  Widget _detail(LifeItemCellData c) {
+    final d = c.detail;
+    return DsCard(
+      key: const ValueKey('life-detail'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            c.icon,
+            SizedBox(width: DsSpace.sm),
+            Expanded(
+              child: Text(d.name,
+                  key: const ValueKey('life-detail-name'),
+                  style: DsText.subtitle(d.nameColor)),
+            ),
+          ]),
+          if (d.tags.isNotEmpty) ...[
+            SizedBox(height: DsSpace.xs),
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              for (final (t, col) in d.tags) DsTag(t, color: col),
+            ]),
+          ],
+          SizedBox(height: DsSpace.xs),
+          for (final l in d.lines) Text(l, style: DsText.body()),
+          ...lifeCompareLines(context, d),
+          if (d.description != null) ...[
+            SizedBox(height: DsSpace.xs),
+            Text(d.description!, style: DsText.detail()),
+          ],
+          if (d.actions.isNotEmpty) ...[
+            SizedBox(height: DsSpace.sm),
+            Wrap(
+                spacing: DsSpace.xs,
+                runSpacing: DsSpace.xs,
+                children: d.actions),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// "vs equipped" lines of a detail (empty when not applicable).
+List<Widget> lifeCompareLines(BuildContext context, LifeItemDetail d) {
+  final cmp = d.compare;
+  if (cmp == null || cmp.isEmpty) return const [];
+  return [
+    SizedBox(height: DsSpace.xs),
+    Text(context.t('ui.town.trades.vs_equipped'), style: DsText.detail()),
+    for (final (t, better) in cmp)
+      Text(t, style: DsText.body(better ? DsColors.success : DsColors.danger)),
+  ];
+}
+
+/// Standard hover card of a trade cell: name, tags, data lines.
+Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) =>
+    DsTooltipCard(
+      title: d.name,
+      titleColor: d.nameColor,
+      tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
+      children: [
+        for (final l in d.lines) Text(l, style: DsText.body()),
+        ...lifeCompareLines(context, d),
+      ],
+    );
+
+/// Molécula: casilla de oficio igual a la de INVENTARIO (44 px, ícono,
+/// marco de rareza, cantidad abajo y E de equipada), sin texto debajo;
+/// el nombre y los datos van en la ficha estándar al pasar el mouse.
+class LifeItemCell extends StatelessWidget {
+  const LifeItemCell(
+      {super.key, required this.data, this.selected = false, this.onTap});
+
+  final LifeItemCellData data;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
     const s = LifeItemGrid.cell;
+    final c = data;
     final fixed = RetroType.fixedScaler(context);
     final box = Container(
       width: s,
@@ -216,90 +329,14 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           ),
       ]),
     );
-    final tipped = c.detail.hoverTip ? DsTooltip(card: _tip(c), child: box) : box;
     return GestureDetector(
       key: ValueKey(c.id),
-      onTap: () => setState(() => _sel = c.id),
+      onTap: onTap,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        child: SizedBox(
-          width: s + DsSpace.md,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            tipped,
-            if (c.caption != null)
-              Text(c.caption!,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  style: DsText.detail()),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _compare(LifeItemDetail d) {
-    final cmp = d.compare;
-    if (cmp == null || cmp.isEmpty) return const [];
-    return [
-      SizedBox(height: DsSpace.xs),
-      Text(context.t('ui.town.trades.vs_equipped'), style: DsText.detail()),
-      for (final (t, better) in cmp)
-        Text(t,
-            style: DsText.body(better ? DsColors.success : DsColors.danger)),
-    ];
-  }
-
-  Widget _tip(LifeItemCellData c) {
-    final d = c.detail;
-    return DsTooltipCard(
-      title: d.name,
-      titleColor: d.nameColor,
-      tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
-      children: [
-        for (final l in d.lines) Text(l, style: DsText.body()),
-        ..._compare(d),
-      ],
-    );
-  }
-
-  Widget _detail(LifeItemCellData c) {
-    final d = c.detail;
-    return DsCard(
-      key: const ValueKey('life-detail'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            c.icon,
-            SizedBox(width: DsSpace.sm),
-            Expanded(
-              child: Text(d.name,
-                  key: const ValueKey('life-detail-name'),
-                  style: DsText.subtitle(d.nameColor)),
-            ),
-          ]),
-          if (d.tags.isNotEmpty) ...[
-            SizedBox(height: DsSpace.xs),
-            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              for (final (t, col) in d.tags) DsTag(t, color: col),
-            ]),
-          ],
-          SizedBox(height: DsSpace.xs),
-          for (final l in d.lines) Text(l, style: DsText.body()),
-          ..._compare(d),
-          if (d.description != null) ...[
-            SizedBox(height: DsSpace.xs),
-            Text(d.description!, style: DsText.detail()),
-          ],
-          if (d.actions.isNotEmpty) ...[
-            SizedBox(height: DsSpace.sm),
-            Wrap(
-                spacing: DsSpace.xs,
-                runSpacing: DsSpace.xs,
-                children: d.actions),
-          ],
-        ],
+        child: DsTooltip(
+            card: lifeTooltipCard(context, c.detail),
+            child: KeyedSubtree(key: ValueKey('${c.id}-tip'), child: box)),
       ),
     );
   }
