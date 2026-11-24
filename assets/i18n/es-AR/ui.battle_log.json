@@ -321,5 +321,6 @@
   "ui.battle_log.mod.tank_guard": "DEFENSA",
   "ui.battle_log.silence_cast": "{a} silencia a {b}: no puede usar habilidades con MP ({n, plural, one{# turno} other{# turnos}})",
   "ui.battle_log.silence_ends": "{a} ya no está silenciado",
-  "ui.battle_log.player_break": "¡{a} QUEBRADO! Pierde su próximo turno y recibe +{p}% de daño"
+  "ui.battle_log.player_break": "¡{a} QUEBRADO! Pierde su próximo turno y recibe +{p}% de daño",
+  "ui.battle_log.mod.meal": "COMIDA"
 }

@@ -1,4 +1,8 @@
+import '../data/cooking_catalog.dart';
 import '../data/farming_catalog.dart';
+import 'meal_buff.dart';
+
+export 'meal_buff.dart';
 
 /// Cultivo del personaje (farming.md § 3): XP, azadas y regaderas, la
 /// semilla elegida, semillas, cosechas (por calidad), abono y los pity.
@@ -18,7 +22,18 @@ class FarmSkills {
     this.pity = 0,
     this.dry = 0,
     List<String> tree = const [],
-  })  : tree = List.unmodifiable(tree.toSet()),
+    Map<String, int> meals = const {},
+    Map<String, int> mealLog = const {},
+    this.meal,
+  })  : meals = Map.unmodifiable({
+          for (final e in meals.entries)
+            if (e.value > 0 && parseMealKey(e.key) != null) e.key: e.value,
+        }),
+        mealLog = Map.unmodifiable({
+          for (final e in mealLog.entries)
+            if (kMeals.containsKey(e.key)) e.key: e.value.clamp(0, 3),
+        }),
+        tree = List.unmodifiable(tree.toSet()),
         hoes = List.unmodifiable({kStarterHoe, ...hoes.where(_isHoe)}),
         cans = List.unmodifiable({kStarterCan, ...cans.where(_isCan)}),
         hoe = hoe != null && _isHoe(hoe) && hoes.contains(hoe) ? hoe : kStarterHoe,
@@ -95,6 +110,16 @@ class FarmSkills {
   /// Nodos tomados del árbol de Cultivo (life_skill_trees.md).
   final List<String> tree;
 
+  /// Cooked meals (farming.md § 17): `mealKey(meal, quality)` → count.
+  final Map<String, int> meals;
+  int mealCount(String key) => meals[key] ?? 0;
+
+  /// Cocina collection: meal id → best quality ever cooked.
+  final Map<String, int> mealLog;
+
+  /// The meal eaten and still active (`null` = none).
+  final MealBuff? meal;
+
   int seedCount(String id) => seeds[id] ?? 0;
   int cropCount(String key) => crops[key] ?? 0;
   int get cropTotal => crops.values.fold(0, (a, b) => a + b);
@@ -123,6 +148,9 @@ class FarmSkills {
     int? pity,
     int? dry,
     List<String>? tree,
+    Map<String, int>? meals,
+    Map<String, int>? mealLog,
+    Object? meal = _keep,
   }) =>
       FarmSkills(
           xp: xp ?? this.xp,
@@ -137,7 +165,12 @@ class FarmSkills {
           ferts: ferts ?? this.ferts,
           pity: pity ?? this.pity,
           dry: dry ?? this.dry,
-          tree: tree ?? this.tree);
+          tree: tree ?? this.tree,
+          meals: meals ?? this.meals,
+          mealLog: mealLog ?? this.mealLog,
+          meal: identical(meal, _keep) ? this.meal : meal as MealBuff?);
+
+  static const _keep = Object();
 
   FarmSkills addSeed(String id, [int n = 1]) =>
       copyWith(seeds: {...seeds, id: seedCount(id) + n});
@@ -158,6 +191,9 @@ class FarmSkills {
         if (pity > 0) 'pity': pity,
         if (dry > 0) 'dry': dry,
         if (tree.isNotEmpty) 'tree': tree,
+        if (meals.isNotEmpty) 'ml': meals,
+        if (mealLog.isNotEmpty) 'mlg': mealLog,
+        if (meal != null) 'mb': meal!.toJson(),
       };
 
   /// Tolerante; sin `farm` (saves de antes de v0.23.0) → [initial].
@@ -183,6 +219,9 @@ class FarmSkills {
       pity: n(raw['pity']),
       dry: n(raw['dry']),
       tree: l(raw['tree']),
+      meals: m(raw['ml']),
+      mealLog: m(raw['mlg']),
+      meal: MealBuff.fromJson(raw['mb']),
     );
   }
 
@@ -204,7 +243,10 @@ class FarmSkills {
       other.cans.join(',') == cans.join(',') &&
       _mapEq(other.seeds, seeds) &&
       _mapEq(other.crops, crops) &&
-      _mapEq(other.cropLog, cropLog);
+      _mapEq(other.cropLog, cropLog) &&
+      _mapEq(other.meals, meals) &&
+      _mapEq(other.mealLog, mealLog) &&
+      other.meal == meal;
 
   @override
   int get hashCode => Object.hash(xp, hoe, can, seeds.length, crops.length);

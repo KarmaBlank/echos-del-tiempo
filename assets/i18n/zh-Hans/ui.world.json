@@ -276,5 +276,6 @@
   "ui.world.clock.season_left": "{season} · 还剩 {n} 天",
   "ui.world.tools.bait": "鱼饵 [F]",
   "ui.world.tools.no_bait_tip": "没有鱼饵：购买或制作。",
-  "ui.world.tools.bait_tip_more": "{name} · 点击或 F：切换鱼饵"
+  "ui.world.tools.bait_tip_more": "{name} · 点击或 F：切换鱼饵",
+  "ui.world.hud.meal": "料理：{meal}（{n}）"
 }

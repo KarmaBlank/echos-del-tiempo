@@ -193,7 +193,8 @@ extension _FarmingOp on _Op {
                     !LifeTimeRules.cropInSeason(
                         e.value.seed!, WeatherRules.season(t.sky.day))
                 ? e.value
-                : FarmingRules.missionGrow(e.value),
+                : FarmingRules.missionGrow(e.value,
+                    season: WeatherRules.season(t.sky.day)),
         }));
   }
 
@@ -506,13 +507,32 @@ extension _FarmingOp on _Op {
         }
         say('${p.name} preparó ${kBaits[id]!.name}.');
         return true;
+      case FarmShopOp.cook:
+        if (id == null || a.n < 0 || a.n >= CropQuality.values.length) {
+          return false;
+        }
+        if (!_profileChange(
+            p, CookingRules.cook(prof, id, CropQuality.values[a.n]))) {
+          return false;
+        }
+        say('${p.name} cocinó ${kMeals[id]!.name}.');
+        return true;
+      case FarmShopOp.eat:
+        if (id == null || !_profileChange(p, CookingRules.eat(prof, id))) {
+          return false;
+        }
+        refresh(p);
+        say('${p.name} comió ${parseMealKey(id)!.$1.name}.');
+        return true;
       case FarmShopOp.buyAbono:
         return id != null &&
             _profileChange(p, FarmingRules.buyFert(prof, id, a.n));
       case FarmShopOp.sell || FarmShopOp.sellAll:
         if (a.op == FarmShopOp.sell && id == null) return false;
         final r = FarmingRules.sell(prof,
-            key: a.op == FarmShopOp.sell ? id : null, materials: a.materials);
+            key: a.op == FarmShopOp.sell ? id : null,
+            materials: a.materials,
+            season: WeatherRules.season(s.town.sky.day));
         if (r == null) return false;
         _profileChange(p, r.profile);
         say('${p.name} vendió ${r.sold} cosecha${r.sold == 1 ? '' : 's'}'

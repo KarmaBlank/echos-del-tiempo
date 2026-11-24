@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'cooking_rules.dart';
 import '../data/tuning_catalog.dart';
 import 'revive_rules.dart';
 import '../data/ascension_catalog.dart';
@@ -2724,6 +2725,19 @@ class _Turn {
     final weakHit = familyFactors(family, hitTags)
         .any((f) => f.weak && !(wardHit && f.tag == warded));
     mult *= affinity;
+    // Comida del jugador (farming.md § 17): resiste un elemento.
+    if (e.isPlayer && e.build?.meal != null) {
+      var res = 0.0;
+      for (final tg in hitTags) {
+        if (tg.isElement) {
+          res = math.max(res, CookingRules.resist(e.build!.meal, tg));
+        }
+      }
+      if (res > 0) {
+        mult *= 1 - res;
+        mods.add(_mod(1 - res, _l('mod.meal')));
+      }
+    }
     if (wardHit) {
       final w = BattleEngine.wardMult;
       mult *= w;

@@ -357,5 +357,6 @@
   "ui.combat.chip.pbroken.tip": "",
   "ui.combat.hud.break_bar": "",
   "ui.combat.ult.silenced": "",
-  "ui.combat.duo.silenced": ""
+  "ui.combat.duo.silenced": "",
+  "ui.combat.chip.meal.short": "料理"
 }

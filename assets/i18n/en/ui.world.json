@@ -237,5 +237,6 @@
   "ui.world.clock.season_left": "{season} · {n, plural, one{1 day left} other{{n} days left}}",
   "ui.world.tools.bait": "Bait [F]",
   "ui.world.tools.no_bait_tip": "No bait: buy or craft some.",
-  "ui.world.tools.bait_tip_more": "{name} · click or F: next bait"
+  "ui.world.tools.bait_tip_more": "{name} · click or F: next bait",
+  "ui.world.hud.meal": "Meal: {meal} ({n})"
 }

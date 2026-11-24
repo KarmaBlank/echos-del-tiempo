@@ -165,19 +165,37 @@ abstract final class LifeTimeRules {
   static bool cropInSeason(String id, Season season) =>
       cropSeasons(id).contains(season);
 
+  /// A seasonal crop (not one of all year) in its season (farming.md
+  /// § 16): sells × `seasonPriceMult` and grows × `seasonGrowMult`.
+  static bool cropSeasonal(String id, Season season) {
+    final s = cropSeasons(id);
+    return s.length < Season.values.length && s.contains(season);
+  }
+
+  /// × of growth from the season bonus (1 when it doesn't apply).
+  static double seasonGrow(String id, Season season) =>
+      cropSeasonal(id, season) ? tf.d('seasonGrowMult') : 1;
+
+  /// × of price from the season bonus (1 when it doesn't apply).
+  static double seasonPrice(String id, Season season) =>
+      cropSeasonal(id, season) ? tf.d('seasonPriceMult') : 1;
+
   /// × de crecimiento ahora: + `affinityBonus` en su franja, −
   /// `affinityMalus` fuera (parejo = 1). Fuera de estación, 0: se frena
   /// (no muere) hasta que vuelva su estación (farming.md § 15).
   static double cropGrowth(String id, SkyState s) {
-    if (!cropInSeason(id, WeatherRules.season(s.day))) return 0;
+    final season = WeatherRules.season(s.day);
+    if (!cropInSeason(id, season)) return 0;
+    final sg = seasonGrow(id, season);
     final a = cropAffinity(id);
-    if (a == CropAffinity.siempre) return 1;
+    if (a == CropAffinity.siempre) return sg;
     final inWin = switch (a) {
       CropAffinity.dia => !SkyRules.isNight(s),
       CropAffinity.noche => SkyRules.isNight(s),
       CropAffinity.lluvia => SkyRules.now(s).wet,
       CropAffinity.siempre => true,
     };
-    return inWin ? 1 + tf.d('affinityBonus') : 1 - tf.d('affinityMalus');
+    return sg *
+        (inWin ? 1 + tf.d('affinityBonus') : 1 - tf.d('affinityMalus'));
   }
 }

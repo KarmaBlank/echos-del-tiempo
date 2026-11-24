@@ -11,6 +11,8 @@ import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../domain/town_names.dart';
 import 'bait_text.dart';
+import '../../../../game_engine/rules/life_time_rules.dart';
+import '../../../../game_engine/rules/weather_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
@@ -580,7 +582,7 @@ class _TraderPanelState extends State<TraderPanel> {
               search: crop.text,
               count: n,
               caption:
-                  context.t('ui.town.trader.price_short', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)}),
+                  context.t('ui.town.trader.price_short', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality, WeatherRules.season(c.town.sky.day))}),
               detail: LifeItemDetail(
                 name: crop.text,
                 nameColor: fishRarityColor(crop.rarity),
@@ -593,7 +595,13 @@ class _TraderPanelState extends State<TraderPanel> {
                 ],
                 lines: [
                   context.t('ui.town.trader.have', {'n': n}),
-                  context.t('ui.town.trader.worth_each', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)}),
+                  context.t('ui.town.trader.worth_each', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality, WeatherRules.season(c.town.sky.day))}),
+                  if (LifeTimeRules.cropSeasonal(
+                      crop.id, WeatherRules.season(c.town.sky.day)))
+                    context.t('ui.town.trader.in_season', {
+                      'n': ((FarmingRules.t.d('seasonPriceMult') - 1) * 100)
+                          .round()
+                    }),
                 ],
                 actions: [
                   if (crop.rarity == FishRarity.legendario)

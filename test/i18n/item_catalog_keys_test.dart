@@ -6,6 +6,7 @@ import 'package:echos_del_tiempo/core/i18n/locale_id.dart';
 import 'package:echos_del_tiempo/core/i18n/string_tables.dart';
 import 'package:echos_del_tiempo/game_engine/data/affixes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/bait_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart' show kMeals;
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
@@ -53,6 +54,10 @@ Map<String, Map<String, String>> catalogSource() {
       ItemKeys.cropName(c.id): c.name,
       ItemKeys.seedName(c.id): c.seedName,
       if (c.lore.isNotEmpty) ItemKeys.cropLore(c.id): c.lore,
+    },
+    for (final m in kMeals.values) ...{
+      ItemKeys.mealName(m.id): m.name,
+      if (m.lore.isNotEmpty) ItemKeys.mealLore(m.id): m.lore,
     },
     for (final f in kFertilizers.values) ItemKeys.fertName(f.id): f.name,
     for (final b in kBaits.values) baitNameKey(b.id): b.name,
