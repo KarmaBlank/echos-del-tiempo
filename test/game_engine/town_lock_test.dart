@@ -26,6 +26,17 @@ void main() {
     expect(s.townEditor, isNull);
   });
 
+  test('el pescador mira al tile de agua pegado a su lugar', () {
+    const t = TownState();
+    final lake = t.builds.firstWhere((b) => b.id == 'l0');
+    for (var i = 0; i < 4; i++) {
+      final (x, y) = TownRules.fisherSpot(t, lake, i);
+      final (dx, dy) = TownRules.fisherFacing(t, lake, i);
+      expect(dx.abs() + dy.abs(), 1);
+      expect(lake.contains(x + dx, y + dy), isTrue);
+    }
+  });
+
   test('el pescador queda en la orilla pegado al agua, cerca del cartel', () {
     const t = TownState();
     final lake = t.builds.firstWhere((b) => b.id == 'l0');

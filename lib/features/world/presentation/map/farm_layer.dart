@@ -14,6 +14,7 @@ import '../../../../game_engine/rules/sky_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import 'fishing_layer.dart';
 import 'map_themes.dart';
 
 class _Pop {
@@ -392,7 +393,25 @@ class MapFarmLayer {
         final bob = pos.work || stuck
             ? 0.0
             : (math.sin(t / 120) * 1).roundToDouble();
-        img(id, pos.x, pos.y + 6 + bob);
+        if (farm) {
+          img(id, pos.x, pos.y + 6 + bob);
+        } else {
+          // Pescador (farming.md § 8.1): mira al agua y, trabajando, tira
+          // la línea con la boya en el tile de agua.
+          final dir = TownRules.fisherFacing(town, b, i);
+          final flip = dir.$1 < 0;
+          if (flip) {
+            c.save();
+            c.translate(pos.x * 2, 0);
+            c.scale(-1, 1);
+          }
+          img(id, pos.x, pos.y + 6 + bob);
+          if (flip) c.restore();
+          if (pos.work) {
+            MapFishingLayer.drawHelperLine(c, pos.x, pos.y, dir,
+                (pos.x + dir.$1 * ts, pos.y + dir.$2 * ts), t);
+          }
+        }
         // Bloqueado (farming.md § 8.6): quieto y con el "!" dorado.
         if (stuck) drawNpcMark(text, NpcMark.news, pos.x, pos.y - 22, t);
       }

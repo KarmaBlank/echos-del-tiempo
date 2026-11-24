@@ -316,7 +316,12 @@ herramienta de área trabaja menos tiles.
 - NPC visibles con sprite propio (`items.vida_npc_granjero[_trabajo]`,
   `vida_npc_pescador[_trabajo]`, `tool/export_life_icons.dart`). El
   granjero va de parcela en parcela de su área (trabaja 60 % del paso,
-  camina el resto); el pescador tira la línea en su lugar. La posición
+  camina el resto); el pescador tira la línea en su lugar: mira al tile
+  de agua pegado a su lugar (`fisherFacing`: derecha/izquierda, después
+  abajo, después arriba; el sprite se espeja si mira a la izquierda) y,
+  trabajando, se dibujan caña, línea y boya en ese tile, con un vaivén
+  suave según el tiempo de animación (`MapFishingLayer.drawHelperLine`).
+  Se deriva en cada cliente; no viaja por la red. La posición
   sale del reloj de la sala (igual en todos). No son sólidos y nunca
   tapan la huerta: E / clic en una parcela sigue siendo del jugador.
 - Mouse encima de un ayudante (jugando o editando): contorno de su área

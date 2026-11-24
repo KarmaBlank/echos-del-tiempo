@@ -166,6 +166,32 @@ class MapFishingLayer {
     c.drawLine(tip, tip.translate(0, 6), Paint()..color = FishingPalette.line);
   }
 
+  /// Caña, línea y boya de un pescador ayudante (farming.md § 8.1) en
+  /// (px, py) tirando hacia [dir] (paso al tile de agua). La boya cae en
+  /// el tile de agua [bobber] (px del mapa) y flota suave según [t] (ms).
+  static void drawHelperLine(Canvas c, double px, double py, (int, int) dir,
+      (double, double) bobber, double t) {
+    final face = dir.$1 < 0 ? -1.0 : 1.0;
+    final hand = Offset(px + face * 4, py - 6);
+    final tip = dir.$1 == 0
+        ? Offset(px + face * 5, py - 19 + dir.$2 * 4)
+        : Offset(px + face * 11, py - 19);
+    c.drawLine(
+        hand,
+        tip,
+        Paint()
+          ..color = FishingPalette.rod
+          ..strokeWidth = 1.5);
+    final bo = Offset(bobber.$1, bobber.$2 + helperBob(t));
+    c.drawLine(tip, bo, Paint()..color = FishingPalette.line);
+    c.drawCircle(bo, 2, Paint()..color = FishingPalette.bobber);
+    c.drawCircle(
+        bo.translate(0, -1.5), 1, Paint()..color = FishingPalette.foam);
+  }
+
+  /// Vaivén de la boya del ayudante en px según [t] (ms).
+  static double helperBob(double t) => math.sin(t / 400) * 1.2;
+
   /// Caña, línea y boya de un jugador en (px, py) mirando [dir]. [mine]:
   /// la pesca local (medidor, barra y boya en vuelo).
   void drawAngler(
