@@ -276,6 +276,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     if (_spokenTo != n.id) {
       _spokenTo = n.id;
       _spoken = _line(c, n, r, p);
+      // De noche, fuera de su casa: dice por qué salió (§ 10.1.1).
+      if (home && SkyRules.isNight(town.sky)) {
+        if (ResidentRules.nightOuting(town, n.id) case final o?) {
+          _spoken = _s.t(o.key);
+        }
+      }
       _talk = NpcTalk(n.id);
       _sendInvite();
       // Recién le asignaron casa: agradece (frase según la hora).
@@ -338,6 +344,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                 ? _s.t('ui.town.npc.invite_accept')
                 : talk.text(_spoken ?? c.npcLine(n)),
             onCancel: () => _close(c, n),
+            skipLabel: _s.t('ui.town.npc.skip'),
             choices: _accepted
                 ? [
                     DsChoice(_s.t('ui.town.npc.bye'),

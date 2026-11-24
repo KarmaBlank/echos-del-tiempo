@@ -314,10 +314,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     // edificio, pedidos y beneficio permanente de cada rol (base + paso
     // por nivel).
     'resInviteRep': 3,
-    // v0.42.6: mudanza (px/s al salir caminando del bioma) y chance por
-    // noche de que un trasnochador salga a pasear.
+    // v0.42.6: mudanza (px/s al salir caminando del bioma). Salidas
+    // nocturnas (§ 10.1.1): chance por noche de cada habitante (la base
+    // para uno sin clave propia; Oren, el vidente, sale más).
     'resWalkSpeed': 40,
-    'resNightOwlChance': 0.25,
+    'resNightOutBase': 0.12,
+    'resNightOutIlda': 0.12,
+    'resNightOutVelda': 0.12,
+    'resNightOutKael': 0.12,
+    'resNightOutBrann': 0.12,
+    'resNightOutOren': 0.3,
     'resSettledRep': 5,
     'resRootedRep': 12,
     'resMaxTier': 5,

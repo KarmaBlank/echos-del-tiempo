@@ -98,6 +98,12 @@ void main() {
     expect(find.byKey(const ValueKey('town-edit-done')), findsOneWidget);
     // El HUD normal se oculta en la edición (town_editor.md § 1).
     expect(find.byType(WorldHud), findsNothing);
+    // Entra con la ventana CONSTRUIR abierta; Esc la cierra (§ 1.2).
+    expect(find.byKey(const ValueKey('town-build-window')), findsOneWidget);
+    expect(c.handleKey(LogicalKeyboardKey.escape), isTrue);
+    await h.frames(2);
+    expect(c.editingTown, isTrue);
+    expect(find.byKey(const ValueKey('town-build-window')), findsNothing);
     final me = (c.local.x, c.local.y);
 
     final game = tester

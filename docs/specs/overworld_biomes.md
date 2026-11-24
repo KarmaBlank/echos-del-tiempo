@@ -282,13 +282,66 @@ pedidos y órdenes.
   `ui.town.npc.house_thanks_night` (**BORRADOR**, a revisar por el
   dueño).
 - **Rutina.** De día camina frente a su casa; de noche entra (no se ve).
-  Trasnochadores (`BiomeNpcDef.nightOwl`, hoy Oren): cada noche, con
-  `resNightOwlChance` (determinista por habitante y día del mundo), sale
-  a pasear frente a su casa.
+  Salidas nocturnas: cualquier habitante con casa puede salir de noche
+  (ver § 10.1.1 "Salidas nocturnas").
 - **Casa con su oficio.** Al lado de la puerta de una CASA habitada se
   dibuja el prop de su campamento (§ 9.2: canasta, pergaminos, yunque…).
 - Textos nuevos de la edición (`ui.town.edit.house_*`, `hint_house`) y
   `ui.town.npc.assign_house` / `no_free_house`: **BORRADOR**.
+
+#### Salidas nocturnas (v0.42.7)
+- **Quién.** Todo habitante con casa. Cada uno tiene su chance por noche
+  en el tuning del pueblo: `resNightOut<Id>` (`resNightOutIlda`,
+  `resNightOutVelda`, `resNightOutKael`, `resNightOutBrann`: 0,12;
+  `resNightOutOren`: 0,3, el vidente sale más). Uno nuevo sin clave
+  propia usa `resNightOutBase` (0,12).
+- **Determinista.** `ResidentRules.nightOuting(town, npc)` tira con una
+  semilla de (id del habitante, día del mundo): primero si sale, después
+  cuál de sus motivos (`BiomeNpcDef.nightOutings`). Todos los jugadores
+  ven lo mismo; no hace falta tocar el protocolo.
+- **Adónde va.** Cada motivo (`NightOuting`) apunta a un lugar del
+  pueblo (`TownSpot`) o a la HUERTA más cercana a su casa; si el lugar
+  no existe en ese pueblo, a la fuente rúnica. Se queda frente a él, yendo
+  y viniendo ±12 px (`ResidentRules.nightTarget`).
+- **Al hablarle** de noche mientras está afuera, dice la frase de su
+  motivo (en vez del saludo del día). El agradecimiento por la casa
+  recién asignada tiene prioridad.
+
+| Habitante | Motivo (clave `ui.town.npc.night.*`) | Lugar |
+|---|---|---|
+| Ilda | `ilda_garden`: espanta plagas y revisa los brotes | HUERTA |
+| Ilda | `ilda_dew`: junta rocío curativo antes del alba | Fuente |
+| Velda | `velda_lamp`: lee sus notas bajo la lámpara | Tablero |
+| Velda | `velda_statue`: copia las runas magitec que brillan de noche | Estatua |
+| Kael | `kael_watch`: vigila el portal por si vuelven los ecos | Portal |
+| Kael | `kael_drill`: entrena a solas | Loot perdido |
+| Brann | `brann_embers`: cuida las brasas de la forja | Forja |
+| Brann | `brann_stock`: cuenta el stock bajo el farol | Armería |
+| Oren | `oren_stars`: lee las estrellas (el futuro ya está escrito) | Estatua |
+| Oren | `oren_fountain`: mira en el agua lo que todavía no pasó | Fuente |
+
+Frases (**BORRADOR**, el dueño escribe el diálogo final; es-AR y en, zh-Hans
+vacío):
+- `ilda_garden`: "De noche la huerta se queda sola y las plagas lo saben.
+  Vengo a espantarlas y a ver si los brotes aguantan el rocío."
+- `ilda_dew`: "El rocío de la fuente cura mejor si lo junto antes de que
+  amanezca. Así lo hacían los de antes, con frascos que brillaban."
+- `velda_lamp`: "Bajo la lámpara del tablero se leen mejor mis notas. De
+  día el pueblo hace demasiado ruido para pensar."
+- `velda_statue`: "De noche las runas de la estatua se encienden apenas.
+  Son del pasado, cuando las máquinas hablaban. Las estoy copiando."
+- `kael_watch`: "Alguien tiene que mirar el portal de noche. Los ecos no
+  avisan cuándo vuelven."
+- `kael_drill`: "Entreno cuando no me ve nadie. El cuerpo aprende mejor
+  en el silencio."
+- `brann_embers`: "Una forja no se deja morir. Si las brasas se apagan,
+  el mecanismo de abajo se enfría y cuesta una semana despertarlo."
+- `brann_stock`: "Cuento lo que queda bajo el farol. Si mañana falta una
+  pieza, prefiero saberlo hoy."
+- `oren_stars`: "Las estrellas ya están donde van a estar. Yo solo las
+  leo; el futuro no se mueve, pero se puede ver venir."
+- `oren_fountain`: "El agua de la fuente refleja lo que todavía no pasó.
+  Esta noche está tranquila. Eso es bueno."
 
 ### 10.2 Encargos
 - Cadena de 2 a 4 pasos por habitante (`kResidentQuests`): recolectar,
