@@ -3,6 +3,8 @@
 // los muestra.
 
 import '../models/game_map.dart';
+import '../models/town_build.dart';
+import 'town_layout.dart';
 
 /// Un lugar del mapa de viaje: el pueblo o el exterior de un bioma.
 class BiomeDef {
@@ -119,6 +121,18 @@ enum NpcRole {
   final String label;
 }
 
+/// Un motivo para salir de noche (overworld_biomes.md § 10.1.1): la
+/// frase que dice ([key], clave i18n) y adónde va: un lugar del pueblo
+/// ([spot]) o la HUERTA más cercana a su casa ([build]); si no existe,
+/// la fuente rúnica.
+class NightOuting {
+  const NightOuting(this.key, {this.spot, this.build});
+
+  final String key;
+  final TownSpot? spot;
+  final BuildKind? build;
+}
+
 /// Un habitante de bioma (§ 9): vende las semillas de su bioma y se
 /// puede invitar al pueblo.
 class BiomeNpcDef {
@@ -128,13 +142,14 @@ class BiomeNpcDef {
       required this.lines,
       required this.seeds,
       required this.benefit,
-      this.nightOwl = false});
+      this.nightOutings = const []});
 
   final String id;
 
-  /// Trasnochador (overworld_biomes.md § 10.1): algunas noches sale a
-  /// pasear en vez de quedarse en su casa (`resNightOwlChance`).
-  final bool nightOwl;
+  /// Salidas nocturnas (overworld_biomes.md § 10.1.1): algunas noches,
+  /// con su chance (`resNightOut<Id>`), sale de su casa por uno de estos
+  /// motivos y se queda cerca del lugar que le corresponde.
+  final List<NightOuting> nightOutings;
   final String name;
   final NpcRole role;
   final String biome;
@@ -285,7 +300,11 @@ const _ilda = BiomeNpcDef('ilda', 'Ilda', NpcRole.herbolaria,
       'Si un día tu pueblo necesita quien cure, avisame.',
     ],
     seeds: {'helecho_dulce': 40, 'arandano_sombra': 110},
-    benefit: 'Pociones: curan +{v} % más.');
+    benefit: 'Pociones: curan +{v} % más.',
+    nightOutings: [
+      NightOuting('ui.town.npc.night.ilda_garden', build: BuildKind.huerta),
+      NightOuting('ui.town.npc.night.ilda_dew', spot: TownSpot.fountain),
+    ]);
 
 const _velda = BiomeNpcDef('velda', 'Velda', NpcRole.archivista,
     biome: kRuinas,
@@ -296,7 +315,11 @@ const _velda = BiomeNpcDef('velda', 'Velda', NpcRole.archivista,
       'Algo hizo que el mundo se volviera medieval. Lo estoy anotando.',
     ],
     seeds: {'lirio_mecanico': 60, 'calabaza_runica': 160},
-    benefit: 'Mazmorras: se ven {v} salas más al entrar.');
+    benefit: 'Mazmorras: se ven {v} salas más al entrar.',
+    nightOutings: [
+      NightOuting('ui.town.npc.night.velda_lamp', spot: TownSpot.board),
+      NightOuting('ui.town.npc.night.velda_statue', spot: TownSpot.statue),
+    ]);
 
 const _kael = BiomeNpcDef('kael', 'Kael', NpcRole.instructor,
     biome: kCavernas,
@@ -307,7 +330,11 @@ const _kael = BiomeNpcDef('kael', 'Kael', NpcRole.instructor,
       'Entrená conmigo y vas a aprender más rápido allá afuera.',
     ],
     seeds: {'nabo_escarcha': 80, 'flor_cristal': 220},
-    benefit: 'Misiones: +{v} % de XP para todo el grupo.');
+    benefit: 'Misiones: +{v} % de XP para todo el grupo.',
+    nightOutings: [
+      NightOuting('ui.town.npc.night.kael_watch', spot: TownSpot.portal),
+      NightOuting('ui.town.npc.night.kael_drill', spot: TownSpot.lostLoot),
+    ]);
 
 const _brann = BiomeNpcDef('brann', 'Brann', NpcRole.forjador,
     biome: kGrieta,
@@ -318,7 +345,11 @@ const _brann = BiomeNpcDef('brann', 'Brann', NpcRole.forjador,
       'Llevame a tu pueblo y tus mejoras van a salir más baratas.',
     ],
     seeds: {'chile_volcan': 110, 'flor_brasa': 300},
-    benefit: 'Forja: mejoras {v} % más baratas.');
+    benefit: 'Forja: mejoras {v} % más baratas.',
+    nightOutings: [
+      NightOuting('ui.town.npc.night.brann_embers', spot: TownSpot.forge),
+      NightOuting('ui.town.npc.night.brann_stock', spot: TownSpot.armory),
+    ]);
 
 const _oren = BiomeNpcDef('oren', 'Oren', NpcRole.vidente,
     biome: kAbismo,
@@ -330,7 +361,10 @@ const _oren = BiomeNpcDef('oren', 'Oren', NpcRole.vidente,
     ],
     seeds: {'trigo_eco': 150, 'rosa_futuro': 420},
     benefit: 'Vida llena al volver al pueblo y +{v} % de vida máxima.',
-    nightOwl: true);
+    nightOutings: [
+      NightOuting('ui.town.npc.night.oren_stars', spot: TownSpot.statue),
+      NightOuting('ui.town.npc.night.oren_fountain', spot: TownSpot.fountain),
+    ]);
 
 /// Los exteriores por id (el pueblo no está).
 const kBiomeLayouts = <String, BiomeLayout>{

@@ -467,15 +467,32 @@ abstract final class ResidentRules {
     return res == null ? s : s.copyWith(residents: res);
   }
 
-  /// Un trasnochador que esta noche sale a pasear (`resNightOwlChance`,
-  /// determinista por habitante y día del mundo).
-  static bool nightOut(TownState s, String npc) {
-    if (biomeNpc(npc)?.nightOwl != true) return false;
+  /// Chance por noche de que [npc] salga (§ 10.1.1): su clave
+  /// `resNightOut<Id>` o, si no tiene, `resNightOutBase`.
+  static double nightOutChance(String npc) {
+    final key = npc.isEmpty
+        ? ''
+        : 'resNightOut${npc[0].toUpperCase()}${npc.substring(1)}';
+    return t.values.containsKey(key)
+        ? t.d(key)
+        : t.d('resNightOutBase');
+  }
+
+  /// Por qué sale [npc] esta noche (`null` = se queda en su casa).
+  /// Determinista por habitante y día del mundo: todos ven lo mismo.
+  static NightOuting? nightOuting(TownState s, String npc) {
+    final outs = biomeNpc(npc)?.nightOutings ?? const <NightOuting>[];
+    if (outs.isEmpty) return null;
     final seed = npc.codeUnits.fold<int>(0, (a, c) => a * 31 + c) +
         s.sky.day * 7919;
-    final roll = math.Random(seed & 0x7fffffff).nextDouble();
-    return roll < t.d('resNightOwlChance');
+    final rng = math.Random(seed & 0x7fffffff);
+    if (rng.nextDouble() >= nightOutChance(npc)) return null;
+    return outs[rng.nextInt(outs.length)];
   }
+
+  /// ¿[npc] sale esta noche? (§ 10.1.1).
+  static bool nightOut(TownState s, String npc) =>
+      nightOuting(s, npc) != null;
 
   // ---------------- relación ----------------
 
@@ -914,8 +931,13 @@ abstract final class ResidentRules {
     final h = s.houseOf(npc);
     // Sin casa: da vueltas por la plaza de la fuente, de día y de noche.
     if (h == null) return _plaza(s, npc, time);
-    // De noche entra a su casa (no se ve), salvo el trasnochador que sale.
-    if (night && !nightOut(s, npc)) return null;
+    // De noche entra a su casa (no se ve), salvo que salga (§ 10.1.1):
+    // entonces se queda cerca del lugar de su motivo.
+    if (night) {
+      final o = nightOuting(s, npc);
+      if (o == null) return null;
+      return _nightSpot(s, npc, o, time);
+    }
     final (ox, oy) = s.origin;
     final b = h.bounds;
     final span = (b.w + 1) * 16.0;
@@ -925,6 +947,43 @@ abstract final class ResidentRules {
     final x = (b.x + ox) * 16.0 - 8 + span * f;
     final y = (b.bottom + oy) * 16.0 + 8;
     return (x, y);
+  }
+
+  /// Centro (px) del lugar al que va [o]: el lugar del pueblo, la HUERTA
+  /// más cercana a la casa de [npc] o, si no hay, la fuente rúnica.
+  static (double, double) nightTarget(TownState s, String npc, NightOuting o) {
+    final (ox, oy) = s.origin;
+    if (o.build case final kind?) {
+      final h = s.houseOf(npc)?.bounds;
+      TownBuild? best;
+      var bd = double.infinity;
+      for (final b in s.builds) {
+        if (b.kind != kind) continue;
+        final d = h == null
+            ? 0.0
+            : ((b.bounds.x - h.x).abs() + (b.bounds.y - h.y).abs())
+                .toDouble();
+        if (d < bd) (bd, best) = (d, b);
+      }
+      if (best != null) {
+        final r = best.bounds;
+        return ((r.x + ox + r.w / 2) * 16.0, (r.bottom + oy) * 16.0 + 8);
+      }
+    }
+    final spot = o.spot ?? TownSpot.fountain;
+    final l = TownPlan.landmarksOf(s).where((l) => l.spot == spot).firstOrNull ??
+        TownPlan.landmarkOf(s, TownSpot.fountain);
+    return ((l.x + ox + l.w / 2) * 16.0, (l.y + oy + l.h) * 16.0 + 8);
+  }
+
+  /// De noche, fuera: va y viene despacio frente a su lugar (± 12 px).
+  static (double, double) _nightSpot(
+      TownState s, String npc, NightOuting o, double time) {
+    final (cx, cy) = nightTarget(s, npc, o);
+    final seed = npc.codeUnits.fold<int>(0, (a, c) => a + c) % 7;
+    final k = (time / 8 + seed) % 2;
+    final f = k < 1 ? k : 2 - k;
+    return (cx - 12 + 24 * f, cy);
   }
 
   /// Paseo de quien todavía no tiene casa: un círculo alrededor de la
