@@ -93,6 +93,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
             name: f.name,
             role: context.t('ui.town.fisher.role'),
             text: talk.text(_answer ?? _greet ?? f.lines.first),
+            skipLabel: context.t('ui.town.npc.skip'),
             onCancel: c.closePanel,
             choices: talk.active
                 ? talk.choices(town, refresh, inTown: false)

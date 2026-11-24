@@ -150,6 +150,7 @@
   "ui.town.npc.invite_first": "Primero invitalo al pueblo",
   "ui.town.npc.invite": "Invitar al pueblo",
   "ui.town.npc.bye": "Adiós",
+  "ui.town.npc.skip": "Saltar [Enter]",
   "ui.town.npc.rep": "Relación",
   "ui.town.npc.rep_value": "{n} / {goal}",
   "ui.town.npc.stage": "Etapa",

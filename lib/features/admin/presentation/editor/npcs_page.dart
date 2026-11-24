@@ -5,6 +5,7 @@ import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/rules/npc_talk_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../field_editors.dart' show NumberStepper;
+import '../../../world/presentation/world_strings.dart';
 import 'npc_editor_controller.dart';
 
 /// Editor → NPC (docs/specs/npc_editor.md): grilla de habitantes | ficha,
@@ -821,13 +822,14 @@ class _PreviewBoxState extends State<_PreviewBox> {
               name: widget.e.name,
               role: widget.e.role,
               text: text ?? greetText,
+              skipLabel: worldStrings(context).t('ui.town.npc.skip'),
               onCancel: widget.onClose,
               choices: [
                 for (final x in open)
                   DsChoice(x.label,
                       onSelected: () => setState(() {
                             text = x.lines.join('\n');
-                            if (x.sub.isNotEmpty) path.add(x);
+                            path.add(x);
                           })),
                 if (path.isNotEmpty)
                   DsChoice('Volver',

@@ -71,9 +71,14 @@ class DsMeter extends StatelessWidget {
 /// Una opción del menú de diálogo. Sin [onSelected] va gris y, si tiene
 /// [reason], la muestra al pasar el cursor.
 class DsChoice {
-  const DsChoice(this.label, {this.onSelected, this.reason, this.key});
+  const DsChoice(this.label,
+      {this.onSelected, this.reason, this.key, this.dimmed = false});
 
   final String label;
+
+  /// Already seen (e.g. a question already asked): drawn dimmer but still
+  /// selectable.
+  final bool dimmed;
   final VoidCallback? onSelected;
   final String? reason;
   final Key? key;
@@ -86,9 +91,18 @@ class DsChoice {
 /// clic. Debajo, una línea con el motivo si la opción marcada está gris.
 class DsChoiceMenu extends StatefulWidget {
   const DsChoiceMenu(this.choices,
-      {super.key, this.onCancel, this.autofocus = true});
+      {super.key,
+      this.onCancel,
+      this.autofocus = true,
+      this.enabled = true,
+      this.focusNode});
 
   final List<DsChoice> choices;
+
+  /// False while the dialogue line is still typing: every option is drawn
+  /// grey and ignores keys and clicks, but keeps its place.
+  final bool enabled;
+  final FocusNode? focusNode;
 
   /// Esc.
   final VoidCallback? onCancel;
@@ -108,7 +122,7 @@ class _DsChoiceMenuState extends State<DsChoiceMenu> {
   }
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
-    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+    if (!widget.enabled || (e is! KeyDownEvent && e is! KeyRepeatEvent)) {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
@@ -132,8 +146,10 @@ class _DsChoiceMenuState extends State<DsChoiceMenu> {
   Widget build(BuildContext context) {
     final at = _at.clamp(0, widget.choices.length - 1);
     final cur = widget.choices.isEmpty ? null : widget.choices[at];
+    final on = widget.enabled;
     return Focus(
       autofocus: widget.autofocus,
+      focusNode: widget.focusNode,
       onKeyEvent: _key,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,30 +157,38 @@ class _DsChoiceMenuState extends State<DsChoiceMenu> {
         children: [
           for (var i = 0; i < widget.choices.length; i++)
             MouseRegion(
-              cursor: widget.choices[i].enabled
+              cursor: on && widget.choices[i].enabled
                   ? SystemMouseCursors.click
                   : SystemMouseCursors.basic,
-              onEnter: (_) => setState(() => _at = i),
+              onEnter: (_) {
+                if (on) setState(() => _at = i);
+              },
               child: GestureDetector(
                 key: widget.choices[i].key,
                 behavior: HitTestBehavior.opaque,
-                onTap: widget.choices[i].onSelected,
+                onTap: on ? widget.choices[i].onSelected : null,
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: DsSpace.xs),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    DsCursor(visible: i == at),
+                    DsCursor(visible: on && i == at),
                     SizedBox(width: DsSpace.sm),
-                    Text(widget.choices[i].label,
-                        style: DsText.body(widget.choices[i].enabled
-                            ? (i == at ? DsColors.selected : DsColors.text)
-                            : DsColors.textDisabled)),
+                    Flexible(
+                      child: Text(widget.choices[i].label,
+                          style: DsText.body(!on || !widget.choices[i].enabled
+                              ? DsColors.textDisabled
+                              : i == at
+                                  ? DsColors.selected
+                                  : widget.choices[i].dimmed
+                                      ? DsColors.textSecondary
+                                      : DsColors.text)),
+                    ),
                   ]),
                 ),
               ),
             ),
           SizedBox(
             height: DsSpace.lg,
-            child: cur != null && !cur.enabled && cur.reason != null
+            child: on && cur != null && !cur.enabled && cur.reason != null
                 ? Padding(
                     padding: EdgeInsets.only(top: DsSpace.xs),
                     child: Text(cur.reason!,
@@ -192,6 +216,7 @@ class DsDialogueBox extends StatefulWidget {
     required this.name,
     required this.text,
     required this.choices,
+    required this.skipLabel,
     this.role,
     this.onCancel,
     this.charDelay = const Duration(milliseconds: 18),
@@ -206,7 +231,15 @@ class DsDialogueBox extends StatefulWidget {
   final VoidCallback? onCancel;
   final Duration charDelay;
 
+  /// Label of the skip button shown while the line types (i18n text).
+  final String skipLabel;
+
   static const portraitSize = 128.0;
+
+  /// Fixed outer height: the box never resizes while typing, when the
+  /// line finishes or when the option list changes.
+  static const height = 272.0;
+  static const choicesWidth = 260.0;
 
   @override
   State<DsDialogueBox> createState() => _DsDialogueBoxState();
@@ -215,6 +248,7 @@ class DsDialogueBox extends StatefulWidget {
 class _DsDialogueBoxState extends State<DsDialogueBox> {
   int _shown = 0;
   Timer? _timer;
+  final _menuFocus = FocusNode(debugLabel: 'ds-dialogue-menu');
 
   bool get _done => _shown >= widget.text.length;
 
@@ -233,11 +267,17 @@ class _DsDialogueBoxState extends State<DsDialogueBox> {
   void _start() {
     _timer?.cancel();
     _shown = widget.charDelay == Duration.zero ? widget.text.length : 0;
-    if (_done) return;
+    if (_done) {
+      _focusMenu();
+      return;
+    }
     _timer = Timer.periodic(widget.charDelay, (t) {
       if (!mounted) return t.cancel();
       setState(() => _shown++);
-      if (_done) t.cancel();
+      if (_done) {
+        t.cancel();
+        _focusMenu();
+      }
     });
   }
 
@@ -245,10 +285,18 @@ class _DsDialogueBoxState extends State<DsDialogueBox> {
     if (_done) return;
     _timer?.cancel();
     setState(() => _shown = widget.text.length);
+    _focusMenu();
+  }
+
+  void _focusMenu() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _done) _menuFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
+    _menuFocus.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -279,6 +327,7 @@ class _DsDialogueBoxState extends State<DsDialogueBox> {
         behavior: HitTestBehavior.opaque,
         onTap: _skip,
         child: Container(
+          height: DsDialogueBox.height,
           decoration: box,
           padding: EdgeInsets.all(DsSpace.md),
           child: Row(
@@ -315,19 +364,56 @@ class _DsDialogueBoxState extends State<DsDialogueBox> {
                       ])),
                     ),
                     SizedBox(height: DsSpace.sm),
-                    Text(widget.text.substring(0, _shown),
-                        key: const ValueKey('ds-dialogue-text'),
-                        softWrap: true,
-                        style: DsText.body(DsColors.text)),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(widget.text.substring(0, _shown),
+                            key: const ValueKey('ds-dialogue-text'),
+                            softWrap: true,
+                            style: DsText.body(DsColors.text)),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Visibility(
+                        visible: !_done,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            key: const ValueKey('ds-dialogue-skip'),
+                            onTap: _skip,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: DsSpace.sm,
+                                  vertical: DsSpace.xs),
+                              decoration: BoxDecoration(
+                                  color: DsColors.surfaceRaised,
+                                  border: Border.all(
+                                      color: DsColors.borderControl)),
+                              child: Text(widget.skipLabel,
+                                  style:
+                                      DsText.detail(DsColors.textSecondary)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
               SizedBox(width: DsSpace.md),
               SizedBox(
-                width: 260,
-                child: _done
-                    ? DsChoiceMenu(widget.choices, onCancel: widget.onCancel)
-                    : null,
+                key: const ValueKey('ds-dialogue-choices'),
+                width: DsDialogueBox.choicesWidth,
+                child: SingleChildScrollView(
+                  child: DsChoiceMenu(widget.choices,
+                      autofocus: false,
+                      enabled: _done,
+                      focusNode: _menuFocus,
+                      onCancel: widget.onCancel),
+                ),
               ),
             ],
           ),

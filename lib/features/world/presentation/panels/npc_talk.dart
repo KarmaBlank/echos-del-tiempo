@@ -16,7 +16,13 @@ class NpcTalk {
 
   final String npc;
   bool active = false;
+  /// Dialogue node stack: each pushed topic is a node whose line is the
+  /// NPC's answer and whose options are its sub-topics plus VOLVER.
+  /// VOLVER pops back to the previous menu.
   final List<TalkTopic> _path = [];
+
+  /// Topic ids already asked: dimmed in their menu, still selectable.
+  final Set<String> _asked = {};
   String? said;
 
   /// Saludo al abrir (uno al azar del catálogo, más [extra]).
@@ -37,6 +43,7 @@ class NpcTalk {
             : () {
                 active = true;
                 _path.clear();
+                _asked.clear();
                 said = '¿De qué querés hablar?';
                 refresh();
               });
@@ -52,9 +59,12 @@ class NpcTalk {
         _path.isEmpty && NpcTalkRules.locked(s, npc, inTown: inTown) > 0;
     return [
       for (final t in list)
-        DsChoice(t.label, key: ValueKey('npc-topic-${t.id}'), onSelected: () {
+        DsChoice(t.label,
+            key: ValueKey('npc-topic-${t.id}'),
+            dimmed: _asked.contains(t.id), onSelected: () {
           said = t.lines.join(' ');
-          if (t.sub.isNotEmpty) _path.add(t);
+          _asked.add(t.id);
+          _path.add(t);
           refresh();
         }),
       if (more)
