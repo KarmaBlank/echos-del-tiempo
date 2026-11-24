@@ -262,16 +262,23 @@ class MapFarmLayer {
     }
   }
 
-  void _plot(Canvas c, FarmPlot p, int tx, int ty, double t) {
-    final px = tx * ts, py = ty * ts;
-    final paint = Paint();
-
-    c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2),
-        paint..color = p.watered ? FarmPalette.wet : FarmPalette.tilled);
+  /// Parcela arada sin cultivo en el tile de esquina ([px], [py]): la
+  /// usan el mapa y la vista previa de la paleta CONSTRUIR.
+  static void drawTilled(Canvas c, double px, double py,
+      {bool watered = false}) {
+    final paint = Paint()
+      ..color = watered ? FarmPalette.wet : FarmPalette.tilled;
+    c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2), paint);
     paint.color = FarmPalette.furrow;
     for (var i = 0; i < 3; i++) {
       c.drawRect(Rect.fromLTWH(px + 2, py + 3 + i * 5, ts - 4, 1), paint);
     }
+  }
+
+  void _plot(Canvas c, FarmPlot p, int tx, int ty, double t) {
+    final px = tx * ts, py = ty * ts;
+    final paint = Paint();
+    drawTilled(c, px, py, watered: p.watered);
     if (p.fert != null) {
       paint.color = FarmPalette.fert;
       for (final (dx, dy) in const [(3, 2), (11, 7), (6, 12)]) {
