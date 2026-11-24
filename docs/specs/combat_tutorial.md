@@ -350,7 +350,7 @@ no decía):
   ni lo completan (la cuenta es la del líder).
 - **Bloqueo.** El host rechaza proponer misión, Eco, Prueba o Jefe del
   Abismo mientras falte alguien. En la UI, el mostrador de misiones
-  muestra el aviso en PROPONER; los paneles del Portal del Eco, de la
+  muestra el aviso en ENTRAR; los paneles del Portal del Eco, de la
   Prueba y del Abismo todavía no muestran el motivo (pendiente).
 - **Sello.** TUTORIAL es la primera fila del mostrador de misiones
   (elegida por defecto si falta hacerlo). Botones: EMPEZAR / REPETIR EN

@@ -207,7 +207,7 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
           KeyHints(
               confirm: ref.t('ui.ascension.hint.choose'),
               back: ref.t('ui.ascension.hint.close')),
-          PanelButton(ref.t('ui.ascension.propose'),
+          PanelButton(ref.t('ui.ascension.enter'),
               key: const ValueKey('trial-propose'),
               accent: ProtoColors.violet,
               reason: why, onPressed: () {

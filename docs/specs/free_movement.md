@@ -151,6 +151,7 @@ se cierra. El `pueblo` nunca.
   (`SessionController.session` = la instancia del jugador local).
 - El mapa de viaje: VIAJAR para todos (sin "Decide el anfitrión");
   gris solo si el bioma está cerrado para uno o si está en mazmorra.
+<<<<<<< HEAD
 - Cajas del grupo (v0.42.0): siempre están todos. Los que están en otro
   lugar salen con una caja atenuada con su nombre, dónde está y
   `IR CON <nombre>` (§ 2.5; gris si no se puede).
@@ -164,6 +165,14 @@ MOSTRADOR, cada fila de zona / misión con gente muestra una insignia
 cada bioma igual; al pasar el mouse, un tooltip de tamaño fijo con
 "Jugadores acá" y los nombres. Sin datos nuevos en la red aparte de la
 clave del § 3.
+=======
+- La lista del grupo en el HUD suma "En otro lugar: Nombre (Bosque)".
+- Los botones de inicio dicen **ENTRAR** (`ui.missions.enter` en el
+  Mostrador, `ui.ascension.enter` en PRUEBAS de la Estatua del Tiempo),
+  nunca PROPONER: no hay nada que proponer, el jugador entra directo
+  como por el portal. Las acciones de red no cambian (siguen siendo
+  `Propose*Action`, el host las resuelve solas, § 2.1).
+>>>>>>> fix/tower-go-button
 - Las acciones del pueblo (pesca, huerta, forraje, habitantes) ya miran
   el `mode` / `place` de la instancia del jugador, o sea su propio lugar.
 

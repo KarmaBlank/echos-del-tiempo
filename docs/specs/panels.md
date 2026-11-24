@@ -140,7 +140,7 @@ Contenido, pausa de grupo y ajustes: docs/specs/settings.md.
 Cambios v0.12 (design_system.md § 10.3): lista de `DsListRow` de una
 línea (rango, zona, `Lv N` / `Bloqueada`), TUTORIAL primero; detalle
 con `DsSectionHeader` (OBJETIVO, RECOMPENSAS) y RANGO S en `DsFold`;
-PROPONER principal con el motivo en el tooltip y en una línea roja al
+ENTRAR principal con el motivo en el tooltip y en una línea roja al
 lado; la línea "Propón…" pasó al "?". Preparación: `¡LISTO!`
 principal y GRUPO con una línea por jugador.
 
@@ -160,7 +160,7 @@ por misión (`MissionCard`, borde `panelBorder`):
   de tier T al ganar (S 90% · A 70% · B 50%) · cofres nivel C` (T = nº de
   misión, C = `chestTier`). Textos en `missionObjectiveText` /
   `missionRewardText` (`lib/features/missions/domain/mission_text.dart`).
-- Botón `PROPONER` abajo a la derecha de la tarjeta (`propose-<id>`,
+- Botón `ENTRAR` abajo a la derecha de la tarjeta (`propose-<id>`,
   `ProposeMissionAction`, cierra el panel); deshabilitado con el motivo
   `Ya hay una votación`.
 
@@ -172,7 +172,7 @@ de una línea por zona / misión (`mission-<id>`, `MenuRow`): rango en
 "Próximamente" siguen como línea gris (`zone-soon-<N>`). Por defecto la
 última zona abierta. Derecha: la `MissionCard` de la elegida
 (`mission-card-<id>`, sin botón) y abajo `Enter Elegir · Esc Cerrar` y
-el único `PROPONER` (`propose-<id>` de la elegida, con el motivo
+el único `ENTRAR` (`propose-<id>` de la elegida, con el motivo
 `Bloqueada` / `Ya hay una votación`). Línea: `Propón una zona: cuando
 todos votan SÍ, a prepararse.` (lo de las puertas del mapa pasó al
 `[?]`).
@@ -187,7 +187,7 @@ de `ZoneRules.zoneList` en orden:
   la zona) y el objetivo por pisos `Derrota K grupos por piso (F pisos)
   y vence al jefe (<jefe>) en el último` (+ extras). Bloqueada: borde
   gris, la línea `Bloqueada: vencé a <jefe> en <zona>` en rojo y
-  `PROPONER` deshabilitado con ese motivo (`Bloqueada`).
+  `ENTRAR` deshabilitado con ese motivo (`Bloqueada`).
 - Zonas "Próximamente" (sin misión): una fila compacta gris
   `Zona N · <nombre> · Lv a-b · Próximamente` (`zone-soon-<N>`), sin
   botón.
