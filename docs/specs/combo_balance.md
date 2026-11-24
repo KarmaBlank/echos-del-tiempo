@@ -287,6 +287,42 @@ detona. Pasan a tener dos tipos:
   `reaction` (`perStack`, `splash`, topes) y los globales en `combo`
   (balance_admin.md).
 
+### 4.1 Convergencias enemigas
+
+Los enemigos pueden hacerles a los jugadores lo mismo que los jugadores
+les hacen a ellos: stacks, reacciones y Convergencias (Explosión tóxica:
+Veneno detonado por Fuego; Combustión: Quemadura detonada por Veneno).
+El motor es simétrico (`_react` / `_converge` valen para los dos bandos);
+la IA vive en `battle_engine_enemy_combo.dart` y las reglas puras en
+`enemy_combo_rules.dart`.
+
+- **Solo con lo que tienen.** Un enemigo combina únicamente los
+  elementos de su propio kit (su elemento, su estado y su ciclo de
+  estados). Nunca se le agrega un elemento ni una habilidad para
+  habilitar un combo.
+- **Tope contra jugadores.** La Convergencia contra un jugador (y su
+  salpicadura a los demás jugadores) tiene tope `eConvCapPlayer` = 28%
+  de la vida máxima, sobrevivible.
+- **Enemigo solo.** Solo si su kit cubre los dos elementos (ej. Heraldo
+  de las Eras: Quemadura → Veneno → Congelación). Busca al jugador
+  preparado con chance `eSoloChance` = 0.25 por golpe y recién con
+  `eSoloMinStacks` = 6 stacks. Si no tiene el par, nunca detona solo.
+- **Grupo.** Quien prepara (Veneno / Quemadura) apila sobre el jugador
+  que ya tiene más stacks si algún aliado vivo tiene de verdad el
+  elemento que lo detona; quien detona va al jugador con ≥
+  `eComboMinStacks` = 4 stacks. Ambos con chance `eComboFocus` = 0.6;
+  si falla, blanco al azar como siempre. Provocar y Protección siguen
+  ganando. El orden es el del modo activo (rondas, fases o línea de
+  tiempo): la IA decide solo cuando al enemigo le toca actuar.
+- **Contrajuego.** Los stacks se ven en la barra del grupo. Limpiar
+  estados (Cura, Cura Mayor, Bendición), matar o quebrar al que detona
+  o retrasarlo evita la detonación. Con una Convergencia lista (un
+  enemigo vivo cuyo próximo golpe la detona) el jugador muestra el chip
+  de aviso "¡Convergencia!" con tooltip (`convergenceThreats`).
+- **Ajustes.** Todos en `combatLimits` (Balance): `eConvOn`,
+  `eConvCapPlayer`, `eComboFocus`, `eComboMinStacks`, `eSoloChance`,
+  `eSoloMinStacks`. No cambia el snapshot (sin cambio de protocolo).
+
 ## 5. Quiebre (rework)
 
 Hoy la barra se llena con `daño × factor`, el umbral es ~0.35 × la vida

@@ -30,6 +30,7 @@ import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/display_names.dart';
+import '../../../game_engine/rules/enemy_combo_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
@@ -106,7 +107,11 @@ Color _hex(String hex) =>
 /// K.O., `defending`, `protecting`, `taunt`, `bonusDefense` (Fortaleza /
 /// Baluarte), la lentitud de Congelación y los efectos del árbol v2
 /// (buffs con duración, marcas, escudos, Último Aliento activo).
-List<StatusChip> combatantChips(Strings s, Combatant p) {
+///
+/// [threats]: ready enemy Convergences against [p] (combo_balance.md §
+/// "Convergencias enemigas"), shown as a warning chip.
+List<StatusChip> combatantChips(Strings s, Combatant p,
+    {List<ConvergenceThreat> threats = const []}) {
   final chips = <StatusChip>[];
   if (!p.alive) {
     chips.add(StatusChip(
@@ -181,6 +186,16 @@ List<StatusChip> combatantChips(Strings s, Combatant p) {
         s.t('ui.combat.chip.ice_resist.long', {'n': p.freezeResist}),
         ProtoColors.ice,
         freezeResistTip(p.freezeResist)));
+  }
+  final mine = [for (final t in threats) if (t.playerId == p.id) t];
+  if (mine.isNotEmpty && p.alive) {
+    final t = mine.first;
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.converge.short'),
+        s.t('ui.combat.chip.converge.long', {'r': t.kind.tr}),
+        DsColors.danger,
+        s.t('ui.combat.chip.converge.tip',
+            {'r': t.kind.tr, 'n': t.stacks, 'k': mine.length})));
   }
   if (p.webbed && p.alive) {
     chips.add(StatusChip(
@@ -1054,6 +1069,7 @@ class BattlePartyBar extends StatelessWidget {
         narrow: narrow,
         key: ValueKey(p.id == localId ? 'my-panel-${p.id}' : 'member-${p.id}'),
         player: p,
+        threats: convergenceThreats(battle, kEnemies),
         local: p.id == localId,
         current: battle.currentId == p.id,
         turnIndex: order.indexOf(p.id),
@@ -1076,6 +1092,7 @@ class _PartyCard extends StatelessWidget {
   const _PartyCard({
     super.key,
     required this.player,
+    this.threats = const [],
     required this.local,
     required this.current,
     required this.turnIndex,
@@ -1108,6 +1125,9 @@ class _PartyCard extends StatelessWidget {
   final ValueChanged<bool>? onAuto;
 
   final Combatant player;
+
+  /// Ready enemy Convergences (warning chip).
+  final List<ConvergenceThreat> threats;
   final bool local;
   final bool current;
   final int turnIndex;
@@ -1122,7 +1142,7 @@ class _PartyCard extends StatelessWidget {
     final p = player;
     final img = sprites?.heroFor(p.classId, p.ascensionId);
     final s = combatStrings(context);
-    final chips = combatantChips(s, p);
+    final chips = combatantChips(s, p, threats: threats);
     final left = turnTimeLeft;
     // Turno: corto para que el nombre no se corte ("T+3").
     // Sistema de diseño (design_system.md § 10.3): jerarquía por color.
@@ -1463,7 +1483,8 @@ class BattleAllyList extends StatelessWidget {
     final stunned = p.stacks(StatusKind.stun) > 0;
     final stunIcon = statusIconOf(StatusKind.stun);
     final chips = [
-      for (final c in combatantChips(s, p))
+      for (final c in combatantChips(s, p,
+          threats: convergenceThreats(battle, kEnemies)))
         if (c.short != 'K.O.') c,
     ];
     final Widget mark;
