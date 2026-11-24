@@ -699,6 +699,9 @@ class MapGame extends Game {
     final full = Offset.zero & Size(size.x, size.y);
     canvas.drawRect(full, Paint()..color = kMapBackground);
     if (view == null) return;
+    // In battle the opaque battle scene covers the whole map: drawing
+    // the world (tiles, lighting, actors) behind it only costs frames.
+    if (view.session.mode == SessionMode.battle) return;
 
     final recorder = ui.PictureRecorder();
     final c =
