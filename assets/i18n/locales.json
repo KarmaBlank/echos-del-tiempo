@@ -22,6 +22,12 @@
     "ui.tutorial",
     "ui.lobby",
     "ui.inventory",
-    "ui.characters"
+    "ui.characters",
+    "data.classes",
+    "data.skills",
+    "data.ults",
+    "data.passives",
+    "data.elements",
+    "ui.battle_log"
   ]
 }

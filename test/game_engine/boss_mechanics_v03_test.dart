@@ -21,6 +21,7 @@ import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Jefes y comunes de la v0.3 (zonas 6–10): docs/specs/bosses.md § "v0.3".
 

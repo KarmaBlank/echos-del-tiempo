@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import '../../helpers/battle_log_helper.dart';
 
 BattlePartyMember _member(String id, String classId, [String? name]) {
   final cls = kClasses[classId]!;

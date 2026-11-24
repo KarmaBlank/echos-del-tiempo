@@ -20,6 +20,7 @@ import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 /// El arma más baja de cada tipo.
 WeaponDef _weaponOf(String type) {

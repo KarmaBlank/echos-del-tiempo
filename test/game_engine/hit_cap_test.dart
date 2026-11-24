@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Afinidades y tope por golpe sin debilidad (docs/specs/combo_balance.md
 // § 3.1–3.2). Azar fijo 0.99: nunca crítico ni esquiva.

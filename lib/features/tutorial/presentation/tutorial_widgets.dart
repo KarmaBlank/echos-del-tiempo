@@ -11,6 +11,7 @@ import '../../../app/theme/retro_type.dart';
 import '../../combat/presentation/battle_hud.dart' show HudHighlight;
 import '../../../game_engine/models/session_action.dart' show TutorialControl;
 import '../../../game_engine/rules/tutorial_rules.dart';
+import '../../../core/i18n/battle_log_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 
 // TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md): el detalle
@@ -372,7 +373,11 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay> {
                                 ? 'ui.tutorial.section.happened'
                                 : 'ui.tutorial.section.stage'),
                         [
-                          for (final l in card.lines)
+                          for (final l in [
+                            ...card.lines,
+                            if (!card.log.isEmpty)
+                              battleLogText(card.log, strings: ref.strings),
+                          ])
                             _line(l, DsColors.textPrimary,
                                 key: const ValueKey('tutorial-card-line')),
                           if (tutorialArrowText(ref.strings, card.arrow) case final a
@@ -391,7 +396,11 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay> {
                       ]),
                     if (last != null)
                       _section(ref.t('ui.tutorial.section.last_action'), [
-                        for (final l in last.lines)
+                        for (final l in [
+                          ...last.lines,
+                          if (!last.log.isEmpty)
+                            battleLogText(last.log, strings: ref.strings),
+                        ])
                           _line(l, DsColors.textSecondary),
                       ]),
                   ],

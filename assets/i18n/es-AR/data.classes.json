@@ -1,0 +1,10 @@
+{
+  "data.classes.guerrero.desc": "Espadas y hachas",
+  "data.classes.guerrero.name": "Guerrero",
+  "data.classes.maga.desc": "Báculos y tomos · cada uno se especializa",
+  "data.classes.maga.name": "Maga",
+  "data.classes.paladin.desc": "Escudo · vida y defensa altas, daño bajo, lento",
+  "data.classes.paladin.name": "Paladín",
+  "data.classes.tirador.desc": "Arcos y rifles",
+  "data.classes.tirador.name": "Tirador"
+}

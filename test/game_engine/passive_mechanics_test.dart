@@ -19,6 +19,7 @@ import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Escenarios determinísticos de cada notable / keystone v2
 // (docs/specs/passive_tree_v2.md § 3-5). Los combatientes se arman a
