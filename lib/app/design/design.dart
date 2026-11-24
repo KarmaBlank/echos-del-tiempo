@@ -7,6 +7,7 @@ export 'ds_carousel.dart';
 export 'ds_columns_template.dart';
 export 'ds_components.dart';
 export 'ds_craft_template.dart';
+export 'ds_detail_pane.dart';
 export 'ds_dialogue.dart';
 export 'ds_focus.dart';
 export 'ds_guide.dart';

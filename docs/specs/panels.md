@@ -1420,6 +1420,19 @@ hay varios grupos con título, se eligen con chips (TODO + cada grupo),
 nunca como secciones apiladas. Sin desbordes en 1280×720 ni 1920×1080
 (`test/features/world/trader_grid_test.dart`).
 
+**Detalle a lo alto con acciones fijas (v0.42.3).** El detalle no es una
+caja chica con scroll propio: la columna ocupa todo el alto del cuerpo
+del panel (el panel va con `PanelFrame(fill: true)`: TIENDA y menús del
+habitante, PUESTO/PEDIDO del pescador, AGROPECUARIO y OBJETOS PERDIDOS),
+y la grilla usa el resto del ancho. Todo detalle es un `DsDetailPane`
+(design_system.md § 6): la información (ícono + nombre, chips, datos,
+descripción) scrollea con barra visible si no entra, y la zona de
+acciones (cantidad −/+, total, COMPRAR / VENDER / TOMAR) queda fija
+abajo, siempre visible. Así nunca hay que scrollear un área chica para
+encontrar el botón. Test: `test/features/world/detail_actions_pinned_test.dart`
+(COMPRAR de la TIENDA y del AGROPECUARIO visible y clickeable sin
+scrollear en 1280×720 y 1920×1080, y con descripción larga).
+
 ## Fuera de alcance
 
 Tienda ambulante (`merchant`): el mapa nunca genera mercader

@@ -181,6 +181,12 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   acciones a la derecha; padding `sm`/`md`, borde inferior.
 - DsCard: superficie sin borde, padding `md`; elegida borde `gold`;
   clickeable con hover. Nunca una tarjeta dentro de otra.
+- DsDetailPane (organismo, v0.42.3): la columna de detalle de toda
+  grilla + detalle. `body` (información) y `actions` (cantidad, total,
+  botón principal). Llena el alto que recibe; `actions` queda fija abajo
+  y siempre visible, solo `body` scrollea (barra visible). Sin alto
+  acotado (dentro de otro scroll) se apila natural. `sunken`: superficie
+  hundida con borde (TIENDA). Solo visual: no sabe de ítems ni precios.
 - DsToast (aviso): caja con franja izquierda de 4 px del color del tipo
   (info `ice`, éxito, peligro, recompensa), una línea de texto, botón ×
   opcional.

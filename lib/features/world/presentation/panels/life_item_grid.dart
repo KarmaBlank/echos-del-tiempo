@@ -183,71 +183,78 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           ),
       ],
     );
-    final detail = sel == null ? null : _detail(sel);
     return LayoutBuilder(builder: (context, box) {
       final wide = box.maxWidth >= LifeItemGrid.wideFrom;
+      final bounded = box.hasBoundedHeight;
       if (wide) {
-        return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(child: SingleChildScrollView(child: grid)),
-          if (detail != null) ...[
-            SizedBox(width: DsSpace.sm),
-            SizedBox(
-                width: LifeItemGrid.detailFor(box.maxWidth),
-                child: SingleChildScrollView(child: detail)),
-          ],
-        ]);
+        // Bounded: grid and detail fill the panel body; the detail keeps
+        // its actions pinned at the bottom (DsDetailPane).
+        return Row(
+            crossAxisAlignment:
+                bounded ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                  child: bounded ? SingleChildScrollView(child: grid) : grid),
+              if (sel != null) ...[
+                SizedBox(width: DsSpace.sm),
+                SizedBox(
+                    width: LifeItemGrid.detailFor(box.maxWidth),
+                    child: lifeDetailPane(context, sel)),
+              ],
+            ]);
       }
-      return SingleChildScrollView(
-        child:
-            Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (detail != null) ...[detail, SizedBox(height: DsSpace.sm)],
-          grid,
-        ]),
-      );
+      final column = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (sel != null) ...[
+              lifeDetailPane(context, sel),
+              SizedBox(height: DsSpace.sm),
+            ],
+            grid,
+          ]);
+      return bounded ? SingleChildScrollView(child: column) : column;
     });
   }
+}
 
-  Widget _detail(LifeItemCellData c) {
-    final d = c.detail;
-    return DsCard(
-      key: const ValueKey('life-detail'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            c.icon,
-            SizedBox(width: DsSpace.sm),
-            Expanded(
-              child: Text(d.name,
-                  key: const ValueKey('life-detail-name'),
-                  style: DsText.subtitle(d.nameColor)),
-            ),
-          ]),
-          if (d.tags.isNotEmpty) ...[
-            SizedBox(height: DsSpace.xs),
-            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              for (final (t, col) in d.tags) DsTag(t, color: col),
-            ]),
-          ],
-          SizedBox(height: DsSpace.xs),
-          for (final l in d.lines) Text(l, style: DsText.body()),
-          ...lifeCompareLines(context, d),
-          if (d.description != null) ...[
-            SizedBox(height: DsSpace.xs),
-            Text(d.description!, style: DsText.detail()),
-          ],
-          if (d.actions.isNotEmpty) ...[
-            SizedBox(height: DsSpace.sm),
-            Wrap(
-                spacing: DsSpace.xs,
-                runSpacing: DsSpace.xs,
-                children: d.actions),
-          ],
-        ],
-      ),
-    );
-  }
+/// Detail of a trade cell: info scrolls, actions pinned (DsDetailPane).
+/// Inside an unbounded height (narrow, stacked) it takes its natural size.
+Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
+  final d = c.detail;
+  final body = Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        c.icon,
+        SizedBox(width: DsSpace.sm),
+        Expanded(
+          child: Text(d.name,
+              key: const ValueKey('life-detail-name'),
+              style: DsText.subtitle(d.nameColor)),
+        ),
+      ]),
+      if (d.tags.isNotEmpty) ...[
+        SizedBox(height: DsSpace.xs),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          for (final (t, col) in d.tags) DsTag(t, color: col),
+        ]),
+      ],
+      SizedBox(height: DsSpace.xs),
+      for (final l in d.lines) Text(l, style: DsText.body()),
+      ...lifeCompareLines(context, d),
+      if (d.description != null) ...[
+        SizedBox(height: DsSpace.xs),
+        Text(d.description!, style: DsText.detail()),
+      ],
+    ],
+  );
+  final actions = d.actions.isEmpty
+      ? null
+      : Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: d.actions);
+  return DsDetailPane(
+      key: const ValueKey('life-detail'), body: body, actions: actions);
 }
 
 /// "vs equipped" lines of a detail (empty when not applicable).
@@ -263,8 +270,7 @@ List<Widget> lifeCompareLines(BuildContext context, LifeItemDetail d) {
 }
 
 /// Standard hover card of a trade cell: name, tags, data lines.
-Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) =>
-    DsTooltipCard(
+Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) => DsTooltipCard(
       title: d.name,
       titleColor: d.nameColor,
       tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
