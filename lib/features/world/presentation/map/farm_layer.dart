@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
+import '../../../../game_engine/data/npc_camp_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
@@ -419,6 +420,16 @@ class MapFarmLayer {
     // Habitantes (overworld_biomes.md § 10.1): caminan frente a su casa
     // de día; "!" si tienen pedido u orden.
     final night = SkyRules.isNight(town.sky);
+    // Casa habitada (§ 10.1): el prop del campamento de su oficio al
+    // lado de la puerta (canasta, pergaminos, yunque…).
+    for (final b in town.builds) {
+      final who = b.resident;
+      if (b.kind != BuildKind.casa || who == null) continue;
+      final camp = kNpcCamps[who];
+      if (camp == null) continue;
+      final r = b.bounds;
+      img(camp.propSprite, (r.x + r.w + ox) * ts + 4, (r.bottom + oy) * ts);
+    }
     for (final n in kBiomeNpcs) {
       final r = town.resident(n.id);
       if (!r.invited) continue;

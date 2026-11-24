@@ -147,6 +147,9 @@ abstract final class QuestTrackRules {
     if (forNpc(p, t, n).any((a) => a.ready)) {
       return NpcMark.ready;
     }
+    // Vive en el pueblo sin casa (overworld_biomes.md § 10.1): pendiente
+    // hasta que le asignen una.
+    if (ResidentRules.homeless(t, n.id)) return NpcMark.news;
     final hasNews = ResidentRules.currentQuest(r) != null ||
         r.request != null ||
         r.order != null;

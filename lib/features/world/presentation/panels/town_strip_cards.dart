@@ -73,6 +73,7 @@ class _TownStripCardsState extends State<TownStripCards>
     final w = view.map.width * TownEditLayer.ts,
         h = view.map.height * TownEditLayer.ts;
     final hire = c.townEdit?.hire;
+    final pick = c.townEdit?.pick;
     final (ox, oy) = town.origin;
     const ts = TownEditLayer.ts;
     return IgnorePointer(
@@ -100,7 +101,7 @@ class _TownStripCardsState extends State<TownStripCards>
                         hot: c.townEdit?.hoverBuild == b.id),
                   ),
                 ),
-        if (hire == null)
+        if (pick == null)
           for (final side in TownSide.values)
             if (g.worldToScreen(TownEditLayer.stripRect(side, w, h))
                     .intersect(area)

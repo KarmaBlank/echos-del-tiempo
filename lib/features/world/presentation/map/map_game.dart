@@ -56,6 +56,8 @@ import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../../game_engine/data/npc_camp_catalog.dart';
 import '../../../../game_engine/rules/npc_camp_rules.dart';
+import '../../../../game_engine/rules/resident_rules.dart';
+import '../../../../app/design/design.dart' show DsColors;
 import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
@@ -938,6 +940,23 @@ class MapGame extends Game {
             cx,
             bottom - ts - 14,
             t);
+      } else if (biomeLayout(map.place) case final lay?) {
+        // Se está mudando (§ 10.1): baja por el camino del sur y se
+        // desvanece en el borde. Sale del reloj de la sala: todos lo ven.
+        final dep = ResidentRules.departure(
+            lay.npc, s.town.resident(lay.npc.id), s.time);
+        final im = sprites.lifeIcon(lay.npc.sprite, 'herramienta');
+        if (dep != null && im != null) {
+          final w = im.width.toDouble(), h = im.height.toDouble();
+          final bottom = dep.y + ts / 2;
+          final hop = (t / 120).floor().isEven ? 1.0 : 0.0;
+          c.drawImageRect(
+              im,
+              Rect.fromLTWH(0, 0, w, h),
+              Rect.fromLTWH(dep.x - w / 2, bottom - h - hop, w, h),
+              SpriteCatalog.pixelPaint()
+                ..color = DsColors.textPrimary.withValues(alpha: dep.alpha));
+        }
       }
       // Pescador nativo del bioma (fishing.md § 12): camina por la orilla.
       if (biomeLayout(map.place) case final lay?) {

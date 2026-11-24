@@ -527,10 +527,10 @@ extension _FarmingOp on _Op {
     if (!home && s.town.resident(npc).invited) return false;
     switch (a.op) {
       case TownOp.invite:
-        final r = ResidentRules.invite(s.town, npc);
+        final r = ResidentRules.invite(s.town, npc, time: s.time);
         if (r == null) return false;
         s.town = r;
-        say('${n.name} se muda al pueblo. Hacele una CASA en EDITAR PUEBLO.');
+        say('${n.name} se muda al pueblo.');
         return true;
       case TownOp.assign:
         final id = a.target;
