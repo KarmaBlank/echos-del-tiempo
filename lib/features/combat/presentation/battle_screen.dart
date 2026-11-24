@@ -29,7 +29,7 @@ import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart'
-    show BattleEngine, ultReady, ultimateOf;
+    show BattleEngine, ultReady, ultSilenced, ultimateOf;
 import '../../../game_engine/rules/dual_rules.dart';
 import '../../../game_engine/rules/family_rules.dart'
     show healCanTargetFoe, healOnFoeDamage, isTargetableHeal, skillHealAmount;
@@ -638,7 +638,8 @@ class BattleViewState extends State<BattleView>
     // already acted this turn can't join (the engine rejects it, `_dual`).
     final b = widget.battle;
     final spent = b.grouped && b.acted.contains(q.id);
-    final ok = !spent && cur.mp >= mp && q.mp >= mp;
+    final silenced = cur.silenced > 0 || q.silenced > 0;
+    final ok = !spent && !silenced && cur.mp >= mp && q.mp >= mp;
     final sum =
         (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) *
             du.power;
@@ -689,6 +690,8 @@ class BattleViewState extends State<BattleView>
           ? null
           : spent
               ? _s.t('ui.combat.duo.partner_acted', {'who': protoEsc(q.name)})
+              : silenced
+                  ? _s.t('ui.combat.duo.silenced')
               : _s.t('ui.combat.duo.need_mp', {'n': mp}),
       onSelect: ok
           ? () => _send(DualCommand(q.id, dualId: w == null ? null : id))
@@ -909,7 +912,7 @@ class BattleViewState extends State<BattleView>
     }
 
     if (ult != null) {
-      final ready = cur.ult >= kUltCost;
+      final ready = cur.ult >= kUltCost && !ultSilenced(cur);
       out.add(BattleCategoryEntry(
           BattleCategory.ultimate,
           [
@@ -928,7 +931,11 @@ class BattleViewState extends State<BattleView>
               summary: skillSummaryMarkup(ult, cur),
               dual: true,
               description: describeSkillMarkup(ult, cur, ultimate: true),
-              reason: ready ? null : _s.t('ui.combat.ult.not_ready'),
+              reason: ready
+                  ? null
+                  : _s.t(ultSilenced(cur)
+                      ? 'ui.combat.ult.silenced'
+                      : 'ui.combat.ult.not_ready'),
               onSelect:
                   ready ? () => _send(UltimateCommand(targetId: tg)) : null,
             ),

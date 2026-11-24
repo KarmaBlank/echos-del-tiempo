@@ -718,6 +718,8 @@ class SessionJson {
         if (c.stanceTurns != 0) 'stcN': c.stanceTurns,
         // Tanks and "nobody alone in one phase" (protocol 63).
         if (c.ward != 0) 'wrd': [c.ward, c.wardTurns],
+        // Enemy silence on players (protocol 66).
+        if (c.silenced != 0) 'sil': c.silenced,
         if (c.phaseDealt.isNotEmpty) 'phd': c.phaseDealt,
         // Mecánicas de jefe v0.3 (opcionales).
         if (c.lava != 0) 'lava': c.lava,
@@ -861,6 +863,7 @@ class SessionJson {
       stanceTurns: j.intOrNull('stcN') ?? 0,
       ward: j['wrd'] == null ? 0 : (j['wrd'] as List)[0] as int,
       wardTurns: j['wrd'] == null ? 0 : (j['wrd'] as List)[1] as int,
+      silenced: j.intOrNull('sil') ?? 0,
       phaseDealt: j['phd'] == null
           ? null
           : {

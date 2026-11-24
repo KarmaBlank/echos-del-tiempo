@@ -344,5 +344,15 @@
   "ui.combat.enemy.phase_hold": "At {pct}% of its life or more, nobody takes it down alone in one phase.",
   "ui.combat.tank.ward.short": "WARD {t}",
   "ui.combat.tank.ward.long": "{a}: {t} ward · {n, plural, one{# turn} other{# turns}}",
-  "ui.combat.tank.ward.tip": "Takes {pct}% less {t} damage and it no longer counts as a weakness. {n, plural, one{# turn} other{# turns}} left."
+  "ui.combat.tank.ward.tip": "Takes {pct}% less {t} damage and it no longer counts as a weakness. {n, plural, one{# turn} other{# turns}} left.",
+  "ui.combat.missing.silenced": "Silenced",
+  "ui.combat.chip.silence.short": "Silence",
+  "ui.combat.chip.silence.long": "Silenced ({n, plural, one{# turn} other{# turns}})",
+  "ui.combat.chip.silence.tip": "Cannot use skills or duos that cost MP{ult, select, true{, nor the ULT} other{}}. Attack, Defend, items and passing are still available. {n, plural, one{# turn} other{# turns}} left.",
+  "ui.combat.chip.pbroken.short": "Broken",
+  "ui.combat.chip.pbroken.long": "Broken (+{p}% damage)",
+  "ui.combat.chip.pbroken.tip": "Enemy hits filled their break bar: loses their next turn and takes +{p}% damage until they recover.",
+  "ui.combat.hud.break_bar": "BRK",
+  "ui.combat.ult.silenced": "Silenced: cannot cast the ULT.",
+  "ui.combat.duo.silenced": "Silenced: duos cost MP."
 }

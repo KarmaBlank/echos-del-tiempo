@@ -71,7 +71,7 @@ const Map<String, EnemyDef> kEnemies = {
       breakMax: 12, evasion: 0.25),
   'guardianReloj': EnemyDef(id: 'guardianReloj', tank: true, eliteUltId: 'eult_e_guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
       credits: 18, breakMax: 12, armor: 0.15, delayHit: 0.3),
-  'hechicera': EnemyDef(id: 'hechicera', name: 'Hechicera del Eco', hp: 1350, attack: 42, speed: 10, xp: 230, credits: 280,
+  'hechicera': EnemyDef(id: 'hechicera', silencer: true, name: 'Hechicera del Eco', hp: 1350, attack: 42, speed: 10, xp: 230, credits: 280,
       boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 80, ultId: 'eult_coro',
       title: 'Voz múltiple del Laberinto Temporal', mechanicId: 'ecos', legendaryId: 'truenoBronce', feminine: true),
   // Eco de la Hechicera (invocación que actúa, nivel 30).
@@ -90,9 +90,9 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 8 · Cementerio de Eras (comunes nivel 36, jefe nivel 40).
   'necrofago': EnemyDef(id: 'necrofago', eliteUltId: 'eult_e_necrofago', name: 'Necrófago', hp: 190, attack: 41, speed: 11, xp: 13, credits: 15,
       pierce: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 12),
-  'almaErrante': EnemyDef(id: 'almaErrante', eliteUltId: 'eult_e_almaErrante', name: 'Alma Errante', hp: 165, attack: 40, speed: 13, xp: 13, credits: 15,
+  'almaErrante': EnemyDef(id: 'almaErrante', silencer: true, eliteUltId: 'eult_e_almaErrante', name: 'Alma Errante', hp: 165, attack: 40, speed: 13, xp: 13, credits: 15,
       inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, feminine: true),
-  'espectroCoronado': EnemyDef(id: 'espectroCoronado', name: 'Espectro Coronado', hp: 1800, attack: 53, speed: 11,
+  'espectroCoronado': EnemyDef(id: 'espectroCoronado', silencer: true, name: 'Espectro Coronado', hp: 1800, attack: 53, speed: 11,
       xp: 290, credits: 360, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 88,
       ultId: 'eult_lamento', title: 'Rey sin reino del Cementerio de Eras', mechanicId: 'sequito',
       legendaryId: 'primaveraRota'),
@@ -104,7 +104,7 @@ const Map<String, EnemyDef> kEnemies = {
   // v0.7: el Vigilante moja (Agua) y el Ojo electrocuta (Electro).
   'vigilanteVacio': EnemyDef(id: 'vigilanteVacio', eliteUltId: 'eult_e_vigilanteVacio', name: 'Vigilante del Vacío', hp: 210, attack: 43, speed: 10, xp: 15,
       credits: 17, breakMax: 12, markHit: 0.2, inflicts: StatusApplication(StatusKind.wet, 1)),
-  'ojoAbismo': EnemyDef(id: 'ojoAbismo', eliteUltId: 'eult_e_ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
+  'ojoAbismo': EnemyDef(id: 'ojoAbismo', silencer: true, eliteUltId: 'eult_e_ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
       inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.3), breakMax: 12),
   // v0.7: golpes de Electro que dejan Cargado; su ULT inunda (Agua).
   'centinela': EnemyDef(id: 'centinela', name: 'Centinela del Vacío', hp: 2100, attack: 59, speed: 9, xp: 320, credits: 400,

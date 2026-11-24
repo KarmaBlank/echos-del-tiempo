@@ -503,6 +503,11 @@ las curas.
 - Jefes y élites con la carga de ULT en 100: avisan (pierden la acción)
   y en su siguiente turno lanzan su ULT. Ver
   docs/specs/break_and_enemy_ults.md § 2.
+- Prioridad de cada turno enemigo: ULT avisada / aviso → Defensa del
+  tanque (§ "Tanques") → Silencio del silenciador (§ "Silencio") →
+  mecánica de jefe → golpe normal.
+- Los golpes enemigos llenan la barra de quiebre del jugador
+  (docs/specs/combo_balance.md § 5.4).
 
 ## Barra de quiebre
 
@@ -889,6 +894,43 @@ Escarcha, Caballero Caído, Guardián del Reloj y Gólem de Magma.
   ficha del enemigo dice que es tanque.
 - Viaja en el estado de batalla (`wrd` = [elemento, turnos]); protocolo
   Mundo 63.
+
+### Silencio
+
+Pedido del dueño (balance de las builds de habilidades, en especial el
+mago elementalista que encadena elementos y actúa primero): las builds
+grandes siguen siendo posibles ("en tu turno un golpe de 10/10"), pero
+algunos enemigos pueden callarlas.
+
+- **Efecto** (`Combatant.silenced`, turnos propios que quedan): el
+  jugador silenciado **no pierde el turno**. No puede usar habilidades
+  que cuestan MP (`SkillDef.mp > 0`), dúos (cuestan MP) ni, si
+  `silenceUlt` = 1, la ULT. Atacar, Defender, objetos, pasar y las
+  habilidades sin costo de MP (solo Pulso) siguen. La regla vive en
+  `SkillRequirements.silencedFor` (host, UI e IA de compañeros) y en
+  `ultReady` / `ultSilenced`.
+- **Duración**: `silenceTurns` (2) turnos propios. Se guarda +1 y baja al
+  empezar cada turno propio (como el escudo del tanque), así el turno en
+  que lo silencian no cuenta.
+- **UI**: chip "Silencio" con tooltip (qué bloquea y turnos que quedan);
+  en el menú las habilidades con MP, los dúos y la ULT salen en gris con
+  el motivo "Silenciado". Log al lanzarlo y al terminar.
+- **Quién silencia** (`EnemyDef.silencer`, editable en Balance → Enemigos):
+  Alma Errante (espectro, zona 7), Ojo del Abismo (aberración, zona 8),
+  Hechicera del Eco (jefa, zona 6) y Espectro Coronado (jefe, zona 7).
+  Lanzadores, no bestias ni tanques; las élites de esos tipos también.
+  Los Jefes del Abismo no (siguen su rotación propia).
+- **IA** (`_castSilence`, después de la Defensa del tanque, que sigue
+  teniendo prioridad): si el silenciador **abre la pelea antes que el
+  grupo** (más rápido en la línea de tiempo o en `porRonda`, `porFases`,
+  o EMBOSCADA en cualquier modo: `BattleEngine.applyOpeningSilence` deja la marca
+  `silence_open` en `once`), su primera acción es Silencio. Después lo
+  repite cada `silenceEvery` (4) acciones propias (0 = solo al abrir).
+  Objetivo: el jugador vivo y no silenciado con más **poder de
+  habilidad** (`skillPower`: el mejor golpe estimado entre sus
+  habilidades con MP, `ATQ o MAG × poder`, ×1.5 si pega a todos; sin
+  ninguna, la mitad de su mejor stat). Lanzarlo usa su acción (no pega).
+- Viaja en el estado (`sil`); protocolo Mundo 66.
 
 ### Velocidad
 

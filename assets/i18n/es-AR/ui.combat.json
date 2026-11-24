@@ -344,5 +344,15 @@
   "ui.combat.enemy.phase_hold": "Si tiene al menos el {pct}% de su vida, nadie lo tumba solo en una fase.",
   "ui.combat.tank.ward.short": "ESCUDO {t}",
   "ui.combat.tank.ward.long": "{a}: escudo de {t} · {n, plural, one{# turno} other{# turnos}}",
-  "ui.combat.tank.ward.tip": "Recibe {pct}% menos de daño de {t} y no cuenta como debilidad. Le quedan {n, plural, one{# turno} other{# turnos}}."
+  "ui.combat.tank.ward.tip": "Recibe {pct}% menos de daño de {t} y no cuenta como debilidad. Le quedan {n, plural, one{# turno} other{# turnos}}.",
+  "ui.combat.missing.silenced": "Silenciado",
+  "ui.combat.chip.silence.short": "Silencio",
+  "ui.combat.chip.silence.long": "Silenciado ({n, plural, one{# turno} other{# turnos}})",
+  "ui.combat.chip.silence.tip": "No puede usar habilidades ni dúos que cuestan MP{ult, select, true{ ni la ULT} other{}}. Atacar, Defender, objetos y pasar siguen disponibles. {n, plural, one{Le queda # turno} other{Le quedan # turnos}}.",
+  "ui.combat.chip.pbroken.short": "Quebrado",
+  "ui.combat.chip.pbroken.long": "Quebrado (+{p}% daño)",
+  "ui.combat.chip.pbroken.tip": "Los golpes enemigos llenaron su barra de quiebre: pierde su próximo turno y recibe +{p}% de daño hasta recuperarse.",
+  "ui.combat.hud.break_bar": "QB",
+  "ui.combat.ult.silenced": "Silenciado: no puede lanzar la ULT.",
+  "ui.combat.duo.silenced": "Silenciado: los dúos cuestan MP."
 }

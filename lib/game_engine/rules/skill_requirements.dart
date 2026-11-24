@@ -32,6 +32,7 @@ class SkillRequirements {
   static List<String> missing(SkillDef sk, Combatant user, Combatant? target,
       {Iterable<Combatant> foes = const []}) {
     return [
+      if (silencedFor(sk, user)) 'Silenciado',
       if (user.mp < sk.mp) '${sk.mp} MP',
       if (user.pulse < sk.pulse) 'Pulso ${sk.pulse}',
       for (final r in sk.requires)
@@ -47,12 +48,17 @@ class SkillRequirements {
           Combatant? target,
           {Iterable<Combatant> foes = const []}) =>
       [
+        if (silencedFor(sk, user)) 'Silenciado',
         if (user.mp < sk.mp) 'Falta: ${sk.mp} MP (tenés ${user.mp})',
         if (user.pulse < sk.pulse)
           'Falta: Pulso ${sk.pulse} (tenés ${user.pulse})',
         for (final r in sk.requires)
           if (!met(r, sk, user, target, foes)) 'Necesita: ${r.label}',
       ];
+
+  /// Silence (combat.md § "Silencio") blocks every skill that costs MP.
+  static bool silencedFor(SkillDef sk, Combatant user) =>
+      user.silenced > 0 && sk.mp > 0;
 
   static String? needsText(List<String> missing) =>
       missing.isEmpty ? null : 'Necesita: ${missing.join(' · ')}';

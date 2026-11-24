@@ -196,6 +196,25 @@ List<StatusChip> combatantChips(Strings s, Combatant p) {
         const Color(0xFFB57BFF),
         s.t('ui.combat.chip.void_mark.tip')));
   }
+  // Enemy Silence (combat.md § "Silencio").
+  if (p.isPlayer && p.silenced > 0 && p.alive) {
+    final n = p.silenced;
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.silence.short'),
+        s.t('ui.combat.chip.silence.long', {'n': n}),
+        const Color(0xFFA29BFE),
+        s.t('ui.combat.chip.silence.tip',
+            {'n': n, 'ult': '${BattleEngine.silenceBlocksUlt}'})));
+  }
+  // Player break (combo_balance.md § 5.4).
+  if (p.isPlayer && !p.isSummon && p.vulnerable > 0 && p.alive) {
+    final pct = jsRound((BattleEngine.playerBrokenMult - 1) * 100);
+    chips.add(StatusChip(
+        s.t('ui.combat.chip.pbroken.short'),
+        s.t('ui.combat.chip.pbroken.long', {'p': pct}),
+        const Color(0xFFFFE14D),
+        s.t('ui.combat.chip.pbroken.tip', {'p': pct})));
+  }
   chips.addAll(treeEffectChips(s, p));
   return chips;
 }
@@ -1197,6 +1216,28 @@ class _PartyCard extends StatelessWidget {
                         _BarRow(
                             mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
                             label: s.t('ui.combat.stat.mp'), valueChars: 9, stack: narrow)),
+                    // Player break bar (combo_balance.md § 5.4).
+                    if (BattleEngine.playerBreakOn &&
+                        p.alive &&
+                        !p.isSummon &&
+                        (!compact || local) &&
+                        // ENORME text / narrow cards: no room; the chip
+                        // still shows a broken player.
+                        !narrow &&
+                        !_BarRow.stacked(context))
+                      _BarRow(
+                          RetroBar(
+                              value: p.vulnerable > 0
+                                  ? BattleEngine.playerBreakMax(p)
+                                  : p.breakGauge,
+                              max: BattleEngine.playerBreakMax(p),
+                              height: 4,
+                              color: const VisionColor(VisionSlot.breakBar)),
+                          '${p.breakGauge.floor()}/${BattleEngine.playerBreakMax(p).floor()}',
+                          label: s.t('ui.combat.hud.break_bar'),
+                          color: const VisionColor(VisionSlot.breakBar),
+                          valueChars: 9,
+                          stack: narrow),
                     if (local || companion)
                       _BarRow(
                           ultBar(p.ult),
@@ -1496,6 +1537,16 @@ class BattleAllyList extends StatelessWidget {
                     max: p.maxMp,
                     color: ProtoColors.mp,
                     height: 4),
+                if (BattleEngine.playerBreakOn && p.alive) ...[
+                  const SizedBox(height: 2),
+                  RetroBar(
+                      value: p.vulnerable > 0
+                          ? BattleEngine.playerBreakMax(p)
+                          : p.breakGauge,
+                      max: BattleEngine.playerBreakMax(p),
+                      color: const VisionColor(VisionSlot.breakBar),
+                      height: 3),
+                ],
                 // Estados, buffs y escudos del aliado (lo mismo que la
                 // tarjeta propia; K.O. ya va en la marca).
                 if (chips.isNotEmpty) ...[
