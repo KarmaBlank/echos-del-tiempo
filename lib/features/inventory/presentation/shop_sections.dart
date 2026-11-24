@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
@@ -102,7 +103,7 @@ class ShopContext {
   String className() =>
       rules.catalog.classes[profile.classId]?.name ?? profile.classId;
 
-  String itemName(ItemInstance it) => rules.items.displayName(it);
+  String itemName(ItemInstance it) => localItemName(rules.items, it);
 }
 
 /// Una pestaña de la ARMERÍA o la FORJA (rótulo, línea "qué hace" y su
@@ -395,7 +396,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
   bool _hit(WeaponDef w) {
     final words =
         foldSearch(_q.text).split(RegExp(r'\s+')).where((x) => x.isNotEmpty);
-    final text = foldSearch('${w.name} ${w.type}');
+    final text = foldSearch('${w.text} ${w.name} ${w.type}');
     return words.every(text.contains);
   }
 
@@ -539,7 +540,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                     Expanded(
                       child: ProtoText(
                           key: const ValueKey('shop-title'),
-                          '<b style="color:#e8ecff">${protoEsc(w.name)}</b> '
+                          '<b style="color:#e8ecff">${protoEsc(w.text)}</b> '
                           '${protoColor(ProtoColors.dim, '${protoEsc(w.type)} · ${s.t('ui.inventory.craft.level_short', {'n': w.level})} · ${s.t('ui.inventory.shop.buy.common')}')} '
                           '${protoColor(ProtoColors.dim, '·')} ${weightTagMarkup(w)}'),
                     ),
@@ -640,9 +641,9 @@ class ItemsTab extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ProtoText('<b>${it.name}</b> '
+                  ProtoText('<b>${it.text}</b> '
                       '${protoColor(ProtoColors.green, s.t('ui.inventory.shop.items.have', {'n': p.itemCount(it.item), 'max': ProgressionRules.maxItems}))}'),
-                  ProtoText('<small>${it.description}</small>'),
+                  ProtoText('<small>${it.descriptionText}</small>'),
                 ],
               ),
             ),
@@ -680,7 +681,7 @@ String passiveForgeNote(Strings s, ItemInstance it) {
   final need = 2 - it.forgeLevel % 2;
   if (need > left) {
     return protoColor(ProtoColors.dim,
-        s.t('ui.inventory.shop.forge.passive_capped', {'rarity': it.rarity.label}));
+        s.t('ui.inventory.shop.forge.passive_capped', {'rarity': it.rarity.text}));
   }
   final next = WeaponPassiveDef.roman(l + 1);
   return '<span style="color:$kPassiveHex">'
@@ -765,10 +766,10 @@ class _ForgeTabState extends State<ForgeTab> {
                   runSpacing: DsSpace.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(retroText(rules.items.displayName(it)),
+                    Text(retroText(localItemName(rules.items, it)),
                         key: const ValueKey('forge-title'),
                         style: DsText.title(RarityColors.of(it.rarity))),
-                    DsTag(it.rarity.label, color: RarityColors.of(it.rarity)),
+                    DsTag(it.rarity.text, color: RarityColors.of(it.rarity)),
                     BuildFitBadge(item: it),
                   ],
                 ),
@@ -785,7 +786,7 @@ class _ForgeTabState extends State<ForgeTab> {
                     LevelPips(it.forgeLevel.clamp(0, cap), cap),
                   ],
                 ).tip(s.t('ui.inventory.shop.forge.cap_tip',
-                    {'rarity': it.rarity.label, 'cap': cap})),
+                    {'rarity': it.rarity.text, 'cap': cap})),
                 SizedBox(height: DsSpace.xs),
                 _ForgePassiveLine(item: it, rules: rules, passive: passive),
               ],

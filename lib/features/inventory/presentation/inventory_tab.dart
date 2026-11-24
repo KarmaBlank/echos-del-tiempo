@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
@@ -1133,7 +1134,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final it = c.item;
     final count = it == null ? _count.clamp(1, c.count) : 1;
     final name = it != null
-        ? shop.rules.items.displayName(it)
+        ? localItemName(shop.rules.items, it)
         : c.eco != null
             ? shop.rules.ecos.fullName(c.eco!)
             : '$count ${c.stack!.label}';

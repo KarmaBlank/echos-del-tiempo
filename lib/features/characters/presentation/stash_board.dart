@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../inventory/domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
@@ -333,7 +334,7 @@ class StashBoardState extends State<StashBoard> {
   }
 
   String _name(CellContent c) {
-    if (c.item case final it?) return _rules.items.displayName(it);
+    if (c.item case final it?) return localItemName(_rules.items, it);
     if (c.eco case final eco?) return _rules.ecos.fullName(eco);
     return c.stack!.label;
   }

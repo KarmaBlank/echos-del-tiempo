@@ -28,6 +28,39 @@ LootDrop _w(String base,
         passiveId: passive));
 
 void main() {
+  test('English keywords read the same as the Spanish ones', () {
+    final en = _rules.parse('''
+Show
+  Rarity >= Rare
+  Class guerrero
+  Weight Light Heavy
+  Item Weapon Echo
+  Passive Yes
+  Build Base Skill
+  Color 255 210 60
+  Sound alerta
+Hide
+  Rarity Common
+  ItemLevel < 10
+''');
+    final es = _rules.parse('''
+Mostrar
+  Rareza >= Raro
+  Clase guerrero
+  Peso Ligera Pesada
+  Objeto Arma Eco
+  Pasiva Si
+  Build Base Habilidad
+  Color 255 210 60
+  Sonido alerta
+Ocultar
+  Rareza Comun
+  NivelObjeto < 10
+''');
+    expect(en.errors, isEmpty);
+    expect(_rules.serialize(en.filter), _rules.serialize(es.filter));
+  });
+
   test('el ejemplo del spec se lee', () {
     final r = _rules.parse('''
 Mostrar

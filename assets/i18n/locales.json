@@ -28,6 +28,9 @@
     "data.ults",
     "data.passives",
     "data.elements",
-    "ui.battle_log"
+    "ui.battle_log",
+    "data.items",
+    "data.materials",
+    "data.crafting"
   ]
 }

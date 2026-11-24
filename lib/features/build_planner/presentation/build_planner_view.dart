@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../inventory/domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -581,7 +582,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           title: retroText([
             w.item == null
                 ? w.base.name
-                : _rules.progression.items.displayName(w.item!),
+                : localItemName(_rules.progression.items, w.item!),
             if (w.equipped) _s.t('ui.build.weapon.equipped'),
             if (stashUids.contains(w.item?.uid))
               _s.t('ui.build.weapon.in_stash'),

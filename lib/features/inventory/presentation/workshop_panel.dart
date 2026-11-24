@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -116,7 +117,7 @@ class WorkshopGrid extends StatelessWidget {
           _ => LifeIconKind.herramienta,
         }, size: 32),
         border: DsColors.border,
-        name: d.name,
+        name: d.text,
         tag: kWorkshopOficio[id],
         count: p.life.craft(id),
         description: d.description,

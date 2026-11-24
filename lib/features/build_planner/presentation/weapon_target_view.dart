@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../inventory/domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -73,7 +74,7 @@ class WeaponTargetRow extends StatelessWidget {
                 Text(
                     retroText(s.t('ui.build.target.best', {
                           'name':
-                              rules.progression.items.displayName(best!.item)
+                              localItemName(rules.progression.items, best!.item)
                         }) +
                         (best!.inStash
                             ? s.t('ui.build.target.best_stash')
