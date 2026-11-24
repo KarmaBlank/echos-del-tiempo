@@ -626,6 +626,22 @@ const Map<String, TuningDef> kTuningDefaults = {
     'wardMult': 0.5,
     'wardTurns': 3,
     'tankGuard': 0.7,
+    // Enemy Silence (combat.md § "Silencio"): own turns of the silenced
+    // player, how often a silencer recasts it (0 = only when it opens
+    // the fight) and whether it also blocks the ULT (1 = yes).
+    'silenceTurns': 2,
+    'silenceEvery': 4,
+    'silenceUlt': 1,
+    // Player break bar (combo_balance.md § 5.4): on (1), threshold,
+    // points per enemy hit and per 1% of max HP lost, decay at the start
+    // of its turn, own turns broken and × damage taken while broken.
+    'pBreakOn': 1,
+    'pBreakMax': 100,
+    'pBreakHit': 10,
+    'pBreakHp': 0.6,
+    'pBreakDecay': 0.1,
+    'pBrokenTurns': 2,
+    'pBrokenMult': 1.25,
     // Turnos como máximo por cada turno del aliado vivo más lento
     // (0 = sin tope).
     'turnsPerSlowest': 2,

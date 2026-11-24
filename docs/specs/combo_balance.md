@@ -460,6 +460,28 @@ por debajo de la meta (<10%). Suben un poco los quiebres por pelea de
 los grupos de 4 Guerreros (p. ej. Fortaleza Caída Raro 0.7 → 1.0) porque
 las que pueden quebrar se usan como ataque normal.
 
+### 5.4 Quiebre de jugadores
+
+Espejo de la barra enemiga, más corta y más suave (todo en Balance →
+Límites de combate):
+
+- **Llenado** (`_addPlayerBreak`, en cada golpe enemigo que recibe un
+  jugador, no invocaciones): `pBreakHit` (10) por golpe + `pBreakHp`
+  (0.6) por cada 1% de vida máxima del golpe. Defendiendo, la mitad.
+- **Umbral**: `pBreakMax` (100) × min(2, 1 + 0.25 × quiebres), como el
+  enemigo. Sin Fisurado: al llenarse, quiebra directo.
+- **Quebrado**: pierde su próximo turno (`breakSkip`, el mismo camino que
+  el enemigo) y recibe × `pBrokenMult` (1.25) de daño durante
+  `pBrokenTurns` (2) turnos propios (contando el que pierde). Al
+  terminar: barra a 0 y umbral +25%. Mientras está quebrado la barra no
+  se llena.
+- **Baja**: al empezar su turno, `pBreakDecay` (0.1) del umbral.
+- `pBreakOn` = 0 lo apaga (sin barra ni efectos).
+- **UI**: barra "QB" compacta en la tarjeta del grupo (HUD) y en la lista
+  de aliados; chip "Quebrado (+25% daño)" con tooltip.
+- Usa los campos de quiebre del combatiente (`brk`, `brkN`, `vul`,
+  `brkS`), que ahora viajan también en los jugadores; protocolo Mundo 66.
+
 ## 5.2 Pulso y precondiciones (nombres aprobados: Pulso, Instante, encadenar)
 
 Punto medio entre los puntos de acción de un JRPG por turnos moderno y la energía por

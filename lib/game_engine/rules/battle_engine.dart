@@ -70,8 +70,12 @@ SkillDef? ultimateOf(Combatant c,
 /// (ultimates_v2.md § 2.2).
 bool ultReady(Combatant c, [GameCatalog catalog = GameCatalog.standard]) {
   final u = ultimateOf(c, catalog);
-  return u != null && c.ult >= kUltCost;
+  return u != null && c.ult >= kUltCost && !ultSilenced(c);
 }
+
+/// [c] is silenced and Silence blocks the ULT (combat.md § "Silencio").
+bool ultSilenced(Combatant c) =>
+    c.silenced > 0 && BattleEngine.silenceBlocksUlt;
 
 /// Los 3 estados elementales (Elementalista).
 const kElementalStatuses = [
@@ -223,6 +227,27 @@ class BattleEngine {
   static double get wardMult => _limits.d('wardMult');
   static int get wardTurns => math.max(1, _limits.i('wardTurns'));
   static double get tankGuard => _limits.d('tankGuard');
+
+  /// Enemy Silence (combat.md § "Silencio"): own turns of the silenced
+  /// player, recast period of a silencer (0 = only when it opens the
+  /// fight) and whether the ULT is blocked too.
+  static int get silenceTurns => math.max(0, _limits.i('silenceTurns'));
+  static int get silenceEvery => math.max(0, _limits.i('silenceEvery'));
+  static bool get silenceBlocksUlt => _limits.i('silenceUlt') > 0;
+
+  /// Player break bar (combo_balance.md § 5.4).
+  static bool get playerBreakOn => _limits.i('pBreakOn') > 0;
+  static double get playerBreakBase => math.max(1, _limits.d('pBreakMax'));
+  static double get playerBreakHit => _limits.d('pBreakHit');
+  static double get playerBreakHp => _limits.d('pBreakHp');
+  static double get playerBreakDecay => _limits.d('pBreakDecay');
+  static int get playerBrokenTurns => math.max(1, _limits.i('pBrokenTurns'));
+  static double get playerBrokenMult => _limits.d('pBrokenMult');
+
+  /// Current threshold of a player's break bar: base × min(2, 1 + 0.25 ×
+  /// breaks), like the enemies'.
+  static double playerBreakMax(Combatant p) =>
+      playerBreakBase * (1 + 0.25 * p.breaks).clamp(1.0, 2.0).toDouble();
 
   /// Tope de carga de ULT extra (árbol, mods, efectos, invocaciones) por
   /// acción y por turno de quien la recibe (combat.md § "Límites").
@@ -413,6 +438,8 @@ class BattleEngine {
     if (encounter != null) _applyInitiative(state, encounter, triggeredBy);
     // After the initiative: opening wards read the opening order.
     applyOpeningWards(state);
+    applyOpeningSilence(state,
+        ambush: encounter == EncounterKind.ambush);
     return BattleStep(state, const []);
   }
 
@@ -435,6 +462,56 @@ class BattleEngine {
       line = line == null ? t : line.plus(t);
     }
     if (line != null) state.logLine = state.logLine.plus(line);
+  }
+
+  /// Key in `Combatant.once` of a silencer that opens the fight before
+  /// the party: its first action is Silence (combat.md § "Silencio").
+  static const silenceOpenKey = 'silence_open';
+
+  /// Silencers that act before every player (or any in an [ambush]) arm
+  /// their opening Silence.
+  void applyOpeningSilence(BattleState state, {bool ambush = false}) {
+    if (silenceTurns <= 0) return;
+    for (final e in state.enemies) {
+      if (isSilencer(e) && (ambush || actsBeforeParty(state, e))) {
+        e.once.add(silenceOpenKey);
+      }
+    }
+  }
+
+  /// [e] casts Silence (`EnemyDef.silencer`).
+  bool isSilencer(Combatant e) =>
+      !e.isPlayer && (catalog.enemies[e.enemyType]?.silencer ?? false);
+
+  /// Skill power of [p] (combat.md § "Silencio"): the best estimated hit
+  /// among its skills that cost MP (stat × power, ×1.5 if it hits every
+  /// foe), else half its best stat.
+  double skillPower(Combatant p) {
+    var best = 0.0;
+    for (final id in p.skillIds) {
+      final sk = catalog.skills[id];
+      if (sk == null || sk.mp <= 0) continue;
+      final stat = sk.kind == SkillKind.physical ? p.attack : p.magic;
+      final v = stat * sk.power * (sk.allTargets ? 1.5 : 1);
+      if (v > best) best = v;
+    }
+    return best > 0 ? best : math.max(p.magic, p.attack) * 0.5;
+  }
+
+  /// Who a silencer silences: the living, non-silenced player with the
+  /// highest [skillPower] (ties: party order); `null` if none.
+  Combatant? silenceTarget(BattleState state) {
+    Combatant? pick;
+    var best = -1.0;
+    for (final p in state.party) {
+      if (!p.alive || p.isSummon || p.silenced > 0) continue;
+      final v = skillPower(p);
+      if (v > best) {
+        best = v;
+        pick = p;
+      }
+    }
+    return pick;
   }
 
   /// [e] is a tank (`EnemyDef.tank`).
@@ -1179,6 +1256,8 @@ class _Turn {
       best.chained = false;
       _gainPulse(best);
       state.logLine = _l('turn_of', {'a': best.name});
+      _tickSilence(best);
+      _decayPlayerBreak(best);
     } else {
       _decayBreak(best);
       _tickWard(best);
@@ -1191,6 +1270,7 @@ class _Turn {
     // Disparo cargado (variantes): cae al empezar el turno del tirador.
     if (best.isPlayer && best.alive) _fireCharge(best);
     final cleared = state.enemies.every((e) => !e.alive);
+    final wasBroken = best.isPlayer && best.vulnerable > 0;
     if (!skip && best.alive && best.breakSkip) {
       // Quebrado: pierde su turno (como aturdido).
       skip = true;
@@ -1214,6 +1294,7 @@ class _Turn {
           : _l('web_skip', {'a': best.name});
       text = text == null ? t : text.plus(t);
     }
+    if (wasBroken) _tickPlayerBroken(best);
     if (text != null) state.logLine = text;
     // Regeneración del arma (afijo `del Renacer`, loot.md § 12).
     if (best.alive &&
@@ -1645,6 +1726,10 @@ class _Turn {
           react *
           affinity),
     );
+    // Player broken (combo_balance.md § 5.4): takes more damage.
+    if (p.isPlayer && !p.isSummon && p.vulnerable > 0) {
+      dmg = math.max(1, jsRound(dmg * BattleEngine.playerBrokenMult));
+    }
     // Juramento Eterno (Guardián): parte del golpe va al Guardián.
     dmg -= _shareDamage(p, dmg);
     final absorbed = _absorb(p, dmg, from: from);
@@ -1674,6 +1759,7 @@ class _Turn {
     } else if (react != 1) {
       _shatter(p);
     }
+    if (from != null && !from.isPlayer && p.alive) _addPlayerBreak(p, dmg);
     if (from != null && p.alive) {
       _fire(ProcTrigger.onHitTaken, p, target: from, amount: dmg);
     }
@@ -3243,6 +3329,92 @@ class _Turn {
   LogLine _tagName(DamageTag t) =>
       LogLine.named(CatalogKeys.damageTag(t), t.label);
 
+  // ---------------- silence (combat.md § "Silencio") ----------------
+
+  /// Silencer turn: on its opening action (acting before the party) or
+  /// every `silenceEvery` own actions, it silences the player with the
+  /// highest skill power. Returns `true` if that used its action.
+  bool _castSilence(Combatant e) {
+    if (!engine.isSilencer(e) || BattleEngine.silenceTurns <= 0) return false;
+    final opening = e.once.remove(BattleEngine.silenceOpenKey);
+    final every = BattleEngine.silenceEvery;
+    if (!opening && (every <= 0 || e.actions % every != 0)) return false;
+    final t = engine.silenceTarget(state);
+    if (t == null) return false;
+    events.add(ActionEvent(e.id, BattleActionKind.enemyAttack, targetId: t.id));
+    // +1: the tick at the start of its next turn does not count.
+    t.silenced = BattleEngine.silenceTurns + 1;
+    state.logLine = _l('silence_cast',
+        {'a': e.name, 'b': t.name, 'n': BattleEngine.silenceTurns});
+    return true;
+  }
+
+  /// Start of a player's turn: Silence loses a turn.
+  void _tickSilence(Combatant p) {
+    if (p.silenced <= 0) return;
+    p.silenced--;
+    if (p.silenced == 0) _notes.add(_l('silence_ends', {'a': p.name}));
+  }
+
+  // ---------------- player break (combo_balance.md § 5.4) -------------
+
+  /// An enemy hit for [dmg] fills [p]'s break bar: a flat amount per hit
+  /// plus per 1% of max HP (half while defending). Full: broken (loses
+  /// its next turn, takes × `pBrokenMult` damage for `pBrokenTurns` own
+  /// turns).
+  void _addPlayerBreak(Combatant p, int dmg) {
+    if (!BattleEngine.playerBreakOn ||
+        !p.isPlayer ||
+        p.isSummon ||
+        p.vulnerable > 0 ||
+        p.breakSkip) {
+      return;
+    }
+    var amount = BattleEngine.playerBreakHit +
+        (p.maxHp <= 0 ? 0 : dmg / p.maxHp * 100) * BattleEngine.playerBreakHp;
+    if (p.defending) amount *= 0.5;
+    if (amount <= 0) return;
+    final max = BattleEngine.playerBreakMax(p);
+    p.breakGauge = math.min(max, _r1(p.breakGauge + amount));
+    if (p.breakGauge < max) {
+      events.add(BreakEvent(p.id, BreakPhase.fill, p.breakGauge, max));
+      return;
+    }
+    p
+      ..breakGauge = max
+      ..breakSkip = true
+      ..vulnerable = BattleEngine.playerBrokenTurns;
+    events.add(BreakEvent(p.id, BreakPhase.broken, max, max));
+    _notes.add(_l('player_break', {
+      'a': p.name,
+      'p': jsRound((BattleEngine.playerBrokenMult - 1) * 100),
+    }));
+  }
+
+  /// Start of a player's turn: the bar drops `pBreakDecay` of the
+  /// threshold (not while broken).
+  void _decayPlayerBreak(Combatant p) {
+    if (p.vulnerable > 0 || p.breakSkip || p.breakGauge <= 0) return;
+    final max = BattleEngine.playerBreakMax(p);
+    p.breakGauge =
+        math.max(0, _r1(p.breakGauge - max * BattleEngine.playerBreakDecay));
+  }
+
+  /// A broken player's own turn passed: one less turn vulnerable; at 0
+  /// it recovers (bar to 0, threshold +25%).
+  void _tickPlayerBroken(Combatant p) {
+    if (p.vulnerable <= 0) return;
+    p.vulnerable--;
+    if (p.vulnerable > 0) return;
+    p
+      ..breakGauge = 0
+      ..breaks += 1;
+    if (!p.alive) return;
+    events.add(BreakEvent(
+        p.id, BreakPhase.recovered, 0, BattleEngine.playerBreakMax(p)));
+    _notes.add(_l('break_recovers', {'a': p.name}));
+  }
+
   /// Clave en `state.acted` de un común que ya aguantó en esta ronda.
   static String holdKey(String id) => '!aguanta:$id';
 
@@ -4290,6 +4462,7 @@ class _Turn {
     }
     e.actions++;
     if (_tankGuard(e)) return;
+    if (_castSilence(e)) return;
     // Jefe del Abismo: su rotación de movimientos (abyss_bosses.md § 2).
     if (mech != null && mech.kind == BossMechanicKind.abyss) {
       _abyssAct(e, mech, alive);
@@ -5287,7 +5460,7 @@ class _Turn {
       case UltimateCommand():
         final sk = ultimateOf(p, engine.catalog);
         // Costo variable (ultimates_v2.md § 2.2): resta, no vacía.
-        if (sk == null || p.ult < kUltCost) return false;
+        if (sk == null || p.ult < kUltCost || ultSilenced(p)) return false;
         p.ult = 0;
         usedUlt = true;
         if (sk.hpCost > 0) {
@@ -5942,6 +6115,9 @@ class _Turn {
         !q.alive ||
         p.mp < BattleEngine.dualMpCost ||
         q.mp < BattleEngine.dualMpCost ||
+        // Silence (combat.md § "Silencio"): duos cost MP.
+        p.silenced > 0 ||
+        q.silenced > 0 ||
         // porBando: el compañero gasta su acción de este turno del grupo.
         (state.grouped && state.acted.contains(q.id))) {
       return false;

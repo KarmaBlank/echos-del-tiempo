@@ -155,7 +155,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// combat.md § "Tanques" and § "Nadie solo en una fase").
 /// 65: action queue (turn_modes.md § 3.1): `q` in the battle snapshot
 /// and the `uncmd` action.
-const kProtocolVersion = 65;
+/// 66: enemy Silence and player break (combat.md § "Silencio",
+/// combo_balance.md § 5.4): `sil` on combatants; players carry `brk`,
+/// `brkN`, `vul`, `brkS`.
+const kProtocolVersion = 66;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

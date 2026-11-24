@@ -318,5 +318,8 @@
   "ui.battle_log.ward_down": "",
   "ui.battle_log.tank_guard": "",
   "ui.battle_log.mod.ward": "",
-  "ui.battle_log.mod.tank_guard": ""
+  "ui.battle_log.mod.tank_guard": "",
+  "ui.battle_log.silence_cast": "",
+  "ui.battle_log.silence_ends": "",
+  "ui.battle_log.player_break": ""
 }

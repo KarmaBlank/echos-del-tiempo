@@ -318,5 +318,8 @@
   "ui.battle_log.ward_down": "{a}'s {t} ward falls",
   "ui.battle_log.tank_guard": "{a} defends",
   "ui.battle_log.mod.ward": "WARD {t}",
-  "ui.battle_log.mod.tank_guard": "DEFENSE"
+  "ui.battle_log.mod.tank_guard": "DEFENSE",
+  "ui.battle_log.silence_cast": "{a} silences {b}: no skills that cost MP ({n, plural, one{# turn} other{# turns}})",
+  "ui.battle_log.silence_ends": "{a} is no longer silenced",
+  "ui.battle_log.player_break": "{a} BROKEN! Loses their next turn and takes +{p}% damage"
 }
