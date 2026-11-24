@@ -143,7 +143,7 @@ Líneas es-AR (BORRADOR):
 ## 5. Red y guardado
 
 - `WorldEventsState` viaja en `TownState.farmJson` (`wev`): todos ven los
-  mismos eventos. Sube `kProtocolVersion` (68 → 69).
+  mismos eventos. Sube `kProtocolVersion` (69 → 70).
 - Se guarda con el mundo (`TownState.toJson`). Un save viejo sin `wev`
   arranca vacío.
 - El catálogo (`assets/data/events/world_events.json`) no viaja: cada par
