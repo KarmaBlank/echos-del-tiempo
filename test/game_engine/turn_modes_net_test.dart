@@ -18,18 +18,18 @@ import 'session_test_helpers.dart';
 
 /// Modos de turno en la red (turn_modes.md § 5): el host manda.
 void main() {
-  test('sala de 3: por defecto Por fases; la pelea usa porFases y viaja',
+  test('sala de 3: por defecto Por rondas; la pelea usa porRonda y viaja',
       () {
     const j = SessionJson();
     final e = sessionEngine();
     var s = inField(e, 'm1', classes: ['guerrero', 'maga', 'guerrero'], mode: null);
-    expect(s.effectiveCombatMode, CombatMode.phases);
+    expect(s.effectiveCombatMode, CombatMode.rounds);
     s = wait(e, s, 2.6);
     final en = s.mission!.enemies.firstWhere((x) => !x.boss && !x.elite);
     s = moveTo(e, s, 'p0', en.x, en.y);
     s = e.tick(s, 0.05).state;
     expect(s.mode, SessionMode.battle);
-    expect(s.battle!.state.turnRule, TurnRule.porFases);
+    expect(s.battle!.state.turnRule, TurnRule.porRonda);
 
     // Varias rondas: los comandos llegan como del cable, y lo que ve un
     // cliente (el snapshot) respeta la regla: nadie actúa dos veces.
@@ -48,7 +48,7 @@ void main() {
           s = step.state;
           // Lo que recibe el cliente.
           final seen = j.fromJson(asJson(jsonDecode(jsonEncode(j.toJson(s)))));
-          expect(seen.battle!.state.turnRule, TurnRule.porFases);
+          expect(seen.battle!.state.turnRule, TurnRule.porRonda);
           expect(seen.battle!.state.acted, contains(who));
           // Un segundo comando del mismo jugador se descarta.
           expect(e.apply(s, who, const BattleAction(DefendCommand())), isNull);
