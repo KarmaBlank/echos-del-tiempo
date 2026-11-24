@@ -145,3 +145,17 @@ ni líneas cortadas.
   (world_events.md § 1).
 - OFICIOS → Herrería → COLECCIÓN usa la misma plantilla
   (`DsCollectionTemplate`, mining_smithing.md § 2.1).
+
+### 6.2.1 Reloj de estación y anuncios (v0.46.2)
+
+- La fila de estación muestra solo la estación actual. El último día dice
+  "Último día de {estación} · mañana {siguiente}".
+- ▸/▾ despliega: "{estación} · día X de Y", "Sigue: {siguiente} mañana / en N
+  días" y "Después: {la otra}".
+- El cartel de clima/pronóstico arriba del mapa aparece al cambiar y dura 3 s
+  (como un snackbar), con fundido en el último medio segundo.
+- Niebla: velo muy leve más dos capas de manchas pixeladas (celdas de 8 px
+  ancladas al mundo, ruido suave, alfa cuantizado) que derivan lento; nunca
+  bandas sólidas.
+- Cada construcción del pueblo dibuja el poste de su cartel en el tile que
+  responde al mouse.

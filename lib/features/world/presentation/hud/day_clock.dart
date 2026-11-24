@@ -11,11 +11,22 @@ import '../world_strings.dart';
 /// el ícono del clima de ahora en el lugar ([place], `null` = pueblo) y la
 /// marca de la estación (weather_seasons.md § 6.2). El mouse encima dice
 /// el clima, la estación y el pronóstico (tooltip de tamaño fijo).
-class DayClock extends StatelessWidget {
+class DayClock extends StatefulWidget {
   const DayClock({super.key, required this.sky, this.place});
 
   final SkyState sky;
   final String? place;
+
+  @override
+  State<DayClock> createState() => _DayClockState();
+}
+
+class _DayClockState extends State<DayClock> {
+  /// Desplegado: muestra la estación siguiente y cuándo empieza.
+  bool _open = false;
+
+  SkyState get sky => widget.sky;
+  String? get place => widget.place;
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +41,12 @@ class DayClock extends StatelessWidget {
         : w.text;
     final next = Season.values[(season.index + 1) % Season.values.length];
     final left = WeatherRules.daysToNextSeason(sky.day);
-    final seasonLine =
-        context.t('ui.world.clock.season_left', {'season': season.text, 'n': left});
+    // Solo la estación actual; el último día avisa qué viene mañana.
+    final lastDay = left <= 1;
+    final seasonLine = lastDay
+        ? context.t('ui.world.clock.season_last',
+            {'season': season.text, 'next': next.text})
+        : season.text;
     // Two rows (weather_seasons.md § 6.2): weather + clock, season + days
     // left. Each icon has its own tooltip; texts never clip (ellipsis as
     // a last resort, full text in the tooltip).
@@ -79,6 +94,35 @@ class DayClock extends StatelessWidget {
           size: const Size.square(12),
           painter: _SeasonIcon(season)),
     );
+    final after = Season.values[(season.index + 2) % Season.values.length];
+    final toggle = DsTooltip(
+      card: DsTooltipCard(
+          title: context.t(_open
+              ? 'ui.world.clock.season_hide'
+              : 'ui.world.clock.season_more')),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          key: const ValueKey('hud-season-toggle'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: EdgeInsets.only(left: DsSpace.xs),
+            child: Text(_open ? '▾' : '▸',
+                style: DsText.body(DsColors.textSecondary)),
+          ),
+        ),
+      ),
+    );
+    Widget detail(String text, Key key) => Padding(
+          padding: EdgeInsets.only(left: 12 + DsSpace.xs, top: DsSpace.xs),
+          child: Text(text,
+              key: key,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: DsText.detail()),
+        );
     return RetroPanel(
       key: const ValueKey('hud-day-clock'),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -88,7 +132,29 @@ class DayClock extends StatelessWidget {
         children: [
           row(weatherIcon, label, const ValueKey('hud-clock-text')),
           SizedBox(height: DsSpace.xs),
-          row(seasonIcon, seasonLine, const ValueKey('hud-season-text')),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(
+                child: row(seasonIcon, seasonLine,
+                    const ValueKey('hud-season-text'))),
+            toggle,
+          ]),
+          if (_open) ...[
+            detail(
+                context.t('ui.world.clock.season', {
+                  'season': season.text,
+                  'day': WeatherRules.seasonDay(sky.day),
+                  'len': WeatherRules.seasonDays,
+                }),
+                const ValueKey('hud-season-now')),
+            detail(
+                context.t('ui.world.clock.season_next',
+                    {'season': next.text, 'n': left}),
+                const ValueKey('hud-season-next')),
+            detail(
+                context.t('ui.world.clock.season_after',
+                    {'season': after.text}),
+                const ValueKey('hud-season-after')),
+          ],
         ],
       ),
     );

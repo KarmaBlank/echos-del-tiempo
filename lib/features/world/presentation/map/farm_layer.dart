@@ -319,6 +319,26 @@ class MapFarmLayer {
     }
   }
 
+  /// El poste de cada cartel (town_editor.md § 4.3, sprite lógico
+  /// `cartel_lago`): sin él, la etiqueta podía quedar tapada y el tile
+  /// del cartel parecía vacío aunque respondía al mouse.
+  void drawSigns(Canvas c, TownState town) {
+    final (ox, oy) = town.origin;
+    final p = Paint();
+    for (final b in town.builds) {
+      final (sx, sy) = TownPlan.signOf(town, b);
+      final x = (sx + ox) * ts, y = (sy + oy) * ts;
+      c.drawRect(Rect.fromLTWH(x + 7, y + 7, 2, 8),
+          p..color = FarmPalette.seedBagTie);
+      c.drawRect(Rect.fromLTWH(x + 2, y + 3, 12, 6),
+          p..color = FarmPalette.hoeHandle);
+      c.drawRect(Rect.fromLTWH(x + 3, y + 4, 10, 4),
+          p..color = FarmPalette.seedBag);
+      c.drawRect(Rect.fromLTWH(x + 5, y + 5, 6, 1),
+          p..color = FarmPalette.seedBagTie);
+    }
+  }
+
   /// El nombre de cada construcción sobre su cartel (LAGO / HUERTA;
   /// town_editor.md § 4.3).
   void drawZoneLabels(Canvas c, TownState town, MapText text) {
