@@ -54,6 +54,8 @@ import 'life_level_layer.dart';
 import '../../../../core/audio/sfx_catalog.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../../../../game_engine/rules/biome_fisher_rules.dart';
+import '../../../../game_engine/data/npc_camp_catalog.dart';
+import '../../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
@@ -910,24 +912,30 @@ class MapGame extends Game {
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
         // pueblo, solo está allá (§ 10.1).
-        final (nx, ny) = lay.npc.tile;
+        // Campamento y paseo (§ 9.2): todo sale del reloj de la sala.
+        _drawCamp(c, lay.npc, t);
+        final at = NpcCampRules.state(lay.npc, s.time);
         final im = sprites.lifeIcon(lay.npc.sprite, 'herramienta');
+        final cx = at.x, bottom = at.y + ts / 2;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
-          final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
+          // Agachado mientras hace lo suyo; un saltito al caminar.
+          final dh = at.busy ? h * 0.82 : h;
+          final hop = at.walking ? ((t / 120).floor().isEven ? 1.0 : 0.0) : 0.0;
           c.drawImageRect(
               im,
               Rect.fromLTWH(0, 0, w, h),
-              Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
+              Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh),
               SpriteCatalog.pixelPaint());
         }
-        _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts, ny * ts - 4,
+        if (at.busy) _drawSparks(c, lay.npc, cx, bottom, t);
+        _rankedText(c, lay.npc.name.toUpperCase(), cx, bottom - ts - 4,
             TownPalette.label, 6, 899);
         drawNpcMark(
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 901),
             _npcMark(lay.npc),
-            (nx + 0.5) * ts,
-            ny * ts - 14,
+            cx,
+            bottom - ts - 14,
             t);
       }
       // Pescador nativo del bioma (fishing.md § 12): camina por la orilla.
@@ -1234,6 +1242,11 @@ class MapGame extends Game {
       final (ox, oy) = map.townOrigin;
       final townLights =
           map.lobby && map.place == null ? s.town.lights : const <(int, int)>[];
+      final campLay = map.lobby ? biomeLayout(map.place) : null;
+      final campNpc = campLay != null &&
+              !s.town.resident(campLay.npc.id).invited
+          ? campLay.npc
+          : null;
       if (ambient.$1 < 0.995 || ambient.$3 < 0.995) {
         light.draw(c, map, worldView,
             ambient: ambient,
@@ -1245,6 +1258,11 @@ class MapGame extends Game {
                     for (final (fx, fy) in townLights)
                       LightSource(fx + ox + 0.5, fy + oy + 0.3,
                           kLightDefs[LightId.faro]!),
+                    // Hoguera del campamento (lighting.md § 3).
+                    if (campNpc != null)
+                      if (NpcCampRules.light(campNpc, a, b, cx, cy)
+                          case final l?)
+                        l,
                   ]
                 : const [],
             moving: lit ? movingLights : const [],
@@ -1500,6 +1518,54 @@ class MapGame extends Game {
         Rect.fromLTWH(0, 0, w, h),
         Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h),
         SpriteCatalog.pixelPaint());
+  }
+
+  final Paint _campPaint = Paint();
+
+  /// Campamento de un habitante de bioma (overworld_biomes.md § 9.2):
+  /// hoguera con brasas que titilan y el objeto de su oficio.
+  void _drawCamp(Canvas c, BiomeNpcDef npc, double t) {
+    final camp = kNpcCamps[npc.id];
+    final fire = NpcCampRules.fireTile(npc);
+    final prop = NpcCampRules.propTile(npc);
+    if (camp == null || fire == null || prop == null) return;
+    void sprite(String id, (int, int) at) {
+      final im = sprites.lifeIcon(id, 'herramienta');
+      if (im == null) return;
+      final w = im.width.toDouble(), h = im.height.toDouble();
+      c.drawImageRect(
+          im,
+          Rect.fromLTWH(0, 0, w, h),
+          Rect.fromLTWH((at.$1 + 0.5) * ts - w / 2, (at.$2 + 1) * ts - h, w, h),
+          SpriteCatalog.pixelPaint());
+    }
+
+    sprite(NpcCampDef.fireSprite, fire);
+    sprite(camp.propSprite, prop);
+    // Llama: tres píxeles que suben y titilan (sin timers: sale de [t]).
+    final fx = (fire.$1 + 0.5) * ts, fy = (fire.$2 + 1) * ts - 7;
+    for (var i = 0; i < 3; i++) {
+      final ph = ((t / 90 + i * 3.7) % 6) / 6;
+      _campPaint.color = Color.lerp(const Color(0xFFFFE08A),
+              const Color(0xFFFF6A2A), ph)!
+          .withValues(alpha: 1 - ph);
+      c.drawRect(
+          Rect.fromLTWH(fx - 2 + i * 1.5, fy - ph * 6, 1, 1), _campPaint);
+    }
+  }
+
+  /// Chispas de la actividad del habitante (§ 9.2), del color de su oficio.
+  void _drawSparks(
+      Canvas c, BiomeNpcDef npc, double x, double bottom, double t) {
+    final key = kNpcCamps[npc.id]?.spark ?? 'calida';
+    final base = LightPalette.tints[key] ?? LightPalette.fallback;
+    for (var i = 0; i < 4; i++) {
+      final ph = ((t / 160 + i * 1.9) % 4) / 4;
+      _campPaint.color = base.withValues(alpha: 1 - ph);
+      c.drawRect(
+          Rect.fromLTWH(x - 5 + i * 3.0, bottom - 3 - ph * 8, 1, 1),
+          _campPaint);
+    }
   }
 }
 

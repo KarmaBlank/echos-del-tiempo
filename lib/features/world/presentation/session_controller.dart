@@ -36,6 +36,7 @@ import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
 import '../../../game_engine/rules/resident_rules.dart';
 import '../../../game_engine/rules/biome_fisher_rules.dart';
+import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
 
@@ -1399,10 +1400,9 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     // Ya vive en el pueblo: no está más en su bioma (§ 10.1).
     if (s.town.resident(lay.npc.id).invited) return null;
-    final (nx, ny) = lay.npc.tile;
-    return WorldRules.distance(
-                local.x, local.y, (nx + 0.5) * 16, (ny + 0.5) * 16) <
-            26
+    // Paseo alrededor del campamento (§ 9.2).
+    final at = NpcCampRules.state(lay.npc, s.time);
+    return WorldRules.distance(local.x, local.y, at.x, at.y) < 26
         ? lay.npc
         : null;
   }
@@ -1426,8 +1426,8 @@ class SessionController extends StateNotifier<SessionView?> {
       return null;
     }
     if (s.town.resident(lay.npc.id).invited) return null;
-    final (nx, ny) = lay.npc.tile;
-    return near((nx + 0.5) * 16, (ny + 0.5) * 16) ? lay.npc : null;
+    final at = NpcCampRules.state(lay.npc, s.time);
+    return near(at.x, at.y) ? lay.npc : null;
   }
 
   /// Abre la pantalla de [n] (clic o E).
