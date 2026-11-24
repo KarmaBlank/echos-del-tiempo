@@ -5,8 +5,8 @@ enum SmithMatKind { ore, ingot, rare, special }
 
 /// A smithing material. [name] is the es-AR source text; the UI resolves
 /// `data.materials.smith.<id>.name`. [tier] is the ore level (1..5) of
-/// its biome; [seasons] is empty for all year (hook for the season
-/// rules: nothing reads it yet).
+/// its biome; [seasons] is empty for all year, otherwise
+/// `MiningRules.inSeason` limits it to those seasons.
 class SmithMaterialDef {
   const SmithMaterialDef(this.id, this.name, this.kind,
       {this.biome, this.tier = 0, this.seasons = const {}});

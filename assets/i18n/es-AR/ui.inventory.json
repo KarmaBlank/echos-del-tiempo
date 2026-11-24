@@ -492,5 +492,15 @@
   "ui.inventory.smith.col.use.smelt": "Se funde en {id}",
   "ui.inventory.smith.col.use.forge": "Forja armas ({id})",
   "ui.inventory.smith.col.use.rare": "Armas Raras o mejores con {id}",
-  "ui.inventory.smith.col.use.legend": "Receta de un legendario forjado ({id})"
+  "ui.inventory.smith.col.use.legend": "Receta de un legendario forjado ({id})",
+  "ui.inventory.smith.col.src.mine": "Mina de {biome}",
+  "ui.inventory.smith.col.src.dungeon": "Veta de mazmorra de {biome} (zona {zone})",
+  "ui.inventory.smith.col.src.smelt": "Fundido en la forja",
+  "ui.inventory.smith.col.src.boss": "Guardián de zona",
+  "ui.inventory.smith.col.have": "Tenés: {n}",
+  "ui.inventory.smith.col.unknown": "Todavía no encontraste este material.",
+  "ui.inventory.smith.col.tab.ore": "MENAS",
+  "ui.inventory.smith.col.tab.ingot": "LINGOTES",
+  "ui.inventory.smith.col.tab.rare": "RAROS",
+  "ui.inventory.smith.col.tab.special": "ESPECIALES"
 }

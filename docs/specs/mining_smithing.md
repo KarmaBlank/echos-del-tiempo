@@ -1,4 +1,4 @@
-# Spec: Minería y herrería (v0.44.0, protocolo 69)
+# Spec: Minería y herrería (v0.44.0, protocolo 71)
 
 Pedido del dueño: minas tranquilas en cada exterior de bioma, vetas que
 se pican con un pico, materiales de herrería con sentido (mena → lingote
@@ -19,9 +19,11 @@ Editor → Balance → **Minería y herrería** (`TuningId.smithing`).
 - Pueblo 100 % opcional (roles.md § 0): nada del camino crítico depende
   de minar o forjar; el balance de solo mazmorras no cuenta las armas
   forjadas.
-- Clima y estaciones (otra rama): cada material tiene `seasons` (vacío =
-  todo el año). Hoy no se mira; el gancho de temporada filtra o pondera
-  por ese campo sin tocar las reglas.
+- Clima y estaciones (weather_seasons.md): cada material tiene `seasons`
+  (vacío = todo el año). `MiningRules.inSeason` lo aplica con
+  `WeatherRules.season(día)`: un material fuera de temporada no sale de
+  vetas de mina ni de mazmorra. Hoy todos los materiales tienen
+  `seasons` vacío (sin cambio de balance).
 
 ## 1. Minas
 
@@ -63,6 +65,8 @@ distancia y que la veta esté lista. Da:
 
 - `mineOreMin`..`mineOreMax` menas del bioma.
 - Con `mineRareChance`, 1 material raro del bioma.
+- Con `mineBaitChance` (0.05), un cebo (`BaitRules.foundBait`, los
+  comunes más seguido; weather_seasons.md).
 - XP de Herrería `mineXp` × nivel de la mena.
 
 La veta queda gastada (`r` → `j`) por `mineRespawnSec` segundos del reloj
@@ -98,10 +102,12 @@ material). Ids en inglés; nombres en `data.materials.smith.<id>.name`.
 Especiales: `schematic` Plano antiguo (receta, vetas de mazmorra) y
 `guardian_core` Núcleo de guardián (jefes).
 
-### 2.1 Colección de materiales (datos; UI pendiente)
+### 2.1 Colección de materiales
 
-Para OFICIOS → Herrería → COLECCIÓN (la plantilla de grilla compartida
-la arma otra rama; el integrador la conecta). Por jugador,
+OFICIOS → Herrería → COLECCIÓN, sobre la plantilla compartida
+`DsCollectionTemplate` (design_system.md § 6.1;
+`lib/features/world/presentation/panels/smith_collection.dart`). Por
+jugador,
 `LifeSkills.oreLog` (JSON `ol`: `{id: [día, origen, total]}`): primer
 hallazgo, origen (`mine:<bioma>`, `dungeon:<zona>`, `boss`, `smelt`) y
 cuántos se encontraron en total. Usos por material, sacados de los datos
@@ -109,7 +115,15 @@ cuántos se encontraron en total. Usos por material, sacados de los datos
 `SmithCollection.entries(perfil)` devuelve cada material (id, ícono del
 manifest, clave del nombre, descubierto y filas como clave i18n +
 argumentos `ui.inventory.smith.col.*`); los no descubiertos van sin
-filas (la UI los muestra como "?" gris).
+filas (la UI los muestra como "?" gris, sin pistas).
+
+UI: subtabs TODOS / MENAS / LINGOTES / RAROS / ESPECIALES y contador
+descubiertos/total. Material descubierto: dónde se encontró (mina de un
+bioma, veta de mazmorra con su bioma y zona, fundido en la forja o
+guardián de zona), primer día, usos, rareza (color y etiqueta), total
+encontrado y cuántos tenés. Tipografía por rol del sistema de diseño,
+sin cortes; test de overflow en
+`test/features/world/smith_collection_test.dart`.
 
 ## 3. Fundir
 
@@ -156,7 +170,7 @@ del encargo de forja de siempre, que sigue igual.
 
 ## 6. Red
 
-- Protocolo 69: `ore` y `ol` en `LifeSkills`, acciones `mine` (`i`) y `smith`
+- Protocolo 71: `ore` y `ol` en `LifeSkills`, acciones `mine` (`i`) y `smith`
   (`o`, `b`, `g`, `r`, `n`), `PoiKind.ore`, lugares `mine:<bioma>:<i>`.
 - Todo lo valida el anfitrión (distancia, veta lista, pueblo, costo,
   nivel, Brann). La Travesía rechaza todo.
@@ -173,4 +187,5 @@ forjado queda debajo del personaje, la rareza respeta el nivel y un
 - Picos mejores (hoy uno solo) y minijuego de golpe.
 - Arte final de vetas, boca de mina y PNJ (placeholders en
   `sprite_manifest.yaml`).
-- Estaciones (§ 0).
+- Materiales de temporada: el gancho existe (§ 0) pero ningún material
+  tiene `seasons` todavía.

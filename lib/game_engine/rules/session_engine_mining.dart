@@ -32,13 +32,19 @@ extension _MiningOp on _Op {
     }
     if (MiningRules.regrowIn(s.town, place, vein, s.time) > 0) return false;
     s.town = MiningRules.spend(s.town, place, vein, s.time);
-    final got = MiningRules.veinYield(_rand, lay.biome);
+    final got = MiningRules.veinYield(_rand, lay.biome, day: s.town.sky.day);
     _profileChange(
         p,
         MiningRules.give(p.profile, got,
             source: MiningRules.mineSource(lay.biome), day: s.town.sky.day),
         gain: true);
-    say('${p.name} picó una veta (${_oreText(got)}).');
+    // Sometimes a bait comes out of the rock (fishing.md § 14.4).
+    final bait = MiningRules.veinBait(_rand);
+    if (bait != null) {
+      p.profile = p.profile.copyWith(life: p.profile.life.addBait(bait));
+    }
+    say('${p.name} picó una veta (${_oreText(got)}'
+        '${bait == null ? '' : ' y ${kBaits[bait]!.name}'}).');
     smithXp(p, MiningRules.veinXp(lay.biome));
     return true;
   }
@@ -104,7 +110,7 @@ extension _MiningOp on _Op {
   /// A rare dungeon vein (mining_smithing.md § 1.4).
   void _mineDungeonVein(SessionPlayer p, int zone) {
     if (p.isCompanion) return;
-    final got = MiningRules.dungeonYield(_rand, zone);
+    final got = MiningRules.dungeonYield(_rand, zone, day: s.town.sky.day);
     _profileChange(
         p,
         MiningRules.give(p.profile, got,

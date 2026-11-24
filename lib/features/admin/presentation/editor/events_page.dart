@@ -1,10 +1,17 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../core/i18n/catalog_text.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
+import '../../../../game_engine/models/sky.dart' show Season, Weather;
 import '../field_editors.dart' show NumberStepper;
 import 'events_editor_controller.dart';
+
+// es-AR source texts of the climate condition (world_events.md § 7).
+const _seasonHeader = 'ESTACIÓN (NINGUNA = CUALQUIERA)';
+const _weatherHeader = 'CLIMA DEL PUEBLO (NINGUNO = CUALQUIERA)';
+const _anyLabel = 'CUALQUIERA';
 
 String _catLabel(WorldEventCategory c) => switch (c) {
       WorldEventCategory.visitor => 'VISITANTE',
@@ -357,6 +364,44 @@ class _Sheet extends StatelessWidget {
                       })),
         ]),
       ],
+      DsSectionHeader(CatalogText.of(
+          'ui.town.events.editor.season', _seasonHeader)),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        DsButton(CatalogText.of('ui.town.events.editor.any', _anyLabel),
+            key: const ValueKey('event-season-none'),
+            size: DsButtonSize.compact,
+            kind: DsButtonKind.ghost,
+            selected: e['season'] == null,
+            onPressed: () => c.edit(() => e.remove('season'))),
+        for (final s in Season.values)
+          DsButton(
+              CatalogText.of('ui.town.season.${s.name}', s.label)
+                  .toUpperCase(),
+              key: ValueKey('event-season-${s.name}'),
+              size: DsButtonSize.compact,
+              kind: DsButtonKind.ghost,
+              selected: e['season'] == s.name,
+              onPressed: () => c.edit(() => e['season'] = s.name)),
+      ]),
+      DsSectionHeader(CatalogText.of(
+          'ui.town.events.editor.weather', _weatherHeader)),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        DsButton(CatalogText.of('ui.town.events.editor.any', _anyLabel),
+            key: const ValueKey('event-weather-none'),
+            size: DsButtonSize.compact,
+            kind: DsButtonKind.ghost,
+            selected: e['weather'] == null,
+            onPressed: () => c.edit(() => e.remove('weather'))),
+        for (final w in Weather.values)
+          DsButton(
+              CatalogText.of('ui.town.weather.${w.name}', w.label)
+                  .toUpperCase(),
+              key: ValueKey('event-weather-${w.name}'),
+              size: DsButtonSize.compact,
+              kind: DsButtonKind.ghost,
+              selected: e['weather'] == w.name,
+              onPressed: () => c.edit(() => e['weather'] = w.name)),
+      ]),
       const DsSectionHeader('HABITANTE QUE TIENE QUE VIVIR EN EL PUEBLO'),
       Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
         if (cat != WorldEventCategory.lore)

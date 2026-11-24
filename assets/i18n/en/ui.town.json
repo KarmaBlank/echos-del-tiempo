@@ -490,5 +490,8 @@
   "ui.town.crop_quality.epico": "epic",
   "ui.town.crop_quality.legendario": "legendary",
   "ui.town.trader.kind.baits": "BAITS",
-  "ui.town.trader.tag_bait": "BAIT"
+  "ui.town.trader.tag_bait": "BAIT",
+  "ui.town.events.editor.season": "SEASON (NONE = ANY)",
+  "ui.town.events.editor.weather": "TOWN WEATHER (NONE = ANY)",
+  "ui.town.events.editor.any": "ANY"
 }

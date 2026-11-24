@@ -20,6 +20,7 @@ import 'life_item_grid.dart';
 import 'seed_text.dart';
 import 'bait_text.dart';
 import 'life_collection.dart';
+import 'smith_collection.dart';
 import '../../../../game_engine/rules/bait_rules.dart';
 import '../world_strings.dart';
 
@@ -74,6 +75,8 @@ const _filters = <OficioBag, List<(String, String, List<String>)>>{
   ],
   OficioBag.herreria: [
     ('todo', 'ui.town.bag.filter.all', ['life-craft-']),
+    // COLECCIÓN (mining_smithing.md § 2.1): the shared template.
+    ('coleccion', 'ui.town.bag.filter.collection', <String>[]),
   ],
 };
 
@@ -154,9 +157,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         SizedBox(height: DsSpace.xs),
         Expanded(
           child: collection
-              ? (_bag == OficioBag.pesca
-                  ? fishCollection(context, p)
-                  : cropCollection(context, p))
+              ? switch (_bag) {
+                  OficioBag.pesca => fishCollection(context, p),
+                  OficioBag.cultivo => cropCollection(context, p),
+                  OficioBag.herreria => smithCollection(context, p),
+                }
               : LifeItemGrid(
             key: ValueKey('life-list-${_bag.name}-${f.$1}'),
             groups: [LifeItemGroup(null, shown)],

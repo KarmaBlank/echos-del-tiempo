@@ -1,4 +1,4 @@
-# Estaciones y clima (protocolo 69)
+# Estaciones y clima (protocolo 72)
 
 Estado: implementado en `feat/weather-seasons`. Textos en es-AR
 definitivos; **en y zh-Hans son borradores** (revisar con quien traduce).
@@ -122,8 +122,9 @@ ni líneas cortadas.
 
 ## 9. Red
 
-- `kProtocolVersion` = 69 (seed en `SkyState`, cebos en `LifeSkills`,
-  `cropLog`, acciones de cebo en `FarmShopOp`).
+- `kProtocolVersion` = 72 (seed `sd` en `SkyState`, cebos en
+  `LifeSkills`, `cropLog` `cl`, acciones de cebo en `FarmShopOp`). Se
+  integró después de eventos del mundo (70) y minería/herrería (71).
 
 ## 10. API para otros sistemas
 
@@ -133,4 +134,14 @@ ni líneas cortadas.
 - `WeatherRules.hasSky(biome)`, `allows(biome, w)`, `biteChance(w)`,
   `fisherFactor(w)`.
 - `SkyRules.nowIn(sky, place)`; `climateOf(biome)` (exposición, marcas).
-- Minas: `BaitRules.foundBait(roll)` devuelve el cebo a dar como botín.
+- Minas: `BaitRules.foundBait(roll)` devuelve el cebo a dar como botín;
+  cada veta picada da uno con `mineBaitChance` (tuning de herrería, 0.05;
+  `MiningRules.veinBait`). Ver mining_smithing.md § 1.3.
+- Herrería: `SmithMaterialDef.seasons` (vacío = todo el año) se aplica
+  con `MiningRules.inSeason(def, día)` usando `WeatherRules.season`.
+- Eventos del mundo: `season` / `weather` opcionales en cada evento,
+  aplicados con `WorldEventRules.climateCondition(seed, día)` (clima del
+  pueblo ese día) vía `WorldEventContext.extraCondition`
+  (world_events.md § 1).
+- OFICIOS → Herrería → COLECCIÓN usa la misma plantilla
+  (`DsCollectionTemplate`, mining_smithing.md § 2.1).

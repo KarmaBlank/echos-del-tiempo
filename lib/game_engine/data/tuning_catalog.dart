@@ -542,6 +542,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'mineOreMin': 1,
     'mineOreMax': 2,
     'mineRareChance': 0.06,
+    'mineBaitChance': 0.05,
     'mineNpcChance': 0.5,
     'mineXp': 8,
     'dungeonOreChance': 0.5,

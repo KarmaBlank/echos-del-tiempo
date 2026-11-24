@@ -490,5 +490,8 @@
   "ui.town.crop_quality.epico": "épica",
   "ui.town.crop_quality.legendario": "legendaria",
   "ui.town.trader.kind.baits": "CEBOS",
-  "ui.town.trader.tag_bait": "CEBO"
+  "ui.town.trader.tag_bait": "CEBO",
+  "ui.town.events.editor.season": "ESTACIÓN (NINGUNA = CUALQUIERA)",
+  "ui.town.events.editor.weather": "CLIMA DEL PUEBLO (NINGUNO = CUALQUIERA)",
+  "ui.town.events.editor.any": "CUALQUIERA"
 }

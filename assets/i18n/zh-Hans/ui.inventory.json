@@ -615,5 +615,45 @@
   "ui.inventory.smith.col.use.legend": {
     "text": "锻造传说武器的配方（{id}）",
     "status": "draft"
+  },
+  "ui.inventory.smith.col.src.mine": {
+    "text": "{biome}矿洞",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.dungeon": {
+    "text": "{biome}地牢矿脉（区域 {zone}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.smelt": {
+    "text": "在锻炉熔炼",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.boss": {
+    "text": "区域守护者",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.have": {
+    "text": "持有：{n}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.unknown": {
+    "text": "你还没有发现这种材料。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.ore": {
+    "text": "矿石",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.ingot": {
+    "text": "锭",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.rare": {
+    "text": "稀有",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.special": {
+    "text": "特殊",
+    "status": "draft"
   }
 }

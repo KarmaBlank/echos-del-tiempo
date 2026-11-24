@@ -492,5 +492,15 @@
   "ui.inventory.smith.col.use.smelt": "Smelts into {id}",
   "ui.inventory.smith.col.use.forge": "Forges weapons ({id})",
   "ui.inventory.smith.col.use.rare": "Rare or better weapons with {id}",
-  "ui.inventory.smith.col.use.legend": "Recipe of a forged legendary ({id})"
+  "ui.inventory.smith.col.use.legend": "Recipe of a forged legendary ({id})",
+  "ui.inventory.smith.col.src.mine": "Mine of {biome}",
+  "ui.inventory.smith.col.src.dungeon": "Dungeon vein of {biome} (zone {zone})",
+  "ui.inventory.smith.col.src.smelt": "Smelted at the forge",
+  "ui.inventory.smith.col.src.boss": "Zone guardian",
+  "ui.inventory.smith.col.have": "You have: {n}",
+  "ui.inventory.smith.col.unknown": "You have not found this material yet.",
+  "ui.inventory.smith.col.tab.ore": "ORES",
+  "ui.inventory.smith.col.tab.ingot": "INGOTS",
+  "ui.inventory.smith.col.tab.rare": "RARE",
+  "ui.inventory.smith.col.tab.special": "SPECIAL"
 }

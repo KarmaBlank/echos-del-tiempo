@@ -1664,6 +1664,7 @@ const _smithingLabels = {
   'mineOreMin': 'Mina: menas mínimas por veta',
   'mineOreMax': 'Mina: menas máximas por veta',
   'mineRareChance': 'Mina: chance de material raro',
+  'mineBaitChance': 'Mina: chance de cebo en una veta',
   'mineNpcChance': 'Mina: chance de un PNJ',
   'mineXp': 'Mina: XP de Herrería × nivel de mena',
   'dungeonOreChance': 'Mazmorra: chance de veta rara por piso',

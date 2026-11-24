@@ -168,10 +168,13 @@ extension _FarmingOp on _Op {
     // The notice line is added by every peer in its own language when
     // the event shows up in the town (SessionController).
     final (next, _) = WorldEventRules.onDay(ev, day, kWorldEvents,
-        ctx: WorldEventContext(residents: {
-          for (final r in s.town.residents.values)
-            if (r.invited) r.npc
-        }));
+        ctx: WorldEventContext(
+            residents: {
+              for (final r in s.town.residents.values)
+                if (r.invited) r.npc
+            },
+            extraCondition:
+                WorldEventRules.climateCondition(s.town.sky.seed, day)));
     if (next != s.town.events) s.town = s.town.copyWith(events: next);
   }
 

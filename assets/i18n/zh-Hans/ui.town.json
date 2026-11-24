@@ -490,5 +490,8 @@
   "ui.town.crop_quality.epico": "史诗",
   "ui.town.crop_quality.legendario": "传说",
   "ui.town.trader.kind.baits": "鱼饵",
-  "ui.town.trader.tag_bait": "鱼饵"
+  "ui.town.trader.tag_bait": "鱼饵",
+  "ui.town.events.editor.season": "季节（无 = 任意）",
+  "ui.town.events.editor.weather": "城镇天气（无 = 任意）",
+  "ui.town.events.editor.any": "任意"
 }

@@ -9,10 +9,12 @@ import '../models/player_profile.dart';
 import '../models/weapon.dart';
 import '../models/world_save.dart' show TownState;
 import 'battle_engine.dart' show RandomSource;
+import 'bait_rules.dart';
 import 'biome_rules.dart';
 import '../models/loot.dart' show LootSource;
 import 'loot_rules.dart';
 import 'mine_generator.dart';
+import 'weather_rules.dart';
 
 /// Mines and veins (docs/specs/mining_smithing.md § 1). Pure; numbers in
 /// `kTuning[TuningId.smithing]`.
@@ -130,33 +132,54 @@ abstract final class MiningRules {
     return town.copyWith(wild: wild);
   }
 
+  /// Material [d] can be found on world [day] (mining_smithing.md § 0):
+  /// an empty `seasons` means all year; otherwise the season of [day]
+  /// ([WeatherRules.season]) must be listed.
+  static bool inSeason(SmithMaterialDef d, int day) =>
+      d.seasons.isEmpty || d.seasons.contains(WeatherRules.season(day).name);
+
+  /// [got] without the materials out of season on [day].
+  static Map<String, int> _seasonal(Map<String, int> got, int day) => {
+        for (final e in got.entries)
+          if (kSmithMaterials[e.key] case final d?
+              when inSeason(d, day))
+            e.key: e.value,
+      };
+
   /// What a vein of [biome] yields: `mineOreMin..mineOreMax` ores and,
-  /// with `mineRareChance`, one rare material. [season] is the hook for
-  /// the season rules (unused today).
+  /// with `mineRareChance`, one rare material. Materials out of season on
+  /// world [day] are dropped ([inSeason]).
   static Map<String, int> veinYield(RandomSource rand, String biome,
-      {String? season}) {
+      {int day = 0}) {
     final b = kBiomeOres[biome];
     if (b == null) return const {};
     final lo = t.i('mineOreMin'), hi = math.max(lo, t.i('mineOreMax'));
     final n = lo + (rand() * (hi - lo + 1)).floor().clamp(0, hi - lo);
-    return {
+    return _seasonal({
       if (n > 0) b.ore: n,
       if (rand() < t.d('mineRareChance')) b.rare: 1,
-    };
+    }, day);
   }
+
+  /// A bait found in a vein (weather_seasons.md / fishing.md § 14.4):
+  /// with `mineBaitChance`, [BaitRules.foundBait]; `null` otherwise.
+  static String? veinBait(RandomSource rand) =>
+      rand() < t.d('mineBaitChance') ? BaitRules.foundBait(rand()) : null;
 
   /// Smith XP of a vein of [biome].
   static int veinXp(String biome) =>
       t.i('mineXp') * (kBiomeOres[biome]?.tier ?? 1);
 
   /// What a rare dungeon vein of zone [zone] yields: one rare material of
-  /// its biome and, with `dungeonSchematicChance`, a schematic.
-  static Map<String, int> dungeonYield(RandomSource rand, int zone) {
+  /// its biome and, with `dungeonSchematicChance`, a schematic (only
+  /// materials in season on [day]).
+  static Map<String, int> dungeonYield(RandomSource rand, int zone,
+      {int day = 0}) {
     final b = kBiomeOres[biomeOfZone(zone) ?? kBosque]!;
-    return {
+    return _seasonal({
       b.rare: 1,
       if (rand() < t.d('dungeonSchematicChance')) kSchematic: 1,
-    };
+    }, day);
   }
 
   /// Rare ore veins of a dungeon floor (see [MineGenerator.dungeonVeins]).

@@ -12,19 +12,26 @@ efectos de juego de cada categoría se conectan de a poco (§ 7).
   `overworldNpc` (alguien aparece en un bioma), `echoPortal` (grieta de
   eco con el jefe del bioma reforzado), `lore` (historia de un
   habitante), `caravan` (caravana de mercaderes en el pueblo).
-- **Sin clima ni estaciones:** el clima y las estaciones son un sistema
-  propio (rama aparte). Este catálogo no tiene eventos de clima,
-  anomalía ni estación, y no toca tablas de pesca, cultivos ni la
-  forja/minería. Gancho: `WorldEventContext.extraCondition` (una
-  condición extra por evento, `null` = sin condición) queda para que un
-  evento futuro dependa del clima o la estación; hoy nadie lo usa.
+- **Clima y estaciones (weather_seasons.md):** son un sistema propio.
+  Este catálogo no tiene eventos de clima ni anomalía y no toca tablas
+  de pesca, cultivos ni la forja/minería. Un evento puede pedir una
+  estación o un clima con los campos opcionales `season` / `weather`
+  (abajo). El anfitrión los aplica con
+  `WorldEventContext.extraCondition` =
+  `WorldEventRules.climateCondition(seed del cielo, día)`: estación del
+  día (`WeatherRules.season`) y clima del pueblo ese día
+  (`WeatherRules.dayWeather`). Los eventos del catálogo actual no los
+  usan.
 - `WorldEventDef` (una entrada del catálogo):
   - `id`, `category`, `enabled`, `weight` (≥ 0; 0 = nunca sale),
     `duration` (días, ≥ 1).
   - Condiciones: `minDay` (día mínimo del mundo), `biomes` (lista de
     biomas donde puede aparecer; vacía = cualquiera abierto; las
     categorías del pueblo siempre van al pueblo), `resident` (habitante
-    que tiene que vivir en el pueblo; vacío = ninguno).
+    que tiene que vivir en el pueblo; vacío = ninguno), `season`
+    (`Season.name`: `spring`, `summer`, `autumn`, `winter`; vacío =
+    cualquiera) y `weather` (`Weather.name`: `despejado`, `lluvia`,
+    `tormenta`, `fog`, `snow`; vacío = cualquiera).
   - Textos (`LocalizedText`, todos los idiomas obligatorios, igual que el
     editor NPC): `title`, `notice` (la línea del chat al empezar),
     `body` (el detalle de la sección EVENTOS).
@@ -214,10 +221,12 @@ Líneas es-AR (BORRADOR):
 - Botón GENERAL arriba de la grilla: intervalo, mínimo y máximo por
   tirada y probabilidad.
 - Detalle con subpestañas FICHA (habilitado, peso, duración, día mínimo,
-  biomas, habitante, objetivo de historia: solo vencer o explorar),
+  biomas, estación, clima del pueblo, habitante, objetivo de historia:
+  solo vencer o explorar),
   TEXTOS (una subpestaña por campo: TÍTULO, AVISO, DETALLE; cada una con
   todos los idiomas y un ! si le falta alguno) y PARÁMETROS (números de
-  § 1). Valida también que el enemigo o el bioma del objetivo existan.
+  § 1). Valida también que el enemigo o el bioma del objetivo existan y
+  que `season` / `weather` sean una estación o un clima conocidos.
 - GUARDAR EVENTOS escribe `assets/data/events/world_events.json` y lo
   aplica. Bloqueado si falta un idioma o el archivo no valida
   (`WorldEventsConfig.validate`).

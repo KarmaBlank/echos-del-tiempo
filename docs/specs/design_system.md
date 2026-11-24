@@ -272,7 +272,7 @@ del catálogo con precio y "TIENES" a la vista, no ítems propios.
 
 ### 6.1 `DsCollectionTemplate` (colecciones)
 
-Plantilla única para colecciones (pesca, cultivo y, a futuro, herrería):
+Plantilla única para colecciones (pesca, cultivo y herrería):
 - `DsCollectionEntry`: id, ícono, descubierto, título, color, borde,
   etiquetas, filas del detalle y grupos (para los filtros).
 - Subtabs de filtro (`(id, label)`, `all` = todos) y contador
