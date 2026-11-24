@@ -223,8 +223,15 @@ batalla vuelven al jugador.
   recuperación al alijo de cada uno al cerrar el mapa (loot.md § 4b.1).
 - En el pueblo hay una torrecita, el Loot perdido (tiles x 3–5, y 10,
   debajo de la fuente izquierda; `Tile.lostTower`), que se usa con E
-  desde abajo y abre el panel LOOT PERDIDO: lista de objetos con TOMAR
-  y el aviso `Se borra al empezar la próxima misión.`
+  desde abajo y abre el panel LOOT PERDIDO y el aviso `Se borra al
+  empezar la próxima misión.` Desde v0.41.6 el panel es una grilla de
+  casillas como INVENTARIO (`DsItemGrid`, 8 por fila, marco de rareza)
+  con la ficha del mouse de siempre (`itemHoverTip` para armas,
+  `RetroTooltip` para Ecos y pilas; mismo tope de ancho y letra), y a la
+  derecha la columna de detalle de la elegida (por defecto la primera)
+  con TOMAR. Enter sobre una casilla también la toma. Abajo, TOMAR TODO
+  (`ui.world.lost_loot.take_all`) manda un `TakeLostLootAction` por
+  objeto; lo que no entra queda en el pozo.
 - Cualquier jugador toma lo que quiera (`TakeLostLootAction`,
   `{"t":"lost","id":N}`, solo en lobby o preparación): entra entero al
   inventario o no se toma.

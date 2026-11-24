@@ -73,6 +73,7 @@
   "ui.world.lost_loot.notice": "Se borra al empezar la próxima misión.",
   "ui.world.lost_loot.empty": "No hay nada.",
   "ui.world.lost_loot.take": "TOMAR",
+  "ui.world.lost_loot.take_all": "TOMAR TODO",
   "ui.world.offering.not_in_dungeon": "No estás en la mazmorra",
   "ui.world.offering.title": "OFRENDA",
   "ui.world.offering.offer": "OFRENDAR",
