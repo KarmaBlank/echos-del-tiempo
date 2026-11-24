@@ -216,4 +216,14 @@ void main() {
           greaterThan(LightRules.visibleRadius(p) * 2));
     });
   });
+
+  test('Mazmorra oscura: sin la Llama errante se ve la mitad', () {
+    final off = LightRules.carried(dark: true);
+    final on = LightRules.carried(dark: true, wisp: true);
+    expect(off.radius, on.radius / 2);
+    expect(on.radius, 11);
+    expect(on.intensity, greaterThan(off.intensity));
+    expect(LightRules.visibleRadius(on),
+        greaterThan(LightRules.visibleRadius(off) * 2));
+  });
 }
