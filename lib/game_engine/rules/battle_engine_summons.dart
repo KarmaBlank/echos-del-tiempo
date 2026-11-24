@@ -42,7 +42,7 @@ extension _SummonTurn on _Turn {
       final old = mine.removeAt(0);
       state.summons.remove(old);
       events.add(KnockedOutEvent(old.id));
-      _notes.add(LogLine.of('${old.name} se desvanece (máx. $max)'));
+      _notes.add(_l('summon_fades_max', {'a': old.name, 'n': max}));
     }
     final st = SummonRules.stats(d,
         magic: owner.magic,
@@ -101,8 +101,13 @@ extension _SummonTurn on _Turn {
     ];
   }
 
-  String _summonText(Combatant s) => '${s.name} (${s.hp} HP, '
-      '${s.attack} poder, ${s.summonTurns >= kSummonForever ? '∞' : s.summonTurns} turnos)';
+  LogLine _summonText(Combatant s) => _l('summon_stats', {
+        'a': s.name,
+        'h': s.hp,
+        'p': s.attack,
+        'inf': s.summonTurns >= kSummonForever ? 'yes' : 'no',
+        'n': s.summonTurns,
+      });
 
   // ---------------- habilidades (gancho de `_useSkill`) ----------------
 
@@ -111,7 +116,8 @@ extension _SummonTurn on _Turn {
     final kind = kSummonSkillKind[tk.id];
     if (kind != null) {
       final s = _summon(p, kind);
-      state.logLine = LogLine.of('${p.name} · ${tk.name}: ${_summonText(s)}');
+      state.logLine =
+          _l('skill_colon', {'a': p.name, 's': _sk(tk), 'x': _summonText(s)});
       return true;
     }
     switch (tk.id) {
@@ -119,20 +125,19 @@ extension _SummonTurn on _Turn {
         final a = kElementalSummons[(_rand() * 4).floor().clamp(0, 3)];
         final b = kElementalSummons[(_rand() * 4).floor().clamp(0, 3)];
         final s1 = _summon(p, a), s2 = _summon(p, b);
-        state.logLine =
-            LogLine.of('${p.name} · ${tk.name}: ${s1.name} y ${s2.name}');
+        state.logLine = _l('summon_pair',
+            {'a': p.name, 's': _sk(tk), 'b': s1.name, 'c': s2.name});
         return true;
       case 'comandar':
         final mine = _summonsOf(p);
         if (mine.isEmpty) {
-          state.logLine =
-              LogLine.of('${p.name} · ${tk.name}: no tenés invocaciones');
+          state.logLine = _l('no_summons', {'a': p.name, 's': _sk(tk)});
           return true;
         }
         _actAll(
             p,
-            '${p.name} · ${tk.name}: ¡${mine.length} invocaciones '
-            'actúan ya!',
+            _l('command_summons',
+                {'a': p.name, 's': _sk(tk), 'n': mine.length}),
             mine,
             1);
         return true;
@@ -145,8 +150,8 @@ extension _SummonTurn on _Turn {
         }
         _actAll(
             p,
-            '${p.name} · ${tk.name}: ¡los cuatro elementales atacan ya '
-            '(×${fm(kPortalStrike)})!',
+            _l('portal_strike',
+                {'a': p.name, 's': _sk(tk), 'x': fm(kPortalStrike)}),
             _summonsOf(p).where((s) => s.once.contains(kPortalMark)),
             kPortalStrike);
         return true;
@@ -174,10 +179,15 @@ extension _SummonTurn on _Turn {
         for (final s in _summonsOf(p)) {
           s.taunt = kMareaTaunt;
         }
-        state.logLine =
-            LogLine.of('${p.name} · ${tk.name}: ${g.name}, ${s1.name} y '
-                '${s2.name} · escudo de $amount a todo el grupo · tus '
-                'invocaciones provocan $kMareaTaunt golpes');
+        state.logLine = _l('tide_summon', {
+          'a': p.name,
+          's': _sk(tk),
+          'g': g.name,
+          'b': s1.name,
+          'c': s2.name,
+          'n': amount,
+          't': kMareaTaunt,
+        });
         return true;
     }
     return false;
@@ -185,14 +195,14 @@ extension _SummonTurn on _Turn {
 
   /// [list] actúa ya (Comandar, Portal); el log junta sus acciones.
   void _actAll(
-      Combatant p, String head, Iterable<Combatant> list, double mult) {
+      Combatant p, LogLine head, Iterable<Combatant> list, double mult) {
     final parts = <LogLine>[];
     for (final s in list.toList()) {
       if (state.enemies.every((e) => !e.alive)) break;
       _summonAction(s, p, mult);
       parts.add(state.logLine);
     }
-    state.logLine = LogLine.join([LogLine.of(head), ...parts]);
+    state.logLine = LogLine.join([head, ...parts]);
   }
 
   /// Avatar del Pacto: absorbe a sus invocaciones (+15% de daño cada una
@@ -218,12 +228,19 @@ extension _SummonTurn on _Turn {
             fresh: true),
     ];
     _summonSync(p);
-    state.logLine = LogLine.of(mine.isEmpty
-        ? '${p.name} · ${tk.name}: no tenés invocaciones para fundirte'
-        : '${p.name} · ${tk.name}: se funde con ${mine.length} invocaciones '
-            '(+${_pct(kAvatarPower * mine.length)} de daño y '
-            '${mine.map((s) => _defOf(s).element.label).toSet().join(', ')} '
-            'en cada golpe, $kAvatarTurns turnos)');
+    state.logLine = mine.isEmpty
+        ? _l('avatar_none', {'a': p.name, 's': _sk(tk)})
+        : _l('avatar', {
+            'a': p.name,
+            's': _sk(tk),
+            'n': mine.length,
+            'p': _pct(kAvatarPower * mine.length),
+            'e': LogLine.join([
+              for (final el in mine.map((s) => _defOf(s).element).toSet())
+                _el(el),
+            ], ', '),
+            't': kAvatarTurns,
+          });
   }
 
   /// Golpe de un jugador en Avatar: deja los estados de lo absorbido
@@ -256,8 +273,7 @@ extension _SummonTurn on _Turn {
   void _sacrifice(Combatant p, SkillDef tk) {
     final mine = _summonsOf(p);
     if (mine.isEmpty) {
-      state.logLine =
-          LogLine.of('${p.name} · ${tk.name}: no tenés invocaciones');
+      state.logLine = _l('no_summons', {'a': p.name, 's': _sk(tk)});
       return;
     }
     final s = mine.first;
@@ -274,9 +290,15 @@ extension _SummonTurn on _Turn {
         _addStatus(e, d.status!, source: p);
       }
     }
-    state.logLine = LogLine.of('${p.name} · ${tk.name}: ${s.name} detona '
-        '${d.element.label} (MAG ${p.magic} × ${fm(kSacrificePower)}): '
-        '${parts.join(', ')}');
+    state.logLine = _l('sacrifice', {
+      'a': p.name,
+      's': _sk(tk),
+      'b': s.name,
+      'e': _el(d.element),
+      'm': p.magic,
+      'x': fm(kSacrificePower),
+      'p': parts.join(', '),
+    });
     _summonGone(s, p, burst: true);
   }
 
@@ -286,7 +308,7 @@ extension _SummonTurn on _Turn {
   void _summonTurn(Combatant s) {
     final owner = _ownerOf(s);
     if (owner == null || !owner.alive) {
-      state.logLine = LogLine.of('${s.name} se desvanece (su invocador cayó)');
+      state.logLine = _l('summon_fades_owner', {'a': s.name});
       _summonGone(s, null);
       return;
     }
@@ -294,7 +316,7 @@ extension _SummonTurn on _Turn {
     if (!s.alive) return;
     if (s.summonTurns < kSummonForever) s.summonTurns--;
     if (s.summonTurns <= 0) {
-      _notes.add(LogLine.of('${s.name} se desvanece'));
+      _notes.add(_l('summon_fades', {'a': s.name}));
       _summonGone(s, owner, burst: s.once.contains(kPortalMark));
     }
   }
@@ -321,7 +343,8 @@ extension _SummonTurn on _Turn {
         ]);
       case SummonRole.golem:
         final q = _lowest(_aliveParty, (c) => c.hp / c.maxHp);
-        var log = s.name;
+        Combatant? shielded, hitTarget;
+        var shieldAmount = 0, hitDamage = 0;
         if (q != null) {
           final amount = jsRound(owner.magic *
               kGolemShield *
@@ -338,20 +361,30 @@ extension _SummonTurn on _Turn {
                 ownerId: owner.id),
           ];
           events.add(ShieldEvent(q.id, amount));
-          log += ' escuda a ${q.name} ($amount)';
+          shielded = q;
+          shieldAmount = amount;
         }
         if (pool.isNotEmpty) {
           final t = pool.first;
           final h = _summonStrike(s, owner, t, mult);
-          log += ' · golpea a ${t.name}: ${h.damage}';
+          hitTarget = t;
+          hitDamage = h.damage;
         }
-        state.logLine = LogLine.of('$log · provoca');
+        state.logLine = _l('golem_turn', {
+          'a': s.name,
+          'sh': shielded != null ? 'yes' : 'no',
+          'b': shielded?.name ?? '',
+          'n': shieldAmount,
+          'hit': hitTarget != null ? 'yes' : 'no',
+          'c': hitTarget?.name ?? '',
+          'd': hitDamage,
+        });
       case SummonRole.espiritu:
         final q = _lowest(_aliveParty, (c) => c.hp / c.maxHp);
         if (q != null && q.hp < q.maxHp * 0.8) {
           final h = math.max(1, jsRound(owner.magic * kSpiritHeal * mult));
           _heal(q, h);
-          state.logLine = LogLine.of('${s.name} cura a ${q.name}: +$h HP');
+          state.logLine = _l('spirit_heal', {'a': s.name, 'b': q.name, 'h': h});
         } else if (pool.isNotEmpty) {
           final t = pool[(_rand() * pool.length).floor()];
           t.effects = [
@@ -369,9 +402,12 @@ extension _SummonTurn on _Turn {
           events.add(BuffAppliedEvent(
               t.id, 'espiritu', BuffStat.damageTaken, kSpiritMark, 2));
           final h = _summonStrike(s, owner, t, mult);
-          state.logLine =
-              LogLine.of('${s.name} marca a ${t.name} (+${_pct(kSpiritMark)} '
-                  'daño recibido) · ${h.damage}');
+          state.logLine = _l('spirit_mark', {
+            'a': s.name,
+            'b': t.name,
+            'p': _pct(kSpiritMark),
+            'd': h.damage,
+          });
         }
     }
     _flush();
@@ -439,8 +475,12 @@ extension _SummonTurn on _Turn {
         parts.add('${e.name} ${h.damage}');
       }
       if (parts.isNotEmpty) {
-        _notes.add(LogLine.of('¡${s.name} explota! ${d.element.label} '
-            '(MAG × ${fm(power)}): ${parts.join(', ')}'));
+        _notes.add(_l('summon_burst', {
+          'a': s.name,
+          'e': _el(d.element),
+          'x': fm(power),
+          'p': parts.join(', '),
+        }));
       }
     }
     _summonSync(owner);
@@ -472,10 +512,10 @@ extension _SummonTurn on _Turn {
     events.add(ActionEvent(e.id, BattleActionKind.enemyAttack, targetId: t.id));
     t.hp = math.max(0, t.hp - dmg);
     events.add(DamageEvent(t.id, dmg));
-    state.logLine = LogLine.of('${e.name} → ${t.name}: $dmg'
-        '${golem != null ? ' (provocado)' : ''}');
+    final hit = _l('enemy_hit', {'a': e.name, 'b': t.name, 'd': dmg});
+    state.logLine = golem != null ? hit.plus(_l('taunted'), ' ') : hit;
     if (!t.alive) {
-      _notes.add(LogLine.of('${t.name} cae'));
+      _notes.add(_l('falls', {'a': t.name}));
       _summonGone(t, _ownerOf(t));
     }
     _flush();
@@ -493,7 +533,11 @@ extension _SummonTurn on _Turn {
     if (cost <= 0) return;
     p.hp -= cost;
     events.add(DamageEvent(p.id, cost, sourceId: 'pacto'));
-    _notes.add(LogLine.of(
-        'Pacto Eterno: ${p.name} paga $cost HP por $n invocaciones'));
+    _notes.add(_l('pact_cost', {
+      'k': LogLine.named(CatalogKeys.mechName('pacto'), 'Pacto Eterno'),
+      'a': p.name,
+      'n': cost,
+      'c': n,
+    }));
   }
 }

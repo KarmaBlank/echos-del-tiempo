@@ -13,6 +13,26 @@ abstract final class ItemKeys {
   static String consumableDesc(String key) =>
       'data.items.consumable.$key.desc';
   static String rarity(Rarity r) => 'data.items.rarity.${r.name}';
+  static String passiveName(String id) => 'data.items.passive.$id.name';
+
+  /// Label of a mod stat (`ModStat.label`).
+  static String modStat(ModStat s) => 'data.crafting.mod.${s.name}';
+
+  /// Tier of a fixed (legendary) mod: "único".
+  static const tierUnique = 'data.crafting.tier.unique';
+
+  /// Shapes of `ModStat.format` as ICU (`v` value, `label` the stat label);
+  /// es-AR gives the same text as the engine.
+  static const modFormats = {
+    'pct': '+{v}{label}',
+    'flat': '+{v} {label}',
+    'stacks': '+{v} {v, plural, one{stack} other{stacks}} de {label}',
+    'regen': 'Regenera {v}{label}',
+    'minus': '−{v} {label}',
+    'plain': '{v}{label}',
+    'main_skill': 'Habilidad principal: {label}',
+  };
+  static String modFormat(String shape) => 'data.crafting.mod_format.$shape';
 
   static String affixName(String id) => 'data.crafting.affix.$id.name';
 

@@ -1256,7 +1256,7 @@ class CompactPlayerBox extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(children: [
                       TextSpan(
-                          text: ' Lv${prof.level}',
+                          text: ' ${context.t('ui.world.hud.level', {'n': prof.level})}',
                           style: const TextStyle(color: DsColors.textPrimary)),
                       // Chips de estado: texto de color (sin caja: no
                       // agranda la línea).
@@ -1544,15 +1544,15 @@ class _PlayerBox extends StatelessWidget {
               final a? => ', ${protoColor(Color(a.color), protoEsc(a.name))}',
               null => '',
             }} '
-            '<span class="k">$cls Lv${prof.level}</span>'),
+            '<span class="k">$cls ${context.t('ui.world.hud.level', {'n': prof.level})}</span>'),
         ProtoText(protoColor(
             ProtoColors.orange,
             '⚔ ${protoEsc(weapon)}'
-            '${prof.points > 0 ? ' ${protoColor(ProtoColors.gold, '+${prof.points} pts')}' : ''}')),
+            '${prof.points > 0 ? ' ${protoColor(ProtoColors.gold, context.t('ui.world.hud.points', {'n': prof.points}))}' : ''}')),
         hpBar(p.hp, p.maxHp),
-        Text('HP ${p.hp.ceil()}/${p.maxHp}'),
+        Text(context.t('ui.world.hud.hp_value', {'hp': p.hp.ceil(), 'max': p.maxHp})),
         mpBar(p.mp, p.maxMp),
-        Text('MP ${p.mp.floor()}/${p.maxMp}'),
+        Text(context.t('ui.world.hud.mp_value', {'mp': p.mp.floor(), 'max': p.maxMp})),
         // Con nivel 50 la XP llena la Maestría (ecos_atlas.md § 6).
         if (prof.level >= ProgressionRules.maxLevel) ...[
           RetroBar(

@@ -5,6 +5,7 @@ import '../../../game_engine/i18n/item_keys.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/item_def.dart';
 import '../../../game_engine/models/weapon.dart';
+import '../../../game_engine/models/weapon_passive.dart';
 import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/life_craft_rules.dart';
@@ -96,4 +97,65 @@ String localWeaponDisplayName(
   final it = p.item(weaponId);
   if (it == null) return rules.catalog.weapons[weaponId]?.text ?? weaponId;
   return localItemName(rules.items, it);
+}
+
+extension ModStatText on ModStat {
+  /// [label] in the active language.
+  String get text => CatalogText.of(ItemKeys.modStat(this), label);
+
+  /// [format] in the active language (`data.crafting.mod_format.*`).
+  String formatText(int value) {
+    if (!CatalogText.isTranslated) return format(value);
+    final shape = switch (this) {
+      ModStat.atkPct ||
+      ModStat.magPct ||
+      ModStat.critChance ||
+      ModStat.critMulti ||
+      ModStat.ultCharge ||
+      ModStat.healReceived ||
+      ModStat.healPower ||
+      ModStat.summonDamage ||
+      ModStat.breakPower =>
+        'pct',
+      ModStat.burnStacks ||
+      ModStat.poisonStacks ||
+      ModStat.freezeStacks =>
+        'stacks',
+      ModStat.regen => 'regen',
+      ModStat.statusResist => 'minus',
+      ModStat.lifeSteal => 'plain',
+      ModStat.breakSkill => 'main_skill',
+      _ => 'flat',
+    };
+    final v = this == ModStat.speed ? (value / 10).toStringAsFixed(1) : value;
+    return CatalogText.of(ItemKeys.modFormat(shape), format(value),
+        {'v': v, 'n': value, 'label': text});
+  }
+}
+
+extension ItemModText on ItemMod {
+  /// [ItemMod.text] in the active language.
+  String get tr => stat.formatText(value);
+}
+
+/// [ItemRules.affixText] in the active language.
+String localAffixText(ItemRules items, AffixRoll r, {ItemInstance? on}) {
+  if (!CatalogText.isTranslated) return items.affixText(r, on: on);
+  final m = items.modOf(r);
+  if (m == null) return r.affixId;
+  final tier = r.fixed
+      ? CatalogText.of(ItemKeys.tierUnique, 'único')
+      : 'T${r.tier}';
+  if (m.stat == ModStat.breakSkill && on != null) {
+    if (items.breakSkillText(on) case final t?) return '$t ($tier)';
+  }
+  return '${m.tr} ($tier)';
+}
+
+extension WeaponPassiveDefText on WeaponPassiveDef {
+  /// Name of a weapon passive in the active language.
+  String get text => CatalogText.of(ItemKeys.passiveName(id), name);
+
+  /// [nameAt] in the active language.
+  String nameAtText(int level) => '$text ${WeaponPassiveDef.roman(level)}';
 }

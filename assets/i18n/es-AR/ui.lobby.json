@@ -51,5 +51,22 @@
   "ui.lobby.patch_notes.read_error": "No se pudieron leer las notas.",
   "ui.lobby.patch_notes.loading": "Cargando...",
   "ui.lobby.patch_notes.empty": "No hay notas en esta versión.",
-  "ui.lobby.patch_notes.latest": "última"
+  "ui.lobby.patch_notes.latest": "última",
+  "ui.lobby.net.bad_lan_code": "Código inválido: usa IP:PUERTO (p. ej. 192.168.1.23:47800).",
+  "ui.lobby.net.cancelled": "Conexión cancelada.",
+  "ui.lobby.net.connect_failed": "No se pudo conectar a la sala {room}: {error}",
+  "ui.lobby.net.create_failed": "No se pudo crear la sala: {error}",
+  "ui.lobby.net.create_net_error": "Error de red al crear la sala ({error}). ¿Tienes internet? Prueba de nuevo.",
+  "ui.lobby.net.create_retry": "No se pudo crear la sala. Prueba de nuevo.",
+  "ui.lobby.net.enter_code": "Escribe el código de la sala.",
+  "ui.lobby.net.host_closed": "El host cerró la conexión.",
+  "ui.lobby.net.lan_timeout": "No se pudo conectar a {room} (tiempo agotado). ¿Están en la misma red y el host tiene la sala abierta?",
+  "ui.lobby.net.net_error": "Error de red: {error}",
+  "ui.lobby.net.open_failed": "No se pudo abrir la sala: {error}",
+  "ui.lobby.net.p2p_timeout": "No se pudo conectar a la sala {room} (tiempo agotado). Puede ser la red (NAT estricta) o que el host ya no esté.",
+  "ui.lobby.net.room_not_found": "Sala {room} no encontrada.",
+  "ui.lobby.net.room_not_found_open": "Sala {room} no encontrada. ¿El host sigue con el juego abierto?",
+  "ui.lobby.net.timeout": "No se pudo conectar (tiempo agotado). Revisa el código o que el host siga con el juego abierto.",
+  "ui.lobby.world_label.cooperativo": "Cooperativo",
+  "ui.lobby.world_label.solitario": "Solitario"
 }

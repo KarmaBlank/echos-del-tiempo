@@ -685,13 +685,14 @@ class BattleViewState extends State<BattleView>
     final ok = missing.isEmpty;
     // Instante: ya encadenaste una en este turno, esta lo termina.
     final instant = sk.instant && !cur.chained;
-    final lines = ok
-        ? const <String>[]
-        : SkillRequirements.missingLines(
+    final miss = ok
+        ? (all: const <String>[], needs: const <String>[])
+        : localMissingLines(
             sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
             foes: _foes);
+    final lines = miss.all;
     // Condición especial (no el MP/Pulso que ya se ve en rojo): tooltip.
-    final special = lines.where((l) => l.startsWith('Necesita')).toList();
+    final special = miss.needs;
     return BattleAction(
       disabledHint: special.isEmpty ? null : special.join('\n'),
       id: 'skill-${sk.id}',
@@ -1687,9 +1688,9 @@ class BattleViewState extends State<BattleView>
       header: header,
       target: targetLine,
       resources:
-          '<span style="color:#74b9ff">MP ${cur.mp.floor()}/${cur.maxMp}</span>'
+          '<span style="color:#74b9ff">${_s.t('ui.combat.stat.mp')} ${cur.mp.floor()}/${cur.maxMp}</span>'
           ' · <span style="color:${ultReady(cur) ? '#ee70ad' : '#a29bfe'}">'
-          'ULT ${cur.ult.floor()}%</span>',
+          '${_s.t('ui.combat.stat.ult')} ${cur.ult.floor()}%</span>',
       extra: bossMechanicRow(_s, widget.battle),
       mp: cur.mp,
       pulse: cur.pulse,

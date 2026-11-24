@@ -1,3 +1,4 @@
+import '../../../inventory/domain/item_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -280,11 +281,11 @@ class _TraderPanelState extends State<TraderPanel> {
                       : LifeIconKind.pescado,
                   size: _icon),
               border: fishRarityColor(f.rarity),
-              search: f.name,
+              search: f.text,
               count: bag[f.id],
               caption: context.t('ui.town.trader.price_short', {'n': f.price}),
               detail: LifeItemDetail(
-                name: f.name,
+                name: f.text,
                 nameColor: fishRarityColor(f.rarity),
                 tags: [
                   (
@@ -467,12 +468,12 @@ class _TraderPanelState extends State<TraderPanel> {
               icon: LifeIcon('cosecha_${crop.id}', LifeIconKind.cosecha,
                   size: _icon),
               border: fishRarityColor(crop.rarity),
-              search: crop.name,
+              search: crop.text,
               count: n,
               caption:
                   context.t('ui.town.trader.price_short', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality)}),
               detail: LifeItemDetail(
-                name: crop.name,
+                name: crop.text,
                 nameColor: fishRarityColor(crop.rarity),
                 tags: [
                   (context.t('ui.town.trader.tag_crop'), DsColors.textSecondary),

@@ -92,7 +92,8 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
             (_family == null || e.family == _family) &&
             (q.isEmpty ||
                 _name(e).toLowerCase().contains(q) ||
-                (e.family?.label.toLowerCase().contains(q) ?? false)))
+                (e.family != null &&
+                    familyLabel(e.family!).toLowerCase().contains(q))))
           e,
     ];
   }
@@ -217,7 +218,7 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
   String _short(EnemyFamily f) => switch (f) {
         EnemyFamily.iceElemental => ref.t('ui.bestiary.family.ice_short'),
         EnemyFamily.aberration => ref.t('ui.bestiary.family.aberration_short'),
-        _ => f.label.toUpperCase(),
+        _ => familyLabel(f).toUpperCase(),
       };
 
   /// Filtros por familia (columna de la izquierda): botones fantasma, el

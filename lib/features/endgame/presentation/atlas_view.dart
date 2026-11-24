@@ -9,6 +9,8 @@ import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../domain/endgame_names.dart';
+import '../domain/endgame_text.dart';
 
 /// Color de una rama del Atlas.
 Color atlasBranchColor(AtlasBranch b) => switch (b) {
@@ -22,11 +24,11 @@ Color atlasBranchColor(AtlasBranch b) => switch (b) {
 
 /// Ficha de un nodo (markup).
 String atlasNodeMarkup(Strings t, AtlasNodeDef n, {String? state}) =>
-    '<b>${protoEsc(n.name)}</b>'
+    '<b>${protoEsc(n.tr)}</b>'
     '${n.notable ? ' ${protoColor(ProtoColors.pink, t.t('ui.endgame.atlas.notable'))}' : ''}<br>'
-    '${protoColor(atlasBranchColor(n.branch), protoEsc(n.branch.label))}'
+    '${protoColor(atlasBranchColor(n.branch), protoEsc(n.branch.tr))}'
     '${n.locked || n.cost == 0 ? '' : t.t('ui.endgame.atlas.cost', {'cost': n.cost})}<br>'
-    '${protoEsc(n.text)}'
+    '${protoEsc(n.textTr)}'
     '${state == null ? '' : '<br>${protoColor(ProtoColors.dim, protoEsc(state))}'}';
 
 /// El Atlas del Tiempo (docs/specs/ecos_atlas.md § 5): la grilla de
@@ -81,7 +83,7 @@ class _AtlasViewState extends ConsumerState<AtlasView> {
     int count(String prefix) =>
         p.done.where((k) => k.startsWith(prefix)).length;
     final node = rules.node(_sel) ?? rules.nodes.first;
-    final why = widget.editBlocked ?? rules.cannotTake(p, node.id);
+    final why = widget.editBlocked ?? atlasTakeBlocked(rules, p, node.id);
     final taken = rules.has(p, node.id);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -167,7 +169,7 @@ class _AtlasViewState extends ConsumerState<AtlasView> {
                           (AtlasBranch.caza, 'down'),
                           (AtlasBranch.dominio, 'left'),
                         ])
-                          '${protoColor(atlasBranchColor(b), b.label)} ${ref.t('ui.endgame.atlas.dir.$where')}',
+                          '${protoColor(atlasBranchColor(b), b.tr)} ${ref.t('ui.endgame.atlas.dir.$where')}',
                       ].join(' · ')}',
                   child: Text(ref.t('ui.endgame.atlas.legend'),
                       style: const TextStyle(color: ProtoColors.sky)),

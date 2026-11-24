@@ -72,13 +72,18 @@ class WebRTCNetSession extends ProtocolNetSession {
         if (await _signaling.createRoom(c)) code = c;
       }
     } on SignalingException catch (e) {
-      throw NetException('No se pudo crear la sala: ${e.message}');
+      throw NetException('No se pudo crear la sala: ${e.message}',
+          key: 'ui.lobby.net.create_failed', args: {'error': e.message});
     } on Object catch (e) {
-      throw NetException('Error de red al crear la sala ($e). '
-          '¿Tienes internet? Prueba de nuevo.');
+      throw NetException(
+          'Error de red al crear la sala ($e). '
+          '¿Tienes internet? Prueba de nuevo.',
+          key: 'ui.lobby.net.create_net_error',
+          args: {'error': '$e'});
     }
     if (code == null) {
-      throw const NetException('No se pudo crear la sala. Prueba de nuevo.');
+      throw const NetException('No se pudo crear la sala. Prueba de nuevo.',
+          key: 'ui.lobby.net.create_retry');
     }
     final room = code;
     _code = room;
@@ -142,20 +147,24 @@ class WebRTCNetSession extends ProtocolNetSession {
   Future<PeerLink> joinRoom(String code) async {
     final c = code.trim().toUpperCase();
     if (c.length < 4) {
-      throw const NetException('Escribe el código de la sala.');
+      throw const NetException('Escribe el código de la sala.',
+          key: 'ui.lobby.net.enter_code');
     }
     _code = c;
     try {
       if (!await _signaling.roomExists(c)) {
         throw NetException(
-            'Sala $c no encontrada. ¿El host sigue con el juego abierto?');
+            'Sala $c no encontrada. ¿El host sigue con el juego abierto?',
+            key: 'ui.lobby.net.room_not_found_open',
+            args: {'room': c});
       }
     } on NetException {
       rethrow;
     } on SignalingException catch (e) {
       throw NetException(e.message);
     } on Object catch (e) {
-      throw NetException('Error de red: $e');
+      throw NetException('Error de red: $e',
+          key: 'ui.lobby.net.net_error', args: {'error': '$e'});
     }
 
     final pc = await createPeerConnection(_config);
@@ -210,12 +219,17 @@ class WebRTCNetSession extends ProtocolNetSession {
     } on SignalingException catch (e) {
       await link.close();
       await _cleanupClientDoc();
-      throw NetException('No se pudo conectar a la sala $c: ${e.message}');
+      throw NetException('No se pudo conectar a la sala $c: ${e.message}',
+          key: 'ui.lobby.net.connect_failed',
+          args: {'room': c, 'error': e.message});
     } on Object {
       await link.close();
       await _cleanupClientDoc();
-      throw NetException('No se pudo conectar a la sala $c (tiempo agotado). '
-          'Puede ser la red (NAT estricta) o que el host ya no esté.');
+      throw NetException(
+          'No se pudo conectar a la sala $c (tiempo agotado). '
+          'Puede ser la red (NAT estricta) o que el host ya no esté.',
+          key: 'ui.lobby.net.p2p_timeout',
+          args: {'room': c});
     }
     // Conectados: la señalización ya no hace falta.
     Timer(const Duration(seconds: 5), () => unawaited(_cleanupClientDoc()));

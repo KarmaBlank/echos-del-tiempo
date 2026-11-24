@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../../../core/i18n/catalog_names.dart';
 import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,6 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
-import '../../../game_engine/data/classes_catalog.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/sprite_catalog.dart';
 import '../../../core/i18n/i18n_providers.dart';
@@ -128,7 +128,7 @@ class AscensionCinematicState extends ConsumerState<AscensionCinematic>
               flash: widget.flash,
               shake: !widget.reduceMotion,
             ),
-            child: _banner(ms, a.name, Color(a.color), a.motto),
+            child: _banner(ms, a.tr, Color(a.color), a.mottoTr),
           );
         },
       ),
@@ -144,7 +144,7 @@ class AscensionCinematicState extends ConsumerState<AscensionCinematic>
     final outT =
         ((ms - AscensionCinematicTiming.bannerOutMs) / 600).clamp(0.0, 1.0);
     final o = (inT * (1 - outT)).clamp(0.0, 1.0);
-    final cls = kClasses[widget.classId]?.name ?? widget.classId;
+    final cls = classNameTr(widget.classId);
     return Opacity(
       opacity: o,
       child: Align(

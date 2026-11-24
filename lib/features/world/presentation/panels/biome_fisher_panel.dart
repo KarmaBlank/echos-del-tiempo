@@ -1,3 +1,4 @@
+import '../../domain/town_names.dart';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -209,7 +210,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
           nameColor: DsColors.textTitle,
           tags: [
             (context.t('ui.town.fisher.order_title'), DsColors.reward),
-            (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+            (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
             context.t('ui.town.npc.order_line_cm', {'n': r.n, 'item': d.name, 'cm': r.cm}),
@@ -254,7 +255,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
           tags: [
             (context.t('ui.town.fisher.sells'), DsColors.reward),
             if (g.fresh) (context.t('ui.town.fisher.new'), DsColors.success),
-            (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+            (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
             context.t('ui.town.fisher.price', {'n': g.price}),
@@ -289,7 +290,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
           nameColor: fishRarityColor(d.rarity),
           tags: [
             (context.t('ui.town.fisher.buys_from_you'), DsColors.textSecondary),
-            (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+            (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
             context.t('ui.town.fisher.pays_each', {'n': pr}),

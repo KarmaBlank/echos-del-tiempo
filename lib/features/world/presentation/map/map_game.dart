@@ -1,3 +1,4 @@
+import '../../../inventory/domain/item_names.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -473,7 +474,7 @@ class MapGame extends Game {
             playerId,
             from.$1,
             from.$2,
-            '${def?.name ?? species} $sizeCm cm',
+            '${def?.text ?? species} $sizeCm cm',
             fishRarityColor(def?.rarity ?? FishRarity.comun),
             t);
       }
@@ -496,7 +497,7 @@ class MapGame extends Game {
           helper ? '' : playerId,
           tx,
           ty,
-          '${count > 1 ? '$count × ' : ''}${def?.name ?? crop} (${q.label})',
+          '${count > 1 ? '$count × ' : ''}${def?.text ?? crop} (${q.label})',
           fishRarityColor(FishRarity.values[q.index.clamp(0, 3)]),
           FarmPalette.fruit[rar.index.clamp(0, 3)],
           t);

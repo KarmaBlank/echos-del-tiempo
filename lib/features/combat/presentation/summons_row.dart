@@ -45,7 +45,9 @@ class SummonsRow extends StatelessWidget {
         children: [
           Container(width: 6, height: 6, color: col),
           const SizedBox(width: 2),
-          Text('${s.hp} · ${summonTurnsText(s)}t',
+          Text(
+              t.t('ui.combat.summon.chip',
+                  {'hp': s.hp, 'turns': summonTurnsText(s)}),
               style: RetroType.smallStyle.copyWith(color: col)),
         ],
       ),

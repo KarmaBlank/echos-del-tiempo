@@ -1,3 +1,5 @@
+import '../../../inventory/domain/item_names.dart';
+import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -134,7 +136,7 @@ class TownEditOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            DsSectionHeader(b.kind.label),
+            DsSectionHeader(b.kind.text),
             Text(TownRules.helperLine(b), style: DsText.detail()),
             Text(
                 why ??
@@ -173,7 +175,7 @@ class TownEditOverlay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          DsSectionHeader(b.kind.label),
+          DsSectionHeader(b.kind.text),
           Text(
               b.kind == BuildKind.lago
                   ? TownRules.lakeSignText(town, b)
@@ -356,7 +358,7 @@ class TownEditOverlay extends StatelessWidget {
         }
         final lake = b.kind == BuildKind.lago;
         return col([
-          DsSectionHeader(b.kind.label),
+          DsSectionHeader(b.kind.text),
           Text(
               lake
                   ? TownRules.lakeSignText(town, b)
@@ -434,7 +436,7 @@ class TownEditOverlay extends StatelessWidget {
                   id: f.id,
                   icon: LifeIcon(f.id, LifeIconKind.pescado,
                       size: LifeItemGrid.iconSize),
-                  name: f.name,
+                  name: f.text,
                   border: fishRarityColor(f.rarity),
                   count: p?.life.count(f.id) ?? 0,
                   tag: f.rarity.name,
@@ -449,7 +451,7 @@ class TownEditOverlay extends StatelessWidget {
                     id: f.id,
                     icon: LifeIcon(f.id, LifeIconKind.pescado,
                         size: LifeItemGrid.iconSize),
-                    name: f.name,
+                    name: f.text,
                     border: fishRarityColor(f.rarity),
                     count: en.value,
                     tag: f.rarity.name,

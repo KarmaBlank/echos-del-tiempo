@@ -9,6 +9,7 @@ import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/uniques_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/weapon_passives.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/i18n/item_keys.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -30,10 +31,15 @@ Map<String, Map<String, String>> catalogSource() {
       ItemKeys.consumableDesc(i.key): i.description,
     },
     for (final r in Rarity.values) ItemKeys.rarity(r): r.label,
+    for (final p in kWeaponPassives.values) ItemKeys.passiveName(p.id): p.name,
   };
   final crafting = <String, String>{
     for (final a in kAffixes.values) ItemKeys.affixName(a.id): a.name,
     ItemKeys.magicName: '{base} {prefixes} {suffixes}',
+    for (final s in ModStat.values) ItemKeys.modStat(s): s.label,
+    for (final e in ItemKeys.modFormats.entries)
+      ItemKeys.modFormat(e.key): e.value,
+    ItemKeys.tierUnique: 'único',
   };
   final materials = <String, String>{
     for (final f in kFish.values) ...{

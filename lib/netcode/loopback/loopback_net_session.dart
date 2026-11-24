@@ -24,7 +24,8 @@ class LoopbackHub {
   PeerLink _connect(String code) {
     final onPeer = _rooms[code.trim().toUpperCase()];
     if (onPeer == null) {
-      throw NetException('Sala $code no encontrada.');
+      throw NetException('Sala $code no encontrada.',
+          key: 'ui.lobby.net.room_not_found', args: {'room': code});
     }
     final a = _LoopLink();
     final b = _LoopLink();

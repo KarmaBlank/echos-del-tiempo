@@ -200,5 +200,11 @@
   "ui.world.loot.found": "{name} encontró: ",
   "ui.world.loot.legendary": "¡LEGENDARIO!",
   "ui.world.loot.gave": "{from} le dio a {to}: ",
-  "ui.world.loot.gave_you": "Te dio {name}:"
+  "ui.world.loot.gave_you": "Te dio {name}:",
+  "ui.world.hud.hp_value": "HP {hp}/{max}",
+  "ui.world.hud.level": "Lv{n}",
+  "ui.world.hud.mp_value": "MP {mp}/{max}",
+  "ui.world.hud.points": "+{n} pts",
+  "ui.world.hud.potion.hp": "Vida",
+  "ui.world.hud.potion.mp": "Maná"
 }

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/i18n/game_text.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
@@ -41,7 +42,7 @@ class EnemyInfoCard extends StatelessWidget {
         protoColor(ProtoColors.gold, protoEsc(enemy.name)),
         familyNameMarkup(EnemyFamily.training),
         familyTraitsMarkup(r),
-        protoColor(ProtoColors.dim, 'De práctica: se recompone, no muere.'),
+        protoColor(ProtoColors.dim, GameText.t('ui.bestiary.practice_note')),
       ].where((l) => l.isNotEmpty).join('<br>');
     }
     final def = kEnemies[enemy.enemyType];

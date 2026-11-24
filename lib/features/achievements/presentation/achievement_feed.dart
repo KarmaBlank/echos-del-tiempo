@@ -25,10 +25,27 @@ String achievementToastText(String id, [Strings? strings]) {
   final s = strings ?? worldFallbackStrings();
   final d = kAchievementsById[id];
   final name = d == null ? id : achievementNameText(s, d);
-  final r = d?.reward.text ?? '';
+  final r = d == null ? '' : achievementRewardText(s, d.reward);
   return s.t(r.isEmpty ? 'ui.achievements.toast_line' : 'ui.achievements.toast_line_reward',
       {'name': name, 'reward': r});
 }
+
+/// Recompensa corta en el idioma de [s] (`+₵300 +1 Cristal de Era`;
+/// espejo de `AchievementReward.text`).
+String achievementRewardText(Strings s, AchievementReward r) => [
+      if (r.credits > 0) '+₵${r.credits}',
+      if (r.esquirlas > 0)
+        s.t('ui.achievements.reward_part.shards', {'n': r.esquirlas}),
+      if (r.cristales > 0)
+        s.t('ui.achievements.reward_part.crystals', {'n': r.cristales}),
+      if (r.prismas > 0)
+        s.t('ui.achievements.reward_part.prisms', {'n': r.prismas}),
+      if (r.potions > 0)
+        s.t('ui.achievements.reward_part.potions', {'n': r.potions}),
+      if (r.ethers > 0)
+        s.t('ui.achievements.reward_part.ethers', {'n': r.ethers}),
+      if (r.ult != null) '+ULT',
+    ].join(' ');
 
 /// Nombre de una hazaña en el idioma de [s] (docs/specs/i18n.md § 3.4).
 String achievementNameText(Strings s, AchievementDef d) =>

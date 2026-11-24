@@ -1,3 +1,4 @@
+import '../domain/town_names.dart';
 import '../../../game_engine/models/combat_mode.dart';
 import '../../../game_engine/models/fog_of_war.dart';
 import '../data/fog_store.dart';
@@ -1794,7 +1795,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final r = FarmingRules.ratio(pl);
     final parts = <String>[
       strings.t('ui.world.ctl.farm.plot_line', {
-        'crop': c.name,
+        'crop': c.text,
         'ripe': r >= 1 ? 'yes' : 'no',
         'pct': (r * 100).round(),
         'watered': pl.watered ? 'yes' : 'no'
@@ -1804,8 +1805,8 @@ class SessionController extends StateNotifier<SessionView?> {
         strings.t('ui.world.ctl.farm.watered_by', {'name': pl.waterer, 'n': pl.waterings}),
       if (kFertilizers[pl.fert] case final f?)
         pl.fertBy == null
-            ? f.name
-            : strings.t('ui.world.ctl.farm.fert_by', {'fert': f.name, 'name': pl.fertBy}),
+            ? f.text
+            : strings.t('ui.world.ctl.farm.fert_by', {'fert': f.text, 'name': pl.fertBy}),
     ];
     if (me != null) {
       final o = FarmingRules.odds(me, pl);
@@ -1965,7 +1966,7 @@ class SessionController extends StateNotifier<SessionView?> {
         strings.t('ui.world.ctl.helper.farmer_seeds', {'n': b.seedTotal}),
         strings.t('ui.world.ctl.helper.farmer_tasks', {'list': on.isEmpty ? strings.t('ui.world.ctl.helper.none') : on.join(', ')}),
         strings.t('ui.town.helper.next_cycle', {
-          'task': next?.label.toLowerCase() ?? strings.t('ui.town.helper.rests'),
+          'task': next?.text.toLowerCase() ?? strings.t('ui.town.helper.rests'),
           's': secs
         }),
       ]
@@ -2456,7 +2457,7 @@ class SessionController extends StateNotifier<SessionView?> {
         FishPhase.bite => strings.t('ui.world.ctl.fish.bite'),
         FishPhase.hooking => strings.t('ui.world.ctl.fish.hooking'),
         FishPhase.reel => strings.t('ui.world.ctl.fish.reel'),
-        FishPhase.won => strings.t('ui.world.ctl.fish.won', {'fish': f.fish?.def.name ?? strings.t('ui.world.ctl.fish.a_fish')}),
+        FishPhase.won => strings.t('ui.world.ctl.fish.won', {'fish': f.fish?.def.text ?? strings.t('ui.world.ctl.fish.a_fish')}),
         FishPhase.lost => strings.t('ui.world.ctl.fish.lost', {'reason': f.game.lostReason ?? strings.t('ui.world.ctl.fish.escaped')}),
       };
 

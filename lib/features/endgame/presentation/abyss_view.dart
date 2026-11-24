@@ -13,7 +13,6 @@ import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
-import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
@@ -22,6 +21,7 @@ import '../../combat/presentation/pixel_sprite.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/endgame_text.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 
 /// Pestaña ABISMO del Portal del Eco (docs/specs/abyss_bosses.md § 4):
@@ -59,7 +59,10 @@ class _AbyssViewState extends ConsumerState<AbyssView> {
     final s = widget.view.session;
     final blocked = abyssOpenBlocked(s, p, d, rules);
     final dev = FeatureFlags.instance.devTools;
-    final counter = kBossMechanics[kEnemies[d.enemyId]?.mechanicId]?.counter ?? '';
+    final mech = kBossMechanics[kEnemies[d.enemyId]?.mechanicId];
+    final counter = mech == null
+        ? ''
+        : ref.strings.data(DataKeys.mechanicCounter(mech.id), mech.counter);
     return PanelSplit(
       listWidth: 560,
       list: [
@@ -95,7 +98,7 @@ class _AbyssViewState extends ConsumerState<AbyssView> {
                     key: const ValueKey('abyss-confirm-text'),
                     protoColor(ProtoColors.orange,
                         ref.t('ui.endgame.abyss.confirm',
-                            {'cost': protoEsc(rules.costText(d))}))),
+                            {'cost': protoEsc(abyssCostText(d))}))),
                 PanelButton(ref.t('ui.endgame.cancel'),
                     key: const ValueKey('abyss-cancel'),
                     onPressed: () => setState(() => _confirm = false)),
@@ -149,7 +152,7 @@ class _AbyssViewState extends ConsumerState<AbyssView> {
           : CostChip([
               for (final e in cost.entries)
                 CostPart(PixelIconKind.shard,
-                    '${p.material(e.key)}/${e.value} ${_short(e.key)}',
+                    '${p.material(e.key)}/${e.value} ${abyssFragmentShort(e.key)}',
                     iconColor: ProtoColors.violet,
                     ok: p.material(e.key) >= e.value),
             ]),
@@ -159,9 +162,6 @@ class _AbyssViewState extends ConsumerState<AbyssView> {
       }),
     );
   }
-
-  static String _short(CraftMaterial m) =>
-      m.label.replaceFirst('Fragmento ', '').replaceFirst('del ', '').replaceFirst('de la ', '').replaceFirst('de las ', '');
 
   /// Sprite del jefe: silueta hasta vencerlo (y candado si es el secreto
   /// oculto).

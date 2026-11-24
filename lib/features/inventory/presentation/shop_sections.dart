@@ -1002,7 +1002,7 @@ class _ForgePassiveLine extends StatelessWidget {
     final line = ProtoText(passiveForgeNote(invStrings(context), item),
         key: const ValueKey('forge-passive-note'),
         style: DsText.detail());
-    final name = rules.items.passiveOf(item)?.nameAt(item.effectivePassiveLevel);
+    final name = rules.items.passiveOf(item)?.nameAtText(item.effectivePassiveLevel);
     if (passive == null || name == null) return line;
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Flexible(

@@ -37,5 +37,19 @@
   "ui.ascension.node.root": "",
   "ui.ascension.node.cost": "",
   "ui.ascension.points": "",
-  "ui.ascension.banner": ""
+  "ui.ascension.banner": "",
+  "ui.ascension.trial.name.1": "",
+  "ui.ascension.trial.name.2": "",
+  "ui.ascension.trial.name.3": "",
+  "ui.ascension.trial.full_name": "",
+  "ui.ascension.trials.none": "",
+  "ui.ascension.trials.summary": "",
+  "ui.ascension.trial.generic": "",
+  "ui.ascension.trial.short": "",
+  "ui.ascension.trial.result_points": "",
+  "ui.ascension.trial.result_none": "",
+  "ui.ascension.trial.completed": "",
+  "ui.ascension.trial.unknown": "",
+  "ui.ascension.trial.requires_level": "",
+  "ui.ascension.trial.requires_previous": ""
 }

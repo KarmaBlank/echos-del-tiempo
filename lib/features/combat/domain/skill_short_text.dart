@@ -152,7 +152,7 @@ List<String> skillExtraShort(SkillDef tk, Combatant? p) {
     if (tk.pulse > 0) 'Usa ${tk.pulse} de Pulso',
     if (tk.instant) 'No termina tu turno',
     if (tk.requires.isNotEmpty)
-      'Necesita: ${tk.requires.map((r) => r.label).join(', ')}',
+      needsLine(tk.requires.map((r) => r.tr).join(', ')),
     if (tk.ultDrain > 0) 'Le baja la carga de ULT',
   ];
 }
