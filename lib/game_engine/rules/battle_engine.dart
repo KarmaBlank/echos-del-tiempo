@@ -675,7 +675,9 @@ class BattleEngine {
       // porBando (roguelike.md § 6): el primero del grupo que manda, actúa.
       if (!state.pendingGroup.any((p) => p.id == playerId)) return null;
       final t = _Turn(this, state.copy()..currentId = playerId);
-      return t.command(t.state.current!, cmd) ? t.result : null;
+      return t.command(t.state.current!, cmd)
+          ? _roundDelays(state, t.result, playerId)
+          : null;
     }
     if (state.ended ||
         cur == null ||
@@ -685,7 +687,36 @@ class BattleEngine {
       return null;
     }
     final t = _Turn(this, state.copy());
-    return t.command(t.state.current!, cmd) ? t.result : null;
+    return t.command(t.state.current!, cmd)
+        ? _roundDelays(state, t.result, playerId)
+        : null;
+  }
+
+  /// `porRonda` (turn_modes.md § 4.1): a combatant still to act this round
+  /// that a command delayed (its `nextTurn` pushed back: Retraso,
+  /// Contratiempo, ...) or froze (gained Congelación stacks) moves to the
+  /// end of what remains of the round (the actor itself never moves). Party blocks (`roundBlock`) are
+  /// recomputed from the new order right away, so two players that are now
+  /// consecutive form a block (and share the action queue in coop).
+  BattleStep _roundDelays(BattleState before, BattleStep step, String actor) {
+    final s = step.state;
+    if (!s.porRonda) return step;
+    final pushed = <String>[];
+    for (final id in s.roundOrder) {
+      if (id == actor || s.acted.contains(id)) continue;
+      final now = s.byId(id);
+      final was = before.byId(id);
+      if (now == null || was == null || !now.alive) continue;
+      if (now.nextTurn > was.nextTurn + 1e-9 ||
+          now.stacks(StatusKind.freeze) > was.stacks(StatusKind.freeze)) {
+        pushed.add(id);
+      }
+    }
+    if (pushed.isEmpty) return step;
+    s.roundOrder
+      ..removeWhere(pushed.contains)
+      ..addAll(pushed);
+    return step;
   }
 
   /// ESPERAR (turn_modes.md § 4): [playerId], del bloque en curso, pasa al
