@@ -1434,6 +1434,11 @@ const _farmLabels = {
   'matValue': 'Oro por Esquirla',
   'legendCristales': 'Canje legendario: Cristales de Era',
   'legendPrismas': 'Canje legendario: Prismas Rotos',
+  'seasonPriceMult': 'Estación: × de precio del cultivo de estación',
+  'seasonGrowMult': 'Estación: × de crecimiento del cultivo de estación',
+  'mealBuffBase': 'Cocina: buff base de una comida',
+  'mealBuffPerQuality': 'Cocina: buff extra por escalón de calidad',
+  'mealMissions': 'Cocina: misiones que dura una comida',
   'reachPx': 'Alcance de una labor (px)',
   'minWorkSec': 'Segundos entre labores',
 };

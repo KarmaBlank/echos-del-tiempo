@@ -6,6 +6,7 @@ import '../data/tuning_catalog.dart';
 import '../models/farm_plot.dart';
 import '../models/item.dart' show CraftMaterial;
 import '../models/player_profile.dart';
+import 'life_time_rules.dart';
 import 'life_tree_rules.dart';
 
 export '../data/farming_catalog.dart';
@@ -162,9 +163,11 @@ abstract final class FarmingRules {
 
   /// Misión ganada: cada cultivo suma `missionGrowSec` (regado si lo
   /// estaba al salir).
-  static FarmPlot missionGrow(FarmPlot p) {
+  static FarmPlot missionGrow(FarmPlot p, {Season? season}) {
     if (p.seed == null || ripe(p)) return p;
-    final g = t.d('missionGrowSec') * fertSpeed(p.fert);
+    final g = t.d('missionGrowSec') *
+        fertSpeed(p.fert) *
+        (season == null ? 1 : LifeTimeRules.seasonGrow(p.seed!, season));
     return p.copyWith(
         grow: p.grow + g, wetGrow: p.wet > 0 ? p.wetGrow + g : p.wetGrow);
   }
@@ -371,14 +374,19 @@ abstract final class FarmingRules {
 
   // ---------------- agropecuario ----------------
 
-  static int unitPrice(PlayerProfile p, CropDef c, CropQuality q) =>
+  /// [season]: the season now (farming.md § 16: seasonal crops in their
+  /// season sell × `seasonPriceMult`).
+  static int unitPrice(PlayerProfile p, CropDef c, CropQuality q,
+          [Season? season]) =>
       (c.price *
               t.d('qualityMult${q.key}') *
+              (season == null ? 1 : LifeTimeRules.seasonPrice(c.id, season)) *
               (1 + LifeTreeRules.farm(p, LifeFx.sell)))
           .round();
 
   /// Vende [key] (todas), o con `key == null` todo menos los legendarios.
-  static CropSale? sell(PlayerProfile p, {String? key, bool materials = false}) {
+  static CropSale? sell(PlayerProfile p,
+      {String? key, bool materials = false, Season? season}) {
     final f = p.life.farm;
     final bag = {...f.crops};
     var value = 0, sold = 0;
@@ -386,7 +394,7 @@ abstract final class FarmingRules {
       final c = parseCropKey(k);
       if (c == null || n <= 0) return;
       bag[k] = (bag[k] ?? 0) - n;
-      value += unitPrice(p, c.$1, c.$2) * n;
+      value += unitPrice(p, c.$1, c.$2, season) * n;
       sold += n;
     }
 

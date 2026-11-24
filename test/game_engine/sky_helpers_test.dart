@@ -127,7 +127,7 @@ void main() {
       final h = t.build('h0')!;
       expect(HelperRules.level(h.stat(0)), 1);
       expect(h.stat(0).ups, isEmpty);
-      expect(TownRules.helperArea(h, 0), hasLength(8));
+      expect(TownRules.helperArea(h, 0), hasLength(12));
     });
 
     test('nivel por XP de trabajo y costos crecientes', () {
@@ -158,7 +158,7 @@ void main() {
       expect(p1.life.craft('fibra'), 7);
       final h = t1.build('h0')!;
       expect(h.stat(0).rank(HelperUpgrade.parcelas), 1);
-      expect(TownRules.helperArea(h, 0), hasLength(10));
+      expect(HelperRules.plotsOf(h, 0), 14);
       // El rango 2 pide nivel 4 del ayudante.
       expect(HelperRules.cannotUpgrade(p1, h, 0, HelperUpgrade.parcelas),
           contains('nivel'));

@@ -173,7 +173,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// crop log `cl`, bait actions.
 /// 73: renown and town tier (renown_town_growth.md): `rn` in the town,
 /// `tourney` session state, `tev`/`tourney` actions.
-const kProtocolVersion = 73;
+/// 74: cooking and meals (farming.md § 17): `ml`/`mlg`/`mb` in the farm
+/// profile, `meal` in the battle build, FarmShopOp.cook/eat.
+const kProtocolVersion = 74;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

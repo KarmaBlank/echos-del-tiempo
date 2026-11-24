@@ -45,6 +45,8 @@ abstract final class ItemKeys {
   static String cropName(String id) => 'data.materials.crop.$id.name';
   static String cropLore(String id) => 'data.materials.crop.$id.lore';
   static String seedName(String id) => 'data.materials.crop.$id.seed';
+  static String mealName(String id) => 'data.materials.meal.$id.name';
+  static String mealLore(String id) => 'data.materials.meal.$id.lore';
   static String fertName(String id) => 'data.materials.fert.$id.name';
   static String farmToolName(String id) => 'data.materials.tool.$id.name';
   static String lifeMaterialName(String id) => 'data.materials.life.$id.name';

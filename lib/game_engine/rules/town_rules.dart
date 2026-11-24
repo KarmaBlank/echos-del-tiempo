@@ -873,7 +873,9 @@ abstract final class TownRules {
     final task = farmerNext(b0, i, season: season);
     var b = b0;
     final out = <(int, int, Harvest)>[];
-    if (task == null) return (b, out);
+    if (task == null) {
+      return (autoWater(b0, i) ?? b, out);
+    }
     final plots = {...b.plots};
     final seeds = {...b.seeds};
     final ft = FarmingRules.t;
@@ -928,7 +930,28 @@ abstract final class TownRules {
       }
     }
     b = b.copyWith(plots: plots, seeds: seeds);
+    b = autoWater(b, i) ?? b;
     return (HelperRules.gainXp(b, i, worked), out);
+  }
+
+  /// The farmer [i] waters on their own (farming.md § 8.2, v0.45.0):
+  /// every round, besides their task, every planted, unripe, dry plot of
+  /// their area gets a `waterRateMin` watering. `null` = nothing to water.
+  static TownBuild? autoWater(TownBuild b, int i) {
+    final ft = FarmingRules.t;
+    Map<String, FarmPlot>? plots;
+    for (final (x, y) in helperArea(b, i)) {
+      final key = plotKey(x, y);
+      final pl = b.plots[key];
+      if (pl == null || !pl.planted || pl.watered || FarmingRules.ripe(pl)) {
+        continue;
+      }
+      (plots ??= {...b.plots})[key] = pl.copyWith(
+          wet: ft.d('waterSec'),
+          waterRate: ft.d('waterRateMin'),
+          waterer: 'Granjero');
+    }
+    return plots == null ? null : b.copyWith(plots: plots);
   }
 
   /// Pasa [n] semillas de [seed] de [p] a los granjeros de [id] (`n <= 0`

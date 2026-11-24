@@ -37,16 +37,14 @@ void main() {
       '1,0': dry,
       '2,0': _ripe(),
     });
-    // Vuelta 1: planta (el seco sigue seco y el maduro, sin cosechar).
-    (b, _) = TownRules.farmerCycle(b, 0, _harvest);
-    expect(b.plots['1,0']!.watered, isFalse);
-    expect(FarmingRules.ripe(b.plots['2,0']!), isTrue);
-    expect(b.seeds, isEmpty);
-    // Vuelta 2: riega; vuelta 3: cosecha al cofre.
-    expect(TownRules.farmerNext(b, 0), HelperTask.regar);
+    // Vuelta 1: planta (el maduro, sin cosechar). Además riega solo
+    // (farming.md § 8.2, v0.45.0): lo seco queda regado.
     (b, _) = TownRules.farmerCycle(b, 0, _harvest);
     expect(b.plots['1,0']!.watered, isTrue);
-    expect(b.chest, isEmpty);
+    expect(b.plots['0,0']!.watered, isTrue);
+    expect(FarmingRules.ripe(b.plots['2,0']!), isTrue);
+    expect(b.seeds, isEmpty);
+    // Vuelta 2: cosecha al cofre (nada para regar con la tarea).
     expect(TownRules.farmerNext(b, 0), HelperTask.cosechar);
     final List<(int, int, Harvest)> hs;
     (b, hs) = TownRules.farmerCycle(b, 0, _harvest);
@@ -55,6 +53,16 @@ void main() {
     // Con regar apagado, salta a cosechar.
     final off = b.copyWith(tasks: [HelperTask.cosechar.bit]);
     expect(TownRules.farmerNext(off, 0), isNull);
+  });
+
+  test('el granjero riega solo aunque tenga regar apagado', () {
+    final dry = FarmingRules.plant(FarmingRules.till(), 'nabo_claro')!;
+    var b = kBaseFarm.copyWith(
+        helper: 1, tasks: [HelperTask.cosechar.bit], plots: {'1,0': dry});
+    expect(TownRules.farmerNext(b, 0), isNull);
+    (b, _) = TownRules.farmerCycle(b, 0, _harvest);
+    expect(b.plots['1,0']!.watered, isTrue);
+    expect(b.plots['1,0']!.waterer, 'Granjero');
   });
 
   test('recoger el cofre pasa todo a la bolsa PESCA Y CULTIVO', () {
@@ -88,8 +96,8 @@ void main() {
   });
 
   test('tope por tamaño y huertas que se tocan se funden', () {
-    // 4 × 3 = 12 parcelas: 2 granjeros de 8.
-    expect(TownRules.helperCap(kBaseFarm), 2);
-    expect(TownRules.helperArea(kBaseFarm, 1), hasLength(4));
+    // 4 × 3 = 12 parcelas: 1 granjero de 12 (v0.45.0).
+    expect(TownRules.helperCap(kBaseFarm), 1);
+    expect(TownRules.helperArea(kBaseFarm, 0), hasLength(12));
   });
 }

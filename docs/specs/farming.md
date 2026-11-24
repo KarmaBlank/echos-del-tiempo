@@ -26,7 +26,9 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 - Se ve donde se ve Pesca: PERSONAJE (línea OFICIOS y pestaña OFICIOS),
   el agropecuario y la pestaña PESCA Y CULTIVO.
 - XP por cosecha: `xp base × xp<Rareza> × qualityMult<Calidad>` (+ el
-  árbol). Arar, plantar y regar dan `workXp` (1). XP de personaje por
+  árbol). Arar, plantar y regar dan `workXp` (3 desde v0.45.0; antes 1). Los
+  cultivos de la zona 1 dan × 1.5 de XP base desde v0.45.0 (nabo 9,
+  trigo 11, … raíz de la Era 263). XP de personaje por
   cosecha `charXp<Rareza>` con tope `charXpCap` por estadía en el pueblo
   (aparte del de la pesca).
 
@@ -114,9 +116,10 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 ### 2.3 Crecimiento (elegido para co-op y para jugar afuera)
 - La huerta crece mientras la sala está abierta, en el pueblo y también
   durante las misiones (el host la avanza de a 1 s): regada a ritmo del
-  riego (`waterRate`), seca a `dryRate` (0.35). Cada riego dura
+  riego (`waterRate`), seca a `dryRate` (0.5 desde v0.45.0; antes 0.35). Cada riego dura
   `waterSec` (240 s, más con la regadera y el árbol).
-- Cada misión ganada suma `missionGrowSec` (420 s) a todo lo plantado.
+- Cada misión ganada suma `missionGrowSec` (600 s desde v0.45.0; antes
+  420) a todo lo plantado (× `seasonGrowMult` si es de estación, § 16).
   Así una expedición de 10–12 min deja la huerta lista aunque nadie
   riegue.
 - Con el juego cerrado no crece nada (sin reloj real: nadie pierde ni
@@ -250,13 +253,14 @@ herramienta de área trabaja menos tiles.
 
 ## 5. Hallazgos de la huerta (como el botín del agua, más chico)
 - Cada cosecha devuelve una semilla del mismo cultivo con
-  `seedDropChance` (40 %; no las legendarias).
-- Hallazgo: `lootChance` (7 %) × (1 + `lootLevelBonus` × (nivel − 1)) ×
+  `seedDropChance` (55 % desde v0.45.0; antes 40 %; no las legendarias).
+- Hallazgo: `lootChance` (12 % desde v0.45.0; antes 7 %) × (1 + `lootLevelBonus` × (nivel − 1)) ×
   árbol. Pesos: semilla rara o épica 60, Esquirlas 35
   (`lootMatMin`..`lootMatMax`), semilla legendaria 5.
 - Pity: `farm.dry` cosechas sin hallazgo → a las `lootPityAfter` (40),
   semilla rara o Esquirlas seguras. `farm.pity` cosechas sin semilla
-  legendaria → a las `legendPityAfter` (150), una segura.
+  legendaria → a las `legendPityAfter` (100 desde v0.45.0; antes 150),
+  una segura.
 - Aviso "encontró en la tierra: …", chat y un pop con el color de la
   rareza.
 
@@ -303,13 +307,13 @@ herramienta de área trabaja menos tiles.
   habilitada = la misma acción `TownOp.hireHelper` y sale. Solo el dueño;
   sin huertas (o lagos) el botón sale gris con el motivo. Sin cambio de
   protocolo.
-- Tope por tamaño: huerta `ceil(parcelas / helperPlots)` (8), lago
+- Tope por tamaño: huerta `ceil(parcelas / helperPlots)` (12 desde v0.45.0; antes 8), lago
   `ceil(tiles / fisherTiles)` (18). Huertas pegadas se funden en una
   (como los lagos): suman parcelas, ayudantes, semillas y cofre, y crece
   el tope. El cartel y las opciones dicen "Granjeros 1 / 2 · cada uno
-  atiende 8 parcelas".
+  atiende 12 parcelas".
 - Áreas automáticas sin pisarse: el granjero i atiende las parcelas
-  i·8 … i·8+7 de la huerta, fila por fila. El pescador i (v0.28.0), un tile de
+  i·12 … i·12+11 de la huerta, fila por fila. El pescador i (v0.28.0), un tile de
   la orilla pegado al agua por un lado (nunca la esquina en diagonal),
   libre del cartel, el cofre y otras construcciones: el primero, el más
   cerca del cartel; los demás, cada vez más lejos (`fisherSpot`).
@@ -335,6 +339,11 @@ herramienta de área trabaja menos tiles.
   primera prendida que tenga algo para hacer, en orden fijo: (1) PLANTAR
   tiles vacíos si tiene semillas, (2) REGAR las plantadas secas, (3)
   COSECHAR las maduras al cofre. Si ninguna aplica, descansa.
+- Riego automático (v0.45.0): además de su tarea, en cada vuelta riega
+  solo toda parcela plantada, seca y sin madurar de su área (ritmo
+  `waterRateMin`), aunque tenga REGAR apagado (`TownRules.autoWater`).
+  Por eso un granjero con COSECHAR prendido nunca queda bloqueado por
+  falta de riego (§ 8.6).
 - Las tareas se prenden y apagan por granjero (pestaña TAREAS); se
   guardan en `tk`. Con una sola prendida, solo hace esa.
 - Solo planta de SU inventario de semillas (el de la huerta, compartido
@@ -513,3 +522,81 @@ Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 - Las semillas muestran sus estaciones en la tienda y en los tooltips.
 - Offline: solo crece mientras el host corre la sesión.
 - COLECCIÓN de cultivos: weather_seasons.md § 7.
+
+## 16. Bonus de estación (v0.45.0)
+
+- Un cultivo **de estación** (sus estaciones no son las cuatro) en una
+  de sus estaciones (`WeatherRules.season(sky.day)`):
+  - se vende × `seasonPriceMult` (1.3) en el agropecuario
+    (`FarmingRules.unitPrice(..., season)` / `sell(season:)`); el
+    detalle muestra "De estación: +30 % de precio";
+  - crece × `seasonGrowMult` (1.2): en el reloj de la huerta
+    (`LifeTimeRules.cropGrowth`) y en el salto de cada misión ganada
+    (`missionGrow(season:)`).
+- Los cultivos de todo el año (nabo de escarcha, flor de cristal, lirio
+  del eco) no tienen bonus. Fuera de estación sigue § 15 (se frena).
+- Helpers: `LifeTimeRules.cropSeasonal`, `seasonGrow`, `seasonPrice`.
+
+## 17. Cocina (v0.45.0, protocolo 73)
+
+La olla del pueblo convierte cosechas (y a veces pescado) en comidas que
+dan un buff para las próximas misiones.
+
+- Dónde: OFICIOS → INVENTARIO → CULTIVO → COCINA (solo en el pueblo; el
+  host valida `_inTown`). Subtabs RECETAS / COMIDAS / COLECCIÓN; RECETAS
+  y COMIDAS usan la plantilla TALLER (`DsCraftGridTemplate`: grilla con
+  el detalle a la derecha) con filtros TODAS / VIDA / ATAQUE /
+  RESISTENCIA; COLECCIÓN usa `DsCollectionTemplate`. Arriba, la comida
+  activa (o "Sin comida activa").
+- Recetas (`kMeals`, `lib/game_engine/data/cooking_catalog.dart`):
+
+  | id | Comida | Ingredientes | Efecto | Poder |
+  |---|---|---|---|---|
+  | sopa_nabo | Sopa de nabo | 3 nabo del claro | + vida | 1 |
+  | pan_dorado | Pan dorado | 3 trigo dorado | + ATQ/MAG | 1 |
+  | guiso_calabaza | Guiso de calabaza | 2 calabaza, 1 papa | resiste agua | 1 |
+  | tarta_frutilla | Tarta de frutilla | 2 frutilla, 1 trigo | resiste fuego | 1 |
+  | sopa_cebolla | Sopa de cebolla de cobre | 2 cebolla, 1 nabo | resiste electro | 1 |
+  | caldo_invierno | Caldo de invierno | 2 col de invierno, 1 rábano de nieve | resiste hielo | 1 |
+  | melon_glaseado | Melón engranaje glaseado | 1 melón engranaje, 2 trigo | + vida | 2 |
+  | ensalada_runica | Ensalada rúnica | 1 flor rúnica, 1 frutilla | + ATQ/MAG | 2 |
+  | mojarra_nabo | Mojarra con nabo | 2 nabo + 1 mojarra del claro | + vida | 1 |
+  | trucha_cebolla | Trucha a la cebolla | 1 cebolla + 1 trucha de cobre | + ATQ/MAG | 1.5 |
+
+- Cocinar (`FarmShopOp.cook`, `id` = receta, `n` = índice de calidad):
+  gasta los cultivos de **esa** calidad (y el pescado de cualquier
+  tamaño). La comida sale con esa calidad. Bolsa `farm.ml`
+  (`<comida>@<calidad>` → cantidad); colección `farm.mlg` (mejor
+  calidad cocinada). Las comidas no ocupan casillas de la bolsa de
+  oficio.
+- Buff = (`mealBuffBase` (0.05) × `qualityMult<Calidad>` +
+  `mealBuffPerQuality` (0.03) × índice de calidad) × poder. Normal 5 %,
+  rara 9.5 %, épica 15 %, legendaria 24 % (× poder). La resistencia se
+  topa en 90 %.
+- Comer (`FarmShopOp.eat`, `id` = clave de la bolsa) reemplaza la comida
+  activa (`farm.mb {m, q, n}`); dura `mealMissions` (2) misiones, +1 si
+  la receta lleva pescado (de 1 a 3 con los valores por defecto).
+- Efecto: + vida máx. o + ATQ y MAG entran en `StatsCalculator` (como el
+  poder de los oficios) vía `PlayerBuild.meal`; la resistencia reduce el
+  daño de golpes con ese elemento al jugador en `BattleEngine` (modificador
+  COMIDA en el desglose).
+- Duración: cada fin de misión (ganada o perdida; no Travesía ni
+  tutorial) resta una (`CookingRules.afterMission`).
+- Co-op: cada perfil tiene su comida; el host aplica cocinar, comer y
+  el vencimiento (host-authoritative). `PlayerBuild.meal` viaja en el
+  build del combatiente (`meal`) para el HUD.
+- HUD: chip COMIDA en la tarjeta de batalla (tooltip: comida, efecto y
+  misiones que quedan) y línea "Comida: … (n)" con tooltip en el recuadro
+  del jugador en el mundo.
+- Balance (Editor → Balance → Cultivo): `mealBuffBase`,
+  `mealBuffPerQuality`, `mealMissions`, `seasonPriceMult`,
+  `seasonGrowMult`.
+
+## 18. XP de Cultivo frente a Pesca (v0.45.0)
+
+Objetivo: ~70 % de la XP por minuto de Pesca. Cuenta a mano (sin sim
+automática): Pesca en zona 1 ronda 55–65 XP/min (≈ 6 capturas/min de
+~9 XP). Cultivo con 12 parcelas de nabo (plantar + regar = 6 XP,
+cosecha 9 XP) y ciclos de ~3.5–4 min (125 s de crecimiento de estación
+más el recorrido) da ≈ 45 XP/min, más con calidad y cultivos raros.
+Ajustable con `workXp`, `xp<Rareza>` y el XP base de cada cultivo.

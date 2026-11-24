@@ -19,6 +19,7 @@ import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'seed_text.dart';
 import 'bait_text.dart';
+import 'cooking_view.dart';
 import 'life_collection.dart';
 import 'smith_collection.dart';
 import '../../../../game_engine/rules/bait_rules.dart';
@@ -72,6 +73,8 @@ const _filters = <OficioBag, List<(String, String, List<String>)>>{
     ('abonos', 'ui.town.bag.filter.ferts', ['life-fert-']),
     ('cosechas', 'ui.town.bag.filter.crops', ['life-crop-']),
     ('coleccion', 'ui.town.bag.filter.collection', <String>[]),
+    // COCINA (farming.md § 17): the town pot, its own view.
+    ('cocina', 'ui.town.bag.filter.cooking', <String>[]),
   ],
   OficioBag.herreria: [
     ('todo', 'ui.town.bag.filter.all', ['life-craft-']),
@@ -156,7 +159,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         ],
         SizedBox(height: DsSpace.xs),
         Expanded(
-          child: collection
+          child: f.$1 == 'cocina'
+              ? CookingView(profile: p, controller: widget.controller)
+              : collection
               ? switch (_bag) {
                   OficioBag.pesca => fishCollection(context, p),
                   OficioBag.cultivo => cropCollection(context, p),

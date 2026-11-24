@@ -190,11 +190,11 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Crecimiento: × sin regar, segundos de riego, segundos que suma cada
     // misión ganada y XP por arar/plantar/regar. Un regador de nivel bajo
     // riega más lento: × crecimiento = waterRateMin + (1 − min) × efect.
-    'dryRate': 0.35,
+    'dryRate': 0.5,
     'waterSec': 240,
     'waterRateMin': 0.6,
-    'missionGrowSec': 420,
-    'workXp': 1,
+    'missionGrowSec': 600,
+    'workXp': 3,
     // Calidad (farming.md § 3): pesos base de normal / rara / épica /
     // legendaria; el puntaje S de los aportes multiplica la rara × (1+S),
     // la épica × (1+S)^2 y la legendaria × (1+S)^3.
@@ -224,16 +224,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     'qualityMultEpico': 1.8,
     'qualityMultLegendario': 3,
     // Semillas: chance de que la cosecha devuelva una (no legendarias).
-    'seedDropChance': 0.4,
+    'seedDropChance': 0.55,
     // Hallazgos de la huerta (farming.md § 5): chance, pesos, mejora por
     // nivel, pity del hallazgo y de la semilla legendaria.
-    'lootChance': 0.07,
+    'lootChance': 0.12,
     'lootSemilla': 60,
     'lootMateriales': 35,
     'lootLegendaria': 5,
     'lootLevelBonus': 0.03,
     'lootPityAfter': 40,
-    'legendPityAfter': 150,
+    'legendPityAfter': 100,
     'lootMatMin': 1,
     'lootMatMax': 2,
     // Agropecuario: × en materiales, oro por Esquirla y canje de un
@@ -242,6 +242,17 @@ const Map<String, TuningDef> kTuningDefaults = {
     'matValue': 25,
     'legendCristales': 3,
     'legendPrismas': 1,
+    // Estación (farming.md § 16): los cultivos de estación (no los de todo
+    // el año) en su estación se venden × seasonPriceMult y crecen ×
+    // seasonGrowMult.
+    'seasonPriceMult': 1.3,
+    'seasonGrowMult': 1.2,
+    // Cocina (farming.md § 17): buff = (mealBuffBase × qualityMult<Q> +
+    // mealBuffPerQuality × índice de calidad), dura mealMissions misiones
+    // (+1 si la receta lleva pescado).
+    'mealBuffBase': 0.05,
+    'mealBuffPerQuality': 0.03,
+    'mealMissions': 2,
     // Validación del host: alcance (px) y segundos entre labores.
     'reachPx': 30,
     'minWorkSec': 0.15,
@@ -275,7 +286,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     // × de XP al que recoge el cofre y tope del cofre.
     'helperLevel': 5,
     'helperCost': 800,
-    'helperPlots': 8,
+    'helperPlots': 12,
     'fisherTiles': 18,
     'fisherCatch': 2,
     'helperEverySec': 45,

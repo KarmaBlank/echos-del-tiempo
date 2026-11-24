@@ -237,5 +237,6 @@
   "ui.world.clock.season_left": "{season} · {n, plural, one{falta 1 día} other{faltan {n} días}}",
   "ui.world.tools.bait": "Cebo [F]",
   "ui.world.tools.no_bait_tip": "Sin cebo: comprá o fabricá cebos.",
-  "ui.world.tools.bait_tip_more": "{name} · clic o F: otro cebo"
+  "ui.world.tools.bait_tip_more": "{name} · clic o F: otro cebo",
+  "ui.world.hud.meal": "Comida: {meal} ({n})"
 }

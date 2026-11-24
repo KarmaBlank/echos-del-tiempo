@@ -1,6 +1,7 @@
 import 'ascension.dart';
 import 'attributes.dart';
 import 'item.dart';
+import 'meal_buff.dart';
 import 'passive_tree.dart';
 import 'status.dart';
 import 'weapon.dart';
@@ -43,6 +44,10 @@ class PlayerBuild {
   final double lifeHp;
   final double lifeAtk;
 
+  /// Meal eaten before the mission (farming.md § 17): + HP / ATK or an
+  /// element resistance while it lasts.
+  final MealBuff? meal;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -57,6 +62,7 @@ class PlayerBuild {
     this.ultLevel = 1,
     this.lifeHp = 0,
     this.lifeAtk = 0,
+    this.meal,
   });
 
   /// Id de la ascensión elegida (`null` = clase base).
@@ -79,6 +85,7 @@ class PlayerBuild {
         ultLevel: ultLevel,
         lifeHp: lifeHp,
         lifeAtk: lifeAtk,
+        meal: meal,
       );
 }
 
