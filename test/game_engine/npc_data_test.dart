@@ -102,6 +102,11 @@ void main() {
     expect(d.missingLocales(locales), isNotEmpty);
   });
 
+  test('the shipped npcs.json has every locale filled', () {
+    final shipped = NpcData.decode(file.readAsStringSync());
+    expect(shipped.missingLocales(locales), isEmpty);
+  });
+
   test('el validador bloquea un idioma faltante (y uno nuevo)', () {
     LocalizedText full(String s) =>
         LocalizedText.of({for (final l in locales) l: s});
