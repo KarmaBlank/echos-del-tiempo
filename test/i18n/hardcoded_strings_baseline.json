@@ -31,7 +31,7 @@
   "lib/features/characters/presentation/unclaimed_box.dart": 1,
   "lib/features/combat/presentation/battle_bar_layout.dart": 13,
   "lib/features/combat/presentation/battle_hud.dart": 4,
-  "lib/features/combat/presentation/battle_screen.dart": 5,
+  "lib/features/combat/presentation/battle_screen.dart": 6,
   "lib/features/combat/presentation/enemy_live_info.dart": 1,
   "lib/features/combat/presentation/scene/battle_fx.dart": 1,
   "lib/features/combat/presentation/scene/chain_fx.dart": 1,
