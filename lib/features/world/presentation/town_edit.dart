@@ -68,6 +68,19 @@ class TownEdit {
   /// Lo que se elige con un clic (`null` = edición normal).
   BuildKind? get pick => hire ?? (houseFor != null ? BuildKind.casa : null);
 
+  /// Ventana CONSTRUIR abierta (town_editor.md § 1.2). Se cierra sola al
+  /// elegir una pieza; el botón del borde derecho la vuelve a abrir.
+  bool buildOpen = true;
+
+  /// Pasos donde va la paleta: mirando o poniendo, sin elegir dónde
+  /// contratar ni la casa de un habitante.
+  bool get buildAvailable =>
+      pick == null &&
+      (step == TownEditStep.browse || step == TownEditStep.placing);
+
+  /// La ventana CONSTRUIR está a la vista.
+  bool get buildShown => buildOpen && buildAvailable;
+
   void reset() {
     step = TownEditStep.browse;
     selected = null;

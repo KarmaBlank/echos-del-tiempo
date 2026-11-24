@@ -43,28 +43,42 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
 v0.40.1: primero se elige QUÉ poner y después DÓNDE (antes era al
 revés: clic en un tile libre y después la lista).
 
-- Al entrar, la columna de la derecha muestra enseguida la PALETA
+- Al entrar se abre la ventana CONSTRUIR (v0.42.7): una ventana GRANDE
+  centrada en la pantalla, como el INVENTARIO, con la PALETA
   (`TownBuildPalette`): todo lo que se puede poner (`kConstructions` +
-  el faro) en una grilla de casillas estilo INVENTARIO (`DsItemCell`)
-  a la izquierda y el detalle (`DsDetailPane`) a la derecha, con la
-  elegida (o la que está bajo el mouse): nombre, tamaño, para qué sirve
-  y costo. Categorías con filtros (TODO · CULTIVO · AGUA · HOGAR · LUZ),
-  nunca secciones apiladas.
+  el faro) en una grilla de casillas amplias (`DsItemCell` + nombre) a
+  la izquierda y el detalle (`DsDetailPane`, columna fija de 300 px) a
+  la derecha, con la elegida (o la que está bajo el mouse): nombre,
+  tamaño, para qué sirve y costo, legible sin scroll. Categorías con
+  filtros arriba (TODO · CULTIVO · AGUA · HOGAR · LUZ), nunca secciones
+  apiladas. Tamaño: ancho de la pantalla − 64 (320–900) por alto − 48
+  (240–540).
+- Elegir una pieza CIERRA la ventana: el mapa queda libre para ponerla.
+  En el borde derecho, arriba, queda un botón fijo `CONSTRUIR ▸` (con la
+  pieza en curso: `CONSTRUIR ▸ Huerta chica`) que la vuelve a abrir. El
+  jugador la abre o cierra cuando quiere: el botón, CERRAR, un clic
+  fuera de la ventana o Esc (Esc cierra primero la ventana; con la
+  ventana cerrada vuelve un paso o sale, como siempre).
+- El botón va arriba de la columna de la derecha: el menú del paso y
+  el panel de info van debajo, así nunca lo tapan ni lo corren. LISTO
+  sigue en la barra; contratar y elegir casa no muestran ni ventana ni
+  botón. Poniendo, la columna no muestra menú (la ayuda y el motivo
+  del rojo van en la barra; se suelta con Esc o clic en la casilla).
 - Cada casilla muestra el tamaño (p. ej. `6×4`) y el nombre completo
   en hasta dos renglones, cortando solo entre palabras; si no entra se
   acorta con "…" y el nombre va en un tooltip (ancho y letra fijos del
   DS) que no recibe el mouse.
 - Sin parpadeo (v0.42.6): casillas y grilla + detalle tienen tamaño
   FIJO; pasar el mouse cambia solo el contenido del detalle, nunca el
-  tamaño de la columna ni la posición de una casilla, así el clic
+  tamaño de la ventana ni la posición de una casilla, así el clic
   siempre elige la pieza.
 - Casilla que no se puede pagar: gris (sin tooltip: el motivo es común
   y el detalle ya muestra el costo en rojo).
 - Clic en una casilla habilitada → paso `placing`: el fantasma sigue al
-  mouse, verde si entra y rojo (con el motivo en la barra y en la
-  columna) si no. Clic en el mapa donde es válido lo pone; donde no,
+  mouse, verde si entra y rojo (con el motivo en la barra y en el
+  detalle) si no. Clic en el mapa donde es válido lo pone; donde no,
   no hace nada. La pieza SIGUE elegida para poner otra igual; se suelta
-  con Esc, CANCELAR o un clic en la misma casilla. Elegir otra casilla
+  con Esc o un clic en la misma casilla. Elegir otra casilla
   cambia la pieza.
 - Sin pieza elegida, el clic en el mapa elige lo que ya está puesto:
 
@@ -103,8 +117,8 @@ fantasma va en el tile del mouse.
 - Contorno de cada construcción (dorado la elegida) y fantasma verde /
   rojo. Colores en `TownEditPalette`.
 - Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
-  entre 240 y 320 px): el menú del paso (en el paso base y al poner, la
-  paleta de § 1.2) y, debajo, el panel de info de la construcción bajo
+  entre 240 y 320 px): arriba el botón CONSTRUIR (§ 1.2) si la ventana
+  está cerrada, el menú del paso y, debajo, el panel de info de la construcción bajo
   el mouse (su cartel). Con otro menú abierto no aparece. La barra: ayuda corta en hasta dos renglones, sin "…".
 - Validación de MOVER (§ 3.2): el borde del pueblo es de un tile (la
   fila de árboles), así cada construcción puede volver a su propio lugar

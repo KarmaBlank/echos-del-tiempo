@@ -38,11 +38,14 @@ class TownEditOverlay extends StatelessWidget {
   /// Hay algo en la columna de la derecha (menú o info).
   static bool sideOpen(SessionController c) {
     final e = c.townEdit;
-    // En el paso base, sin contratar, está la paleta (§ 1.2).
-    return e != null &&
-        (e.step != TownEditStep.browse ||
-            e.hire == null ||
-            e.hoverBuild != null);
+    // La ventana CONSTRUIR va centrada y el botón del borde es chico:
+    // mirando o poniendo, el mapa queda libre salvo el panel de info.
+    if (e == null) return false;
+    return switch (e.step) {
+      TownEditStep.browse => e.hoverBuild != null,
+      TownEditStep.placing => false,
+      _ => true,
+    };
   }
 
   @override
@@ -90,38 +93,105 @@ class TownEditOverlay extends StatelessWidget {
           ]),
         ),
         Expanded(
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: EdgeInsets.all(DsSpace.sm),
-              child: SizedBox(
-                width: side,
-                child: SingleChildScrollView(
+          child: Stack(children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: EdgeInsets.all(DsSpace.sm),
+                child: SizedBox(
+                  width: side,
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (menu != null)
-                          Container(
-                            key: const ValueKey('town-edit-menu'),
-                            color: DsColors.background,
-                            padding: EdgeInsets.all(DsSpace.sm),
-                            child: menu,
+                        // Botón fijo arriba: lo de abajo (menú, info)
+                        // nunca lo corre ni lo tapa.
+                        if (e.buildAvailable && !e.buildOpen) ...[
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: DsButton(
+                                switch (c.townEdit?.placeDef) {
+                                  final id? when
+                                      e.step == TownEditStep.placing =>
+                                    s.t('ui.town.edit.build_toggle_piece', {
+                                      'name': TownBuildPalette.pieces(s, c)
+                                              .where((p) => p.id == id)
+                                              .firstOrNull
+                                              ?.name ??
+                                          id
+                                    }),
+                                  _ => s.t('ui.town.edit.build_toggle'),
+                                },
+                                key: const ValueKey('town-build-toggle'),
+                                size: DsButtonSize.compact,
+                                kind: DsButtonKind.primary,
+                                onPressed: () => c.setBuildOpen(true)),
                           ),
-                        if (menu != null && info != null)
-                          SizedBox(height: DsSpace.xs),
-                        if (info != null)
-                          Container(
-                            key: const ValueKey('town-edit-hover'),
-                            color: DsColors.background,
-                            padding: EdgeInsets.all(DsSpace.sm),
-                            child: info,
+                          if (menu != null || info != null)
+                            SizedBox(height: DsSpace.xs),
+                        ],
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (menu != null)
+                                    Container(
+                                      key: const ValueKey('town-edit-menu'),
+                                      color: DsColors.background,
+                                      padding: EdgeInsets.all(DsSpace.sm),
+                                      child: menu,
+                                    ),
+                                  if (menu != null && info != null)
+                                    SizedBox(height: DsSpace.xs),
+                                  if (info != null)
+                                    Container(
+                                      key: const ValueKey('town-edit-hover'),
+                                      color: DsColors.background,
+                                      padding: EdgeInsets.all(DsSpace.sm),
+                                      child: info,
+                                    ),
+                                ]),
                           ),
+                        ),
                       ]),
                 ),
               ),
             ),
-          ),
+            // Ventana CONSTRUIR centrada (town_editor.md § 1.2): un clic
+            // afuera o Esc la cierra.
+            if (e.buildShown) ...[
+              Positioned.fill(
+                child: GestureDetector(
+                  key: const ValueKey('town-build-barrier'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => c.setBuildOpen(false),
+                  child: ColoredBox(
+                      color: DsColors.background.withValues(alpha: 0.4)),
+                ),
+              ),
+              Center(
+                child: LayoutBuilder(builder: (context, area) {
+                  final size = TownBuildPalette.windowSize(
+                      Size(area.maxWidth, area.maxHeight));
+                  return Container(
+                    key: const ValueKey('town-build-window'),
+                    width: size.width,
+                    height: size.height,
+                    decoration: BoxDecoration(
+                      color: DsColors.background,
+                      border: Border.all(color: DsColors.border, width: 2),
+                    ),
+                    padding: EdgeInsets.all(DsSpace.md),
+                    child: TownBuildPalette(
+                        controller: c,
+                        onClose: () => c.setBuildOpen(false)),
+                  );
+                }),
+              ),
+            ],
+          ]),
         ),
       ]);
     });
@@ -252,8 +322,8 @@ class TownEditOverlay extends StatelessWidget {
     }
     switch (e.step) {
       case TownEditStep.browse:
-        // Paleta: elegir qué poner y después dónde (§ 1.2).
-        return e.pick == null ? TownBuildPalette(controller: c) : null;
+        // La paleta va en la ventana CONSTRUIR centrada (§ 1.2).
+        return null;
       case TownEditStep.side:
         final side = e.side!;
         final why = c.cannotExpandTown(side);
@@ -510,11 +580,9 @@ class TownEditOverlay extends StatelessWidget {
           ]),
         ]);
       case TownEditStep.placing:
-        return col([
-          TownBuildPalette(controller: c),
-          SizedBox(height: DsSpace.xs),
-          Align(alignment: Alignment.centerLeft, child: cancel()),
-        ]);
+        // Poniendo: el mapa queda libre; la ayuda va en la barra y el
+        // botón CONSTRUIR del borde muestra la pieza (§ 1.2).
+        return null;
       case TownEditStep.moving:
         return col([
           DsSectionHeader(s.t('ui.town.edit.move')),

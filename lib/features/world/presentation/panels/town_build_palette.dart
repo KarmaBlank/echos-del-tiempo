@@ -47,24 +47,36 @@ class TownPiece {
       };
 }
 
-/// Organismo: la paleta de la edición del pueblo (town_editor.md § 1.2).
-/// Grilla de casillas estilo INVENTARIO con filtros por categoría y el
-/// detalle a la derecha (tamaño fijo, sin parpadeo al pasar el mouse); elegir una pieza la deja lista para poner en el mapa.
+/// Organismo: la ventana CONSTRUIR de la edición del pueblo
+/// (town_editor.md § 1.2). Grilla de casillas estilo INVENTARIO con
+/// filtros por categoría y el detalle a la derecha, para ir centrada en
+/// la pantalla con el tamaño que le da su contenedor. Casillas y
+/// columnas de tamaño fijo (sin parpadeo al pasar el mouse); elegir una
+/// pieza la deja lista para poner en el mapa.
 class TownBuildPalette extends StatefulWidget {
-  const TownBuildPalette({super.key, required this.controller});
+  const TownBuildPalette({super.key, required this.controller, this.onClose});
 
   final SessionController controller;
+
+  /// Botón CERRAR de la cabecera (`null`: sin botón).
+  final VoidCallback? onClose;
 
   static const cell = DsItemCell.size;
 
   /// Ancho de una casilla con su nombre (fijo: el hover no la mueve).
-  static const cellWidth = 72.0;
+  static const cellWidth = 104.0;
 
   /// Alto de una casilla: cuadro + dos renglones de nombre.
-  static const cellHeight = cell + 40.0;
+  static const cellHeight = cell + 44.0;
 
-  /// Alto fijo de grilla + detalle (dos filas de casillas).
-  static const paneHeight = cellHeight * 2 + 24.0;
+  /// Ancho fijo de la columna de detalle.
+  static const detailWidth = 300.0;
+
+  /// Tamaño de la ventana para un área de [box]: grande pero con margen.
+  static Size windowSize(Size box) => Size(
+        (box.width - 64).clamp(320.0, 900.0),
+        (box.height - 48).clamp(240.0, 540.0),
+      );
 
   /// Las piezas que se pueden poner, con su costo y motivo.
   static List<TownPiece> pieces(Strings s, SessionController c) {
@@ -157,9 +169,14 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
     return Column(
       key: const ValueKey('town-build-palette'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
       children: [
-        DsSectionHeader(s.t('ui.town.edit.build')),
+        DsSectionHeader(s.t('ui.town.edit.build'),
+            trailing: widget.onClose == null
+                ? null
+                : DsButton(s.t('ui.town.edit.build_close'),
+                    key: const ValueKey('town-build-close'),
+                    size: DsButtonSize.compact,
+                    onPressed: widget.onClose)),
         DsTabBar(
           key: const ValueKey('town-build-filters'),
           tabs: [
@@ -170,34 +187,32 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
           index: cats.indexOf(_filter).clamp(0, cats.length - 1),
           onChanged: (i) => setState(() => _filter = cats[i]),
         ),
-        SizedBox(height: DsSpace.xs),
+        SizedBox(height: DsSpace.sm),
         // Grilla a la izquierda y detalle a la derecha, de tamaño fijo:
         // el hover cambia el CONTENIDO del detalle, nunca el tamaño ni la
         // posición de una casilla (así no parpadea).
-        SizedBox(
-          height: TownBuildPalette.paneHeight,
+        Expanded(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: TownBuildPalette.cellWidth * 2 + DsSpace.xs,
+              Expanded(
                 child: SingleChildScrollView(
                   key: const ValueKey('town-build-grid'),
                   child: Wrap(
-                    spacing: DsSpace.xs,
-                    runSpacing: DsSpace.xs,
+                    spacing: DsSpace.sm,
+                    runSpacing: DsSpace.sm,
                     children: [
                       for (final p in shown) _cell(s, c, p, p.id == placing)
                     ],
                   ),
                 ),
               ),
-              SizedBox(width: DsSpace.xs),
-              Expanded(
+              SizedBox(width: DsSpace.sm),
+              SizedBox(
+                width: TownBuildPalette.detailWidth,
                 child: DsDetailPane(
                   key: const ValueKey('town-build-pane'),
                   sunken: true,
-                  padding: EdgeInsets.all(DsSpace.sm),
                   body: _detail(
                       s, focus, placing != null && focus?.id == placing),
                 ),
