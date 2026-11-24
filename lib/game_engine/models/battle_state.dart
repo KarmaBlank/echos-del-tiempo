@@ -695,10 +695,12 @@ class BattleState {
     this.round = 0,
     List<String>? roundOrder,
     Set<String>? waited,
+    List<String>? hasteNext,
   })  : summons = summons ?? [],
         acted = acted ?? {},
         roundOrder = roundOrder ?? [],
-        waited = waited ?? {};
+        waited = waited ?? {},
+        hasteNext = hasteNext ?? [];
 
   final List<Combatant> party;
   final List<Combatant> enemies;
@@ -748,6 +750,10 @@ class BattleState {
 
   /// `porRonda`: quiénes ya usaron Esperar en esta ronda.
   final Set<String> waited;
+
+  /// `porRonda` / `porFases` (turn_modes.md § 4.2): ids hasted on
+  /// themselves or after acting; they open the next round, in speed order.
+  final List<String> hasteNext;
 
   /// `porRonda`: los que faltan actuar en la ronda, en orden (vivos).
   List<Combatant> get roundRemaining => [
@@ -816,5 +822,6 @@ class BattleState {
         round: round,
         roundOrder: [...roundOrder],
         waited: {...waited},
+        hasteNext: [...hasteNext],
       );
 }

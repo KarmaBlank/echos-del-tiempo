@@ -146,18 +146,43 @@ cantidad de turnos.
   la ronda, ese pasa al final de lo que falta de la ronda
   (`BattleEngine._roundDelays`; el que actúa nunca se mueve). Los
   bloques se recalculan al instante: si dos jugadores quedan seguidos,
-  forman bloque (y en coop comparten la cola, § 3.1). Prisa y Pasar ×½
-  no cambian el orden de la ronda. "Pierde el turno"
+  forman bloque (y en coop comparten la cola, § 3.1). Pasar ×½ no
+  cambia el orden de la ronda (Prisa: § 4.2). "Pierde el turno"
   (aturdido, quebrado, telaraña) salta su lugar en esta ronda.
 - Aguanta una ronda (combat.md § "Límites") usa esta misma ronda (y en
   Por fases, la ronda = fase enemiga + fase de jugadores).
 - Nadie solo en una fase (combat.md § "Nadie solo en una fase") cuenta el
   daño de cada personaje en su turno dentro de la fase de jugadores.
 
+### 4.2 Prisa en rondas y fases
+
+"Prisa" = todo lo que adelanta un turno: la habilidad Prisa, adelantar
+aliados (`advanceAllies`, disparos `advanceAlly` / `advanceParty`),
+"tu próximo turno llega antes" (`selfTurn`, `advanceTurn`) y la
+Distorsión del Jefe del Abismo. Los enemigos siguen las mismas reglas
+(`BattleEngine._roundHaste`).
+
+- Sobre otro que todavía no actuó en la ronda: actúa a continuación,
+  justo después del que actúa (en Por rondas, después de todo el bloque
+  en curso, que nunca se parte). Si quedan varios, mantienen su orden de
+  velocidad. Un jugador que queda pegado al bloque se suma a él al
+  instante (arranca su turno ahí; comparte la cola en coop, § 3.1).
+- En Por fases, igual dentro de la fase: la fase de jugadores ya es
+  simultánea (no cambia nada); invocaciones y enemigos adelantados
+  actúan primero en lo que falta de su fase (`roundOrder` hace de cola
+  en este modo).
+- Sobre sí mismo, o sobre alguien que ya actuó: en la ronda siguiente
+  actúa primero (`BattleState.hasteNext`, `hn` en la red). Si son
+  varios, entre ellos por velocidad. En Por fases, primero dentro de su
+  fase.
+- Línea de tiempo: sin cambios (solo mueve `nextTurn`).
+- Prisa sin aliados (devuelve el MP y el turno) no cuenta como Prisa.
 ## 5. Netcode
 
 - La regla viaja en el estado de batalla (`tr`, `gp`, `act`, `rd`; Por
-  rondas suma `ro` y `wt`) y el modo en la sala (`cm`). Protocolo Mundo 40.
+  rondas suma `ro` y `wt`; Por fases manda `ro` si hay cola de Prisa;
+  `hn` con Prisa pendiente, § 4.2) y el modo en la sala (`cm`).
+  Protocolo Mundo 40 (`hn` desde el 69).
 - La iniciativa del encuentro (combat.md § "Iniciativa del encuentro")
   solo ajusta esos mismos campos al empezar: no cambia el protocolo.
 - El host es la única autoridad: decide el orden, valida "el primero que
