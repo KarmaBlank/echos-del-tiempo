@@ -1,7 +1,6 @@
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
-import 'package:echos_del_tiempo/game_engine/models/sky.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:echos_del_tiempo/game_engine/rules/quest_track_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/resident_rules.dart';
