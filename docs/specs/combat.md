@@ -73,6 +73,9 @@ siguiente batalla.
 - Primer turno: enemigos en `IV × (0.35 + azar × 0.60)` (con su velocidad
   base); jugadores en `IV × (0.30 + azar × 0.50)`, salvo el que tocó al
   enemigo: `IV × 0.20`.
+- Mensaje inicial: jefe `start_boss`, élite `start_elite`; si no,
+  `start_first_strike` ("¡PRIMER GOLPE!") o `start_ambush`
+  ("¡EMBOSCADA!") según la iniciativa (sin iniciativa: `start_ambush`).
 - Repetidos (v0.13.1): `assignCombatantTags` da una letra A, B, C… a
   los enemigos del mismo tipo, a los aliados con el mismo nombre y a las
   invocaciones del mismo tipo, y la agrega al nombre ("Lobo B"). Se
@@ -81,6 +84,32 @@ siguiente batalla.
   el nuevo recibe la primera libre. Viaja por la red como `tag`.
 - Jugadores: se borran estados, provocación, protección, defensa y
   `bonus_def_batalla`. Vida y maná se conservan del campo (limitados al máximo).
+
+## Iniciativa del encuentro (`EncounterRules`)
+
+Regla del dueño: quien provoca el encuentro actúa primero.
+
+- `EncounterRules.kind`: el host mira el último paso del jugador que tocó
+  (`stepX/stepY`, la diferencia entre sus dos últimas posiciones mientras
+  camina; 0 si se detuvo). **PRIMER GOLPE** si se está moviendo
+  (paso² ≥ 0.25: los pasos menores a 0.5 px son el redondeo a 0.1 px de la posición enviada y no pisan el último paso real) y `paso · (enemigo − (jugador − paso)) > 0` (desde donde arrancó el paso: pisar justo al enemigo también cuenta). Si no (quieto o
+  alejándose) es **EMBOSCADA**.
+- Primer golpe: abre el grupo y el que tocó es el primero. Emboscada:
+  abren los enemigos y el que tocó (el líder del grupo, `e0`) es el
+  primero. Jefes y élites usan la misma regla (solo cambia el mensaje).
+  Entrar a un Jefe del Abismo desde la sala es siempre primer golpe.
+- Por modo (`BattleEngine._applyInitiative`):
+  - Línea de tiempo: el que abre queda con `nextTurn = mín(resto) × 0.5`
+    (`applyTimelineOpener`; se reaplica después del escalado de zona/Eco).
+  - Por fases: primer golpe saltea la fase enemiga de la ronda 1 (empieza
+    la fase de jugadores, simultánea); emboscada = fase enemiga primero,
+    `e0` primero (orden de lista).
+  - Por bando: primer golpe = turno del grupo (por defecto); emboscada
+    abre la ronda 1 con los enemigos, `e0` primero.
+  - Por rondas: el orden de la ronda 1 es por velocidad con el que abre
+    adelante.
+- Travesía y vistas previas llaman `start` sin `encounter`: comportamiento
+  anterior. No viaja nada nuevo por la red (usa `rd`, `act`, `ro`, `gp`).
 
 ## Timeline de turnos
 
@@ -792,6 +821,9 @@ fracción de su vida máxima, siempre:
 | `capElite` | 0.60 |
 | `capCommon` | 0 (sin tope) |
 
+Otros ajustes de Límites de combate: `phaseHold` 0.5 (§ "Nadie solo en una
+fase"), `wardMult` 0.5, `wardTurns` 3 y `tankGuard` 0.7 (§ "Tanques").
+
 Vale para golpes, daño de efectos, reacciones, daño crudo y estados por
 turno. La ficha del enemigo en combate lo dice: "No cae de un golpe: cada
 golpe le saca como máximo el N% de su vida."
@@ -807,6 +839,56 @@ jugadores), `holdSolo` = 0.
 Ronda: en `porBando` la de siempre; en `velocidad` termina cuando actuaron
 todos los jugadores vivos (`state.acted` / `state.round` también se usan
 en la línea de tiempo; la marca del enemigo es `!aguanta:<id>`).
+
+### Nadie solo en una fase
+
+Un solo personaje no puede tumbar a un enemigo (común, élite, jefe o
+tanque: todos) dentro de su fase si el enemigo tenía al menos `phaseHold`
+(0.5) de su vida máxima cuando esa fase empezó: el golpe letal lo deja en
+1 ("{a} aguanta: {b} solo no lo puede tumbar en una fase"). Bajarlo de la
+mitad está bien; el que lo remata tiene que ser otro personaje (o el
+mismo en su fase siguiente).
+
+- Fase de un personaje: en `porBando` / `porFases` / `porRonda`, su turno
+  dentro de la fase de jugadores (o de la ronda); en `velocidad`, la ronda
+  de § "Aguanta una ronda" (termina cuando actuaron todos los vivos).
+- Se cuenta el daño que ese personaje ya le sacó en la fase
+  (`Combatant.phaseDealt`, viaja como `phd`): vida al empezar la fase =
+  vida actual + lo que le sacó. Cubre golpes, efectos, reacciones,
+  remates y daño crudo del jugador que tiene el turno (no las
+  invocaciones en su propio turno ni el daño por turno del enemigo).
+- Vale en cooperativo y en solitario si queda otro aliado vivo
+  (compañeros incluidos), aunque ya haya actuado (lo remata en la fase
+  siguiente). Sin ningún otro aliado vivo no aplica: nada de peleas
+  trabadas.
+- `phaseHold` = 0 lo apaga (Balance → Límites de combate).
+
+### Tanques
+
+Los comunes pesados son tanques (`EnemyDef.tank`): Gólem, Elemental de
+Escarcha, Caballero Caído, Guardián del Reloj y Gólem de Magma.
+
+- Escudo elemental: resiste un elemento al que el tanque es débil. Elige,
+  entre sus debilidades elementales de familia, la que más usa el grupo
+  (tipos de daño de las habilidades de los jugadores vivos); empate: la
+  debilidad más alta. Sin debilidades elementales no alza escudo (solo
+  defiende). Mientras dura, ese elemento le pega × `wardMult` (0.5) y no
+  cuenta como debilidad (no salta el tope sin debilidad ni da puntos de
+  quiebre de debilidad).
+- En su turno, si no tiene escudo, usa la acción en DEFENDER y alzarlo:
+  recibe × `tankGuard` (0.7) hasta su próximo turno y el escudo dura
+  `wardTurns` (3) turnos propios. Si tiene escudo, ataca normal.
+- Al empezar la pelea, si el tanque no actúa primero (el grupo abre la
+  pelea: `porBando`, golpe primero en la línea de tiempo, o algún jugador
+  antes que él en `porRonda`), ya trae el escudo puesto (`wardTurns`
+  turnos). En `porFases` abre la fase enemiga, así que no. Se calcula con
+  el estado ya armado (`BattleEngine.applyOpeningWards`), así sirve con
+  cualquier regla de iniciativa.
+- El escudo se ve como chip "ESCUDO <elemento>" con tooltip (cuánto
+  resiste y turnos que quedan) y en el log (sube, ya lo trae, cae). La
+  ficha del enemigo dice que es tanque.
+- Viaja en el estado de batalla (`wrd` = [elemento, turnos]); protocolo
+  Mundo 63.
 
 ### Velocidad
 

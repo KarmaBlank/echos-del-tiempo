@@ -1086,6 +1086,13 @@ reconstrucciones por cuadro (CPU en modo JIT: sirve para comparar, no
 como número absoluto). El mismo archivo comprueba que el HUD no
 reconstruye las cajas, el chat ni los botones en ticks sin cambios.
 
+**En batalla** (v0.41.4): el `GameWidget` del mapa sigue montado debajo
+de la escena de batalla, que lo tapa entera. `MapGame.render` no dibuja
+el mundo (tiles, luz, actores) en `SessionMode.battle`: antes lo
+rasterizaba en cada cuadro sin que se viera (~5,6 ms de media en el
+arnés, más en mazmorras oscuras). `test/perf/battle_perf_test.dart`
+mide la batalla y exige que ese render quede casi en cero.
+
 **En el juego real**: con **FPS Y PING** prendido, cada 10 s se escribe
 en `ecos.log` una línea `Rendimiento: N cuadros (X fps) · build p50 …
 · raster p50 … · total … · mapa: tiles en caché (B bloques, G grabados)

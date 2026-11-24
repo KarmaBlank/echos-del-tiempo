@@ -29,7 +29,9 @@ PRUEBAS y ASCENSIÓN).
 
 - Proponer: `ProposeTrialAction(n)` en el pueblo (modo lobby, sin otra
   votación). Lo puede proponer quien cumple el nivel y el requisito.
-  Votación y preparación como cualquier misión (`MissionVote` con
+  En el Mundo con otros humanos abre una convocatoria (IR / UNIRSE,
+  free_movement.md § 2.1.1); solo, entra directo. Dentro de la
+  instancia, votación y preparación como cualquier misión (`MissionVote` con
   `missionId = 'trial'`, número en `GameSession.trial`, JSON `trial`).
 - Se puede repetir: la primera vez da los puntos, después solo loot.
 - Mazmorra: `MapGenerator.zone` del `ZoneDef` sintético de la Prueba
@@ -381,7 +383,7 @@ cambiar).`
   estado; `Nivel N · requiere la Prueba X`; mazmorra, pisos y nivel;
   `Jefe:`; `Trampas por piso: N púas (−P% de vida/s) · M Pulsos (te
   devuelven al inicio)`; `Premio: +2 puntos de ascensión` (y `elegir
-  subclase` en la I). Abajo `ENTRAR` (`trial-propose`) con el motivo.
+  subclase` en la I). Abajo `PROPONER` (`trial-propose`) con el motivo.
 - **ASCENSIÓN sin elegir**: las 2 tarjetas lado a lado (comparar es la
   decisión); el héroe a la izquierda de la ficha (no arriba) para que el
   kit entre; `ELEGIR <NOMBRE>` abajo.

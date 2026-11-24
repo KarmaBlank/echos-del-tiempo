@@ -56,7 +56,7 @@ Combatant _foe() => Combatant(
       speed: 5,
       attack: 10,
       critChance: 0,
-      enemyType: 'golem',
+      enemyType: 'slime', // not a tank: it must hit, not defend
       nextTurn: 50,
     );
 

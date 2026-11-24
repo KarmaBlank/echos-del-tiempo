@@ -65,6 +65,12 @@ class EnemyDef {
   /// Estados en ciclo, uno por acción (reemplaza a [inflicts]).
   final List<StatusApplication> inflictCycle;
 
+  /// Tank (combat.md § "Tanques"): defends and raises an elemental ward
+  /// against the element it is weak to (the one the party is likely to
+  /// hit it with). Starts the fight with the ward up if it does not act
+  /// first.
+  final bool tank;
+
   const EnemyDef({
     required this.id,
     required this.name,
@@ -90,6 +96,7 @@ class EnemyDef {
     this.delayHit = 0,
     this.markHit = 0,
     this.inflictCycle = const [],
+    this.tank = false,
   });
 
   /// "el Rey Limo" / "la Matriarca Araña".

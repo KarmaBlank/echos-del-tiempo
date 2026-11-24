@@ -336,5 +336,10 @@
   "ui.combat.stat.ult": "",
   "ui.combat.summon.chip": "",
   "ui.combat.tag.can_break": "",
-  "ui.combat.tag.instant": ""
+  "ui.combat.tag.instant": "",
+  "ui.combat.enemy.tank": "",
+  "ui.combat.enemy.phase_hold": "",
+  "ui.combat.tank.ward.short": "",
+  "ui.combat.tank.ward.long": "",
+  "ui.combat.tank.ward.tip": ""
 }

@@ -1242,15 +1242,17 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Pone al jugador local en (x, y) y se lo informa al host.
   @visibleForTesting
-  void teleport(double x, double y) {
+  void teleport(double x, double y, {bool moving = false}) {
     final s = _s;
     final me = s?.players[localId];
     if (s == null || me == null) return;
     local
       ..sync(me)
       ..x = x
-      ..y = y;
-    _apply(MoveAction(x, y, epoch: local.epoch, dir: local.dir));
+      ..y = y
+      ..moving = moving;
+    _apply(MoveAction(x, y,
+        epoch: local.epoch, dir: local.dir, moving: moving));
   }
 
   // ------------------------------------------------------------------
@@ -2933,6 +2935,10 @@ class SessionController extends StateNotifier<SessionView?> {
       _apply(ProposeMissionAction(missionId));
 
   bool vote(bool yes) => _apply(VoteMissionAction(yes));
+
+  /// Open gathering (free_movement.md § 2.1): UNIRSE / SALIR / IR /
+  /// CANCELAR.
+  bool gather(GatherOp op) => _apply(GatherAction(op));
 
   /// Bajar (`>`) o subir (`<`) de piso con todo el grupo.
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));

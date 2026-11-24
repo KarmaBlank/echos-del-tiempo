@@ -13,7 +13,7 @@ const Map<String, EnemyDef> kEnemies = {
       inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 12),
   'bat': EnemyDef(id: 'bat', eliteUltId: 'eult_e_bat', name: 'Murciélago', hp: 22, attack: 9, speed: 13, xp: 7, credits: 6,
       pierce: true, breakMax: 12),
-  'golem': EnemyDef(id: 'golem', eliteUltId: 'eult_e_golem', name: 'Gólem', hp: 70, attack: 12, speed: 5, xp: 14, credits: 12,
+  'golem': EnemyDef(id: 'golem', tank: true, eliteUltId: 'eult_e_golem', name: 'Gólem', hp: 70, attack: 12, speed: 5, xp: 14, credits: 12,
       breakMax: 12),
   'ghost': EnemyDef(id: 'ghost', eliteUltId: 'eult_e_ghost', name: 'Espectro', hp: 55, attack: 15, speed: 11, xp: 16, credits: 14,
       pierce: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
@@ -43,7 +43,7 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 4 · Cavernas Heladas (comunes nivel 16, jefe nivel 20).
   'murcielagoHielo': EnemyDef(id: 'murcielagoHielo', eliteUltId: 'eult_e_murcielagoHielo', name: 'Murciélago de Hielo', hp: 80, attack: 22, speed: 14,
       xp: 10, credits: 9, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
-  'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', eliteUltId: 'eult_e_elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
+  'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', tank: true, eliteUltId: 'eult_e_elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
       xp: 16, credits: 15, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, armor: 0.15),
   // v0.7: su mordida moja (Agua) y su Aliento Glacial (Hielo) congela al
   // instante a los mojados (Congelación súbita; bestiary.md § 4).
@@ -58,7 +58,7 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 5 · Fortaleza Caída (comunes nivel 21, jefe nivel 25).
   'esqueleto': EnemyDef(id: 'esqueleto', eliteUltId: 'eult_e_esqueleto', name: 'Esqueleto', hp: 125, attack: 27, speed: 10, xp: 12, credits: 11,
       pierce: true, breakMax: 12),
-  'caballeroCaido': EnemyDef(id: 'caballeroCaido', eliteUltId: 'eult_e_caballeroCaido', name: 'Caballero Caído', hp: 200, attack: 28, speed: 7, xp: 18, credits: 16,
+  'caballeroCaido': EnemyDef(id: 'caballeroCaido', tank: true, eliteUltId: 'eult_e_caballeroCaido', name: 'Caballero Caído', hp: 200, attack: 28, speed: 7, xp: 18, credits: 16,
       inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.25), breakMax: 12, armor: 0.2),
   'caballeroHueco': EnemyDef(id: 'caballeroHueco', name: 'Caballero Hueco', hp: 1250, attack: 38, speed: 9, xp: 200, credits: 240,
       boss: true, breakMax: 77, ultId: 'eult_juicio',
@@ -69,7 +69,7 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 6 · Laberinto Temporal (comunes nivel 26, jefa nivel 30).
   'ecoSombra': EnemyDef(id: 'ecoSombra', eliteUltId: 'eult_e_ecoSombra', name: 'Eco Sombrío', hp: 120, attack: 32, speed: 15, xp: 12, credits: 13,
       breakMax: 12, evasion: 0.25),
-  'guardianReloj': EnemyDef(id: 'guardianReloj', eliteUltId: 'eult_e_guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
+  'guardianReloj': EnemyDef(id: 'guardianReloj', tank: true, eliteUltId: 'eult_e_guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
       credits: 18, breakMax: 12, armor: 0.15, delayHit: 0.3),
   'hechicera': EnemyDef(id: 'hechicera', name: 'Hechicera del Eco', hp: 1350, attack: 42, speed: 10, xp: 230, credits: 280,
       boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 80, ultId: 'eult_coro',
@@ -81,7 +81,7 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 7 · Grieta Ígnea (comunes nivel 31, jefa nivel 35).
   'salamandra': EnemyDef(id: 'salamandra', eliteUltId: 'eult_e_salamandra', name: 'Salamandra', hp: 150, attack: 37, speed: 12, xp: 12, credits: 14,
       inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 12, feminine: true),
-  'golemMagma': EnemyDef(id: 'golemMagma', eliteUltId: 'eult_e_golemMagma', name: 'Gólem de Magma', hp: 260, attack: 36, speed: 5, xp: 17, credits: 20,
+  'golemMagma': EnemyDef(id: 'golemMagma', tank: true, eliteUltId: 'eult_e_golemMagma', name: 'Gólem de Magma', hp: 260, attack: 36, speed: 5, xp: 17, credits: 20,
       inflicts: StatusApplication(StatusKind.burn, 1), breakMax: 12, armor: 0.25),
   'bestiaMagma': EnemyDef(id: 'bestiaMagma', name: 'Bestia de Magma', hp: 1700, attack: 48, speed: 7, xp: 260, credits: 320,
       boss: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 83, ultId: 'eult_erupcion',

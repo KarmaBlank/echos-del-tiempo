@@ -111,7 +111,7 @@ void main() {
       // 0.6 + 0.3*2 = 1.2 (combo_balance.md § 3.3) → Limo 30*1.2 = 36,
       // Murciélago 22*1.2 = 26.4 → 26
       expect(s.enemies.map((e) => e.maxHp), [36, 26]);
-      expect(s.log, '¡Emboscada!');
+      expect(s.log, '¡EMBOSCADA!');
     });
 
     test('el élite tiene ×2.6 vida, ×1.35 ATQ y ×1.1 velocidad', () {

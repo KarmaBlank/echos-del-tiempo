@@ -101,7 +101,38 @@ class SessionJson {
             for (final a in s.away)
               [a.id, a.name, a.where, a.placeId, if (a.busy) 1]
           ],
+        // v0.41.4 (protocol 64): open gathering (free_movement.md § 2.1).
+        if (s.gather case final g?)
+          'gat': {
+            'by': g.byId,
+            'bn': g.byName,
+            'k': g.kind.name,
+            't': g.target,
+            'l': g.label,
+            'j': [
+              for (final a in g.joined) [a.id, a.name]
+            ],
+          },
       };
+
+  static Gathering? _gatherFromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final kind = GatherKind.values.where((k) => k.name == raw['k']).firstOrNull;
+    if (kind == null) return null;
+    return Gathering(
+      byId: '${raw['by']}',
+      byName: '${raw['bn']}',
+      kind: kind,
+      target: '${raw['t']}',
+      label: '${raw['l']}',
+      joined: [
+        if (raw['j'] case final List js)
+          for (final e in js)
+            if (e is List && e.length >= 2)
+              AwayPlayer('${e[0]}', '${e[1]}', ''),
+      ],
+    );
+  }
 
   GameSession fromJson(Json j) {
     final players = <String, SessionPlayer>{};
@@ -161,6 +192,7 @@ class SessionJson {
                   AwayPlayer('${raw[0]}', '${raw[1]}', '${raw[2]}',
                       raw.length > 3 ? '${raw[3]}' : '', raw.length > 4),
             ],
+      gather: _gatherFromJson(j['gat']),
     );
   }
 
@@ -670,6 +702,9 @@ class SessionJson {
         if (c.webbed) 'web': true,
         if (c.stance != 0) 'stc': c.stance,
         if (c.stanceTurns != 0) 'stcN': c.stanceTurns,
+        // Tanks and "nobody alone in one phase" (protocol 63).
+        if (c.ward != 0) 'wrd': [c.ward, c.wardTurns],
+        if (c.phaseDealt.isNotEmpty) 'phd': c.phaseDealt,
         // Mecánicas de jefe v0.3 (opcionales).
         if (c.lava != 0) 'lava': c.lava,
         if (c.voidMarked) 'vmk': true,
@@ -810,6 +845,14 @@ class SessionJson {
       webbed: j.flag('web'),
       stance: j.intOrNull('stc') ?? 0,
       stanceTurns: j.intOrNull('stcN') ?? 0,
+      ward: j['wrd'] == null ? 0 : (j['wrd'] as List)[0] as int,
+      wardTurns: j['wrd'] == null ? 0 : (j['wrd'] as List)[1] as int,
+      phaseDealt: j['phd'] == null
+          ? null
+          : {
+              for (final e in (j['phd'] as Map).entries)
+                e.key as String: (e.value as num).toInt()
+            },
       lava: j.intOrNull('lava') ?? 0,
       voidMarked: j.flag('vmk'),
       phase: j.intOrNull('phase') ?? 0,

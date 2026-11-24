@@ -93,7 +93,7 @@ abstract final class ZoneRules {
       {CurveDef curve = const CurveDef()}) {
     if (level <= 0) return;
     final zoneC = curve.isZoneC(level);
-    final ambush = zoneC && state.party.length > 1;
+    final zoneCRush = zoneC && state.party.length > 1;
     for (final e in state.enemies) {
       final base = baseLevel(e.enemyType ?? '');
       final hf = math.max(1.0, hpScale(level, curve) / hpScale(base, curve));
@@ -105,7 +105,7 @@ abstract final class ZoneRules {
         ..hp = hp
         ..attack = jsRound(e.attack * af)
         ..level = level;
-      if (ambush) e.nextTurn *= curve.groupInitiativeC;
+      if (zoneCRush) e.nextTurn *= curve.groupInitiativeC;
     }
   }
 

@@ -78,6 +78,8 @@ class SessionPlayer {
     Map<String, StashAck>? stashAcks,
     this.fishLine,
     this.wisp = false,
+    this.stepX = 0,
+    this.stepY = 0,
   })  : trail = trail ?? const [],
         stashAcks = stashAcks ?? {};
 
@@ -91,6 +93,10 @@ class SessionPlayer {
   /// = no está pescando. Lo manda el propio jugador (`fLn`) y el host lo
   /// valida y lo borra si camina.
   FishLine? fishLine;
+
+  /// Last field step (px) of this player, for the encounter initiative
+  /// (combat.md § "Encounter initiative"). Host only: not in the snapshot.
+  double stepX, stepY;
 
   /// Llama errante prendida (`wi`, lighting.md § 3.1.1): lo manda el
   /// propio jugador (`wisp`) y viaja en el snapshot para que la vean todos.
@@ -187,6 +193,8 @@ class SessionPlayer {
         stashAcks: {...stashAcks},
         fishLine: fishLine,
         wisp: wisp,
+        stepX: stepX,
+        stepY: stepY,
       );
 }
 
@@ -700,6 +708,7 @@ class GameSession {
     this.ownerId,
     this.instance = '',
     List<AwayPlayer>? away,
+    this.gather,
   })  : players = players ?? LinkedHashMap(),
         away = List.unmodifiable(away ?? const <AwayPlayer>[]),
         ground = ground ?? [],
@@ -830,6 +839,10 @@ class GameSession {
   /// Los jugadores que están en otro lugar (free_movement.md § 3, `aw`).
   List<AwayPlayer> away;
 
+  /// Open gathering in the world (free_movement.md § 2.1, `gat`): the
+  /// same one in every instance.
+  Gathering? gather;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -931,6 +944,7 @@ class GameSession {
         ownerId: ownerId,
         instance: instance,
         away: away,
+        gather: gather,
       );
 }
 
@@ -967,4 +981,53 @@ class AwayPlayer {
 
   @override
   int get hashCode => Object.hash(id, name, where, placeId, busy);
+}
+
+/// What a gathering starts (free_movement.md § 2.1).
+enum GatherKind { mission, trial, abyss }
+
+/// An open gathering ("convocatoria", free_movement.md § 2.1): someone
+/// proposed a mission / Trial / Abyss Boss and waits for friends before
+/// pressing IR. World-wide: every instance carries the same one.
+/// Immutable.
+class Gathering {
+  const Gathering({
+    required this.byId,
+    required this.byName,
+    required this.kind,
+    required this.target,
+    required this.label,
+    this.joined = const [],
+  });
+
+  /// Who proposed it (only they can press IR or cancel).
+  final String byId;
+  final String byName;
+  final GatherKind kind;
+
+  /// Mission id, or the Trial / Abyss Boss number as text.
+  final String target;
+
+  /// Ready to show (mission name, Trial name...).
+  final String label;
+
+  /// Who joined (besides the proposer), in order.
+  final List<AwayPlayer> joined;
+
+  /// The mission id when [kind] is a mission.
+  String? get missionId => kind == GatherKind.mission ? target : null;
+
+  bool has(String id) => id == byId || joined.any((j) => j.id == id);
+
+  Gathering withJoined(List<AwayPlayer> joined) => Gathering(
+      byId: byId,
+      byName: byName,
+      kind: kind,
+      target: target,
+      label: label,
+      joined: List.unmodifiable(joined));
+
+  /// Stable text for change detection.
+  String get signature =>
+      '$byId|$byName|${kind.name}|$target|$label|${joined.map((j) => j.id).join(',')}';
 }

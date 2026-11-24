@@ -35,6 +35,7 @@ import '../data/abyss_catalog.dart';
 import '../data/achievements_catalog.dart';
 import 'achievement_rules.dart';
 import 'abyss_rules.dart';
+import 'encounter_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
@@ -792,6 +793,11 @@ class _Op {
 
   void say(String text) => events.add(SystemMessageEvent(text));
 
+  /// " ¡Voten!" only where the vote is still used (not in the Mundo with
+  /// free movement: there the world opens a gathering, § 2.1).
+  String get _voteCall =>
+      e.freeMovement && e.gameMode == GameModeKind.mundo ? '' : ' ¡Voten!';
+
   /// Perfiles antes del paso, para [settleOficios].
   Map<String, PlayerProfile> snapshot() =>
       {for (final p in players) p.id: p.profile};
@@ -1093,8 +1099,22 @@ class _Op {
             !p.alive) {
           return false;
         }
+        final ox = p.x, oy = p.y;
         if (a.x.isFinite && a.x != 0) p.x = a.x;
         if (a.y.isFinite && a.y != 0) p.y = a.y;
+        // Encounter initiative: remember the last real step.
+        if (!a.moving) {
+          p
+            ..stepX = 0
+            ..stepY = 0;
+        } else if ((p.x - ox) * (p.x - ox) + (p.y - oy) * (p.y - oy) >=
+            EncounterRules.minStep2) {
+          // Smaller steps are the 0.1 px rounding of the position: keep the
+          // last real step.
+          p
+            ..stepX = p.x - ox
+            ..stepY = p.y - oy;
+        }
         p.dir = a.dir > 0 ? 1 : -1;
         p.moving = a.moving;
         // Caminar guarda la caña (fishing.md § 4).
@@ -1111,8 +1131,12 @@ class _Op {
           return false;
         }
         s.vote = MissionVote(m.id, p.name, {p.id});
-        say('${p.name} propone: ${m.name}. ¡Voten!');
+        say('${p.name} propone: ${m.name}.$_voteCall');
         return true;
+
+      // Only the world routes gatherings (free_movement.md § 2.1).
+      case GatherAction():
+        return false;
 
       case VoteMissionAction():
         final v = s.vote;
@@ -1618,7 +1642,7 @@ class _Op {
       ..abyss = n
       ..abyssOwner = p.id
       ..vote = MissionVote(AbyssRules.missionId, p.name, {p.id});
-    say('${p.name} abre ${d.name} (${e.abyssRules.costText(d)}). ¡Voten!');
+    say('${p.name} abre ${d.name} (${e.abyssRules.costText(d)}).$_voteCall');
     return true;
   }
 
@@ -1665,7 +1689,9 @@ class _Op {
     );
     _enterField(def, seed);
     final first = players.firstOrNull;
-    if (first != null) startBattle(boss, first);
+    if (first != null) {
+      startBattle(boss, first, kind: EncounterKind.firstStrike);
+    }
   }
 
   /// Jefe del Abismo vencido: cada jugador recibe su exclusivo (seguro la
@@ -1697,7 +1723,7 @@ class _Op {
       ..trial = n
       ..vote = MissionVote(TrialRules.missionId, p.name, {p.id});
     final boss = catalog.zone(t.bossZone)?.bossName ?? '?';
-    say('${p.name} propone la ${t.fullName} (jefe: $boss). ¡Voten!');
+    say('${p.name} propone la ${t.fullName} (jefe: $boss).$_voteCall');
     return true;
   }
 
@@ -1784,8 +1810,8 @@ class _Op {
       ..eco = eco
       ..ecoOwner = p.id
       ..vote = MissionVote(EcoRules.missionId, p.name, {p.id});
-    say('${p.name} abre ${ecos.fullName(eco)} (jefe: ${ecos.bossName(eco)}). '
-        '¡Voten!');
+    say('${p.name} abre ${ecos.fullName(eco)} (jefe: ${ecos.bossName(eco)}).'
+        '$_voteCall');
     return true;
   }
 
@@ -3461,6 +3487,9 @@ class _Op {
         }
         final dx = at.x - c.x, dy = at.y - c.y;
         c.moving = dx.abs() > 0.01 || dy.abs() > 0.01;
+        c
+          ..stepX = c.moving ? dx : 0
+          ..stepY = c.moving ? dy : 0;
         if (dx.abs() > 0.5) c.dir = dx > 0 ? 1 : -1;
         c
           ..x = at.x
@@ -3630,7 +3659,18 @@ class _Op {
 
   // ---------------- batalla ----------------
 
-  void startBattle(FieldEnemy en, SessionPlayer trigger) {
+  void startBattle(FieldEnemy en, SessionPlayer trigger,
+      {EncounterKind? kind}) {
+    final encounter = kind ??
+        EncounterRules.kind(
+          px: trigger.x,
+          py: trigger.y,
+          ex: en.x,
+          ey: en.y,
+          mdx: trigger.stepX,
+          mdy: trigger.stepY,
+          moving: trigger.moving,
+        );
     s.seq++;
     e.battles
       ..townPotion = ResidentRules.frac(s.town, NpcRole.herbolaria)
@@ -3642,6 +3682,7 @@ class _Op {
       enemyTypes: en.group,
       elite: en.elite,
       triggeredBy: trigger.id,
+      encounter: encounter,
       turnRule: s.effectiveCombatMode.turnRule,
     );
     final level = _levelFor(en);
@@ -3650,6 +3691,12 @@ class _Op {
     if (eco != null) {
       EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
     }
+    // Zone / Eco scaling may move enemy turns: keep the opener first.
+    EncounterRules.applyTimelineOpener(
+        step.state,
+        encounter == EncounterKind.ambush
+            ? step.state.enemies.firstOrNull?.id
+            : trigger.id);
     s.battle = SessionBattle(
       id: s.seq,
       state: step.state,

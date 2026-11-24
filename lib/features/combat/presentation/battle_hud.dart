@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/i18n/catalog_names.dart';
+import '../../../core/i18n/data_text.dart';
+import '../../../game_engine/catalog_text_keys.dart';
+import '../../../game_engine/data/enemy_families.dart' show DamageTag;
 import '../../../core/procedural/weapon_look.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -32,6 +35,7 @@ import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'game_sprites.dart';
+import 'scene/fx_style.dart' show immuneColor;
 import 'hero_figure.dart';
 import 'status_icons.dart';
 import 'combat_strings.dart';
@@ -202,6 +206,27 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
   final chips = <StatusChip>[];
   for (final e in b.enemies) {
     if (!e.alive) continue;
+    // Tank ward (combat.md § "Tanques").
+    if (e.ward > 0 && e.ward <= DamageTag.values.length) {
+      final tag = DamageTag.values[e.ward - 1];
+      final t = s.data(CatalogKeys.damageTag(tag), tag.label);
+      final pct = jsRound((1 - BattleEngine.wardMult) * 100);
+      chips.add(StatusChip(
+          s.t('ui.combat.tank.ward.short', {'t': t}),
+          s.t('ui.combat.tank.ward.long',
+              {'a': e.name, 't': t, 'n': e.wardTurns}),
+          immuneColor,
+          '<b style="color:#b8c6ff">${protoEsc(s.t('ui.combat.tank.ward.short', {
+                'a': e.name,
+                't': t
+              }))}</b> '
+              '<span class="k">(${protoEsc(e.name)})</span><br>'
+              '${protoEsc(s.t('ui.combat.tank.ward.tip', {
+                'pct': pct,
+                't': t,
+                'n': e.wardTurns
+              }))}'));
+    }
     final m = bossMechanicOf(kEnemies[e.enemyType]);
     if (m == null) continue;
     switch (m.kind) {
@@ -285,7 +310,7 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                 ? (
                     s.t('ui.combat.boss.court.immune_short', {'n': n}),
                     '${s.t('ui.combat.boss.court.immune_long', {'n': n})}$when',
-                    const Color(0xFFB8C6FF),
+                    immuneColor,
                     '#b8c6ff'
                   )
                 : (
@@ -397,7 +422,7 @@ List<StatusChip> abyssChips(
             : s.t('ui.combat.abyss.phase_long',
                 {'n': n, 'of': of, 'name': ph.name}),
         immune
-            ? const Color(0xFFB8C6FF)
+            ? immuneColor
             : n >= d.phases.length
                 ? ProtoColors.crimson
                 : ProtoColors.pink,

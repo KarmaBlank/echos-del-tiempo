@@ -150,6 +150,10 @@ Para cada enemigo vivo que no es jefe (el jefe no se mueve):
 - **Contacto**: terminada la gracia (estrictamente después), si un
   jugador vivo está a menos de 14 px (26 px si es el jefe) empieza una
   batalla contra ese grupo (ver missions.md) y el tick termina ahí.
+  El host decide quién abre la pelea (combat.md § "Iniciativa del
+  encuentro"): PRIMER GOLPE si el jugador que tocó venía caminando hacia
+  el enemigo, EMBOSCADA si estaba quieto o se alejaba. Para eso guarda el
+  último paso de cada jugador (`stepX/stepY`, solo host, no viaja).
 
 `calmEnemies` (después de cada batalla ganada y al salir de la subida
 de nivel): todo enemigo vivo no-jefe con un jugador a menos de 120 px

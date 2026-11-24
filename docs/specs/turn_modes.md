@@ -97,11 +97,15 @@ cantidad de turnos.
   (aturdido, quebrado, telaraña) salta su lugar en esta ronda.
 - Aguanta una ronda (combat.md § "Límites") usa esta misma ronda (y en
   Por fases, la ronda = fase enemiga + fase de jugadores).
+- Nadie solo en una fase (combat.md § "Nadie solo en una fase") cuenta el
+  daño de cada personaje en su turno dentro de la fase de jugadores.
 
 ## 5. Netcode
 
 - La regla viaja en el estado de batalla (`tr`, `gp`, `act`, `rd`; Por
   rondas suma `ro` y `wt`) y el modo en la sala (`cm`). Protocolo Mundo 40.
+- La iniciativa del encuentro (combat.md § "Iniciativa del encuentro")
+  solo ajusta esos mismos campos al empezar: no cambia el protocolo.
 - El host es la única autoridad: decide el orden, valida "el primero que
   manda" dentro del bloque o la fase y descarta el segundo comando.
 - ESPERAR y TERMINAR TURNO viajan como `{"a":"wait"}` y `{"a":"end"}`.

@@ -336,5 +336,10 @@
   "ui.combat.stat.ult": "ULT",
   "ui.combat.summon.chip": "{hp} · {turns}t",
   "ui.combat.tag.can_break": "PUEDE QUEBRAR",
-  "ui.combat.tag.instant": "INSTANTE"
+  "ui.combat.tag.instant": "INSTANTE",
+  "ui.combat.enemy.tank": "Tanque: se defiende y alza un escudo contra el elemento al que es débil.",
+  "ui.combat.enemy.phase_hold": "Si tiene al menos el {pct}% de su vida, nadie lo tumba solo en una fase.",
+  "ui.combat.tank.ward.short": "ESCUDO {t}",
+  "ui.combat.tank.ward.long": "{a}: escudo de {t} · {n, plural, one{# turno} other{# turnos}}",
+  "ui.combat.tank.ward.tip": "Recibe {pct}% menos de daño de {t} y no cuenta como debilidad. Le quedan {n, plural, one{# turno} other{# turnos}}."
 }
