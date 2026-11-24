@@ -1,59 +1,119 @@
 {
-  "version": 1,
+  "version": 2,
   "npcs": {
     "ilda": {
       "greet": [
-        "Llegaste justo. Estaba separando hojas.",
-        "¿Venís a charlar o a buscar remedios?",
-        "El bosque está tranquilo hoy."
+        {
+          "es-AR": "Llegaste justo. Estaba separando hojas.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "¿Venís a charlar o a buscar remedios?",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El bosque está tranquilo hoy.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué hacés?",
+          "label": {
+            "es-AR": "¿Qué hacés?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Curo con lo que da el bosque. Hojas, raíces, rocío."
+            {
+              "es-AR": "Curo con lo que da el bosque. Hojas, raíces, rocío.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Por ahora. Si tu pueblo necesita quien cure, me mudo."
+            {
+              "es-AR": "Por ahora. Si tu pueblo necesita quien cure, me mudo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1,
           "where": "biome"
         },
         {
           "id": "pueblo",
-          "label": "¿Cómo te trata el pueblo?",
+          "label": {
+            "es-AR": "¿Cómo te trata el pueblo?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Bien. Extraño el bosque, pero acá alguien siempre se lastima."
+            {
+              "es-AR": "Bien. Extraño el bosque, pero acá alguien siempre se lastima.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "where": "town"
         },
         {
           "id": "ecos",
-          "label": "Los ecos",
+          "label": {
+            "es-AR": "Los ecos",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Bajan por el río, como hojas. Algunos vienen de mañana."
+            {
+              "es-AR": "Bajan por el río, como hojas. Algunos vienen de mañana.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "sub": [
             {
               "id": "miedo",
-              "label": "¿Te dan miedo?",
+              "label": {
+                "es-AR": "¿Te dan miedo?",
+                "en": "",
+                "zh-Hans": ""
+              },
               "lines": [
-                "No. Lo que tiene que pasar, pasa. Yo curo lo que quede."
+                {
+                  "es-AR": "No. Lo que tiene que pasar, pasa. Yo curo lo que quede.",
+                  "en": "",
+                  "zh-Hans": ""
+                }
               ]
             }
           ]
         },
         {
           "id": "sombra",
-          "label": "Algo raro en el bosque",
+          "label": {
+            "es-AR": "Algo raro en el bosque",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Hay rincones donde la luz no entra. No es el follaje."
+            {
+              "es-AR": "Hay rincones donde la luz no entra. No es el follaje.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 4,
           "rep": 3
@@ -90,61 +150,167 @@
           "rep": 2,
           "reward": "frasco_ilda"
         }
-      ]
+      ],
+      "ambient": [
+        {
+          "es-AR": "Las moras de acá saben distinto cada mañana. Como si el bosque se acordara de algo.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Hay ecos que bajan por el río. Yo no los pesco: los dejo pasar.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Si un día tu pueblo necesita quien cure, avisame.",
+          "en": "",
+          "zh-Hans": ""
+        }
+      ],
+      "night": {
+        "ilda_garden": {
+          "es-AR": "De noche la huerta se queda sola y las plagas lo saben. Vengo a espantarlas y a ver si los brotes aguantan el rocío.",
+          "en": "At night the garden is left alone, and the pests know it. I come to scare them off and see if the sprouts hold up to the dew.",
+          "zh-Hans": ""
+        },
+        "ilda_dew": {
+          "es-AR": "El rocío de la fuente cura mejor si lo junto antes de que amanezca. Así lo hacían los de antes, con frascos que brillaban.",
+          "en": "Fountain dew heals better if I gather it before dawn. That is how the old ones did it, with jars that glowed.",
+          "zh-Hans": ""
+        }
+      },
+      "invite_accept": {
+        "es-AR": "Sí, acepto. Me gustaría ir a tu pueblo.",
+        "en": "Yes, I accept. I'd like to go to your town.",
+        "zh-Hans": ""
+      },
+      "house_thanks": {
+        "day": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+          "zh-Hans": ""
+        },
+        "night": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+          "zh-Hans": ""
+        }
+      }
     },
     "velda": {
       "greet": [
-        "Cuidado dónde pisás: esa placa es un mapa.",
-        "Ah, sos vos. Anoto y te escucho.",
-        "Las ruinas hablan si sabés leer."
+        {
+          "es-AR": "Cuidado dónde pisás: esa placa es un mapa.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Ah, sos vos. Anoto y te escucho.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Las ruinas hablan si sabés leer.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué anotás?",
+          "label": {
+            "es-AR": "¿Qué anotás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Todo lo que dejó el pasado. Era más avanzado que nosotros."
+            {
+              "es-AR": "Todo lo que dejó el pasado. Era más avanzado que nosotros.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Vivo donde están los papeles. Si me das un techo, los llevo."
+            {
+              "es-AR": "Vivo donde están los papeles. Si me das un techo, los llevo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1,
           "where": "biome"
         },
         {
           "id": "pueblo",
-          "label": "¿Y el pueblo?",
+          "label": {
+            "es-AR": "¿Y el pueblo?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Tranquilo. Ya armé un archivo en mi casa."
+            {
+              "es-AR": "Tranquilo. Ya armé un archivo en mi casa.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "where": "town"
         },
         {
           "id": "automatas",
-          "label": "Los autómatas",
+          "label": {
+            "es-AR": "Los autómatas",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Se movían con magia, no con vapor. Esperan una orden."
+            {
+              "es-AR": "Se movían con magia, no con vapor. Esperan una orden.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "sub": [
             {
               "id": "orden",
-              "label": "¿Qué orden?",
+              "label": {
+                "es-AR": "¿Qué orden?",
+                "en": "",
+                "zh-Hans": ""
+              },
               "lines": [
-                "Nadie la recuerda. Por eso sigo leyendo."
+                {
+                  "es-AR": "Nadie la recuerda. Por eso sigo leyendo.",
+                  "en": "",
+                  "zh-Hans": ""
+                }
               ]
             }
           ]
         },
         {
           "id": "caida",
-          "label": "¿Qué pasó con el pasado?",
+          "label": {
+            "es-AR": "¿Qué pasó con el pasado?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Algo hizo que todo volviera a ser medieval. No sé qué. Todavía."
+            {
+              "es-AR": "Algo hizo que todo volviera a ser medieval. No sé qué. Todavía.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 4,
           "rep": 3
@@ -174,44 +340,134 @@
           "rep": 2,
           "reward": "placa_velda"
         }
-      ]
+      ],
+      "ambient": [
+        {
+          "es-AR": "Estas placas son mapas. Del pasado, cuando todo era más avanzado.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Los autómatas no están rotos: esperan una orden que nadie recuerda.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Algo hizo que el mundo se volviera medieval. Lo estoy anotando.",
+          "en": "",
+          "zh-Hans": ""
+        }
+      ],
+      "night": {
+        "velda_lamp": {
+          "es-AR": "Bajo la lámpara del tablero se leen mejor mis notas. De día el pueblo hace demasiado ruido para pensar.",
+          "en": "My notes read better under the board's lamp. By day the town is too loud to think.",
+          "zh-Hans": ""
+        },
+        "velda_statue": {
+          "es-AR": "De noche las runas de la estatua se encienden apenas. Son del pasado, cuando las máquinas hablaban. Las estoy copiando.",
+          "en": "At night the statue's runes barely light up. They are from the past, when machines spoke. I am copying them.",
+          "zh-Hans": ""
+        }
+      },
+      "invite_accept": {
+        "es-AR": "Sí, acepto. Me gustaría ir a tu pueblo.",
+        "en": "Yes, I accept. I'd like to go to your town.",
+        "zh-Hans": ""
+      },
+      "house_thanks": {
+        "day": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+          "zh-Hans": ""
+        },
+        "night": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+          "zh-Hans": ""
+        }
+      }
     },
     "kael": {
       "greet": [
-        "Hombros abajo. Respirá.",
-        "Otra vez por acá. Bien.",
-        "El frío enseña paciencia."
+        {
+          "es-AR": "Hombros abajo. Respirá.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Otra vez por acá. Bien.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El frío enseña paciencia.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué enseñás?",
+          "label": {
+            "es-AR": "¿Qué enseñás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "A moverse sin miedo. Lo demás viene solo."
+            {
+              "es-AR": "A moverse sin miedo. Lo demás viene solo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Acá entreno. Si tu pueblo tiene lugar, entreno allá."
+            {
+              "es-AR": "Acá entreno. Si tu pueblo tiene lugar, entreno allá.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1,
           "where": "biome"
         },
         {
           "id": "pueblo",
-          "label": "¿Te gusta el pueblo?",
+          "label": {
+            "es-AR": "¿Te gusta el pueblo?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Hay sol. Me cuesta acostumbrarme."
+            {
+              "es-AR": "Hay sol. Me cuesta acostumbrarme.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "where": "town"
         },
         {
           "id": "eco",
-          "label": "El eco de las cavernas",
+          "label": {
+            "es-AR": "El eco de las cavernas",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "A veces oigo mis pasos antes de darlos. Vienen del futuro."
+            {
+              "es-AR": "A veces oigo mis pasos antes de darlos. Vienen del futuro.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2
         }
@@ -240,52 +496,150 @@
           "rep": 2,
           "reward": "silbato_kael"
         }
-      ]
+      ],
+      "ambient": [
+        {
+          "es-AR": "Acá abajo no hay día ni noche. Solo el frío y el eco de tus pasos.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El eco que oís a veces llega antes que tu voz. Es del futuro.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Entrená conmigo y vas a aprender más rápido allá afuera.",
+          "en": "",
+          "zh-Hans": ""
+        }
+      ],
+      "night": {
+        "kael_watch": {
+          "es-AR": "Alguien tiene que mirar el portal de noche. Los ecos no avisan cuándo vuelven.",
+          "en": "Someone has to watch the portal at night. Echoes don't warn you when they come back.",
+          "zh-Hans": ""
+        },
+        "kael_drill": {
+          "es-AR": "Entreno cuando no me ve nadie. El cuerpo aprende mejor en el silencio.",
+          "en": "I train when no one is watching. The body learns better in silence.",
+          "zh-Hans": ""
+        }
+      },
+      "invite_accept": {
+        "es-AR": "Sí, acepto. Me gustaría ir a tu pueblo.",
+        "en": "Yes, I accept. I'd like to go to your town.",
+        "zh-Hans": ""
+      },
+      "house_thanks": {
+        "day": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+          "zh-Hans": ""
+        },
+        "night": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+          "zh-Hans": ""
+        }
+      }
     },
     "brann": {
       "greet": [
-        "Cuidado, que quema.",
-        "¿Traés metal? No, ya sé, traés preguntas.",
-        "El fuego de abajo no se apaga nunca."
+        {
+          "es-AR": "Cuidado, que quema.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "¿Traés metal? No, ya sé, traés preguntas.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El fuego de abajo no se apaga nunca.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué forjás?",
+          "label": {
+            "es-AR": "¿Qué forjás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que deja el pasado, rehecho. Nada se pierde del todo."
+            {
+              "es-AR": "Lo que deja el pasado, rehecho. Nada se pierde del todo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Vivo al lado del fuego. Si en tu pueblo hay fuego, voy."
+            {
+              "es-AR": "Vivo al lado del fuego. Si en tu pueblo hay fuego, voy.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1,
           "where": "biome"
         },
         {
           "id": "pueblo",
-          "label": "¿Cómo va la forja?",
+          "label": {
+            "es-AR": "¿Cómo va la forja?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Más fría que la grieta. Igual sale buen acero."
+            {
+              "es-AR": "Más fría que la grieta. Igual sale buen acero.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "where": "town"
         },
         {
           "id": "mecanismo",
-          "label": "El calor de la grieta",
+          "label": {
+            "es-AR": "El calor de la grieta",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Viene de un mecanismo viejo, más abajo. Sigue andando solo."
+            {
+              "es-AR": "Viene de un mecanismo viejo, más abajo. Sigue andando solo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "sub": [
             {
               "id": "quien",
-              "label": "¿Quién lo hizo?",
+              "label": {
+                "es-AR": "¿Quién lo hizo?",
+                "en": "",
+                "zh-Hans": ""
+              },
               "lines": [
-                "Los de antes. Sabían mezclar magia y engranaje."
+                {
+                  "es-AR": "Los de antes. Sabían mezclar magia y engranaje.",
+                  "en": "",
+                  "zh-Hans": ""
+                }
               ]
             }
           ]
@@ -315,52 +669,150 @@
           "rep": 2,
           "reward": "martillo_brann"
         }
-      ]
+      ],
+      "ambient": [
+        {
+          "es-AR": "Este calor viene de abajo, de un mecanismo viejo que sigue andando.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Forjo con lo que deja el pasado. Nada se pierde del todo.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Llevame a tu pueblo y tus mejoras van a salir más baratas.",
+          "en": "",
+          "zh-Hans": ""
+        }
+      ],
+      "night": {
+        "brann_embers": {
+          "es-AR": "Una forja no se deja morir. Si las brasas se apagan, el mecanismo de abajo se enfría y cuesta una semana despertarlo.",
+          "en": "You never let a forge die. If the embers go out, the old mechanism below cools down and it takes a week to wake it.",
+          "zh-Hans": ""
+        },
+        "brann_stock": {
+          "es-AR": "Cuento lo que queda bajo el farol. Si mañana falta una pieza, prefiero saberlo hoy.",
+          "en": "I count what is left under the lamp. If a part is missing tomorrow, I would rather know tonight.",
+          "zh-Hans": ""
+        }
+      },
+      "invite_accept": {
+        "es-AR": "Sí, acepto. Me gustaría ir a tu pueblo.",
+        "en": "Yes, I accept. I'd like to go to your town.",
+        "zh-Hans": ""
+      },
+      "house_thanks": {
+        "day": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+          "zh-Hans": ""
+        },
+        "night": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+          "zh-Hans": ""
+        }
+      }
     },
     "oren": {
       "greet": [
-        "Ya sabía que venías.",
-        "Sentate. O no. Ya te vi hacer las dos cosas.",
-        "Llegás a tiempo. Siempre."
+        {
+          "es-AR": "Ya sabía que venías.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Sentate. O no. Ya te vi hacer las dos cosas.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Llegás a tiempo. Siempre.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué ves?",
+          "label": {
+            "es-AR": "¿Qué ves?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que va a pasar. No lo puedo cambiar; solo mirar."
+            {
+              "es-AR": "Lo que va a pasar. No lo puedo cambiar; solo mirar.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Vivo donde el futuro se oye mejor. Tu pueblo también sirve."
+            {
+              "es-AR": "Vivo donde el futuro se oye mejor. Tu pueblo también sirve.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1,
           "where": "biome"
         },
         {
           "id": "pueblo",
-          "label": "¿Qué ves desde el pueblo?",
+          "label": {
+            "es-AR": "¿Qué ves desde el pueblo?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Gente que vuelve sana. Eso ya pasó, aunque no pasó."
+            {
+              "es-AR": "Gente que vuelve sana. Eso ya pasó, aunque no pasó.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "where": "town"
         },
         {
           "id": "futuro",
-          "label": "El futuro",
+          "label": {
+            "es-AR": "El futuro",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Hay algo muy malo allá. Y aun así, tiene que llegar."
+            {
+              "es-AR": "Hay algo muy malo allá. Y aun así, tiene que llegar.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "sub": [
             {
               "id": "bueno",
-              "label": "¿Termina bien?",
+              "label": {
+                "es-AR": "¿Termina bien?",
+                "en": "",
+                "zh-Hans": ""
+              },
               "lines": [
-                "Creo que sí. Pero porque pasa todo lo que tiene que pasar."
+                {
+                  "es-AR": "Creo que sí. Pero porque pasa todo lo que tiene que pasar.",
+                  "en": "",
+                  "zh-Hans": ""
+                }
               ]
             }
           ]
@@ -397,44 +849,134 @@
           "rep": 2,
           "reward": "reloj_oren"
         }
-      ]
+      ],
+      "ambient": [
+        {
+          "es-AR": "El futuro no se cambia. Se cumple. Yo solo miro cómo llega.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Ya te vi volver de esa mazmorra. Todavía no fuiste.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Lo que tiene que pasar, pasa. Mejor llegar sanos.",
+          "en": "",
+          "zh-Hans": ""
+        }
+      ],
+      "night": {
+        "oren_stars": {
+          "es-AR": "Las estrellas ya están donde van a estar. Yo solo las leo; el futuro no se mueve, pero se puede ver venir.",
+          "en": "The stars are already where they will be. I only read them; the future does not move, but you can see it coming.",
+          "zh-Hans": ""
+        },
+        "oren_fountain": {
+          "es-AR": "El agua de la fuente refleja lo que todavía no pasó. Esta noche está tranquila. Eso es bueno.",
+          "en": "The fountain's water reflects what has not happened yet. Tonight it is calm. That is good.",
+          "zh-Hans": ""
+        }
+      },
+      "invite_accept": {
+        "es-AR": "Sí, acepto. Me gustaría ir a tu pueblo.",
+        "en": "Yes, I accept. I'd like to go to your town.",
+        "zh-Hans": ""
+      },
+      "house_thanks": {
+        "day": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar, voy a estar aquí en el pueblo, voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. I'll be here in town, and I'll try to help you…",
+          "zh-Hans": ""
+        },
+        "night": {
+          "es-AR": "Muchas gracias por darme un nuevo hogar. Esta noche ya duermo bajo mi techo; mañana voy a intentar ayudarte…",
+          "en": "Thank you so much for giving me a new home. Tonight I sleep under my own roof; tomorrow I'll try to help you…",
+          "zh-Hans": ""
+        }
+      }
     },
     "pesc_bosque": {
       "greet": [
-        "Shh, que pican.",
-        "Sentate en la orilla, hay lugar.",
-        "Hoy el agua está clara."
+        {
+          "es-AR": "Shh, que pican.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Sentate en la orilla, hay lugar.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Hoy el agua está clara.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué pescás?",
+          "label": {
+            "es-AR": "¿Qué pescás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que el lago quiera dar. Hay peces de antes de los árboles."
+            {
+              "es-AR": "Lo que el lago quiera dar. Hay peces de antes de los árboles.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Desde siempre. Esta orilla es mi casa."
+            {
+              "es-AR": "Desde siempre. Esta orilla es mi casa.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1
         },
         {
           "id": "brillo",
-          "label": "El agua que brilla",
+          "label": {
+            "es-AR": "El agua que brilla",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Ahí pasa un eco. Los peces lo siguen."
+            {
+              "es-AR": "Ahí pasa un eco. Los peces lo siguen.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "orders": 1
         },
         {
           "id": "lago",
-          "label": "Este lago",
+          "label": {
+            "es-AR": "Este lago",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Tiene más años que el bosque. Lo sé por los peces."
+            {
+              "es-AR": "Tiene más años que el bosque. Lo sé por los peces.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 4,
           "orders": 2
@@ -442,51 +984,111 @@
       ],
       "rooted": true,
       "decline": [
-        "Gracias, de verdad. Pero acá me siento bien, no me voy a mover.",
-        "Llevate esto. Lo hice con una raíz más vieja que el lago."
+        {
+          "es-AR": "Gracias, de verdad. Pero acá me siento bien, no me voy a mover.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Llevate esto. Lo hice con una raíz más vieja que el lago.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "gift": "Anzuelo de raíz",
       "ambient": [
-        "Este lago guarda peces que ya nadaban antes de los árboles.",
-        "Si ves el agua brillar, tirá ahí. No me preguntes por qué."
+        {
+          "es-AR": "Este lago guarda peces que ya nadaban antes de los árboles.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Si ves el agua brillar, tirá ahí. No me preguntes por qué.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ]
     },
     "pesc_ruinas": {
       "greet": [
-        "Cuidado con los engranajes del fondo.",
-        "El estanque giró un poco hoy.",
-        "¿Venís a pescar o a mirar?"
+        {
+          "es-AR": "Cuidado con los engranajes del fondo.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El estanque giró un poco hoy.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "¿Venís a pescar o a mirar?",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué pescás?",
+          "label": {
+            "es-AR": "¿Qué pescás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Peces que muerden metal viejo. No me preguntes cómo."
+            {
+              "es-AR": "Peces que muerden metal viejo. No me preguntes cómo.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Entre las ruinas. Me hacen compañía."
+            {
+              "es-AR": "Entre las ruinas. Me hacen compañía.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1
         },
         {
           "id": "estanque",
-          "label": "El estanque que gira",
+          "label": {
+            "es-AR": "El estanque que gira",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo mueve un mecanismo del pasado. Nadie le da cuerda."
+            {
+              "es-AR": "Lo mueve un mecanismo del pasado. Nadie le da cuerda.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "orders": 1
         },
         {
           "id": "nombre",
-          "label": "¿Por qué Engranaje?",
+          "label": {
+            "es-AR": "¿Por qué Engranaje?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Arreglo lo que encuentro. Y encuentro mucho."
+            {
+              "es-AR": "Arreglo lo que encuentro. Y encuentro mucho.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 4,
           "orders": 2
@@ -494,42 +1096,94 @@
       ],
       "rooted": true,
       "decline": [
-        "No, no. Acá me siento bien, no me voy a mover.",
-        "Pero tomá: un carrete de los de antes. Todavía gira."
+        {
+          "es-AR": "No, no. Acá me siento bien, no me voy a mover.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Pero tomá: un carrete de los de antes. Todavía gira.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "gift": "Carrete de engranaje",
       "ambient": [
-        "Los peces de acá muerden metal viejo. Raro, ¿no?",
-        "El estanque gira despacio, como un reloj que nadie da cuerda."
+        {
+          "es-AR": "Los peces de acá muerden metal viejo. Raro, ¿no?",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El estanque gira despacio, como un reloj que nadie da cuerda.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ]
     },
     "pesc_cavernas": {
       "greet": [
-        "Hablá bajo. El eco asusta a los peces.",
-        "Hace frío, ¿no? Ya te acostumbrás.",
-        "El hielo cruje. Buena señal."
+        {
+          "es-AR": "Hablá bajo. El eco asusta a los peces.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Hace frío, ¿no? Ya te acostumbrás.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El hielo cruje. Buena señal.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué pescás?",
+          "label": {
+            "es-AR": "¿Qué pescás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que nada bajo el hielo. Hay que tener paciencia."
+            {
+              "es-AR": "Lo que nada bajo el hielo. Hay que tener paciencia.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Sí. Acá no hay día ni noche, y me gusta así."
+            {
+              "es-AR": "Sí. Acá no hay día ni noche, y me gusta así.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1
         },
         {
           "id": "eco",
-          "label": "Los ecos bajo el hielo",
+          "label": {
+            "es-AR": "Los ecos bajo el hielo",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "A veces suenan antes de que tire la línea."
+            {
+              "es-AR": "A veces suenan antes de que tire la línea.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "orders": 1
@@ -537,42 +1191,94 @@
       ],
       "rooted": true,
       "decline": [
-        "Qué lindo que me invites. Pero acá me siento bien, no me voy a mover.",
-        "Tomá esta línea: no se corta ni con el peor frío."
+        {
+          "es-AR": "Qué lindo que me invites. Pero acá me siento bien, no me voy a mover.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Tomá esta línea: no se corta ni con el peor frío.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "gift": "Línea de escarcha",
       "ambient": [
-        "Bajo el hielo se oyen ecos. A veces son peces.",
-        "Paciencia: acá el agua tarda en contestar."
+        {
+          "es-AR": "Bajo el hielo se oyen ecos. A veces son peces.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Paciencia: acá el agua tarda en contestar.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ]
     },
     "pesc_grieta": {
       "greet": [
-        "No te acerques mucho al borde.",
-        "Hoy el lago hierve tranquilo.",
-        "Manos firmes, ¿eh?"
+        {
+          "es-AR": "No te acerques mucho al borde.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Hoy el lago hierve tranquilo.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Manos firmes, ¿eh?",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué pescás?",
+          "label": {
+            "es-AR": "¿Qué pescás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que aguanta este calor. Pocos peces, pero duros."
+            {
+              "es-AR": "Lo que aguanta este calor. Pocos peces, pero duros.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Al lado del fuego. Me crié acá."
+            {
+              "es-AR": "Al lado del fuego. Me crié acá.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1
         },
         {
           "id": "tiempo",
-          "label": "Peces de otro tiempo",
+          "label": {
+            "es-AR": "Peces de otro tiempo",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Algunos ya estuvieron en otra época. Se les nota en las escamas."
+            {
+              "es-AR": "Algunos ya estuvieron en otra época. Se les nota en las escamas.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "orders": 1
@@ -580,51 +1286,111 @@
       ],
       "rooted": true,
       "decline": [
-        "Ja. Acá me siento bien, no me voy a mover.",
-        "Pero esto es tuyo: una caña templada en este mismo lago."
+        {
+          "es-AR": "Ja. Acá me siento bien, no me voy a mover.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Pero esto es tuyo: una caña templada en este mismo lago.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "gift": "Caña templada",
       "ambient": [
-        "Pescar en brasas pide manos duras y caña firme.",
-        "Lo que sale de este lago ya estuvo en otro tiempo."
+        {
+          "es-AR": "Pescar en brasas pide manos duras y caña firme.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Lo que sale de este lago ya estuvo en otro tiempo.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ]
     },
     "pesc_abismo": {
       "greet": [
-        "Ya pescaste conmigo. Mañana.",
-        "El agua devuelve lo que cae del futuro.",
-        "Sentate. Esto lleva tiempo, y el tiempo sobra."
+        {
+          "es-AR": "Ya pescaste conmigo. Mañana.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "El agua devuelve lo que cae del futuro.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Sentate. Esto lleva tiempo, y el tiempo sobra.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "topics": [
         {
           "id": "oficio",
-          "label": "¿Qué pescás?",
+          "label": {
+            "es-AR": "¿Qué pescás?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Lo que el futuro deja caer al agua."
+            {
+              "es-AR": "Lo que el futuro deja caer al agua.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ]
         },
         {
           "id": "vivis",
-          "label": "¿Vivís acá?",
+          "label": {
+            "es-AR": "¿Vivís acá?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Vivo acá ahora, y antes, y después."
+            {
+              "es-AR": "Vivo acá ahora, y antes, y después.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 1
         },
         {
           "id": "nombre",
-          "label": "¿Por qué Eco Viejo?",
+          "label": {
+            "es-AR": "¿Por qué Eco Viejo?",
+            "en": "",
+            "zh-Hans": ""
+          },
           "lines": [
-            "Porque llegué antes de llegar. Como todos los ecos."
+            {
+              "es-AR": "Porque llegué antes de llegar. Como todos los ecos.",
+              "en": "",
+              "zh-Hans": ""
+            }
           ],
           "talks": 2,
           "orders": 1,
           "sub": [
             {
               "id": "de_donde",
-              "label": "¿De cuándo venís?",
+              "label": {
+                "es-AR": "¿De cuándo venís?",
+                "en": "",
+                "zh-Hans": ""
+              },
               "lines": [
-                "De un mañana que no se puede cambiar. Tranquilo: termina bien."
+                {
+                  "es-AR": "De un mañana que no se puede cambiar. Tranquilo: termina bien.",
+                  "en": "",
+                  "zh-Hans": ""
+                }
               ]
             }
           ]
@@ -632,13 +1398,29 @@
       ],
       "rooted": true,
       "decline": [
-        "Ya sabía que me ibas a invitar. Acá me siento bien, no me voy a mover.",
-        "Este señuelo lo vas a usar. Ya lo usaste."
+        {
+          "es-AR": "Ya sabía que me ibas a invitar. Acá me siento bien, no me voy a mover.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Este señuelo lo vas a usar. Ya lo usaste.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ],
       "gift": "Señuelo del mañana",
       "ambient": [
-        "Pesco lo que el futuro deja caer al agua.",
-        "Todo lo que saques de acá ya lo sacaste antes."
+        {
+          "es-AR": "Pesco lo que el futuro deja caer al agua.",
+          "en": "",
+          "zh-Hans": ""
+        },
+        {
+          "es-AR": "Todo lo que saques de acá ya lo sacaste antes.",
+          "en": "",
+          "zh-Hans": ""
+        }
       ]
     }
   }

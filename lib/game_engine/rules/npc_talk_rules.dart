@@ -6,6 +6,7 @@ import '../data/npc_talk_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'resident_rules.dart';
+import 'sky_rules.dart';
 
 /// Un tema de HABLAR con lo que hace falta para verlo.
 typedef TalkProgress = ({int talks, int orders, int rep});
@@ -64,14 +65,23 @@ abstract final class NpcTalkRules {
     return (talks: b.talks, orders: r.orders + r.quest, rep: r.rep);
   }
 
-  static bool open(TalkTopic t, TalkProgress g, {required bool inTown}) =>
+  static bool open(TalkTopic t, TalkProgress g,
+          {required bool inTown, bool night = false}) =>
       g.talks >= t.talks &&
+      timeOk(t.time, night: night) &&
       g.orders >= t.orders &&
       g.rep >= t.rep &&
       switch (t.where) {
         TalkWhere.any => true,
         TalkWhere.biome => !inTown,
         TalkWhere.town => inTown,
+      };
+
+  /// Whether a topic with [time] can be raised now (npc_editor.md § 3.2).
+  static bool timeOk(TalkTime time, {required bool night}) => switch (time) {
+        TalkTime.any => true,
+        TalkTime.day => !night,
+        TalkTime.night => night,
       };
 
   /// Temas abiertos de [npc] (en orden).
@@ -82,7 +92,7 @@ abstract final class NpcTalkRules {
     final g = progress(s, npc);
     return [
       for (final t in d.topics)
-        if (open(t, g, inTown: inTown)) t
+        if (open(t, g, inTown: inTown, night: SkyRules.isNight(s.sky))) t
     ];
   }
 
@@ -90,7 +100,10 @@ abstract final class NpcTalkRules {
   static int locked(TownState s, String npc, {required bool inTown}) {
     final d = npcTalk(npc);
     if (d == null) return 0;
-    final all = d.topics.where((t) => switch (t.where) {
+    final night = SkyRules.isNight(s.sky);
+    final all = d.topics.where((t) =>
+        timeOk(t.time, night: night) &&
+        switch (t.where) {
           TalkWhere.any => true,
           TalkWhere.biome => !inTown,
           TalkWhere.town => inTown,
@@ -98,11 +111,37 @@ abstract final class NpcTalkRules {
     return all.length - topics(s, npc, inTown: inTown).length;
   }
 
-  /// Un saludo de [npc] elegido con [rng].
+  /// Un saludo de [npc] elegido con [rng] (in the active language).
   static String greeting(String npc, math.Random rng,
-      {List<String> extra = const []}) {
+      {List<LocalizedText> extra = const []}) {
     final pool = [...?npcTalk(npc)?.greet, ...extra];
-    return pool.isEmpty ? '…' : pool[rng.nextInt(pool.length)];
+    return pool.isEmpty ? '…' : pool[rng.nextInt(pool.length)].text;
+  }
+
+  /// The loose line of [npc] for world [day] (one per day, in order), or
+  /// `null` if it has none.
+  static String? dayLine(String npc, int day) {
+    final a = npcTalk(npc)?.ambient ?? const [];
+    return a.isEmpty ? null : a[day % a.length].text;
+  }
+
+  /// Why [npc] went out tonight ([outing] = `NightOuting.id`), or `null`.
+  static String? nightLine(String npc, String outing) =>
+      _nonEmpty(npcTalk(npc)?.night[outing]);
+
+  /// What [npc] says when accepting the invite (or `null`).
+  static String? inviteAccept(String npc) =>
+      _nonEmpty(npcTalk(npc)?.inviteAccept);
+
+  /// What [npc] says after getting a house (or `null`).
+  static String? houseThanks(String npc, {required bool night}) {
+    final d = npcTalk(npc);
+    return _nonEmpty(night ? d?.thanksNight : d?.thanksDay);
+  }
+
+  static String? _nonEmpty(LocalizedText? t) {
+    final s = t?.text ?? '';
+    return s.trim().isEmpty ? null : s;
   }
 
   // ---------------- arraigados ----------------

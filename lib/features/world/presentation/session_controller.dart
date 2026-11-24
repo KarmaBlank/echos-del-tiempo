@@ -20,6 +20,7 @@ import '../../../game_engine/models/run_save.dart';
 import '../../../game_engine/models/travesia_meta.dart';
 import '../../../game_engine/rules/meta_progress_rules.dart';
 import '../../../game_engine/rules/run_rules.dart';
+import '../../../game_engine/rules/npc_talk_rules.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/game_mode.dart';
@@ -1474,7 +1475,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Frase del habitante (cambia con el día del mundo).
   String npcLine(BiomeNpcDef n) =>
-      n.lines[town.sky.day % n.lines.length];
+      NpcTalkRules.dayLine(n.id, town.sky.day) ?? '…';
 
   bool travelPlace(String id) {
     if (cannotTravel != null || id == place) return false;

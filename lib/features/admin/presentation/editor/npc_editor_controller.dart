@@ -1,8 +1,13 @@
 import 'dart:convert';
+import 'dart:io' show File;
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/di/service_locator.dart';
+import '../../../../core/i18n/locale_id.dart';
+import '../../../../core/i18n/locale_registry.dart';
+import '../../../../core/i18n/string_tables.dart';
 import '../../../../game_engine/balance/balance_codecs.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/farming_catalog.dart';
@@ -46,11 +51,17 @@ const kNpcLineSoftLimit = 90;
 /// guarda) sobre `NpcData.current`; las reglas de los generadores se
 /// editan en el borrador del Balance ([balance]).
 class NpcEditorController extends ChangeNotifier {
-  NpcEditorController({required this.balance, this.spriteImage}) {
+  NpcEditorController(
+      {required this.balance, this.spriteImage, List<String>? locales})
+      : locales = locales ?? npcLocaleTags() {
     reload();
   }
 
   final AdminController balance;
+
+  /// Every language a text must have (npc_editor.md § 3.1): the game's
+  /// locale list (`assets/i18n/locales.json`), es-AR first.
+  final List<String> locales;
 
   /// Miniatura de un sprite del manifest (`null`: sin catálogo).
   final ui.Image? Function(String id)? spriteImage;
@@ -126,6 +137,10 @@ class NpcEditorController extends ChangeNotifier {
     }
   }
 
+  /// Texts lacking a language (npc_editor.md § 3.1). Saving is blocked
+  /// while this is not empty.
+  List<String> get missing => draft.$1?.missingLocales(locales) ?? const [];
+
   /// Descarta lo no guardado (relee lo que usa el juego).
   void reload() {
     _doc = jsonDecode(jsonEncode(NpcData.current.toJson()))
@@ -140,6 +155,13 @@ class NpcEditorController extends ChangeNotifier {
     final (d, err) = draft;
     if (d == null) {
       message = 'No se guardó: $err';
+      notifyListeners();
+      return false;
+    }
+    final miss = d.missingLocales(locales);
+    if (miss.isNotEmpty) {
+      message = 'No se guardó: faltan idiomas en ${miss.length} textos '
+          '(${miss.first})';
       notifyListeners();
       return false;
     }
@@ -187,8 +209,23 @@ class NpcEditorController extends ChangeNotifier {
   static List<dynamic> listOf(Map<String, dynamic> m, String key) =>
       (m[key] ??= <dynamic>[]) as List<dynamic>;
 
+  /// A new per-language text: es-AR [source], the rest empty (the editor
+  /// flags them until filled).
+  Map<String, dynamic> text([String source = '…']) => newText(source, locales);
+
+  static Map<String, dynamic> newText(
+          [String source = '…', List<String>? locales]) =>
+      {
+        for (final t in locales ?? npcLocaleTags())
+          t: t == LocalizedText.sourceTag ? source : ''
+      };
+
+  /// [newTopic] with this editor's languages.
+  Map<String, dynamic> newTopicFor(List siblings) =>
+      newTopic(siblings, locales);
+
   /// Un tema nuevo con id libre entre [siblings].
-  static Map<String, dynamic> newTopic(List siblings) {
+  static Map<String, dynamic> newTopic(List siblings, [List<String>? locales]) {
     var n = siblings.length + 1;
     final ids = {for (final t in siblings) (t as Map)['id']};
     while (ids.contains('tema_$n')) {
@@ -196,8 +233,8 @@ class NpcEditorController extends ChangeNotifier {
     }
     return {
       'id': 'tema_$n',
-      'label': 'Tema nuevo',
-      'lines': <dynamic>['…'],
+      'label': newText('Tema nuevo', locales),
+      'lines': <dynamic>[newText('…', locales)],
     };
   }
 
@@ -361,4 +398,26 @@ class NpcGenerator {
   final String title;
   final BalanceKind kind;
   final List<(String, String)> fields;
+}
+
+/// The game's languages (npc_editor.md § 3.1): the i18n locale list
+/// (`assets/i18n/locales.json`, published and hidden), in [LocaleId]
+/// order. Never hardcoded: a new locale there is asked for every text.
+List<String> npcLocaleTags() {
+  LocaleRegistry? reg;
+  if (sl.isRegistered<StringTables>()) {
+    reg = sl<StringTables>().registry;
+  } else {
+    try {
+      reg = LocaleRegistry.parse(
+          File('${StringTables.assetRoot}/${LocaleRegistry.fileName}')
+              .readAsStringSync());
+    } on Object {
+      reg = null;
+    }
+  }
+  return [
+    for (final l in LocaleId.values)
+      if (reg == null || reg.status.containsKey(l)) l.tag,
+  ];
 }

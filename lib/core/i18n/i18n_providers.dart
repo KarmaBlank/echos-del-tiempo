@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/feature_flags.dart';
+import '../../game_engine/models/localized_text.dart';
 import '../di/service_locator.dart';
 import '../settings/settings_providers.dart';
 import 'catalog_text.dart';
@@ -60,6 +61,7 @@ final stringsProvider = Provider<Strings>((ref) {
       ref.watch(activeLocaleProvider),
       allowMachineText: FeatureFlags.instance.allowMachineText);
   CatalogText.active = s;
+  LocalizedText.activeTag = s.locale.tag;
   return s;
 });
 

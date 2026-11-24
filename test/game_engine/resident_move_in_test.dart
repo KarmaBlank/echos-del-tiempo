@@ -3,6 +3,7 @@ import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
+import 'package:echos_del_tiempo/game_engine/rules/npc_talk_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/quest_track_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/resident_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/town_rules.dart';
@@ -46,8 +47,8 @@ void main() {
     expect(a.alpha, 1);
     // Al final ya no está y el anfitrión limpia la marca.
     expect(ResidentRules.departure(n, r, 200), isNull);
-    expect(ResidentRules.settleDepartures(town, 101).resident('ilda').leftAt,
-        100);
+    expect(
+        ResidentRules.settleDepartures(town, 101).resident('ilda').leftAt, 100);
     expect(
         ResidentRules.settleDepartures(town, 200).resident('ilda').leftAt, 0);
     // Reloj de otra sesión (volvió atrás): también se limpia.
@@ -107,9 +108,9 @@ void main() {
       for (var d = 1; d <= 60; d++) {
         final s = TownState(sky: SkyState(day: d));
         final a = ResidentRules.nightOuting(s, n.id);
-        final b = ResidentRules.nightOuting(
-            TownState.fromJson(s.toJson()), n.id);
-        expect(a?.key, b?.key, reason: '${n.id} día $d');
+        final b =
+            ResidentRules.nightOuting(TownState.fromJson(s.toJson()), n.id);
+        expect(a?.id, b?.id, reason: '${n.id} día $d');
       }
     }
   });
@@ -120,15 +121,16 @@ void main() {
       expect(ResidentRules.nightOutChance(n.id), greaterThan(0));
       final keys = <String>{};
       for (var d = 1; d <= 400; d++) {
-        final o = ResidentRules.nightOuting(
-            TownState(sky: SkyState(day: d)), n.id);
+        final o =
+            ResidentRules.nightOuting(TownState(sky: SkyState(day: d)), n.id);
         if (o == null) continue;
         expect(n.nightOutings, contains(o));
-        expect(o.key, startsWith('ui.town.npc.night.${n.id}_'));
-        keys.add(o.key);
+        expect(o.id, startsWith('${n.id}_'));
+        expect(NpcTalkRules.nightLine(n.id, o.id), isNotNull);
+        keys.add(o.id);
       }
       // Con 400 noches salen todos sus motivos.
-      expect(keys, {for (final o in n.nightOutings) o.key}, reason: n.id);
+      expect(keys, {for (final o in n.nightOutings) o.id}, reason: n.id);
     }
   });
 
@@ -141,8 +143,7 @@ void main() {
     expect(ResidentRules.nightOutChance('nadie'), t.d('resNightOutBase'));
     int count(String npc) => [
           for (var d = 1; d <= 1000; d++)
-            if (ResidentRules.nightOut(TownState(sky: SkyState(day: d)), npc))
-              d
+            if (ResidentRules.nightOut(TownState(sky: SkyState(day: d)), npc)) d
         ].length;
     for (final n in kBiomeNpcs) {
       final want = ResidentRules.nightOutChance(n.id) * 1000;
@@ -157,8 +158,8 @@ void main() {
     final day = [
       for (var d = 1; d <= 400; d++)
         if (ResidentRules.nightOuting(
-                town.copyWith(sky: SkyState(day: d)), 'brann')
-            ?.spot ==
+                    town.copyWith(sky: SkyState(day: d)), 'brann')
+                ?.spot ==
             TownSpot.forge)
           d
     ].first;

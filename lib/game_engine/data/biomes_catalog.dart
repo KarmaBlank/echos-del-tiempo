@@ -122,13 +122,14 @@ enum NpcRole {
 }
 
 /// Un motivo para salir de noche (overworld_biomes.md § 10.1.1): la
-/// frase que dice ([key], clave i18n) y adónde va: un lugar del pueblo
+/// frase que dice ([id], en npcs.json) y adónde va: un lugar del pueblo
 /// ([spot]) o la HUERTA más cercana a su casa ([build]); si no existe,
 /// la fuente rúnica.
 class NightOuting {
-  const NightOuting(this.key, {this.spot, this.build});
+  const NightOuting(this.id, {this.spot, this.build});
 
-  final String key;
+  /// Id of its line in `NpcTalkDef.night` (npcs.json).
+  final String id;
   final TownSpot? spot;
   final BuildKind? build;
 }
@@ -139,7 +140,6 @@ class BiomeNpcDef {
   const BiomeNpcDef(this.id, this.name, this.role,
       {required this.biome,
       required this.tile,
-      required this.lines,
       required this.seeds,
       required this.benefit,
       this.nightOutings = const []});
@@ -156,9 +156,6 @@ class BiomeNpcDef {
 
   /// Dónde está parado en su exterior.
   final (int, int) tile;
-
-  /// Frases (una por visita, en orden circular).
-  final List<String> lines;
 
   /// Semilla del bioma → precio en oro.
   final Map<String, int> seeds;
@@ -293,77 +290,51 @@ class BiomeLayout {
 const _ilda = BiomeNpcDef('ilda', 'Ilda', NpcRole.herbolaria,
     biome: kBosque,
     tile: (12, 15),
-    lines: [
-      'Las moras de acá saben distinto cada mañana. Como si el bosque se '
-          'acordara de algo.',
-      'Hay ecos que bajan por el río. Yo no los pesco: los dejo pasar.',
-      'Si un día tu pueblo necesita quien cure, avisame.',
-    ],
     seeds: {'helecho_dulce': 40, 'arandano_sombra': 110},
     benefit: 'Pociones: curan +{v} % más.',
     nightOutings: [
-      NightOuting('ui.town.npc.night.ilda_garden', build: BuildKind.huerta),
-      NightOuting('ui.town.npc.night.ilda_dew', spot: TownSpot.fountain),
+      NightOuting('ilda_garden', build: BuildKind.huerta),
+      NightOuting('ilda_dew', spot: TownSpot.fountain),
     ]);
 
 const _velda = BiomeNpcDef('velda', 'Velda', NpcRole.archivista,
     biome: kRuinas,
     tile: (21, 16),
-    lines: [
-      'Estas placas son mapas. Del pasado, cuando todo era más avanzado.',
-      'Los autómatas no están rotos: esperan una orden que nadie recuerda.',
-      'Algo hizo que el mundo se volviera medieval. Lo estoy anotando.',
-    ],
     seeds: {'lirio_mecanico': 60, 'calabaza_runica': 160},
     benefit: 'Mazmorras: se ven {v} salas más al entrar.',
     nightOutings: [
-      NightOuting('ui.town.npc.night.velda_lamp', spot: TownSpot.board),
-      NightOuting('ui.town.npc.night.velda_statue', spot: TownSpot.statue),
+      NightOuting('velda_lamp', spot: TownSpot.board),
+      NightOuting('velda_statue', spot: TownSpot.statue),
     ]);
 
 const _kael = BiomeNpcDef('kael', 'Kael', NpcRole.instructor,
     biome: kCavernas,
     tile: (12, 15),
-    lines: [
-      'Acá abajo no hay día ni noche. Solo el frío y el eco de tus pasos.',
-      'El eco que oís a veces llega antes que tu voz. Es del futuro.',
-      'Entrená conmigo y vas a aprender más rápido allá afuera.',
-    ],
     seeds: {'nabo_escarcha': 80, 'flor_cristal': 220},
     benefit: 'Misiones: +{v} % de XP para todo el grupo.',
     nightOutings: [
-      NightOuting('ui.town.npc.night.kael_watch', spot: TownSpot.portal),
-      NightOuting('ui.town.npc.night.kael_drill', spot: TownSpot.lostLoot),
+      NightOuting('kael_watch', spot: TownSpot.portal),
+      NightOuting('kael_drill', spot: TownSpot.lostLoot),
     ]);
 
 const _brann = BiomeNpcDef('brann', 'Brann', NpcRole.forjador,
     biome: kGrieta,
     tile: (21, 16),
-    lines: [
-      'Este calor viene de abajo, de un mecanismo viejo que sigue andando.',
-      'Forjo con lo que deja el pasado. Nada se pierde del todo.',
-      'Llevame a tu pueblo y tus mejoras van a salir más baratas.',
-    ],
     seeds: {'chile_volcan': 110, 'flor_brasa': 300},
     benefit: 'Forja: mejoras {v} % más baratas.',
     nightOutings: [
-      NightOuting('ui.town.npc.night.brann_embers', spot: TownSpot.forge),
-      NightOuting('ui.town.npc.night.brann_stock', spot: TownSpot.armory),
+      NightOuting('brann_embers', spot: TownSpot.forge),
+      NightOuting('brann_stock', spot: TownSpot.armory),
     ]);
 
 const _oren = BiomeNpcDef('oren', 'Oren', NpcRole.vidente,
     biome: kAbismo,
     tile: (12, 15),
-    lines: [
-      'El futuro no se cambia. Se cumple. Yo solo miro cómo llega.',
-      'Ya te vi volver de esa mazmorra. Todavía no fuiste.',
-      'Lo que tiene que pasar, pasa. Mejor llegar sanos.',
-    ],
     seeds: {'trigo_eco': 150, 'rosa_futuro': 420},
     benefit: 'Vida llena al volver al pueblo y +{v} % de vida máxima.',
     nightOutings: [
-      NightOuting('ui.town.npc.night.oren_stars', spot: TownSpot.statue),
-      NightOuting('ui.town.npc.night.oren_fountain', spot: TownSpot.fountain),
+      NightOuting('oren_stars', spot: TownSpot.statue),
+      NightOuting('oren_fountain', spot: TownSpot.fountain),
     ]);
 
 /// Los exteriores por id (el pueblo no está).
