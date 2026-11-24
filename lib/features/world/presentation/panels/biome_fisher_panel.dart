@@ -170,6 +170,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
       key: const ValueKey('panel-biome-fisher'),
       title: context.t('ui.town.fisher.window_title', {'name': f.name.toUpperCase(), 'menu': title}),
       width: 1000,
+      fill: true,
       onClose: back,
       header: _status(f, p, town),
       leading: [

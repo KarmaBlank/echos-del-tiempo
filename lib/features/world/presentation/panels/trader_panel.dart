@@ -84,6 +84,7 @@ class _TraderPanelState extends State<TraderPanel> {
       key: const ValueKey('panel-trader'),
       title: context.t('ui.town.trader.title'),
       width: 760,
+      fill: true,
       onClose: c.closePanel,
       actions: [
         if (_mode == 1)
@@ -176,9 +177,7 @@ class _TraderPanelState extends State<TraderPanel> {
           ],
           SizedBox(height: DsSpace.sm),
           // Grilla de casillas con el detalle de la elegida (v0.24.4).
-          SizedBox(
-            height:
-                (MediaQuery.sizeOf(context).height * 0.42).clamp(200.0, 440.0),
+          Expanded(
             child: LifeItemGrid(
               key: ValueKey('trade-grid-$_mode-$_tab'),
               groups: _visible(_tab == 0 ? _fishing() : _farming()),

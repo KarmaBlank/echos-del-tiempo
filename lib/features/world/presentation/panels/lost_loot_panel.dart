@@ -112,28 +112,20 @@ class _LostLootPanelState extends State<LostLootPanel> {
 
     final detail = sel == null
         ? const SizedBox.shrink()
-        : Column(
+        : DsDetailPane(
             key: const ValueKey('lost-detail'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  child: ProtoText(_markup(rules, sel.drop, viewer, attrs)),
-                ),
-              ),
-              SizedBox(height: DsSpace.sm),
-              DsButton(context.t('ui.world.lost_loot.take'),
-                  key: ValueKey('lost-take-${sel.id}'),
-                  kind: DsButtonKind.primary,
-                  onPressed: () => controller.takeLostLoot(sel.id)),
-            ],
+            body: ProtoText(_markup(rules, sel.drop, viewer, attrs)),
+            actions: DsButton(context.t('ui.world.lost_loot.take'),
+                key: ValueKey('lost-take-${sel.id}'),
+                kind: DsButtonKind.primary,
+                onPressed: () => controller.takeLostLoot(sel.id)),
           );
 
     return PanelFrame(
       key: const ValueKey('panel-lost-loot'),
       title: context.t('ui.world.lost_loot.title'),
       width: 720,
+      fill: true,
       onClose: controller.closePanel,
       actions: [
         PanelButton(context.t('ui.world.lost_loot.take_all'),
@@ -159,10 +151,9 @@ class _LostLootPanelState extends State<LostLootPanel> {
             Text(context.t('ui.world.lost_loot.empty'),
                 key: const ValueKey('lost-empty'), style: DsText.detail())
           else
-            SizedBox(
-              height: 300,
+            Expanded(
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SingleChildScrollView(child: grid),
                   SizedBox(width: DsSpace.md),
