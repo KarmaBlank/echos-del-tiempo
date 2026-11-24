@@ -623,7 +623,11 @@ class BattleViewState extends State<BattleView>
   /// los de armas.
   BattleAction _duoAction(Combatant cur, Combatant q, String id, DualDef du) {
     const mp = BattleEngine.dualMpCost;
-    final ok = cur.mp >= mp && q.mp >= mp;
+    // Grouped turns (Por fases / Por bando / Por rondas): a partner who
+    // already acted this turn can't join (the engine rejects it, `_dual`).
+    final b = widget.battle;
+    final spent = b.grouped && b.acted.contains(q.id);
+    final ok = !spent && cur.mp >= mp && q.mp >= mp;
     final sum =
         (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) *
             du.power;
@@ -670,7 +674,11 @@ class BattleViewState extends State<BattleView>
             'n': mp,
             'who': protoEsc(q.name)
           })}',
-      reason: ok ? null : _s.t('ui.combat.duo.need_mp', {'n': mp}),
+      reason: ok
+          ? null
+          : spent
+              ? _s.t('ui.combat.duo.partner_acted', {'who': protoEsc(q.name)})
+              : _s.t('ui.combat.duo.need_mp', {'n': mp}),
       onSelect: ok
           ? () => _send(DualCommand(q.id, dualId: w == null ? null : id))
           : null,
@@ -687,8 +695,7 @@ class BattleViewState extends State<BattleView>
     final instant = sk.instant && !cur.chained;
     final miss = ok
         ? (all: const <String>[], needs: const <String>[])
-        : localMissingLines(
-            sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
+        : localMissingLines(sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
             foes: _foes);
     final lines = miss.all;
     // Condición especial (no el MP/Pulso que ya se ve en rojo): tooltip.

@@ -173,6 +173,7 @@
   "ui.combat.duo.formula": "(your max(ATK, MAG) + theirs) × {x} = <b>{sum}</b> to ALL enemies",
   "ui.combat.duo.cost_line": "{n} MP each · {who} loses their next turn",
   "ui.combat.duo.need_mp": "Needs {n} MP each.",
+  "ui.combat.duo.partner_acted": "{who} already acted this turn.",
   "ui.combat.heal.lowest": "Most wounded",
   "ui.combat.heal.party": "Whole party",
   "ui.combat.heal.lowest_desc": "{skill} on the ally with the least life: +{n} HP",
