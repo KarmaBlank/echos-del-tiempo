@@ -1,7 +1,8 @@
 {
   "lib/features/achievements/presentation/achievement_feed.dart": 3,
   "lib/features/achievements/presentation/achievements_view.dart": 4,
-  "lib/features/admin/presentation/admin_app.dart": 20,
+  "lib/features/admin/presentation/admin_app.dart": 22,
+  "lib/features/admin/presentation/editor/events_page.dart": 26,
   "lib/features/admin/presentation/admin_widgets.dart": 1,
   "lib/features/admin/presentation/balance_page.dart": 12,
   "lib/features/admin/presentation/changes_page.dart": 7,

@@ -64,6 +64,9 @@ enum WorldPanel {
   /// Pescador nativo del bioma (fishing.md § 12).
   biomeFisher,
 
+  /// A world event actor: talk, shop or rift (world_events.md § 6).
+  worldEvent,
+
   /// Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
   questLog,
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
