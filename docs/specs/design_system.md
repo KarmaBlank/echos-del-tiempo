@@ -187,6 +187,15 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   y siempre visible, solo `body` scrollea (barra visible). Sin alto
   acotado (dentro de otro scroll) se apila natural. `sunken`: superficie
   hundida con borde (TIENDA). Solo visual: no sabe de ítems ni precios.
+- Grilla + detalle: elegir → detalle → acción fija (v0.46.1). En toda
+  grilla con `DsDetailPane` (INVENTARIO, tiendas de NPC, HERRERÍA,
+  CONSTRUIR): un clic ELIGE (casilla marcada) y nunca actúa solo; el
+  detalle sigue a la elegida y es fijo: el hover solo previsualiza si no
+  hay nada elegido, y mover el mouse hacia el detalle (su barra) no lo
+  cambia. La acción va en un botón primario fijo en `actions` (gris
+  con el motivo en el detalle si no se puede); doble clic y Enter son
+  atajos; flechas mueven la elección, Esc cierra. El detalle se
+  dimensiona para que el contenido normal entre sin scroll.
 - DsToast (aviso): caja con franja izquierda de 4 px del color del tipo
   (info `ice`, éxito, peligro, recompensa), una línea de texto, botón ×
   opcional.

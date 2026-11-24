@@ -26,11 +26,12 @@ class TownPiecePreview extends StatelessWidget {
     final def = construction(id);
     final Widget child = def?.kind == BuildKind.casa
         ? LifeIcon('casa_1', LifeIconKind.herramienta, size: size)
-        : CustomPaint(
-            size: Size.square(size),
-            painter: _PiecePainter(id, def));
+        : CustomPaint(size: Size.square(size), painter: _PiecePainter(id, def));
+    // Never paints outside its box (town_editor.md § 1.2).
     return SizedBox.square(
-        key: ValueKey('town-piece-preview-$id'), dimension: size, child: child);
+        key: ValueKey('town-piece-preview-$id'),
+        dimension: size,
+        child: ClipRect(child: child));
   }
 }
 
@@ -41,17 +42,25 @@ class _PiecePainter extends CustomPainter {
   final ConstructionDef? def;
 
   static const ts = MapFarmLayer.ts;
+
+  /// Lo que el faro dibuja por encima de su tile (brasero + resplandor).
+  static const faroOverhang = 11.0;
   static final _tiles = TilePainter();
 
   @override
   void paint(Canvas c, Size size) {
     final d = def;
-    // Faro: un tile con el brasero que sobresale 6 px por arriba.
+    // Faro: un tile con el brasero y su resplandor, que sobresalen 11 px
+    // por arriba (TilePainter.faro). La pieza entera entra en la caja,
+    // con margen y sin deformarse; escala entera si es >= 1 (pixel art).
     final w = d?.w ?? 1, h = d?.h ?? 1;
-    final top = d == null ? 6.0 : 0.0;
+    final top = d == null ? faroOverhang : 0.0;
     final pw = w * ts, ph = h * ts + top;
-    final k = math.min(size.width / pw, size.height / ph);
+    final pad = math.max(1.0, size.shortestSide * 0.06);
+    var k = math.min((size.width - 2 * pad) / pw, (size.height - 2 * pad) / ph);
+    if (k >= 1) k = k.floorToDouble();
     c.save();
+    c.clipRect(Offset.zero & size);
     c.translate((size.width - pw * k) / 2, (size.height - ph * k) / 2);
     c.scale(k);
     c.translate(0, top);
