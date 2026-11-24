@@ -56,7 +56,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
     final id = nativeId(f.biome);
     if (_greetTo != id) {
       _greetTo = id;
-      _greet = NpcTalk.greet(id, extra: f.lines);
+      _greet = NpcTalk.greet(id, extra: npcTalk(id)?.ambient ?? const []);
       _talk = NpcTalk(id);
       _answer = null;
       WidgetsBinding.instance.addPostFrameCallback((_) => c.npcTalked(id));
@@ -67,19 +67,49 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
   }
 
   String _giftText(NpcTalkDef? d) => [
-        ...?d?.decline,
+        ...?d?.decline.map((l) => l.text),
         if (d != null && d.gift.isNotEmpty)
-          context.t('ui.town.fisher.gift_text', {'gift': d.gift, 'gold': NpcTalkRules.giftGold, 'xp': NpcTalkRules.giftFishXp, 'points': NpcTalkRules.giftPoints}),
+          context.t('ui.town.fisher.gift_text', {
+            'gift': d.gift,
+            'gold': NpcTalkRules.giftGold,
+            'xp': NpcTalkRules.giftFishXp,
+            'points': NpcTalkRules.giftPoints
+          }),
       ].join(' ');
 
-  Widget _dialogue(SessionController c, BiomeFisherDef f, PlayerProfile p,
-      TownState town) {
+  Widget _dialogue(
+      SessionController c, BiomeFisherDef f, PlayerProfile p, TownState town) {
     final id = nativeId(f.biome);
     final talk = _talk ??= NpcTalk(id);
     void refresh() => setState(() {});
     void open(_FisherMenu m) => setState(() => _menu = m);
     final declined = NpcTalkRules.declined(town, f.biome);
     final canInvite = NpcTalkRules.cannotInvite(town, f.biome) == null;
+    void invite() {
+      if (c.nativeInvite()) {
+        setState(() => _answer = _giftText(npcTalk(id)));
+      }
+    }
+
+    // Topic actions (npc_editor.md § 3.3): same rules as the menu.
+    final actions = TalkActions(
+      why: (a) => switch (a) {
+        TalkAction.invite =>
+          canInvite ? null : NpcTalkRules.cannotInvite(town, f.biome),
+        TalkAction.trade => declined ? null : '',
+        TalkAction.house || TalkAction.none => '',
+      },
+      run: (a) {
+        switch (a) {
+          case TalkAction.invite:
+            invite();
+          case TalkAction.trade:
+            open(_FisherMenu.puesto);
+          case TalkAction.house:
+          case TalkAction.none:
+        }
+      },
+    );
     return Align(
       key: const ValueKey('panel-biome-fisher'),
       alignment: Alignment.bottomCenter,
@@ -92,13 +122,17 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
                 size: DsDialogueBox.portraitSize),
             name: f.name,
             role: context.t('ui.town.fisher.role'),
-            text: talk.text(_answer ?? _greet ?? f.lines.first),
+            text: talk.text(_answer ?? _greet ?? '…'),
             skipLabel: context.t('ui.town.npc.skip'),
             onCancel: c.closePanel,
             choices: talk.active
-                ? talk.choices(town, refresh, inTown: false)
+                ? talk.choices(town, refresh,
+                    inTown: false,
+                    strings: worldStrings(context),
+                    actions: actions)
                 : [
-                    talk.entry(town, refresh, inTown: false),
+                    talk.entry(town, refresh,
+                        inTown: false, strings: worldStrings(context)),
                     DsChoice(context.t('ui.town.fisher.menu_order'),
                         key: const ValueKey('fisher-choice-pedido'),
                         onSelected: () => open(_FisherMenu.pedido)),
@@ -108,8 +142,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
                           onSelected: () => open(_FisherMenu.puesto)),
                     if (canInvite)
                       DsChoice(context.t('ui.town.npc.invite'),
-                          key: const ValueKey('fisher-invite'),
-                          onSelected: () {
+                          key: const ValueKey('fisher-invite'), onSelected: () {
                         if (c.nativeInvite()) {
                           setState(() => _answer = _giftText(npcTalk(id)));
                         }
@@ -138,7 +171,8 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
               Text(
                   b.declined
                       ? b.rep.toString()
-                      : context.t('ui.town.npc.rep_value', {'n': b.rep, 'goal': goal}),
+                      : context.t(
+                          'ui.town.npc.rep_value', {'n': b.rep, 'goal': goal}),
                   style: DsText.body(DsColors.mp)),
               SizedBox(height: DsSpace.xs),
               DsMeter(b.rep, goal, color: DsColors.mp),
@@ -146,7 +180,8 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
           )),
       DsStatusCell(context.t('ui.town.fisher.orders_done'),
           Text(b.orders.toString(), style: DsText.body(DsColors.success))),
-      DsStatusCell(context.t('ui.town.npc.your_gold'),
+      DsStatusCell(
+          context.t('ui.town.npc.your_gold'),
           key: const ValueKey('fisher-gold'),
           Text(p.credits.toString(), style: DsText.body(DsColors.reward))),
     ]);
@@ -169,7 +204,8 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
     };
     return PanelFrame(
       key: const ValueKey('panel-biome-fisher'),
-      title: context.t('ui.town.fisher.window_title', {'name': f.name.toUpperCase(), 'menu': title}),
+      title: context.t('ui.town.fisher.window_title',
+          {'name': f.name.toUpperCase(), 'menu': title}),
       width: 1000,
       fill: true,
       onClose: back,
@@ -215,12 +251,17 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
             (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
-            context.t('ui.town.npc.order_line_cm', {'n': r.n, 'item': d.name, 'cm': r.cm}),
-            context.t('ui.town.fisher.have_record', {'n': p.life.count(d.id), 'cm': p.life.log[d.id] ?? 0}),
+            context.t('ui.town.npc.order_line_cm',
+                {'n': r.n, 'item': d.name, 'cm': r.cm}),
+            context.t('ui.town.fisher.have_record',
+                {'n': p.life.count(d.id), 'cm': p.life.log[d.id] ?? 0}),
             context.t('ui.town.fisher.fish_xp', {'n': w.fishXp}),
             context.t('ui.town.fisher.char_xp', {'n': w.charXp}),
-            context.t('ui.town.fisher.gold_plus', {'n': BiomeFisherRules.favorGold(c.townState, f.biome, w.gold)}),
-            context.t('ui.town.fisher.friendship_plus', {'n': NpcTalkRules.orderRep}),
+            context.t('ui.town.fisher.gold_plus', {
+              'n': BiomeFisherRules.favorGold(c.townState, f.biome, w.gold)
+            }),
+            context.t(
+                'ui.town.fisher.friendship_plus', {'n': NpcTalkRules.orderRep}),
           ],
           description: context.t('ui.town.fisher.order_desc'),
           actions: [
@@ -237,8 +278,8 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
 
   /// Puesto: lo que vende hoy (con la novedad) y lo que te compra de tu
   /// bolsa, todo en la misma grilla con el detalle a la derecha.
-  List<LifeItemCellData> _stall(SessionController c, BiomeFisherDef f,
-      PlayerProfile p, TownState town) {
+  List<LifeItemCellData> _stall(
+      SessionController c, BiomeFisherDef f, PlayerProfile p, TownState town) {
     final day = math.max(1, c.town.sky.day);
     final cells = <LifeItemCellData>[];
     for (final g in NpcTalkRules.stock(town, f.biome, day)) {
@@ -264,7 +305,8 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
             context.t('ui.town.npc.have', {'n': p.life.count(d.id)}),
           ],
           description: g.fresh
-              ? context.t('ui.town.fisher.fresh_desc', {'n': NpcTalkRules.freshEvery})
+              ? context.t(
+                  'ui.town.fisher.fresh_desc', {'n': NpcTalkRules.freshEvery})
               : context.t('ui.town.fisher.from_lake'),
           actions: [
             DsButton(context.t('ui.town.npc.buy'),

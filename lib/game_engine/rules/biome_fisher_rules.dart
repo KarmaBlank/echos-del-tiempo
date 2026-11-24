@@ -12,39 +12,23 @@ import 'resident_rules.dart';
 /// Pescador nativo de un bioma (fishing.md § 12): camina por la orilla
 /// de su lago, nunca se muda al pueblo y pide un pez de su lago por día.
 class BiomeFisherDef {
-  const BiomeFisherDef(this.biome, this.name, this.lines);
+  const BiomeFisherDef(this.biome, this.name);
   final String biome;
   final String name;
-  final List<String> lines;
 
   /// Sprite (`items.vida_npc_pesc_<bioma>` del manifest).
   String get sprite => 'npc_pesc_$biome';
 }
 
 const kBiomeFishersDefaults = <String, BiomeFisherDef>{
-  kBosque: BiomeFisherDef(kBosque, 'Nera de la Orilla', [
-    'Este lago guarda peces que ya nadaban antes de los árboles.',
-    'Si ves el agua brillar, tirá ahí. No me preguntes por qué.',
-  ]),
-  kRuinas: BiomeFisherDef(kRuinas, 'Tadeo Engranaje', [
-    'Los peces de acá muerden metal viejo. Raro, ¿no?',
-    'El estanque gira despacio, como un reloj que nadie da cuerda.',
-  ]),
-  kCavernas: BiomeFisherDef(kCavernas, 'Sila Escarcha', [
-    'Bajo el hielo se oyen ecos. A veces son peces.',
-    'Paciencia: acá el agua tarda en contestar.',
-  ]),
-  kGrieta: BiomeFisherDef(kGrieta, 'Bruno Brasa', [
-    'Pescar en brasas pide manos duras y caña firme.',
-    'Lo que sale de este lago ya estuvo en otro tiempo.',
-  ]),
-  kAbismo: BiomeFisherDef(kAbismo, 'Eco Viejo', [
-    'Pesco lo que el futuro deja caer al agua.',
-    'Todo lo que saques de acá ya lo sacaste antes.',
-  ]),
+  kBosque: BiomeFisherDef(kBosque, 'Nera de la Orilla'),
+  kRuinas: BiomeFisherDef(kRuinas, 'Tadeo Engranaje'),
+  kCavernas: BiomeFisherDef(kCavernas, 'Sila Escarcha'),
+  kGrieta: BiomeFisherDef(kGrieta, 'Bruno Brasa'),
+  kAbismo: BiomeFisherDef(kAbismo, 'Eco Viejo'),
 };
 
-/// Lo que lee el juego (código + frases de `assets/data/npcs/npcs.json`).
+/// Lo que lee el juego (sus frases viven en `NpcTalkDef.ambient`).
 final Map<String, BiomeFisherDef> kBiomeFishers =
     Map.of(kBiomeFishersDefaults);
 

@@ -2,6 +2,7 @@ import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:echos_del_tiempo/game_engine/rules/npc_talk_rules.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/npc_talk.dart';
+import 'package:echos_del_tiempo/features/world/presentation/world_strings.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -32,9 +33,8 @@ void main() {
 
   Size size(WidgetTester t) =>
       t.getSize(find.byKey(const ValueKey('ds-dialogue')));
-  String shown(WidgetTester t) => t
-      .widget<Text>(find.byKey(const ValueKey('ds-dialogue-text')))
-      .data!;
+  String shown(WidgetTester t) =>
+      t.widget<Text>(find.byKey(const ValueKey('ds-dialogue-text'))).data!;
 
   testWidgets('box size is constant while typing and after', (t) async {
     await pumpDs(t, box());
@@ -87,26 +87,28 @@ void main() {
     expect(topics, isNotEmpty);
     final first = topics.first;
     final talk = NpcTalk('ilda');
-    await pumpDs(
-        t,
-        StatefulBuilder(
-          builder: (context, set) {
-            void refresh() => set(() {});
-            return SizedBox(
-              width: 1200,
-              child: DsDialogueBox(
-                portrait: const SizedBox(),
-                name: 'Ilda',
-                text: talk.text('Hola.'),
-                skipLabel: 'Saltar [Enter]',
-                charDelay: Duration.zero,
-                choices: talk.active
-                    ? talk.choices(town, refresh, inTown: true)
-                    : [talk.entry(town, refresh, inTown: true)],
-              ),
-            );
-          },
-        ));
+    await pumpDs(t, StatefulBuilder(
+      builder: (context, set) {
+        void refresh() => set(() {});
+        return SizedBox(
+          width: 1200,
+          child: DsDialogueBox(
+            portrait: const SizedBox(),
+            name: 'Ilda',
+            text: talk.text('Hola.'),
+            skipLabel: 'Saltar [Enter]',
+            charDelay: Duration.zero,
+            choices: talk.active
+                ? talk.choices(town, refresh,
+                    inTown: true, strings: worldFallbackStrings())
+                : [
+                    talk.entry(town, refresh,
+                        inTown: true, strings: worldFallbackStrings())
+                  ],
+          ),
+        );
+      },
+    ));
     await t.tap(find.byKey(const ValueKey('npc-choice-hablar')));
     await t.pump();
     final q = ValueKey('npc-topic-${first.id}');
@@ -114,7 +116,7 @@ void main() {
     await t.pump();
     // The answer node: the asked question is gone, only its branch + VOLVER.
     expect(find.byKey(q), findsNothing);
-    expect(shown(t), first.lines.join(' '));
+    expect(shown(t), first.lines.map((l) => l.text).join(' '));
     for (final s in first.sub) {
       expect(find.byKey(ValueKey('npc-topic-${s.id}')), findsOneWidget);
     }
@@ -127,6 +129,6 @@ void main() {
     expect(label.style!.color, isNot(DsColors.text));
     await t.tap(find.byKey(q));
     await t.pump();
-    expect(shown(t), first.lines.join(' '));
+    expect(shown(t), first.lines.map((l) => l.text).join(' '));
   });
 }

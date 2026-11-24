@@ -8,40 +8,28 @@ import '../rules/resident_rules.dart';
 /// (docs/specs/npc_editor.md § 1): `assets/data/npcs/npcs.json`. Puro;
 /// el lector de assets vive en `lib/core/data/npc_data_loader.dart`.
 class NpcData {
-  const NpcData(
-      {required this.talks, required this.quests, required this.ambient});
+  const NpcData({required this.talks, required this.quests});
 
   static const assetPath = 'assets/data/npcs/npcs.json';
-  static const version = 1;
 
-  /// Charla por id de habitante.
+  /// 2: every text is a per-language map (npc_editor.md § 1.1). Version 1
+  /// (plain strings = es-AR) is still read.
+  static const version = 2;
+
+  /// Charla por id de habitante (with its loose, night, invite and
+  /// house lines).
   final Map<String, NpcTalkDef> talks;
 
   /// Cadena de encargos escrita a mano por id (solo los que se mudan).
   final Map<String, List<QuestStepDef>> quests;
 
-  /// Frases sueltas de la orilla por id de pescador nativo
-  /// (`pesc_<bioma>`).
-  final Map<String, List<String>> ambient;
-
   /// Los valores del código (el respaldo).
-  static NpcData get defaults => NpcData(
-        talks: kNpcTalksDefaults,
-        quests: kResidentQuestsDefaults,
-        ambient: {
-          for (final f in kBiomeFishersDefaults.values)
-            nativeId(f.biome): f.lines,
-        },
-      );
+  static NpcData get defaults =>
+      const NpcData(talks: kNpcTalksDefaults, quests: kResidentQuestsDefaults);
 
   /// Lo que usa el juego ahora.
-  static NpcData get current => NpcData(
-        talks: Map.of(kNpcTalks),
-        quests: Map.of(kResidentQuests),
-        ambient: {
-          for (final f in kBiomeFishers.values) nativeId(f.biome): f.lines,
-        },
-      );
+  static NpcData get current =>
+      NpcData(talks: Map.of(kNpcTalks), quests: Map.of(kResidentQuests));
 
   /// Ids que el juego conoce (los otros se ignoran al instalar).
   static Set<String> get knownIds => {
@@ -51,11 +39,61 @@ class NpcData {
       };
 
   // ------------------------------------------------------------------
+  // Validation (npc_editor.md § 3.1)
+  // ------------------------------------------------------------------
+
+  /// Every dialogue text lacking one of [locales] (tags), as
+  /// `"<npc> · <where>: <tags>"`. Empty = complete. Saving is blocked
+  /// while this is not empty.
+  List<String> missingLocales(List<String> locales) {
+    final out = <String>[];
+    void check(String id, String where, LocalizedText t) {
+      final m = t.missing(locales);
+      if (m.isNotEmpty) out.add('$id · $where: ${m.join(', ')}');
+    }
+
+    void lines(String id, String where, List<LocalizedText> l) {
+      for (var i = 0; i < l.length; i++) {
+        check(id, '$where ${i + 1}', l[i]);
+      }
+    }
+
+    void topics(String id, List<TalkTopic> list, String path) {
+      for (final x in list) {
+        final p = path.isEmpty ? x.id : '$path/${x.id}';
+        check(id, 'tema $p', x.label);
+        lines(id, 'tema $p línea', x.lines);
+        topics(id, x.sub, p);
+      }
+    }
+
+    for (final MapEntry(key: id, value: t) in talks.entries) {
+      lines(id, 'saludo', t.greet);
+      topics(id, t.topics, '');
+      lines(id, 'al invitarlo', t.decline);
+      lines(id, 'frase suelta', t.ambient);
+      for (final MapEntry(key: k, value: v) in t.night.entries) {
+        check(id, 'noche $k', v);
+      }
+      if (!t.rooted && npcHasResidentLines(id)) {
+        check(id, 'acepta invitación', t.inviteAccept);
+        check(id, 'gracias por la casa (día)', t.thanksDay);
+        check(id, 'gracias por la casa (noche)', t.thanksNight);
+      }
+    }
+    return out;
+  }
+
+  /// Residents (they move to town) have invite / house lines.
+  static bool npcHasResidentLines(String id) =>
+      kResidentQuestsDefaults.containsKey(id);
+
+  // ------------------------------------------------------------------
   // JSON
   // ------------------------------------------------------------------
 
   Map<String, Object?> toJson() {
-    final ids = <String>{...talks.keys, ...quests.keys, ...ambient.keys};
+    final ids = <String>{...talks.keys, ...quests.keys};
     return {
       'version': version,
       'npcs': {
@@ -64,7 +102,6 @@ class NpcData {
             if (talks[id] case final t?) ...talkToJson(t),
             if (quests[id] case final q?)
               'quests': [for (final s in q) stepToJson(s)],
-            if (ambient[id] case final a?) 'ambient': a,
           },
       },
     };
@@ -74,71 +111,112 @@ class NpcData {
       '${const JsonEncoder.withIndent('  ').convert(toJson())}\n';
 
   /// Lanza [FormatException] si el archivo no tiene la forma esperada.
+  /// Reads version 1 (plain strings) and 2 (per-language maps).
   static NpcData fromJson(Object? j) {
     if (j is! Map || j['npcs'] is! Map) {
       throw const FormatException('falta "npcs"');
     }
     final talks = <String, NpcTalkDef>{};
     final quests = <String, List<QuestStepDef>>{};
-    final ambient = <String, List<String>>{};
     for (final MapEntry(key: id, value: v) in (j['npcs'] as Map).entries) {
       if (id is! String || v is! Map) {
         throw FormatException('habitante inválido: $id');
       }
-      if (v.containsKey('greet') || v.containsKey('topics')) {
+      if (v.containsKey('greet') ||
+          v.containsKey('topics') ||
+          v.containsKey('ambient')) {
         talks[id] = talkFromJson(v);
       }
       if (v['quests'] is List) {
         quests[id] = [for (final s in v['quests'] as List) stepFromJson(s)];
       }
-      if (v['ambient'] is List) ambient[id] = _strings(v['ambient']);
     }
-    return NpcData(talks: talks, quests: quests, ambient: ambient);
+    return NpcData(talks: talks, quests: quests);
   }
 
   static NpcData decode(String raw) => fromJson(jsonDecode(raw));
 
+  static List<Map<String, String>> _textsToJson(List<LocalizedText> l) =>
+      [for (final x in l) x.toJson()];
+
+  static bool _blank(LocalizedText t) =>
+      t.byLocale.values.every((s) => s.isEmpty);
+
   static Map<String, Object?> talkToJson(NpcTalkDef t) => {
-        'greet': t.greet,
+        'greet': _textsToJson(t.greet),
         'topics': [for (final x in t.topics) topicToJson(x)],
         if (t.rooted) 'rooted': true,
-        if (t.decline.isNotEmpty) 'decline': t.decline,
+        if (t.decline.isNotEmpty) 'decline': _textsToJson(t.decline),
         if (t.gift.isNotEmpty) 'gift': t.gift,
+        if (t.ambient.isNotEmpty) 'ambient': _textsToJson(t.ambient),
+        if (t.night.isNotEmpty)
+          'night': {
+            for (final e in t.night.entries) e.key: e.value.toJson(),
+          },
+        if (!_blank(t.inviteAccept)) 'invite_accept': t.inviteAccept.toJson(),
+        if (!_blank(t.thanksDay) || !_blank(t.thanksNight))
+          'house_thanks': {
+            'day': t.thanksDay.toJson(),
+            'night': t.thanksNight.toJson(),
+          },
       };
 
-  static NpcTalkDef talkFromJson(Map v) => NpcTalkDef(
-        greet: _strings(v['greet']),
-        topics: [
-          for (final x in (v['topics'] as List? ?? const [])) topicFromJson(x)
-        ],
-        rooted: v['rooted'] == true,
-        decline: _strings(v['decline']),
-        gift: v['gift'] as String? ?? '',
-      );
+  static NpcTalkDef talkFromJson(Map v) {
+    final thanks = v['house_thanks'];
+    return NpcTalkDef(
+      greet: _texts(v['greet']),
+      topics: [
+        for (final x in (v['topics'] as List? ?? const [])) topicFromJson(x)
+      ],
+      rooted: v['rooted'] == true,
+      decline: _texts(v['decline']),
+      gift: v['gift'] as String? ?? '',
+      ambient: _texts(v['ambient']),
+      night: {
+        if (v['night'] case final Map n)
+          for (final e in n.entries)
+            '${e.key}': LocalizedText.fromJson(e.value),
+      },
+      inviteAccept: LocalizedText.fromJson(v['invite_accept']),
+      thanksDay: thanks is Map
+          ? LocalizedText.fromJson(thanks['day'])
+          : LocalizedText.empty,
+      thanksNight: thanks is Map
+          ? LocalizedText.fromJson(thanks['night'])
+          : LocalizedText.empty,
+    );
+  }
 
   static Map<String, Object?> topicToJson(TalkTopic t) => {
         'id': t.id,
-        'label': t.label,
-        'lines': t.lines,
+        'label': t.label.toJson(),
+        'lines': _textsToJson(t.lines),
         if (t.talks > 0) 'talks': t.talks,
         if (t.orders > 0) 'orders': t.orders,
         if (t.rep > 0) 'rep': t.rep,
         if (t.where != TalkWhere.any) 'where': t.where.name,
+        if (t.time != TalkTime.any) 'time': t.time.name,
+        if (t.action != TalkAction.none) 'action': t.action.name,
         if (t.sub.isNotEmpty) 'sub': [for (final s in t.sub) topicToJson(s)],
       };
 
   static TalkTopic topicFromJson(Object? j) {
-    if (j is! Map || j['id'] is! String || j['label'] is! String) {
+    if (j is! Map ||
+        j['id'] is! String ||
+        (j['label'] is! String && j['label'] is! Map)) {
       throw FormatException('tema inválido: $j');
     }
-    return TalkTopic(
-        j['id'] as String, j['label'] as String, _strings(j['lines']),
+    return TalkTopic(j['id'] as String, LocalizedText.fromJson(j['label']),
+        _texts(j['lines']),
         talks: _int(j['talks']),
         orders: _int(j['orders']),
         rep: _int(j['rep']),
         where:
             TalkWhere.values.where((w) => w.name == j['where']).firstOrNull ??
                 TalkWhere.any,
+        time: TalkTime.values.where((w) => w.name == j['time']).firstOrNull ??
+            TalkTime.any,
+        action: TalkAction.fromName(j['action']),
         sub: [
           for (final s in (j['sub'] as List? ?? const [])) topicFromJson(s)
         ]);
@@ -167,8 +245,8 @@ class NpcData {
         reward: j['reward'] as String?);
   }
 
-  static List<String> _strings(Object? j) =>
-      j is List ? [for (final s in j) '$s'] : const [];
+  static List<LocalizedText> _texts(Object? j) =>
+      j is List ? [for (final s in j) LocalizedText.fromJson(s)] : const [];
 
   static int _int(Object? j, [int fallback = 0]) =>
       (j as num?)?.toInt() ?? fallback;
@@ -196,12 +274,6 @@ class NpcData {
         continue;
       }
       kResidentQuests[id] = q;
-    }
-    for (final f in kBiomeFishersDefaults.values) {
-      final lines = ambient[nativeId(f.biome)];
-      if (lines != null && lines.isNotEmpty) {
-        kBiomeFishers[f.biome] = BiomeFisherDef(f.biome, f.name, lines);
-      }
     }
     return skipped;
   }
