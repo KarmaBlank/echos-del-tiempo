@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:echos_del_tiempo/game_engine/rules/quest_track_rules.dart';
@@ -77,32 +78,98 @@ void main() {
     expect(back.resident('ilda'), town.resident('ilda'));
   });
 
-  test('de noche entra a su casa; el trasnochador a veces sale', () {
-    var town = withHouse(invited('ilda'));
-    town = ResidentRules.assign(
-        town, 'ilda', ResidentRules.freeHouses(town).single.id)!;
-    expect(ResidentRules.position(town, 'ilda', 5, night: false), isNotNull);
-    expect(ResidentRules.position(town, 'ilda', 5, night: true), isNull);
-    expect(biomeNpc('ilda')!.nightOwl, isFalse);
+  TownState housed(String npc) {
+    final town = withHouse(invited(npc));
+    return ResidentRules.assign(
+        town, npc, ResidentRules.freeHouses(town).single.id)!;
+  }
 
-    var oren = withHouse(invited('oren'));
-    oren = ResidentRules.assign(
-        oren, 'oren', ResidentRules.freeHouses(oren).single.id)!;
-    expect(biomeNpc('oren')!.nightOwl, isTrue);
-    TownState onDay(int d) => oren.copyWith(sky: SkyState(day: d));
+  test('de noche entra a su casa salvo la noche que sale', () {
+    final town = housed('ilda');
+    expect(ResidentRules.position(town, 'ilda', 5, night: false), isNotNull);
+    TownState onDay(int d) => town.copyWith(sky: SkyState(day: d));
     final out = [
-      for (var d = 1; d <= 200; d++)
-        if (ResidentRules.nightOut(onDay(d), 'oren')) d
+      for (var d = 1; d <= 300; d++)
+        if (ResidentRules.nightOut(onDay(d), 'ilda')) d
     ];
-    // Baja chance: algunas noches sí, la mayoría no.
     expect(out, isNotEmpty);
-    expect(out.length, lessThan(100));
+    expect(out.length, lessThan(150));
     final inDay =
-        [for (var d = 1; d <= 200; d++) d].firstWhere((d) => !out.contains(d));
-    expect(ResidentRules.position(onDay(out.first), 'oren', 5, night: true),
+        [for (var d = 1; d <= 300; d++) d].firstWhere((d) => !out.contains(d));
+    expect(ResidentRules.position(onDay(out.first), 'ilda', 5, night: true),
         isNotNull);
     expect(
-        ResidentRules.position(onDay(inDay), 'oren', 5, night: true), isNull);
+        ResidentRules.position(onDay(inDay), 'ilda', 5, night: true), isNull);
+  });
+
+  test('salida nocturna: determinista por habitante y día', () {
+    for (final n in kBiomeNpcs) {
+      for (var d = 1; d <= 60; d++) {
+        final s = TownState(sky: SkyState(day: d));
+        final a = ResidentRules.nightOuting(s, n.id);
+        final b = ResidentRules.nightOuting(
+            TownState.fromJson(s.toJson()), n.id);
+        expect(a?.key, b?.key, reason: '${n.id} día $d');
+      }
+    }
+  });
+
+  test('todo habitante puede salir y elige un motivo propio', () {
+    for (final n in kBiomeNpcs) {
+      expect(n.nightOutings, isNotEmpty, reason: n.id);
+      expect(ResidentRules.nightOutChance(n.id), greaterThan(0));
+      final keys = <String>{};
+      for (var d = 1; d <= 400; d++) {
+        final o = ResidentRules.nightOuting(
+            TownState(sky: SkyState(day: d)), n.id);
+        if (o == null) continue;
+        expect(n.nightOutings, contains(o));
+        expect(o.key, startsWith('ui.town.npc.night.${n.id}_'));
+        keys.add(o.key);
+      }
+      // Con 400 noches salen todos sus motivos.
+      expect(keys, {for (final o in n.nightOutings) o.key}, reason: n.id);
+    }
+  });
+
+  test('tuning: Oren sale más que la base y la chance manda', () {
+    final t = ResidentRules.t;
+    expect(t.d('resNightOutOren'), greaterThan(t.d('resNightOutBase')));
+    expect(ResidentRules.nightOutChance('oren'), t.d('resNightOutOren'));
+    expect(ResidentRules.nightOutChance('ilda'), t.d('resNightOutIlda'));
+    // Sin clave propia: la base.
+    expect(ResidentRules.nightOutChance('nadie'), t.d('resNightOutBase'));
+    int count(String npc) => [
+          for (var d = 1; d <= 1000; d++)
+            if (ResidentRules.nightOut(TownState(sky: SkyState(day: d)), npc))
+              d
+        ].length;
+    for (final n in kBiomeNpcs) {
+      final want = ResidentRules.nightOutChance(n.id) * 1000;
+      expect(count(n.id), inInclusiveRange(want * 0.6, want * 1.4),
+          reason: n.id);
+    }
+    expect(count('oren'), greaterThan(count('ilda')));
+  });
+
+  test('de noche fuera: queda cerca del lugar de su motivo', () {
+    final town = housed('brann');
+    final day = [
+      for (var d = 1; d <= 400; d++)
+        if (ResidentRules.nightOuting(
+                town.copyWith(sky: SkyState(day: d)), 'brann')
+            ?.spot ==
+            TownSpot.forge)
+          d
+    ].first;
+    final s = town.copyWith(sky: SkyState(day: day));
+    final o = ResidentRules.nightOuting(s, 'brann')!;
+    final (cx, cy) = ResidentRules.nightTarget(s, 'brann', o);
+    for (final time in [0.0, 3.0, 11.0, 40.0]) {
+      final (x, y) = ResidentRules.position(s, 'brann', time, night: true)!;
+      expect((x - cx).abs(), lessThanOrEqualTo(12.001));
+      expect(y, cy);
+    }
   });
 
   test('ida y vuelta JSON del estado de mudanza', () {
