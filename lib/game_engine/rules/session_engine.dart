@@ -1,4 +1,6 @@
 import 'oficio_storage_rules.dart';
+import 'weather_rules.dart';
+import 'bait_rules.dart';
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';

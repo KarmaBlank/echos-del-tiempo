@@ -18,6 +18,9 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'seed_text.dart';
+import 'bait_text.dart';
+import 'life_collection.dart';
+import '../../../../game_engine/rules/bait_rules.dart';
 import '../world_strings.dart';
 
 /// OFICIOS → INVENTARIO de PERSONAJE (docs/specs/oficio_storage.md,
@@ -46,18 +49,20 @@ enum LifeItemsCategory {
   pescados,
   semillas,
   cosechas,
-  bestiario,
+  cebos,
   materiales
 }
 
 /// Filtros de cada bolsa: (id, clave del rótulo, prefijos de id de celda).
 const _filters = <OficioBag, List<(String, String, List<String>)>>{
   OficioBag.pesca: [
-    ('todo', 'ui.town.bag.filter.all', ['life-tool-cana', 'life-fish-', 'life-junk-']),
+    ('todo', 'ui.town.bag.filter.all', ['life-tool-cana', 'life-bait-', 'life-fish-', 'life-junk-']),
     ('canas', 'ui.town.bag.filter.rods', ['life-tool-cana']),
     ('pescados', 'ui.town.bag.filter.fish', ['life-fish-']),
     ('basura', 'ui.town.bag.filter.junk', ['life-junk-']),
-    ('bestiario', 'ui.town.bag.filter.log', ['life-log-']),
+    ('cebos', 'ui.town.bag.filter.baits', ['life-bait-']),
+    // COLECCIÓN (weather_seasons.md § 7): its own template, no cells.
+    ('coleccion', 'ui.town.bag.filter.collection', <String>[]),
   ],
   OficioBag.cultivo: [
     ('todo', 'ui.town.bag.filter.all', ['life-tool-a', 'life-tool-r', 'life-seed-', 'life-fert-', 'life-crop-']),
@@ -65,6 +70,7 @@ const _filters = <OficioBag, List<(String, String, List<String>)>>{
     ('semillas', 'ui.town.bag.filter.seeds', ['life-seed-']),
     ('abonos', 'ui.town.bag.filter.ferts', ['life-fert-']),
     ('cosechas', 'ui.town.bag.filter.crops', ['life-crop-']),
+    ('coleccion', 'ui.town.bag.filter.collection', <String>[]),
   ],
   OficioBag.herreria: [
     ('todo', 'ui.town.bag.filter.all', ['life-craft-']),
@@ -84,19 +90,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   final _filter = <OficioBag, String>{};
   var _query = '';
 
-  /// Bioma del BESTIARIO DE PESCA (fishing.md § 10).
-  String _logBiome = 'zona1';
-
-  /// Franja del BESTIARIO (`null` = todas; las sin descubrir no se
-  /// filtran por hora: su horario es "???").
-  DayTime? _logTime;
-
   String _biomeLabel(String id) => lifeBiomeLabel(context, id);
-
-  static List<String> get _logBiomes => {
-        for (final d in kFish.values)
-          if (d.biome != kWaterJunkBiome) d.biome
-      }.toList();
 
   @override
   Widget build(BuildContext context) {
@@ -113,15 +107,12 @@ class _LifeItemsViewState extends State<LifeItemsView> {
     final fid = _filter[_bag] ?? 'todo';
     final f =
         filters.firstWhere((e) => e.$1 == fid, orElse: () => filters.first);
-    final log = f.$1 == 'bestiario';
+    final collection = f.$1 == 'coleccion';
     final q = _query.trim().toLowerCase();
     final shown = [
       for (final c in all)
         if (f.$3.any(c.id.startsWith) &&
-            (q.isEmpty || c.search.toLowerCase().contains(q)) &&
-            (!log ||
-                (c.id.startsWith('life-log-$_logBiome-') &&
-                    (_logTime == null || _logTimeOf(c.id) == _logTime))))
+            (q.isEmpty || c.search.toLowerCase().contains(q)))
           c
     ];
     final p = widget.profile;
@@ -160,29 +151,13 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   onPressed: () => setState(() => _filter[_bag] = e.$1)),
           ]),
         ],
-        if (log) ...[
-          SizedBox(height: DsSpace.xs),
-          Wrap(spacing: DsSpace.xs, children: [
-            for (final b in _logBiomes)
-              DsButton('${_biomeLabel(b)} ${_logFound(b)}/${_logTotal(b)}',
-                  key: ValueKey('life-log-biome-$b'),
-                  size: DsButtonSize.compact,
-                  selected: _logBiome == b,
-                  onPressed: () => setState(() => _logBiome = b)),
-          ]),
-          SizedBox(height: DsSpace.xs),
-          Wrap(spacing: DsSpace.xs, children: [
-            for (final t in [null, ...DayTime.values])
-              DsButton((t?.text ?? context.t('ui.town.bag.all_hours')).toUpperCase(),
-                  key: ValueKey('life-log-time-${t?.name ?? 'todas'}'),
-                  size: DsButtonSize.compact,
-                  selected: _logTime == t,
-                  onPressed: () => setState(() => _logTime = t)),
-          ]),
-        ],
         SizedBox(height: DsSpace.xs),
         Expanded(
-          child: LifeItemGrid(
+          child: collection
+              ? (_bag == OficioBag.pesca
+                  ? fishCollection(context, p)
+                  : cropCollection(context, p))
+              : LifeItemGrid(
             key: ValueKey('life-list-${_bag.name}-${f.$1}'),
             groups: [LifeItemGroup(null, shown)],
             empty: q.isEmpty ? context.t('ui.town.bag.empty') : context.t('ui.town.bag.no_results'),
@@ -195,17 +170,14 @@ class _LifeItemsViewState extends State<LifeItemsView> {
 
   static const _icon = LifeItemGrid.iconSize;
 
-  DayTime? _logTimeOf(String cellId) {
-    final id = cellId.split('-').last;
-    if (!widget.profile.life.discovered(id)) return null;
-    return LifeTimeRules.fishTime(id);
+  /// Name of a bait recipe's extra item (a fish or a crop key).
+  String _recipeItem(String bait) {
+    final item = kBaits[bait]!.recipe.item;
+    if (item == null) return '';
+    final pc = parseCropKey(item);
+    if (pc != null) return pc.$1.text;
+    return kFish[item]?.text ?? item;
   }
-
-  int _logTotal(String b) =>
-      kFish.values.where((d) => d.biome == b).length;
-  int _logFound(String b) => kFish.values
-      .where((d) => d.biome == b && widget.profile.life.discovered(d.id))
-      .length;
 
   List<LifeItemCellData> _cells(LifeItemsCategory cat) {
     final c = widget.controller;
@@ -333,55 +305,51 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 ),
               ),
         ];
-      case LifeItemsCategory.bestiario:
+      case LifeItemsCategory.cebos:
+        // Cebos (fishing.md § 14): owned ones, plus the craftable ones.
         return [
-          for (final d in kFish.values)
-            if (d.biome != kWaterJunkBiome)
-              if (life.log[d.id] case final rec?)
-                LifeItemCellData(
-                  id: 'life-log-${d.biome}-${d.id}',
-                  icon: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
-                  border: fishRarityColor(d.rarity),
-                  search: '${d.text} ${d.name}',
-                  caption: context.t('ui.town.bag.cm', {'n': rec}),
-                  detail: LifeItemDetail(
-                    name: d.text,
-                    nameColor: fishRarityColor(d.rarity),
-                    tags: [
-                      (_biomeLabel(d.biome), DsColors.textSecondary),
-                      (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
-                    ],
-                    lines: [
-                      context.t('ui.town.bag.record', {'n': rec}),
-                      context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
-                      context.t('ui.town.bag.bites', {'time': LifeTimeRules.fishTimeText(d.id)}),
-                      context.t('ui.town.bag.worth', {'n': d.price}),
-                    ],
-                  ),
-                )
-              else
-                LifeItemCellData(
-                  id: 'life-log-${d.biome}-${d.id}',
-                  icon: ColorFiltered(
-                    colorFilter: const ColorFilter.mode(
-                        DsColors.textSecondary, BlendMode.srcIn),
-                    child: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
-                  ),
-                  border: DsColors.textSecondary,
-                  search: '',
-                  caption: '?',
-                  detail: LifeItemDetail(
-                    name: context.t('ui.town.bag.undiscovered'),
-                    nameColor: DsColors.textSecondary,
-                    tags: [(_biomeLabel(d.biome), DsColors.textSecondary)],
-                    lines: [
-                      context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
-                      context.t('ui.town.bag.bites', {'time': '???'}),
-                      context.t('ui.town.bag.catch_in', {'place': _biomeLabel(d.biome).toLowerCase()}),
-                      context.t('ui.town.bag.first_catch'),
-                    ],
-                  ),
+          for (final b in kBaits.values)
+            if (life.baitCount(b.id) > 0 ||
+                BaitRules.craftBlock(widget.profile, b.id) == null)
+              LifeItemCellData(
+                id: 'life-bait-${b.id}',
+                icon: LifeIcon('cebo_${b.id}', LifeIconKind.pescado,
+                    size: _icon),
+                border: fishRarityColor(b.rarity),
+                search: '${baitText(b.id)} ${b.name}',
+                count: life.baitCount(b.id) > 0 ? life.baitCount(b.id) : null,
+                equipped: c.activeBait == b.id,
+                detail: LifeItemDetail(
+                  name: baitText(b.id),
+                  nameColor: fishRarityColor(b.rarity),
+                  tags: [
+                    (context.t('ui.town.trader.tag_bait'),
+                        DsColors.textSecondary),
+                    (b.rarity.text.toUpperCase(), fishRarityColor(b.rarity)),
+                  ],
+                  lines: [
+                    ...baitLines(context, b.id),
+                    baitRecipeLine(context, b.id, _recipeItem(b.id)),
+                  ],
+                  actions: [
+                    if (life.baitCount(b.id) > 0)
+                      c.activeBait == b.id
+                          ? DsTag(context.t('ui.town.bait.on_hook'),
+                              color: DsColors.reward)
+                          : DsButton(context.t('ui.town.bag.pick'),
+                              key: ValueKey('life-bait-pick-${b.id}'),
+                              size: DsButtonSize.compact,
+                              onPressed: () => c.selectBait(b.id)),
+                    DsButton(context.t('ui.town.bait.craft'),
+                        key: ValueKey('life-bait-craft-${b.id}'),
+                        size: DsButtonSize.compact,
+                        onPressed:
+                            BaitRules.craftBlock(widget.profile, b.id) == null
+                                ? () => c.craftBait(b.id)
+                                : null),
+                  ],
                 ),
+              ),
         ];
       case LifeItemsCategory.semillas:
         return [
@@ -408,6 +376,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     context.t('ui.town.trader.grows_in', {'min': (d.growSec / 60).round()}),
                     context.t('ui.town.bag.origin', {'place': _biomeLabel(d.biome).toLowerCase()}),
                     LifeTimeRules.cropAffinity(d.id).text,
+                    ...seedSeasonLines(context, d),
                     context.t('ui.town.bag.yields', {'n': d.price}),
                   ],
                   actions: [

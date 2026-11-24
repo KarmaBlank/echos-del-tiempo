@@ -94,7 +94,8 @@ abstract final class FishingRules {
       bool auto = false,
       bool noLegend = false,
       double epicMult = 1,
-      int pity = 0}) {
+      int pity = 0,
+      double sizeBonus = 0}) {
     final noLeg = auto || noLegend;
     final after = t.i('pityAfter');
     if (!noLeg && after > 0 && pity >= after) return FishRarity.legendario;
@@ -122,7 +123,8 @@ abstract final class FishingRules {
       bool auto = false,
       bool noLegend = false,
       double epicMult = 1,
-      int pity = 0}) {
+      int pity = 0,
+      double sizeBonus = 0}) {
     var r = rollRarity(rand(),
         rareBonus: rareBonus,
         auto: auto,
@@ -137,7 +139,9 @@ abstract final class FishingRules {
         final f = of[(rand() * of.length).floor().clamp(0, of.length - 1)];
         // Tamaño: auto-pesca saca los chicos (mitad baja del rango).
         final span = f.maxCm - f.minCm;
-        final u = rand() * (auto ? 0.5 : 1);
+        // Cebo (§ 14): pushes the size toward the top of the range.
+        var u = rand() * (auto ? 0.5 : 1);
+        u += (1 - u) * sizeBonus.clamp(0.0, 1.0);
         return FishCatch(f.id, f.minCm + (u * span).round());
       }
       if (r == FishRarity.comun) return FishCatch(pool.first.id, pool.first.minCm);

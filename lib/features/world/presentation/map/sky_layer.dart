@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
@@ -81,14 +82,14 @@ class MapSkyLayer {
       double density = 1,
       double flash = 1,
       bool motion = true,
-      bool tint = true}) {
+      bool tint = true,
+      Weather? weather,
+      bool precipitation = true}) {
     final dark = SkyRules.darkness(sky);
-    final w = SkyRules.now(sky);
-    final overcast = switch (w) {
-      Weather.tormenta => 0.32,
-      Weather.lluvia => 0.18,
-      Weather.despejado => 0.0,
-    };
+    // [weather]: the weather of the place on screen (weather_seasons.md
+    // § 2); by default, the town's.
+    final w = weather ?? SkyRules.now(sky);
+    final overcast = overcastOf(w);
     final alpha = math.max(dark * 0.72, overcast);
     final flies = dark > 0.3 ? fireflies(view, t, density) : const <(Offset, double)>[];
     // Sin [tint]: la noche la pone la capa de luz (lighting.md § 4).
@@ -141,8 +142,91 @@ class MapSkyLayer {
         c.drawRect(Rect.fromLTWH(o.dx.roundToDouble(), o.dy.roundToDouble(), 1, 1), dot);
       }
     }
-    if (w.wet) _rain(c, view, t, w == Weather.tormenta, density, motion);
+    // No rain or snow particles on hot ground (weather_seasons.md § 2.3).
+    if (precipitation && w.wet) {
+      _rain(c, view, t, w == Weather.tormenta, density, motion);
+    }
+    if (precipitation && w == Weather.snow) _snow(c, view, t, density, motion);
+    if (w == Weather.fog) _fog(c, view, t, motion);
     _bolts(c, view, t, flash);
+  }
+
+  /// How much the weather darkens the day (0–1 of the overcast tint):
+  /// storm darkest, then rain, fog and snow.
+  static double overcastOf(Weather w) => switch (w) {
+        Weather.tormenta => 0.32,
+        Weather.lluvia => 0.18,
+        Weather.fog => 0.12,
+        Weather.snow => 0.1,
+        Weather.despejado => 0.0,
+      };
+
+  /// Max snowflakes per frame (the point buffer is allocated once).
+  static const maxFlakes = 140;
+  final _flakes = Float32List(maxFlakes * 2);
+  static final _snowPaint = Paint()
+    ..isAntiAlias = false
+    ..color = SkyPalette.snow
+    ..strokeWidth = 2
+    ..strokeCap = StrokeCap.square;
+  static final _fogPaint = Paint()..isAntiAlias = false;
+
+  /// Writes up to [n] snowflakes inside [view] (px of the world) into
+  /// [out] as x, y pairs and returns how many. Pure: same [t], same
+  /// flakes; every flake is inside the visible area.
+  static int snowFlakes(Rect view, double t, int n, Float32List out,
+      {bool motion = true}) {
+    final k = math.min(n, out.length ~/ 2);
+    if (k <= 0 || view.width <= 0 || view.height <= 0) return 0;
+    final speed = motion ? 0.05 : 0.02;
+    final wv = view.width, hv = view.height;
+    for (var i = 0; i < k; i++) {
+      final h = _hash(i, 11);
+      final ph = (h >> 6) % 628 / 100;
+      final sway = motion ? math.sin(t / 900 + ph) * 6 : 0.0;
+      out[i * 2] = view.left + ((h % 1000) / 1000 * wv + sway + wv) % wv;
+      out[i * 2 + 1] =
+          view.top + ((h >> 10) % 1000 / 1000 * hv + t * speed) % hv;
+    }
+    return k;
+  }
+
+  void _snow(Canvas c, Rect view, double t, double density, bool motion) {
+    final n = snowFlakes(view, t, scaledCount(110, density), _flakes,
+        motion: motion);
+    if (n <= 0) return;
+    c.drawRawPoints(ui.PointMode.points,
+        _flakeView(n), _snowPaint);
+  }
+
+  // The view over the first n flakes, rebuilt only when n changes (the
+  // density setting), so a steady frame allocates nothing.
+  Float32List? _view;
+  int _viewN = -1;
+  Float32List _flakeView(int n) {
+    if (n != _viewN || _view == null) {
+      _viewN = n;
+      _view = Float32List.sublistView(_flakes, 0, n * 2);
+    }
+    return _view!;
+  }
+
+  /// A cheap fog veil: one translucent fill over the view plus two slow
+  /// drifting bands (only the visible area is drawn).
+  void _fog(Canvas c, Rect view, double t, bool motion) {
+    _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.22);
+    c.drawRect(view, _fogPaint);
+    final drift = motion ? t / 80 : 0.0;
+    for (var i = 0; i < 2; i++) {
+      final hb = view.height * 0.18;
+      final y = view.top +
+          ((view.height * (0.25 + 0.45 * i) + drift * (i == 0 ? 1 : 0.6)) %
+              view.height);
+      _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.14);
+      c.drawRect(
+          Rect.fromLTRB(view.left, y, view.right, math.min(view.bottom, y + hb)),
+          _fogPaint);
+    }
   }
 
   /// Cuánto ilumina ahora el último rayo (0–1, lighting.md § 5.2).

@@ -834,7 +834,7 @@ abstract final class TownRules {
   /// Lo que hará el granjero [i] de [b] en la próxima vuelta: la primera
   /// tarea prendida, en orden fijo (plantar, regar, cosechar), que tenga
   /// algo para hacer en su área. `null` = descansa.
-  static HelperTask? farmerNext(TownBuild b, int i) {
+  static HelperTask? farmerNext(TownBuild b, int i, {Season? season}) {
     final m = b.taskMask(i);
     bool on(HelperTask t) => m & t.bit != 0;
     final plots = [
@@ -851,7 +851,8 @@ abstract final class TownRules {
     }
     if (on(HelperTask.cosechar) &&
         !chestFull(b) &&
-        plots.any((p) => p != null && p.planted && FarmingRules.ripe(p))) {
+        plots.any((p) =>
+            p != null && p.planted && FarmingRules.harvestable(p, season))) {
       return HelperTask.cosechar;
     }
     return null;
@@ -866,8 +867,10 @@ abstract final class TownRules {
   /// ([rareSeed]) para la huerta.
   static (TownBuild, List<(int, int, Harvest)>) farmerCycle(
       TownBuild b0, int i, Harvest Function(FarmPlot) harvest,
-      {double Function()? rand, String Function()? rareSeed}) {
-    final task = farmerNext(b0, i);
+      {double Function()? rand,
+      String Function()? rareSeed,
+      Season? season}) {
+    final task = farmerNext(b0, i, season: season);
     var b = b0;
     final out = <(int, int, Harvest)>[];
     if (task == null) return (b, out);
@@ -901,7 +904,11 @@ abstract final class TownRules {
               waterer: 'Granjero');
           worked++;
         case HelperTask.cosechar:
-          if (pl == null || !pl.planted || !FarmingRules.ripe(pl)) continue;
+          if (pl == null ||
+              !pl.planted ||
+              !FarmingRules.harvestable(pl, season)) {
+            continue;
+          }
           if (chestFull(b)) break;
           final h = harvest(pl);
           var q = h.quality;

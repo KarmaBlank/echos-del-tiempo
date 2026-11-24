@@ -499,3 +499,17 @@ Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 - SEMILLAS muestra origen, tiempo de crecimiento, afinidad y rinde.
 - Pendiente: registro de cultivos descubiertos ("???" hasta la primera
   cosecha) y filtros por bioma y hora en SEMILLAS / COSECHAS.
+
+## 15. Estaciones de los cultivos (protocolo 69)
+
+- `CropDef.seasons` (por defecto primavera, verano, otoño). nabo_escarcha,
+  flor_cristal y lirio_eco crecen todo el año.
+- Fuera de estación el cultivo **se frena** (crecimiento × 0): no muere ni
+  pierde lo crecido. Vuelve a crecer al volver su estación.
+- Solo de invierno (`winterOnly`): rabano_nieve (común, semilla 7),
+  col_invierno (común, semilla 10), puerro_helado (raro, semilla 40).
+  Solo se cosechan en invierno (`FarmingRules.harvestable`), también por
+  el granjero.
+- Las semillas muestran sus estaciones en la tienda y en los tooltips.
+- Offline: solo crece mientras el host corre la sesión.
+- COLECCIÓN de cultivos: weather_seasons.md § 7.

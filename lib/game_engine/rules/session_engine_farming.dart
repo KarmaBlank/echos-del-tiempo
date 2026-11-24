@@ -182,7 +182,11 @@ extension _FarmingOp on _Op {
         _rand,
         t.copyWith(plots: {
           for (final e in t.plots.entries)
-            e.key: FarmingRules.missionGrow(e.value),
+            e.key: e.value.seed != null &&
+                    !LifeTimeRules.cropInSeason(
+                        e.value.seed!, WeatherRules.season(t.sky.day))
+                ? e.value
+                : FarmingRules.missionGrow(e.value),
         }));
   }
 
@@ -216,7 +220,8 @@ extension _FarmingOp on _Op {
             (pl) =>
                 FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!,
             rand: _rand,
-            rareSeed: () => FarmingRules.rareSeed(_rand));
+            rareSeed: () => FarmingRules.rareSeed(_rand),
+            season: WeatherRules.season(s.town.sky.day));
         b = nb;
         for (final (x, y, h) in hs) {
           events.add(CropHarvestedEvent(owner.id, h.crop.id, h.quality.index,
@@ -328,6 +333,12 @@ extension _FarmingOp on _Op {
       case FarmOp.harvest:
         final pl = plots[key];
         if (pl == null || !FarmingRules.ripe(pl)) return false;
+        // Winter crops: only harvested in winter (farming.md § 15).
+        if (!FarmingRules.harvestable(pl, WeatherRules.season(s.town.sky.day))) {
+          say('${kCrops[pl.seed]?.name ?? 'Ese cultivo'} solo se cosecha en '
+              'invierno.');
+          return false;
+        }
         _fa.lastWork[p.id] = s.time;
         // Queda arada y vacía, lista para replantar.
         s.town = s.town.copyWith(plots: {...plots, key: const FarmPlot()});
@@ -476,6 +487,18 @@ extension _FarmingOp on _Op {
       case FarmShopOp.selectSeed:
         return id != null &&
             _profileChange(p, FarmingRules.selectSeed(prof, id));
+      case FarmShopOp.buyBait:
+        return id != null && _profileChange(p, BaitRules.buy(prof, id, a.n));
+      case FarmShopOp.selectBait:
+        return id != null && _profileChange(p, BaitRules.select(prof, id));
+      case FarmShopOp.cycleBait:
+        return _profileChange(p, BaitRules.cycle(prof));
+      case FarmShopOp.craftBait:
+        if (id == null || !_profileChange(p, BaitRules.craft(prof, id))) {
+          return false;
+        }
+        say('${p.name} preparó ${kBaits[id]!.name}.');
+        return true;
       case FarmShopOp.buyAbono:
         return id != null &&
             _profileChange(p, FarmingRules.buyFert(prof, id, a.n));

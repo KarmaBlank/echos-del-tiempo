@@ -8,6 +8,8 @@ import 'editor/animations_page.dart';
 import 'editor/fx_editor_controller.dart';
 import 'editor/layout_editor_controller.dart';
 import 'editor/layout_page.dart';
+import 'editor/climate_editor_controller.dart';
+import 'editor/climate_page.dart';
 import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
 import 'editor/events_editor_controller.dart';
@@ -20,7 +22,11 @@ import 'monitoring_page.dart';
 import 'patch_page.dart';
 
 /// Áreas del Editor (docs/specs/game_editor.md § 6).
-enum EditorArea { monitoring, balance, visuals, layout, screens, npcs, events }
+enum EditorArea { monitoring, balance, visuals, layout, screens, npcs, events,
+  climate }
+
+/// Tab label of the CLIMA area (weather_seasons.md § 8).
+const _climateTab = 'CLIMA';
 
 /// El Editor del juego (game_editor.md; antes "admin de balance",
 /// balance_admin.md § 5): Monitoreo · Balance · Visuales. Tema Material
@@ -36,6 +42,7 @@ class AdminApp extends StatelessWidget {
       this.screens,
       this.npcs,
       this.events,
+      this.climate,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
@@ -51,6 +58,8 @@ class AdminApp extends StatelessWidget {
 
   /// EVENTOS (world_events.md § 7; `null`: sin área).
   final EventsEditorController? events;
+  /// CLIMA (weather_seasons.md § 8; `null`: sin área de clima).
+  final ClimateEditorController? climate;
 
   /// Visuales → Sprites (`null`: área sin catálogo, p. ej. tests de
   /// balance).
@@ -83,6 +92,7 @@ class AdminApp extends StatelessWidget {
             screens: screens,
             npcs: npcs,
             events: events,
+            climate: climate,
             animateFx: animateFx,
             initialArea: initialArea,
             initialVisualTab: initialVisualTab),
@@ -99,6 +109,7 @@ class AdminShell extends StatefulWidget {
       this.screens,
       this.npcs,
       this.events,
+      this.climate,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
@@ -115,6 +126,8 @@ class AdminShell extends StatefulWidget {
 
   /// EVENTOS (world_events.md § 7; `null`: sin área).
   final EventsEditorController? events;
+  /// CLIMA (weather_seasons.md § 8; `null`: sin área de clima).
+  final ClimateEditorController? climate;
 
   /// Visuales → Animaciones (`null`: sin catálogo de fx).
   final FxEditorController? animations;
@@ -157,6 +170,7 @@ class _AdminShellState extends State<AdminShell> {
       case EditorArea.screens:
       case EditorArea.npcs:
       case EditorArea.events:
+      case EditorArea.climate:
         break;
     }
   }
@@ -171,6 +185,7 @@ class _AdminShellState extends State<AdminShell> {
         if (widget.animations != null) widget.animations!,
         if (widget.npcs != null) widget.npcs!,
         if (widget.events != null) widget.events!,
+        if (widget.climate != null) widget.climate!,
       ]),
       builder: (context, _) {
         final pending = c.pendingChanges.length;
@@ -197,6 +212,8 @@ class _AdminShellState extends State<AdminShell> {
                       badge: widget.npcs?.dirty ?? false ? '!' : null),
                   DsTab('EVENTOS',
                       badge: widget.events?.dirty ?? false ? '!' : null),
+                  DsTab(_climateTab,
+                      badge: widget.climate?.dirty ?? false ? '!' : null),
                 ],
               ),
               actions: [
@@ -243,6 +260,9 @@ class _AdminShellState extends State<AdminShell> {
         return ev == null
             ? Center(child: Text('SIN ÁREA DE EVENTOS', style: DsText.detail()))
             : EventsPage(c: ev);
+      case EditorArea.climate:
+        final cl = widget.climate;
+        return cl == null ? const SizedBox.shrink() : ClimatePage(c: cl);
       case EditorArea.layout:
         final l = widget.layouts;
         return l == null

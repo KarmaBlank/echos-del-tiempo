@@ -85,6 +85,7 @@ import '../../characters/data/account_repository.dart';
 import '../../characters/domain/stash.dart';
 import '../../characters/presentation/characters_providers.dart';
 import '../../../game_engine/data/fishing_catalog.dart';
+import '../../../game_engine/rules/bait_rules.dart';
 import '../../../game_engine/rules/fishing_rules.dart';
 import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
@@ -2008,6 +2009,29 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool selectSeed(String id) =>
       _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
+
+  // ---- Cebos (fishing.md § 14) ----
+
+  /// The bait on the hook (the picked one, else the best owned).
+  String? get activeBait {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? null : BaitRules.active(p);
+  }
+
+  List<String> get ownedBaits {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? const [] : BaitRules.owned(p);
+  }
+
+  /// CEBO slot click / F with the rod out: the next owned bait.
+  bool cycleBait() => ownedBaits.length > 1 &&
+      _apply(const FarmShopAction(FarmShopOp.cycleBait));
+  bool selectBait(String id) =>
+      _apply(FarmShopAction(FarmShopOp.selectBait, id: id));
+  bool buyBait(String id, [int n = 1]) =>
+      _apply(FarmShopAction(FarmShopOp.buyBait, id: id, n: n));
+  bool craftBait(String id) =>
+      _apply(FarmShopAction(FarmShopOp.craftBait, id: id));
   bool stockFish(String species, [String? lakeId]) =>
       _apply(TownAction(TownOp.stock, id: species, target: lakeId));
   // ---- Ayudantes (farming.md § 8, v0.25.5) ----
@@ -2541,9 +2565,12 @@ class SessionController extends StateNotifier<SessionView?> {
     final f = MapFishing.start(
         engine.mapFor(s), local.x, local.y, local.fx, local.fy,
         rand: _fishRand.nextDouble,
-        biteBonus: b.bite,
+        biteBonus: b.bite +
+            (BaitRules.active(p) == null
+                ? 0.0
+                : BaitRules.bite(BaitRules.active(p)!)),
         zoneBonus: b.zone,
-        biteChance: SkyRules.biteChance(s.town.sky));
+        biteChance: SkyRules.biteChance(s.town.sky, s.place));
     if (f == null) return false;
     _fishing = f;
     _fishPrev = f.phase;
@@ -3037,6 +3064,13 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_panel == null && nearFarm && key == LogicalKeyboardKey.keyR) {
       cycleFarmHand(HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
       return true;
+    }
+    // F with the rod out: next bait (fishing.md § 14.5).
+    if (_panel == null &&
+        farmTile == null &&
+        activeTool == ActiveTool.rod &&
+        key == LogicalKeyboardKey.keyF) {
+      return cycleBait();
     }
     if (_panel == null && farmTile != null) {
       if (key == LogicalKeyboardKey.keyF) {

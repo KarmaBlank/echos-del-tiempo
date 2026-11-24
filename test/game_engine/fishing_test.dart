@@ -331,6 +331,24 @@ void main() {
       expect(e.apply(s, 'p0', const FishAutoAction(true)), isNull);
     });
 
+    test('auto-fishing spends one bait per catch (fishing.md § 14)', () {
+      final e = sessionEngine();
+      final prof = newProfile('Ana', 'guerrero');
+      var s = e
+          .addPlayer(e.create(), 'p0',
+              prof.copyWith(life: prof.life.addBait('lombriz', 50)))!
+          .state;
+      s = moveTo(e, s, 'p0', x, y);
+      s = act(e, s, 'p0', const FishLineAction(FishLine(FishLineStage.rod)));
+      s = act(e, s, 'p0', const FishAutoAction(true));
+      final log = <SessionEvent>[];
+      s = wait(e, s, 600, log: log);
+      final caught = log.whereType<FishCaughtEvent>().length;
+      expect(caught, greaterThan(0));
+      expect(s.players['p0']!.profile.life.baitCount('lombriz'),
+          50 - caught);
+    });
+
     test('catches with penalties: no legendary, pity untouched, less XP', () {
       // Pity already full: a manual cast would be a sure legendary.
       final after = FishingRules.t.i('pityAfter');

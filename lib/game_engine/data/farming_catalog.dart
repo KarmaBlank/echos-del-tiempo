@@ -1,9 +1,11 @@
 // Cultivos, semillas y herramientas de la huerta (docs/specs/farming.md
 // § 2 y § 4). Datos puros: los lee `FarmingRules`; la UI solo los muestra.
 
-import 'fishing_catalog.dart' show FishRarity;
+import 'fishing_catalog.dart'
+    show FishRarity, Season, kAllSeasons, kWarmSeasons;
 
-export 'fishing_catalog.dart' show FishRarity;
+export 'fishing_catalog.dart'
+    show FishRarity, Season, kAllSeasons, kWarmSeasons;
 
 /// Calidad de una cosecha (farming.md § 3): normal, rara, épica o
 /// legendaria. El precio y la XP suben con la calidad
@@ -51,7 +53,16 @@ class CropDef {
       required this.price,
       required this.xp,
       this.seedPrice = 0,
-      this.lore = ''});
+      this.lore = '',
+      this.seasons = kWarmSeasons});
+
+  /// Seasons when it grows (farming.md § 15): out of season a planted
+  /// crop stalls (it does not die) until its season comes back. Most
+  /// crops skip winter; winter crops only grow and ripen in winter.
+  final Set<Season> seasons;
+
+  /// Only grows in winter (and only then can it be harvested).
+  bool get winterOnly => seasons.length == 1 && seasons.contains(Season.winter);
 
   final String id;
   final String name;
@@ -186,6 +197,18 @@ const kCrops = <String, CropDef>{
       FishRarity.legendario,
       biome: 'zona1', growSec: 1800, price: 1100, xp: 175,
       lore: 'Creció cuando el pasado era más avanzado que el presente.'),
+  // Winter crops (weather_seasons.md § 5, v0.44.0): they only grow in
+  // winter, and only then can they be harvested.
+  'rabano_nieve': CropDef('rabano_nieve', 'Rábano de nieve', FishRarity.comun,
+      biome: 'zona1', growSec: 180, price: 18, xp: 8, seedPrice: 7,
+      seasons: {Season.winter}),
+  'col_invierno': CropDef('col_invierno', 'Col de invierno', FishRarity.comun,
+      biome: 'zona1', growSec: 280, price: 26, xp: 10, seedPrice: 10,
+      seasons: {Season.winter}),
+  'puerro_helado': CropDef('puerro_helado', 'Puerro helado', FishRarity.raro,
+      biome: 'zona1', growSec: 500, price: 70, xp: 20, seedPrice: 40,
+      seasons: {Season.winter},
+      lore: 'Lo dulce le sale con la primera helada.'),
   // Semillas exclusivas del Bosque (overworld_biomes.md § 3.3): salen de
   // recolectar y se plantan en la huerta del pueblo; no se venden.
   'helecho_dulce': CropDef('helecho_dulce', 'Helecho dulce', FishRarity.comun,
@@ -215,12 +238,15 @@ const kCrops = <String, CropDef>{
       lore: 'Da frutos que maduran en una época que ya pasó.'),
   // Semillas exclusivas de CAVERNAS (overworld_biomes.md § 3.3).
   'nabo_escarcha': CropDef('nabo_escarcha', 'Nabo de escarcha', FishRarity.comun,
-      biome: 'cavernas', growSec: 420, price: 46, xp: 14),
+      biome: 'cavernas', growSec: 420, price: 46, xp: 14,
+      seasons: kAllSeasons),
   'flor_cristal': CropDef('flor_cristal', 'Flor de cristal', FishRarity.raro,
-      biome: 'cavernas', growSec: 780, price: 115, xp: 30),
+      biome: 'cavernas', growSec: 780, price: 115, xp: 30,
+      seasons: kAllSeasons),
   'lirio_eco': CropDef('lirio_eco', 'Lirio del eco', FishRarity.epico,
       biome: 'cavernas', growSec: 1400, price: 320, xp: 70,
-      lore: 'Repite su perfume un rato después de cortarlo.'),
+      lore: 'Repite su perfume un rato después de cortarlo.',
+      seasons: kAllSeasons),
   // Semillas exclusivas de GRIETA (overworld_biomes.md § 3.3).
   'chile_volcan': CropDef('chile_volcan', 'Chile de volcán', FishRarity.comun,
       biome: 'grieta', growSec: 460, price: 60, xp: 16),

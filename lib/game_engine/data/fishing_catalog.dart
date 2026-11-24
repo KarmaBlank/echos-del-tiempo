@@ -1,6 +1,10 @@
 // Peces y cañas (docs/specs/fishing.md § 2 y § 4). Datos puros: los lee
 // `FishingRules`; la UI solo los muestra.
 
+import '../models/sky.dart';
+
+export '../models/sky.dart' show Season, Weather, kAllSeasons, kWarmSeasons;
+
 /// Rareza de un pez o de una caña (fishing.md § 2).
 enum FishRarity {
   comun('común'),
@@ -26,7 +30,23 @@ class FishDef {
       required this.maxCm,
       required this.price,
       required this.xp,
-      this.lore = ''});
+      this.lore = '',
+      this.seasons = kAllSeasons,
+      this.weather,
+      this.visitor = false});
+
+  /// Seasons when it bites (weather_seasons.md § 4): out of season it
+  /// never bites, not even off-hours.
+  final Set<Season> seasons;
+
+  /// Weather it needs (`null` = any, or the time rule of fishing.md
+  /// § 13). Set here, it is strict: only in that weather.
+  final Weather? weather;
+
+  /// Seasonal / weather visitor (§ 4.2): not part of any stored lake
+  /// list; it joins the lakes of its [biome] while its season and
+  /// weather hold.
+  final bool visitor;
 
   final String id;
   final String name;
@@ -99,9 +119,11 @@ const kFish = <String, FishDef>{
   'perca_rayada': FishDef('perca_rayada', 'Perca rayada', FishRarity.comun,
       biome: 'zona1', minCm: 15, maxCm: 30, price: 15, xp: 7),
   'carpa_musgo': FishDef('carpa_musgo', 'Carpa de musgo', FishRarity.comun,
-      biome: 'zona1', minCm: 20, maxCm: 45, price: 18, xp: 8),
+      biome: 'zona1', minCm: 20, maxCm: 45, price: 18, xp: 8,
+      seasons: kWarmSeasons),
   'trucha_cobre': FishDef('trucha_cobre', 'Trucha de cobre', FishRarity.raro,
-      biome: 'zona1', minCm: 25, maxCm: 50, price: 45, xp: 16),
+      biome: 'zona1', minCm: 25, maxCm: 50, price: 45, xp: 16,
+      seasons: {Season.autumn, Season.winter, Season.spring}),
   'bagre_ruinas': FishDef('bagre_ruinas', 'Bagre de las ruinas',
       FishRarity.raro,
       biome: 'zona1', minCm: 30, maxCm: 70, price: 55, xp: 18,
@@ -140,7 +162,8 @@ const kFish = <String, FishDef>{
       FishRarity.legendario,
       biome: 'bosque', minCm: 70, maxCm: 130, price: 1100, xp: 170,
       lore: 'Remonta un río que todavía no existe: viene del futuro a '
-          'desovar en el pasado, y siempre llega.'),
+          'desovar en el pasado, y siempre llega.',
+      seasons: {Season.autumn, Season.winter}),
   // Lago de RUINAS (overworld_biomes.md § 3, v0.29.0).
   'carpa_cobre': FishDef('carpa_cobre', 'Carpa de cobre', FishRarity.comun,
       biome: 'ruinas', minCm: 12, maxCm: 30, price: 30, xp: 10),
@@ -167,7 +190,8 @@ const kFish = <String, FishDef>{
       lore: 'Su eco llega al anzuelo antes que él.'),
   'pez_invierno': FishDef('pez_invierno', 'Pez del Invierno que Vendrá', FishRarity.legendario,
       biome: 'cavernas', minCm: 80, maxCm: 160, price: 2100, xp: 270,
-      lore: 'Un eco del futuro: el frío que todavía no llegó.'),
+      lore: 'Un eco del futuro: el frío que todavía no llegó.',
+      seasons: {Season.autumn, Season.winter}),
   // Lago de GRIETA (overworld_biomes.md § 3, v0.29.0).
   'pez_ceniza': FishDef('pez_ceniza', 'Pez ceniza', FishRarity.comun,
       biome: 'grieta', minCm: 10, maxCm: 26, price: 62, xp: 16),
@@ -177,7 +201,8 @@ const kFish = <String, FishDef>{
       biome: 'grieta', minCm: 20, maxCm: 50, price: 170, xp: 38),
   'dorado_igneo': FishDef('dorado_igneo', 'Dorado ígneo', FishRarity.epico,
       biome: 'grieta', minCm: 55, maxCm: 120, price: 450, xp: 90,
-      lore: 'Brilla como el mecanismo que calienta la grieta.'),
+      lore: 'Brilla como el mecanismo que calienta la grieta.',
+      seasons: kWarmSeasons),
   'pez_ultimo_fuego': FishDef('pez_ultimo_fuego', 'Pez del Último Fuego', FishRarity.legendario,
       biome: 'grieta', minCm: 80, maxCm: 170, price: 2800, xp: 330,
       lore: 'Viene del día en que se apagó el pasado.'),
@@ -185,7 +210,8 @@ const kFish = <String, FishDef>{
   'pez_eco': FishDef('pez_eco', 'Pez eco', FishRarity.comun,
       biome: 'abismo', minCm: 12, maxCm: 30, price: 85, xp: 20),
   'medusa_manana': FishDef('medusa_manana', 'Medusa del mañana', FishRarity.comun,
-      biome: 'abismo', minCm: 20, maxCm: 50, price: 98, xp: 21),
+      biome: 'abismo', minCm: 20, maxCm: 50, price: 98, xp: 21,
+      seasons: {Season.spring, Season.summer}),
   'raya_reloj': FishDef('raya_reloj', 'Raya del reloj', FishRarity.raro,
       biome: 'abismo', minCm: 40, maxCm: 90, price: 230, xp: 46),
   'pez_paradoja': FishDef('pez_paradoja', 'Pez paradoja', FishRarity.epico,
@@ -194,6 +220,46 @@ const kFish = <String, FishDef>{
   'leviatan_quieto': FishDef('leviatan_quieto', 'Leviatán del Futuro Quieto', FishRarity.legendario,
       biome: 'abismo', minCm: 150, maxCm: 300, price: 3800, xp: 400,
       lore: 'El futuro no se cambia: él ya estaba en tu red.'),
+  // Seasonal and weather visitors (weather_seasons.md § 4.2, v0.44.0):
+  // they join the lakes of their biome only in their season / weather.
+  'mojarra_primavera': FishDef('mojarra_primavera', 'Mojarra de primavera',
+      FishRarity.comun,
+      biome: 'zona1', minCm: 8, maxCm: 18, price: 16, xp: 8,
+      seasons: {Season.spring}, visitor: true),
+  'carpa_nevada': FishDef('carpa_nevada', 'Carpa nevada', FishRarity.raro,
+      biome: 'zona1', minCm: 25, maxCm: 55, price: 60, xp: 20,
+      seasons: {Season.winter}, visitor: true,
+      lore: 'Sube a la orilla cuando el lago se enfría.'),
+  'pez_copo': FishDef('pez_copo', 'Pez copo', FishRarity.raro,
+      biome: 'zona1', minCm: 10, maxCm: 22, price: 70, xp: 22,
+      seasons: {Season.winter}, weather: Weather.snow, visitor: true,
+      lore: 'Solo nada mientras nieva; después nadie lo encuentra.'),
+  'pez_bruma': FishDef('pez_bruma', 'Pez de bruma', FishRarity.epico,
+      biome: 'zona1', minCm: 30, maxCm: 70, price: 180, xp: 48,
+      weather: Weather.fog, visitor: true,
+      lore: 'Se ve mejor cuando no se ve nada.'),
+  'perca_hojas': FishDef('perca_hojas', 'Perca de hojas', FishRarity.comun,
+      biome: 'bosque', minCm: 12, maxCm: 28, price: 20, xp: 9,
+      seasons: {Season.autumn}, visitor: true),
+  'trucha_tormenta': FishDef('trucha_tormenta', 'Trucha de tormenta',
+      FishRarity.epico,
+      biome: 'bosque', minCm: 40, maxCm: 90, price: 190, xp: 50,
+      weather: Weather.tormenta, visitor: true,
+      lore: 'Salta cuando cae el rayo, como si lo esperara.'),
+  'anguila_niebla': FishDef('anguila_niebla', 'Anguila de niebla',
+      FishRarity.raro,
+      biome: 'ruinas', minCm: 40, maxCm: 90, price: 110, xp: 28,
+      weather: Weather.fog, visitor: true,
+      lore: 'Se enrosca en los engranajes hundidos cuando baja la niebla.'),
+  'dorado_estival': FishDef('dorado_estival', 'Dorado estival',
+      FishRarity.raro,
+      biome: 'grieta', minCm: 30, maxCm: 70, price: 200, xp: 42,
+      seasons: {Season.summer}, visitor: true),
+  'raya_relampago': FishDef('raya_relampago', 'Raya del relámpago',
+      FishRarity.epico,
+      biome: 'abismo', minCm: 60, maxCm: 140, price: 700, xp: 120,
+      weather: Weather.tormenta, visitor: true,
+      lore: 'Lleva en el lomo la luz de un rayo que todavía no cayó.'),
   // Basura de los lagos de bioma (fishing.md § 8).
   'engranaje_oxidado': FishDef('engranaje_oxidado', 'Engranaje oxidado', FishRarity.comun,
       biome: kWaterJunkBiome, minCm: 5, maxCm: 12, price: 1, xp: 1),
@@ -241,5 +307,5 @@ const kFishingLegendaries = ['filoHundido', 'relojAhogado', 'cuerdaOrilla'];
 /// Especies iniciales del lago del pueblo (las del bioma de la zona 1).
 List<String> get kTownLakeDefault => [
       for (final f in kFish.values)
-        if (f.biome == kTownStartBiome) f.id
+        if (f.biome == kTownStartBiome && !f.visitor) f.id
     ];
