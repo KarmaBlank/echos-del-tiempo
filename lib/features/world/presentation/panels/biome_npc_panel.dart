@@ -344,6 +344,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                 ? _s.t('ui.town.npc.invite_accept')
                 : talk.text(_spoken ?? c.npcLine(n)),
             onCancel: () => _close(c, n),
+            skipLabel: _s.t('ui.town.npc.skip'),
             choices: _accepted
                 ? [
                     DsChoice(_s.t('ui.town.npc.bye'),

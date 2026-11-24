@@ -282,8 +282,30 @@ de juego):
   tenés y precio alineado a la derecha (gris si no alcanza el oro).
 - `DsDialogueBox` (organismo / plantilla): cuadro abajo de la pantalla
   con retrato grande (128 px) a la izquierda, placa con nombre y rol, la
-  frase escrita letra a letra (clic, Enter, Espacio o Esc la completan)
-  y, al terminar, el `DsChoiceMenu` a la derecha.
+  frase escrita letra a letra y el `DsChoiceMenu` a la derecha.
+
+### 10.1 Cuadro de diálogo: tamaño fijo, saltar y pila de nodos
+
+- **Tamaño fijo.** El cuadro abre con su tamaño final (alto
+  `DsDialogueBox.height`, columna de opciones de `choicesWidth` ya
+  armada a la derecha) y nunca cambia: ni mientras escribe, ni al
+  terminar la frase, ni cuando cambia la lista de opciones. Si la frase
+  o las opciones no entran, hacen scroll dentro de su zona.
+- **Mientras escribe** las opciones se ven pero van grises
+  (`textDisabled`), sin cursor ▶ y sin responder a teclas ni clics.
+  Abajo a la derecha del área de la frase aparece el botón
+  `Saltar [Enter]` (`ui.town.npc.skip`). Enter, Espacio, Esc, un clic en
+  la frase o el botón muestran la frase entera al instante; el botón
+  desaparece (guardando su lugar) y el foco pasa al menú. La segunda
+  pulsación ya elige la opción marcada (convención de RPG).
+- **Pila de nodos (HABLAR, `NpcTalk`).** Cada tema elegido se apila como
+  nodo: su frase es la respuesta del personaje y sus opciones son sólo
+  sus sub-temas (si tiene) más VOLVER. La pregunta elegida no queda en
+  la lista. VOLVER desapila y vuelve al menú anterior, donde la pregunta
+  se puede volver a hacer; las ya hechas se ven atenuadas
+  (`DsChoice.dimmed`, color `textSecondary`) pero siguen elegibles.
+- Etiqueta nueva `ui.town.npc.skip` ("Saltar [Enter]" / "Skip [Enter]",
+  zh-Hans vacío): **BORRADOR**, a revisar por el dueño.
 
 Uso: la pantalla del habitante (`BiomeNpcPanel`). Primero el diálogo con
 COMPRAR, ENCARGOS, PEDIDOS, REGALAR, CASA, INVITAR AL PUEBLO y ADIÓS;

@@ -47,6 +47,7 @@ void main() {
             name: 'Ilda',
             role: 'Herbolaria',
             text: 'Hola, viajero del eco.',
+            skipLabel: 'Saltar [Enter]',
             choices: [
               DsChoice('Comprar',
                   key: const ValueKey('c-buy'),
@@ -56,7 +57,7 @@ void main() {
             ],
           ),
         ));
-    expect(find.byKey(const ValueKey('c-buy')), findsNothing);
+    expect(find.byKey(const ValueKey('c-buy')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('ds-dialogue')));
     await tester.pump();
     expect(find.text('Hola, viajero del eco.'), findsOneWidget);
