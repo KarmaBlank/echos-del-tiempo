@@ -648,6 +648,18 @@ const Map<String, TuningDef> kTuningDefaults = {
     'pBreakDecay': 0.1,
     'pBrokenTurns': 2,
     'pBrokenMult': 1.25,
+    // Enemy Convergences (combo_balance.md § "Convergencias enemigas"):
+    // on (1); cap of a Convergence against a player (fraction of its max
+    // HP, also caps the splash); group AI: chance a primer / detonator
+    // focuses the primed player and stacks the detonator waits for; lone
+    // enemy (only if its own kit has both elements): chance per hit to go
+    // for the primed player and stacks it waits for before detonating.
+    'eConvOn': 1,
+    'eConvCapPlayer': 0.28,
+    'eComboFocus': 0.6,
+    'eComboMinStacks': 4,
+    'eSoloChance': 0.25,
+    'eSoloMinStacks': 6,
     // Turnos como máximo por cada turno del aliado vivo más lento
     // (0 = sin tope).
     'turnsPerSlowest': 2,
