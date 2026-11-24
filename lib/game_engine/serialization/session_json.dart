@@ -98,7 +98,8 @@ class SessionJson {
         if (s.ownerId != null) 'own': s.ownerId,
         if (s.away.isNotEmpty)
           'aw': [
-            for (final a in s.away) [a.id, a.name, a.where]
+            for (final a in s.away)
+              [a.id, a.name, a.where, a.placeId, if (a.busy) 1]
           ],
       };
 
@@ -157,7 +158,8 @@ class SessionJson {
           : [
               for (final raw in j.list('aw'))
                 if (raw is List && raw.length >= 3)
-                  AwayPlayer('${raw[0]}', '${raw[1]}', '${raw[2]}'),
+                  AwayPlayer('${raw[0]}', '${raw[1]}', '${raw[2]}',
+                      raw.length > 3 ? '${raw[3]}' : '', raw.length > 4),
             ],
     );
   }

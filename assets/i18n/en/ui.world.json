@@ -9,6 +9,8 @@
   "ui.world.hud.minimap_out": "Zoom the minimap out",
   "ui.world.hud.minimap_in": "Zoom the minimap in",
   "ui.world.hud.map": "MAP [M]",
+  "ui.world.players_here.title": "Players here",
+  "ui.world.hud.join": "GO TO {name}",
   "ui.world.hud.leave_dungeon": "LEAVE THE DUNGEON",
   "ui.world.hud.away": "Elsewhere: {names}",
   "ui.world.hud.pick_up": "[E] Pick up {item}",

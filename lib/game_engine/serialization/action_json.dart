@@ -234,6 +234,8 @@ abstract final class ActionJson {
             't': 'leaveD',
             if (a.poiId != null) 'i': a.poiId,
           },
+        // Protocolo 63: IR CON otro jugador.
+        JoinPlayerAction() => {'t': 'joinP', 'p': a.targetId},
         // Protocolo 58 (v0.34.0): Ofrenda del jefe.
         OfferBossAction() => {'t': 'offer'},
       };
@@ -475,6 +477,8 @@ abstract final class ActionJson {
         return LeaveDungeonAction(poiId: j.intOrNull('i'));
       case 'offer':
         return const OfferBossAction();
+      case 'joinP':
+        return JoinPlayerAction(j.str('p'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

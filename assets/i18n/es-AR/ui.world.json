@@ -9,6 +9,8 @@
   "ui.world.hud.minimap_out": "Alejar el minimapa",
   "ui.world.hud.minimap_in": "Acercar el minimapa",
   "ui.world.hud.map": "MAPA [M]",
+  "ui.world.players_here.title": "Jugadores acá",
+  "ui.world.hud.join": "IR CON {name}",
   "ui.world.hud.leave_dungeon": "SALIR DE LA MAZMORRA",
   "ui.world.hud.away": "En otro lugar: {names}",
   "ui.world.hud.pick_up": "[E] Recoger {item}",

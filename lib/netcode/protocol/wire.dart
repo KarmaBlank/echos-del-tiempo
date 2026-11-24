@@ -145,7 +145,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// docs/specs/i18n.md § 3.5) so each player reads it in their language.
 /// 62 (v0.41.0): boss/summon/support battle-log lines become keys
 /// (i18n phase 4) and `NetException` carries a key.
-const kProtocolVersion = 62;
+/// 63 (v0.42.0): `aw` lleva la clave del destino (4.º campo) para marcar
+/// dónde están los demás en el mostrador y el mapa de viaje
+/// (free_movement.md § 3), si se puede IR CON él (5.º) y la acción
+/// `joinP` (IR CON otro jugador, § 2.5).
+const kProtocolVersion = 63;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

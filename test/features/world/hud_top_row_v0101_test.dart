@@ -110,7 +110,11 @@ void main() {
         }
         add('objetivos', find.byKey(const ValueKey('hud-objectives')));
         if (field) {
-          expect(rects.keys.where((k) => k.startsWith('barra')), isNotEmpty);
+          // exploration.md § "HUD": sin banner de misión; el tiempo va bajo el
+          // minimapa.
+          expect(rects.keys.where((k) => k.startsWith('barra')), isEmpty);
+          expect(find.byKey(const ValueKey('hud-mission-time')),
+              findsOneWidget);
         }
         expect(find.byKey(const ValueKey('hud-points-badge')), findsOneWidget);
         // Solo lo de arriba (los botones del minimapa van dentro de él).

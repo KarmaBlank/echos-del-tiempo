@@ -9,6 +9,8 @@
   "ui.world.hud.minimap_out": "",
   "ui.world.hud.minimap_in": "",
   "ui.world.hud.map": "",
+  "ui.world.players_here.title": "",
+  "ui.world.hud.join": "",
   "ui.world.hud.leave_dungeon": "",
   "ui.world.hud.away": "",
   "ui.world.hud.pick_up": "",

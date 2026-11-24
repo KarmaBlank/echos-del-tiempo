@@ -345,8 +345,6 @@ void main() {
                 .ancestor(
                     of: find.byType(Minimap), matching: find.byType(RetroPanel))
                 .first),
-            'barra':
-                tester.getRect(find.byKey(const ValueKey('hud-mission-bar'))),
             'chat': tester.getRect(find.byKey(const ValueKey('chat-pill'))),
             for (final (i, e) in find.byType(PartyBox).evaluate().indexed)
               'grupo $i': tester.getRect(find.byWidget(e.widget)),
