@@ -116,6 +116,9 @@ class Combatant {
     this.webbed = false,
     this.stance = 0,
     this.stanceTurns = 0,
+    this.ward = 0,
+    this.wardTurns = 0,
+    Map<String, int>? phaseDealt,
     this.lava = 0,
     this.voidMarked = false,
     this.phase = 0,
@@ -160,6 +163,7 @@ class Combatant {
         mechanics = mechanics ?? {},
         effects = effects ?? [],
         skillIds = skillIds ?? const [],
+        phaseDealt = phaseDealt ?? {},
         statuses = statuses ?? {};
 
   final String id;
@@ -297,6 +301,19 @@ class Combatant {
   /// Turnos propios que faltan para cambiar de postura (1 = cambia en su
   /// próximo turno).
   int stanceTurns;
+
+  // ---- tanks (docs/specs/combat.md § "Tanques") ----
+
+  /// Elemental ward: `DamageTag.index + 1` (0 = none). Damage of that
+  /// element is multiplied by `wardMult`.
+  int ward;
+
+  /// Own turns left on the ward (it drops at the start of its turn).
+  int wardTurns;
+
+  /// Damage each character dealt to this enemy in the current phase
+  /// (combat.md § "Nadie solo en una fase"): attacker id → damage.
+  final Map<String, int> phaseDealt;
 
   // ---- mecánicas de jefe v0.3 (docs/specs/bosses.md § "v0.3") ----
 
@@ -539,6 +556,9 @@ class Combatant {
         webbed: webbed,
         stance: stance,
         stanceTurns: stanceTurns,
+        ward: ward,
+        wardTurns: wardTurns,
+        phaseDealt: {...phaseDealt},
         lava: lava,
         voidMarked: voidMarked,
         phase: phase,

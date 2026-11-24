@@ -145,7 +145,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// docs/specs/i18n.md § 3.5) so each player reads it in their language.
 /// 62 (v0.41.0): boss/summon/support battle-log lines become keys
 /// (i18n phase 4) and `NetException` carries a key.
-const kProtocolVersion = 62;
+/// 63 (v0.42.0): tank wards and per-phase damage on enemies (`wrd`,
+/// `phd`; combat.md § "Tanques" and § "Nadie solo en una fase").
+const kProtocolVersion = 63;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

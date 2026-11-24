@@ -335,5 +335,10 @@
   "ui.combat.stat.ult": "ULT",
   "ui.combat.summon.chip": "{hp} · {turns}t",
   "ui.combat.tag.can_break": "CAN BREAK",
-  "ui.combat.tag.instant": "INSTANT"
+  "ui.combat.tag.instant": "INSTANT",
+  "ui.combat.enemy.tank": "Tank: defends and raises a ward against the element it is weak to.",
+  "ui.combat.enemy.phase_hold": "At {pct}% of its life or more, nobody takes it down alone in one phase.",
+  "ui.combat.tank.ward.short": "WARD {t}",
+  "ui.combat.tank.ward.long": "{a}: {t} ward · {n, plural, one{# turn} other{# turns}}",
+  "ui.combat.tank.ward.tip": "Takes {pct}% less {t} damage and it no longer counts as a weakness. {n, plural, one{# turn} other{# turns}} left."
 }

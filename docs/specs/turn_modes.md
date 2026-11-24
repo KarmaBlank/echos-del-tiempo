@@ -97,6 +97,8 @@ cantidad de turnos.
   (aturdido, quebrado, telaraña) salta su lugar en esta ronda.
 - Aguanta una ronda (combat.md § "Límites") usa esta misma ronda (y en
   Por fases, la ronda = fase enemiga + fase de jugadores).
+- Nadie solo en una fase (combat.md § "Nadie solo en una fase") cuenta el
+  daño de cada personaje en su turno dentro de la fase de jugadores.
 
 ## 5. Netcode
 

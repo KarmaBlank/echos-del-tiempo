@@ -668,6 +668,9 @@ class SessionJson {
         if (c.webbed) 'web': true,
         if (c.stance != 0) 'stc': c.stance,
         if (c.stanceTurns != 0) 'stcN': c.stanceTurns,
+        // Tanks and "nobody alone in one phase" (protocol 63).
+        if (c.ward != 0) 'wrd': [c.ward, c.wardTurns],
+        if (c.phaseDealt.isNotEmpty) 'phd': c.phaseDealt,
         // Mecánicas de jefe v0.3 (opcionales).
         if (c.lava != 0) 'lava': c.lava,
         if (c.voidMarked) 'vmk': true,
@@ -808,6 +811,14 @@ class SessionJson {
       webbed: j.flag('web'),
       stance: j.intOrNull('stc') ?? 0,
       stanceTurns: j.intOrNull('stcN') ?? 0,
+      ward: j['wrd'] == null ? 0 : (j['wrd'] as List)[0] as int,
+      wardTurns: j['wrd'] == null ? 0 : (j['wrd'] as List)[1] as int,
+      phaseDealt: j['phd'] == null
+          ? null
+          : {
+              for (final e in (j['phd'] as Map).entries)
+                e.key as String: (e.value as num).toInt()
+            },
       lava: j.intOrNull('lava') ?? 0,
       voidMarked: j.flag('vmk'),
       phase: j.intOrNull('phase') ?? 0,

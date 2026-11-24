@@ -309,5 +309,12 @@
   "ui.battle_log.turn_done": "{a} termina el turno",
   "ui.battle_log.unstoppable_head": "{a} · Golpe Imparable (todos)",
   "ui.battle_log.weapon_stack": "{e}: +1 pila",
-  "ui.battle_log.web_freed": "{a} corta la telaraña: ¡{b} queda libre! (medio turno)"
+  "ui.battle_log.web_freed": "{a} corta la telaraña: ¡{b} queda libre! (medio turno)",
+  "ui.battle_log.holds_phase": "{a} aguanta: {b} solo no lo puede tumbar en una fase (queda en 1)",
+  "ui.battle_log.ward_up": "{a} se defiende y alza un escudo de {t} ({n} turnos)",
+  "ui.battle_log.ward_opening": "{a} ya trae un escudo de {t}",
+  "ui.battle_log.ward_down": "cae el escudo de {t} de {a}",
+  "ui.battle_log.tank_guard": "{a} se defiende",
+  "ui.battle_log.mod.ward": "ESCUDO {t}",
+  "ui.battle_log.mod.tank_guard": "DEFENSA"
 }

@@ -309,5 +309,12 @@
   "ui.battle_log.turn_done": "",
   "ui.battle_log.unstoppable_head": "",
   "ui.battle_log.weapon_stack": "",
-  "ui.battle_log.web_freed": ""
+  "ui.battle_log.web_freed": "",
+  "ui.battle_log.holds_phase": "",
+  "ui.battle_log.ward_up": "",
+  "ui.battle_log.ward_opening": "",
+  "ui.battle_log.ward_down": "",
+  "ui.battle_log.tank_guard": "",
+  "ui.battle_log.mod.ward": "",
+  "ui.battle_log.mod.tank_guard": ""
 }

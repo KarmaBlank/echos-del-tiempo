@@ -212,6 +212,17 @@ class BattleEngine {
   static bool holdsRound({required bool coop}) =>
       _limits.i(coop ? 'holdCoop' : 'holdSolo') > 0;
 
+  /// Nobody alone in one phase (combat.md § "Nadie solo en una fase"):
+  /// fraction of max HP from which one character cannot kill an enemy
+  /// within their phase (0 = off).
+  static double get phaseHold => _limits.d('phaseHold');
+
+  /// Tank elemental ward (combat.md § "Tanques"): × damage of the warded
+  /// element, duration in own turns, and Defense (× damage taken).
+  static double get wardMult => _limits.d('wardMult');
+  static int get wardTurns => math.max(1, _limits.i('wardTurns'));
+  static double get tankGuard => _limits.d('tankGuard');
+
   /// Tope de carga de ULT extra (árbol, mods, efectos, invocaciones) por
   /// acción y por turno de quien la recibe (combat.md § "Límites").
   static double get ultBonusPerAction => _limits.d('ultBonusAction');
@@ -394,8 +405,84 @@ class BattleEngine {
               ? _l('start_elite', {'a': first.name})
               : _l('start_ambush'),
     );
+    applyOpeningWards(state);
     assignCombatantTags(state);
     return BattleStep(state, const []);
+  }
+
+  /// Tanks that do not act first start with their ward up (combat.md §
+  /// "Tanques"). Reads the opening order from [state] as built, so it
+  /// works with any initiative rule.
+  void applyOpeningWards(BattleState state) {
+    LogLine? line;
+    for (final e in state.enemies) {
+      if (!isTank(e) || actsBeforeParty(state, e)) continue;
+      final tag = chooseWard(state, e);
+      if (tag == null) continue;
+      e
+        ..ward = tag.index + 1
+        ..wardTurns = wardTurns;
+      final t = _l('ward_opening', {
+        'a': e.name,
+        't': LogLine.named(CatalogKeys.damageTag(tag), tag.label),
+      });
+      line = line == null ? t : line.plus(t);
+    }
+    if (line != null) state.logLine = state.logLine.plus(line);
+  }
+
+  /// [e] is a tank (`EnemyDef.tank`).
+  bool isTank(Combatant e) =>
+      !e.isPlayer && (catalog.enemies[e.enemyType]?.tank ?? false);
+
+  /// [e] acts before every player in the opening of [state].
+  bool actsBeforeParty(BattleState state, Combatant e) {
+    final players = [
+      for (final p in state.party)
+        if (p.alive && !p.isSummon) p
+    ];
+    if (players.isEmpty) return true;
+    switch (state.turnRule) {
+      case TurnRule.porFases:
+        return true; // The enemy phase opens the fight.
+      case TurnRule.porBando:
+        return false; // The party turn opens the fight.
+      case TurnRule.porRonda:
+        final iv = interval(e);
+        return players.every((p) => iv < interval(p));
+      case TurnRule.velocidad:
+        return players.every((p) => e.nextTurn < p.nextTurn);
+    }
+  }
+
+  /// Element [e] wards against: among its elemental weaknesses, the one
+  /// the party hits with most (skills); else its strongest weakness;
+  /// `null` if it has none.
+  DamageTag? chooseWard(BattleState state, Combatant e) {
+    final f = e.family;
+    final r = !familiesEnabled || f == null ? null : kFamilyRules[f];
+    if (r == null) return null;
+    final weak = [
+      for (final en in r.damage.entries)
+        if (en.key.isElement && en.value > 1) en.key
+    ];
+    if (weak.isEmpty) return null;
+    final count = <DamageTag, int>{};
+    for (final p in state.party) {
+      if (!p.alive || p.isSummon) continue;
+      for (final id in p.skillIds) {
+        for (final t in skillDamageTags(catalog.skills[id])) {
+          count[t] = (count[t] ?? 0) + 1;
+        }
+      }
+    }
+    weak.sort((a, b) {
+      final c = (count[b] ?? 0).compareTo(count[a] ?? 0);
+      if (c != 0) return c;
+      final v = r.damage[b]!.compareTo(r.damage[a]!);
+      return v != 0 ? v : a.index.compareTo(b.index);
+    });
+    return weak.first;
   }
 
   /// Le da el turno al próximo actor y procesa sus estados alterados.
@@ -1009,6 +1096,13 @@ class _Turn {
       state.logLine = _l('turn_of', {'a': best.name});
       return;
     }
+    if (best.isPlayer && !best.isSummon && state.grouped) {
+      // A new phase for this character (combat.md § "Nadie solo en una
+      // fase").
+      for (final e in state.enemies) {
+        e.phaseDealt.remove(best.id);
+      }
+    }
     if (best.isPlayer) {
       // Racha de Defender: solo sigue si viene de un Defender elegido.
       if (!best.defending) best.guardStreak = false;
@@ -1022,6 +1116,7 @@ class _Turn {
       state.logLine = _l('turn_of', {'a': best.name});
     } else {
       _decayBreak(best);
+      _tickWard(best);
     }
     var (skip, text) = _statusTick(best);
     // Trampas del Trampero: saltan al empezar el turno del enemigo.
@@ -2323,6 +2418,12 @@ class _Turn {
       mult *= 1 - armor;
       mods.add(_mod(1 - armor, _l('mod.armor')));
     }
+    // Tank Defense (combat.md § "Tanques").
+    final guard = BattleEngine.tankGuard;
+    if (e.defending && !e.isPlayer && guard > 0 && guard < 1) {
+      mult *= guard;
+      mods.add(_mod(guard, _l('mod.tank_guard')));
+    }
     // Familia: debilidades y resistencias por tipo de daño
     // (bestiary.md § 1.3).
     final hitTags = {
@@ -2330,8 +2431,20 @@ class _Turn {
       if (damageTagOf(el) case final t?) t,
     };
     final affinity = _familyMods(family, hitTags, mods);
-    final weakHit = familyFactors(family, hitTags).any((f) => f.weak);
+    // Tank ward (combat.md § "Tanques"): the warded element hits for
+    // `wardMult` and no longer counts as a weakness.
+    final warded = e.ward > 0 && e.ward <= DamageTag.values.length
+        ? DamageTag.values[e.ward - 1]
+        : null;
+    final wardHit = warded != null && hitTags.contains(warded);
+    final weakHit = familyFactors(family, hitTags)
+        .any((f) => f.weak && !(wardHit && f.tag == warded));
     mult *= affinity;
+    if (wardHit) {
+      final w = BattleEngine.wardMult;
+      mult *= w;
+      mods.add(_mod(w, _l('mod.ward', {'t': _tagName(warded)})));
+    }
     // Reacción elemental (una por golpe) o golpe físico a un Quebradizo
     // (elemental_reactions.md § 2 y § 7). Si el elemento propio del golpe
     // no reacciona, cuentan los estados que el golpe lleva (§ 9): los
@@ -2994,8 +3107,76 @@ class _Turn {
       dmg = e.hp - 1;
       _notes.add(_l('holds_round', {'a': e.name}));
     }
+    final by = _phaseActor();
+    if (by != null) {
+      final dealt = e.phaseDealt[by.id] ?? 0;
+      if (dmg >= e.hp && e.hp > 1 && _holdsPhase(e, by, dealt)) {
+        dmg = e.hp - 1;
+        _notes.add(_l('holds_phase', {'a': e.name, 'b': by.name}));
+      }
+      e.phaseDealt[by.id] = dealt + dmg;
+    }
     return dmg;
   }
+
+  /// Character whose phase is running (the player with the turn), or
+  /// `null` (enemy or summon turn).
+  Combatant? _phaseActor() {
+    final c = state.current;
+    if (c == null || !c.isPlayer || c.isSummon) return null;
+    return c;
+  }
+
+  /// Nobody alone in one phase (combat.md § "Nadie solo en una fase"):
+  /// [e] was at or above `phaseHold` of its max HP when [by]'s phase
+  /// began ([dealt] = what [by] already took from it) and another living
+  /// ally can still finish it.
+  bool _holdsPhase(Combatant e, Combatant by, int dealt) {
+    final f = BattleEngine.phaseHold;
+    if (f <= 0) return false;
+    if (e.hp + dealt < e.maxHp * f) return false;
+    return state.party.any((p) => p.alive && !p.isSummon && p.id != by.id);
+  }
+
+  /// Start of an enemy's own turn: its Defense ends and its ward loses a
+  /// turn (it drops at 0).
+  void _tickWard(Combatant e) {
+    if (engine.isTank(e)) e.defending = false;
+    if (e.ward == 0) return;
+    e.wardTurns -= 1;
+    if (e.wardTurns > 0) return;
+    final tag = DamageTag.values[e.ward - 1];
+    e
+      ..ward = 0
+      ..wardTurns = 0;
+    _notes.add(_l('ward_down', {'a': e.name, 't': _tagName(tag)}));
+  }
+
+  /// Tank turn (combat.md § "Tanques"): without a ward it defends and
+  /// raises one. Returns `true` if that used its action.
+  bool _tankGuard(Combatant e) {
+    if (!engine.isTank(e) || e.ward != 0) return false;
+    final tag = engine.chooseWard(state, e);
+    events.add(ActionEvent(e.id, BattleActionKind.defend));
+    e.defending = true;
+    if (tag != null) {
+      // +1: the tick at the start of its next turn does not count.
+      e
+        ..ward = tag.index + 1
+        ..wardTurns = BattleEngine.wardTurns + 1;
+    }
+    state.logLine = tag == null
+        ? _l('tank_guard', {'a': e.name})
+        : _l('ward_up', {
+            'a': e.name,
+            't': _tagName(tag),
+            'n': BattleEngine.wardTurns,
+          });
+    return true;
+  }
+
+  LogLine _tagName(DamageTag t) =>
+      LogLine.named(CatalogKeys.damageTag(t), t.label);
 
   /// Clave en `state.acted` de un común que ya aguantó en esta ronda.
   static String holdKey(String id) => '!aguanta:$id';
@@ -3056,6 +3237,9 @@ class _Turn {
       state
         ..round += 1
         ..acted.clear();
+      for (final e in state.enemies) {
+        e.phaseDealt.clear();
+      }
     }
   }
 
@@ -4040,6 +4224,7 @@ class _Turn {
       e.ult = math.min(100, e.ult + BattleEngine.enemyUltPerTurn);
     }
     e.actions++;
+    if (_tankGuard(e)) return;
     // Jefe del Abismo: su rotación de movimientos (abyss_bosses.md § 2).
     if (mech != null && mech.kind == BossMechanicKind.abyss) {
       _abyssAct(e, mech, alive);

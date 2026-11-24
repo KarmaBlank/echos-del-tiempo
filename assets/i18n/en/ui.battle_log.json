@@ -309,5 +309,12 @@
   "ui.battle_log.turn_done": "{a} ends the turn",
   "ui.battle_log.unstoppable_head": "{a} · Unstoppable Blow (all)",
   "ui.battle_log.weapon_stack": "{e}: +1 stack",
-  "ui.battle_log.web_freed": "{a} cuts the web: {b} is free! (half a turn)"
+  "ui.battle_log.web_freed": "{a} cuts the web: {b} is free! (half a turn)",
+  "ui.battle_log.holds_phase": "{a} holds: {b} alone cannot take it down in one phase (left at 1)",
+  "ui.battle_log.ward_up": "{a} defends and raises a {t} ward ({n} turns)",
+  "ui.battle_log.ward_opening": "{a} already has a {t} ward up",
+  "ui.battle_log.ward_down": "{a}'s {t} ward falls",
+  "ui.battle_log.tank_guard": "{a} defends",
+  "ui.battle_log.mod.ward": "WARD {t}",
+  "ui.battle_log.mod.tank_guard": "DEFENSE"
 }
