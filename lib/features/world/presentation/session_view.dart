@@ -279,20 +279,12 @@ class SessionView {
   /// nadie tiene el turno; manda el primero de los que faltan que maneja
   /// este dispositivo (el local primero, después sus compañeros sin AUTO).
   /// Action queue (turn_modes.md § 3.1): players with a queued command
-  /// are skipped; in Por rondas anyone still to act this round can leave
-  /// an intent, so the menu stays up while others animate.
+  /// are skipped.
   String? get groupActor {
     final b = session.battle;
     final st = b?.state;
-    if (b == null || st == null) return null;
-    final ids = st.porRonda && session.tutorial == null
-        ? [
-            for (final p in st.roundRemaining)
-              if (p.isPlayer && !p.isSummon) p.id
-          ]
-        : st.awaitingGroup
-            ? [for (final p in st.pendingGroup) p.id]
-            : const <String>[];
+    if (b == null || st == null || !st.awaitingGroup) return null;
+    final ids = [for (final p in st.pendingGroup) p.id];
     bool free(String id) => !auto.contains(id) && !b.queued(id);
     if (ids.contains(localId) && free(localId)) return localId;
     for (final id in ids) {
@@ -311,13 +303,24 @@ class SessionView {
   }
 
   /// [id] may confirm a command now even if the host is animating (it
-  /// goes to the action queue; mirrors `SessionEngine.queueOpen`).
+  /// goes to the action queue; mirrors `SessionEngine.queueOpen`): only in
+  /// Por fases / porBando with 2+ human players (never Por rondas,
+  /// timeline or solo, where companions don't count).
   bool canQueue(String? id) {
     final b = session.battle;
     if (id == null || b == null || session.tutorial != null) return false;
     final st = b.state;
     if (b.endTimer != null || st.ended || b.queued(id)) return false;
-    if (st.porRonda) return st.roundRemaining.any((c) => c.id == id);
+    if (st.porRonda || !st.porBando) return false;
+    final humans = st.party
+        .where((c) =>
+            c.isPlayer &&
+            !c.isSummon &&
+            session.players.containsKey(c.id) &&
+            !isCompanion(c.id) &&
+            session.players[c.id]?.isCompanion != true)
+        .length;
+    if (humans < 2) return false;
     return st.porBando &&
         st.awaitingGroup &&
         st.pendingGroup.any((c) => c.id == id);
