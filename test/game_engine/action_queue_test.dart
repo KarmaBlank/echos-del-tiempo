@@ -159,27 +159,157 @@ void main() {
     fail('no turn for $who');
   }
 
-  test('Por rondas coop: no queue, never waits behind an enemy turn', () {
-    final e = sessionEngine();
+  /// Por rondas coop: ticks to a front block with nobody acted yet, then
+  /// rewrites what remains of the round as [order] (ids; 'E' = the first
+  /// living enemy, 'F' = the second one or the first again).
+  GameSession roundsWith(SessionEngine e, List<String> order) {
     var s = fight(e, CombatMode.rounds);
-    expect(battleQueueEnabled(s), isFalse);
-    // Every command while it is not the player's turn is refused, never
-    // queued behind enemies.
-    for (var i = 0; i < 2000; i++) {
+    for (var i = 0; i < 6000; i++) {
       sturdy(s);
       final b = s.battle!;
-      for (final id in ['p0', 'p1', 'p2']) {
-        final st = b.state;
-        final up = b.waitingForPlayer &&
-            (st.currentId == id ||
-                st.awaitingGroup && st.pendingGroup.any((c) => c.id == id));
-        final step = e.apply(s, id, const BattleAction(DefendCommand()));
-        if (!up) expect(step, isNull, reason: '$id is not up');
-        if (step != null) s = step.state;
-        expect(s.battle!.queue, isEmpty);
+      final st = b.state;
+      if (b.wait <= 0 &&
+          b.waitingForPlayer &&
+          st.awaitingGroup &&
+          b.queue.isEmpty &&
+          ['p0', 'p1', 'p2'].every((id) => !st.acted.contains(id))) {
+        final foes = [for (final x in st.enemies) if (x.alive) x.id];
+        final ids = [
+          for (final o in order)
+            o == 'E'
+                ? foes.first
+                : o == 'F'
+                    ? foes.last
+                    : o
+        ];
+        final rest = [
+          for (final id in st.roundOrder)
+            if (!ids.contains(id)) id
+        ];
+        st.roundOrder
+          ..clear()
+          ..addAll([...ids, ...rest]);
+        st.acted.removeWhere(ids.contains);
+        return s;
+      }
+      if (b.waitingForPlayer && st.awaitingGroup) {
+        final step = e.apply(
+            s, st.pendingGroup.first.id, const BattleAction(DefendCommand()));
+        if (step != null) {
+          s = step.state;
+          continue;
+        }
       }
       s = e.tick(s, 0.05).state;
     }
+    fail('no fresh round block');
+  }
+
+  /// Ticks until the queue is empty; returns players in the order they
+  /// acted, and fails if an enemy acts before [before] acted.
+  List<String> drain(SessionEngine e, GameSession Function() get,
+      void Function(GameSession) set, String before) {
+    final order = <String>[];
+    var s = get();
+    final enemies = {for (final x in s.battle!.state.enemies) x.id};
+    for (var i = 0; i < 400 && s.battle!.queue.isNotEmpty; i++) {
+      final was = {...s.battle!.state.acted};
+      s = e.tick(s, 0.05).state;
+      final added = s.battle!.state.acted.difference(was);
+      if (!order.contains(before)) {
+        expect(added.intersection(enemies), isEmpty,
+            reason: 'enemy acted inside the block');
+      }
+      order.addAll(added.where((id) => !enemies.contains(id)));
+    }
+    set(s);
+    return order;
+  }
+
+  group('Por rondas coop', () {
+    test('block of 2: both queue, arrival order, no enemy in between', () {
+      final e = sessionEngine();
+      var s = roundsWith(e, ['p0', 'p1', 'E', 'p2']);
+      expect(battleQueueEnabled(s), isTrue);
+      expect([for (final c in s.battle!.state.pendingGroup) c.id],
+          ['p0', 'p1']);
+      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      expect(s.battle!.wait, greaterThan(0));
+      // p1 confirms while p0 animates: queued.
+      s = act(e, s, 'p1', const BattleAction(DefendCommand()));
+      expect([for (final q in s.battle!.queue) q.playerId], ['p1']);
+      // p2 is behind an enemy: refused, not queued.
+      expect(e.apply(s, 'p2', const BattleAction(DefendCommand())), isNull);
+      final order = drain(e, () => s, (x) => s = x, 'p1');
+      expect(order, ['p1']);
+      expect(s.battle!.state.acted, containsAll(['p0', 'p1']));
+    });
+
+    test('enemy between: the second player waits for their own turn', () {
+      final e = sessionEngine();
+      var s = roundsWith(e, ['p0', 'E', 'p1', 'p2']);
+      expect([for (final c in s.battle!.state.pendingGroup) c.id], ['p0']);
+      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      expect(e.apply(s, 'p1', const BattleAction(DefendCommand())), isNull);
+      expect(s.battle!.queue, isEmpty);
+    });
+
+    test('player 1 delays the enemy between 2 and 3: they queue a combo',
+        () {
+      final e = sessionEngine();
+      var s = roundsWith(e, ['p0', 'p1', 'E', 'p2']);
+      final st = s.battle!.state;
+      final foe = st.roundOrder[2];
+      // Owner's case: p0 acts first, the enemy sits between p1 and p2.
+      st.byId('p0')!
+        ..skillIds = [...st.byId('p0')!.skillIds, 'grietaTemporal']
+        ..mp = 999;
+      // Order: p0, p1, E, p2 (p2 cut off by the enemy).
+      expect([for (final c in s.battle!.state.pendingGroup) c.id],
+          ['p0', 'p1']);
+      s = act(e, s, 'p0',
+          BattleAction(SkillCommand('grietaTemporal', targetId: foe)));
+      if (s.battle!.state.byId('p0')!.chained) {
+        s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      }
+      // The enemy went to the end: p1 and p2 are the block and queue.
+      expect([for (final c in s.battle!.state.pendingGroup) c.id],
+          ['p1', 'p2']);
+      expect(s.battle!.wait, greaterThan(0));
+      s = act(e, s, 'p2', const BattleAction(DefendCommand()));
+      s = act(e, s, 'p1', const BattleAction(DefendCommand()));
+      expect([for (final q in s.battle!.queue) q.playerId], ['p2', 'p1']);
+      final order = drain(e, () => s, (x) => s = x, 'p1');
+      expect(order, ['p2', 'p1']);
+    });
+
+    test('INSTANT then a skill in a block resolves; partner keeps its entry',
+        () {
+      final e = sessionEngine();
+      var s = roundsWith(e, ['p0', 'p1', 'E', 'p2']);
+      final foe = s.battle!.state.enemies.firstWhere((x) => x.alive).id;
+      s = act(e, s, 'p0',
+          BattleAction(SkillCommand('brasaEco', targetId: foe)));
+      expect(s.battle!.state.byId('p0')!.chained, isTrue);
+      expect(s.battle!.wait, greaterThan(0));
+      // Partner confirms during the INSTANT animation; the actor too.
+      s = act(e, s, 'p1', const BattleAction(DefendCommand()));
+      s = act(e, s, 'p0', BattleAction(AttackCommand(targetId: foe)));
+      final order = drain(e, () => s, (x) => s = x, 'p1');
+      // The turn holder's follow-up first, then the partner.
+      expect(order, ['p0', 'p1']);
+      expect(s.battle!.queue, isEmpty);
+    });
+  });
+
+  test('Por rondas solo: never a queue', () {
+    final e = sessionEngine();
+    var s = inField(e, 'm1', classes: ['guerrero'], mode: CombatMode.rounds);
+    s = wait(e, s, 2.6);
+    final en = s.mission!.enemies.firstWhere((x) => !x.boss && !x.elite);
+    s = moveTo(e, s, 'p0', en.x, en.y);
+    s = e.tick(s, 0.05).state;
+    expect(battleQueueEnabled(s), isFalse);
   });
 
   test('Por rondas solo: INSTANT then a skill both resolve; no enemy early',

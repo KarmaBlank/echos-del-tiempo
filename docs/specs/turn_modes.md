@@ -89,9 +89,16 @@ Es la fase de grupo de `porBando` con los enemigos primero:
   que comparte la fase de grupo) y solo en cooperativo: 2 o más humanos
   en esa batalla (los compañeros IA del modo solo no cuentan;
   `battleQueueEnabled` en el host, `SessionView.canQueue` en el
-  cliente). En Por rondas, línea de tiempo y solo no hay cola ni
-  confirmación anticipada: el jugador espera su turno como antes de
-  v0.41.6 (el menú igual no se reinicia por actualizaciones ajenas).
+  cliente). En línea de tiempo y solo no hay cola ni confirmación
+  anticipada: el jugador espera su turno como antes de v0.41.6 (el menú
+  igual no se reinicia por actualizaciones ajenas).
+- **Por rondas (v0.42.3):** en cooperativo, cuando dos o más miembros de
+  la party quedan seguidos al frente de lo que falta de la ronda, sin
+  enemigo entre ellos (el bloque `roundBlock`), la cola aplica a ese
+  bloque (recalculado al instante si un retraso o Congelación saca a un
+  enemigo de entre medio, § 4): confirman en cualquier orden y se resuelven en orden de
+  llegada, de a uno con su animación. Si hay un enemigo entre medio, el
+  de atrás no está en el bloque: su comando se rechaza hasta su turno.
   La cola solo contiene y espera a miembros de la party en su fase;
   nunca espera el turno de un enemigo.
 - Instante: el mismo jugador sigue con el turno; al terminar la
@@ -118,7 +125,7 @@ cantidad de turnos.
   decreciente); empate estable en orden de lista: grupo, invocaciones,
   enemigos. El orden queda en `BattleState.roundOrder`.
 - Los cambios de velocidad (buffs, Congelación) rigen desde la ronda
-  siguiente. Los que llegan a mitad de ronda (invocaciones, jugadores que
+  siguiente (salvo el corrimiento por retraso/Congelación, abajo). Los que llegan a mitad de ronda (invocaciones, jugadores que
   entran) actúan desde la siguiente.
 - Jugadores seguidos al frente de lo que falta forman un bloque: arrancan
   sus turnos juntos y actúan en cualquier orden (el primero que manda),
@@ -133,8 +140,14 @@ cantidad de turnos.
   mismo turno (igual en Por fases).
 - Duraciones: cuentan en rondas (cada efecto baja 1 al final del turno de
   su dueño, que es una vez por ronda).
-- Efectos que mueven el turno en la línea de tiempo (`nextTurn`: Prisa,
-  retrasos, Pasar ×½): no cambian el orden de la ronda. "Pierde el turno"
+- Retrasos y Congelación a mitad de ronda (v0.42.3): si el comando de un
+  jugador retrasa (`nextTurn` empujado: Retraso, Contratiempo, ...) o
+  congela (suma stacks de Congelación) a alguien que todavía no actuó en
+  la ronda, ese pasa al final de lo que falta de la ronda
+  (`BattleEngine._roundDelays`; el que actúa nunca se mueve). Los
+  bloques se recalculan al instante: si dos jugadores quedan seguidos,
+  forman bloque (y en coop comparten la cola, § 3.1). Prisa y Pasar ×½
+  no cambian el orden de la ronda. "Pierde el turno"
   (aturdido, quebrado, telaraña) salta su lugar en esta ronda.
 - Aguanta una ronda (combat.md § "Límites") usa esta misma ronda (y en
   Por fases, la ronda = fase enemiga + fase de jugadores).
