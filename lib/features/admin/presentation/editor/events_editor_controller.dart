@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/enemies_catalog.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
+import '../../../../game_engine/rules/world_event_rules.dart';
 import '../admin_controller.dart';
 import 'npc_editor_controller.dart' show NpcEditorController, npcLocaleTags;
 
@@ -80,7 +81,8 @@ class EventsEditorController extends ChangeNotifier {
     return d.validate(locales,
         biomes: {for (final b in kBiomes) b.id},
         residents: {for (final n in kBiomeNpcs) n.id},
-        enemies: kEnemies.keys.toSet());
+        enemies: kEnemies.keys.toSet(),
+        items: WorldEventRules.giftItems);
   }
 
   void reload() {
@@ -89,15 +91,73 @@ class EventsEditorController extends ChangeNotifier {
     // event carries all its texts.
     for (final e in events) {
       for (final k in const ['title', 'notice', 'body']) {
-        e[k] = <String, dynamic>{
-          for (final t in locales) t: '${(e[k] as Map?)?[t] ?? ''}',
-        };
+        e[k] = fullText(e[k]);
+      }
+      if (_isNpc(e)) e['greeting'] = fullText(e['greeting']);
+      for (final m in [...?(e['topics'] as List?), ...?(e['actions'] as List?)]) {
+        final x = m as Map;
+        x['label'] = fullText(x['label']);
+        x['line'] = fullText(x['line']);
       }
     }
     _savedJson = _json;
     message = null;
     notifyListeners();
   }
+
+  /// [raw] as a map with every language (missing = empty).
+  Map<String, dynamic> fullText(Object? raw) => <String, dynamic>{
+        for (final t in locales)
+          t: raw is Map ? '${raw[t] ?? ''}' : (t == 'es-AR' && raw is String ? raw : ''),
+      };
+
+  static bool _isNpc(Map e) {
+    try {
+      return WorldEventCategory.fromName(e['category']).isNpc;
+    } on FormatException {
+      return false;
+    }
+  }
+
+  /// DIÁLOGO (§ 7): a new topic of [e] with a free id.
+  void addTopic(Map<String, dynamic> e) => edit(() {
+        final list = (e['topics'] ??= <dynamic>[]) as List;
+        final ids = {for (final t in list) (t as Map)['id']};
+        var n = 1;
+        while (ids.contains('tema_$n')) {
+          n++;
+        }
+        list.add(<String, dynamic>{
+          'id': 'tema_$n',
+          'label': NpcEditorController.newText('¿…?', locales),
+          'line': NpcEditorController.newText('…', locales),
+        });
+      });
+
+  /// ACCIONES (§ 7): a new action of [kind] (at most 2).
+  void addAction(Map<String, dynamic> e, EventActionKind kind) => edit(() {
+        final list = (e['actions'] ??= <dynamic>[]) as List;
+        if (list.length >= 2) return;
+        list.add(<String, dynamic>{
+          'kind': kind.name,
+          'label': NpcEditorController.newText('…', locales),
+          'line': NpcEditorController.newText('…', locales),
+          if (kind == EventActionKind.gift) ...{
+            'item': 'rare_cog',
+            'params': <String, dynamic>{'qty': 1},
+          },
+          if (kind == EventActionKind.rumor) 'target': EventNpcAction.rift,
+          if (kind == EventActionKind.duel) ...{
+            'target': 'slime',
+            'params': <String, dynamic>{
+              'hpMult': 1.2,
+              'atkMult': 1.1,
+              'levelBonus': 1,
+              'rewardMult': 1.5
+            },
+          },
+        });
+      });
 
   /// A new event of [c] with a free id.
   void add(WorldEventCategory c) => edit(() {
@@ -115,6 +175,8 @@ class EventsEditorController extends ChangeNotifier {
           'title': NpcEditorController.newText('Evento nuevo', locales),
           'notice': NpcEditorController.newText('…', locales),
           'body': NpcEditorController.newText('…', locales),
+          if (c.isNpc) 'greeting': NpcEditorController.newText('…', locales),
+
           if (c == WorldEventCategory.lore) ...{
             'resident': kBiomeNpcs.first.id,
             'objective': LoreObjective.defeat.name,

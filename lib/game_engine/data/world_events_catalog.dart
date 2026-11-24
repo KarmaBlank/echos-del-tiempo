@@ -11,6 +11,18 @@ LocalizedText _t(String es, String en, String zh) =>
 /// missing or broken. Every text is a BORRADOR (draft) for the owner.
 const _visitor = WorldEventCategory.visitor;
 
+// Event NPC dialogue (§ 3.6): every line is a BORRADOR draft.
+final _trade = EventNpcAction(EventActionKind.trade,
+    label: _t('Comerciar', 'Trade', '交易'),
+    line: _t('Mirá lo que traje.', 'Have a look at what I brought.',
+        '看看我带来了什么。'));
+
+EventNpcAction _rumor(String target, LocalizedText line) =>
+    EventNpcAction(EventActionKind.rumor,
+        label: _t('¿Algún rumor?', 'Any rumors?', '有什么传闻吗？'),
+        line: line,
+        target: target);
+
 final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
   interval: 5,
   minPerRoll: 1,
@@ -21,6 +33,26 @@ final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
       id: 'visitor_clockmaker',
       category: _visitor,
       sprite: 'npc_ev_visitante',
+      greeting: _t('¿Se te atrasó el reloj? A todos se nos atrasa algo.',
+          'Is your clock running late? Something always is.',
+          '你的钟慢了吗？总有什么会慢下来。'),
+      topics: [
+        EventTopic(
+            id: 'trade',
+            label: _t('¿Qué arreglás?', 'What do you mend?', '你修什么？'),
+            line: _t(
+                'Relojes, cerraduras, engranajes. Lo que el tiempo gasta.',
+                'Clocks, locks, gears. Whatever time wears down.',
+                '钟表、锁、齿轮。凡是被时间磨损的。')),
+      ],
+      actions: [
+        _trade,
+        _rumor(
+            EventNpcAction.rift,
+            _t('Mis relojes tiemblan cerca de una grieta de eco. Te la marco en el mapa.',
+                'My clocks shiver near an echo rift. I marked it on your map.',
+                '我的钟在回声裂隙附近会颤动。我在你的地图上标出来了。')),
+      ],
       weight: 3,
       duration: 3,
       params: const {'discount': 0.1},
@@ -38,6 +70,24 @@ final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
       id: 'visitor_chronicler',
       category: _visitor,
       sprite: 'npc_ev_cronista',
+      greeting: _t('Ah, sos vos. Ya te había anotado.',
+          'Ah, it is you. I already wrote you down.',
+          '啊，是你。我早就把你记下了。'),
+      topics: [
+        EventTopic(
+            id: 'book',
+            label: _t('¿Qué libro?', 'Which book?', '哪本书？'),
+            line: _t('Uno que todavía no se escribió. Las últimas páginas no se pueden cambiar.',
+                'One not yet written. Its last pages cannot be changed.',
+                '一本尚未写成的书。最后几页无法改变。')),
+      ],
+      actions: [
+        _rumor(
+            'cavernas',
+            _t('En mis páginas, las Cavernas guardan una veta que nadie encontró todavía. Te la marco.',
+                'In my pages, the Caverns hold a vein no one has found yet. I marked it.',
+                '在我的书页里，洞窟藏着一条还没人发现的矿脉。我替你标出来了。')),
+      ],
       weight: 2,
       duration: 2,
       minDay: 5,
@@ -54,6 +104,32 @@ final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
       id: 'wanderer_forest',
       category: WorldEventCategory.overworldNpc,
       sprite: 'npc_ev_peregrina',
+      greeting: _t('¿Lo oís? No... claro que no.',
+          'Do you hear it? No... of course not.', '你听见了吗？不……当然听不见。'),
+      topics: [
+        EventTopic(
+            id: 'echo',
+            label: _t('¿Qué eco seguís?', 'What echo do you follow?',
+                '你在追随什么回声？'),
+            line: _t('Una voz que todavía no habló. Me dice por dónde ir.',
+                'A voice that has not spoken yet. It tells me where to go.',
+                '一个还没开口的声音。它告诉我该往哪走。')),
+      ],
+      actions: [
+        EventNpcAction(EventActionKind.gift,
+            label: _t('¿Tenés algo para mí?', 'Do you have something for me?',
+                '你有东西给我吗？'),
+            line: _t('Tomá: brillan cuando el agua recuerda. Los peces no se resisten.',
+                'Here: they glow when the water remembers. Fish cannot resist.',
+                '拿着：水记起往事时它们会发光。鱼抵挡不住。'),
+            item: 'larva_brillante',
+            params: const {'qty': 3}),
+        _rumor(
+            EventNpcAction.rift,
+            _t('El eco viene de una grieta. Te marco dónde está.',
+                'The echo comes from a rift. I marked where it is.',
+                '回声来自一道裂隙。我标出了它的位置。')),
+      ],
       weight: 3,
       duration: 3,
       biomes: const ['bosque'],
@@ -70,6 +146,35 @@ final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
       id: 'wanderer_automaton',
       category: WorldEventCategory.overworldNpc,
       sprite: 'npc_ev_automata',
+      greeting: _t('Clic. ¿Sos. Quien. Me. Dio. Cuerda?',
+          'Click. Are. You. The. One. Who. Wound. Me?', '咔哒。是。你。给。我。上。的。发条。吗？'),
+      topics: [
+        EventTopic(
+            id: 'mine',
+            label: _t('¿De dónde venís?', 'Where do you come from?', '你从哪里来？'),
+            line: _t('De abajo. La mina de las ruinas. Ahí quedó la fragua que me armó.',
+                'From below. The ruins mine. The forge that built me is still there.',
+                '从下面。遗迹的矿坑。造我的熔炉还在那里。')),
+      ],
+      actions: [
+        EventNpcAction(EventActionKind.gift,
+            label: _t('Te ayudo a buscarlo', 'I will help you look', '我帮你找'),
+            line: _t('Gracias. Tomá. Me sobra. Un engranaje.',
+                'Thanks. Take. A spare. Cog.', '谢谢。拿着。多余的。齿轮。'),
+            item: 'rare_cog',
+            params: const {'qty': 1}),
+        EventNpcAction(EventActionKind.duel,
+            label: _t('Probemos fuerzas', 'Let us test our strength', '比试一下'),
+            line: _t('Protocolo. De. Prueba. Iniciado.',
+                'Test. Protocol. Engaged.', '测试。协议。启动。'),
+            target: 'guardianReloj',
+            params: const {
+              'hpMult': 1.4,
+              'atkMult': 1.2,
+              'levelBonus': 2,
+              'rewardMult': 1.5
+            }),
+      ],
       weight: 2,
       duration: 3,
       minDay: 10,
@@ -207,6 +312,26 @@ final WorldEventsConfig kWorldEventsDefaults = WorldEventsConfig(
       id: 'caravan_relics',
       category: WorldEventCategory.caravan,
       sprite: 'npc_ev_caravana',
+      greeting: _t('¡Restos del pasado, recién desenterrados!',
+          'Relics of the past, freshly dug up!', '刚出土的往昔遗物！'),
+      topics: [
+        EventTopic(
+            id: 'relics',
+            label: _t('¿De dónde sacan esto?', 'Where do you find these?',
+                '这些是从哪找到的？'),
+            line: _t('De la época magitec. Cada pieza todavía recuerda para qué servía.',
+                'From the magitec age. Every piece still remembers its purpose.',
+                '来自魔导时代。每一件都还记得自己的用途。')),
+      ],
+      actions: [
+        _trade,
+        _rumor(
+            'ruinas',
+            _t('En la mina de las Ruinas hay una reliquia magitec enterrada. Te la marco.',
+                'There is a magitec relic buried in the Ruins mine. I marked it.',
+                '遗迹的矿坑里埋着一件魔导遗物。我替你标出来了。')),
+      ],
+
       weight: 2,
       duration: 3,
       minDay: 10,

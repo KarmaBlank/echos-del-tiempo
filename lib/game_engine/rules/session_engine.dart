@@ -1600,6 +1600,8 @@ class _Op {
         return !tutorialLocked && _proposeAbyss(p, a.boss);
       case ProposeRiftAction():
         return !tutorialLocked && _proposeRift(p, a.uid);
+      case EventNpcActAction():
+        return !tutorialLocked && _eventNpcAct(p, a.uid, a.index);
       case ScheduleTownEventAction():
         return !tutorialLocked && _scheduleTownEvent(p, a.id);
       case ProposeTourneyAction():
@@ -1748,6 +1750,7 @@ class _Op {
         s.vote != null ||
         r == null ||
         p.isCompanion ||
+        s.town.events.clearedBy(uid, p.id) ||
         (s.place ?? kPueblo) != r.$1.biome ||
         WorldEventRules.near(s.town, r.$1.biome, p.x, p.y, player: p.id)
                 ?.uid !=
@@ -1762,7 +1765,42 @@ class _Op {
     return true;
   }
 
+  /// `EventNpcActAction` (world_events.md § 3.6): a gift (once per
+  /// player) or a rumor (marks the place) of the event NPC [uid], in
+  /// front of it.
+  bool _eventNpcAct(SessionPlayer p, String uid, int i) {
+    final ev = s.town.events;
+    final a = ev.active.where((x) => x.uid == uid).firstOrNull;
+    final d = a == null ? null : kWorldEvents.def(a.def);
+    if (a == null ||
+        d == null ||
+        !d.isNpc ||
+        p.isCompanion ||
+        s.mode != SessionMode.lobby ||
+        i < 0 ||
+        i >= d.actions.length ||
+        (s.place ?? kPueblo) != a.biome ||
+        WorldEventRules.near(s.town, a.biome, p.x, p.y)?.uid != uid ||
+        ev.doneBy(uid, i, p.id)) {
+      return false;
+    }
+    final act = d.actions[i];
+    switch (act.kind) {
+      case EventActionKind.gift:
+        final prof = WorldEventRules.gift(p.profile, act);
+        if (prof == null) return false;
+        _profileChange(p, prof);
+      case EventActionKind.rumor:
+        break;
+      case EventActionKind.duel || EventActionKind.trade:
+        return false;
+    }
+    s.town = s.town.copyWith(events: ev.markDone(uid, i, p.id));
+    return true;
+  }
+
   /// Starts the voted rift: straight into the scaled boss fight.
+
   void _startRift() {
     final r = WorldEventRules.riftOf(s.town.events, s.rift);
     if (r == null) {
