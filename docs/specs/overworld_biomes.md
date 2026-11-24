@@ -210,7 +210,7 @@ cada tramo tiene un destino dentro de un radio `NpcCampRules.radius`
 (1.25 tiles) del centro de su tile, sacado de un hash de (id, tramo).
 Los primeros `walk` (2 s) camina en línea recta del destino anterior al
 nuevo; el resto queda quieto. Uno de cada 3 tramos (por el hash) hace su
-actividad durante la pausa: pose agachada y chispas del color del
+actividad durante la pausa: chispas del color del
 oficio. Como los dos extremos caen dentro del círculo, toda la recta
 también.
 
