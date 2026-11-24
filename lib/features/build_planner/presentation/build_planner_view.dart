@@ -1131,7 +1131,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 t.tier,
                 _s.t('ui.build.pick.tier', {'tier': t.tier}),
                 _s.t('ui.build.pick.tier_range', {
-                  'min': def.stat.format(t.min),
+                  'min': def.stat.formatText(t.min),
                   'max': t.max,
                   'level': t.minLevel,
                 }),
@@ -1142,10 +1142,10 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         }
       case 'wp':
         final list = kWeaponPassives.values.toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+          ..sort((a, b) => a.text.compareTo(b.text));
         final id = await _pick<String>(_s.t('ui.build.pick.passive_title'), [
           for (final w in list)
-            PickOption(w.id, w.name,
+            PickOption(w.id, w.text,
                 '${w.unique ? _s.t('ui.build.pick.unique') : ''}${w.descriptionAt(1)}',
                 key: 'wp-${w.id}'),
         ]);

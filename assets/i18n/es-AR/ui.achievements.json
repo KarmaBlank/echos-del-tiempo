@@ -15,5 +15,10 @@
   "ui.achievements.toast_head": "HAZAÑA LOGRADA",
   "ui.achievements.help": "<b>Hazañas</b><br>Una vez por cuenta: cada una paga créditos, materiales o pociones al personaje con el que la lográs. Funcionan como guía: pasá el mouse por una fila (o mantenela apretada) para ver cómo se consigue.<br>Las de contador (II, III) cuentan desde que existen las hazañas.",
   "ui.achievements.toast_line": "HAZAÑA · {name}",
-  "ui.achievements.toast_line_reward": "HAZAÑA · {name} · {reward}"
+  "ui.achievements.toast_line_reward": "HAZAÑA · {name} · {reward}",
+  "ui.achievements.reward_part.shards": "+{n} {n, plural, one{Esquirla} other{Esquirlas}} del Eco",
+  "ui.achievements.reward_part.crystals": "+{n} {n, plural, one{Cristal} other{Cristales}} de Era",
+  "ui.achievements.reward_part.prisms": "+{n} {n, plural, one{Prisma Roto} other{Prismas Rotos}}",
+  "ui.achievements.reward_part.potions": "+{n} {n, plural, one{Poción} other{Pociones}} de vida",
+  "ui.achievements.reward_part.ethers": "+{n} {n, plural, one{Poción} other{Pociones}} de maná"
 }

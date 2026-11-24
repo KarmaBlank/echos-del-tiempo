@@ -31,8 +31,15 @@ class SessionConfig {
 /// Error de conexión con un mensaje listo para mostrarle al jugador
 /// (`Sala X no encontrada`, `La sala está llena`...).
 class NetException implements Exception {
-  const NetException(this.message);
+  const NetException(this.message, {this.key, this.args = const {}});
+
+  /// es-AR text (logs, tests and the fallback when [key] is null).
   final String message;
+
+  /// Text key (`ui.lobby.net.*`, docs/specs/i18n.md § 3.8) the lobby shows
+  /// in the player's language with [args]; `null` = show [message].
+  final String? key;
+  final Map<String, Object?> args;
 
   @override
   String toString() => message;

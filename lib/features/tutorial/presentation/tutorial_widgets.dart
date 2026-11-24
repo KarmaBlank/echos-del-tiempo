@@ -12,6 +12,7 @@ import '../../combat/presentation/battle_hud.dart' show HudHighlight;
 import '../../../game_engine/models/session_action.dart' show TutorialControl;
 import '../../../game_engine/rules/tutorial_rules.dart';
 import '../../../core/i18n/battle_log_text.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 
 // TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md): el detalle
@@ -143,7 +144,7 @@ class _TutorialSealDetailState extends ConsumerState<TutorialSealDetail> {
                           style: _body(ProtoColors.ink)),
                       const SizedBox(height: 8),
                       for (final s in w.rules.stages)
-                        Text('${s.number}. ${s.title}: ${s.teaches}',
+                        Text('${s.number}. ${ref.strings.data('ui.tutorial.stage.${s.number}.title', s.title)}: ${ref.strings.data('ui.tutorial.stage.${s.number}.teaches', s.teaches)}',
                             style: _body(ProtoColors.dim)),
                       Text(
                           ref.t('ui.tutorial.seal.after'),

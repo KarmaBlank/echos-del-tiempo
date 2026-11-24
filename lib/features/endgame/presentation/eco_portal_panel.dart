@@ -22,6 +22,7 @@ import 'abyss_view.dart';
 import 'atlas_view.dart';
 import 'eco_zone_hub.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../domain/endgame_names.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
@@ -111,7 +112,7 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
                       key: const ValueKey('eco-hub'),
                       profile: p,
                       zoneName: (z) =>
-                          c.engine.catalog.zone(z)?.name ??
+                          c.engine.catalog.zone(z)?.tr ??
                           ref.t('ui.endgame.zone_n', {'zone': z}),
                       goBlocked: c.ecoTravelBlocked,
                       onGo: (z, t) => c.travelToEcoPortal(z, tier: t)),
@@ -174,7 +175,7 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
           onTap: () => setState(() => _sel = e.uid),
           label: ecoNameMarkup(rules, e),
           value: protoColor(
-              ProtoColors.dim, protoEsc(rules.ecos.zoneOf(e)?.name ?? '?')),
+              ProtoColors.dim, protoEsc(rules.ecos.zoneOf(e)?.tr ?? '?')),
         ),
       if (dev) ...[
         const SizedBox(height: 8),

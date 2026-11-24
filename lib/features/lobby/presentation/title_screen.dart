@@ -426,7 +426,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       setState(() {
         _busy = false;
         _netStatus = e is NetException
-            ? e.message
+            ? (e.key == null ? e.message : ref.t(e.key!, e.args))
             : ref.t('ui.lobby.status.net_error', {'error': e});
         _netError = true;
       });

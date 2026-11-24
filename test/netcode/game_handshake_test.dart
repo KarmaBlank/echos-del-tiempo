@@ -11,9 +11,9 @@ import '../game_engine/session_test_helpers.dart';
 /// juego"): Mundo y Travesía no comparten salas.
 void main() {
   test('Mundo en 61 (v0.40.0: log estructurado) y Travesía arranca su secuencia en 1', () {
-    expect(WireGame.mundo.protocol, 61);
-    expect(kProtocolVersion, 61);
-    expect(WireGame.travesia.protocol, 5);
+    expect(WireGame.mundo.protocol, 62);
+    expect(kProtocolVersion, 62);
+    expect(WireGame.travesia.protocol, 6);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });
 

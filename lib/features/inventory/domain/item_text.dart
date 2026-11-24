@@ -77,7 +77,7 @@ String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
 /// Texto de un mod con su tier, en azul (los fijos de un único, naranja).
 String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
     _c(a.fixed ? _orange : kModHex,
-        _esc(modShort(rules.items.affixText(a, on: on))));
+        _esc(modShort(localAffixText(rules.items, a, on: on))));
 
 /// Texto de un mod (afijo, implícito, pasiva del arma) según TEXTOS:
 /// en RESUMIDO sin abreviaturas ni fórmulas (ui_minimal.md § 8).
@@ -274,7 +274,7 @@ String itemTooltipMarkup(
   final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
   if (implicit.isNotEmpty) {
     l.add('<span class="k">Implícito:</span> '
-        '${implicit.map((m) => _esc(modShort(m.text))).join(', ')}');
+        '${implicit.map((m) => _esc(modShort(m.tr))).join(', ')}');
   }
   if (it.rarity.maxMods > 0 || it.affixes.isNotEmpty) {
     l.add('<span class="k">Mods ${it.modCount}/${it.rarity.maxMods}</span>');
@@ -344,7 +344,7 @@ String itemTooltipMarkup(
   final mods = <String>[
     if (implicit.isNotEmpty)
       '<span class="k">Implícito:</span> '
-          '${implicit.map((m) => _esc(modShort(m.text))).join(', ')}',
+          '${implicit.map((m) => _esc(modShort(m.tr))).join(', ')}',
     ...affixGroupsMarkup(rules, it),
   ];
   final passive = items.passiveText(it);
@@ -424,11 +424,11 @@ String weaponRoleLine(WeaponDef w, ItemInstance it) {
   ];
   final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
   for (final m in implicit) {
-    l.add(_c(_dim, '• ${short(m.text)}'));
+    l.add(_c(_dim, '• ${short(m.tr)}'));
   }
   for (final a in it.affixes) {
     l.add(_c(a.fixed ? _orange : kModHex,
-        '• ${short(items.affixText(a, on: it))}'));
+        '• ${short(localAffixText(items, a, on: it))}'));
   }
   final passive = items.passiveText(it);
   if (passive != null) {

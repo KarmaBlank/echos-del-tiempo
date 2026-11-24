@@ -364,6 +364,7 @@
   "ui.town.trades.vs_equipped": "VS EQUIPADA",
   "ui.town.trades.tab.habilidades": "HABILIDADES",
   "ui.town.trades.tab.inventario": "INVENTARIO",
+<<<<<<< HEAD
   "ui.town.edit.cat_all": "TODO",
   "ui.town.edit.cat_farm": "CULTIVO",
   "ui.town.edit.cat_water": "AGUA",
@@ -376,4 +377,25 @@
   "ui.town.edit.lamp_info": "Alumbra fuerte de noche, mucho más que una antorcha.",
   "ui.town.edit.placing_info": "Clic en el mapa para ponerla; queda elegida para poner otra. Esc o clic en la casilla para soltarla.",
   "ui.town.edit.footprint": "{w}×{h}"
+=======
+  "ui.town.build_kind.casa": "CASA",
+  "ui.town.build_kind.huerta": "HUERTA",
+  "ui.town.build_kind.lago": "LAGO",
+  "ui.town.crop_affinity.dia": "Crece más de día",
+  "ui.town.crop_affinity.lluvia": "Crece más con lluvia",
+  "ui.town.crop_affinity.noche": "Crece más de noche",
+  "ui.town.crop_affinity.siempre": "Parejo",
+  "ui.town.day_time.amanecer": "Amanecer",
+  "ui.town.day_time.atardecer": "Atardecer",
+  "ui.town.day_time.dia": "Día",
+  "ui.town.day_time.noche": "Noche",
+  "ui.town.day_time.siempre": "Siempre",
+  "ui.town.fish_rarity.comun": "común",
+  "ui.town.fish_rarity.epico": "épico",
+  "ui.town.fish_rarity.legendario": "legendario",
+  "ui.town.fish_rarity.raro": "raro",
+  "ui.town.helper_task.cosechar": "Cosechar",
+  "ui.town.helper_task.plantar": "Plantar",
+  "ui.town.helper_task.regar": "Regar"
+>>>>>>> origin/main
 }

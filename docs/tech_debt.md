@@ -296,3 +296,23 @@ Funcionalidad pendiente:
 - Tres mecanismos para traducir catálogos (`CatalogText` + `item_names.dart`,
   `catalog_names.dart` `.tr` + `GameText.current`, `DataKeys` +
   `Strings.data`): unificarlos en uno (`docs/specs/i18n.md` §3.7).
+
+## Idiomas fase 4 (v0.41.0)
+
+- Nombres Raro/Épico/Eco tirados al azar se guardan como texto: guardar
+  sus partes (ids) y armarlos por idioma con respaldo al texto guardado.
+  No se hizo por riesgo en partidas y red.
+- Diálogo NPC: sin campo `en` ni selector en el editor de NPC (el dueño
+  escribe el diálogo a mano; falta solo la plomería).
+- Siguen en es-AR: descripciones de pasivas de arma (`describe(v)`), textos
+  largos de `CraftHelp`, `CraftMaterial`/`CropQuality`/`OficioBag`, pasos y
+  motivos de `BuildCoach`/`BuildPlanRules`, motivos de `CraftRules`,
+  `breakSkillText`, glosario y líneas de voto del tutorial
+  (`TutorialRules`), rasgos de familia (`family_rules.dart`),
+  `blockedReactionsLine`, mods y nombres de Eco, nombres de mecánicas de
+  jefe y movimientos/fases del Abismo dentro del log, y el texto de rechazo
+  de unión del anfitrión (`msg.text`, viaja por red).
+- Rótulos de los slots de layout (`craft_layout.dart`,
+  `battle_bar_layout.dart`) y el editor admin: herramienta interna.
+- Varias extracciones no las cuenta el lint (enums, mods, errores de red),
+  así que la línea base subestima lo hecho.

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/i18n/catalog_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -8,7 +9,6 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
-import '../../../game_engine/data/classes_catalog.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/ascension.dart';
 import '../../../game_engine/rules/ascension_rules.dart';
@@ -27,17 +27,17 @@ String ascensionCardMarkup(Strings t, AscensionDef a) {
   ];
   final ult = kAscensionUltimatesById[a.ultId];
   final root = a.node(a.rootId);
-  return '<b style="color:$hex">${protoEsc(a.name.toUpperCase())}</b><br>'
-      '${protoColor(ProtoColors.dim, protoEsc(a.theme))}<br>'
-      '${protoColor(ProtoColors.cream, protoEsc(a.motto))}<br>'
-      '${t.t('ui.ascension.card.awakening', {'name': protoEsc(root?.name ?? '')})}<br>'
-      '${protoEsc(root?.text ?? '')}<br>'
+  return '<b style="color:$hex">${protoEsc(a.tr.toUpperCase())}</b><br>'
+      '${protoColor(ProtoColors.dim, protoEsc(a.themeTr))}<br>'
+      '${protoColor(ProtoColors.cream, protoEsc(a.mottoTr))}<br>'
+      '${t.t('ui.ascension.card.awakening', {'name': protoEsc(root?.tr ?? '')})}<br>'
+      '${protoEsc(root?.textTr ?? '')}<br>'
       '${t.t('ui.ascension.card.kit')}<br>'
       '${[
     for (final s in skills)
-      '· <b>${protoEsc(s.name)}</b> ${protoColor(ProtoColors.ice, '${s.mp} MP')}',
+      '· <b>${protoEsc(s.tr)}</b> ${protoColor(ProtoColors.ice, '${s.mp} MP')}',
     if (ult != null)
-      '· ${protoColor(ProtoColors.pink, '★ ULT ${protoEsc(ult.name)}')}',
+      '· ${protoColor(ProtoColors.pink, '★ ULT ${protoEsc(ult.tr)}')}',
   ].join('<br>')}';
 }
 
@@ -163,7 +163,7 @@ class AscensionChoiceView extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: PanelButton(
                 ref.t('ui.ascension.choose',
-                    {'name': a.name.toUpperCase()}),
+                    {'name': a.tr.toUpperCase()}),
                 key: ValueKey('asc-choose-${a.id}'),
                 accent: col,
                 reason: blocked,
@@ -237,7 +237,7 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
     final col = Color(a.color);
     final taken = _rules.has(p, node.id);
     final why = widget.editBlocked ?? _why(node);
-    final cls = kClasses[a.classId]?.name ?? a.classId;
+    final cls = classNameTr(a.classId);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -297,10 +297,10 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
               // Primero el nodo elegido (lo que se decide).
               ProtoText(
                   key: const ValueKey('asc-node-detail'),
-                  '<b>${protoEsc(node.name)}</b>'
+                  '<b>${protoEsc(node.tr)}</b>'
                   '${node.major ? ' ${protoColor(ProtoColors.pink, ref.t('ui.ascension.node.major'))}' : ''} '
                   '${node.root ? protoColor(ProtoColors.gold, ref.t('ui.ascension.node.root')) : protoColor(ProtoColors.dim, ref.t('ui.ascension.node.cost', {'cost': node.cost}))}<br>'
-                  '${protoEsc(node.text)}<br>'
+                  '${protoEsc(node.textTr)}<br>'
                   '${protoColor(ProtoColors.dim, protoEsc(_state(node)))}'),
               const SizedBox(height: 6),
               ProtoText(
@@ -322,8 +322,8 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
                   Expanded(
                     child: ProtoText(
                         '<b style="color:${ascensionHex(a)}">'
-                        '${protoEsc(a.name.toUpperCase())}</b><br>'
-                        '${protoColor(ProtoColors.dim, '${protoEsc(cls)} · ${protoEsc(a.theme)}')}'),
+                        '${protoEsc(a.tr.toUpperCase())}</b><br>'
+                        '${protoColor(ProtoColors.dim, '${protoEsc(cls)} · ${protoEsc(a.themeTr)}')}'),
                   ),
                 ],
               ),
@@ -352,7 +352,7 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
       top: c.dy + size / 2 + 3,
       width: cell * 1.8,
       child: IgnorePointer(
-        child: Text(retroText(n.name),
+        child: Text(retroText(n.tr),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -379,7 +379,7 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
       width: size,
       height: size,
       child: RetroTooltip(
-        message: '<b>${protoEsc(n.name)}</b><br>${protoEsc(n.text)}<br>'
+        message: '<b>${protoEsc(n.tr)}</b><br>${protoEsc(n.textTr)}<br>'
             '${protoColor(ProtoColors.dim, protoEsc(_state(n)))}',
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -442,4 +442,4 @@ class _TreeLinks extends CustomPainter {
 /// Texto de los títulos del panel (`retroText`).
 String ascensionPanelTitle(Strings t, AscensionDef? a) => retroText(a == null
     ? t.t('ui.ascension.title')
-    : t.t('ui.ascension.title_with', {'name': a.name}));
+    : t.t('ui.ascension.title_with', {'name': a.tr}));

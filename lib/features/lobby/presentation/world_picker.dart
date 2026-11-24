@@ -1,3 +1,4 @@
+import '../../world/domain/town_names.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,7 +41,7 @@ class WorldPicker extends ConsumerWidget {
         const SizedBox(height: 8),
         for (final l in WorldLabel.values)
           if (groups[l]!.isNotEmpty) ...[
-            Text(l.text.toUpperCase(),
+            Text(l.tr.toUpperCase(),
                 key: ValueKey('world-group-${l.name}'),
                 style: DsText.detail(ProtoColors.dim)),
             const SizedBox(height: 4),
@@ -162,7 +163,7 @@ class _CreateWorldDialogState extends State<_CreateWorldDialog> {
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
             for (final l in WorldLabel.values)
-              PanelButton(l.text.toUpperCase(),
+              PanelButton(l.tr.toUpperCase(),
                   key: ValueKey('world-label-${l.name}'),
                   selected: _label == l,
                   onPressed: () => setState(() => _label = l)),

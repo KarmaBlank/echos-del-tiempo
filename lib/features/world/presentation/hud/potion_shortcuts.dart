@@ -37,9 +37,9 @@ class PotionShortcuts extends StatelessWidget {
       key: const ValueKey('hud-potions'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        button(BattleItem.potion, '1', 'Vida', prof.potions),
+        button(BattleItem.potion, '1', context.t('ui.world.hud.potion.hp'), prof.potions),
         const SizedBox(width: 6),
-        button(BattleItem.ether, '2', 'Maná', prof.ethers),
+        button(BattleItem.ether, '2', context.t('ui.world.hud.potion.mp'), prof.ethers),
       ],
     );
   }

@@ -66,8 +66,7 @@ extension _AbyssTurn on _Turn {
     if (_abyssDamageImmune(e)) {
       if (_immuneShown.add('dmg|${e.id}')) {
         events.add(BossMechanicEvent(e.id, BossMechanicPhase.immune));
-        _notes.add(LogLine.of('${e.name} es INMUNE al daño mientras vivan sus '
-            'invocaciones'));
+        _notes.add(_l('abyss_immune', {'a': e.name}));
       }
       mods?.add(_l('x_immune'));
       return 0;
@@ -99,9 +98,7 @@ extension _AbyssTurn on _Turn {
         ..attack = jsRound(e.attack * d.enragePower);
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.enrage,
           value: d.enragePower));
-      _notes.add(
-          LogLine.of('¡${e.name} entra en FURIA! ATQ ×${fm(d.enragePower)} y '
-              'golpea a todos'));
+      _notes.add(_l('abyss_enrage', {'a': e.name, 'x': fm(d.enragePower)}));
     }
     final aspects = AbyssRules.phaseOf(d, e).aspects;
     if (aspects.length > 1) {
@@ -111,7 +108,7 @@ extension _AbyssTurn on _Turn {
       e.abyssAspect = next.index + 1;
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.aspect,
           value: next.index.toDouble()));
-      _notes.add(LogLine.of('${e.name} toma el aspecto de ${next.label}'));
+      _notes.add(_l('abyss_aspect', {'a': e.name, 'e': _el(next)}));
     } else if (aspects.length == 1) {
       e.abyssAspect = aspects.first.index + 1;
     }
@@ -122,7 +119,7 @@ extension _AbyssTurn on _Turn {
           ..abyssSeal = 0
           ..abyssSealTurns = 0;
         events.add(BossMechanicEvent(e.id, BossMechanicPhase.sealFade));
-        _notes.add(LogLine.of('el sello de ${e.name} se apaga'));
+        _notes.add(_l('abyss_seal_fades', {'a': e.name}));
       }
     }
   }
@@ -165,8 +162,7 @@ extension _AbyssTurn on _Turn {
             _basicAttack(e, m, alive);
           } else {
             state.logLine =
-                LogLine.of('${e.name} · ${mv.label}: vuelven $k invocación'
-                    '${k == 1 ? '' : 'es'}');
+                _l('abyss_summons', {'a': e.name, 'm': mv.label, 'n': k});
           }
         case AbyssMoveKind.devour:
           _abyssDevour(e, mv);
@@ -178,7 +174,7 @@ extension _AbyssTurn on _Turn {
     if (next.kind.telegraphed) {
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.abyssTelegraph,
           value: next.kind.index.toDouble()));
-      _notes.add(LogLine.of('Próximo: ${next.label}'));
+      _notes.add(_l('abyss_next', {'m': next.label}));
     }
   }
 
@@ -198,7 +194,7 @@ extension _AbyssTurn on _Turn {
     final atk = _abyssAtk(e);
     events.add(ActionEvent(e.id, BattleActionKind.enemyArea, allTargets: true));
     final protector = alive.where((p) => p.protecting).firstOrNull;
-    final parts = <String>[];
+    final parts = <LogLine>[];
     for (final p0 in alive) {
       final p = protector != null && p0 != protector ? protector : p0;
       if (!p.alive) continue;
@@ -215,18 +211,24 @@ extension _AbyssTurn on _Turn {
         p.nextTurn += _iv(p) * mv.delay;
         events.add(DelayedEvent(p.id));
       }
-      parts.add('${p.name} ${h.damage}${guard ? ' (defiende)' : ''}');
+      parts.add(_l('abyss_strike_part',
+          {'a': p.name, 'd': h.damage, 'g': guard ? 'yes' : 'no'}));
     }
-    state.logLine =
-        LogLine.of('${e.name} · ${mv.label} (todos, ATQ $atk × ${fm(mv.power)}'
-            '${el != GameElement.fisico ? ', ${el.label}' : ''}'
-            '${mv.delay > 0 ? ', retrasa' : ''}): ${parts.join(', ')}');
+    state.logLine = _l('abyss_strike', {
+      'a': e.name,
+      'm': mv.label,
+      'n': atk,
+      'x': fm(mv.power),
+      'el': el != GameElement.fisico ? 'yes' : 'no',
+      'e': _el(el),
+      'dl': mv.delay > 0 ? 'yes' : 'no',
+      'p': LogLine.join(parts, ', '),
+    });
   }
 
   void _abyssRewind(Combatant e, AbyssMoveDef mv) {
     if (e.broken) {
-      state.logLine =
-          LogLine.of('${e.name} intenta rebobinar, pero está QUEBRADO');
+      state.logLine = _l('abyss_rewind_broken', {'a': e.name});
       return;
     }
     final f = _abyssSolo ? mv.soloValue : mv.value;
@@ -237,8 +239,8 @@ extension _AbyssTurn on _Turn {
     }
     events.add(
         BossMechanicEvent(e.id, BossMechanicPhase.rewind, value: h.toDouble()));
-    state.logLine = LogLine.of('${e.name} · ${mv.label}: recupera $h HP '
-        '(${_pct(f)} de lo recibido desde su acción anterior)');
+    state.logLine =
+        _l('abyss_rewind', {'a': e.name, 'm': mv.label, 'h': h, 'p': _pct(f)});
   }
 
   void _abyssTimeWarp(Combatant e, AbyssMoveDef mv, List<Combatant> alive) {
@@ -250,8 +252,7 @@ extension _AbyssTurn on _Turn {
     _abyssHaste[this] = kAbyssHaste;
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.timeWarp, value: f));
     state.logLine =
-        LogLine.of('${e.name} · ${mv.label}: retrasa al grupo ${_pct(f)} de un '
-            'turno y adelanta el suyo');
+        _l('abyss_time_warp', {'a': e.name, 'm': mv.label, 'p': _pct(f)});
   }
 
   /// Cada eco vivo (o el jefe, sin ecos) copia la última habilidad del
@@ -271,7 +272,6 @@ extension _AbyssTurn on _Turn {
         if (c.alive && m.addType != null && c.enemyType == m.addType) c,
     ];
     if (casters.isEmpty) casters.add(e);
-    final name = sk == null ? 'Reflejo' : 'Reflejo: ${sk.name}';
     final parts = <String>[];
     for (final c in casters) {
       final live = _aliveParty.toList();
@@ -295,9 +295,14 @@ extension _AbyssTurn on _Turn {
         parts.add('${p.name} ${h.damage}');
       }
     }
-    state.logLine = LogLine.of('${e.name} · $name'
-        '${el != GameElement.fisico ? ' (${el.label})' : ''}: '
-        '${parts.join(', ')}');
+    state.logLine = _l('abyss_mirror', {
+      'a': e.name,
+      'sk': sk == null ? 'no' : 'yes',
+      's': sk == null ? '' : _sk(sk),
+      'el': el != GameElement.fisico ? 'yes' : 'no',
+      'e': _el(el),
+      'p': parts.join(', '),
+    });
   }
 
   void _abyssSeal(Combatant e, AbyssMoveDef mv) {
@@ -308,10 +313,14 @@ extension _AbyssTurn on _Turn {
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.sealCast,
         value: r.index.toDouble()));
     final block = _abyssSolo ? mv.soloValue : mv.value;
-    state.logLine = LogLine.of(
-        '${e.name} · ${mv.label}: recibe −${_pct(block)} de daño '
-        '${mv.turns} turnos · rompelo con ${_abyssSolo ? 'cualquier reacción' : r.label} '
-        'o quebrándolo');
+    state.logLine = _l('abyss_seal', {
+      'a': e.name,
+      'm': mv.label,
+      'p': _pct(block),
+      'n': mv.turns,
+      'solo': _abyssSolo ? 'yes' : 'no',
+      'r': _rxL(r),
+    });
   }
 
   /// Se come los buffs y escudos del grupo: +ATQ por cada uno (tope).
@@ -346,10 +355,15 @@ extension _AbyssTurn on _Turn {
     }
     events.add(
         BossMechanicEvent(e.id, BossMechanicPhase.devour, value: n.toDouble()));
-    state.logLine = LogLine.of(n == 0
-        ? '${e.name} · ${mv.label}: no encuentra buffs que comer'
-        : '${e.name} · ${mv.label}: se come $n buff${n == 1 ? '' : 's'} del '
-            'grupo · ATQ +${_pct(after)} (tope +${_pct(cap)})');
+    state.logLine = n == 0
+        ? _l('abyss_devour_none', {'a': e.name, 'm': mv.label})
+        : _l('abyss_devour', {
+            'a': e.name,
+            'm': mv.label,
+            'n': n,
+            'p': _pct(after),
+            'c': _pct(cap),
+          });
   }
 
   // ---------------- fases ----------------
@@ -391,9 +405,13 @@ extension _AbyssTurn on _Turn {
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift,
         value: e.phase.toDouble()));
-    _notes.add(LogLine.of(
-        '¡${e.name}: FASE ${e.phase} · ${ph.name}! Pierde sus estados'
-        '${ph.attackMult != 1 ? ', ATQ ×${fm(ph.attackMult)}' : ''}'));
+    _notes.add(_l('abyss_phase', {
+      'a': e.name,
+      'n': e.phase,
+      'f': ph.name,
+      'atk': ph.attackMult != 1 ? 'yes' : 'no',
+      'x': fm(ph.attackMult),
+    }));
     if (ph.summon && m.addType != null) {
       e.mechTurns = 0;
       final k = _summonAdds(e, m);
@@ -408,22 +426,23 @@ extension _AbyssTurn on _Turn {
   void _abyssReacted(Combatant? by, Combatant t, ReactionKind k) {
     if (t.abyssSeal <= 0 || by == null || !by.isPlayer) return;
     if (!_abyssSolo && t.abyssSeal - 1 != k.index) return;
-    _abyssBreakSeal(t, by, '¡${k.label} rompe el sello de ${t.name}!');
+    _abyssBreakSeal(
+        t, by, _l('abyss_seal_reaction', {'r': _rxL(k), 'a': t.name}));
   }
 
   /// El quiebre también rompe el sello.
   void _abyssBroken(Combatant e) {
     if (e.abyssSeal <= 0) return;
-    _abyssBreakSeal(e, _attacker, 'el quiebre rompe el sello de ${e.name}');
+    _abyssBreakSeal(e, _attacker, _l('abyss_seal_break', {'a': e.name}));
   }
 
-  void _abyssBreakSeal(Combatant e, Combatant? by, String note) {
+  void _abyssBreakSeal(Combatant e, Combatant? by, LogLine note) {
     e
       ..abyssSeal = 0
       ..abyssSealTurns = 0;
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.sealBroken,
         targetId: by?.id));
-    _notes.add(LogLine.of(note));
+    _notes.add(note);
   }
 
   /// Curas del grupo: dañan a los jefes con `healHurts` (también en su
@@ -436,7 +455,7 @@ extension _AbyssTurn on _Turn {
       if (d == null || d.healHurts <= 0) continue;
       final dmg = math.max(1, jsRound(healed * d.healHurts));
       _rawDamage(null, e, dmg, kAbyssHealSourceId);
-      _notes.add(LogLine.of('la cura daña a ${e.name}: $dmg'));
+      _notes.add(_l('abyss_heal_hurts', {'a': e.name, 'd': dmg}));
     }
   }
 

@@ -451,7 +451,8 @@ abstract class ProtocolNetSession
     final link = await joinRoom(code);
     if (_closed) {
       await _quietly(link.close());
-      throw const NetException('Conexión cancelada.');
+      throw const NetException('Conexión cancelada.',
+          key: 'ui.lobby.net.cancelled');
     }
     _host = link;
     final welcome = Completer<void>();
@@ -490,7 +491,8 @@ abstract class ProtocolNetSession
       onDone: () {
         if (!welcome.isCompleted) {
           welcome.completeError(
-              const NetException('El host cerró la conexión.'));
+              const NetException('El host cerró la conexión.',
+                  key: 'ui.lobby.net.host_closed'));
         } else if (!_closed) {
           _host = null;
           _welcomed = false;
@@ -509,7 +511,8 @@ abstract class ProtocolNetSession
       await welcome.future.timeout(welcomeTimeout,
           onTimeout: () => throw const NetException(
               'No se pudo conectar (tiempo agotado). Revisa el código o '
-              'que el host siga con el juego abierto.'));
+              'que el host siga con el juego abierto.',
+              key: 'ui.lobby.net.timeout'));
     } on Object {
       _host = null;
       await _quietly(link.close());

@@ -6,6 +6,7 @@ import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../domain/endgame_text.dart';
 
 /// Los 16 tiers de un portal de Ecos en grilla (ecos_zone.md § 3):
 /// `T<n>` con cuántos Ecos de ese tier hay; los cerrados en gris con el
@@ -47,7 +48,7 @@ class EcoTierGrid extends ConsumerWidget {
 
   Widget _cell(WidgetRef ref, int t, int n) {
     final why =
-        EcoPortalRules.lockReason(profile, zone, t, zoneName: zoneName);
+        ecoLockText(profile, zone, t, zoneName: zoneName);
     return DsButton(
       n > 0 ? 'T$t ·$n' : 'T$t',
       key: ValueKey('$keyPrefix-$t'),
@@ -165,7 +166,7 @@ class _EcoZoneHubState extends ConsumerState<EcoZoneHub> {
         ? ref.t('ui.endgame.hub.already_here')
         :
         widget.goBlocked(zone);
-    final lock = EcoPortalRules.lockReason(p, zone, 1, zoneName: name);
+    final lock = ecoLockText(p, zone, 1, zoneName: name);
     return Column(
       key: ValueKey('eco-hub-detail-$zone'),
       crossAxisAlignment: CrossAxisAlignment.stretch,

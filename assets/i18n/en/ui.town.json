@@ -364,6 +364,7 @@
   "ui.town.trades.vs_equipped": "VS EQUIPPED",
   "ui.town.trades.tab.habilidades": "SKILLS",
   "ui.town.trades.tab.inventario": "INVENTORY",
+<<<<<<< HEAD
   "ui.town.edit.cat_all": "ALL",
   "ui.town.edit.cat_farm": "FARMING",
   "ui.town.edit.cat_water": "WATER",
@@ -376,4 +377,25 @@
   "ui.town.edit.lamp_info": "Shines bright at night, far more than a torch.",
   "ui.town.edit.placing_info": "Click the map to place it; it stays picked so you can place another. Esc or click the cell to drop it.",
   "ui.town.edit.footprint": "{w}×{h}"
+=======
+  "ui.town.build_kind.casa": "HOUSE",
+  "ui.town.build_kind.huerta": "FARM",
+  "ui.town.build_kind.lago": "LAKE",
+  "ui.town.crop_affinity.dia": "Grows faster by day",
+  "ui.town.crop_affinity.lluvia": "Grows faster in the rain",
+  "ui.town.crop_affinity.noche": "Grows faster at night",
+  "ui.town.crop_affinity.siempre": "Steady",
+  "ui.town.day_time.amanecer": "Dawn",
+  "ui.town.day_time.atardecer": "Dusk",
+  "ui.town.day_time.dia": "Day",
+  "ui.town.day_time.noche": "Night",
+  "ui.town.day_time.siempre": "Always",
+  "ui.town.fish_rarity.comun": "common",
+  "ui.town.fish_rarity.epico": "epic",
+  "ui.town.fish_rarity.legendario": "legendary",
+  "ui.town.fish_rarity.raro": "rare",
+  "ui.town.helper_task.cosechar": "Harvest",
+  "ui.town.helper_task.plantar": "Plant",
+  "ui.town.helper_task.regar": "Water"
+>>>>>>> origin/main
 }

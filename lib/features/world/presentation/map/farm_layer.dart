@@ -1,3 +1,4 @@
+import '../../domain/town_names.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -315,7 +316,7 @@ class MapFarmLayer {
     final (ox, oy) = town.origin;
     for (final b in town.builds) {
       final (sx, sy) = TownPlan.signOf(town, b);
-      text(b.kind.label, (sx + ox + 0.5) * ts, (sy + oy) * ts - 4,
+      text(b.kind.text, (sx + ox + 0.5) * ts, (sy + oy) * ts - 4,
           TownPalette.label, 6);
     }
   }

@@ -15,6 +15,7 @@ import '../../inventory/domain/item_text.dart';
 import '../domain/endgame_text.dart';
 import 'eco_zone_hub.dart';
 import '../../../core/i18n/i18n_providers.dart';
+import '../domain/endgame_names.dart';
 
 /// Portal de Ecos de una zona, en el exterior de su bioma
 /// (docs/specs/ecos_zone.md § 4): arriba los tiers (cerrados en gris con
@@ -43,7 +44,7 @@ class _EcoZonePortalPanelState extends ConsumerState<EcoZonePortalPanel> {
     final zone = c.ecoZone ?? 1;
     final p = view.actor!.profile;
     final rules = c.engine.progression;
-    final name = c.engine.catalog.zone(zone)?.name ??
+    final name = c.engine.catalog.zone(zone)?.tr ??
         ref.t('ui.endgame.zone_n', {'zone': zone});
     final open = EcoPortalRules.unlockedTier(p, zone);
     var tier = _tier ?? c.ecoTier;
@@ -65,7 +66,7 @@ class _EcoZonePortalPanelState extends ConsumerState<EcoZonePortalPanel> {
     sel ??= ecos.isEmpty ? null : ecos.first;
     final s = view.session;
     final e = sel;
-    final lock = EcoPortalRules.lockReason(p, zone, tier, zoneName: name);
+    final lock = ecoLockText(p, zone, tier, zoneName: name);
     return PanelFrame(
       key: const ValueKey('panel-eco-zone'),
       title: ref.t('ui.endgame.zone_portal.title', {'zone': zone}),

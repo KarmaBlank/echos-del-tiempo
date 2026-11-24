@@ -1,3 +1,4 @@
+import '../../../core/i18n/catalog_text.dart';
 import '../../../game_engine/data/elements_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/passive_mechanic.dart' show BuffStat;
@@ -5,6 +6,7 @@ import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/revive_rules.dart';
+import '../../../game_engine/rules/skill_requirements.dart';
 import '../../../core/i18n/catalog_names.dart';
 import '../../../core/text/text_detail.dart';
 import 'element_text.dart';
@@ -78,7 +80,8 @@ const kInstantHex = '#9fe8ff';
 const kInstantSeparator = 'Instante — no terminan tu turno';
 
 /// Marca de las Instante en el menú: INSTANTE en celeste.
-String instantTagMarkup() => hexSpan(kInstantHex, '[INSTANTE]');
+String instantTagMarkup() => hexSpan(kInstantHex,
+    '[${CatalogText.of('ui.combat.tag.instant', 'INSTANTE')}]');
 
 /// Costo de una habilidad para la fila del menú (combat_tutorial.md § 3,
 /// pedido del dueño v0.9.6): el Pulso se ve igual que el MP pero en
@@ -348,7 +351,7 @@ List<String> variantEffectLines(SkillDef tk) {
               'una acción más (una Instante por turno)'),
     if (tk.requires.isNotEmpty)
       hexSpan('#ff9f43',
-          'Necesita: ${tk.requires.map((r) => r.label).join(' · ')}'),
+          needsLine(tk.requires.map((r) => r.tr).join(' · '))),
     if (tk.ultDrain > 0)
       hexSpan(
           '#a29bfe',
@@ -406,6 +409,28 @@ enum SkillReach {
 
   /// Si apunta a enemigos (se resaltan en la escena).
   bool get foes => this == oneFoe || this == allFoes;
+
+  String get _key => switch (this) {
+        oneFoe => 'one_foe',
+        allFoes => 'all_foes',
+        ally => 'ally',
+        party => 'party',
+        self => 'self',
+      };
+
+  /// [label] en el idioma activo (docs/specs/i18n.md § 3.8).
+  String get tr => CatalogText.of('ui.combat.reach.$_key', label);
+
+  /// "A 1 enemigo", "A TODOS"... (resumen del detalle).
+  String get toTr => CatalogText.of(
+      'ui.combat.reach.to.$_key',
+      switch (this) {
+        oneFoe => 'A 1 enemigo',
+        allFoes => 'A TODOS',
+        ally => 'A un aliado',
+        party => 'Al grupo',
+        self => 'A vos',
+      });
 }
 
 /// El objetivo real de [sk] según su tipo, `allTargets` y sus efectos.
@@ -437,7 +462,7 @@ SkillReach skillReach(SkillDef sk) {
 /// Etiqueta del objetivo en su color: `[1 enemigo]`, `[TODOS]`...
 String skillReachMarkup(SkillDef sk) {
   final r = skillReach(sk);
-  return hexSpan(r.hex, '[${r.label}]');
+  return hexSpan(r.hex, '[${r.tr}]');
 }
 
 /// Resumen de una línea, arriba del detalle: "A TODOS · Fuego · 32 c/u ·
@@ -452,13 +477,7 @@ String skillSummaryMarkup(SkillDef sk, Combatant p) {
   return [
     hexSpan(
         r.hex,
-        switch (r) {
-          SkillReach.oneFoe => 'A 1 enemigo',
-          SkillReach.allFoes => 'A TODOS',
-          SkillReach.ally => 'A un aliado',
-          SkillReach.party => 'Al grupo',
-          SkillReach.self => 'A vos',
-        }),
+        r.toTr),
     if (dmg) elementOf(sk.id).tr,
     if (dmg) hexSpan('#ffd166', '${jsRound(v)}${sk.allTargets ? ' c/u' : ''}'),
     if (st != null)
@@ -496,4 +515,46 @@ List<String> reviveLinesMarkup(SkillDef tk, Combatant? p) {
         : '${hexSpan('#ffd166', 'Velo del Retorno')}: sin Curación del '
             'árbol no hay escudo.',
   ];
+}
+
+extension SkillReqText on SkillReq {
+  /// [SkillReq.label] in the active language (`ui.build.req.*`).
+  String get tr => CatalogText.of(
+      'ui.build.req.${kind.name}',
+      label,
+      {
+        'n': amount,
+        'status': status?.tr ?? '',
+        'pct': (fraction * 100).round(),
+      });
+}
+
+/// "Necesita: [list]" in the active language.
+String needsLine(String list) =>
+    CatalogText.of('ui.build.needs', 'Necesita: $list', {'list': list});
+
+/// The condition lines of [SkillRequirements.missingLines] in the active
+/// language: `Falta: 3 MP (tenés 1)`, `Necesita: objetivo Fisurado`...
+/// [needs] are only the `Necesita` ones (the special conditions).
+({List<String> all, List<String> needs}) localMissingLines(
+    SkillDef sk, Combatant user, Combatant? target,
+    {Iterable<Combatant> foes = const []}) {
+  final needs = [
+    for (final r in sk.requires)
+      if (!SkillRequirements.met(r, sk, user, target, foes)) needsLine(r.tr),
+  ];
+  return (
+    all: [
+      if (user.mp < sk.mp)
+        CatalogText.of('ui.combat.missing.mp',
+            'Falta: ${sk.mp} MP (tenés ${user.mp})', {'n': sk.mp, 'have': user.mp}),
+      if (user.pulse < sk.pulse)
+        CatalogText.of(
+            'ui.combat.missing.pulse',
+            'Falta: Pulso ${sk.pulse} (tenés ${user.pulse})',
+            {'n': sk.pulse, 'have': user.pulse}),
+      ...needs,
+    ],
+    needs: needs,
+  );
 }

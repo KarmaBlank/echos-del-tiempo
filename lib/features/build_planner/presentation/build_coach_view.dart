@@ -16,6 +16,7 @@ import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import 'build_fit_badge.dart' show kPlanColor;
 import 'build_text.dart';
+import '../domain/build_coach_text.dart';
 
 /// Vista simple de BUILD (build_planner.md § 10): elegir plantilla, "Qué
 /// hacer ahora" y progreso por área plegable. Sin controles de edición:
@@ -126,7 +127,7 @@ class BuildCoachView extends StatelessWidget {
         leading: _icon(kPlanColor),
         title: t.name,
         tags: [
-          DsTag(BuildCoach.difficultyLabel(t.difficulty).toUpperCase(),
+          DsTag(coachDifficultyText(t.difficulty).toUpperCase(),
               key: ValueKey('build-tpl-diff-${t.id}'),
               color: switch (t.difficulty) {
                 <= 1 => DsColors.success,
@@ -171,7 +172,7 @@ class BuildCoachView extends StatelessWidget {
       for (final a in areas)
         DsProgressFold(
           key: ValueKey('build-area-${a.area.name}'),
-          title: a.area.label,
+          title: a.area.text,
           done: a.done,
           total: a.total,
           child: _areaBody(a.area, s),
@@ -354,7 +355,7 @@ class BuildCoachView extends StatelessWidget {
                 g.done,
                 s.t('ui.build.coach.attr_progress', {
                   'attr':
-                      BuildCoach.attributeLabel(Attribute.values.byName(g.ref)),
+                      coachAttributeLabel(Attribute.values.byName(g.ref)),
                   'current': g.current,
                   'total': g.total,
                 })),
@@ -467,7 +468,7 @@ class BuildCoachView extends StatelessWidget {
                   s.t('ui.build.weapon.in_stash'),
               ].join(' '),
               tags: [
-                DsTag(fit.label.toUpperCase(),
+                DsTag(fit.text.toUpperCase(),
                     key: ValueKey('build-weapon-fit-$i'),
                     color: switch (fit) {
                       WeaponFit.ideal => DsColors.success,
@@ -494,7 +495,7 @@ class BuildCoachView extends StatelessWidget {
             style: DsText.detail(kPlanColor)),
       ),
       for (final m in mods)
-        _status('build-mod-${m.affixId}', m.have, m.text, sub: m.status),
+        _status('build-mod-${m.affixId}', m.have, m.textTr, sub: m.statusTr),
     ];
   }
 

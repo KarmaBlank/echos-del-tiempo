@@ -1,3 +1,5 @@
+import '../../../inventory/domain/item_names.dart';
+import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -122,7 +124,7 @@ class _HelperPanelState extends State<HelperPanel> {
   List<DsTransferFilter> get _rarityFilters => [
     DsTransferFilter(context.t('ui.town.helper.all'), null),
     for (final r in FishRarity.values)
-      DsTransferFilter(r.label.toUpperCase(), r.name),
+      DsTransferFilter(r.text.toUpperCase(), r.name),
   ];
 
   DsTransferItem _seedItem(TownBuild b, String id, int n, bool theirs) {
@@ -137,7 +139,7 @@ class _HelperPanelState extends State<HelperPanel> {
       border: fishRarityColor(d.rarity),
       count: n,
       tag: d.rarity.name,
-      info: context.t('ui.town.helper.seed_info', {'rarity': d.rarity.label, 'mine': mine, 'there': there}),
+      info: context.t('ui.town.helper.seed_info', {'rarity': d.rarity.text, 'mine': mine, 'there': there}),
     );
   }
 
@@ -187,7 +189,7 @@ class _HelperPanelState extends State<HelperPanel> {
         SizedBox(height: DsSpace.xs),
         Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
           for (final t in HelperTask.values)
-            DsButton('${t.index + 1}. ${t.label.toUpperCase()}',
+            DsButton('${t.index + 1}. ${t.text.toUpperCase()}',
                 key: ValueKey('helper-task-${t.name}'),
                 selected: mask & t.bit != 0,
                 onPressed: () =>
@@ -195,7 +197,7 @@ class _HelperPanelState extends State<HelperPanel> {
         ]),
         SizedBox(height: DsSpace.sm),
         Text(
-            context.t('ui.town.helper.next_cycle', {'task': next?.label.toLowerCase() ?? context.t('ui.town.helper.rests'), 's': c.helperRoundIn.ceil()}),
+            context.t('ui.town.helper.next_cycle', {'task': next?.text.toLowerCase() ?? context.t('ui.town.helper.rests'), 's': c.helperRoundIn.ceil()}),
             key: const ValueKey('helper-next'),
             style: DsText.body()),
       ],
@@ -289,7 +291,7 @@ class _HelperPanelState extends State<HelperPanel> {
         return DsTransferItem(
           id: k,
           icon: LifeIcon(k, LifeIconKind.pescado, size: LifeItemGrid.iconSize),
-          name: f?.name ?? k,
+          name: f?.text ?? k,
           border: f == null ? DsColors.border : fishRarityColor(f.rarity),
           count: n,
           tag: f?.rarity.name,
@@ -301,7 +303,7 @@ class _HelperPanelState extends State<HelperPanel> {
         id: k,
         icon: LifeIcon('cosecha_${pc?.$1.id ?? k}', LifeIconKind.cosecha,
             size: LifeItemGrid.iconSize),
-        name: pc == null ? k : '${pc.$1.name} (${pc.$2.label.toLowerCase()})',
+        name: pc == null ? k : '${pc.$1.text} (${pc.$2.label.toLowerCase()})',
         border: pc == null ? DsColors.border : fishRarityColor(pc.$1.rarity),
         count: n,
         tag: pc?.$1.rarity.name,

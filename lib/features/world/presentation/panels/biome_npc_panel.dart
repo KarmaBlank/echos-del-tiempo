@@ -1,3 +1,5 @@
+import '../../../inventory/domain/item_names.dart';
+import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -22,7 +24,7 @@ import 'npc_talk.dart';
 import '../world_strings.dart';
 
 /// Nombre de un producto, cultivo o pez.
-String residentItemName(String id) => kFish[id]?.name ?? kCrops[id]?.name ?? id;
+String residentItemName(String id) => kFish[id]?.text ?? kCrops[id]?.text ?? id;
 
 /// Ícono de un producto, cultivo o pez.
 Widget residentItemIcon(String id) => kFish.containsKey(id)
@@ -518,14 +520,14 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                     LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: 48),
                     SizedBox(width: DsSpace.sm),
                     Expanded(
-                      child: Text(s.seedName,
+                      child: Text(s.seedText,
                           style: DsText.title(fishRarityColor(s.rarity))),
                     ),
                   ]),
                   SizedBox(height: DsSpace.sm),
                   Wrap(spacing: DsSpace.xs, children: [
                     DsTag(_s.t('ui.town.npc.seed'), color: DsColors.textSecondary),
-                    DsTag(s.rarity.label.toUpperCase(),
+                    DsTag(s.rarity.text.toUpperCase(),
                         color: fishRarityColor(s.rarity)),
                   ]),
                   if (s.lore.isNotEmpty) ...[

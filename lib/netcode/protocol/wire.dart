@@ -143,7 +143,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `wi` en el jugador del snapshot.
 /// 61 (v0.40.0): the battle log travels structured (`log` = key + args,
 /// docs/specs/i18n.md § 3.5) so each player reads it in their language.
-const kProtocolVersion = 61;
+/// 62 (v0.41.0): boss/summon/support battle-log lines become keys
+/// (i18n phase 4) and `NetException` carries a key.
+const kProtocolVersion = 62;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
@@ -153,8 +155,8 @@ const kProtocolVersion = 61;
 /// dificultad y élites (roguelike.md § 12.1). 4: sin niveles en la run
 /// (el snapshot ya no manda `gl`; maná lleno al empezar cada pelea),
 /// roguelike.md § 12.2. 5: structured battle log (`log` = key + args,
-/// i18n.md § 3.5).
-const kTravesiaProtocolVersion = 5;
+/// i18n.md § 3.5). 6: remaining battle-log lines keyed (i18n phase 4).
+const kTravesiaProtocolVersion = 6;
 
 /// Qué juego habla por la red y con qué versión de protocolo. Lo decide
 /// el composition root (`GameEdition.wire`); la sesión nunca mira el
