@@ -187,4 +187,33 @@ void main() {
       expect(g.lum(7, 3), greaterThan(0));
     });
   });
+
+  group('fireflyFade (lighting.md § 3.4)', () {
+    const r = 10.0;
+    test('sin luces o lejos: brillo normal', () {
+      expect(LightRules.fireflyFade(0, 0, const [], radius: r), 1);
+      expect(LightRules.fireflyFade(0, 0, const [(20.0, 0.0)], radius: r), 1);
+    });
+    test('junto a la luz desaparece; en el medio baja de a poco', () {
+      expect(LightRules.fireflyFade(0, 0, const [(1.0, 0.0)], radius: r), 0);
+      final mid = LightRules.fireflyFade(0, 0, const [(7.0, 0.0)], radius: r);
+      expect(mid, greaterThan(0));
+      expect(mid, lessThan(1));
+      final nearer =
+          LightRules.fireflyFade(0, 0, const [(6.0, 0.0)], radius: r);
+      expect(nearer, lessThan(mid));
+    });
+    test('las sobrevivientes quedan aunque haya luz', () {
+      expect(
+          LightRules.fireflyFade(0, 0, const [(0.0, 0.0)],
+              radius: r, survivor: true),
+          LightRules.fireflySurvivorAlpha);
+    });
+    test('el faro del pueblo alumbra más que el jugador al aire libre', () {
+      final faro = kLightDefs[LightId.faro]!;
+      final p = LightRules.carried(dark: false);
+      expect(LightRules.visibleRadius(faro),
+          greaterThan(LightRules.visibleRadius(p) * 2));
+    });
+  });
 }

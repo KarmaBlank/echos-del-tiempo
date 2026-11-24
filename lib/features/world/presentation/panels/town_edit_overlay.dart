@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/world_save.dart';
@@ -14,6 +13,7 @@ import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'town_build_palette.dart';
 import '../world_strings.dart';
 
 /// Interfaz de la edición del pueblo (town_editor.md § 1): barra de
@@ -36,8 +36,11 @@ class TownEditOverlay extends StatelessWidget {
   /// Hay algo en la columna de la derecha (menú o info).
   static bool sideOpen(SessionController c) {
     final e = c.townEdit;
+    // En el paso base, sin contratar, está la paleta (§ 1.2).
     return e != null &&
-        (e.step != TownEditStep.browse || e.hoverBuild != null);
+        (e.step != TownEditStep.browse ||
+            e.hire == null ||
+            e.hoverBuild != null);
   }
 
   @override
@@ -207,7 +210,8 @@ class TownEditOverlay extends StatelessWidget {
         children: ch);
     switch (e.step) {
       case TownEditStep.browse:
-        return null;
+        // Paleta: elegir qué poner y después dónde (§ 1.2).
+        return e.hire == null ? TownBuildPalette(controller: c) : null;
       case TownEditStep.side:
         final side = e.side!;
         final why = c.cannotExpandTown(side);
@@ -234,50 +238,6 @@ class TownEditOverlay extends StatelessWidget {
             SizedBox(width: DsSpace.xs),
             cancel(),
           ]),
-        ]);
-      case TownEditStep.choose:
-        return col([
-          DsSectionHeader(s.t('ui.town.edit.build')),
-          for (final d in kConstructions)
-            Builder(builder: (_) {
-              // La CASA cuesta oro y tablas (town_editor.md § 3.4).
-              final casa = d.kind == BuildKind.casa;
-              final p = c.view?.me?.profile;
-              final cost = ResidentRules.placeCost();
-              final why = !casa
-                  ? null
-                  : p == null
-                      ? s.t('ui.town.edit.no_character')
-                      : HelperRules.cannotPay(p, cost);
-              return DsListRow(
-                key: ValueKey('town-edit-build-${d.id}'),
-                compact: true,
-                title: d.name,
-                detail: '${d.w}×${d.h} · ${d.detail}'
-                    '${casa ? ' · ${HelperRules.costText(cost)}' : ''}',
-                enabled: why == null,
-                onTap: why == null ? () => c.editChoose(d.id) : null,
-              );
-            }),
-          Builder(builder: (_) {
-            final p = c.view?.me?.profile;
-            final cost = TownRules.faroCost;
-            final why = p == null
-                ? s.t('ui.town.edit.no_character')
-                : p.credits < cost
-                    ? s.t('ui.town.edit.missing_gold', {'have': p.credits, 'need': cost})
-                    : null;
-            return DsListRow(
-              key: const ValueKey('town-edit-build-faro'),
-              compact: true,
-              title: s.t('ui.town.edit.lamp'),
-              detail: s.t('ui.town.edit.lamp_detail', {'cost': cost}),
-              enabled: why == null,
-              onTap: why == null ? () => c.editChoose(kFaroId) : null,
-            );
-          }),
-          SizedBox(height: DsSpace.xs),
-          Align(alignment: Alignment.centerLeft, child: cancel()),
         ]);
       case TownEditStep.options:
         if (TownState.parseLightId(e.selected) != null) {
@@ -507,17 +467,18 @@ class TownEditOverlay extends StatelessWidget {
             cancel(),
           ]),
         ]);
-      case TownEditStep.moving || TownEditStep.placing:
+      case TownEditStep.placing:
         return col([
-          DsSectionHeader(e.step == TownEditStep.moving
-              ? s.t('ui.town.edit.move')
-              : e.placeDef == kFaroId
-                  ? s.t('ui.town.edit.lamp')
-                  : construction(e.placeDef ?? '')?.name ?? ''),
+          TownBuildPalette(controller: c),
+          SizedBox(height: DsSpace.xs),
+          Align(alignment: Alignment.centerLeft, child: cancel()),
+        ]);
+      case TownEditStep.moving:
+        return col([
+          DsSectionHeader(s.t('ui.town.edit.move')),
           Text(c.editGhostError ?? s.t('ui.town.edit.click_map_place'),
               key: const ValueKey('town-edit-ghost'), style: DsText.detail()),
-          if (e.step == TownEditStep.moving &&
-              c.editSelected?.kind == BuildKind.lago)
+          if (c.editSelected?.kind == BuildKind.lago)
             Text(s.t('ui.town.edit.lake_merge'),
                 style: DsText.detail()),
           SizedBox(height: DsSpace.xs),

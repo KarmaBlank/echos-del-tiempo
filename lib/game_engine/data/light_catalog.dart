@@ -58,7 +58,7 @@ abstract final class LightId {
 /// nunca en los pintores.
 const Map<String, LightDef> kLightDefs = {
   LightId.faro:
-      LightDef(radius: 6, intensity: 0.95, tint: 'calida', flicker: 0.05),
+      LightDef(radius: 11, intensity: 1.4, tint: 'calida', flicker: 0.05),
   LightId.forja:
       LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
   LightId.fuente: LightDef(radius: 4, intensity: 0.6, tint: 'runa'),

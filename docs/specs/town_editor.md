@@ -22,7 +22,7 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   nada). La cámara queda libre: WASD / flechas, arrastrar con el mouse,
   rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
   franja por lado para ver las ampliaciones fantasma.
-- Esc vuelve un paso (cierra el menú o cancela lo que se mueve); en el
+- Esc vuelve un paso (cierra el menú, suelta la pieza elegida o cancela lo que se mueve); en el
   paso base sale. LISTO [ESC] sale siempre.
 - Los demás siguen jugando. Cada cambio es una acción al anfitrión, que
   lo valida y lo manda en el estado: todos ven el pueblo nuevo al toque.
@@ -39,18 +39,39 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   Si el candado es de otro, la edición local se cierra.
 
 ### 1.2 Pasos (clic sin arrastrar)
+
+v0.40.1: primero se elige QUÉ poner y después DÓNDE (antes era al
+revés: clic en un tile libre y después la lista).
+
+- Al entrar, la columna de la derecha muestra enseguida la PALETA
+  (`TownBuildPalette`): todo lo que se puede poner (`kConstructions` +
+  el faro) en una grilla de casillas estilo INVENTARIO, con el detalle
+  de la elegida (o la que está bajo el mouse) arriba de la grilla:
+  nombre, tamaño, para qué sirve y costo. Categorías con filtros
+  (TODO · CULTIVO · AGUA · HOGAR · LUZ), nunca secciones apiladas.
+- Casilla que no se puede pagar: gris (sin tooltip: el motivo es común
+  y el detalle ya muestra el costo en rojo).
+- Clic en una casilla habilitada → paso `placing`: el fantasma sigue al
+  mouse, verde si entra y rojo (con el motivo en la barra y en la
+  columna) si no. Clic en el mapa donde es válido lo pone; donde no,
+  no hace nada. La pieza SIGUE elegida para poner otra igual; se suelta
+  con Esc, CANCELAR o un clic en la misma casilla. Elegir otra casilla
+  cambia la pieza.
+- Sin pieza elegida, el clic en el mapa elige lo que ya está puesto:
+
 | Clic en | Abre |
 |---|---|
 | Franja fantasma de un lado | AMPLIAR AL <LADO> con el costo (pasar el mouse ya lo muestra en el panel de info) |
 | Lago (o su cartel) | AGREGAR ESPECIES · MOVER · BORRAR LAGO |
 | Huerta (o su cartel) | MOVER · BORRAR |
+| Faro | MOVER · BORRAR |
 | Lugar fijo (fuente, portal, tablero, forja, estatua, comerciante, loot perdido, taller de oficios, armería) | MOVER (no se borran; § 3.3) |
-| Tile libre (pasto o árbol) | CONSTRUIR: lista del catálogo (§ 3) |
+| Tile libre | nada (la paleta sigue a la derecha) |
 
-MOVER y elegir qué construir dejan un fantasma que sigue al mouse
-(verde si entra, rojo con el motivo en la barra si no); un clic lo
-deja ahí (esa es la confirmación) y CANCELAR / Esc lo descarta. La
-esquina superior izquierda del fantasma va en el tile del mouse.
+MOVER deja un fantasma que sigue al mouse (verde si entra, rojo con el
+motivo en la barra si no); un clic lo deja ahí (esa es la confirmación)
+y CANCELAR / Esc lo descarta. La esquina superior izquierda del
+fantasma va en el tile del mouse.
 
 ### 1.3 Dibujo (legible desde v0.24.2)
 - Mientras se edita se oculta el HUD normal (TITULO, MENÚ, ALIJO,
@@ -73,9 +94,9 @@ esquina superior izquierda del fantasma va en el tile del mouse.
 - Contorno de cada construcción (dorado la elegida) y fantasma verde /
   rojo. Colores en `TownEditPalette`.
 - Debajo de la barra, a la derecha, una sola columna (30 % del ancho,
-  entre 240 y 320 px): el menú del paso y, debajo, el panel de info de
-  la construcción bajo el mouse (su cartel). Con un menú abierto no
-  aparece. La barra: ayuda corta en hasta dos renglones, sin "…".
+  entre 240 y 320 px): el menú del paso (en el paso base y al poner, la
+  paleta de § 1.2) y, debajo, el panel de info de la construcción bajo
+  el mouse (su cartel). Con otro menú abierto no aparece. La barra: ayuda corta en hasta dos renglones, sin "…".
 - Validación de MOVER (§ 3.2): el borde del pueblo es de un tile (la
   fila de árboles), así cada construcción puede volver a su propio lugar
   o correrse pisando el que deja.

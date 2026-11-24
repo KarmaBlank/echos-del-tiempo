@@ -57,6 +57,7 @@ import '../../../../game_engine/data/farming_catalog.dart'
     show kCrops, kFertilizers, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
+import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/rules/fishing_minigame.dart';
 
@@ -194,6 +195,10 @@ class MapGame extends Game {
   static const vh = 288;
   static const ts = TilePainter.ts;
 
+  /// Margen (px) para juntar faros fuera de cuadro: su luz y su efecto
+  /// sobre las luciérnagas llegan hasta su radio (lighting.md § 3.4).
+  static const _lampReach = 12 * ts;
+
   /// Reloj de animación en ms (`performance.now()` del prototipo).
   double t = 0;
 
@@ -285,7 +290,13 @@ class MapGame extends Game {
     final mw = view.map.width * ts, mh = view.map.height * ts;
     double clamp(double v, double lo, double hi) =>
         hi < lo ? (lo + hi) / 2 : v.clamp(lo, hi);
-    camX = clamp(camX, -m, mw + m - vwz);
+    // La columna de la derecha (paleta, menú) tapa parte del mapa: se
+    // descuenta para poder ver la franja este (town_editor.md § 1.2).
+    final r = viewRect(Size(size.x, size.y));
+    final pad = r.width > 0 && TownEditOverlay.sideOpen(controller)
+        ? (TownEditOverlay.sideWidth(size.x) + 16) * vw / r.width * zoom
+        : 0.0;
+    camX = clamp(camX, -m, mw + m - (vwz - pad));
     camY = clamp(camY, -m, mh + m - vhz);
   }
 
@@ -929,12 +940,15 @@ class MapGame extends Game {
         s.mission != null &&
         LightRules.isDark(map.theme, floor: currentFloor(view)?.index ?? 0);
     final movingLights = <LightSource>[];
+    final placed = <(double, double)>[];
+    sky.placedLights = placed;
     if (map.lobby && map.place == null) {
       final (ox, oy) = map.townOrigin;
       for (final (fx, fy) in s.town.lights) {
         final px = (fx + ox) * ts, py = (fy + oy) * ts;
-        if (!worldView.inflate(64).contains(Offset(px, py))) continue;
+        if (!worldView.inflate(_lampReach).contains(Offset(px, py))) continue;
         lights.add(Offset(px + 8, py + 2));
+        placed.add((fx + ox + 0.5, fy + oy + 0.3));
         add(py + 15, () => tiles.faro(c, px, py, t, lit: night));
       }
     }

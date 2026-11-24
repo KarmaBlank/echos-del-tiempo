@@ -82,7 +82,7 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 
 | Luz | Dónde | Radio | Intensidad | Titila |
 |---|---|---|---|---|
-| faro | faros del pueblo (`TownState.lights`) | 6 | 0.95 | 5 % |
+| faro | faros del pueblo (`TownState.lights`; v0.40.1, antes 6 / 0.95: casi no se notaban) | 11 | 1.4 | 5 % |
 | forja | tile de armería / forja | 5 | 0.9 | 12 % |
 | fuente | fuente rúnica | 4 | 0.6 | no |
 | portal | portal del eco | 5 | 0.75 | no |
@@ -171,6 +171,18 @@ solo de la luz del jugador. `LightRules.ambientEmitters`:
   52 %, grieta 58 %, cementerio 26 %, abismo 25 %, corazón 31 %,
   exterior del bosque 78 %.
 - Pendiente: un dibujo propio para cada emisor (hoy es el brillo).
+
+### 3.4 Luciérnagas y luces puestas (v0.40.1)
+
+Las luciérnagas no se juntan donde hay luz puesta (hoy, los faros del
+pueblo). `LightRules.fireflyFade(x, y, luces, radius:)`, con el radio del
+faro: más allá del radio, brillo normal; dentro de `fireflyInner` (0.45)
+× radio, nada; en el medio baja con smoothstep, así al acercarse a un
+faro se van apagando de a poco y no de golpe. Una de cada
+`fireflySurvivorEvery` (7, por el hash de su celda) sobrevive con brillo
+mínimo `fireflySurvivorAlpha` (0.7): en una zona iluminada queda alguna
+que otra suelta. En la oscuridad no cambia nada. Afecta el punto dibujado
+y su luz móvil (`luciernaga`). Solo decorado: no viaja.
 
 ## 4. Dibujo y rendimiento
 
@@ -318,3 +330,4 @@ nítido en 2 × 2, edificio que tapa una antorcha y emisor sobre un
 edificio que igual alumbra alrededor. `test/perf/light_perf_test.dart`
 mide con 2 × 2 y `test/perf/town_soak_perf_test.dart` controla que el
 pueblo no se ponga más lento.
+v0.40.1: `fireflyFade` (lejos, adentro, medio suave y sobrevivientes) y faro más fuerte que la luz del jugador del pueblo.

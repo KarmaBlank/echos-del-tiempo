@@ -124,6 +124,35 @@ abstract final class LightRules {
           {required bool wisp, required bool dark, bool outdoor = false}) =>
       wisp && dark && !outdoor ? wispAggro : 1;
 
+  /// Cuánto se ve una luciérnaga (0–1) en (x, y) (tiles) según las
+  /// luces puestas [placed] (centros en tiles; lighting.md § 3.4): lejos
+  /// de toda luz, 1; dentro de [fireflyInner] × [radius], 0; en el medio
+  /// baja suave (smoothstep). Las [survivor] (una de cada
+  /// [fireflySurvivorEvery]) quedan visibles aunque haya luz, a media luz.
+  static double fireflyFade(
+      double x, double y, Iterable<(double, double)> placed,
+      {required double radius, bool survivor = false}) {
+    var best = double.infinity;
+    for (final (lx, ly) in placed) {
+      final dx = x - lx, dy = y - ly;
+      best = math.min(best, dx * dx + dy * dy);
+    }
+    if (best == double.infinity) return 1;
+    final inner = radius * fireflyInner;
+    final q = ((math.sqrt(best) - inner) / (radius - inner)).clamp(0.0, 1.0);
+    final k = q * q * (3 - 2 * q);
+    return survivor ? math.max(k, fireflySurvivorAlpha) : k;
+  }
+
+  /// Fracción del radio de la luz en la que ya no quedan luciérnagas.
+  static const fireflyInner = 0.45;
+
+  /// Una de cada tantas luciérnagas sobrevive en zona iluminada.
+  static const fireflySurvivorEvery = 7;
+
+  /// Brillo mínimo de las sobrevivientes.
+  static const fireflySurvivorAlpha = 0.7;
+
   /// Visibilidad mínima con la que se distingue algo (la de los enemigos
   /// en la penumbra).
   static const seenLum = 0.12;

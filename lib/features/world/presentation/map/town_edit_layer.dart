@@ -129,10 +129,6 @@ abstract final class TownEditLayer {
               .deflate(0.5),
           line);
     }
-    if (e.tile case (final tx, final ty)? when e.step == TownEditStep.choose) {
-      c.drawRect(Rect.fromLTWH(tx * ts, ty * ts, ts, ts).deflate(0.5),
-          line..color = TownEditPalette.selected);
-    }
     final g = e.ghost;
     if (g == null) return;
     final List<TownRect> parts;

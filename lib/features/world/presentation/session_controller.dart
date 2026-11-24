@@ -2168,7 +2168,9 @@ class SessionController extends StateNotifier<SessionView?> {
               ? _apply(TownAction(TownOp.place, id: e.placeDef, x: tx, y: ty))
               : _apply(
                   TownAction(TownOp.move, target: e.selected, x: tx, y: ty));
-          if (ok) e.reset();
+          // Poner deja la pieza elegida para poner otra (town_editor.md
+          // § 1.2); mover termina.
+          if (ok && e.step == TownEditStep.moving) e.reset();
         }
       default:
         final side = editSideAt(tx, ty);
@@ -2196,34 +2198,28 @@ class SessionController extends StateNotifier<SessionView?> {
           e
             ..step = TownEditStep.options
             ..selected = id;
-        } else if (_freeTile(tx, ty)) {
-          e
-            ..step = TownEditStep.choose
-            ..tile = (tx, ty);
         }
     }
     _emit();
   }
 
-  bool _freeTile(int tx, int ty) {
-    final s = _s;
-    if (s == null) return false;
-    final m = engine.mapFor(s);
-    if (tx < 2 || ty < 2 || tx >= m.width - 2 || ty >= m.height - 2) {
-      return false;
-    }
-    final c = m.tileAt(tx, ty);
-    return c == Tile.grass || c == Tile.tree;
-  }
-
-  /// Elegir qué construir en el tile libre (paso `choose`).
+  /// Elegir en la paleta qué poner (town_editor.md § 1.2): el fantasma
+  /// sigue al mouse y cada clic válido pone una. Elegir la misma pieza
+  /// otra vez la suelta.
   void editChoose(String defId) {
     final e = _edit;
-    if (e == null || e.tile == null) return;
-    e
-      ..step = TownEditStep.placing
-      ..placeDef = defId
-      ..ghost = e.tile;
+    if (e == null || e.hire != null) return;
+    if (e.step == TownEditStep.placing && e.placeDef == defId) {
+      e.reset();
+    } else {
+      // Al cambiar de pieza el fantasma queda donde estaba el mouse.
+      final ghost = e.step == TownEditStep.placing ? e.ghost : null;
+      e
+        ..reset()
+        ..step = TownEditStep.placing
+        ..placeDef = defId
+        ..ghost = ghost;
+    }
     _emit();
   }
 

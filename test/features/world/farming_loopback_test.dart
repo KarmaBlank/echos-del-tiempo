@@ -78,6 +78,44 @@ void main() {
     expect(me.town.build('h0')!.bounds.y, 8);
   });
 
+  test('edición: primero la pieza de la paleta, después el lugar '
+      '(town_editor.md § 1.2)', () async {
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub);
+    final hp =
+        progression.normalize(PlayerProfile(name: 'Host', classId: 'maga'));
+    await hn.connect(SessionConfig(profile: hp));
+    final host = make(hn, hp);
+    await host.start();
+    host.advance(0.05);
+    await pumpEventQueue();
+    expect(host.enterTownEdit(), isTrue);
+    // Un tile libre sin pieza elegida no abre nada.
+    host.editClick(5, 9);
+    expect(host.townEdit!.step, TownEditStep.browse);
+    final before = host.town.builds.length;
+    host.editChoose('huerta_chica');
+    expect(host.townEdit!.step, TownEditStep.placing);
+    host.editHover(4, 8);
+    expect(host.editGhostError, isNull);
+    host.editClick(4, 8);
+    expect(host.town.builds.length, before + 1);
+    // Sigue elegida para poner otra; encima del lago base, no.
+    expect(host.townEdit!.step, TownEditStep.placing);
+    expect(host.townEdit!.placeDef, 'huerta_chica');
+    host.editHover(4, 15);
+    expect(host.editGhostError, isNotNull);
+    host.editClick(4, 15);
+    expect(host.town.builds.length, before + 1);
+    // Elegir la misma pieza la suelta; Esc también.
+    host.editChoose('huerta_chica');
+    expect(host.townEdit!.step, TownEditStep.browse);
+    host.editChoose('lago_chico');
+    host.editBack();
+    expect(host.townEdit!.step, TownEditStep.browse);
+    expect(host.townEdit, isNotNull);
+  });
+
   test('loopback: el cliente planta y cosecha; el host otorga', () async {
     final hub = LoopbackHub();
     final hn = LoopbackNetSession(hub), cn = LoopbackNetSession(hub);

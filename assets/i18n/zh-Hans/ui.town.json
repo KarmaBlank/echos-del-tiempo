@@ -363,5 +363,17 @@
   "ui.town.trades.take": "",
   "ui.town.trades.vs_equipped": "",
   "ui.town.trades.tab.habilidades": "",
-  "ui.town.trades.tab.inventario": ""
+  "ui.town.trades.tab.inventario": "",
+  "ui.town.edit.cat_all": "",
+  "ui.town.edit.cat_farm": "",
+  "ui.town.edit.cat_water": "",
+  "ui.town.edit.cat_home": "",
+  "ui.town.edit.cat_light": "",
+  "ui.town.edit.palette_empty": "",
+  "ui.town.edit.size": "",
+  "ui.town.edit.cost": "",
+  "ui.town.edit.free": "",
+  "ui.town.edit.lamp_info": "",
+  "ui.town.edit.placing_info": "",
+  "ui.town.edit.footprint": ""
 }
