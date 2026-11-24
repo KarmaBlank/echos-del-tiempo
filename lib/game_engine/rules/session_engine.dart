@@ -35,6 +35,7 @@ import '../data/abyss_catalog.dart';
 import '../data/achievements_catalog.dart';
 import 'achievement_rules.dart';
 import 'abyss_rules.dart';
+import 'encounter_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'quest_track_rules.dart' show QuestTrackRules;
@@ -1093,8 +1094,22 @@ class _Op {
             !p.alive) {
           return false;
         }
+        final ox = p.x, oy = p.y;
         if (a.x.isFinite && a.x != 0) p.x = a.x;
         if (a.y.isFinite && a.y != 0) p.y = a.y;
+        // Encounter initiative: remember the last real step.
+        if (!a.moving) {
+          p
+            ..stepX = 0
+            ..stepY = 0;
+        } else if ((p.x - ox) * (p.x - ox) + (p.y - oy) * (p.y - oy) >=
+            EncounterRules.minStep2) {
+          // Smaller steps are the 0.1 px rounding of the position: keep the
+          // last real step.
+          p
+            ..stepX = p.x - ox
+            ..stepY = p.y - oy;
+        }
         p.dir = a.dir > 0 ? 1 : -1;
         p.moving = a.moving;
         // Caminar guarda la caña (fishing.md § 4).
@@ -1664,7 +1679,9 @@ class _Op {
     );
     _enterField(def, seed);
     final first = players.firstOrNull;
-    if (first != null) startBattle(boss, first);
+    if (first != null) {
+      startBattle(boss, first, kind: EncounterKind.firstStrike);
+    }
   }
 
   /// Jefe del Abismo vencido: cada jugador recibe su exclusivo (seguro la
@@ -3460,6 +3477,9 @@ class _Op {
         }
         final dx = at.x - c.x, dy = at.y - c.y;
         c.moving = dx.abs() > 0.01 || dy.abs() > 0.01;
+        c
+          ..stepX = c.moving ? dx : 0
+          ..stepY = c.moving ? dy : 0;
         if (dx.abs() > 0.5) c.dir = dx > 0 ? 1 : -1;
         c
           ..x = at.x
@@ -3629,7 +3649,18 @@ class _Op {
 
   // ---------------- batalla ----------------
 
-  void startBattle(FieldEnemy en, SessionPlayer trigger) {
+  void startBattle(FieldEnemy en, SessionPlayer trigger,
+      {EncounterKind? kind}) {
+    final encounter = kind ??
+        EncounterRules.kind(
+          px: trigger.x,
+          py: trigger.y,
+          ex: en.x,
+          ey: en.y,
+          mdx: trigger.stepX,
+          mdy: trigger.stepY,
+          moving: trigger.moving,
+        );
     s.seq++;
     e.battles
       ..townPotion = ResidentRules.frac(s.town, NpcRole.herbolaria)
@@ -3641,6 +3672,7 @@ class _Op {
       enemyTypes: en.group,
       elite: en.elite,
       triggeredBy: trigger.id,
+      encounter: encounter,
       turnRule: s.effectiveCombatMode.turnRule,
     );
     final level = _levelFor(en);
@@ -3649,6 +3681,12 @@ class _Op {
     if (eco != null) {
       EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
     }
+    // Zone / Eco scaling may move enemy turns: keep the opener first.
+    EncounterRules.applyTimelineOpener(
+        step.state,
+        encounter == EncounterKind.ambush
+            ? step.state.enemies.firstOrNull?.id
+            : trigger.id);
     s.battle = SessionBattle(
       id: s.seq,
       state: step.state,

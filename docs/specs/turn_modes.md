@@ -102,6 +102,8 @@ cantidad de turnos.
 
 - La regla viaja en el estado de batalla (`tr`, `gp`, `act`, `rd`; Por
   rondas suma `ro` y `wt`) y el modo en la sala (`cm`). Protocolo Mundo 40.
+- La iniciativa del encuentro (combat.md § "Iniciativa del encuentro")
+  solo ajusta esos mismos campos al empezar: no cambia el protocolo.
 - El host es la única autoridad: decide el orden, valida "el primero que
   manda" dentro del bloque o la fase y descarta el segundo comando.
 - ESPERAR y TERMINAR TURNO viajan como `{"a":"wait"}` y `{"a":"end"}`.

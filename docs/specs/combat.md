@@ -73,6 +73,9 @@ siguiente batalla.
 - Primer turno: enemigos en `IV × (0.35 + azar × 0.60)` (con su velocidad
   base); jugadores en `IV × (0.30 + azar × 0.50)`, salvo el que tocó al
   enemigo: `IV × 0.20`.
+- Mensaje inicial: jefe `start_boss`, élite `start_elite`; si no,
+  `start_first_strike` ("¡PRIMER GOLPE!") o `start_ambush`
+  ("¡EMBOSCADA!") según la iniciativa (sin iniciativa: `start_ambush`).
 - Repetidos (v0.13.1): `assignCombatantTags` da una letra A, B, C… a
   los enemigos del mismo tipo, a los aliados con el mismo nombre y a las
   invocaciones del mismo tipo, y la agrega al nombre ("Lobo B"). Se
@@ -81,6 +84,32 @@ siguiente batalla.
   el nuevo recibe la primera libre. Viaja por la red como `tag`.
 - Jugadores: se borran estados, provocación, protección, defensa y
   `bonus_def_batalla`. Vida y maná se conservan del campo (limitados al máximo).
+
+## Iniciativa del encuentro (`EncounterRules`)
+
+Regla del dueño: quien provoca el encuentro actúa primero.
+
+- `EncounterRules.kind`: el host mira el último paso del jugador que tocó
+  (`stepX/stepY`, la diferencia entre sus dos últimas posiciones mientras
+  camina; 0 si se detuvo). **PRIMER GOLPE** si se está moviendo
+  (paso² ≥ 0.25: los pasos menores a 0.5 px son el redondeo a 0.1 px de la posición enviada y no pisan el último paso real) y `paso · (enemigo − (jugador − paso)) > 0` (desde donde arrancó el paso: pisar justo al enemigo también cuenta). Si no (quieto o
+  alejándose) es **EMBOSCADA**.
+- Primer golpe: abre el grupo y el que tocó es el primero. Emboscada:
+  abren los enemigos y el que tocó (el líder del grupo, `e0`) es el
+  primero. Jefes y élites usan la misma regla (solo cambia el mensaje).
+  Entrar a un Jefe del Abismo desde la sala es siempre primer golpe.
+- Por modo (`BattleEngine._applyInitiative`):
+  - Línea de tiempo: el que abre queda con `nextTurn = mín(resto) × 0.5`
+    (`applyTimelineOpener`; se reaplica después del escalado de zona/Eco).
+  - Por fases: primer golpe saltea la fase enemiga de la ronda 1 (empieza
+    la fase de jugadores, simultánea); emboscada = fase enemiga primero,
+    `e0` primero (orden de lista).
+  - Por bando: primer golpe = turno del grupo (por defecto); emboscada
+    abre la ronda 1 con los enemigos, `e0` primero.
+  - Por rondas: el orden de la ronda 1 es por velocidad con el que abre
+    adelante.
+- Travesía y vistas previas llaman `start` sin `encounter`: comportamiento
+  anterior. No viaja nada nuevo por la red (usa `rd`, `act`, `ro`, `gp`).
 
 ## Timeline de turnos
 
