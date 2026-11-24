@@ -52,6 +52,8 @@ abstract final class LightId {
   static const ascua = 'ascua';
   static const enjambre = 'enjambre';
   static const guia = 'guia';
+  // Biome resident camps (overworld_biomes.md § 9.2).
+  static const campfire = 'campfire';
 }
 
 /// Catálogo de luces con sus números (lighting.md § 3). Se ajusta acá,
@@ -87,6 +89,8 @@ const Map<String, LightDef> kLightDefs = {
   LightId.enjambre: LightDef(radius: 4, intensity: 0.55, tint: 'luciernaga'),
   LightId.guia:
       LightDef(radius: 6, intensity: 0.9, tint: 'calida', flicker: 0.05),
+  LightId.campfire:
+      LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
 };
 
 /// Luz natural de un tema (lighting.md § 3.3): una luz [light] en los

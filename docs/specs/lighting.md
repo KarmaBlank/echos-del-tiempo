@@ -98,6 +98,7 @@ del mapa (alineación de la ventana hacia abajo con negativos).
 | hongo / cristal / magitec / fatuo / ascua / enjambre | luz natural del tema (§ 3.3) | 4–5 | 0.55–0.7 | ascua 10 % |
 | guía | llegada y escaleras de cada piso (§ 3.3) | 6 | 0.9 | 5 % |
 | farol | faroles encendidos de las mazmorras oscuras (§ 5.5; v0.36.2, antes 11) | 13 | 1 | 4 % |
+| campfire | hoguera del campamento de cada habitante de bioma (overworld_biomes.md § 9.2; v0.41.9), una por campamento, solo si está cerca de la vista | 5 | 0.9 | 12 % |
 
 ### 3.1 Luz que lleva el jugador
 
