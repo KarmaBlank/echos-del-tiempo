@@ -13,6 +13,7 @@ import 'biome_npc_panel.dart'
     show orderCell, questCells, residentItemIcon, trackButton;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'world_event_cells.dart';
 import '../world_strings.dart';
 
 /// DIARIO (roles.md § 8.1, antes "registro de encargos"): la subpestaña
@@ -45,14 +46,15 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
         for (final n in kBiomeNpcs)
           if (QuestTrackRules.met(p, n.id)) n
     ];
-    final tab = _tab.clamp(0, npcs.length);
+    final tab = _tab.clamp(0, npcs.length + 1);
+    final events = tab == 1;
     final tracked = p == null
         ? const <ActiveQuest>[]
         : [
             for (final a in QuestTrackRules.active(p, town))
               if (a.tracked) a
           ];
-    final n = tab == 0 ? null : npcs[tab - 1];
+    final n = tab <= 1 ? null : npcs[tab - 2];
     final r = n == null ? null : town.resident(n.id);
     return PanelFrame(
       key: const ValueKey('panel-quest-log'),
@@ -72,6 +74,11 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
               DsTab(context.t('ui.town.journal.tracked'),
                   badge: tracked.isEmpty ? null : '${tracked.length}',
                   key: const ValueKey('quest-log-tab-seguidos')),
+              DsTab(context.t('ui.town.journal.events'),
+                  badge: town.events.active.isEmpty
+                      ? null
+                      : '${town.events.active.length}',
+                  key: const ValueKey('quest-log-tab-eventos')),
               for (var i = 0; i < npcs.length; i++)
                 () {
                   final mark = p == null
@@ -109,10 +116,14 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                 style: DsText.detail(DsColors.textSecondary)),
           SizedBox(height: DsSpace.xs),
           LifeItemGrid(
-            key: ValueKey('quest-log-grid-${n?.id ?? 'seguidos'}'),
+            key: ValueKey(
+                'quest-log-grid-${n?.id ?? (events ? 'eventos' : 'seguidos')}'),
             groups: [
               LifeItemGroup(null, [
-                if (n == null)
+                if (events)
+                  for (final a in town.events.active)
+                    worldEventCell(context, a, town.sky.day),
+                if (n == null && !events)
                   for (final a in tracked) _trackedCell(a, p),
                 if (n != null && r != null) ...[
                   if (orderCell(worldStrings(context), c, n, r, p,
@@ -123,7 +134,9 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                 ],
               ]),
             ],
-            empty: n == null
+            empty: events
+                ? context.t('ui.town.journal.no_events')
+                : n == null
                 ? context.t('ui.town.journal.none_tracked')
                 : context.t('ui.town.journal.no_quests'),
           ),

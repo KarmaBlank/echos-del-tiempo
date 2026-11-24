@@ -8,6 +8,7 @@ import 'npc_bond.dart';
 import 'resident.dart';
 import 'sky.dart';
 import 'town_build.dart';
+import 'world_event.dart';
 
 export 'dungeon_save.dart';
 export 'farm_plot.dart';
@@ -52,7 +53,11 @@ class TownState {
       this.residents = const {},
       this.daily = const {},
       this.bonds = const {},
-      this.dungeons = const {}});
+      this.dungeons = const {},
+      this.events = const WorldEventsState()});
+
+  /// World events (world_events.md § 1): travel and are saved (`wev`).
+  final WorldEventsState events;
 
   /// Mazmorras de zona del mundo (persistent_dungeons.md), por id de
   /// misión. Solo del anfitrión: se guarda (`dg`) pero no viaja en
@@ -223,6 +228,7 @@ class TownState {
     Map<String, int>? daily,
     Map<String, NpcBond>? bonds,
     Map<String, DungeonSave>? dungeons,
+    WorldEventsState? events,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -238,7 +244,8 @@ class TownState {
         residents: residents ?? this.residents,
         daily: daily ?? this.daily,
         bonds: bonds ?? this.bonds,
-        dungeons: dungeons ?? this.dungeons);
+        dungeons: dungeons ?? this.dungeons,
+        events: events ?? this.events);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -267,6 +274,7 @@ class TownState {
               residents[k]!.toJson()
           ],
         if (daily.isNotEmpty) 'dy': daily,
+        if (!events.isEmpty) 'wev': events.toJson(),
         if (bonds.isNotEmpty)
           'nat': [
             for (final k in (bonds.keys.toList()..sort())) bonds[k]!.toJson()
@@ -357,6 +365,7 @@ class TownState {
             }.toList()
           : const [],
       sky: SkyState.fromJson(raw['sky']),
+      events: WorldEventsState.fromJson(raw['wev']),
       residents: raw['res'] is List
           ? {
               for (final v in raw['res'] as List)

@@ -81,6 +81,8 @@ import 'light_rules.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
+import 'world_event_rules.dart';
+import '../data/world_events_catalog.dart';
 import '../data/biomes_catalog.dart';
 import '../models/world_save.dart'
     show TownState, TownSide, BuildKind, TownBuild, HelperUpgrade, Weather;

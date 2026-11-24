@@ -32,6 +32,7 @@ import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
+import '../../../game_engine/data/world_events_catalog.dart';
 import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
 import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
@@ -3879,7 +3880,23 @@ class SessionController extends StateNotifier<SessionView?> {
   // Estado
   // ------------------------------------------------------------------
 
+  /// World events (world_events.md § 6): every peer adds the notice of a
+  /// new event in its own language. Nothing on the first state (joining).
+  void _announceWorldEvents(WorldEventsState? before, WorldEventsState now) {
+    if (before == null) return;
+    final old = {for (final a in before.active) a.uid};
+    for (final a in now.active) {
+      if (old.contains(a.uid)) continue;
+      final text = kWorldEvents.def(a.def)?.notice.text;
+      if (text == null || text.isEmpty) continue;
+      _messages.add(text);
+      if (_messages.length > maxMessages) _messages.removeAt(0);
+      _addChat(ChatLine.system(text));
+    }
+  }
+
   void _step(SessionStep step) {
+    _announceWorldEvents(_s?.town.events, step.state.town.events);
     _s = step.state;
     _saveRun();
     _settleRun();

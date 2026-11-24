@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "interval": 5,
+  "minPerRoll": 1,
+  "maxPerRoll": 2,
+  "chance": 1.0,
+  "events": [
+    {
+      "id": "visitor_clockmaker",
+      "category": "visitor",
+      "weight": 3,
+      "duration": 3,
+      "title": {
+        "es-AR": "Relojera ambulante",
+        "en": "Wandering clockmaker",
+        "zh-Hans": "流浪钟表匠"
+      },
+      "notice": {
+        "es-AR": "Llegó una relojera ambulante al pueblo: arregla lo que el tiempo rompió.",
+        "en": "A wandering clockmaker reached town: she mends what time broke.",
+        "zh-Hans": "一位流浪钟表匠来到镇上：她修补时间弄坏的东西。"
+      },
+      "body": {
+        "es-AR": "Mientras esté, el puesto del pueblo cobra menos.",
+        "en": "While she stays, the town stall charges less.",
+        "zh-Hans": "她在镇上期间，镇上摊位的价格更低。"
+      },
+      "params": {
+        "discount": 0.1
+      }
+    },
+    {
+      "id": "visitor_chronicler",
+      "category": "visitor",
+      "weight": 2,
+      "duration": 2,
+      "minDay": 5,
+      "title": {
+        "es-AR": "Cronista de paso",
+        "en": "Passing chronicler",
+        "zh-Hans": "过路的编年史家"
+      },
+      "notice": {
+        "es-AR": "Un cronista de paso anota lo que todavía no pasó.",
+        "en": "A passing chronicler writes down what has not happened yet.",
+        "zh-Hans": "一位过路的编年史家记下了尚未发生的事。"
+      },
+      "body": {
+        "es-AR": "Dice que leyó estas páginas en un libro que todavía no se escribió.",
+        "en": "He claims he read these pages in a book not yet written.",
+        "zh-Hans": "他说自己在一本尚未写成的书里读过这些内容。"
+      }
+    },
+    {
+      "id": "wanderer_forest",
+      "category": "overworldNpc",
+      "weight": 3,
+      "duration": 3,
+      "biomes": [
+        "bosque"
+      ],
+      "title": {
+        "es-AR": "Peregrina del eco",
+        "en": "Echo pilgrim",
+        "zh-Hans": "回声朝圣者"
+      },
+      "notice": {
+        "es-AR": "Una peregrina camina por el bosque siguiendo un eco que nadie más oye.",
+        "en": "A pilgrim walks the forest following an echo no one else hears.",
+        "zh-Hans": "一位朝圣者在森林中行走，追随着只有她听得见的回声。"
+      },
+      "body": {
+        "es-AR": "Se la ve cerca del lago del bosque unos días.",
+        "en": "She can be seen near the forest lake for a few days.",
+        "zh-Hans": "几天内可以在森林湖边见到她。"
+      }
+    },
+    {
+      "id": "wanderer_automaton",
+      "category": "overworldNpc",
+      "weight": 2,
+      "duration": 3,
+      "minDay": 10,
+      "biomes": [
+        "ruinas"
+      ],
+      "title": {
+        "es-AR": "Autómata errante",
+        "en": "Wandering automaton",
+        "zh-Hans": "游荡的自动人偶"
+      },
+      "notice": {
+        "es-AR": "Un autómata viejo anda por las ruinas buscando a quien le dio cuerda.",
+        "en": "An old automaton roams the ruins looking for whoever wound it.",
+        "zh-Hans": "一具古老的自动人偶在废墟中游荡，寻找为它上发条的人。"
+      },
+      "body": {
+        "es-AR": "Sus engranajes todavía recuerdan el pasado magitec.",
+        "en": "Its gears still remember the magitech past.",
+        "zh-Hans": "它的齿轮仍记得魔导科技的过去。"
+      }
+    },
+    {
+      "id": "echo_rift",
+      "category": "echoPortal",
+      "weight": 3,
+      "duration": 3,
+      "minDay": 5,
+      "title": {
+        "es-AR": "Grieta de eco",
+        "en": "Echo rift",
+        "zh-Hans": "回声裂隙"
+      },
+      "notice": {
+        "es-AR": "Se abrió una grieta de eco: del otro lado espera un jefe que ya ganó una vez.",
+        "en": "An echo rift opened: on the other side waits a boss that already won once.",
+        "zh-Hans": "一道回声裂隙打开了：另一侧等待着一个曾经赢过的首领。"
+      },
+      "body": {
+        "es-AR": "El jefe del bioma, más fuerte. Mejor recompensa mientras dure.",
+        "en": "The biome boss, stronger. Better reward while it lasts.",
+        "zh-Hans": "更强的本区域首领。持续期间奖励更丰厚。"
+      },
+      "params": {
+        "hpMult": 1.6,
+        "atkMult": 1.3,
+        "levelBonus": 3,
+        "rewardMult": 1.75
+      }
+    },
+    {
+      "id": "lore_ilda_roots",
+      "category": "lore",
+      "weight": 2,
+      "duration": 6,
+      "resident": "ilda",
+      "title": {
+        "es-AR": "Las moras que recuerdan",
+        "en": "The berries that remember",
+        "zh-Hans": "记得一切的莓果"
+      },
+      "notice": {
+        "es-AR": "Las moras de Ilda recuerdan un invierno que todavía no llegó.",
+        "en": "Ilda's berries remember a winter that has not come yet.",
+        "zh-Hans": "伊尔达的莓果记得一个尚未到来的冬天。"
+      },
+      "body": {
+        "es-AR": "Algo vino del futuro a buscarlas. Vencé al Eco de Raíz en el bosque.",
+        "en": "Something came from the future for them. Defeat the Root Echo in the forest.",
+        "zh-Hans": "有东西从未来来寻找它们。在森林中击败根之回声。"
+      },
+      "params": {
+        "gold": 120,
+        "rep": 2
+      },
+      "objective": "defeat",
+      "target": "eco_raiz",
+      "n": 1
+    },
+    {
+      "id": "lore_velda_order",
+      "category": "lore",
+      "weight": 2,
+      "duration": 6,
+      "resident": "velda",
+      "title": {
+        "es-AR": "El orden de los autómatas",
+        "en": "The order of the automatons",
+        "zh-Hans": "自动人偶的顺序"
+      },
+      "notice": {
+        "es-AR": "Velda encontró el orden que esperan los autómatas.",
+        "en": "Velda found the order the automatons are waiting for.",
+        "zh-Hans": "维尔达找到了自动人偶等待的顺序。"
+      },
+      "body": {
+        "es-AR": "Falta probarlo abajo: resolvé el mecanismo de las Ruinas Cronales.",
+        "en": "It must be tested below: solve the mechanism in the Chronal Ruins.",
+        "zh-Hans": "还需要在下面验证：解开时序废墟中的机关。"
+      },
+      "params": {
+        "gold": 150,
+        "rep": 2
+      },
+      "objective": "puzzle",
+      "target": "z3",
+      "n": 1
+    },
+    {
+      "id": "lore_kael_guardian",
+      "category": "lore",
+      "weight": 2,
+      "duration": 6,
+      "resident": "kael",
+      "title": {
+        "es-AR": "El guardián adelantado",
+        "en": "The guardian ahead of time",
+        "zh-Hans": "超前的守护者"
+      },
+      "notice": {
+        "es-AR": "El guardián que pelea antes de que llegues dejó un mensaje: aguantá.",
+        "en": "The guardian who fights before you arrive left a message: hold on.",
+        "zh-Hans": "那位在你到来前就开战的守护者留下了讯息：撑住。"
+      },
+      "body": {
+        "es-AR": "Resistí cinco oleadas en el Laberinto Temporal.",
+        "en": "Survive five waves in the Temporal Labyrinth.",
+        "zh-Hans": "在时间迷宫中坚持五波攻势。"
+      },
+      "params": {
+        "gold": 180,
+        "rep": 2
+      },
+      "objective": "survive",
+      "target": "z6",
+      "n": 5
+    },
+    {
+      "id": "lore_brann_forge",
+      "category": "lore",
+      "weight": 2,
+      "duration": 6,
+      "resident": "brann",
+      "title": {
+        "es-AR": "La fragua que sigue andando",
+        "en": "The forge that keeps running",
+        "zh-Hans": "仍在运转的熔炉"
+      },
+      "notice": {
+        "es-AR": "Un autómata salió de la Grieta caminando hacia la fragua de Brann.",
+        "en": "An automaton left the Rift, walking toward Brann's forge.",
+        "zh-Hans": "一具自动人偶走出裂谷，朝布兰的熔炉走去。"
+      },
+      "body": {
+        "es-AR": "Hay que acompañarlo hasta el pueblo sin que lo rompan.",
+        "en": "Escort it to town before anything breaks it.",
+        "zh-Hans": "护送它到镇上，别让它被毁坏。"
+      },
+      "params": {
+        "gold": 200,
+        "rep": 2
+      },
+      "objective": "escort",
+      "target": "automata",
+      "n": 1
+    },
+    {
+      "id": "lore_oren_future",
+      "category": "lore",
+      "weight": 1,
+      "duration": 6,
+      "minDay": 15,
+      "resident": "oren",
+      "title": {
+        "es-AR": "Lo que tiene que pasar",
+        "en": "What has to happen",
+        "zh-Hans": "必须发生的事"
+      },
+      "notice": {
+        "es-AR": "Oren vio el final. No se puede cambiar.",
+        "en": "Oren saw the ending. It cannot be changed.",
+        "zh-Hans": "奥伦看见了结局。它无法改变。"
+      },
+      "body": {
+        "es-AR": "Hay que llegar hasta ahí: bajá al fondo del Abismo y contáselo a Oren.",
+        "en": "Someone has to get there: reach the bottom of the Abyss and tell Oren.",
+        "zh-Hans": "总得有人到达那里：抵达深渊之底，然后告诉奥伦。"
+      },
+      "params": {
+        "gold": 250,
+        "rep": 3
+      },
+      "objective": "explore",
+      "target": "abismo",
+      "n": 1
+    },
+    {
+      "id": "caravan_relics",
+      "category": "caravan",
+      "weight": 2,
+      "duration": 3,
+      "minDay": 10,
+      "title": {
+        "es-AR": "Caravana de restos",
+        "en": "Relic caravan",
+        "zh-Hans": "遗物商队"
+      },
+      "notice": {
+        "es-AR": "Llegó una caravana con restos del pasado magitec.",
+        "en": "A caravan arrived with relics of the magitech past.",
+        "zh-Hans": "一支商队带着魔导科技过去的遗物抵达。"
+      },
+      "body": {
+        "es-AR": "Mercaderes de paso: precios más bajos unos días.",
+        "en": "Passing merchants: lower prices for a few days.",
+        "zh-Hans": "过路商人：几天内价格更低。"
+      },
+      "params": {
+        "discount": 0.15
+      }
+    }
+  ]
+}
