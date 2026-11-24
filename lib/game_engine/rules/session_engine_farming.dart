@@ -127,7 +127,9 @@ extension _FarmingOp on _Op {
           fishLv: humans.fold(
               1, (a, h) => math.max(a, FishingRules.level(h.profile))),
           farmLv: humans.fold(
-              1, (a, h) => math.max(a, FarmingRules.level(h.profile))));
+              1, (a, h) => math.max(a, FarmingRules.level(h.profile))),
+          smithLv: humans.fold(
+              0, (a, h) => math.max(a, SmithRules.level(h.profile))));
       s.town = s.town.copyWith(daily: {
         for (final e in s.town.daily.entries)
           if (e.key.endsWith(':${sky.day}')) e.key: e.value,

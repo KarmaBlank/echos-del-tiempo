@@ -4,6 +4,7 @@
 
 import '../models/game_map.dart';
 import '../models/town_build.dart';
+import 'mine_catalog.dart' show mineEntrances;
 import 'town_layout.dart';
 
 /// Un lugar del mapa de viaje: el pueblo o el exterior de un bioma.
@@ -277,7 +278,7 @@ class BiomeLayout {
         g[y + 1][x + dx] = Tile.path;
       }
     }
-    for (final (x, y) in mines) {
+    for (final (x, y) in mineEntrances(this)) {
       g[y][x] = Tile.mineEntrance;
       g[y + 1][x] = Tile.path;
     }

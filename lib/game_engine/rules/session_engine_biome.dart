@@ -34,6 +34,7 @@ extension _BiomeOp on _Op {
     final next = place == kPueblo ? null : place;
     if (next == s.place && portal == null) return false;
     final moved = next != s.place;
+    final arrive = MiningRules.arrival(s.place, place, worldId: s.worldId);
     s.place = next;
     e.fishing.pending.clear();
     var i = 0;
@@ -45,9 +46,14 @@ extension _BiomeOp on _Op {
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
       }
       // Out of a mine: in front of its entrance (mining_smithing.md § 1.1).
-      if (fromMine != null && portal == null) {
+      if (fromMine != null && portal == null && arrive == null) {
         final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+      }
+      // Between mine levels (mining_smithing.md § 1.4).
+      if (arrive != null) {
+        pos = WorldPoint(
+            arrive.x + (i.isOdd ? 1 : -1) * 8.0 * ((i + 1) ~/ 2), arrive.y);
       }
       i++;
       q

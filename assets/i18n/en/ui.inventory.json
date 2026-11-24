@@ -492,5 +492,22 @@
   "ui.inventory.smith.col.use.smelt": "Smelts into {id}",
   "ui.inventory.smith.col.use.forge": "Forges weapons ({id})",
   "ui.inventory.smith.col.use.rare": "Rare or better weapons with {id}",
-  "ui.inventory.smith.col.use.legend": "Recipe of a forged legendary ({id})"
+  "ui.inventory.smith.col.use.legend": "Recipe of a forged legendary ({id})",
+  "ui.inventory.smith.brann_extra": "Commission: +{gold} gold for Brann's work",
+  "ui.inventory.smith.brann_name": "{name} (commission)",
+  "ui.inventory.smith.cap_brann": "Brann forges up to {rarity}",
+  "ui.inventory.smith.cap_self": "Your smithing level {lv} reaches {rarity}",
+  "ui.inventory.smith.go_make": "MAKE",
+  "ui.inventory.smith.have_gold": "You have {n} ores, but not enough gold ({gold} per ingot)",
+  "ui.inventory.smith.have_short": "You have {n} ores: {per} needed per ingot",
+  "ui.inventory.smith.mine_batch": "Makes {n} per batch",
+  "ui.inventory.smith.mine_owned": "You already own it",
+  "ui.inventory.smith.mine_tool_desc": "Mining tool, tier {tier}. Power {power}, one hit every {swing} s.",
+  "ui.inventory.smith.mine_desc.mine_torch": "Placed on a mine floor or wall, it stays lit.",
+  "ui.inventory.smith.mine_desc.mine_bomb": "Breaks the rock around it after a short fuse.",
+  "ui.inventory.smith.mine_desc.vein_oil": "For a while, veins give more and better ore.",
+  "ui.inventory.smith.tab.mine": "MINING",
+  "ui.inventory.smith.wait_brann": "Brann delivers at once, but takes his cut",
+  "ui.inventory.smith.who_brann": "Forged by Brann, the town smith",
+  "ui.inventory.smith.who_self": "You forge it: +{xp} smithing experience"
 }

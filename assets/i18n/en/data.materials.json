@@ -194,5 +194,13 @@
   "data.materials.smith.ingot_echo.name": "Echo silver ingot",
   "data.materials.smith.rare_sand.name": "Stilled sand",
   "data.materials.smith.schematic.name": "Ancient schematic",
-  "data.materials.smith.guardian_core.name": "Guardian core"
+  "data.materials.smith.guardian_core.name": "Guardian core",
+  "data.materials.smith.pico.name": "Iron pick",
+  "data.materials.smith.pick_copper.name": "Copper pick",
+  "data.materials.smith.pick_frost.name": "Frost iron pick",
+  "data.materials.smith.pick_ember.name": "Ember steel pick",
+  "data.materials.smith.drill_echo.name": "Echo silver drill",
+  "data.materials.smith.mine_torch.name": "Mine torch",
+  "data.materials.smith.mine_bomb.name": "Mine bomb",
+  "data.materials.smith.vein_oil.name": "Vein oil"
 }

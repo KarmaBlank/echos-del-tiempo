@@ -169,7 +169,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 71: mining and smithing (mining_smithing.md § 6): `ore` in the
 /// profile life skills, `mine` and `smith` actions, `PoiKind.ore` and
 /// mine places `mine:<biome>:<i>`.
-const kProtocolVersion = 71;
+/// 72: mining v2 (mining_smithing.md § 1): dig-through levels (`mn` in the
+/// town farm block), `mine` action ops, `mDug`/`mBomb`/`mBlast` events.
+const kProtocolVersion = 72;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -194,5 +194,13 @@
   "data.materials.smith.ingot_echo.name": "Lingote de plata del eco",
   "data.materials.smith.rare_sand.name": "Arena detenida",
   "data.materials.smith.schematic.name": "Plano antiguo",
-  "data.materials.smith.guardian_core.name": "Núcleo de guardián"
+  "data.materials.smith.guardian_core.name": "Núcleo de guardián",
+  "data.materials.smith.pico.name": "Pico de hierro",
+  "data.materials.smith.pick_copper.name": "Pico de cobre",
+  "data.materials.smith.pick_frost.name": "Pico de hierro helado",
+  "data.materials.smith.pick_ember.name": "Pico de acero ígneo",
+  "data.materials.smith.drill_echo.name": "Taladro de plata del eco",
+  "data.materials.smith.mine_torch.name": "Antorcha de mina",
+  "data.materials.smith.mine_bomb.name": "Bomba de mina",
+  "data.materials.smith.vein_oil.name": "Aceite de veta"
 }

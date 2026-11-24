@@ -263,8 +263,21 @@ class CraftRules {
   /// 25% de lo gastado en forja`, mínimo ₵10.
   int sellPrice(ItemInstance i) => math.max(
       10,
-      jsRound(itemValue(i.itemLevel) * sellFraction(i.rarity) +
-          forgeSpent(i) * 0.25));
+      jsRound((itemValue(i.itemLevel) * sellFraction(i.rarity) +
+              forgeSpent(i) * 0.25) *
+          forgedSellMult(i)));
+
+  /// Uid prefix of a weapon forged at the HERRERÍA (mining_smithing.md
+  /// § 4): it sells above loot of the same rarity.
+  static const forgedPrefix = kForgedUidPrefix;
+
+  /// Sell multiplier of [i]: `forgedSellMult + forgedSellPerRarity ×
+  /// rarity` for forged weapons, 1 for the rest.
+  static double forgedSellMult(ItemInstance i) {
+    if (!i.uid.startsWith(forgedPrefix)) return 1;
+    final t = tuning(TuningId.smithing);
+    return t.d('forgedSellMult') + t.d('forgedSellPerRarity') * i.rarity.index;
+  }
 
   /// Costo de reforjar la base: créditos `(100 + 25·nivel de objeto) ×
   /// factor de rareza` y Común 1 Esquirla, Mágico / Raro 1 Cristal, Épico

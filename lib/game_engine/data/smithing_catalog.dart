@@ -1,7 +1,10 @@
 import 'biomes_catalog.dart';
 
 /// Kind of a smithing material (docs/specs/mining_smithing.md § 2).
-enum SmithMatKind { ore, ingot, rare, special }
+///
+/// v2 (§ 1.6): [tool] = a mining tool you own (amount 1); [supply] = a
+/// mine consumable (torch, bomb, booster).
+enum SmithMatKind { ore, ingot, rare, special, tool, supply }
 
 /// A smithing material. [name] is the es-AR source text; the UI resolves
 /// `data.materials.smith.<id>.name`. [tier] is the ore level (1..5) of
@@ -86,6 +89,22 @@ const kSmithMaterials = <String, SmithMaterialDef>{
       SmithMaterialDef(kSchematic, 'Plano antiguo', SmithMatKind.special),
   kGuardianCore: SmithMaterialDef(
       kGuardianCore, 'Núcleo de guardián', SmithMatKind.special),
+  // Mining v2 (mining_smithing.md § 1.6): tools and consumables.
+  'pico': SmithMaterialDef('pico', 'Pico de hierro', SmithMatKind.tool),
+  'pick_copper': SmithMaterialDef(
+      'pick_copper', 'Pico de cobre', SmithMatKind.tool, tier: 1),
+  'pick_frost': SmithMaterialDef(
+      'pick_frost', 'Pico de hierro helado', SmithMatKind.tool, tier: 2),
+  'pick_ember': SmithMaterialDef(
+      'pick_ember', 'Pico de acero ígneo', SmithMatKind.tool, tier: 3),
+  'drill_echo': SmithMaterialDef(
+      'drill_echo', 'Taladro de plata del eco', SmithMatKind.tool, tier: 4),
+  'mine_torch':
+      SmithMaterialDef('mine_torch', 'Antorcha de mina', SmithMatKind.supply),
+  'mine_bomb':
+      SmithMaterialDef('mine_bomb', 'Bomba de mina', SmithMatKind.supply),
+  'vein_oil':
+      SmithMaterialDef('vein_oil', 'Aceite de veta', SmithMatKind.supply),
 };
 
 /// The ingot an ore smelts into (`null` = not an ore).
@@ -119,3 +138,6 @@ const kMineNpcs = ['miner', 'hermit'];
 
 /// Lines per mine NPC (keys `.0` .. `.n-1`; BORRADOR).
 const kMineNpcLines = 3;
+
+/// Lines of the lore stones (`ui.world.mine.lore.<n>`; BORRADOR).
+const kMineLoreLines = 4;

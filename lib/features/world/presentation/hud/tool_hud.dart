@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
+import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import '../panels/life_icon.dart';
 import '../session_controller.dart';
 import '../world_strings.dart';
@@ -57,10 +59,89 @@ class ToolHud extends StatelessWidget {
           ],
           DsCard(
             padding: EdgeInsets.all(DsSpace.xs),
-            child: tool == ActiveTool.rod ? _rod(context) : _farm(context),
+            child: switch (tool) {
+              ActiveTool.rod => _rod(context),
+              ActiveTool.mine => _mine(context),
+              ActiveTool.hoe => _farm(context),
+            },
           ),
         ],
       ),
+    );
+  }
+
+  /// Mine bar (mining_smithing.md § 1.6): PICO (or TALADRO) | ANTORCHA |
+  /// BOMBA | ACEITE, like ABONO and CEBO. Click picks the slot; 1–4 and R
+  /// too.
+  Widget _mine(BuildContext context) {
+    final life = profile.life;
+    final tool = MiningRules.tool(profile);
+    final hand = controller.mineHand;
+    Widget slot(MineHand h, String key, String icon, String name,
+        String? count, String tip) {
+      final empty = count == '×0';
+      return SizedBox(
+        width: slotW,
+        child: DsCard(
+          key: ValueKey(key),
+          selected: hand == h,
+          padding: EdgeInsets.all(DsSpace.xs),
+          onTap: () => controller.selectMineHand(h),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+                height: seedSize,
+                child: Center(
+                    child: Opacity(
+                        opacity: empty ? 0.4 : 1,
+                        child: LifeIcon(icon, LifeIconKind.herramienta,
+                            size: iconSize)))),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: DsText.subtitle(
+                    empty ? DsColors.textSecondary : DsColors.text)),
+            if (count != null)
+              Text(count,
+                  textAlign: TextAlign.center,
+                  style: DsText.body(
+                      empty ? DsColors.textSecondary : DsColors.text)),
+          ]),
+        ).tip(tip),
+      );
+    }
+
+    final boost = controller.boostLeft;
+    return Row(
+      key: const ValueKey('hud-mine-bar'),
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        slot(
+            MineHand.pick,
+            'hud-mine-pick',
+            tool.id,
+            context.t(tool.drill
+                ? 'ui.world.tools.drill'
+                : 'ui.world.tools.pick'),
+            null,
+            context.t('ui.world.tools.pick_tip', {
+              'name': context.t('data.materials.smith.${tool.id}.name'),
+              'tier': tool.tier,
+            })),
+        slot(MineHand.torch, 'hud-mine-torch', kMineTorch,
+            context.t('ui.world.tools.torch'), '×${life.ore(kMineTorch)}',
+            context.t('ui.world.tools.torch_tip')),
+        slot(MineHand.bomb, 'hud-mine-bomb', kMineBomb,
+            context.t('ui.world.tools.bomb'), '×${life.ore(kMineBomb)}',
+            context.t('ui.world.tools.bomb_tip')),
+        slot(
+            MineHand.oil,
+            'hud-mine-oil',
+            kVeinOil,
+            context.t('ui.world.tools.oil'),
+            boost > 0 ? '${boost}s' : '×${life.ore(kVeinOil)}',
+            context.t('ui.world.tools.oil_tip')),
+      ],
     );
   }
 

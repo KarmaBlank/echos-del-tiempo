@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'ds_button.dart';
 import 'ds_components.dart';
+import 'ds_detail_pane.dart';
 import 'ds_tokens.dart';
 import 'ds_transfer_template.dart' show DsItemCell, DsTransferFilter;
 
@@ -60,14 +61,16 @@ class DsCraftItem {
 }
 
 /// Detalle de una receta (organismo): nombre, descripción, datos y botones.
+/// Sobre [DsDetailPane]: los botones quedan FIJOS abajo y solo el texto
+/// se desplaza (mining_smithing.md § 8: el botón principal se cortaba).
 class DsCraftDetail extends StatelessWidget {
   const DsCraftDetail(this.item, {super.key});
 
   final DsCraftItem item;
 
   @override
-  Widget build(BuildContext context) => DsCard(
-        child: Column(
+  Widget build(BuildContext context) => DsDetailPane(
+        body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -82,15 +85,14 @@ class DsCraftDetail extends StatelessWidget {
             ],
             SizedBox(height: DsSpace.xs),
             for (final l in item.lines) Text(l, style: DsText.body()),
-            if (item.actions.isNotEmpty) ...[
-              SizedBox(height: DsSpace.sm),
-              Wrap(
-                  spacing: DsSpace.xs,
-                  runSpacing: DsSpace.xs,
-                  children: item.actions),
-            ],
           ],
         ),
+        actions: item.actions.isEmpty
+            ? null
+            : Wrap(
+                spacing: DsSpace.xs,
+                runSpacing: DsSpace.xs,
+                children: item.actions),
       );
 }
 
@@ -227,7 +229,8 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
                       SizedBox(width: DsSpace.sm),
                       SizedBox(
                           width: DsCraftGridTemplate.detailWidth,
-                          child: SingleChildScrollView(child: detail)),
+                          height: box.maxHeight,
+                          child: detail),
                     ],
                   ]);
             }

@@ -13,6 +13,9 @@ import 'item_rules.dart';
 /// [columns] × [rows]; cada arma ocupa 1 casilla (la equipada no ocupa);
 /// pociones y materiales se apilan en 1 casilla por tipo. Funciones
 /// puras sobre `PlayerProfile`.
+/// Uid prefix of a weapon forged at the HERRERÍA (`CraftRules.forgedPrefix`).
+const kForgedUidPrefix = 'smith-';
+
 class InventoryRules {
   const InventoryRules({this.items = const ItemRules()});
 
@@ -326,7 +329,12 @@ class InventoryRules {
   /// Agrega un arma con un `uid` nuevo (sin mirar el lugar: eso es
   /// [receive]). Devuelve el perfil y el `uid` asignado.
   static (PlayerProfile, String) addItem(PlayerProfile p, ItemInstance item) {
-    final (uid, seq) = nextUid(p);
+    final (fresh, seq) = nextUid(p);
+    // A weapon forged at the HERRERÍA keeps its mark (mining_smithing.md
+    // § 2.2: it sells above loot).
+    final uid = item.uid.startsWith(kForgedUidPrefix)
+        ? '$kForgedUidPrefix$fresh'
+        : fresh;
     final next = p.copyWith(
         items: [...p.items, item.copyWith(uid: uid)], itemSeq: seq);
     return (relayout(next), uid);

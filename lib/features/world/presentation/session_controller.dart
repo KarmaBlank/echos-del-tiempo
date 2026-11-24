@@ -29,9 +29,11 @@ import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
-import '../../../game_engine/rules/mine_generator.dart' show MineLayout;
+import '../../../game_engine/rules/mine_work_rules.dart';
+import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/rules/mining_rules.dart';
-import '../../../game_engine/data/smithing_catalog.dart' show kMineNpcLines;
+import '../../../game_engine/data/smithing_catalog.dart'
+    show kMineNpcLines, kMineLoreLines;
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
@@ -1518,15 +1520,21 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(TravelAction(id));
   }
 
-  // ---------------- mining (mining_smithing.md § 1) ----------------
+  // ---------------- mining v2 (mining_smithing.md § 1) ----------------
 
-  /// The mine the room is in, or `null`.
-  MineLayout? get mineLayout {
+  /// The mine level the room is in, or `null`.
+  MineLevel? get mineLevel {
     final s = _s;
     if (s == null) return null;
-    return MiningRules.layout(s.place,
-        worldId: s.worldId, day: s.town.sky.day);
+    return MiningRules.level(s.place, worldId: s.worldId);
   }
+
+  /// What changed in that level (dug tiles, torches, station, miners).
+  MineLevelState get mineState => town.mine(_s?.place ?? '');
+
+  /// In a mine level, free to dig (lobby, no panel).
+  bool get inMine =>
+      mineLevel != null && _s?.mode == SessionMode.lobby && _panel == null;
 
   static double _tileDist(double x, double y, int tx, int ty) =>
       WorldRules.distance(x, y, (tx + 0.5) * 16, (ty + 0.5) * 16);
@@ -1536,49 +1544,47 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final lay = biomeLayout(s?.place);
     if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
-    for (var i = 0; i < lay.mines.length; i++) {
-      final (x, y) = lay.mines[i];
+    final spots = MiningRules.entrances(lay);
+    for (var i = 0; i < spots.length; i++) {
+      final (x, y) = spots[i];
       if (_tileDist(local.x, local.y, x, y) < 26) return i;
     }
     return null;
   }
 
-  /// In a mine, in front of its exit.
+  /// In a mine, in front of its way up.
   bool get nearMineExit {
-    final m = mineLayout;
+    final m = mineLevel;
     if (m == null || _s?.mode != SessionMode.lobby) return false;
     return _tileDist(local.x, local.y, m.exit.$1, m.exit.$2) < 24;
   }
 
-  /// The vein (index) in front of the local player, or `null`.
-  int? get nearVein {
-    final m = mineLayout;
-    if (m == null || _s?.mode != SessionMode.lobby) return null;
-    final reach = MiningRules.t.d('mineReach') - 2;
-    for (var i = 0; i < m.nodes.length; i++) {
-      final (x, y) = m.nodes[i];
-      if (_tileDist(local.x, local.y, x, y) < reach) return i;
-    }
-    return null;
+  /// In a mine, next to its shaft down.
+  bool get nearShaft {
+    final sh = mineLevel?.shaft;
+    if (sh == null || _s?.mode != SessionMode.lobby) return false;
+    return _tileDist(local.x, local.y, sh.$1, sh.$2) < 20;
   }
 
   /// The mine NPC (`kMineNpcs` id) in front of the local player.
   String? get nearMineNpc {
-    final npc = mineLayout?.npc;
+    final npc = mineLevel?.npc;
     if (npc == null) return null;
     return _tileDist(local.x, local.y, npc.$2, npc.$3) < 26 ? npc.$1 : null;
   }
 
-  /// Enters mine [i] of this biome (or leaves the mine with [i] `null`).
-  bool travelMine(int? i) {
+  /// Goes into mine [i] of this biome; with [i] `null`, one level up (or
+  /// out to the biome from the first level).
+  bool travelMine(int? i, {bool down = false}) {
     if (cannotTravel != null) return false;
     final s = _s;
     if (s == null) return false;
     final String to;
     if (i == null) {
-      final m = mineLayout;
+      final m = MiningRules.parse(s.place);
       if (m == null) return false;
-      to = m.biome;
+      final l = m.$3 + (down ? 1 : -1);
+      to = l < 0 ? m.$1 : MiningRules.placeOf(m.$1, m.$2, l);
     } else {
       if (biomeLayout(s.place) == null) return false;
       to = MiningRules.placeOf(s.place!, i);
@@ -1588,26 +1594,244 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(TravelAction(to));
   }
 
-  String veinHint(int i) {
-    final s = _s;
-    if (s == null || s.place == null) return '';
-    final left = MiningRules.regrowIn(s.town, s.place!, i, s.time).ceil();
-    return left > 0
-        ? strings.t('ui.world.mine.vein_regrow', {'n': left})
-        : strings.t('ui.world.mine.prompt_mine');
-  }
-
-  bool mineVein() {
-    final i = nearVein;
-    return i != null && _apply(MineAction(i));
-  }
-
   /// A line of the mine NPC [id] (changes with the world day): BORRADOR.
   void talkMineNpc(String id) {
     final n = (town.sky.day + id.length) % kMineNpcLines;
     addLocalNotice('${strings.t('ui.world.mine.npc.$id.name')}: '
         '${strings.t('ui.world.mine.npc.$id.$n')}');
   }
+
+  /// What the local player holds in a mine (HUD slots, § 1.6).
+  MineHand mineHand = MineHand.pick;
+
+  void selectMineHand(MineHand h) {
+    if (mineHand == h) return;
+    mineHand = h;
+    _emit();
+  }
+
+  void cycleMineHand(int d) => selectMineHand(MineHand
+      .values[(mineHand.index + d) % MineHand.values.length]);
+
+  /// The tile in front of the local player (the one a swing hits).
+  (int, int) get mineTarget {
+    var fx = local.fx, fy = local.fy;
+    if (fx == 0 && fy == 0) fy = 1;
+    final horiz = fx.abs() >= fy.abs();
+    final tx = (local.x / 16).floor() + (horiz ? fx.sign.toInt() : 0);
+    final ty = (local.y / 16).floor() + (horiz ? 0 : fy.sign.toInt());
+    return (tx, ty);
+  }
+
+  /// The code of the tile in front.
+  String? get mineTargetCode {
+    final lvl = mineLevel;
+    if (lvl == null) return null;
+    final (x, y) = mineTarget;
+    return MiningRules.tileAt(lvl, mineState, x, y);
+  }
+
+  /// Hits dealt by the local player per tile (prediction for the crack
+  /// stages; the host keeps the real count).
+  final mineCracks = <int, int>{};
+
+  /// Last local swing (ms of [mineClock]) and its tile, for the swing
+  /// animation and the cooldown.
+  double lastSwingMs = -1e9;
+  (int, int)? lastSwingTile;
+  final mineClock = Stopwatch()..start();
+
+  /// Called with each local swing (sparks in the map layer).
+  void Function(int tx, int ty)? onMineSwing;
+
+  Timer? _mineHold;
+
+  /// Why a swing at the target fails (i18n key), or `null`.
+  String? get mineBlock {
+    final lvl = mineLevel;
+    final p = _s?.players[localId]?.profile;
+    final c = mineTargetCode;
+    if (lvl == null || p == null || c == null) return null;
+    if (!MineTile.breakable.contains(c) && c != MineTile.bedrock) return null;
+    return switch (MiningRules.cannotBreak(c, lvl.level, MiningRules.tool(p))) {
+      'bedrock' => 'ui.world.mine.why.bedrock',
+      'tier' => 'ui.world.mine.why.tier',
+      _ => null,
+    };
+  }
+
+  /// One swing of the held tool at the tile in front (predicts the
+  /// crack; the host decides).
+  bool mineSwing() {
+    final lvl = mineLevel;
+    final p = _s?.players[localId]?.profile;
+    if (lvl == null || p == null || !inMine) return false;
+    final tool = MiningRules.tool(p);
+    final now = mineClock.elapsedMilliseconds.toDouble();
+    if (now - lastSwingMs < tool.swing * 1000) return false;
+    final (x, y) = mineTarget;
+    final c = MiningRules.tileAt(lvl, mineState, x, y);
+    if (MiningRules.cannotBreak(c, lvl.level, tool) != null) {
+      if (c == MineTile.bedrock || MineTile.breakable.contains(c)) {
+        lastSwingMs = now;
+        lastSwingTile = (x, y);
+        onMineSwing?.call(x, y);
+        _emit();
+      }
+      return false;
+    }
+    lastSwingMs = now;
+    lastSwingTile = (x, y);
+    final i = lvl.idx(x, y);
+    mineCracks.removeWhere((k, _) =>
+        !MineTile.breakable.contains(MiningRules.tileAt(
+            lvl, mineState, k % lvl.width, k ~/ lvl.width)));
+    mineCracks[i] = (mineCracks[i] ?? 0) + tool.power;
+    onMineSwing?.call(x, y);
+    fishSfx?.call(Sfx.hit);
+    return _apply(MineAction(MineOp.dig, x: x, y: y));
+  }
+
+  /// E / click held in a mine: swing again at the tool's rhythm (the
+  /// drill mines continuously while held).
+  void mineHoldStart() {
+    if (!inMine || mineHand != MineHand.pick) return;
+    mineSwing();
+    _mineHold?.cancel();
+    _mineHold = Timer.periodic(const Duration(milliseconds: 40), (_) {
+      if (!inMine) return mineHoldEnd();
+      mineSwing();
+    });
+  }
+
+  void mineHoldEnd() {
+    _mineHold?.cancel();
+    _mineHold = null;
+  }
+
+  /// E in a mine: the find in front (chest, mushrooms, lore stone,
+  /// station spot) or the held tool.
+  bool mineUse() {
+    final lvl = mineLevel;
+    if (lvl == null || !inMine) return false;
+    final (x, y) = mineTarget;
+    final c = MiningRules.tileAt(lvl, mineState, x, y);
+    switch (c) {
+      case MineTile.chest || MineTile.relic || MineTile.mushroom:
+        return _apply(MineAction(MineOp.use, x: x, y: y));
+      case MineTile.lore:
+        final n = (lvl.level + lvl.index + lvl.biome.length) % kMineLoreLines;
+        addLocalNotice(strings.t('ui.world.mine.lore.$n'));
+        return true;
+      case MineTile.station when !mineState.station:
+        return _apply(MineAction(MineOp.use, x: x, y: y));
+      default:
+    }
+    switch (mineHand) {
+      case MineHand.pick:
+        mineHoldStart();
+        return true;
+      case MineHand.torch:
+        return _apply(MineAction(MineOp.torch, x: x, y: y));
+      case MineHand.bomb:
+        return _apply(MineAction(MineOp.bomb, x: x, y: y));
+      case MineHand.oil:
+        final ok = _apply(const MineAction(MineOp.boost));
+        if (ok) {
+          boostUntilMs = mineClock.elapsedMilliseconds +
+              MiningRules.t.d('boostSec') * 1000;
+        }
+        return ok;
+    }
+  }
+
+  /// Local booster clock (HUD), ms of [mineClock].
+  double boostUntilMs = 0;
+  int get boostLeft => math.max(
+      0, ((boostUntilMs - mineClock.elapsedMilliseconds) / 1000).ceil());
+
+  /// Hire / dismiss a miner on this level (needs its station).
+  bool hireMiner() => _apply(const MineAction(MineOp.hire));
+  bool fireMiner() => _apply(const MineAction(MineOp.fire));
+
+  /// In the mine, next to its built station.
+  bool get nearMineStation {
+    final lvl = mineLevel;
+    if (lvl == null || !mineState.station) return false;
+    return _tileDist(local.x, local.y, lvl.station.$1, lvl.station.$2) < 30;
+  }
+
+  /// Hint in front of the target (prompt line).
+  String? mineHint() {
+    final lvl = mineLevel;
+    if (lvl == null) return null;
+    final c = mineTargetCode;
+    if (c == MineTile.station && !mineState.station) {
+      return strings.t('ui.world.mine.prompt_station', {
+        'gold': MiningRules.t.i('stationGold'),
+        'n': MiningRules.t.i('stationIngots'),
+      });
+    }
+    if (c == MineTile.chest || c == MineTile.relic) {
+      return strings.t('ui.world.mine.prompt_chest');
+    }
+    if (c == MineTile.mushroom) return strings.t('ui.world.mine.prompt_mushroom');
+    if (c == MineTile.lore) return strings.t('ui.world.mine.prompt_lore');
+    if (nearMineStation) {
+      return strings.t('ui.world.mine.prompt_miners', {
+        'n': mineState.miners.length,
+        'max': MiningRules.t.i('minerMax'),
+        'gold': MiningRules.t.i('minerCost'),
+      });
+    }
+    if (mineBlock case final k?) return strings.t(k);
+    return switch (mineHand) {
+      MineHand.pick => MineTile.breakable.contains(c)
+          ? strings.t('ui.world.mine.prompt_dig')
+          : null,
+      MineHand.torch => strings.t('ui.world.mine.prompt_torch'),
+      MineHand.bomb => strings.t('ui.world.mine.prompt_bomb'),
+      MineHand.oil => strings.t('ui.world.mine.prompt_oil'),
+    };
+  }
+
+  // ---- the town cart station (§ 1.8) ----
+
+  /// Near the town cart station.
+  bool get nearCartStation => townSpot == TownSpot.carts;
+
+  /// The first cart parked in town (mine level place), or `null`.
+  String? get parkedCart {
+    for (final (place, c) in MineWorkRules.townCarts(town.mines)) {
+      if (c.phase == CartPhase.town) return place;
+    }
+    return null;
+  }
+
+  /// Unloads the first parked cart.
+  bool unloadCart() {
+    final p = parkedCart;
+    return p != null && _apply(MineAction(MineOp.unload, id: p));
+  }
+
+  /// Label of a cart: its mine and biome.
+  String cartLabel(String place) {
+    final m = MiningRules.parse(place);
+    if (m == null) return place;
+    return strings.t('ui.world.mine.cart_label', {
+      'n': m.$2 + 1,
+      'level': m.$3 + 1,
+      'biome': biomeDef(m.$1)?.name ?? m.$1,
+    });
+  }
+
+  /// Buy, craft or sell mining goods (trader / forge).
+  bool buyMine(String id, [int n = 1]) =>
+      _apply(MineAction(MineOp.buy, id: id, n: n));
+  bool craftMine(String id, [String? ore]) =>
+      _apply(MineAction(MineOp.craft, id: id, mat: ore));
+  bool sellMine(String id, [int n = 1]) =>
+      _apply(MineAction(MineOp.sell, id: id, n: n));
 
   /// La mata del exterior frente al jugador local (índice), o `null`.
   int? get nearForage {
@@ -1695,6 +1919,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// La herramienta que el jugador tiene en la mano en el mapa (solo en
   /// el pueblo; nunca en misiones). La caña manda cerca del agua.
   ActiveTool? get activeTool {
+    if (inMine) return ActiveTool.mine;
     if (!_townFree()) return null;
     if (_fishing != null || canFish) return ActiveTool.rod;
     if (nearFarm) return ActiveTool.hoe;
@@ -1703,6 +1928,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Aviso compacto sobre las pociones (farming.md § 4, fishing.md § 4).
   String? get toolPrompt {
+    if (inMine) return mineHint();
     if (_fishing case final f?) return fishingHint(f);
     // Junto a un ayudante, su pantalla primero (antes que "Sin semillas…").
     if (nearHelper != null) return strings.t(WorldPrompt.helper.key);
@@ -2917,10 +3143,16 @@ class SessionController extends StateNotifier<SessionView?> {
         travelMine(i);
       } else if (nearMineExit) {
         travelMine(null);
+      } else if (nearShaft) {
+        travelMine(null, down: true);
       } else if (nearMineNpc case final n?) {
         talkMineNpc(n);
-      } else if (nearVein != null) {
-        mineVein();
+      } else if (inMine) {
+        mineUse();
+      } else if (nearCartStation) {
+        if (!unloadCart()) {
+          addLocalNotice(strings.t('ui.world.mine.no_cart'));
+        }
       } else if (nearChest case final b? when b.chest.isNotEmpty) {
         collectChest(b.id);
       } else if (farmTile != null) {
@@ -3004,6 +3236,29 @@ class SessionController extends StateNotifier<SessionView?> {
       if (key == LogicalKeyboardKey.keyR) {
         toggleAutoFish();
         return true;
+      }
+    }
+    // Mines (mining_smithing.md § 1.6): G hires a miner at the station
+    // (Shift+G dismisses one); R / Shift+R cycles the held tool.
+    if (_panel == null && inMine) {
+      if (key == LogicalKeyboardKey.keyG && nearMineStation) {
+        HardwareKeyboard.instance.isShiftPressed ? fireMiner() : hireMiner();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.keyR) {
+        cycleMineHand(HardwareKeyboard.instance.isShiftPressed ? -1 : 1);
+        return true;
+      }
+      for (final (k, h) in [
+        (LogicalKeyboardKey.digit1, MineHand.pick),
+        (LogicalKeyboardKey.digit2, MineHand.torch),
+        (LogicalKeyboardKey.digit3, MineHand.bomb),
+        (LogicalKeyboardKey.digit4, MineHand.oil),
+      ]) {
+        if (key == k) {
+          selectMineHand(h);
+          return true;
+        }
       }
     }
     // G: hablar con el ayudante de al lado (E queda para la huerta).
@@ -4542,6 +4797,18 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearMineExit) {
       return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit'));
     }
+    if (nearShaft) {
+      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_down'));
+    }
+    if (nearCartStation) {
+      final c = parkedCart;
+      return (
+        WorldPrompt.poi,
+        c == null
+            ? strings.t('ui.world.mine.no_cart')
+            : strings.t('ui.world.mine.prompt_unload', {'name': cartLabel(c)})
+      );
+    }
     if (nearMineNpc case final n?) {
       return (
         WorldPrompt.poi,
@@ -4549,7 +4816,6 @@ class SessionController extends StateNotifier<SessionView?> {
             {'name': strings.t('ui.world.mine.npc.$n.name')})
       );
     }
-    if (nearVein case final i?) return (WorldPrompt.poi, veinHint(i));
     final helperTip = nearHelper == null
         ? ''
         : ' · ${strings.t(WorldPrompt.helper.key)}';
@@ -4622,7 +4888,11 @@ class _StashOp {
 }
 
 /// Herramienta de oficio en la mano (HUD de herramienta, farming.md § 4).
-enum ActiveTool { rod, hoe }
+enum ActiveTool { rod, hoe, mine }
+
+/// What the local player holds in a mine (mining_smithing.md § 1.6): the
+/// best pick (or drill), torches, bombs and the vein oil.
+enum MineHand { pick, torch, bomb, oil }
 
 /// Herramienta de huerta en la mano (farming.md § 2.5).
 enum FarmHand { hoe, seed, can, fert }

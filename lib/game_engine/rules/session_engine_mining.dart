@@ -1,13 +1,39 @@
 part of 'session_engine.dart';
 
-// Mines, veins, smelting and forging weapons
+// Mines v2, carts, smelting and forging weapons
 // (docs/specs/mining_smithing.md). Everything is decided by the host.
 
+/// A lit bomb waiting for its fuse (host only).
+class PendingBomb {
+  PendingBomb(this.place, this.x, this.y, this.at, this.owner);
+  final String place;
+  final int x, y;
+  final double at;
+  final String owner;
+}
+
+/// Mining state of the host (not in the snapshot): swing clocks, crack
+/// damage per tile, boosters, lit bombs and the miners' clock.
+class MiningHostState {
+  final lastSwing = <String, double>{};
+
+  /// `<place>|<tile>` → hits dealt so far.
+  final cracks = <String, int>{};
+
+  /// Player → room second the booster ends.
+  final boost = <String, double>{};
+  final bombs = <PendingBomb>[];
+  double stepAcc = 0;
+}
+
 extension _MiningOp on _Op {
+  MiningHostState get _mh => e.mining;
+  TuningDef get _mt => MiningRules.t;
+
   bool miningAction(SessionPlayer p, SessionAction a) {
     switch (a) {
-      case MineAction(:final vein):
-        return _mineVein(p, vein);
+      case MineAction():
+        return _mine(p, a);
       case SmithAction():
         return _smith(p, a);
       default:
@@ -15,32 +41,317 @@ extension _MiningOp on _Op {
     }
   }
 
-  bool _mineVein(SessionPlayer p, int vein) {
+  bool _boosted(SessionPlayer p) => (_mh.boost[p.id] ?? -1) > s.time;
+
+  /// The mine level the room is in, with its state, or `null`.
+  (String, MineLevel, MineLevelState)? get _level {
+    final place = s.place;
+    final lvl = MiningRules.level(place, worldId: s.worldId);
+    if (place == null || lvl == null) return null;
+    return (place, lvl, s.town.mine(place));
+  }
+
+  bool _reaches(SessionPlayer p, int x, int y) =>
+      WorldRules.distance(p.x, p.y, (x + 0.5) * 16, (y + 0.5) * 16) <=
+      MiningRules.t.d('mineReach') + 10;
+
+  bool _mine(SessionPlayer p, MineAction a) {
     if (s.mode != SessionMode.lobby || s.run != null || p.isCompanion) {
       return false;
     }
-    final place = s.place;
-    final lay = MiningRules.layout(place,
-        worldId: s.worldId, day: s.town.sky.day);
-    if (place == null || lay == null || vein < 0 || vein >= lay.nodes.length) {
-      return false;
+    switch (a.op) {
+      case MineOp.unload:
+        return _unloadCart(p, a.id);
+      case MineOp.buy:
+        return _buyMine(p, a.id, a.n);
+      case MineOp.craft:
+        return _craftMine(p, a.id, a.mat);
+      case MineOp.sell:
+        return _sellMine(p, a.id, a.n);
+      default:
     }
-    final (tx, ty) = lay.nodes[vein];
-    if (WorldRules.distance(p.x, p.y, (tx + 0.5) * 16, (ty + 0.5) * 16) >
-        MiningRules.t.d('mineReach')) {
-      return false;
+    final lv = _level;
+    if (lv == null) return false;
+    final (place, lvl, st) = lv;
+    switch (a.op) {
+      case MineOp.dig:
+        return _dig(p, place, lvl, st, a.x, a.y);
+      case MineOp.bomb:
+        if (p.profile.life.ore(kMineBomb) <= 0 || !_reaches(p, a.x, a.y)) {
+          return false;
+        }
+        _profileChange(p, MiningRules.give(p.profile, {kMineBomb: -1}));
+        final fuse = _mt.d('bombFuse');
+        _mh.bombs.add(PendingBomb(place, a.x, a.y, s.time + fuse, p.id));
+        events.add(MineBombEvent(a.x, a.y, fuse));
+        return true;
+      case MineOp.torch:
+        if (p.profile.life.ore(kMineTorch) <= 0 ||
+            !_reaches(p, a.x, a.y) ||
+            !MiningRules.canTorch(lvl, st, a.x, a.y)) {
+          return false;
+        }
+        _profileChange(p, MiningRules.give(p.profile, {kMineTorch: -1}));
+        s.town = s.town.withMine(
+            place, st.copyWith(torches: {...st.torches, lvl.idx(a.x, a.y)}));
+        return true;
+      case MineOp.boost:
+        if (p.profile.life.ore(kVeinOil) <= 0) return false;
+        _profileChange(p, MiningRules.give(p.profile, {kVeinOil: -1}));
+        _mh.boost[p.id] = s.time + _mt.d('boostSec');
+        say('${p.name} untó su pico con Aceite de veta.');
+        return true;
+      case MineOp.use:
+        return _useTile(p, place, lvl, st, a.x, a.y);
+      case MineOp.hire:
+        if (!st.station || st.miners.length >= _mt.i('minerMax')) return false;
+        if (p.profile.credits < _mt.i('minerCost')) return false;
+        _profileChange(
+            p, p.profile.copyWith(credits: p.profile.credits - _mt.i('minerCost')));
+        final (mx, my) = MineWorkRules.minerSpawn(lvl);
+        s.town = s.town.withMine(
+            place, st.copyWith(miners: [...st.miners, MinerState(mx, my)]));
+        say('${p.name} contrató un minero para ${MiningRules.placeName(place)}.');
+        return true;
+      case MineOp.fire:
+        if (st.miners.isEmpty) return false;
+        s.town = s.town.withMine(place,
+            st.copyWith(miners: st.miners.sublist(0, st.miners.length - 1)));
+        return true;
+      default:
+        return false;
     }
-    if (MiningRules.regrowIn(s.town, place, vein, s.time) > 0) return false;
-    s.town = MiningRules.spend(s.town, place, vein, s.time);
-    final got = MiningRules.veinYield(_rand, lay.biome);
+  }
+
+  bool _dig(SessionPlayer p, String place, MineLevel lvl, MineLevelState st,
+      int x, int y) {
+    if (!_reaches(p, x, y)) return false;
+    final tool = MiningRules.tool(p.profile);
+    final last = _mh.lastSwing[p.id] ?? -99;
+    if (s.time - last < tool.swing * 0.6) return false;
+    final code = MiningRules.tileAt(lvl, st, x, y);
+    if (MiningRules.cannotBreak(code, lvl.level, tool) != null) return false;
+    _mh.lastSwing[p.id] = s.time;
+    final key = '$place|${lvl.idx(x, y)}';
+    final dealt = (_mh.cracks[key] ?? 0) + tool.power;
+    if (dealt < MiningRules.hits(code, lvl.level)) {
+      _mh.cracks[key] = dealt;
+      return true;
+    }
+    _mh.cracks.remove(key);
+    _breakTile(p, place, lvl, x, y, tool.yieldBonus);
+    return true;
+  }
+
+  /// Breaks ([x], [y]) for [p]: the level changes for everyone, [p] gets
+  /// what it held.
+  void _breakTile(SessionPlayer p, String place, MineLevel lvl, int x, int y,
+      double toolBonus) {
+    final st = s.town.mine(place);
+    final code = MiningRules.tileAt(lvl, st, x, y);
+    s.town = s.town.withMine(place, MiningRules.dig(lvl, st, x, y, s.time));
+    var got = MiningRules.veinYield(_rand, lvl.biome,
+        code: code, toolBonus: toolBonus, boosted: _boosted(p));
+    if (code == MineTile.wallTorch) got = {kMineTorch: 1};
+    if (got.isNotEmpty) {
+      _profileChange(
+          p,
+          MiningRules.give(p.profile, got,
+              source: MiningRules.mineSource(lvl.biome), day: s.town.sky.day),
+          gain: true);
+    }
+    events.add(MineDugEvent(p.id, x, y, code, _oreText(got)));
+    smithXp(p, MiningRules.digXp(lvl.biome, code));
+  }
+
+  bool _useTile(SessionPlayer p, String place, MineLevel lvl,
+      MineLevelState st, int x, int y) {
+    if (!_reaches(p, x, y)) return false;
+    final code = MiningRules.tileAt(lvl, st, x, y);
+    final i = lvl.idx(x, y);
+    switch (code) {
+      case MineTile.chest || MineTile.relic:
+        s.town = s.town.withMine(place, st.copyWith(opened: {...st.opened, i}));
+        final relic = code == MineTile.relic;
+        final def = kChestTiers[relic ? ChestTier.oro : ChestTier.madera]!;
+        final lvlP = math.max(1, p.profile.level);
+        final cr = ((15 + (_rand() * 26).floor()) * def.creditMult).round();
+        _profileChange(p, p.profile.copyWith(credits: p.profile.credits + cr));
+        final drops = _chestDrops(p, def, lvlP);
+        events.add(MineDugEvent(p.id, x, y, code, '+$cr'));
+        say(relic
+            ? '${p.name} abrió un cofre reliquia magitec (+$cr de oro).'
+            : '${p.name} abrió un cofre de la mina (+$cr de oro).');
+        _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
+        return true;
+      case MineTile.mushroom:
+        s.town = s.town.withMine(place, st.copyWith(opened: {...st.opened, i}));
+        final life = p.profile.life;
+        _profileChange(
+            p,
+            p.profile.copyWith(
+                life: life.copyWith(
+                    crafts: {...life.crafts, 'fibra': life.craft('fibra') + 2})),
+            gain: true);
+        events.add(MineDugEvent(p.id, x, y, code, '+2'));
+        return true;
+      case MineTile.station:
+        if (st.station) return false;
+        final ing = kBiomeOres[kBosque]!.ingot;
+        final gold = _mt.i('stationGold'), n = _mt.i('stationIngots');
+        if (p.profile.credits < gold || p.profile.life.ore(ing) < n) {
+          return false;
+        }
+        _profileChange(
+            p,
+            MiningRules.give(p.profile, {ing: -n})
+                .copyWith(credits: p.profile.credits - gold));
+        s.town = s.town.withMine(place, st.copyWith(station: true));
+        say('${p.name} armó la estación de vagonetas de '
+            '${MiningRules.placeName(place)}.');
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  bool _unloadCart(SessionPlayer p, String? place) {
+    if (place == null || s.place != null) return false;
+    final st = s.town.mines[place];
+    if (st == null) return false;
+    final r = MineWorkRules.unload(st, s.time);
+    if (r == null) return false;
+    s.town = s.town.withMine(place, r.$1);
+    final m = MiningRules.parse(place);
     _profileChange(
         p,
-        MiningRules.give(p.profile, got,
-            source: MiningRules.mineSource(lay.biome), day: s.town.sky.day),
+        MiningRules.give(p.profile, r.$2,
+            source: m == null ? null : MiningRules.mineSource(m.$1),
+            day: s.town.sky.day),
         gain: true);
-    say('${p.name} picó una veta (${_oreText(got)}).');
-    smithXp(p, MiningRules.veinXp(lay.biome));
+    say('${p.name} descargó la vagoneta de ${MiningRules.placeName(place)} '
+        '(${_oreText(r.$2)}).');
     return true;
+  }
+
+  bool _buyMine(SessionPlayer p, String? id, int n) {
+    if (id == null || n < 1 || s.place != null) return false;
+    final price = MiningRules.price(id);
+    final tool = mineTool(id);
+    if (price <= 0 || (tool != null && (tool.tier == 0 || n != 1))) {
+      return false;
+    }
+    if (tool != null && p.profile.life.ore(id) > 0) return false;
+    if (p.profile.credits < price * n) return false;
+    _profileChange(
+        p,
+        MiningRules.give(p.profile, {id: n})
+            .copyWith(credits: p.profile.credits - price * n));
+    return true;
+  }
+
+  bool _craftMine(SessionPlayer p, String? id, String? ore) {
+    if (id == null || s.place != null) return false;
+    final rec = MiningRules.recipe(id, ore ?? kBiomeOres[kBosque]!.ore);
+    if (rec == null) return false;
+    if (ore != null && kSmithMaterials[ore]?.kind != SmithMatKind.ore) {
+      return false;
+    }
+    if (mineTool(id) != null && p.profile.life.ore(id) > 0) return false;
+    for (final e in rec.mats.entries) {
+      if (p.profile.life.ore(e.key) < e.value) return false;
+    }
+    if (p.profile.credits < rec.gold) return false;
+    _profileChange(
+        p,
+        MiningRules.give(p.profile, {
+          for (final e in rec.mats.entries) e.key: -e.value,
+          id: rec.n,
+        }).copyWith(credits: p.profile.credits - rec.gold));
+    smithXp(p, _mt.i('smeltXp'));
+    return true;
+  }
+
+  bool _sellMine(SessionPlayer p, String? id, int n) {
+    if (id == null || n < 1 || s.place != null) return false;
+    final price = SmithCraftRules.sellPrice(id);
+    if (price <= 0 || p.profile.life.ore(id) < n) return false;
+    _profileChange(
+        p,
+        MiningRules.give(p.profile, {id: -n})
+            .copyWith(credits: p.profile.credits + price * n));
+    return true;
+  }
+
+  /// Bombs, veins growing back where nobody looks, miners and carts.
+  /// [world]: this room runs the world clocks (miners, carts).
+  void mineTick(double dt, bool world) {
+    if (_mh.bombs.isNotEmpty) {
+      final due = [
+        for (final b in _mh.bombs)
+          if (b.at <= s.time && b.place == s.place) b
+      ];
+      for (final b in due) {
+        _mh.bombs.remove(b);
+        _blast(b);
+      }
+    }
+    if (_level case (final place, final lvl, final st)
+        when st.regrow.isNotEmpty) {
+      final next = MineWorkRules.regrowTick(lvl, st, s.time,
+          [for (final p in players) (p.x / 16, p.y / 16)], _rand);
+      if (!identical(next, st)) s.town = s.town.withMine(place, next);
+    }
+    if (!world || s.town.mines.isEmpty) return;
+    _mh.stepAcc += dt;
+    final step = math.max(0.1, _mt.d('minerStepSec'));
+    final work = _mh.stepAcc >= step;
+    if (work) _mh.stepAcc -= step;
+    var mines = s.town.mines;
+    var changed = false;
+    for (final e in s.town.mines.entries) {
+      var st = e.value;
+      final cart = MineWorkRules.cartTick(st.cart, s.time);
+      if (!identical(cart, st.cart)) st = st.copyWith(cart: cart);
+      if (work && st.miners.isNotEmpty) {
+        final lvl = MiningRules.level(e.key, worldId: s.worldId);
+        if (lvl != null) {
+          final before = st.cart.phase;
+          st = MineWorkRules.minerStep(lvl, st, s.time, _rand);
+          if (before == CartPhase.mine && st.cart.phase == CartPhase.toTown) {
+            say('La vagoneta de ${MiningRules.placeName(e.key)} salió '
+                'llena hacia el pueblo.');
+          }
+        }
+      }
+      if (!identical(st, e.value)) {
+        if (!changed) mines = {...mines};
+        changed = true;
+        mines[e.key] = st;
+      }
+    }
+    if (changed) s.town = s.town.copyWith(mines: mines);
+  }
+
+  void _blast(PendingBomb b) {
+    final lv = _level;
+    if (lv == null) return;
+    final (place, lvl, st) = lv;
+    final owner = s.players[b.owner];
+    final tiles = MiningRules.bombTiles(lvl, st, b.x, b.y);
+    events.add(MineBlastEvent(b.x, b.y, _mt.i('bombRadius')));
+    if (owner == null) {
+      var cur = st;
+      for (final (x, y) in tiles) {
+        cur = MiningRules.dig(lvl, cur, x, y, s.time);
+      }
+      s.town = s.town.withMine(place, cur);
+      return;
+    }
+    final bonus = MiningRules.tool(owner.profile).yieldBonus;
+    for (final (x, y) in tiles) {
+      _breakTile(owner, place, lvl, x, y, bonus);
+    }
   }
 
   String _oreText(Map<String, int> got) => [

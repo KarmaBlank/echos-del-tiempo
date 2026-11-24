@@ -79,6 +79,8 @@ import 'life_time_rules.dart';
 import 'helper_rules.dart';
 import 'light_rules.dart';
 import 'mining_rules.dart';
+import 'mine_work_rules.dart';
+import '../data/mine_catalog.dart';
 import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
@@ -297,7 +299,9 @@ class SessionEngine {
       ..worldId = id
       ..worldName = name;
     // El pueblo del mundo (farming.md § 10): huerta, ampliaciones y lago.
-    if (town != null) s.town = BiomeRules.rebase(town, s.time);
+    if (town != null) {
+      s.town = MiningRules.rebase(BiomeRules.rebase(town, s.time), s.time);
+    }
     if (lake != null && lake.isNotEmpty) {
       s.town = s.town.copyWith(lake: List.unmodifiable(lake));
     }
@@ -313,6 +317,9 @@ class SessionEngine {
 
   /// Huerta del anfitrión (farming.md § 10): tiempos y acumuladores.
   final farming = FarmingHostState();
+
+  /// Mining of the host (mining_smithing.md § 1): swings, cracks, bombs.
+  final mining = MiningHostState();
 
   SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
     if (session.turnTimer == timer) return SessionStep(session, const []);
@@ -481,11 +488,8 @@ class SessionEngine {
             lay, BiomeRules.picked(s.town, lay.id, s.time));
       }
       // Mine (mining_smithing.md § 1): a calm lobby map, no enemies.
-      if (MiningRules.layout(s.place,
-              worldId: s.worldId, day: s.town.sky.day)
-          case final mine?) {
-        return MiningRules.mapOf(
-            mine, MiningRules.spent(s.town, s.place!, s.time));
+      if (MiningRules.level(s.place, worldId: s.worldId) case final lvl?) {
+        return MiningRules.mapOf(lvl, s.town.mine(s.place!));
       }
       return MapGenerator.townOf(s.town);
     }
@@ -2649,6 +2653,7 @@ class _Op {
     // Mudanzas (overworld_biomes.md § 10.1): quien ya llegó al borde.
     s.town = ResidentRules.settleDepartures(s.town, s.time);
     if (world) farmTick(dt);
+    if (s.mode == SessionMode.lobby) mineTick(dt, world);
     autoFishTick();
     _loreExplore();
     final m = s.mission;

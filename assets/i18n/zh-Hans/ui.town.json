@@ -446,5 +446,21 @@
   "ui.town.events.close": "关闭",
   "ui.town.events.prompt_rift": "[E] 回声裂隙",
   "ui.town.events.progress": "进度：{have}/{need}",
-  "ui.town.events.trade_banner": "{name}：购买价格降低 {n}%（结账时返还）。"
+  "ui.town.events.trade_banner": "{name}：购买价格降低 {n}%（结账时返还）。",
+  "ui.town.trader.kind.mine_goods": {
+    "text": "矿石与锭",
+    "status": "draft"
+  },
+  "ui.town.trader.kind.mine_supplies": {
+    "text": "耗材",
+    "status": "draft"
+  },
+  "ui.town.trader.kind.mine_tools": {
+    "text": "镐",
+    "status": "draft"
+  },
+  "ui.town.trader.tab_mining": {
+    "text": "采矿",
+    "status": "draft"
+  }
 }
