@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../build_planner/presentation/build_feed.dart';
 import '../../../app/design/design.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
@@ -1023,6 +1024,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
   }
 
   Widget _panel(
+          WorldPanel panel, SessionView view, SessionController controller) =>
+      withCharacterTab(
+          panel, view, controller, _panelBody(panel, view, controller));
+
+  Widget _panelBody(
       WorldPanel panel, SessionView view, SessionController controller) {
     final s = view.session;
     final me = view.me!;
@@ -1200,4 +1206,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ));
     }
   }
+}
+
+/// Every panel but PERSONAJE / INVENTARIO (they close on Tab) and the big
+/// map (Tab picks a destination) shows `PERSONAJE [TAB]`: plain Tab opens
+/// it from anywhere in [body], text fields and grids included
+/// (panels.md § "Teclado en los menús").
+Widget withCharacterTab(WorldPanel panel, SessionView view,
+    SessionController controller, Widget body) {
+  final ownTab = panel == WorldPanel.character ||
+      panel == WorldPanel.inventory ||
+      panel == WorldPanel.map ||
+      view.session.mode == SessionMode.battle;
+  if (ownTab) return body;
+  return PanelTabShortcut(
+      onTab: () => controller.openPanel(WorldPanel.character), child: body);
 }

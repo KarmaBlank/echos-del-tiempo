@@ -1318,6 +1318,7 @@ es la de CONTROLES › MENÚS):
 |---|---|
 | Flechas | Mueven el foco en esa dirección (o al siguiente / anterior). En listas, el detalle **sigue al cursor** (`MenuRow.onFocus`). Al abrir, el foco ya está en la primera fila / tarjeta (`InitialFocus`) |
 | `Tab` / `Shift+Tab` | Saltan a la **sección** siguiente / anterior (`NavSection`: lista, cada `SectionPanel`, los chips de habilidades; los botones sueltos cuentan como una) en orden de lectura |
+| `Tab` en paneles del Mundo | En todo panel que muestra `PERSONAJE [TAB]` (forja, armería, taller, comercios, mostrador, etc.; todos menos PERSONAJE / INVENTARIO, que se cierran con `Tab`, y el mapa grande, donde `Tab` elige destino) `Tab` solo **abre PERSONAJE**, también con el foco en un campo de texto (BUSCAR) o en una grilla (`PanelTabShortcut`, puesto por `withCharacterTab` en `world_screen.dart`). `Shift+Tab` sigue saltando a la sección anterior |
 | `Enter` / `Espacio` | Activan lo que tiene el foco (fila, tarjeta, botón) |
 | `Esc` | Vuelve un paso (fusión, comparar, "elige B", creador) o cierra el panel; sin panel, la pausa |
 | `Q` / `E`, `RePág` / `AvPág` | Pestaña anterior / siguiente (en círculo) |
