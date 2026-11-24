@@ -19,11 +19,11 @@ anfitrión"). Cada opción tiene un tooltip de una línea (`CombatMode.tip`).
 | opción | regla | por defecto |
 |---|---|---|
 | Línea de tiempo | `velocidad` con los topes de v0.20.20 | no (en prueba) |
-| Por rondas | `porRonda` (§ 4) | no |
-| Por fases (recomendado) | `porFases` (§ 3) | solo y cooperativo |
+| Por rondas (recomendado) | `porRonda` (§ 4) | solo y cooperativo |
+| Por fases | `porFases` (§ 3) | no |
 
-Desde v0.41.2 "Por fases (recomendado)" es el de por defecto (antes, desde v0.31.0, "Por rondas") en solitario
-y en cooperativo (`modeSolo` = `modeCoop` = 2). Se elige en OPCIONES → JUEGO → MODO DE COMBATE (la preparación de misión ya no se abre). Las otras dos dicen en su
+Desde v0.41.5 vuelve "Por rondas (recomendado)" por defecto (v0.41.2 a v0.41.4 fue "Por fases") en solitario
+y en cooperativo (`modeSolo` = `modeCoop` = 1). Se elige en OPCIONES → JUEGO → MODO DE COMBATE (la preparación de misión ya no se abre). Las otras dos dicen en su
 tooltip por qué están en prueba. Un `GameSettings.combatMode` ya guardado
 se respeta; solo cambia el de por defecto de los ajustes sin valor.
 
