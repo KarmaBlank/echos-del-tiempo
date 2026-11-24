@@ -64,7 +64,16 @@ revés: clic en un tile libre y después la lista).
   sigue en la barra; contratar y elegir casa no muestran ni ventana ni
   botón. Poniendo, la columna no muestra menú (la ayuda y el motivo
   del rojo van en la barra; se suelta con Esc o clic en la casilla).
-- Cada casilla muestra el tamaño (p. ej. `6×4`) y el nombre completo
+- Cada casilla muestra la MINIATURA de la pieza (v0.42.9,
+  `TownPiecePreview`) con el mismo arte del mapa: la casa es su sprite
+  del manifest (`items.vida_casa_1`); huertas y lagos se dibujan con los
+  pintores del mapa (`TilePainter`: tierra con parcelas aradas, agua con
+  las esquinas de pasto) y el faro con `TilePainter.faro`, todo escalado
+  a la casilla. Sin poder pagar, la miniatura va atenuada. El tamaño
+  (p. ej. `6×4`) es una etiqueta chica en la esquina de arriba a la
+  derecha. El detalle muestra arriba la misma miniatura en grande
+  (96 px) de la pieza bajo el mouse o elegida.
+- Debajo de la casilla va el nombre completo
   en hasta dos renglones, cortando solo entre palabras; si no entra se
   acorta con "…" y el nombre va en un tooltip (ancho y letra fijos del
   DS) que no recibe el mouse.

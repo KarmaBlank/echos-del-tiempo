@@ -9,6 +9,7 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import '../world_strings.dart';
+import 'town_piece_preview.dart';
 
 /// Filtro de la paleta (town_editor.md § 1.2).
 enum TownPieceCategory { farm, water, home, light }
@@ -68,6 +69,9 @@ class TownBuildPalette extends StatefulWidget {
 
   /// Alto de una casilla: cuadro + dos renglones de nombre.
   static const cellHeight = cell + 44.0;
+
+  /// Lado de la miniatura grande del detalle.
+  static const detailPreview = 96.0;
 
   /// Ancho fijo de la columna de detalle.
   static const detailWidth = 300.0;
@@ -235,6 +239,14 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        Center(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.sm),
+            child: TownPiecePreview(p.id,
+                key: const ValueKey('town-build-detail-preview'),
+                size: TownBuildPalette.detailPreview),
+          ),
+        ),
         Text(p.name, style: DsText.body(_catColor(p.category))),
         Text(s.t('ui.town.edit.size', {'w': p.w, 'h': p.h}),
             style: DsText.detail()),
@@ -275,11 +287,33 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
           height: TownBuildPalette.cellHeight,
           child: Column(children: [
             DsItemCell(
-              icon: Text(
-                s.t('ui.town.edit.footprint', {'w': p.w, 'h': p.h}),
-                textAlign: TextAlign.center,
-                textScaler: RetroType.fixedScaler(context),
-                style: DsText.detail(color),
+              // Miniatura de la pieza con el tamaño como etiqueta chica
+              // en la esquina (town_editor.md § 1.2).
+              icon: SizedBox.square(
+                dimension: TownBuildPalette.cell - 4,
+                child: Stack(children: [
+                  Center(
+                    child: Opacity(
+                      opacity: p.enabled ? 1 : 0.4,
+                      child: TownPiecePreview(p.id,
+                          size: TownBuildPalette.cell - 8),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      color: DsColors.surfaceSunken,
+                      padding: const EdgeInsets.symmetric(horizontal: 1),
+                      child: Text(
+                        s.t('ui.town.edit.footprint', {'w': p.w, 'h': p.h}),
+                        textScaler: RetroType.fixedScaler(context),
+                        style: DsText.detail(color)
+                            .copyWith(fontSize: RetroType.label),
+                      ),
+                    ),
+                  ),
+                ]),
               ),
               border: color,
               selected: selected,
