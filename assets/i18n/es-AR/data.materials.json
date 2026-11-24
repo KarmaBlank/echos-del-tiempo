@@ -177,5 +177,22 @@
   "data.materials.tool.regadera_cobre.name": "Regadera de cobre",
   "data.materials.tool.regadera_eco.name": "Regadera del Eco",
   "data.materials.tool.regadera_lata.name": "Regadera de lata",
-  "data.materials.tool.regadera_runica.name": "Regadera de bronce rúnico"
+  "data.materials.tool.regadera_runica.name": "Regadera de bronce rúnico",
+  "data.materials.smith.ore_copper.name": "Mena de cobre",
+  "data.materials.smith.ingot_copper.name": "Lingote de cobre",
+  "data.materials.smith.rare_amber.name": "Ámbar de raíz",
+  "data.materials.smith.ore_bronze.name": "Mena de bronce rúnico",
+  "data.materials.smith.ingot_bronze.name": "Lingote de bronce rúnico",
+  "data.materials.smith.rare_cog.name": "Engranaje antiguo",
+  "data.materials.smith.ore_frost.name": "Mena de hierro helado",
+  "data.materials.smith.ingot_frost.name": "Lingote de hierro helado",
+  "data.materials.smith.rare_rime.name": "Cristal de escarcha",
+  "data.materials.smith.ore_ember.name": "Mena de acero ígneo",
+  "data.materials.smith.ingot_ember.name": "Lingote de acero ígneo",
+  "data.materials.smith.rare_magma.name": "Corazón de magma",
+  "data.materials.smith.ore_echo.name": "Mena de plata del eco",
+  "data.materials.smith.ingot_echo.name": "Lingote de plata del eco",
+  "data.materials.smith.rare_sand.name": "Arena detenida",
+  "data.materials.smith.schematic.name": "Plano antiguo",
+  "data.materials.smith.guardian_core.name": "Núcleo de guardián"
 }

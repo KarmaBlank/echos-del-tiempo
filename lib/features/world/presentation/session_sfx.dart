@@ -170,7 +170,7 @@ class SessionSfx {
           PoiKind.wind => Sfx.wind,
           PoiKind.waystone => Sfx.ascReveal,
           PoiKind.brazier || PoiKind.lantern => Sfx.flare,
-          PoiKind.relic => Sfx.lootPickup,
+          PoiKind.relic || PoiKind.ore => Sfx.lootPickup,
         });
       default:
         break;

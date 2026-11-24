@@ -22,7 +22,12 @@ abstract final class SkyRules {
 
   /// Exteriores de bioma sin cielo (overworld_biomes.md § 3.5): ni noche
   /// ni clima aunque sean zona segura.
-  static const undergroundThemes = {'cavernas_ext'};
+  static const undergroundThemes = {
+    'cavernas_ext',
+    // Minas (mining_smithing.md § 1.2): bajo tierra, sin cielo.
+    'mina_bosque', 'mina_ruinas', 'mina_cavernas', 'mina_grieta',
+    'mina_abismo',
+  };
 
   static bool outdoor(String theme, {bool town = false}) =>
       !undergroundThemes.contains(theme) &&

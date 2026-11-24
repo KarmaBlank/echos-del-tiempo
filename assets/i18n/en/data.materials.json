@@ -177,5 +177,22 @@
   "data.materials.tool.regadera_cobre.name": "Copper watering can",
   "data.materials.tool.regadera_eco.name": "Echo Watering Can",
   "data.materials.tool.regadera_lata.name": "Tin watering can",
-  "data.materials.tool.regadera_runica.name": "Runic bronze watering can"
+  "data.materials.tool.regadera_runica.name": "Runic bronze watering can",
+  "data.materials.smith.ore_copper.name": "Copper ore",
+  "data.materials.smith.ingot_copper.name": "Copper ingot",
+  "data.materials.smith.rare_amber.name": "Root amber",
+  "data.materials.smith.ore_bronze.name": "Runic bronze ore",
+  "data.materials.smith.ingot_bronze.name": "Runic bronze ingot",
+  "data.materials.smith.rare_cog.name": "Ancient cog",
+  "data.materials.smith.ore_frost.name": "Frost iron ore",
+  "data.materials.smith.ingot_frost.name": "Frost iron ingot",
+  "data.materials.smith.rare_rime.name": "Rime crystal",
+  "data.materials.smith.ore_ember.name": "Ember steel ore",
+  "data.materials.smith.ingot_ember.name": "Ember steel ingot",
+  "data.materials.smith.rare_magma.name": "Magma heart",
+  "data.materials.smith.ore_echo.name": "Echo silver ore",
+  "data.materials.smith.ingot_echo.name": "Echo silver ingot",
+  "data.materials.smith.rare_sand.name": "Stilled sand",
+  "data.materials.smith.schematic.name": "Ancient schematic",
+  "data.materials.smith.guardian_core.name": "Guardian core"
 }

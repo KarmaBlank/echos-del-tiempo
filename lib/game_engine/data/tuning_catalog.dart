@@ -34,6 +34,7 @@ abstract final class TuningId {
   static const town = 'town';
   static const lifeTree = 'lifeTree';
   static const dungeon = 'dungeon';
+  static const smithing = 'smithing';
 }
 
 /// Los valores del código.
@@ -457,6 +458,42 @@ const Map<String, TuningDef> kTuningDefaults = {
     'prismaFrom': 4,
     'prismaPerZone': 1,
     'altarReach': 40,
+  }),
+  // mining_smithing.md (v0.44.0): minas, vetas, fundir y forjar armas.
+  TuningId.smithing: TuningDef('Minería y herrería', {
+    'mineNodes': 7,
+    'mineRespawnSec': 600,
+    'mineReach': 26,
+    'mineReshapeDays': 7,
+    'mineOreMin': 1,
+    'mineOreMax': 2,
+    'mineRareChance': 0.06,
+    'mineNpcChance': 0.5,
+    'mineXp': 8,
+    'dungeonOreChance': 0.5,
+    'dungeonSchematicChance': 0.15,
+    'bossCore': 1,
+    'smeltOre': 3,
+    'smeltGoldPerTier': 10,
+    'smeltXp': 4,
+    'ingotIlPerTier': 12,
+    'craftIlGap': 3,
+    'craftGoldPerIl': 4,
+    'brannGoldPerIl': 25,
+    'craftXp': 20,
+    'lvMagico': 4,
+    'lvRaro': 10,
+    'lvEpico': 18,
+    'lvLegend': 25,
+    'ingotsComun': 3,
+    'ingotsMagico': 4,
+    'ingotsRaro': 6,
+    'ingotsEpico': 8,
+    'ingotsLegend': 10,
+    'rareRaro': 1,
+    'rareEpico': 2,
+    'rareLegend': 3,
+    'stackCap': 999,
   }),
   TuningId.mission: TuningDef('Misiones', {
     'maxFloors': 3,

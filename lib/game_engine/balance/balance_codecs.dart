@@ -98,7 +98,10 @@ enum BalanceKind {
   fishing('fishing', 'Pesca', 'Ajustes de Pesca'),
 
   /// Puntos y valor de los nodos de oficios (life_skill_trees.md).
-  lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios');
+  lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios'),
+
+  /// Minas, vetas, fundir y forjar armas (mining_smithing.md).
+  smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1583,6 +1586,45 @@ const _fishLabels = {
   'fisherGoldPerValue': 'Pescador: oro × valor',
 };
 
+final smithingCodec = _tuningCodec(
+    BalanceKind.smithing, _autoFields('smithing', _smithingLabels));
+
+const _smithingLabels = {
+  'mineNodes': 'Mina: vetas por mina',
+  'mineRespawnSec': 'Mina: segundos para que vuelva una veta',
+  'mineReach': 'Mina: distancia para picar (px)',
+  'mineReshapeDays': 'Mina: días hasta que cambia de forma',
+  'mineOreMin': 'Mina: menas mínimas por veta',
+  'mineOreMax': 'Mina: menas máximas por veta',
+  'mineRareChance': 'Mina: chance de material raro',
+  'mineNpcChance': 'Mina: chance de un PNJ',
+  'mineXp': 'Mina: XP de Herrería × nivel de mena',
+  'dungeonOreChance': 'Mazmorra: chance de veta rara por piso',
+  'dungeonSchematicChance': 'Mazmorra: chance de Plano antiguo',
+  'bossCore': 'Jefe: Núcleos de guardián',
+  'smeltOre': 'Fundir: menas por lingote',
+  'smeltGoldPerTier': 'Fundir: oro × nivel de mena',
+  'smeltXp': 'Fundir: XP × nivel por lingote',
+  'ingotIlPerTier': 'Forjar: nivel de objeto máximo × nivel del lingote',
+  'craftIlGap': 'Forjar: niveles debajo del personaje',
+  'craftGoldPerIl': 'Forjar: oro × nivel de objeto',
+  'brannGoldPerIl': 'Brann: oro × nivel de objeto',
+  'craftXp': 'Forjar: XP × (rareza + 1)',
+  'lvMagico': 'Herrería: nivel para Mágico',
+  'lvRaro': 'Herrería: nivel para Raro',
+  'lvEpico': 'Herrería: nivel para Épico',
+  'lvLegend': 'Herrería: nivel para Legendario',
+  'ingotsComun': 'Lingotes: Común',
+  'ingotsMagico': 'Lingotes: Mágico',
+  'ingotsRaro': 'Lingotes: Raro',
+  'ingotsEpico': 'Lingotes: Épico',
+  'ingotsLegend': 'Lingotes: Legendario',
+  'rareRaro': 'Material raro: Raro',
+  'rareEpico': 'Material raro: Épico',
+  'rareLegend': 'Material raro: Legendario',
+  'stackCap': 'Tope por material',
+};
+
 final lifeTreeCodec = _tuningCodec(
     BalanceKind.lifeTree, _autoFields('lifeTree', _lifeTreeLabels()));
 
@@ -1620,6 +1662,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.town => townCodec,
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
+      BalanceKind.smithing => smithingCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1638,4 +1681,5 @@ const kTuningKinds = [
   BalanceKind.town,
   BalanceKind.fishing,
   BalanceKind.lifeTree,
+  BalanceKind.smithing,
 ];

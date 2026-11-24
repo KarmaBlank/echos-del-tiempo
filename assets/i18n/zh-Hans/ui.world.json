@@ -217,5 +217,57 @@
   "ui.world.hud.mp_value": "",
   "ui.world.hud.points": "",
   "ui.world.hud.potion.hp": "",
-  "ui.world.hud.potion.mp": ""
+  "ui.world.hud.potion.mp": "",
+  "ui.world.mine.label": {
+    "text": "矿洞",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_enter": {
+    "text": "[E] 进入矿洞",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_exit": {
+    "text": "[E] 离开矿洞",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_mine": {
+    "text": "[E] 开采矿脉",
+    "status": "draft"
+  },
+  "ui.world.mine.vein_regrow": {
+    "text": "矿脉已枯竭：{n} 秒后恢复",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.miner.name": {
+    "text": "矿工",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.miner.0": {
+    "text": "在这下面，时间过得更慢。看起来是这样。",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.miner.1": {
+    "text": "石头发光的话，从侧面敲。",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.miner.2": {
+    "text": "这些矿脉在小镇出现之前就在这里了。",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.hermit.name": {
+    "text": "隐士",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.hermit.0": {
+    "text": "我来听岩石的回声。它会说话。",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.hermit.1": {
+    "text": "古人用光熔炼金属。我用火。",
+    "status": "draft"
+  },
+  "ui.world.mine.npc.hermit.2": {
+    "text": "不着急。该发生的总会发生。",
+    "status": "draft"
+  }
 }

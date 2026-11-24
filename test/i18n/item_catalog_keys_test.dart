@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/game_engine/data/affixes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/smithing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/uniques_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapon_passives.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
@@ -58,6 +59,7 @@ Map<String, Map<String, String>> catalogSource() {
       ItemKeys.lifeMaterialName(m.id): m.name,
       ItemKeys.lifeMaterialDesc(m.id): m.description,
     },
+    for (final m in kSmithMaterials.values) m.textKey: m.name,
   };
   return {
     'data.items': items,

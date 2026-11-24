@@ -135,6 +135,9 @@ abstract final class WorldRules {
           Tile.fishing => TownSpot.fishing,
           Tile.sign => TownSpot.sign,
           Tile.forage || Tile.forageUsed => TownSpot.forage,
+          Tile.mineEntrance => TownSpot.mine,
+          Tile.stairsUp when map.lobby => TownSpot.mine,
+          Tile.ore || Tile.oreUsed => TownSpot.ore,
           _ => null,
         };
         if (spot == null) continue;

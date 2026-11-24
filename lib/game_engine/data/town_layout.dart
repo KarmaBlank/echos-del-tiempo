@@ -42,6 +42,13 @@ enum TownSpot {
 
   /// Mata recolectable de un exterior de bioma (overworld_biomes.md § 3.2).
   forage,
+
+  /// Mine entrance of a biome exterior, or the exit inside a mine
+  /// (mining_smithing.md § 1.1).
+  mine,
+
+  /// Ore vein inside a mine (mining_smithing.md § 1.3).
+  ore,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su

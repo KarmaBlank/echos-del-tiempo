@@ -217,5 +217,18 @@
   "ui.world.hud.mp_value": "MP {mp}/{max}",
   "ui.world.hud.points": "+{n} pts",
   "ui.world.hud.potion.hp": "Health",
-  "ui.world.hud.potion.mp": "Mana"
+  "ui.world.hud.potion.mp": "Mana",
+  "ui.world.mine.label": "MINE",
+  "ui.world.mine.prompt_enter": "[E] Enter the mine",
+  "ui.world.mine.prompt_exit": "[E] Leave the mine",
+  "ui.world.mine.prompt_mine": "[E] Mine the vein",
+  "ui.world.mine.vein_regrow": "Spent vein: back in {n} s",
+  "ui.world.mine.npc.miner.name": "Miner",
+  "ui.world.mine.npc.miner.0": "Down here time runs slower. Or so it seems.",
+  "ui.world.mine.npc.miner.1": "If the rock glows, strike it from the side.",
+  "ui.world.mine.npc.miner.2": "These veins were here before there was a town.",
+  "ui.world.mine.npc.hermit.name": "Hermit",
+  "ui.world.mine.npc.hermit.0": "I came to hear the echo of the rock. It says things.",
+  "ui.world.mine.npc.hermit.1": "The ancients smelted metal with light. I use fire.",
+  "ui.world.mine.npc.hermit.2": "No hurry. What has to happen, happens."
 }

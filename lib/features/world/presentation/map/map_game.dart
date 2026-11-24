@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import 'light_layer.dart';
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
@@ -900,6 +901,11 @@ class MapGame extends Game {
         _placeText(
             c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
       }
+      for (final (x, y)
+          in biomeLayout(map.place)?.mines ?? const <(int, int)>[]) {
+        _placeText(c, controller.strings.t('ui.world.mine.label'),
+            (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
+      }
     } else if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
       final (ox, oy) = map.townOrigin;
@@ -1018,6 +1024,25 @@ class MapGame extends Game {
       // World event actors (world_events.md § 3): visitors, wanderers,
       // caravans and echo rift portals, for their days.
       _drawWorldEvents(c, s, map.place ?? kPueblo, t);
+      // PNJ de la mina (mining_smithing.md § 1.2): quieto, con su nombre.
+      if (controller.mineLayout?.npc case (final id, final nx, final ny)?) {
+        final im = sprites.lifeIcon('npc_mina_$id', 'herramienta');
+        final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
+        if (im != null) {
+          final w = im.width.toDouble(), h = im.height.toDouble();
+          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+              Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
+              SpriteCatalog.pixelPaint());
+        }
+        _rankedText(
+            c,
+            controller.strings.t('ui.world.mine.npc.$id.name').toUpperCase(),
+            cx,
+            bottom - ts - 6,
+            TownPalette.label,
+            6,
+            897);
+      }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);
@@ -1032,12 +1057,14 @@ class MapGame extends Game {
     final outdoor = SkyRules.outdoor(map.theme, town: map.lobby);
     final night = outdoor && SkyRules.darkness(s.town.sky) > 0.25;
     final lights = <Offset>[];
-    // Mazmorra oscura (lighting.md § 5): solo con misión en curso.
-    final darkMap = !map.lobby &&
-        s.mission != null &&
-        (debugForceDark ||
-            LightRules.isDark(map.theme,
-                floor: currentFloor(view)?.index ?? 0));
+    // Mazmorra oscura (lighting.md § 5): solo con misión en curso. Las
+    // minas (mining_smithing.md § 1.2) son oscuras siempre.
+    final darkMap = (!map.lobby &&
+            s.mission != null &&
+            (debugForceDark ||
+                LightRules.isDark(map.theme,
+                    floor: currentFloor(view)?.index ?? 0))) ||
+        (map.lobby && MiningRules.isMine(map.place));
     final movingLights = <LightSource>[];
     final placed = <(double, double)>[];
     sky.placedLights = placed;

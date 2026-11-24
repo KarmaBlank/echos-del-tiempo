@@ -27,10 +27,10 @@ extension _BiomeOp on _Op {
         s.prep != null ||
         p.isCompanion ||
         !_isOwner(p) ||
-        !BiomeRules.canTravelTo(place,
-            unlockedZone: ZoneRules.unlockedZone(p.profile))) {
+        !_canGo(p, place)) {
       return false;
     }
+    final fromMine = MiningRules.parse(s.place);
     final next = place == kPueblo ? null : place;
     if (next == s.place && portal == null) return false;
     final moved = next != s.place;
@@ -44,6 +44,11 @@ extension _BiomeOp on _Op {
         final f = portal.front;
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
       }
+      // Out of a mine: in front of its entrance (mining_smithing.md § 1.1).
+      if (fromMine != null && portal == null) {
+        final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
+        pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+      }
       i++;
       q
         ..x = pos.x
@@ -51,8 +56,18 @@ extension _BiomeOp on _Op {
         ..fishLine = null
         ..epoch += 1;
     }
-    if (moved) say('El grupo viajó a ${biomeDef(place)!.name}.');
+    if (moved) say('El grupo viajó a ${MiningRules.placeName(place)}.');
     return true;
+  }
+
+  /// Biomes need the zone unlocked; a mine is entered from its biome and
+  /// left back to it (mining_smithing.md § 1.1).
+  bool _canGo(SessionPlayer p, String place) {
+    if (MiningRules.isMine(place) || MiningRules.isMine(s.place)) {
+      return MiningRules.canTravel(s.place, place);
+    }
+    return BiomeRules.canTravelTo(place,
+        unlockedZone: ZoneRules.unlockedZone(p.profile));
   }
 
   bool _forage(SessionPlayer p, int spot) {

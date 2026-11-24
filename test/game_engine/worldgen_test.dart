@@ -253,7 +253,10 @@ void main() {
     });
 
     test('v0.3: tiles de cada generador y vacío/lava donde corresponde', () {
-      const v2 = {'#', '.', ',', '~', 'G', '>', '<', ':', ...Tile.poiTiles};
+      const v2 = {
+        '#', '.', ',', '~', 'G', '>', '<', ':', ...Tile.poiTiles,
+        Tile.ore, // rare ore veins (mining_smithing.md § 1.4)
+      };
       final want = <int, Set<String>>{
         6: {...v2, 'o'},
         7: {...v2, '%', '='},

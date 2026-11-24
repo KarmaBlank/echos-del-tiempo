@@ -177,5 +177,73 @@
   "data.materials.tool.regadera_cobre.name": "",
   "data.materials.tool.regadera_eco.name": "",
   "data.materials.tool.regadera_lata.name": "",
-  "data.materials.tool.regadera_runica.name": ""
+  "data.materials.tool.regadera_runica.name": "",
+  "data.materials.smith.ore_copper.name": {
+    "text": "铜矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ingot_copper.name": {
+    "text": "铜锭",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_amber.name": {
+    "text": "根琥珀",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_bronze.name": {
+    "text": "符文青铜矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ingot_bronze.name": {
+    "text": "符文青铜锭",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_cog.name": {
+    "text": "古代齿轮",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_frost.name": {
+    "text": "寒铁矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ingot_frost.name": {
+    "text": "寒铁锭",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_rime.name": {
+    "text": "霜晶",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_ember.name": {
+    "text": "炎钢矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ingot_ember.name": {
+    "text": "炎钢锭",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_magma.name": {
+    "text": "熔岩之心",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_echo.name": {
+    "text": "回响银矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ingot_echo.name": {
+    "text": "回响银锭",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_sand.name": {
+    "text": "静止之沙",
+    "status": "draft"
+  },
+  "data.materials.smith.schematic.name": {
+    "text": "古代图纸",
+    "status": "draft"
+  },
+  "data.materials.smith.guardian_core.name": {
+    "text": "守护者核心",
+    "status": "draft"
+  }
 }

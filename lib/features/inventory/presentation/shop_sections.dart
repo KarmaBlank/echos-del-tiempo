@@ -1,3 +1,4 @@
+import 'smith_bench.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import '../domain/item_names.dart';
@@ -153,7 +154,10 @@ enum ArmoryTab implements ShopTabDef {
 enum ForgeHallTab implements ShopTabDef {
   upgrade,
   condense,
-  fuse;
+  fuse,
+
+  /// HERRERÍA (mining_smithing.md): smelt, forge, Brann.
+  smith;
 
   @override
   String label(Strings s) => s.t('ui.inventory.shop.forge_tab.$name.label');
@@ -165,6 +169,7 @@ enum ForgeHallTab implements ShopTabDef {
         ForgeHallTab.upgrade => ForgeTab(shop: shop),
         ForgeHallTab.condense => CondensePanel(shop: shop),
         ForgeHallTab.fuse => CraftBench(shop: shop),
+        ForgeHallTab.smith => SmithBench(shop: shop),
       };
 
   PanelTabSpec spec(ShopContext Function() shop, [Strings? strings]) {

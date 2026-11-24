@@ -356,6 +356,28 @@ items:
   vida_camp_dummy: { idle: items/vida_camp_dummy.png, size: [16, 16] }
   vida_camp_anvil: { idle: items/vida_camp_anvil.png, size: [16, 16] }
   vida_camp_orb: { idle: items/vida_camp_orb.png, size: [16, 16] }
+  # Minería y herrería (mining_smithing.md): placeholders reemplazables
+  # desde el editor sin tocar Dart (pico, PNJ de mina y materiales).
+  vida_pico: { idle: items/vida_azada_hierro.png, size: [16, 16] }
+  vida_npc_mina_miner: { idle: items/vida_npc_brann.png, size: [14, 18] }
+  vida_npc_mina_hermit: { idle: items/vida_npc_oren.png, size: [14, 18] }
+  vida_ore_copper: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ingot_copper: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_rare_amber: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ore_bronze: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ingot_bronze: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_rare_cog: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ore_frost: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ingot_frost: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_rare_rime: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ore_ember: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ingot_ember: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_rare_magma: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ore_echo: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_ingot_echo: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_rare_sand: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_schematic: { idle: items/vida_camp_anvil.png, size: [16, 16] }
+  vida_guardian_core: { idle: items/vida_camp_anvil.png, size: [16, 16] }
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }
