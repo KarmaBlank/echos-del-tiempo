@@ -75,7 +75,7 @@ Future<SessionController> _pumpBattle(WidgetTester tester) async {
   c.advance(0.1);
   startBattleWithFirstGroup(c);
   for (var i = 0; i < 2000 && c.session!.battle != null; i++) {
-    if (c.view!.myTurn) break;
+    if (c.view!.myTurn && c.session!.battle!.waitingForPlayer) break;
     c.advance(0.05);
   }
   await tester.pump();
@@ -113,7 +113,9 @@ void main() {
     final c = await _pumpBattle(tester);
     // The leader acts first; then it's the companion's turn in the phase.
     expect(c.battleCommand(const DefendCommand()), isTrue);
-    for (var i = 0; i < 100 && !c.view!.myTurn; i++) {
+    for (var i = 0;
+        i < 100 && !(c.view!.myTurn && c.session!.battle!.waitingForPlayer);
+        i++) {
       c.advance(0.05);
     }
     await tester.pump();

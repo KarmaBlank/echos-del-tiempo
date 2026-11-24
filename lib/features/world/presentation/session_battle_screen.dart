@@ -29,7 +29,11 @@ class SessionBattleScreen extends StatefulWidget {
     this.sceneOptions = const SceneOptions(),
     this.onAuto,
     this.actionGate,
+    this.onCancelQueued,
   });
+
+  /// Withdraws a queued command (turn_modes.md § 3.1).
+  final void Function(String id)? onCancelQueued;
 
   /// Prende / apaga el AUTO de un compañero (docs/specs/solo_party.md § 4).
   final void Function(String id, bool on)? onAuto;
@@ -104,6 +108,16 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       auto: view.auto,
       onAuto: widget.onAuto,
       actionGate: widget.actionGate,
+      queue: [
+        for (final q in view.battleQueue)
+          BattleQueueEntry(
+            q.playerId,
+            b.state.byId(q.playerId)?.name ?? q.playerId,
+            battleQueueGlyph(q.command),
+            mine: view.controls(q.playerId),
+          ),
+      ],
+      onCancelQueued: widget.onCancelQueued,
     );
   }
 

@@ -20,6 +20,7 @@ import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import '../models/tutorial.dart';
 import '../models/world_save.dart' show TownState;
+import 'action_json.dart';
 import 'json_read.dart';
 import 'run_json.dart';
 
@@ -547,6 +548,12 @@ class SessionJson {
         'end': b.endTimer,
         if (b.endHold > 0) 'hold': b.endHold,
         if (b.level != 0) 'lv': b.level,
+        // Action queue (turn_modes.md § 3.1, protocol 65).
+        if (b.queue.isNotEmpty)
+          'q': [
+            for (final q in b.queue)
+              {'p': q.playerId, ...ActionJson.commandToJson(q.command)},
+          ],
       };
 
   SessionBattle battleFromJson(Json j) => SessionBattle(
@@ -560,6 +567,13 @@ class SessionJson {
         endTimer: j.dblOrNull('end'),
         endHold: j.dblOrNull('hold') ?? 0,
         level: j.intOrNull('lv') ?? 0,
+        queue: j['q'] == null
+            ? null
+            : [
+                for (final raw in j.list('q'))
+                  QueuedBattleCommand(asJson(raw).str('p'),
+                      ActionJson.commandFromJson(asJson(raw))),
+              ],
       );
 
   Json battleStateToJson(BattleState s) => {

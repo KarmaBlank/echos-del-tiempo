@@ -86,7 +86,15 @@ class BattleView extends StatefulWidget {
     this.layout,
     this.layoutHooks,
     this.layoutCatalog,
+    this.queue = const [],
+    this.onCancelQueued,
   });
+
+  /// Action queue of the turn (turn_modes.md § 3.1), in resolution order.
+  final List<BattleQueueEntry> queue;
+
+  /// Withdraws a queued command of this device; `null` = no button.
+  final void Function(String id)? onCancelQueued;
 
   /// Layout de la barra de abajo y perillas de la escena (Editor →
   /// LAYOUT, pantalla `battle`); `null` = el del [layoutCatalog].
@@ -382,9 +390,12 @@ class BattleViewState extends State<BattleView>
     } else if (oldWidget.battle.logLine != widget.battle.logLine) {
       _pushLog(battleLogText(oldWidget.battle.logLine, strings: _s));
     }
-    // Turno nuevo (u otro actor) o sin poder actuar: el menú vuelve al
-    // principio (nunca queda elegida una acción del turno anterior).
-    if (!widget.canAct ||
+    // Another battle or another actor: the menu goes back to the start
+    // (never keeps an action of a previous turn). Someone else's action
+    // resolving (canAct blinking, new state) never resets it: category,
+    // cursor and target stay; `_menu` clamps them if options changed
+    // (turn_modes.md § 3.1, combat.md § "Menú de batalla").
+    if (oldWidget.battleId != widget.battleId ||
         oldWidget.battle.currentId != widget.battle.currentId) {
       _resetMenu();
     }
@@ -1519,6 +1530,21 @@ class BattleViewState extends State<BattleView>
                   onHover: _hoverRow,
                 ),
               ),
+            // Action queue (turn_modes.md § 3.1): centered under the strip.
+            if (widget.queue.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: g.stripPx + 4,
+                child: Center(
+                  child: BattleQueueRow(
+                    entries: widget.queue,
+                    title: _s.t('ui.combat.queue.title'),
+                    cancelLabel: _s.t('ui.combat.queue.cancel'),
+                    onCancel: widget.onCancelQueued,
+                  ),
+                ),
+              ),
             // El objetivo: nombre, vida y quiebre (arriba a la izquierda).
             if (_foes.where((e) => e.id == target).firstOrNull case final tg?)
               Positioned(
@@ -1661,7 +1687,9 @@ class BattleViewState extends State<BattleView>
       _category = entries.first.category;
     }
     final visible = _visible(cur);
-    if (_selected >= visible.length) _selected = 0;
+    if (_selected >= visible.length) {
+      _selected = visible.isEmpty ? 0 : visible.length - 1;
+    }
     final tg = _foes.where((e) => e.id == target).firstOrNull;
     final String? header = switch (_potMode) {
       BattleItem.potion => _s.t('ui.combat.pick.potion', {
@@ -1904,6 +1932,83 @@ class _EndOverlay extends StatelessWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One entry of the action queue as the HUD shows it.
+class BattleQueueEntry {
+  const BattleQueueEntry(this.id, this.name, this.glyph, {this.mine = false});
+  final String id;
+  final String name;
+
+  /// Small action mark (attack, skill, item...).
+  final String glyph;
+
+  /// Controlled by this device: it can be withdrawn.
+  final bool mine;
+}
+
+/// Action mark of a command for the queue row.
+String battleQueueGlyph(BattleCommand c) => switch (c) {
+      AttackCommand() => '⚔',
+      SkillCommand() => '✦',
+      UltimateCommand() => '★',
+      DualCommand() => '⇄',
+      ItemCommand() => '✚',
+      DefendCommand() => '⛨',
+      PassCommand() || EndTurnCommand() || WaitCommand() => '»',
+    };
+
+/// The action queue row (turn_modes.md § 3.1): "Queued" + each entry in
+/// order; own entries carry a button to withdraw them.
+class BattleQueueRow extends StatelessWidget {
+  const BattleQueueRow({
+    super.key,
+    required this.entries,
+    required this.title,
+    required this.cancelLabel,
+    this.onCancel,
+  });
+
+  final List<BattleQueueEntry> entries;
+  final String title;
+  final String cancelLabel;
+  final void Function(String id)? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xCC10121C),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ProtoText(title),
+            for (var i = 0; i < entries.length; i++) ...[
+              const SizedBox(width: 8),
+              ProtoText('${i + 1}. ${entries[i].glyph} '
+                  '${protoEsc(entries[i].name)}'),
+              if (entries[i].mine && onCancel != null)
+                Tooltip(
+                  message: cancelLabel,
+                  child: GestureDetector(
+                    key: ValueKey('queue-cancel-${entries[i].id}'),
+                    onTap: () => onCancel!(entries[i].id),
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 3),
+                      child: ProtoText('✕'),
+                    ),
+                  ),
+                ),
+            ],
+          ],
         ),
       ),
     );

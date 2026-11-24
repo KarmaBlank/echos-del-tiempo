@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'battle_command.dart';
 import 'battle_state.dart';
 import 'build_wants.dart';
 import 'combat_mode.dart';
@@ -527,7 +528,15 @@ class SessionBattle {
     this.endTimer,
     this.endHold = 0,
     this.level = 0,
-  });
+    List<QueuedBattleCommand>? queue,
+  }) : queue = queue ?? [];
+
+  /// Action queue of the party phase (turn_modes.md § 3.1): confirmed
+  /// commands in arrival order at the host; resolved one by one.
+  final List<QueuedBattleCommand> queue;
+
+  /// [playerId] has a command waiting in [queue].
+  bool queued(String playerId) => queue.any((q) => q.playerId == playerId);
 
   /// Nivel de los enemigos (worldgen.md § 6.3); 0 = sin escalar.
   final int level;
@@ -576,7 +585,16 @@ class SessionBattle {
         endTimer: endTimer,
         endHold: endHold,
         level: level,
+        queue: [...queue],
       );
+}
+
+/// A confirmed party-phase command waiting its turn in
+/// [SessionBattle.queue] (turn_modes.md § 3.1).
+class QueuedBattleCommand {
+  const QueuedBattleCommand(this.playerId, this.command);
+  final String playerId;
+  final BattleCommand command;
 }
 
 /// Votación de misión en el lobby (`S.vote`).

@@ -153,7 +153,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// the snapshot and the `gather` action (join / leave / go / cancel).
 /// Also tank wards and per-phase damage on enemies (`wrd`, `phd`;
 /// combat.md § "Tanques" and § "Nadie solo en una fase").
-const kProtocolVersion = 64;
+/// 65: action queue (turn_modes.md § 3.1): `q` in the battle snapshot
+/// and the `uncmd` action.
+const kProtocolVersion = 65;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
