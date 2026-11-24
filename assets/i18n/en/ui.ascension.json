@@ -37,5 +37,19 @@
   "ui.ascension.node.root": "Root",
   "ui.ascension.node.cost": "cost {cost}",
   "ui.ascension.points": "Free points <b>{free}</b> · earned {earned}/{max}",
-  "ui.ascension.banner": "ASCENSION"
+  "ui.ascension.banner": "ASCENSION",
+  "ui.ascension.trial.name.1": "The Threshold",
+  "ui.ascension.trial.name.2": "The Crossroads",
+  "ui.ascension.trial.name.3": "The Judgment",
+  "ui.ascension.trial.full_name": "Time Trial {roman} · {name}",
+  "ui.ascension.trials.none": "No Trials",
+  "ui.ascension.trials.summary": "Trials {list} · {free, plural, one{# free point} other{# free points}}",
+  "ui.ascension.trial.generic": "Trial",
+  "ui.ascension.trial.short": "Trial {roman}",
+  "ui.ascension.trial.result_points": "{name} cleared! +{points} ascension points",
+  "ui.ascension.trial.result_none": "{name} cleared (you already had it or do not meet the level: no points)",
+  "ui.ascension.trial.completed": "{name} cleared {trial}: +{points} ascension points",
+  "ui.ascension.trial.unknown": "Unknown Trial",
+  "ui.ascension.trial.requires_level": "Requires level {level}",
+  "ui.ascension.trial.requires_previous": "Clear Trial {roman} first"
 }

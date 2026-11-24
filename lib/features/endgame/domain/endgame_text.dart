@@ -1,6 +1,8 @@
 import '../../../app/theme/proto_markup.dart';
+import '../../../core/i18n/game_text.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/data/uniques_catalog.dart';
+import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
@@ -9,75 +11,96 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../inventory/domain/item_names.dart';
+import 'endgame_names.dart';
 
-/// Textos del Portal del Eco y del Atlas (docs/specs/ecos_atlas.md).
+/// Textos del Portal del Eco, del Atlas y de los Jefes del Abismo
+/// (docs/specs/ecos_atlas.md, abyss_bosses.md) en el idioma activo
+/// (`GameText`, docs/specs/i18n.md § 3.5). Los motivos que en el motor
+/// están en es-AR (`lockReason`, `cannotCraft`, `cannotOpen`,
+/// `cannotTake`) tienen acá su espejo con claves.
+
+String _t(String key, [Map<String, Object?> args = const {}]) =>
+    GameText.t(key, args);
 
 /// Ayuda `[?]` del portal.
-const kEcoPortalHelp = '<b>Portal del Eco</b><br>'
-    '<span class="k">ZONAS</span>: cada zona tiene su portal de Ecos en el '
-    'exterior de su bioma, con un tier por Eco. IR te lleva hasta ahí. T1 '
-    'se abre al vencer al jefe de la zona; cada Eco completado abre el tier '
-    'siguiente de esa zona.<br>'
-    '<span class="k">ECOS</span>: mapas de endgame que caen como loot desde '
-    'nivel 45. Cada uno tiene tier (monstruos nivel 50 a 80), zona, jefe y '
-    'modificadores que lo hacen más difícil pero suman <b>cantidad</b> y '
-    '<b>rareza</b> de botín. Se abren en el portal de su zona '
-    '(este portal ya no abre Ecos); se consume al entrar, se complete o '
-    'no.<br>'
-    'Crafteo: Esquirla (mods nuevos), Cristal (+1 mod), Prisma (rareza), '
-    'Ancla Temporal (+1 tier; cae solo en Ecos).<br>'
-    '<span class="k">ATLAS</span>: árbol de toda tu cuenta. La primera vez '
-    'que completás un tier, una zona o un jefe ganás puntos. Reiniciar es '
-    'gratis. En grupo vale el Atlas del anfitrión; los puntos los gana cada '
-    'uno.<br>'
-    '+10% de cantidad de botín por cada jugador extra en el Eco.';
+String get kEcoPortalHelp => _t('ui.endgame.portal.help');
+
+/// Por qué el portal T[tier] de [zone] sigue cerrado (o `null`): espejo
+/// de `EcoPortalRules.lockReason`.
+String? ecoLockText(PlayerProfile p, int zone, int tier, {String? zoneName}) {
+  if (!EcoPortalRules.zoneBeaten(p, zone)) {
+    return _t('ui.endgame.lock.beat_boss', {
+      'named': zoneName == null ? 'no' : 'yes',
+      'name': zoneName ?? '',
+      'zone': zone,
+    });
+  }
+  if (tier > EcoPortalRules.unlockedTier(p, zone)) {
+    return _t(
+        'ui.endgame.lock.complete_tier', {'prev': tier - 1, 'tier': tier});
+  }
+  return null;
+}
 
 /// Por qué no se puede abrir [e] en el portal T[tier] de [zone] ahora
 /// (o `null`; ecos_zone.md § 4). [near]: el jugador sigue frente al portal.
 String? ecoZoneOpenBlocked(GameSession s, PlayerProfile p, EcoItem? e,
     int zone, int tier,
     {required bool near, String? zoneName}) {
-  final lock = EcoPortalRules.lockReason(p, zone, tier, zoneName: zoneName);
+  final lock = ecoLockText(p, zone, tier, zoneName: zoneName);
   if (lock != null) return lock;
-  if (e == null) return 'Necesitás un Eco T$tier de esta zona';
-  if (s.mode != SessionMode.lobby) return 'Solo fuera de misión';
-  if (s.vote != null) return 'Ya hay una votación';
-  if (!near) return 'Acercate al portal';
+  if (e == null) return _t('ui.endgame.blocked.need_eco', {'tier': tier});
+  if (s.mode != SessionMode.lobby) {
+    return _t('ui.endgame.blocked.outside_mission');
+  }
+  if (s.vote != null) return _t('ui.endgame.blocked.vote_open');
+  if (!near) return _t('ui.endgame.blocked.get_closer');
   return null;
 }
 
-/// Por qué no se puede craftear (modo y Eco en votación) o `null`.
+/// Por qué no se puede craftear (modo, Eco en votación y espejo de
+/// `EcoRules.cannotCraft`) o `null`.
 String? ecoCraftBlocked(
     GameSession s, String localId, PlayerProfile p, EcoItem e, EcoCraftOp op) {
-  if (!s.canShop) return 'Solo en el pueblo';
-  if (s.ecoOwner == localId && s.eco?.uid == e.uid) return 'Eco en votación';
-  return EcoRules.cannotCraft(p, e.uid, op);
+  if (!s.canShop) return _t('ui.endgame.only_in_town');
+  if (s.ecoOwner == localId && s.eco?.uid == e.uid) {
+    return _t('ui.endgame.blocked.eco_in_vote');
+  }
+  final own = p.ecoByUid(e.uid);
+  if (own == null) return _t('ui.endgame.craft.no_eco');
+  if (EcoRules.blocked(own, op) != null) {
+    return _t(switch (op) {
+      EcoCraftOp.reroll => 'ui.endgame.craft.no_mods',
+      EcoCraftOp.addMod => 'ui.endgame.craft.max_mods',
+      EcoCraftOp.rarity => 'ui.endgame.craft.max_rarity',
+      EcoCraftOp.tier => 'ui.endgame.craft.max_tier',
+    });
+  }
+  final c = EcoRules.cost(own, op)!;
+  if (p.material(c.$1) < c.$2) {
+    return _t('ui.endgame.craft.missing', {'material': c.$1.endgameTr});
+  }
+  return null;
 }
 
-/// Etiqueta del botón de crafteo (`ESQUIRLA ×1`).
+/// Etiqueta del botón de crafteo (`MODS NUEVOS (Esquirla del Eco ×1)`).
 String ecoCraftLabel(EcoItem e, EcoCraftOp op) {
   final c = EcoRules.cost(e, op);
-  final what = switch (op) {
-    EcoCraftOp.reroll => 'MODS NUEVOS',
-    EcoCraftOp.addMod => '+1 MOD',
-    EcoCraftOp.rarity => 'RAREZA',
-    EcoCraftOp.tier => '+1 TIER',
-  };
-  return c == null ? what : '$what (${c.$1.label} ×${c.$2})';
+  final what = _t('ui.endgame.craft.op.${op.name}');
+  return c == null
+      ? what
+      : _t('ui.endgame.craft.label_cost',
+          {'what': what, 'material': c.$1.endgameTr, 'n': c.$2});
 }
 
-/// Fila de mejora del Portal: `<b>+1 Tier</b> 1 Ancla` (el costo en
+/// Fila de mejora del Portal: `<b>+1 tier</b> 1 Anc.` (el costo en
 /// `dim`).
 String ecoCraftRowMarkup(EcoItem e, EcoCraftOp op) {
   final c = EcoRules.cost(e, op);
-  final what = switch (op) {
-    EcoCraftOp.reroll => 'Mods nuevos',
-    EcoCraftOp.addMod => '+1 mod',
-    EcoCraftOp.rarity => 'Rareza',
-    EcoCraftOp.tier => '+1 tier',
-  };
+  final what = _t('ui.endgame.craft.row.${op.name}');
   return '<b>$what</b>'
-      '${c == null ? '' : ' <span style="color:#7d8bc4">${c.$2} ${c.$1.label.substring(0, 3)}.</span>'}';
+      '${c == null ? '' : ' <span style="color:#7d8bc4">${c.$2} ${_t('ui.endgame.material_abbr.${c.$1.name}')}</span>'}';
 }
 
 // ---------------------------------------------------------------------
@@ -86,88 +109,121 @@ String ecoCraftRowMarkup(EcoItem e, EcoCraftOp op) {
 // ---------------------------------------------------------------------
 
 /// Ayuda `[?]` de la pestaña ABISMO.
-const kAbyssHelp = '<b>Jefes del Abismo</b><br>'
-    'Versiones extremas de 4 jefes (nivel 85–90) y un jefe secreto. '
-    '<span class="k">Fragmentos</span>: caen en Ecos de tier 10 o más '
-    '(más tier, rareza y mods = más chance; el Eco cuyo jefe coincide da '
-    'más de ese Fragmento). 5 abren su jefe; se consumen al entrar.<br>'
-    'Pelea directa, sin mazmorra: fases, avisos del próximo movimiento y '
-    'furia si tarda. Cada jugador gana su propio botín: el legendario '
-    'exclusivo es seguro la primera vez; Esencias del Abismo (forja).<br>'
-    'El secreto pide vencer a los 4 y 1 Fragmento de cada uno.';
+String get kAbyssHelp => _t('ui.endgame.abyss.help');
 
-/// Por qué no se puede abrir [d] ahora (o `null`).
+/// Costo de [d] (espejo de `AbyssRules.costText`).
+String abyssCostText(AbyssBossDef d) => d.fragment == null
+    ? _t('ui.endgame.abyss.cost_each')
+    : '${d.fragmentCost} ${d.fragment!.endgameTr}';
+
+/// Por qué no se puede abrir [d] ahora (o `null`; espejo de
+/// `AbyssRules.cannotOpen`).
 String? abyssOpenBlocked(
     GameSession s, PlayerProfile p, AbyssBossDef d, AbyssRules rules) {
-  if (s.mode != SessionMode.lobby) return 'Solo en el pueblo';
-  if (s.vote != null) return 'Ya hay una votación';
-  return rules.cannotOpen(p, d);
+  if (s.mode != SessionMode.lobby) return _t('ui.endgame.only_in_town');
+  if (s.vote != null) return _t('ui.endgame.blocked.vote_open');
+  if (!p.ecosUnlocked) return _t('ui.endgame.abyss.beat_devourer');
+  if (d.secret && !AbyssRules.beatAllFour(p)) {
+    return _t('ui.endgame.abyss.beat_four');
+  }
+  for (final e in rules.cost(d).entries) {
+    final have = p.material(e.key);
+    if (have < e.value) {
+      return _t('ui.endgame.abyss.missing',
+          {'material': e.key.endgameTr, 'have': have, 'need': e.value});
+    }
+  }
+  return null;
 }
 
 /// Nombre visible de [d]: `???` hasta vencerlo (el secreto, hasta vencer
 /// a los 4).
 String abyssBossLabel(PlayerProfile p, AbyssBossDef d) {
-  if (d.secret && !AbyssRules.visible(p, d)) return '??? · Jefe secreto';
-  return AbyssRules.known(p, d) || !d.secret ? d.name : '???';
+  if (d.secret && !AbyssRules.visible(p, d)) {
+    return _t('ui.endgame.abyss.secret');
+  }
+  return AbyssRules.known(p, d) || !d.secret ? d.tr : '???';
 }
 
 /// Ficha de [d] (markup): nivel, fases, costo, mecánica y recompensas.
 String abyssDetailMarkup(
     PlayerProfile p, AbyssBossDef d, AbyssRules rules, String counter) {
   if (d.secret && !AbyssRules.visible(p, d)) {
-    return '<b>??? · Jefe secreto</b><br>'
-        '<span class="k">Requisito:</span> vencer a los 4 Jefes del Abismo '
-        '(${p.abyssKills.where((n) => n <= 4).length}/4).<br>'
-        '<span class="k">Costo:</span> ${rules.costText(d)}.';
+    return _t('ui.endgame.abyss.secret_detail', {
+      'title': _t('ui.endgame.abyss.secret'),
+      'beaten': p.abyssKills.where((n) => n <= 4).length,
+      'cost': abyssCostText(d),
+    });
   }
   final legs = [
     for (final id in d.legendaryIds)
-      if (kUniques[id] case final u?) protoEsc(u.name),
+      if (kUniques[id] case final u?) protoEsc(u.text),
   ];
-  return '<b>${protoEsc(d.name)}</b>'
-      '${AbyssRules.known(p, d) ? ' <span class="k">(vencido)</span>' : ''}<br>'
-      '<span class="k">Nivel</span> ${d.level} · '
-      '<span class="k">Fases</span> ${d.phases.map((f) => protoEsc(f.name)).join(' → ')}<br>'
-      '<span class="k">Costo:</span> ${rules.costText(d)} (se consume al entrar)<br>'
-      '<span class="k">Furia:</span> en su turno ${d.enrageTurns}<br>'
-      '$counter<br>'
-      '<span class="k">Recompensas:</span> ${legs.join(' o ')} (seguro la '
-      'primera vez, después ${(d.legendaryChance * 100).round()}%), '
-      'Esencia del Abismo, +${d.atlasPoints} punto${d.atlasPoints == 1 ? '' : 's'} '
-      'de Atlas la primera vez.';
+  return _t('ui.endgame.abyss.detail', {
+    'name': protoEsc(d.tr),
+    'beaten': AbyssRules.known(p, d) ? 'yes' : 'no',
+    'level': d.level,
+    'phases': [
+      for (var i = 0; i < d.phases.length; i++) protoEsc(d.phaseTr(i)),
+    ].join(' → '),
+    'cost': abyssCostText(d),
+    'enrage': d.enrageTurns,
+    'counter': counter,
+    'legendaries': legs.join(_t('ui.endgame.abyss.or')),
+    'chance': (d.legendaryChance * 100).round(),
+    'points': d.atlasPoints,
+  });
 }
+
+/// Nombre corto de un Fragmento (`Reloj`).
+String abyssFragmentShort(CraftMaterial m) =>
+    _t('ui.endgame.fragment_short.${m.name}');
 
 /// Línea de Fragmentos del jugador.
 String abyssFragmentsMarkup(PlayerProfile p) => [
       for (final f in kFragments)
-        '${protoEsc(f.label.split(' ').last)} <b>${p.material(f)}</b>',
-      'Esencia <b>${p.material(CraftMaterial.esencia)}</b>',
+        '${protoEsc(abyssFragmentShort(f))} <b>${p.material(f)}</b>',
+      '${_t('ui.endgame.essence_short')} '
+          '<b>${p.material(CraftMaterial.esencia)}</b>',
     ].join(' · ');
 
 /// Línea del resultado de un Jefe del Abismo vencido.
 String abyssResultText(String name, int points) => points > 0
-    ? '$name vencido: +$points punto${points == 1 ? '' : 's'} de Atlas'
-    : '$name vencido de nuevo';
+    ? _t('ui.endgame.abyss.result_points', {'name': name, 'points': points})
+    : _t('ui.endgame.abyss.result_again', {'name': name});
 
 /// Texto de la Maestría para la barra / el panel.
 String masteryText(PlayerProfile p) => p.mastery >= PlayerProfile.maxMastery
-    ? 'MAESTRÍA MÁX'
-    : 'MAESTRÍA ${p.mastery}';
+    ? _t('ui.endgame.mastery_max')
+    : _t('ui.endgame.mastery', {'n': p.mastery});
 
 /// Línea del resultado de un Eco completado con lo que ganó tu Atlas.
 String ecoAtlasText(AtlasGain? g) {
-  if (g == null || g.points == 0) {
-    return 'Atlas: sin primeras veces esta vez (ya completaste ese tier, '
-        'zona y jefe).';
-  }
+  if (g == null || g.points == 0) return _t('ui.endgame.atlas.gain_none');
   final what = [
     for (final k in g.keys)
       switch (k[0]) {
-        't' => 'tier ${k.substring(1)}',
-        'z' => 'zona nueva',
-        _ => 'jefe nuevo',
+        't' => _t('ui.endgame.atlas.gain_tier', {'tier': k.substring(1)}),
+        'z' => _t('ui.endgame.atlas.gain_zone'),
+        _ => _t('ui.endgame.atlas.gain_boss'),
       },
   ];
-  return '+${g.points} punto${g.points == 1 ? '' : 's'} de Atlas: '
-      '${what.join(', ')}';
+  return _t(
+      'ui.endgame.atlas.gain', {'points': g.points, 'list': what.join(', ')});
+}
+
+/// Por qué no se puede tomar el nodo [id] del Atlas (o `null`): espejo
+/// de `AtlasRules.cannotTake`.
+String? atlasTakeBlocked(AtlasRules rules, AtlasProgress p, String id) {
+  final n = rules.node(id);
+  if (n == null) return _t('ui.endgame.atlas.unknown_node');
+  if (n.locked) return _t('ui.endgame.atlas.soon');
+  if (rules.has(p, id)) return _t('ui.endgame.atlas.already_taken');
+  if (!n.links.any((l) => rules.has(p, l))) {
+    return _t('ui.endgame.atlas.not_linked');
+  }
+  if (rules.free(p) < n.cost) {
+    return _t('ui.endgame.atlas.missing_points', {'cost': n.cost});
+  }
+  return null;
 }

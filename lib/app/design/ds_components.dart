@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/i18n/catalog_text.dart';
 import '../../core/text/text_detail.dart';
 import '../theme/proto_colors.dart';
 import '../theme/proto_markup.dart';
@@ -717,32 +718,41 @@ class DsCost extends StatelessWidget {
 
 /// Etiqueta en mayúsculas con borde del color de su tipo.
 class DsTag extends StatelessWidget {
-  const DsTag(this.text, {super.key, required this.color});
+  const DsTag(this.text, {super.key, required this.color}) : textKey = null;
 
   const DsTag.instant({super.key})
       : text = 'INSTANTE',
+        textKey = 'ui.combat.tag.instant',
         color = DsColors.instant;
   const DsTag.canBreak({super.key})
       : text = 'PUEDE QUEBRAR',
+        textKey = 'ui.combat.tag.can_break',
         color = DsColors.warning;
   /// Marca de traslado (build_planner.md § 9.6): verde si va con el
   /// plan, apagada si no.
   const DsTag.buildFit(bool fits, {super.key})
       : text = fits ? 'PARA TU BUILD' : 'NO VA CON TU BUILD',
+        textKey = fits ? 'ui.build.tag.fits' : 'ui.build.tag.not_fits',
         color = fits ? DsColors.success : ProtoColors.dim;
   const DsTag.isNew({super.key})
       : text = 'NUEVO',
+        textKey = 'ui.inventory.tag.new',
         color = DsColors.reward;
 
+  /// es-AR text (also the fallback of [textKey]).
   final String text;
+
+  /// Key of the preset tags (docs/specs/i18n.md § 3.8).
+  final String? textKey;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
+    final shown = textKey == null ? text : CatalogText.of(textKey!, text);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 3),
       decoration: BoxDecoration(border: Border.all(color: color, width: 2)),
-      child: Text(retroText(text), style: DsText.subtitle(color)),
+      child: Text(retroText(shown), style: DsText.subtitle(color)),
     );
   }
 }

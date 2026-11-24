@@ -51,5 +51,22 @@
   "ui.lobby.patch_notes.read_error": "Could not read the notes.",
   "ui.lobby.patch_notes.loading": "Loading...",
   "ui.lobby.patch_notes.empty": "There are no notes in this version.",
-  "ui.lobby.patch_notes.latest": "latest"
+  "ui.lobby.patch_notes.latest": "latest",
+  "ui.lobby.net.bad_lan_code": "Invalid code: use IP:PORT (e.g. 192.168.1.23:47800).",
+  "ui.lobby.net.cancelled": "Connection cancelled.",
+  "ui.lobby.net.connect_failed": "Couldn’t connect to room {room}: {error}",
+  "ui.lobby.net.create_failed": "Couldn’t create the room: {error}",
+  "ui.lobby.net.create_net_error": "Network error while creating the room ({error}). Are you online? Try again.",
+  "ui.lobby.net.create_retry": "Couldn’t create the room. Try again.",
+  "ui.lobby.net.enter_code": "Enter the room code.",
+  "ui.lobby.net.host_closed": "The host closed the connection.",
+  "ui.lobby.net.lan_timeout": "Couldn’t connect to {room} (timed out). Are you on the same network, and does the host have the room open?",
+  "ui.lobby.net.net_error": "Network error: {error}",
+  "ui.lobby.net.open_failed": "Couldn’t open the room: {error}",
+  "ui.lobby.net.p2p_timeout": "Couldn’t connect to room {room} (timed out). It may be the network (strict NAT) or the host may be gone.",
+  "ui.lobby.net.room_not_found": "Room {room} not found.",
+  "ui.lobby.net.room_not_found_open": "Room {room} not found. Does the host still have the game open?",
+  "ui.lobby.net.timeout": "Couldn’t connect (timed out). Check the code, or that the host still has the game open.",
+  "ui.lobby.world_label.cooperativo": "Co-op",
+  "ui.lobby.world_label.solitario": "Solo"
 }

@@ -195,13 +195,20 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
     // Barra de herramientas (design_system.md § 4): vista, estado y
     // acciones en una fila; GUARDAR es la principal.
     final s = ref.strings;
+    final errors = [
+      for (final e in parsed.issues)
+        s.t('ui.inventory.filter.err.line', {
+          'n': e.line,
+          'msg': s.t('ui.inventory.filter.err.${e.code}', e.args),
+        }),
+    ];
     final status = parsed.ok
         ? s.t('ui.inventory.filter.status_ok', {
             'n': f.rules.length,
             'default': p.lootFilter == null ? 'yes' : 'no'
           })
-        : '${parsed.errors.first}'
-            '${parsed.errors.length > 1 ? ' (+${parsed.errors.length - 1})' : ''}';
+        : '${errors.first}'
+            '${errors.length > 1 ? ' (+${errors.length - 1})' : ''}';
     final statusText = KeyedSubtree(
       key: const ValueKey('filter-status'),
       child: Text(retroText(status),
@@ -229,7 +236,7 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
           SizedBox(width: DsSpace.md),
           parsed.ok
               ? statusText
-              : Tooltip(message: parsed.errors.join('\n'), child: statusText),
+              : Tooltip(message: errors.join('\n'), child: statusText),
           SizedBox(width: DsSpace.md),
           DsButton(s.t('ui.inventory.filter.restore_default'),
               key: const ValueKey('filter-default'),

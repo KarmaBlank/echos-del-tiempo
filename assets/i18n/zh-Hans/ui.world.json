@@ -200,5 +200,11 @@
   "ui.world.loot.found": "",
   "ui.world.loot.legendary": "",
   "ui.world.loot.gave": "",
-  "ui.world.loot.gave_you": ""
+  "ui.world.loot.gave_you": "",
+  "ui.world.hud.hp_value": "",
+  "ui.world.hud.level": "",
+  "ui.world.hud.mp_value": "",
+  "ui.world.hud.points": "",
+  "ui.world.hud.potion.hp": "",
+  "ui.world.hud.potion.mp": ""
 }

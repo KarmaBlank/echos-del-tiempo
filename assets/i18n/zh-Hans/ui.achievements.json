@@ -15,5 +15,10 @@
   "ui.achievements.toast_head": "",
   "ui.achievements.help": "",
   "ui.achievements.toast_line": "",
-  "ui.achievements.toast_line_reward": ""
+  "ui.achievements.toast_line_reward": "",
+  "ui.achievements.reward_part.shards": "",
+  "ui.achievements.reward_part.crystals": "",
+  "ui.achievements.reward_part.prisms": "",
+  "ui.achievements.reward_part.potions": "",
+  "ui.achievements.reward_part.ethers": ""
 }

@@ -9,7 +9,7 @@ import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
-import 'achievement_feed.dart' show achievementNameText;
+import 'achievement_feed.dart' show achievementNameText, achievementRewardText;
 
 /// Filtro de la pestaña.
 enum AchievementFilter {
@@ -185,7 +185,7 @@ class AchievementRow extends ConsumerWidget {
               SizedBox(height: DsSpace.xs),
               Text(
                   retroText(ref.t('ui.achievements.reward',
-                      {'reward': def.reward.text})),
+                      {'reward': achievementRewardText(ref.strings, def.reward)})),
                   style: DsText.detail(DsColors.reward)),
               if (progressText != null)
                 Text(

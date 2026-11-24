@@ -15,5 +15,10 @@
   "ui.achievements.toast_head": "FEAT EARNED",
   "ui.achievements.help": "<b>Feats</b><br>Once per account: each one pays credits, materials or potions to the character who earns it. They work as a guide: hover over a row (or press and hold it) to see how to get it.<br>Counter feats (II, III) count from when feats were added.",
   "ui.achievements.toast_line": "FEAT · {name}",
-  "ui.achievements.toast_line_reward": "FEAT · {name} · {reward}"
+  "ui.achievements.toast_line_reward": "FEAT · {name} · {reward}",
+  "ui.achievements.reward_part.shards": "+{n} Echo {n, plural, one{Shard} other{Shards}}",
+  "ui.achievements.reward_part.crystals": "+{n} Era {n, plural, one{Crystal} other{Crystals}}",
+  "ui.achievements.reward_part.prisms": "+{n} Broken {n, plural, one{Prism} other{Prisms}}",
+  "ui.achievements.reward_part.potions": "+{n} Health {n, plural, one{Potion} other{Potions}}",
+  "ui.achievements.reward_part.ethers": "+{n} Mana {n, plural, one{Potion} other{Potions}}"
 }

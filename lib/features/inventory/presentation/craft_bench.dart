@@ -57,7 +57,7 @@ enum BenchGroup {
   String note(Strings s) => s.t('ui.inventory.craft.group.$name.note');
 
   /// Tooltip del encabezado (una línea, `CraftHelp.groups`).
-  String get help => CraftHelp.groups[name]!;
+  String get help => CraftHelp.groupText(name);
 }
 
 /// Textos de cada operación de la mesa en palabras simples (sin "slot"
@@ -587,7 +587,7 @@ class _CraftBenchState extends State<CraftBench> {
     return {
       FuseLayout.crumbs: (_) => StepCrumbs(
             steps: [_s.t('ui.inventory.craft.step.target'), _s.t('ui.inventory.craft.step.action'), _s.t('ui.inventory.craft.step.preview')],
-            tips: CraftHelp.steps,
+            tips: CraftHelp.stepsText,
             current: _step,
             keyPrefix: 'bench-crumb-',
             onStep: _go,
@@ -1136,7 +1136,7 @@ class _CraftBenchState extends State<CraftBench> {
               padding: const EdgeInsets.only(top: 6),
               child: Wrap(spacing: 6, runSpacing: 4, children: [
                 ProtoText(
-                    _s.t('ui.inventory.craft.passive_of', {'name': protoEsc(rules.items.passiveOf(src!)?.name ?? '')})),
+                    _s.t('ui.inventory.craft.passive_of', {'name': protoEsc(rules.items.passiveOf(src!)?.text ?? '')})),
                 TransferFitMark(profile: p, passiveId: src.passiveId),
               ])));
         }
@@ -1361,7 +1361,7 @@ class _CraftBenchState extends State<CraftBench> {
           ? rules.catalog.skills[skill]?.name
           : passive == null
               ? null
-              : rules.items.passiveOf(src!)?.name;
+              : rules.items.passiveOf(src!)?.text;
       if (name != null) {
         out.add(Padding(
           key: const ValueKey('craft-incoming'),
@@ -1532,7 +1532,7 @@ class _CraftBenchState extends State<CraftBench> {
           (num x) => '${(x * 100).round()}%'
         ),
         (_s.t('ui.inventory.craft.stat.def'), b.defense, a.defense, i),
-        ('HP', b.maxHp, a.maxHp, i),
+        (_s.t('ui.inventory.craft.stat.hp'), b.maxHp, a.maxHp, i),
       ]) {
         out.add(cmp(l, f(x0), delta(x0, x1, f)));
       }
@@ -1540,7 +1540,8 @@ class _CraftBenchState extends State<CraftBench> {
     if (r.outcomes.isNotEmpty) {
       out.add(const SizedBox(height: 6));
       out.add(
-          const Text('PUEDE SALIR', style: TextStyle(color: ProtoColors.gold)));
+          Text(_s.t('ui.inventory.craft.can_drop'),
+              style: const TextStyle(color: ProtoColors.gold)));
       out.add(ProtoText(
           key: const ValueKey('craft-outcomes'),
           protoColor(ProtoColors.sky, protoEsc(r.outcomes.join(' · ')))));
@@ -1589,11 +1590,11 @@ class _CraftBenchState extends State<CraftBench> {
         ? const <String>[]
         : affixGroupsMarkup(rules, shown, line: (a) {
             if (removed.contains(a) && !after.affixes.contains(a)) {
-              return '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} ${_s.t('ui.inventory.craft.removed')}')}';
+              return '• ${protoColor(ProtoColors.red, '${protoEsc(localAffixText(rules.items, a, on: before))} ${_s.t('ui.inventory.craft.removed')}')}';
             }
             return before.affixes.contains(a)
                 ? '• ${affixMarkup(rules, a, on: after)}'
-                : '• ${protoColor(ProtoColors.green, '${protoEsc(rules.items.affixText(a, on: after))} ${_s.t('ui.inventory.craft.new_m')}')}';
+                : '• ${protoColor(ProtoColors.green, '${protoEsc(localAffixText(rules.items, a, on: after))} ${_s.t('ui.inventory.craft.new_m')}')}';
           });
     return lines.isEmpty
         ? protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.no_mods'))

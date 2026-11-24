@@ -1,3 +1,4 @@
+import '../../inventory/domain/item_names.dart';
 import '../../../game_engine/data/game_catalog.dart';
 import '../../../game_engine/data/summoner_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
@@ -118,7 +119,7 @@ List<String> summonWeaponLines(WeaponDef w) {
   if (!summons) return const [];
   final imp = [
     for (final m in w.implicit)
-      if (kSummonModStats.contains(m.stat)) m.stat.format(m.value),
+      if (kSummonModStats.contains(m.stat)) m.stat.formatText(m.value),
   ];
   return [
     '<span class="k">INVOCACIONES</span>',

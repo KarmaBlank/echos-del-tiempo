@@ -864,10 +864,10 @@ String heroNameMarkup(Combatant p) {
   return a == null ? n : '$n, ${hexSpan(ascensionHex(a), protoEsc(a.name))}';
 }
 
-String _classLine(Combatant p) {
-  final cls = kClasses[p.classId]?.name ?? p.classId ?? '';
+String _classLine(Strings s, Combatant p) {
+  final cls = kClasses[p.classId]?.tr ?? p.classId ?? '';
   final lvl = p.build?.level;
-  return '$cls${lvl == null ? '' : ' Lv$lvl'}';
+  return '$cls${lvl == null ? '' : ' ${s.t('ui.combat.hud.level', {'n': lvl})}'}';
 }
 
 /// Detalle de [p] para el tooltip de su tarjeta: ATQ, MAG, DEF, crítico,
@@ -883,10 +883,11 @@ String heroStatsMarkup(Strings s, Combatant p, {int points = 0}) {
       ? ' ${hexSpan('#ffd166', s.t('ui.combat.hud.points', {'n': points}))}'
       : '';
   return [
-    '${heroNameMarkup(p)} <span class="k">${_classLine(p)}</span>',
+    '${heroNameMarkup(p)} <span class="k">${_classLine(s, p)}</span>',
     if (weapon.isNotEmpty) hexSpan('#ff9f43', '⚔ ${protoEsc(weapon)}$pts'),
-    'HP ${p.hp}/${p.maxHp} · MP ${p.mp.floor()}/${p.maxMp} · '
-        'ULT ${p.ult.floor()}% · '
+    '${s.t('ui.combat.stat.hp')} ${p.hp}/${p.maxHp} · '
+        '${s.t('ui.combat.stat.mp')} ${p.mp.floor()}/${p.maxMp} · '
+        '${s.t('ui.combat.stat.ult')} ${p.ult.floor()}% · '
         '${hexSpan('#ffb142', s.t('ui.combat.hud.pulse_value', {
                   'n': p.pulse,
                   'max': BattleEngine.pulseMax
@@ -1151,8 +1152,10 @@ class _PartyCard extends StatelessWidget {
                                         ? DsColors.textTitle
                                         : DsColors.textPrimary)),
                                 TextSpan(
-                                    text:
-                                        ' Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}',
+                                    text: ' ${s.t('ui.combat.hud.level', {
+                                          'n': p.build?.level ??
+                                              (p.level > 0 ? p.level : '?')
+                                        })}',
                                     style: DsText.detail()),
                               ])),
                         ),
@@ -1161,21 +1164,21 @@ class _PartyCard extends StatelessWidget {
                       ],
                     ),
                     _BarRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
-                        label: 'HP', valueChars: 9, stack: narrow),
+                        label: s.t('ui.combat.stat.hp'), valueChars: 9, stack: narrow),
                     HudHighlight.wrap(
                         context,
                         HudHighlight.mp,
                         ValueKey('hl-mp-${p.id}'),
                         _BarRow(
                             mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
-                            label: 'MP', valueChars: 9, stack: narrow)),
+                            label: s.t('ui.combat.stat.mp'), valueChars: 9, stack: narrow)),
                     if (local || companion)
                       _BarRow(
                           ultBar(p.ult),
                           ultReady(p)
                               ? s.t('ui.combat.hud.ult_ready')
                               : '${p.ult.floor()}%',
-                          label: 'ULT',
+                          label: s.t('ui.combat.stat.ult'),
                           color: ultColor,
                           valueChars: 9,
                           stack: narrow),
@@ -1286,14 +1289,14 @@ class TargetBar extends StatelessWidget {
             if (e.ultPending && kEnemyUlts[e.ultId] != null)
               Text(
                   s.t('ui.combat.enemy.ult_prepares',
-                      {'name': kEnemyUlts[e.ultId]!.name}),
+                      {'name': kEnemyUlts[e.ultId]!.tr}),
                   key: const ValueKey('target-ult-name'),
                   maxLines: 2,
                   style: DsText.detail(DsColors.danger)),
             _BarRow(
                 RetroBar(value: e.hp, max: e.maxHp, color: ProtoColors.crimson),
                 hpText,
-                label: 'HP',
+                label: s.t('ui.combat.stat.hp'),
                 valueChars: chars),
             if (e.hasBreak)
               _BarRow(

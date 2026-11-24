@@ -697,7 +697,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
       PickOption('', _s.t('ui.build.target.none'), null, key: 'wp-none'),
       for (final w in kWeaponPassives.values)
         if (!w.unique && (type == null || w.types.contains(type)))
-          PickOption(w.id, w.name, w.descriptionAt(1), key: 'wp-${w.id}'),
+          PickOption(w.id, w.text, w.descriptionAt(1), key: 'wp-${w.id}'),
     ]);
     if (id == null) return;
     if (id.isEmpty) {
@@ -706,7 +706,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
     }
     final lv = await _pick<int>(_s.t('ui.build.target.min_level'), [
       for (var l = 1; l <= 5; l++)
-        PickOption(l, kWeaponPassives[id]!.nameAt(l), null, key: 'wpl-$l'),
+        PickOption(l, kWeaponPassives[id]!.nameAtText(l), null, key: 'wpl-$l'),
     ]);
     if (lv != null) {
       setState(() => _t = _t.copyWith(passive: () => id, passiveLevel: lv));

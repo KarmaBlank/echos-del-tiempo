@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../core/i18n/data_text.dart';
+import '../../../core/i18n/game_text.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/data/enemy_descriptions.dart';
@@ -11,6 +13,18 @@ import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/rules/family_rules.dart';
 import '../../combat/domain/element_text.dart';
+import '../../inventory/domain/item_names.dart';
+
+String _t(String key, [Map<String, Object?> args = const {}]) =>
+    GameText.t(key, args);
+
+/// Nombre de la familia [f] en el idioma activo.
+String familyLabel(EnemyFamily f) =>
+    GameText.strings.data('ui.bestiary.family.${DataKeys.slug(f.name)}', f.label);
+
+/// Nombre del enemigo [def] en el idioma activo.
+String enemyNameText(EnemyDef def) =>
+    GameText.strings.data(DataKeys.enemyName(def.id), def.name);
 
 /// Color de cada familia (ícono, nombre, borde de la ficha).
 Color familyColor(EnemyFamily f) => switch (f) {
@@ -30,7 +44,8 @@ Color familyColor(EnemyFamily f) => switch (f) {
 /// "Zona" de los Jefes del Abismo en el bestiario (después de la 10).
 const kAbyssBestiaryZone = 11;
 
-/// Texto cuando todavía no se lo mató (bestiary.md § 3).
+/// Texto cuando todavía no se lo mató (bestiary.md § 3), es-AR; se
+/// muestra `ui.bestiary.unknown_hint`.
 const kBestiaryUnknownHint = 'Derrotalo para agregarlo al bestiario';
 
 /// Una ficha del bestiario: el enemigo, su zona y su rol.
@@ -61,19 +76,22 @@ class BestiaryEntry {
   EnemyFamily? get family => familyOf(def.id);
   FamilyRule? get rule => familyRuleOf(def.id);
 
+  /// Nombre de la zona en el idioma activo.
   String get zoneName => zone == kAbyssBestiaryZone
-      ? 'Abismo'
+      ? _t('ui.bestiary.zone_name.abyss')
       : zone <= 0 || zone > kZones.length
-          ? 'Desconocida'
-          : kZones[zone - 1].name;
+          ? _t('ui.bestiary.zone_name.unknown')
+          : GameText.strings
+              .data(DataKeys.zoneName(kZones[zone - 1].id), kZones[zone - 1].name);
 
-  String get role => def.boss
-      ? 'Jefe'
+  /// Rol en el idioma activo.
+  String get role => _t(def.boss
+      ? 'ui.bestiary.role.boss'
       : summon
-          ? 'Invocación'
+          ? 'ui.bestiary.role.summon'
           : elite
-              ? 'Común · también élite'
-              : 'Común';
+              ? 'ui.bestiary.role.common_elite'
+              : 'ui.bestiary.role.common');
 }
 
 /// Todas las fichas, por zona (comunes, después invocaciones, después el
@@ -148,7 +166,7 @@ BestiaryEntry? bestiaryEntryOf(String? id) {
 
 /// Nombre de la familia en su color.
 String familyNameMarkup(EnemyFamily f) =>
-    protoColor(familyColor(f), '[${f.code}] ${protoEsc(f.label)}');
+    protoColor(familyColor(f), '[${f.code}] ${protoEsc(familyLabel(f))}');
 
 /// Debilidades / resistencias / inmunidades de la familia [r], una línea
 /// por grupo.
@@ -164,9 +182,9 @@ String familyTraitsMarkup(FamilyRule r) {
   }
 
   return [
-    group(TraitKind.weak, ProtoColors.green, 'Débil:'),
-    group(TraitKind.resist, ProtoColors.orange, 'Resiste:'),
-    group(TraitKind.immune, ProtoColors.red, 'Inmune:'),
+    group(TraitKind.weak, ProtoColors.green, _t('ui.bestiary.trait.weak')),
+    group(TraitKind.resist, ProtoColors.orange, _t('ui.bestiary.trait.resist')),
+    group(TraitKind.immune, ProtoColors.red, _t('ui.bestiary.trait.immune')),
   ].where((s) => s.isNotEmpty).join('<br>');
 }
 
@@ -178,7 +196,7 @@ String familyShortMarkup(String? enemyType, {EnemyFamily? family}) {
   if (f == null || r == null) return '';
   final weak = familyWeakSummary(r);
   return '${familyNameMarkup(f)}'
-      '${weak.isEmpty ? '' : ' · ${protoColor(ProtoColors.green, 'débil a ${protoEsc(weak)}')}'}';
+      '${weak.isEmpty ? '' : ' · ${protoColor(ProtoColors.green, _t('ui.bestiary.weak_to', {'list': protoEsc(weak)}))}'}';
 }
 
 /// Lo que se ve al pasar el mouse sobre un enemigo (batalla) o en la
@@ -189,26 +207,28 @@ String enemyInfoMarkup(EnemyDef def, BestiaryProgress bestiary,
     {int? level, bool elite = false, bool description = false}) {
   if (!bestiary.knows(def.id)) {
     return '${protoColor(ProtoColors.gold, '???')}<br>'
-        '${protoColor(ProtoColors.dim, kBestiaryUnknownHint)}';
+        '${protoColor(ProtoColors.dim, _t('ui.bestiary.unknown_hint'))}';
   }
   final f = familyOf(def.id);
   final r = familyRuleOf(def.id);
   final entry = bestiaryEntryOf(def.id);
   final lv = level ?? entry?.level;
   final lines = <String>[
-    '${protoColor(ProtoColors.gold, protoEsc(def.name))}'
-        '${elite ? ' ${protoColor(ProtoColors.amber, 'ÉLITE')}' : ''}'
-        '${lv == null ? '' : ' ${protoColor(ProtoColors.dim, 'Nv $lv')}'}',
+    '${protoColor(ProtoColors.gold, protoEsc(enemyNameText(def)))}'
+        '${elite ? ' ${protoColor(ProtoColors.amber, _t('ui.bestiary.elite'))}' : ''}'
+        '${lv == null ? '' : ' ${protoColor(ProtoColors.dim, _t('ui.bestiary.level', {'level': lv}))}'}',
     if (f != null) familyNameMarkup(f),
     if (description && (kEnemyDescriptions[def.id] ?? '').isNotEmpty)
       protoColor(ProtoColors.dim, protoEsc(kEnemyDescriptions[def.id]!)),
     if (r != null) familyTraitsMarkup(r),
     if (r != null && blockedReactionsLine(r.immune).isNotEmpty)
-      '${protoColor(ProtoColors.red, 'Sin reacción:')} '
+      '${protoColor(ProtoColors.red, _t('ui.bestiary.no_reaction'))} '
           '${protoEsc(blockedReactionsLine(r.immune))}',
     if (bossMechanicOf(def) case final m?)
-      '${protoColor(ProtoColors.pink, 'Mecánica: ${protoEsc(m.name)}')} — ${m.counter}',
-    protoColor(ProtoColors.sky, 'Derrotados: ${bestiary.killsOf(def.id)}'),
+      '${protoColor(ProtoColors.pink, _t('ui.bestiary.mechanic', {'name': protoEsc(GameText.strings.data(DataKeys.mechanicName(m.id), m.name))}))}'
+          ' — ${GameText.strings.data(DataKeys.mechanicCounter(m.id), m.counter)}',
+    protoColor(ProtoColors.sky,
+        _t('ui.bestiary.kills', {'n': bestiary.killsOf(def.id)})),
   ];
   return lines.where((l) => l.isNotEmpty).join('<br>');
 }
@@ -217,11 +237,11 @@ String enemyInfoMarkup(EnemyDef def, BestiaryProgress bestiary,
 String enemyDropsMarkup(BestiaryEntry e) {
   final leg = e.def.legendaryId == null ? null : kUniques[e.def.legendaryId];
   return [
-    '${protoColor(ProtoColors.dim, 'Zona:')} ${e.zone > 0 ? '${e.zone} · ' : ''}'
-        '${protoEsc(e.zoneName)} · ${protoEsc(e.role)} · Nv ${e.level}',
+    '${protoColor(ProtoColors.dim, _t('ui.bestiary.drops.zone'))} ${e.zone > 0 ? '${e.zone} · ' : ''}'
+        '${protoEsc(e.zoneName)} · ${protoEsc(e.role)} · ${_t('ui.bestiary.level', {'level': e.level})}',
     if (!e.def.passive)
-      '${protoColor(ProtoColors.dim, 'Botín:')} ${e.def.xp} XP · '
-          '${e.def.credits} créditos'
-          '${leg == null ? '' : ' · ${protoColor(ProtoColors.amber, 'legendario ${protoEsc(leg.name)}')}'}',
+      '${protoColor(ProtoColors.dim, _t('ui.bestiary.drops.loot'))} '
+          '${_t('ui.bestiary.drops.rewards', {'xp': e.def.xp, 'credits': e.def.credits})}'
+          '${leg == null ? '' : ' · ${protoColor(ProtoColors.amber, _t('ui.bestiary.drops.legendary', {'name': protoEsc(leg.text)}))}'}',
   ].join('<br>');
 }

@@ -33,10 +33,25 @@ class FilterContext {
 /// Resultado de leer un filtro de texto: el filtro (con las líneas que
 /// se entendieron) y los errores por línea.
 class FilterParseResult {
-  const FilterParseResult(this.filter, this.errors);
+  const FilterParseResult(this.filter, this.errors, [this.issues = const []]);
   final LootFilter filter;
+
+  /// es-AR text of each error ("línea N: ...").
   final List<String> errors;
+
+  /// The same errors as code + args, for the UI to show them in the
+  /// player's language (docs/specs/i18n.md § 3.8); same order as [errors].
+  final List<FilterIssue> issues;
   bool get ok => errors.isEmpty;
+}
+
+/// One parse error: 1-based [line], [code] (`ui.inventory.filter.err.<code>`)
+/// and its [args].
+class FilterIssue {
+  const FilterIssue(this.line, this.code, [this.args = const {}]);
+  final int line;
+  final String code;
+  final Map<String, Object?> args;
 }
 
 /// Parser, serializador y evaluador de filtros de loot (loot.md § 13).
@@ -374,6 +389,7 @@ Ocultar # Mágicos de nivel bajo
   FilterParseResult parse(String text) {
     final rules = <FilterRule>[];
     final errors = <String>[];
+    final issues = <FilterIssue>[];
     bool? show;
     String? name;
     var conds = <FilterCondition>[];
@@ -418,7 +434,10 @@ Ocultar # Mágicos de nivel bajo
       final words = line.trim().split(RegExp(r'\s+'))
         ..removeWhere((w) => w.isEmpty);
       if (words.isEmpty) continue;
-      void err(String msg) => errors.add('línea ${n + 1}: $msg');
+      void err(String code, String msg, [Map<String, Object?> args = const {}]) {
+        errors.add('línea ${n + 1}: $msg');
+        issues.add(FilterIssue(n + 1, code, args));
+      }
       final key = _word(words.first);
       final a = words.sublist(1);
 
@@ -426,11 +445,16 @@ Ocultar # Mágicos de nivel bajo
         close();
         show = key == 'mostrar';
         name = comment == null || comment.isEmpty ? null : comment;
-        if (a.isNotEmpty) err('"${words.first}" va solo en su línea');
+        if (a.isNotEmpty) {
+          err('alone', '"${words.first}" va solo en su línea',
+              {'word': words.first});
+        }
         continue;
       }
       if (show == null) {
-        err('"${words.first}" fuera de una regla (falta Mostrar u Ocultar)');
+        err('outside_rule',
+            '"${words.first}" fuera de una regla (falta Mostrar u Ocultar)',
+            {'word': words.first});
         continue;
       }
       switch (key) {
@@ -438,20 +462,21 @@ Ocultar # Mágicos de nivel bajo
           final ov = _opValue(a);
           final r = ov == null ? null : _rarity(ov.$2);
           if (r == null) {
-            err('rareza inválida');
+            err('bad_rarity', 'rareza inválida');
           } else {
             conds.add(RarityCondition(ov!.$1, r));
           }
         case 'tipo':
           if (a.isEmpty) {
-            err('falta el tipo de arma');
+            err('no_type', 'falta el tipo de arma');
           } else {
             conds.add(TypeCondition(a));
           }
         case 'base':
           final bad = [for (final b in a) if (!catalog.weapons.containsKey(b)) b];
           if (a.isEmpty || bad.isNotEmpty) {
-            err('base desconocida: ${bad.join(' ')}');
+            err('unknown_base', 'base desconocida: ${bad.join(' ')}',
+                {'list': bad.join(' ')});
           } else {
             conds.add(BaseCondition(a));
           }
@@ -462,7 +487,8 @@ Ocultar # Mágicos de nivel bajo
               if (!catalog.classes.keys.map(_fold).contains(f)) f
           ];
           if (a.isEmpty || bad.isNotEmpty) {
-            err('clase desconocida: ${bad.join(' ')}');
+            err('unknown_class', 'clase desconocida: ${bad.join(' ')}',
+                {'list': bad.join(' ')});
           } else {
             conds.add(FamilyCondition([
               for (final f in fams)
@@ -473,7 +499,8 @@ Ocultar # Mágicos de nivel bajo
           final ov = _opValue(a);
           final v = ov == null ? null : int.tryParse(ov.$2);
           if (v == null) {
-            err('se esperaba "${words.first} <op> número"');
+            err('expected_number', 'se esperaba "${words.first} <op> número"',
+                {'word': words.first});
           } else if (key == 'nivelobjeto') {
             conds.add(ItemLevelCondition(ov!.$1, v));
           } else if (key == 'nivelrelativo') {
@@ -485,14 +512,16 @@ Ocultar # Mágicos de nivel bajo
           }
         case 'tienemod':
           if (a.isEmpty || !kAffixes.containsKey(a.first)) {
-            err('afijo desconocido: ${a.isEmpty ? '' : a.first}');
+            err('unknown_affix', 'afijo desconocido: ${a.isEmpty ? '' : a.first}',
+                {'name': a.isEmpty ? '' : a.first});
           } else if (a.length == 1) {
             conds.add(HasModCondition(a.first));
           } else {
             final op = a.length == 3 ? FilterOp.bySymbol(a[1]) : null;
             final t = a.length == 3 ? int.tryParse(a[2]) : null;
             if (op == null || t == null) {
-              err('se esperaba "TieneMod <afijo> [<op> tier]"');
+              err('expected_has_mod',
+                  'se esperaba "TieneMod <afijo> [<op> tier]"');
             } else {
               conds.add(HasModCondition(a.first, op: op, tier: t));
             }
@@ -505,7 +534,7 @@ Ocultar # Mágicos de nivel bajo
                   .firstOrNull,
           ];
           if (a.isEmpty || cs.any((c) => c == null)) {
-            err('se esperaba Ligera, Media o Pesada');
+            err('expected_weight', 'se esperaba Ligera, Media o Pesada');
           } else {
             conds.add(WeightCondition([for (final c in cs) c!]));
           }
@@ -517,7 +546,7 @@ Ocultar # Mágicos de nivel bajo
         case 'pasiva' || 'utilizable':
           final yes = _yesNo(a);
           if (yes == null) {
-            err('se esperaba Si o No');
+            err('expected_yes_no', 'se esperaba Si o No');
           } else {
             conds.add(
                 key == 'pasiva' ? PassiveCondition(yes) : UsableCondition(yes));
@@ -531,7 +560,7 @@ Ocultar # Mágicos de nivel bajo
                   .firstOrNull,
           ];
           if (a.isEmpty || mats.any((m) => m == null)) {
-            err('material desconocido');
+            err('unknown_material', 'material desconocido');
           } else {
             conds.add(MaterialCondition([for (final m in mats) m!]));
           }
@@ -543,14 +572,15 @@ Ocultar # Mágicos de nivel bajo
                   .firstOrNull,
           ];
           if (a.isEmpty || ks.any((k) => k == null)) {
-            err('se esperaba Arma, Material, Pocion o Eco');
+            err('expected_kind', 'se esperaba Arma, Material, Pocion o Eco');
           } else {
             conds.add(KindCondition([for (final k in ks) k!]));
           }
         case 'buildmejora' || 'mejorabuild':
           final yn = _yesNo(a);
           if (a.length > 1 || yn == null) {
-            err('se esperaba "BuildMejora" o "BuildMejora No"');
+            err('expected_build_upgrade',
+                'se esperaba "BuildMejora" o "BuildMejora No"');
           } else {
             conds.add(BuildUpgradeCondition(has: yn));
           }
@@ -570,14 +600,15 @@ Ocultar # Mágicos de nivel bajo
             }
           }
           if (bad.isNotEmpty) {
-            err('se esperaba "Build [Base Mod Pasiva Habilidad]" o "Build No"');
+            err('expected_build',
+                'se esperaba "Build [Base Mod Pasiva Habilidad]" o "Build No"');
           } else {
             conds.add(BuildCondition(kinds: List.unmodifiable(ks)));
           }
         case 'color' || 'borde' || 'fondo':
           final c = _color(a);
           if (c == null) {
-            err('color inválido (R G B [A], 0–255)');
+            err('bad_color', 'color inválido (R G B [A], 0–255)');
           } else if (key == 'color') {
             text0 = c;
           } else if (key == 'borde') {
@@ -588,13 +619,15 @@ Ocultar # Mágicos de nivel bajo
         case 'tamano':
           final v = a.length == 1 ? int.tryParse(a.first) : null;
           if (v == null) {
-            err('tamaño inválido');
+            err('bad_size', 'tamaño inválido');
           } else {
             size = v.clamp(FilterStyle.minSize, FilterStyle.maxSize);
           }
         case 'sonido':
           if (a.length != 1 || !kLootFilterSounds.contains(_fold(a.first))) {
-            err('sonido desconocido (${kLootFilterSounds.join(', ')})');
+            err('unknown_sound',
+                'sonido desconocido (${kLootFilterSounds.join(', ')})',
+                {'list': kLootFilterSounds.join(', ')});
           } else {
             sound = _fold(a.first);
           }
@@ -610,16 +643,18 @@ Ocultar # Mágicos de nivel bajo
                   .where((c) => c.name == _fold(a[1]))
                   .firstOrNull;
           if (shape == null || color == null || a.length > 2) {
-            err('ícono inválido (forma [color])');
+            err('bad_icon', 'ícono inválido (forma [color])');
           } else {
             icon = MapIcon(shape, color);
           }
         default:
-          err('no entiendo "${words.first}"');
+          err('unknown_word', 'no entiendo "${words.first}"',
+              {'word': words.first});
       }
     }
     close();
-    return FilterParseResult(LootFilter(List.unmodifiable(rules)), errors);
+    return FilterParseResult(
+        LootFilter(List.unmodifiable(rules)), errors, issues);
   }
 
   /// Texto canónico del filtro (lo que se exporta y se guarda).

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../endgame/domain/endgame_names.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
@@ -148,7 +149,6 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
   }
 
   Widget _trials(PlayerProfile p) {
-    final rules = c.engine.trialRules;
     final s = view.session;
     final sel = trialDef(_sel) ??
         kTrials.firstWhere((t) => !p.ascension.trials.contains(t.number),
@@ -157,17 +157,17 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
       if (p.ascension.trials.contains(t.number)) {
         return protoColor(ProtoColors.green, ref.t('ui.ascension.trial.cleared'));
       }
-      final why = rules.cannotPropose(p, t.number);
+      final why = trialProposeBlocked(p, t.number);
       return why == null
           ? protoColor(ProtoColors.gold, ref.t('ui.ascension.trial.available'))
           : protoColor(ProtoColors.dim, protoEsc(why));
     }
 
     final dev = FeatureFlags.instance.devTools;
-    final boss = c.engine.catalog.zone(sel.bossZone)?.bossName ?? '?';
-    final zone = c.engine.catalog.zone(sel.zone)?.name ?? '?';
+    final boss = c.engine.catalog.zone(sel.bossZone)?.bossTr ?? '?';
+    final zone = c.engine.catalog.zone(sel.zone)?.tr ?? '?';
     final voteOpen = s.vote != null;
-    final why = rules.cannotPropose(p, sel.number) ??
+    final why = trialProposeBlocked(p, sel.number) ??
         (s.mode != SessionMode.lobby
             ? ref.t('ui.ascension.only_in_town')
             : voteOpen
@@ -182,12 +182,12 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
             selected: t.number == sel.number,
             onTap: () => setState(() => _sel = t.number),
             label: ref.t('ui.ascension.trial.row',
-                {'roman': t.roman, 'name': protoEsc(t.name)}),
+                {'roman': t.roman, 'name': protoEsc(t.tr)}),
             // Una palabra: el motivo largo va en el detalle.
             value: p.ascension.trials.contains(t.number)
                 ? protoColor(ProtoColors.green, ref.t('ui.ascension.trial.cleared'))
                 : protoColor(
-                    rules.cannotPropose(p, t.number) == null
+                    trialProposeBlocked(p, t.number) == null
                         ? ProtoColors.gold
                         : ProtoColors.dim,
                     ref.t('ui.ascension.trial.level_short', {'level': t.level})),
@@ -219,7 +219,7 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
           ProtoText(
               key: const ValueKey('trial-detail'),
               ref.t('ui.ascension.trial.detail', {
-                'name': protoEsc(sel.fullName),
+                'name': protoEsc(sel.fullNameTr),
                 'state': state(sel),
                 'level': sel.level,
                 'hasRequires': sel.number > 1 ? 'yes' : 'no',

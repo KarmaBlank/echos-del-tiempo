@@ -51,5 +51,22 @@
   "ui.lobby.patch_notes.read_error": "",
   "ui.lobby.patch_notes.loading": "",
   "ui.lobby.patch_notes.empty": "",
-  "ui.lobby.patch_notes.latest": ""
+  "ui.lobby.patch_notes.latest": "",
+  "ui.lobby.net.bad_lan_code": "",
+  "ui.lobby.net.cancelled": "",
+  "ui.lobby.net.connect_failed": "",
+  "ui.lobby.net.create_failed": "",
+  "ui.lobby.net.create_net_error": "",
+  "ui.lobby.net.create_retry": "",
+  "ui.lobby.net.enter_code": "",
+  "ui.lobby.net.host_closed": "",
+  "ui.lobby.net.lan_timeout": "",
+  "ui.lobby.net.net_error": "",
+  "ui.lobby.net.open_failed": "",
+  "ui.lobby.net.p2p_timeout": "",
+  "ui.lobby.net.room_not_found": "",
+  "ui.lobby.net.room_not_found_open": "",
+  "ui.lobby.net.timeout": "",
+  "ui.lobby.world_label.cooperativo": "",
+  "ui.lobby.world_label.solitario": ""
 }

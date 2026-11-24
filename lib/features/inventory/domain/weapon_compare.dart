@@ -1,3 +1,4 @@
+import 'item_names.dart';
 import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/elements.dart';
@@ -147,8 +148,8 @@ WeaponComparison compareWeapons(
 
   final modsA = a == null
       ? const <String>[]
-      : [for (final r in a.affixes) items.affixText(r, on: a)];
-  final modsB = [for (final r in to.affixes) items.affixText(r, on: to)];
+      : [for (final r in a.affixes) localAffixText(items, r, on: a)];
+  final modsB = [for (final r in to.affixes) localAffixText(items, r, on: to)];
 
   // ULT libres del arma (ultimates_v2.md § 2.1): la comparación no
   // muestra ULT.

@@ -4522,10 +4522,11 @@ class _Turn {
     e.mechTurns = 0;
     final k = _summonAdds(e, m);
     if (k > 0) {
-      _notes.add(LogLine.of(m.kind == BossMechanicKind.echo
-          ? '${m.name}: ${e.name} se desdobla en $k eco${k == 1 ? '' : 's'}'
-          : '${m.name}: ${e.name} invoca $k siervo${k == 1 ? '' : 's'}'
-              ' (inmune a estados mientras vivan)'));
+      _notes.add(_l(
+          m.kind == BossMechanicKind.echo
+              ? 'mech_echo_split'
+              : 'mech_summon_servants',
+          {'m': m.name, 'a': e.name, 'n': k}));
     }
   }
 
@@ -4606,14 +4607,20 @@ class _Turn {
       parts.add('${p.name} $taken');
     }
     if (parts.isNotEmpty) {
-      _notes.add(LogLine.of('${m.name}: se queman por defenderse (ATQ $atk × '
-          '${fm(power)} + $stacks Quemadura): ${parts.join(', ')}'));
+      _notes.add(_l('lava_burn', {
+        'm': m.name,
+        'n': atk,
+        'x': fm(power),
+        'k': stacks,
+        's': _st(StatusKind.burn),
+        'p': parts.join(', '),
+      }));
     }
     e.lava--;
     if (e.lava <= 0) {
       e.lava = 0;
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaFade));
-      _notes.add(LogLine.of('la lava se enfría'));
+      _notes.add(_l('lava_cools'));
     }
   }
 
@@ -4623,8 +4630,7 @@ class _Turn {
     e.lava = math.max(e.lava, turns);
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaRise,
         value: e.lava.toDouble()));
-    _notes.add(LogLine.of(
-        '¡la lava sube ${e.lava} turnos! No te defiendas sobre ella'));
+    _notes.add(_l('lava_rises', {'n': e.lava}));
   }
 
   /// El Centinela marca a un jugador (el provocador si hay).
@@ -4636,10 +4642,13 @@ class _Turn {
     events.add(
         BossMechanicEvent(e.id, BossMechanicPhase.markCast, targetId: p.id));
     final solo = alive.length == 1;
-    state.logLine = LogLine.of(
-        '${e.name} · ${m.name} → ${p.name}: su próximo golpe pega '
-        '×${fm(solo ? m.soloValue : m.value)} · '
-        '${solo ? 'defendete para contrarrestarla' : 'que un aliado lo proteja'}');
+    state.logLine = _l('mark_cast', {
+      'a': e.name,
+      'm': m.name,
+      'b': p.name,
+      'x': fm(solo ? m.soloValue : m.value),
+      'solo': solo ? 'yes' : 'no',
+    });
   }
 
   /// El golpe al marcado: × value, salvo que otro lo proteja (o, en solo,
@@ -4737,9 +4746,8 @@ class _Turn {
         ..fissured = false;
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
-    _notes.add(LogLine.of(
-        '¡${e.name} se transforma! FASE 2: pierde sus estados, ATQ '
-        '+${_pct(m.power - 1)} y Colapso Temporal cada ${m.every} acciones'));
+    _notes.add(_l('transform',
+        {'a': e.name, 'p': _pct(m.power - 1), 'n': m.every}));
   }
 
   void _shiftStance(Combatant e, BossMechanicDef m) {
@@ -4774,9 +4782,8 @@ class _Turn {
       total = math.max(total, _r2(-v));
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.frost, value: total));
-    _notes.add(
-        LogLine.of('${m.name}: el grupo pierde ${_pct(m.value)} de velocidad '
-            '(−${_pct(total)}) · rompé los cristales'));
+    _notes.add(_l('frost',
+        {'m': m.name, 'p': _pct(m.value), 't': _pct(total)}));
   }
 
   static double _r2(double v) => (v * 100).round() / 100;
@@ -4790,7 +4797,7 @@ class _Turn {
       ];
     }
     events.add(BossMechanicEvent(boss.id, BossMechanicPhase.thaw));
-    _notes.add(LogLine.of('¡Cristales rotos! El campo se descongela'));
+    _notes.add(_l('crystals_broken'));
   }
 
   /// Murió [c]: si es un jefe, sus invocaciones caen con él; si era la
@@ -4863,9 +4870,7 @@ class _Turn {
     events.add(ActionEvent(p.id, BattleActionKind.attack, targetId: ally.id));
     events.add(
         BossMechanicEvent(p.id, BossMechanicPhase.webFreed, targetId: ally.id));
-    state.logLine =
-        LogLine.of('${p.name} corta la telaraña: ¡${ally.name} queda libre! '
-            '(medio turno)');
+    state.logLine = _l('web_freed', {'a': p.name, 'b': ally.name});
     tickEffects(p);
     p.nextTurn = state.clock + _iv(p) * 0.5;
     endTurn();
@@ -4992,7 +4997,7 @@ class _Turn {
           if (cost > 0) {
             p.hp -= cost;
             events.add(DamageEvent(p.id, cost, sourceId: sk.id));
-            _notes.add(LogLine.of('${sk.name}: cuesta $cost HP'));
+            _notes.add(_l('hp_cost', {'s': _sk(sk), 'n': cost}));
           }
         }
         // Curas (bestiary.md § 1.4.1): el objetivo elegido puede ser un
@@ -5040,7 +5045,7 @@ class _Turn {
           if (cost > 0) {
             p.hp -= cost;
             events.add(DamageEvent(p.id, cost, sourceId: sk.id));
-            _notes.add(LogLine.of('${sk.name}: cuesta $cost HP'));
+            _notes.add(_l('hp_cost', {'s': _sk(sk), 'n': cost}));
           }
         }
         events.add(UltimateUsedEvent(p.id, sk.name));
@@ -5059,8 +5064,8 @@ class _Turn {
         if (last != null) {
           final copy = last.scaled(sk.echoLast);
           act.skill = copy;
-          _notes.add(LogLine.of(
-              '${sk.name}: repite ${last.name} al ${_pct(sk.echoLast)}'));
+          _notes.add(_l('echo_repeat',
+              {'s': _sk(sk), 'b': _sk(last), 'p': _pct(sk.echoLast)}));
           _useSkill(p, copy, foes, target, ultimate: true);
           _skillExtras(p, copy);
         } else {
@@ -5093,7 +5098,7 @@ class _Turn {
         p.guardStreak = true;
         p.guardHitPending = true;
         _ultWithBonus(p, BattleEngine.defendUlt);
-        state.logLine = LogLine.of('${p.name} se defiende (actúa antes)');
+        state.logLine = _l('defends', {'a': p.name});
         _act = null;
         tickEffects(p);
         p.nextTurn = state.clock + _iv(p) * 0.7;
@@ -5105,9 +5110,7 @@ class _Turn {
         // Después de una Instante ya actuó: termina el turno sin el
         // adelanto de Pasar (combat.md § "Pulso e Instante").
         final acted = p.chained;
-        state.logLine = LogLine.of(acted
-            ? '${p.name} termina el turno'
-            : '${p.name} pasa el turno (el próximo llega antes)');
+        state.logLine = _l(acted ? 'turn_done' : 'pass_turn', {'a': p.name});
         _act = null;
         _attacker = null;
         tickEffects(p);
@@ -5133,7 +5136,7 @@ class _Turn {
     if (steal > 0 && _dealt > 0 && p.alive && p.hp < p.maxHp) {
       final h = math.max(1, jsRound(_dealt * steal));
       _heal(p, h);
-      _notes.add(LogLine.of('robo de vida +$h HP'));
+      _notes.add(_l('life_steal', {'h': h}));
     }
     // Drenaje (variantes): el daño cura al aliado más herido.
     final drain = act.skill?.drainHeal ?? 0;
@@ -5143,8 +5146,12 @@ class _Turn {
         final h = math.max(1, jsRound(_dealt * drain));
         _heal(q, h);
         _fire(ProcTrigger.onHeal, p, target: q, amount: h);
-        _notes.add(LogLine.of('${act.skill!.name}: ${q.name} +$h HP '
-            '(${_pct(drain)} del daño)'));
+        _notes.add(_l('drain_heal', {
+          's': _sk(act.skill!),
+          'a': q.name,
+          'h': h,
+          'p': _pct(drain),
+        }));
       }
     }
     if (!usedUlt) {
@@ -5166,7 +5173,7 @@ class _Turn {
         (act.skill?.instant ?? false);
     if (instant && !p.chained && p.alive) {
       p.chained = true;
-      _notes.add(LogLine.of('Instante: una acción más'));
+      _notes.add(_l('instant_more'));
       _flush();
       _checkEnd();
       if (state.ended) state.currentId = null;
@@ -5196,13 +5203,9 @@ class _Turn {
           _damageEnemy(e, atk * 0.6, p.critChance, element: wel),
       ];
       _weaponElementStack(p, wel, foes);
-      state.logLine = LogLine.of(_damageLog(
-          LogLine.of('${p.name} · Golpe Imparable (todos)'),
-          _atkText(p),
-          atk,
-          0.6,
-          hits,
-          all: true));
+      state.logLine = _damageLog(
+          _l('unstoppable_head', {'a': p.name}), _atkText(p), atk, 0.6, hits,
+          all: true);
       return;
     }
     final act = _act!..single = true;
@@ -5211,11 +5214,11 @@ class _Turn {
     act
       ..mainTarget = target
       ..mainHit = hit;
-    var log = _damageLog(LogLine.of('${p.name} ataca → ${target.name}'),
+    var log = _damageLog(_l('attacks', {'a': p.name, 'b': target.name}),
         _atkText(p), atk, 1, [hit],
         all: false);
     if (_weaponElementStack(p, wel, [target])) {
-      log += ' · ${wel!.label}: +1 pila';
+      log = log.plus(_l('weapon_stack', {'e': _el(wel!)}));
     }
     final stunChance =
         p.stunOnAttackChance > 0 ? p.stunOnAttackChance + _duoStun(p) : 0.0;
@@ -5225,22 +5228,22 @@ class _Turn {
         // Solo si entró (un jefe con séquito es inmune).
         _addStatus(target, const StatusApplication(StatusKind.stun, 1),
             source: p, primary: true)) {
-      log += ' · ¡aturde! (${jsRound(stunChance * 100)}%)';
+      log = log.plus(_l('stuns_pct', {'p': jsRound(stunChance * 100)}));
     }
     if (p.branch == 'creyente' && _rand() < 0.25) {
       for (final q in _aliveParty) {
         _heal(q, math.max(1, jsRound(q.maxHp * 0.02)));
       }
-      log += ' · Fe: cura 2% a todos';
+      log = log.plus(_l('faith_heal'));
     }
     if (p.branch == 'inherente' &&
         target.alive &&
         _rand() < 0.25 &&
         _addStatus(target, const StatusApplication(StatusKind.holy, 1),
             source: p, primary: true)) {
-      log += ' · Sagrado (5/turno, 3 turnos)';
+      log = log.plus(_l('holy_proc', {'s': _st(StatusKind.holy)}));
     }
-    state.logLine = LogLine.of(log);
+    state.logLine = log;
   }
 
   /// Cuenta un básico con elemento de arma y, cada
@@ -5273,7 +5276,7 @@ class _Turn {
     required bool ultimate,
     Combatant? healPick,
   }) {
-    state.logLine = LogLine.of('${p.name} · ${tk.name}');
+    state.logLine = _l('skill_use', {'a': p.name, 's': _sk(tk)});
     final allies = _aliveParty.toList();
 
     switch (tk.kind) {
@@ -5286,8 +5289,12 @@ class _Turn {
           for (final e in tk.allTargets ? foes : [target]) {
             _plantTrap(p, e, tk.id, tk.trap, 1);
           }
-          state.logLine = LogLine.of('${p.name} · ${tk.name}: trampa en '
-              '${tk.allTargets ? 'todos los enemigos' : target.name}');
+          state.logLine = _l('trap_set', {
+            'a': p.name,
+            's': _sk(tk),
+            'all': tk.allTargets ? 'yes' : 'no',
+            'b': target.name,
+          });
         } else if (tk.debuffs.isNotEmpty || tk.ultDrain > 0) {
           // Variantes sin daño: Rugido, Señalar Presa.
           for (final e in tk.allTargets ? foes : [target]) {
@@ -5299,7 +5306,7 @@ class _Turn {
             ..._debuffText(tk),
           ]);
         } else {
-          state.logLine = LogLine.of('${p.name} · ${tk.name}');
+          state.logLine = _l('skill_use', {'a': p.name, 's': _sk(tk)});
         }
         return 6;
 
@@ -5331,24 +5338,26 @@ class _Turn {
           for (final e in foes) {
             _damageEnemy(e, base, p.critChance);
           }
-          log += ' · Luz: ${jsRound(base)} a cada enemigo (MAG × 0.8)';
+          log = log.plus(_l('light_dmg', {'n': jsRound(base)}));
         }
-        state.logLine = LogLine.of(log);
+        state.logLine = log;
         return 8;
 
       case SkillKind.defenseUp:
         p.bonusDefense =
             math.min(BattleEngine.maxBonusDefense, p.bonusDefense + tk.amount);
         engine._refreshStats(p);
-        state.logLine = LogLine.of('${p.name} · ${tk.name}: DEF ${p.defense} '
-            '(−${jsRound(p.defensePercent * 100)}% daño recibido)');
+        state.logLine = _l('defense_up', {
+          'a': p.name,
+          's': _sk(tk),
+          'd': p.defense,
+          'p': jsRound(p.defensePercent * 100),
+        });
         return 6;
 
       case SkillKind.protect:
         p.protecting = true;
-        state.logLine = LogLine.of(
-            '${p.name} · ${tk.name}: absorbe todo el daño dirigido a '
-            'sus aliados hasta su próximo turno');
+        state.logLine = _l('protect', {'a': p.name, 's': _sk(tk)});
         return 8;
 
       case SkillKind.bulwark:
@@ -5362,9 +5371,7 @@ class _Turn {
         p.bonusDefense =
             math.min(BattleEngine.maxBonusDefense, p.bonusDefense + 4);
         engine._refreshStats(p);
-        state.logLine =
-            LogLine.of('${p.name} · ${tk.name}: cura 30% a todos, todos '
-                'defienden, Protección y DEF +4');
+        state.logLine = _l('bulwark', {'a': p.name, 's': _sk(tk)});
         return 0;
 
       case SkillKind.heal:
@@ -5394,8 +5401,13 @@ class _Turn {
           final dealt = _procDamage(p, healPick, d, kHealHarmSourceId);
           final fem =
               engine.catalog.enemies[healPick.enemyType]?.feminine ?? false;
-          state.logLine = LogLine.of('${p.name} · ${tk.name}: ¡la cura quema '
-              '${fem ? 'a la' : 'al'} ${healPick.name}! $dealt');
+          state.logLine = _l('heal_burns_foe', {
+            'a': p.name,
+            's': _sk(tk),
+            'g': fem ? 'f' : 'm',
+            'b': healPick.name,
+            'd': dealt,
+          });
           return 8;
         }
         final healed = tk.lowestAlly
@@ -5441,17 +5453,14 @@ class _Turn {
       case SkillKind.taunt:
         p.taunt = tk.amount;
         state.logLine =
-            LogLine.of('${p.name} · ${tk.name}: los próximos ${tk.amount} '
-                'ataques enemigos van contra ${p.name}');
+            _l('taunt', {'a': p.name, 's': _sk(tk), 'n': tk.amount});
         return 0;
 
       case SkillKind.guard:
         for (final q in allies) {
           q.defending = true;
         }
-        state.logLine =
-            LogLine.of('${p.name} · ${tk.name}: todo el equipo recibe ½ daño '
-                'hasta su próximo turno');
+        state.logLine = _l('guard_all', {'a': p.name, 's': _sk(tk)});
         return 0;
 
       case SkillKind.haste:
@@ -5461,7 +5470,7 @@ class _Turn {
         if (state.party.length == 1) {
           p.mp += tk.mp;
           p.nextTurn = state.clock;
-          state.logLine = LogLine.of('Prisa necesita aliados');
+          state.logLine = _l('haste_no_allies');
           _act = null;
           endTurn();
           return null;
@@ -5505,8 +5514,12 @@ class _Turn {
               target.fissured &&
               !_fissuredNow.contains(target.id);
           if (ok) _break(target);
-          state.logLine = LogLine.of('${p.name} · ${tk.name} → ${target.name}'
-              '${ok ? ': QUEBRADO' : ': no está Fisurado'}');
+          state.logLine = _l('pure_break', {
+            'a': p.name,
+            's': _sk(tk),
+            'b': target.name,
+            'ok': ok ? 'yes' : 'no',
+          });
           return 0;
         }
         if (tk.delayedHit > 0) {
@@ -5518,11 +5531,16 @@ class _Turn {
             ..doomTurns = 2
             ..doomBy = p.id;
           events.add(ProcEvent(p.id, tk.id, targetId: target.id));
-          state.logLine =
-              LogLine.of('${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name} → '
-                  '${target.name}: en 2 turnos recibe ${target.doom} '
-                  '(${tk.kind == SkillKind.magical ? 'MAG' : 'ATQ'} $v × '
-                  '${fm(tk.delayedHit)}) y se quiebra si está Fisurado');
+          state.logLine = _l('doom_set', {
+            'a': p.name,
+            'u': ultimate ? 'yes' : 'no',
+            's': _sk(tk),
+            'b': target.name,
+            'd': target.doom,
+            'mag': tk.kind == SkillKind.magical ? 'yes' : 'no',
+            'v': v,
+            'x': fm(tk.delayedHit),
+          });
           return 0;
         }
         final tormenta = p.keystones.contains('tormenta')
@@ -5536,8 +5554,7 @@ class _Turn {
                 _aliveParty.where((q) => q != p && !q.isSummon).length
             : 0.0;
         if (allyPower > 0) {
-          _notes.add(
-              LogLine.of('${tk.name}: +${fm(allyPower)} de poder por aliados'));
+          _notes.add(_l('ally_power', {'s': _sk(tk), 'x': fm(allyPower)}));
         }
         final base = sourceValue * (tk.power + allyPower) * tormenta;
         final st = tk.status;
@@ -5574,12 +5591,12 @@ class _Turn {
           if (tk.openerBonus > 0 && e.hp >= e.maxHp) {
             b *= 1 + tk.openerBonus;
             _notes.add(
-                LogLine.of('${tk.name}: vida llena, +${_pct(tk.openerBonus)}'));
+                _l('opener', {'s': _sk(tk), 'p': _pct(tk.openerBonus)}));
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
           hits.add(hit);
-          if (tk.stripBuffs) _stripBuffs(e, LogLine.of(tk.name));
+          if (tk.stripBuffs) _stripBuffs(e, _sk(tk));
           if (!tk.allTargets) {
             act
               ..mainTarget = e
@@ -5593,9 +5610,11 @@ class _Turn {
                       single: !tk.allTargets, hitIndex: h)
                   .damage);
             }
-            _notes
-                .add(LogLine.of('${more.length} golpes: ${more.join(' + ')} = '
-                    '${more.fold(0, (s, d) => s + d)}'));
+            _notes.add(_l('multi_hits', {
+              'n': more.length,
+              'p': more.join(' + '),
+              't': more.fold<int>(0, (s, d) => s + d),
+            }));
           }
           _variantOnHit(p, e, tk);
           if (st != null && !burnBlocked) {
@@ -5625,31 +5644,42 @@ class _Turn {
           if (tk.trap > 0 && e.alive) _plantTrap(p, e, tk.id, tk.trap, 1);
         }
         if (detonated > 0) {
-          _notes.add(LogLine.of('${tk.name}: detona $detonated stack'
-              '${detonated == 1 ? '' : 's'} (+${_pct(tk.detonate * detonated)})'));
+          _notes.add(_l('detonate', {
+            's': _sk(tk),
+            'n': detonated,
+            'p': _pct(tk.detonate * detonated),
+          }));
         }
         if (!tk.allTargets) {
           _pierceAndBounce(p, tk, target, base, st, burnBlocked ? 0 : bonus,
               blocked: burnBlocked);
         }
-        final head = '${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name}'
-            '${tk.allTargets ? ' (todos)' : ' → ${target.name}'}';
+        final head = _l('skill_head', {
+          'a': p.name,
+          'u': ultimate ? 'yes' : 'no',
+          's': _sk(tk),
+          'all': tk.allTargets ? 'yes' : 'no',
+          'b': target.name,
+        });
         var log = _damageLog(
-            LogLine.of(head),
+            head,
             magical ? _l('src_mag', {'n': sourceValue}) : _atkText(p),
             sourceValue,
             tk.power,
             hits,
             all: tk.allTargets,
             tormenta: tormenta);
-        if (tk.delay > 0) log += ' · retrasa';
+        if (tk.delay > 0) log = log.plus(_l('delays'));
         log += _debuffText(tk);
         if (burnBlocked) {
-          log += ' · sin Quemadura (Alma de Hielo)';
+          log = log.plus(_l('burn_blocked', {
+            's': _st(StatusKind.burn),
+            'k': LogLine.named(CatalogKeys.mechName('almaHielo'), 'Alma de Hielo'),
+          }));
         } else if (st != null) {
           log += _statusOutcome(st, bonus, tried, landed);
         }
-        state.logLine = LogLine.of(log);
+        state.logLine = log;
         return 0;
     }
   }
@@ -5694,9 +5724,10 @@ class _Turn {
         landed++;
       }
     }
-    state.logLine = LogLine.of(_damageLog(
-            LogLine.of('${p.name} + ${q.name} · ${du.name} (todos)'),
-            LogLine.of('($pv + $qv)'),
+    state.logLine = (_damageLog(
+            _l('dual_head',
+                {'a': p.name, 'b': q.name, 's': LogLine.dual(id, du.name)}),
+            LogLine.raw('($pv + $qv)'),
             pv + qv,
             du.power,
             hits,
@@ -5749,9 +5780,8 @@ class _Turn {
     t.statuses[StatusKind.poison] = 0;
     t.nextTurn = state.clock + _iv(t);
     events.add(RevivedEvent(t.id));
-    state.logLine =
-        LogLine.of('${p.name} usa Éter en ${t.name}: ¡revive con toda la '
-            'vida (${t.hp}/${t.maxHp})!');
+    state.logLine = _l('aether_revive',
+        {'a': p.name, 'b': t.name, 'h': t.hp, 'm': t.maxHp});
     return true;
   }
 
@@ -5773,9 +5803,15 @@ class _Turn {
       t.nextTurn = state.clock + _iv(t);
       events.add(RevivedEvent(t.id));
     }
-    state.logLine = LogLine.of(
-        '${p.name} usa Poción de vida en ${t.name}: +$a HP = 45% de '
-        '${t.maxHp}${was == 0 ? ' (¡revive!)' : ''} · quita Quemadura y Veneno');
+    state.logLine = _l('potion', {
+      'a': p.name,
+      'b': t.name,
+      'n': a,
+      'm': t.maxHp,
+      'rev': was == 0 ? 'yes' : 'no',
+      'x': _st(StatusKind.burn),
+      'y': _st(StatusKind.poison),
+    });
     return true;
   }
 }

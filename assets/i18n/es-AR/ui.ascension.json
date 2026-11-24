@@ -37,5 +37,19 @@
   "ui.ascension.node.root": "Raíz",
   "ui.ascension.node.cost": "costo {cost}",
   "ui.ascension.points": "Puntos libres <b>{free}</b> · ganados {earned}/{max}",
-  "ui.ascension.banner": "ASCENSIÓN"
+  "ui.ascension.banner": "ASCENSIÓN",
+  "ui.ascension.trial.name.1": "El Umbral",
+  "ui.ascension.trial.name.2": "La Encrucijada",
+  "ui.ascension.trial.name.3": "El Juicio",
+  "ui.ascension.trial.full_name": "Prueba del Tiempo {roman} · {name}",
+  "ui.ascension.trials.none": "Sin Pruebas",
+  "ui.ascension.trials.summary": "Pruebas {list} · {free, plural, one{# punto libre} other{# puntos libres}}",
+  "ui.ascension.trial.generic": "Prueba",
+  "ui.ascension.trial.short": "Prueba {roman}",
+  "ui.ascension.trial.result_points": "¡{name} superada! +{points} puntos de ascensión",
+  "ui.ascension.trial.result_none": "{name} superada (ya la tenías o no cumplís el nivel: sin puntos)",
+  "ui.ascension.trial.completed": "{name} superó la {trial}: +{points} puntos de ascensión",
+  "ui.ascension.trial.unknown": "Prueba desconocida",
+  "ui.ascension.trial.requires_level": "Requiere nivel {level}",
+  "ui.ascension.trial.requires_previous": "Superá antes la Prueba {roman}"
 }

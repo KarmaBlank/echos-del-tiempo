@@ -90,7 +90,8 @@ class LanNetSession extends ProtocolNetSession {
         // Otra sala en esta PC ya usa el puerto: uno libre cualquiera.
         server = await HttpServer.bind(address, 0);
       } on SocketException catch (e) {
-        throw NetException('No se pudo abrir la sala: ${e.message}');
+        throw NetException('No se pudo abrir la sala: ${e.message}',
+            key: 'ui.lobby.net.open_failed', args: {'error': e.message});
       }
     }
     _server = server;
@@ -117,7 +118,9 @@ class LanNetSession extends ProtocolNetSession {
   Future<PeerLink> joinRoom(String code) async {
     final parsed = parseCode(code);
     if (parsed == null) {
-      throw const NetException('Código inválido: usa IP:PUERTO (p. ej. 192.168.1.23:47800).');
+      throw const NetException(
+          'Código inválido: usa IP:PUERTO (p. ej. 192.168.1.23:47800).',
+          key: 'ui.lobby.net.bad_lan_code');
     }
     final (host, p) = parsed;
     try {
@@ -126,11 +129,17 @@ class LanNetSession extends ProtocolNetSession {
       ws.pingInterval = const Duration(seconds: 5);
       return _WsLink(ws);
     } on TimeoutException {
-      throw NetException('No se pudo conectar a $host:$p (tiempo agotado). '
-          '¿Están en la misma red y el host tiene la sala abierta?');
+      throw NetException(
+          'No se pudo conectar a $host:$p (tiempo agotado). '
+          '¿Están en la misma red y el host tiene la sala abierta?',
+          key: 'ui.lobby.net.lan_timeout',
+          args: {'room': '$host:$p'});
     } on Object {
-      throw NetException('Sala $host:$p no encontrada. '
-          '¿El host sigue con el juego abierto?');
+      throw NetException(
+          'Sala $host:$p no encontrada. '
+          '¿El host sigue con el juego abierto?',
+          key: 'ui.lobby.net.room_not_found_open',
+          args: {'room': '$host:$p'});
     }
   }
 

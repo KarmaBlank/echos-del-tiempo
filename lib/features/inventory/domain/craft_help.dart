@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'item_names.dart';
+import '../../../core/i18n/catalog_text.dart';
 
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -55,30 +56,36 @@ class CraftOpHelp {
   /// color) y una línea por parte con su etiqueta en `k`.
   String markup(String title) => [
         '<b>${craftHelpEsc(title)}</b>',
-        _part(whatLabel, what),
-        _part(changeLabel, change),
-        _part(costLabel, cost),
-        _part(loseLabel, lose),
+        _part(_label('what', whatLabel), what),
+        _part(_label('change', changeLabel), change),
+        _part(_label('cost', costLabel), cost),
+        _part(_label('lose', loseLabel), lose),
         if (blocked != null)
-          '<span style="color:#ff6b81">$blockedLabel</span> '
+          '<span style="color:#ff6b81">${_label('blocked', blockedLabel)}</span> '
               '${craftHelpEsc(blocked!)}'
               '${blockedHint(blocked!) == null ? '' : ' ${craftHelpEsc(blockedHint(blocked!)!)}'}',
-        _part(exampleLabel, example),
+        _part(_label('example', exampleLabel), example),
       ].join('<br>');
+
+  /// A part label in the active language.
+  static String _label(String id, String source) =>
+      CatalogText.of('ui.inventory.craft.help.label.$id', source);
 
   /// Qué hacer con un motivo de bloqueo común (`null` = nada que sumar).
   static String? blockedHint(String reason) {
+    String h(String id, String source) =>
+        CatalogText.of('ui.inventory.craft.help.hint.$id', source);
     if (reason.startsWith('Falta ')) {
-      return '(Mira dónde se consigue en el contador de materiales.)';
+      return h('material', '(Mira dónde se consigue en el contador de materiales.)');
     }
     if (reason.startsWith('Faltan \$')) {
-      return '(Vende o desarma armas que no uses para juntar créditos.)';
+      return h('credits', '(Vende o desarma armas que no uses para juntar créditos.)');
     }
     if (reason == 'Está equipada') {
-      return '(Equipa otra arma primero.)';
+      return h('equipped', '(Equipa otra arma primero.)');
     }
     if (reason == 'Arma inicial') {
-      return '(Siempre te queda una arma inicial: no se destruye.)';
+      return h('starter', '(Siempre te queda una arma inicial: no se destruye.)');
     }
     return null;
   }
@@ -112,6 +119,16 @@ class CraftHelp {
     'change': 'CAMBIAR: convierte el arma en otro tipo (p. ej. hacha → '
         'báculo) y se queda con lo que sirva.',
   };
+
+  /// [groups] in the active language.
+  static String groupText(String name) =>
+      CatalogText.of('ui.inventory.craft.help.group.$name', groups[name]!);
+
+  /// [steps] in the active language.
+  static List<String> get stepsText => [
+        for (var i = 0; i < steps.length; i++)
+          CatalogText.of('ui.inventory.craft.help.step.${i + 1}', steps[i]),
+      ];
 
   /// Una línea por paso de las migas (1 DESTINO / 2 ACCIÓN / 3 VISTA
   /// PREVIA; ui_minimal.md § 4).

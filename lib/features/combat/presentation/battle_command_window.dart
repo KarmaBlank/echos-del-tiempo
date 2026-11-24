@@ -302,7 +302,7 @@ class _Actions extends StatelessWidget {
     final tags = <Widget>[
       if (a.instant) const DsTag.instant(),
       if (a.reach case final r?)
-        DsTag(r.label.toUpperCase(),
+        DsTag(r.tr.toUpperCase(),
             color: ProtoColors.parse(r.hex) ?? DsColors.textSecondary),
     ];
     final costs = <Widget>[

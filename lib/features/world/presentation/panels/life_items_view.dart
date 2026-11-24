@@ -1,3 +1,4 @@
+import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
 import '../../../inventory/domain/item_names.dart';
 
@@ -174,7 +175,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, children: [
             for (final t in [null, ...DayTime.values])
-              DsButton((t?.label ?? context.t('ui.town.bag.all_hours')).toUpperCase(),
+              DsButton((t?.text ?? context.t('ui.town.bag.all_hours')).toUpperCase(),
                   key: ValueKey('life-log-time-${t?.name ?? 'todas'}'),
                   size: DsButtonSize.compact,
                   selected: _logTime == t,
@@ -231,7 +232,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 nameColor: fishRarityColor(r),
                 tags: [
                   (kind.toUpperCase(), DsColors.textSecondary),
-                  (r.label.toUpperCase(), fishRarityColor(r)),
+                  (r.text.toUpperCase(), fishRarityColor(r)),
                 ],
                 lines: lines,
                 compare: cmp,
@@ -283,7 +284,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
                     (context.t('ui.town.trader.tag_fish'), DsColors.textSecondary),
-                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                    (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
                   ],
                   lines: [
                     context.t('ui.town.trader.have', {'n': life.count(d.id)}),
@@ -350,7 +351,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     nameColor: fishRarityColor(d.rarity),
                     tags: [
                       (_biomeLabel(d.biome), DsColors.textSecondary),
-                      (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                      (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
                     ],
                     lines: [
                       context.t('ui.town.bag.record', {'n': rec}),
@@ -402,13 +403,13 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
                     (context.t('ui.town.trader.tag_seed'), DsColors.textSecondary),
-                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
+                    (d.rarity.text.toUpperCase(), fishRarityColor(d.rarity)),
                   ],
                   lines: [
                     context.t('ui.town.trader.have', {'n': e.value}),
                     context.t('ui.town.trader.grows_in', {'min': (d.growSec / 60).round()}),
                     context.t('ui.town.bag.origin', {'place': _biomeLabel(d.biome).toLowerCase()}),
-                    LifeTimeRules.cropAffinity(d.id).label,
+                    LifeTimeRules.cropAffinity(d.id).text,
                     context.t('ui.town.bag.yields', {'n': d.price}),
                   ],
                   actions: [

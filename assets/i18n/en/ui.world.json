@@ -200,5 +200,11 @@
   "ui.world.loot.found": "{name} found: ",
   "ui.world.loot.legendary": "LEGENDARY!",
   "ui.world.loot.gave": "{from} gave {to}: ",
-  "ui.world.loot.gave_you": "{name} gave you:"
+  "ui.world.loot.gave_you": "{name} gave you:",
+  "ui.world.hud.hp_value": "HP {hp}/{max}",
+  "ui.world.hud.level": "Lv{n}",
+  "ui.world.hud.mp_value": "MP {mp}/{max}",
+  "ui.world.hud.points": "+{n} pts",
+  "ui.world.hud.potion.hp": "Health",
+  "ui.world.hud.potion.mp": "Mana"
 }
