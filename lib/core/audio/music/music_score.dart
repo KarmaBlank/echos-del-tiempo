@@ -267,6 +267,30 @@ class Track {
 
   bool get isDrums => instrument.voice == Voice.drums;
 
+  /// The same track with another [name], [instrument] or [gain], and
+  /// every note passed through [pitch] (drum hits stay as they are).
+  /// Used to build arrangements (dungeon variants) without copying the
+  /// score text.
+  Track mapped({
+    String? name,
+    Instrument? instrument,
+    double? gain,
+    int Function(int midi)? pitch,
+  }) =>
+      Track._(
+          name ?? this.name,
+          instrument ?? this.instrument,
+          (
+            steps: steps,
+            events: [
+              for (final e in events)
+                e.midi == null || pitch == null
+                    ? e
+                    : NoteEvent(e.start, e.length, midi: pitch(e.midi!)),
+            ],
+          ),
+          gain ?? this.gain);
+
   String get signature =>
       '$name|${instrument.signature}|$gain|$steps|${events.join(',')}';
 }

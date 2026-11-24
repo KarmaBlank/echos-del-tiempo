@@ -18,7 +18,7 @@ Song victoryJingle() {
     tracks: [
       Track('ocarina', Inst.ocarina.copyWith(volume: 0.36),
           join([
-            bar('G4:2 C5:2 E5:2 G5:4 F5:2 E5:2 F5:2'),
+            bar('G5:2 C5:2 E5:2 G5:4 F5:2 E5:2 F5:2'),
             bar('A5:4 G5:2 E5:2 D5:2 E5:2 G5:4'),
             bar('C6:14 .:2'),
           ])),
@@ -52,7 +52,7 @@ Song defeatJingle() {
       Track('ocarina', Inst.ocarinaEcho,
           join([
             bar('E5:6 D5:2 C5:4 B4:4'),
-            bar('A4:4 F4:4 E4:8'),
+            bar('C5:4 B4:4 A4:8'),
           ])),
       Track('colchón', Inst.pad.copyWith(volume: 0.07),
           comp(chords, 'x:16', center: 60, count: 3)),
