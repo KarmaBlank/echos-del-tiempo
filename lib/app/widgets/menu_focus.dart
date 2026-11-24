@@ -38,6 +38,52 @@ const kMenuKeys = <(String, String)>[
   ('Inventario', 'Flechas mueven la casilla; Enter otra vez equipa el arma'),
 ];
 
+/// World panels that show `PERSONAJE [TAB]`: plain `Tab` (no Shift /
+/// Ctrl / Alt) calls [onTab] (open the character panel) instead of moving
+/// the focus, even from a text field (docs/specs/panels.md § "Teclado en
+/// los menús"). [NavSection] and the panel frame let that `Tab` bubble up
+/// to here; `Shift+Tab` keeps jumping to the previous section.
+class PanelTabShortcut extends StatelessWidget {
+  const PanelTabShortcut({super.key, required this.onTab, required this.child});
+
+  final VoidCallback onTab;
+  final Widget child;
+
+  /// `true` if [e] is the plain `Tab` this shortcut takes.
+  static bool isPlainTab(KeyEvent e) {
+    if (e.logicalKey != LogicalKeyboardKey.tab) return false;
+    final hw = HardwareKeyboard.instance;
+    return !hw.isShiftPressed &&
+        !hw.isControlPressed &&
+        !hw.isAltPressed &&
+        !hw.isMetaPressed;
+  }
+
+  /// There is a [PanelTabShortcut] above [context] that takes [e].
+  static bool takes(BuildContext context, KeyEvent e) =>
+      isPlainTab(e) &&
+      context.findAncestorWidgetOfExactType<_PanelTabMarker>() != null;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (_, e) {
+          if (!isPlainTab(e)) return KeyEventResult.ignored;
+          if (e is KeyDownEvent) onTab();
+          return KeyEventResult.handled;
+        },
+        child: _PanelTabMarker(child: child),
+      );
+}
+
+class _PanelTabMarker extends InheritedWidget {
+  const _PanelTabMarker({required super.child});
+
+  @override
+  bool updateShouldNotify(_PanelTabMarker oldWidget) => false;
+}
+
 /// Hay un campo de texto con el foco: las teclas son suyas.
 bool typingInField() {
   final ctx = FocusManager.instance.primaryFocus?.context;
@@ -363,6 +409,7 @@ class _NavSectionState extends State<NavSection> {
       return KeyEventResult.ignored;
     }
     final hw = HardwareKeyboard.instance;
+    if (PanelTabShortcut.takes(context, e)) return KeyEventResult.ignored;
     if (e.logicalKey != LogicalKeyboardKey.tab ||
         hw.isControlPressed ||
         hw.isAltPressed ||

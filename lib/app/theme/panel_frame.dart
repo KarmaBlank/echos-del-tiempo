@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/menu_focus.dart';
 import '../widgets/points_badge.dart';
 import 'proto_colors.dart';
 import 'proto_markup.dart';
@@ -220,6 +221,8 @@ class _PanelKeysState extends State<_PanelKeys> {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    // Plain Tab opens PERSONAJE (PanelTabShortcut above): let it bubble.
+    if (PanelTabShortcut.takes(context, e)) return KeyEventResult.ignored;
     final focused = FocusManager.instance.primaryFocus;
     final ctx = focused?.context;
     // Escribiendo en un campo: las teclas son del campo.
