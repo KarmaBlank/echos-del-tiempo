@@ -1,0 +1,10 @@
+{
+  "data.classes.guerrero.desc": "Swords and axes",
+  "data.classes.guerrero.name": "Warrior",
+  "data.classes.maga.desc": "Staves and tomes · each one specializes",
+  "data.classes.maga.name": "Mage",
+  "data.classes.paladin.desc": "Shield · high life and defense, low damage, slow",
+  "data.classes.paladin.name": "Paladin",
+  "data.classes.tirador.desc": "Bows and rifles",
+  "data.classes.tirador.name": "Marksman"
+}

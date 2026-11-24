@@ -13,5 +13,7 @@
   "ui.achievements.back": "",
   "ui.achievements.loading": "",
   "ui.achievements.toast_head": "",
-  "ui.achievements.help": ""
+  "ui.achievements.help": "",
+  "ui.achievements.toast_line": "",
+  "ui.achievements.toast_line_reward": ""
 }

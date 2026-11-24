@@ -180,12 +180,13 @@ class WorldHud extends StatelessWidget {
                     id: _TopSlot.bar,
                     child: Memo(
                       deps: [
-                        _MissionBar.textFor(view, _missionName(s)),
+                        _MissionBar.textFor(view, _missionName(s, worldStrings(context)),
+                            worldStrings(context)),
                         turnTimerNote(view),
                       ],
                       builder: (_) => _MissionBar(
                         view: view,
-                        missionName: _missionName(s),
+                        missionName: _missionName(s, worldStrings(context)),
                       ),
                     ),
                   ),
@@ -385,7 +386,7 @@ class WorldHud extends StatelessWidget {
                       child: Consumer(
                         builder: (context, ref, _) => _Objectives(
                             mission: s.mission!,
-                            zoneName: _missionName(s),
+                            zoneName: _missionName(s, worldStrings(context)),
                             floorLevel: MapGame.currentFloor(view)?.level,
                             floor: MapGame.currentFloor(view),
                             time: s.time,
@@ -731,23 +732,28 @@ class WorldHud extends StatelessWidget {
   }
 
   /// Nombre de la misión en curso: la zona si es de zona.
-  String _missionName(GameSession s) {
+  String _missionName(GameSession s, Strings str) {
     final m = s.mission;
     if (m == null) return '';
     final cat = controller.engine.catalog;
     // Eco: `Eco T7 · Grieta Ígnea` (docs/specs/ecos_atlas.md § 4).
     final eco = s.eco;
     if (eco != null && m.missionId == 'eco') {
-      return 'Eco T${eco.tier} · ${cat.zone(eco.zone)?.name ?? ''}';
+      final z = cat.zone(eco.zone);
+      return str.t('ui.missions.hud.eco_name', {
+        'tier': eco.tier,
+        'zone': z == null ? '' : zoneNameText(str, z),
+      });
     }
     // Prueba del Tiempo (docs/specs/ascension.md § 1).
     final trial = trialDef(s.trial);
     if (trial != null && m.missionId == 'trial') {
-      return 'Prueba del Tiempo ${trial.roman}';
+      return str.t('ui.missions.hud.trial_name', {'roman': trial.roman});
     }
-    return cat.zone(m.zone)?.name ??
-        cat.mission(m.missionId)?.name ??
-        m.missionId;
+    final z = cat.zone(m.zone);
+    if (z != null) return zoneNameText(str, z);
+    final md = cat.mission(m.missionId);
+    return md == null ? m.missionId : missionNameText(str, md);
   }
 
   /// Lo que el jugador local ve del piso (con Alt, también lo oculto).
@@ -934,7 +940,7 @@ class _MissionBar extends StatelessWidget {
   /// El texto de la barra (también es la clave de su [Memo]); `null` en
   /// el pueblo (v0.10.1: sin barra de ayuda, los `[E]` salen al acercarse
   /// y los atajos están en la pausa).
-  static String? textFor(SessionView view, String missionName) {
+  static String? textFor(SessionView view, String missionName, Strings str) {
     final s = view.session;
     final m = s.mission;
     final String? text;
@@ -942,17 +948,17 @@ class _MissionBar extends StatelessWidget {
         s.mode != SessionMode.lobby &&
         s.mode != SessionMode.prep) {
       final goals = m.open
-          ? '¡Derrota al jefe!'
+          ? str.t('ui.missions.hud.defeat_boss')
           : m.objectives
               .map((o) =>
-                  '${o.kind.label.split(' ').first} ${o.count.clamp(0, o.goal)}/${o.goal}')
+                  '${objectiveShortText(str, o.kind)} ${o.count.clamp(0, o.goal)}/${o.goal}')
               .join(' · ');
       final name = m.floors > 1
-          ? floorLabelText(missionName, m.floor, m.floors)
+          ? floorLabelText(str, missionName, m.floor, m.floors)
           : missionName;
       text = '$name · $goals · ${clockText(m.elapsed)}';
     } else if (s.mode == SessionMode.prep) {
-      text = 'Preparación de misión';
+      text = str.t('ui.missions.hud.prep');
     } else {
       text = null;
     }
@@ -961,7 +967,7 @@ class _MissionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = textFor(view, missionName);
+    final text = textFor(view, missionName, worldStrings(context));
     // Tiempo de turno de la sala si no es el normal (en co-op lo fija el
     // anfitrión; accessibility.md § 7).
     final turns = turnTimerNote(view);
@@ -1080,14 +1086,16 @@ List<MinimapLoot> minimapLootFor(
 
 /// El mapa en grande (tecla M; panel `WorldPanel.map`).
 Widget fullMapPanel(SessionView view, SessionController controller,
-    {bool reduceMotion = false}) {
+    {bool reduceMotion = false, Strings? strings}) {
   final s = view.session;
   final m = s.mission;
-  final name = WorldHud(view: view, controller: controller)._missionName(s);
+  final str = strings ?? worldFallbackStrings();
+  final name =
+      WorldHud(view: view, controller: controller)._missionName(s, str);
   final title = m == null || s.mode == SessionMode.lobby
-      ? 'Mapa del mundo'
+      ? str.t('ui.missions.hud.world_map')
       : m.floors > 1
-          ? floorLabelText(name, m.floor, m.floors)
+          ? floorLabelText(str, name, m.floor, m.floors)
           : name;
   return FullMap(
     key: const ValueKey('panel-map'),
@@ -1320,23 +1328,25 @@ void toggleObjectives(WidgetRef ref) {
 
 /// Resumen de una línea de la caja plegada: `Piso 1/4 · Grupos 4/4 ·
 /// Opcional 1/2` (y `★ JEFE` con la barrera abierta).
-String objectivesSummaryText(MissionRun m, MapFloor? floor) {
+String objectivesSummaryText(MissionRun m, MapFloor? floor, [Strings? str]) {
+  final s = str ?? worldFallbackStrings();
   final floors = m.floors > 1;
   final f = m.floor;
   final parts = <String>[];
   if (floors) {
     final goal = f < m.floorGoals.length ? m.floorGoals[f] : 0;
     parts
-      ..add('Piso ${f + 1}/${m.floors}')
-      ..add('Grupos ${m.floorKills(f).clamp(0, goal)}/$goal');
+      ..add(s.t('ui.missions.hud.floor', {'floor': f + 1, 'floors': m.floors}))
+      ..add('${objectiveShortText(s, ObjectiveKind.kills)} '
+          '${m.floorKills(f).clamp(0, goal)}/$goal');
   }
   for (final o in m.objectives) {
     if (floors && o.kind == ObjectiveKind.kills) continue;
-    parts.add('${o.kind.label.split(' ').first} '
+    parts.add('${objectiveShortText(s, o.kind)} '
         '${o.count.clamp(0, o.goal)}/${o.goal}');
   }
   if (optionalSummary(m, floor) case final opt?) parts.add(opt);
-  if (m.open && (!floors || m.isLastFloor)) parts.add('★ JEFE');
+  if (m.open && (!floors || m.isLastFloor)) parts.add(s.t('ui.missions.hud.boss_star'));
   return parts.join(' · ');
 }
 
@@ -1376,13 +1386,14 @@ class _Objectives extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final str = worldStrings(context);
     final floors = mission.floors > 1;
     final f = mission.floor;
     final goal =
         floors && f < mission.floorGoals.length ? mission.floorGoals[f] : 0;
     final floorDone = floors && mission.floorKills(f) >= goal;
     final title = floors
-        ? '${floorLabelText(zoneName, f, mission.floors)}'
+        ? '${floorLabelText(str, zoneName, f, mission.floors)}'
             '${floorLevel == null ? '' : ' · Lv $floorLevel'}'
         : zoneName;
     final header = ActionLink(
@@ -1398,7 +1409,7 @@ class _Objectives extends StatelessWidget {
             // la barra de misión).
             Flexible(
               child: collapsed
-                  ? Text(retroText(objectivesSummaryText(mission, floor)),
+                  ? Text(retroText(objectivesSummaryText(mission, floor, str)),
                       key: const ValueKey('hud-objectives-summary'),
                       style: const TextStyle(color: DsColors.textPrimary))
                   : Text(retroText(title),
@@ -1431,30 +1442,32 @@ class _Objectives extends StatelessWidget {
           if (!collapsed) ...[
             if (floors) ...[
               if (mission.isLastFloor)
-                objectiveLine('¡Piso del JEFE!',
+                objectiveLine(str.t('ui.missions.hud.boss_floor'),
                     mark: '',
                     color: ProtoColors.crimson,
                     key: const ValueKey('hud-boss-floor')),
               objectiveLine(
-                  'Grupos del piso '
-                  '${mission.floorKills(f).clamp(0, goal)}/$goal',
+                  str.t('ui.missions.hud.floor_groups', {
+                    'n': '${mission.floorKills(f).clamp(0, goal)}/$goal'
+                  }),
                   done: floorDone),
               if (!mission.isLastFloor)
                 mission.floorOpen(f)
-                    ? objectiveLine('Escalera abierta: bajá [E]',
+                    ? objectiveLine(str.t('ui.missions.hud.stairs_open'),
                         mark: '>', color: ProtoColors.green)
-                    : objectiveLine('Escalera: despejá el piso'),
+                    : objectiveLine(str.t('ui.missions.hud.stairs_closed')),
             ],
             for (final o in mission.objectives)
               if (!floors || o.kind != ObjectiveKind.kills)
                 objectiveLine(
-                    '${o.kind.label} ${o.count.clamp(0, o.goal)}/${o.goal}',
+                    '${objectiveLongText(str, o.kind)} '
+                    '${o.count.clamp(0, o.goal)}/${o.goal}',
                     done: o.done),
             if (!floors || mission.isLastFloor)
               mission.open
-                  ? objectiveLine('¡Ve por el JEFE!',
+                  ? objectiveLine(str.t('ui.missions.hud.go_boss'),
                       mark: '★', color: ProtoColors.gold)
-                  : objectiveLine('Jefe: completa los objetivos'),
+                  : objectiveLine(str.t('ui.missions.hud.boss_locked')),
             ...explorationLines(mission, floor, time),
           ],
         ],

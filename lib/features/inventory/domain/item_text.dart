@@ -19,6 +19,7 @@ import '../../../game_engine/rules/weapon_weight.dart';
 import 'battle_impact.dart';
 import 'skill_tip.dart';
 import 'weapon_text.dart';
+import 'item_names.dart';
 
 /// Textos de objetos del loot v2 (ficha / tooltip, requisitos, mods) en
 /// el markup del prototipo (`ProtoMarkup`). Ver docs/specs/panels.md §
@@ -71,7 +72,7 @@ String requirementsLineMarkup(WeaponDef w, int level, PlayerAttributes a) {
 /// Nombre de un objeto en el color de su rareza (negrita).
 String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
     '<b style="color:${rarityHex(it.rarity)}">'
-    '${_esc(rules.items.displayName(it))}</b>';
+    '${_esc(localItemName(rules.items, it))}</b>';
 
 /// Texto de un mod con su tier, en azul (los fijos de un único, naranja).
 String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
@@ -254,9 +255,9 @@ String itemTooltipMarkup(
   final items = rules.items;
   final w = items.baseOf(it);
   final l = <String>[itemNameMarkup(rules, it)];
-  final base = w?.name ?? it.baseId;
+  final base = w?.text ?? it.baseId;
   final generated = it.rarity.index >= Rarity.raro.index;
-  l.add('<span class="k">${it.rarity.label} · ${w?.type ?? '?'} · '
+  l.add('<span class="k">${it.rarity.text} · ${w?.type ?? '?'} · '
       'nivel de objeto ${it.itemLevel}</span>'
       '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
       '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}');
@@ -297,7 +298,7 @@ String itemTooltipMarkup(
   } else if (skills) {
     l.add('<span class="k">Habilidades:</span> ${itemSkillsMarkup(rules, it)}');
   }
-  final flavor = items.uniqueOf(it)?.flavor;
+  final flavor = items.uniqueOf(it)?.flavorText;
   if (flavor != null && flavor.isNotEmpty) l.add(_c(_dim, _esc(flavor)));
   return l.join('<br>');
 }
@@ -324,11 +325,11 @@ String itemTooltipMarkup(
   }
   final items = rules.items;
   final w = items.baseOf(it);
-  final base = w?.name ?? it.baseId;
+  final base = w?.text ?? it.baseId;
   final generated = it.rarity.index >= Rarity.raro.index;
   final head = <String>[
     itemNameMarkup(rules, it),
-    '<span class="k">${it.rarity.label} · ${w?.type ?? '?'} · '
+    '<span class="k">${it.rarity.text} · ${w?.type ?? '?'} · '
         'nivel de objeto ${it.itemLevel}</span>'
         '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
         '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
@@ -352,7 +353,7 @@ String itemTooltipMarkup(
     if (w != null) ...weightLinesMarkup(rules, w, stats: stats),
     if (it.forgeLevel > 0 || ItemRules.forgeCapOf(it) > 0) forgeText(it),
   ];
-  final flavor = items.uniqueOf(it)?.flavor;
+  final flavor = items.uniqueOf(it)?.flavorText;
   final hasMods = it.rarity.maxMods > 0 || it.affixes.isNotEmpty;
   final element = weaponElementMarkup(it);
   final el = weaponElementOf(it);
@@ -408,7 +409,7 @@ String weaponRoleLine(WeaponDef w, ItemInstance it) {
   String short(String t) => _esc(plainShort(t, sentence: false));
   final l = <String>[
     itemNameMarkup(rules, it),
-    '<span class="k">${it.rarity.label}</span>'
+    '<span class="k">${it.rarity.text}</span>'
         '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
     if (w != null) _c(_sky, _esc(weaponRoleLine(w, it))),
     if (stats != null)
@@ -512,7 +513,7 @@ String stackTooltipMarkup(StackKind k, int count) {
 String itemRowMarkup(ProgressionRules rules, ItemInstance it) {
   final w = rules.items.baseOf(it);
   return '${itemNameMarkup(rules, it)}<br>'
-      '<small>${it.rarity.label} · ${w?.type ?? '?'} · Nv ${w?.level ?? 1}'
+      '<small>${it.rarity.text} · ${w?.type ?? '?'} · Nv ${w?.level ?? 1}'
       '</small>';
 }
 
@@ -576,7 +577,7 @@ String ecoTooltipMarkup(ProgressionRules rules, EcoItem e,
   final z = eco.zoneOf(e);
   final l = <String>[
     ecoNameMarkup(rules, e),
-    '<span class="k">Eco ${e.rarity.label} · Tier ${e.tier} · '
+    '<span class="k">Eco ${e.rarity.text} · Tier ${e.tier} · '
         'monstruos nivel ${e.monsterLevel}</span>',
     'Zona: <b>${_esc(z?.name ?? '?')}</b> · '
         '${e.floors} piso${e.floors == 1 ? '' : 's'}',

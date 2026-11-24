@@ -8,6 +8,7 @@ import '../../../game_engine/data/summoner_catalog.dart';
 import '../../combat/domain/skill_text.dart';
 import '../../combat/domain/summon_text.dart';
 import 'item_text.dart' show weightLinesMarkup;
+import 'item_names.dart';
 
 /// Textos de armas de los paneles — puerto de `reqHtml`, `wPowTxt`,
 /// `skHtml` (líneas 1262-1266) y `weaponTip` (1122-1131) en el markup
@@ -82,7 +83,7 @@ String weaponTooltip(ProgressionRules rules, PlayerProfile p, WeaponDef w) {
   final power = f.evaluate(p.attributes) *
       (1 + WeaponUpgradeLevels.powPer * (owned ? up.pow : 0));
   final l = <String>[
-    '<b>${owned ? rules.weaponDisplayName(p, w.id) : w.name}</b> '
+    '<b>${owned ? localWeaponDisplayName(rules, p, w.id) : w.text}</b> '
         '<span class="k">${w.type} · tier ${w.tier}</span>',
     'Requisitos: ${w.requirements.entries.map((e) {
       final ok = p.attributes[e.key] >= e.value;

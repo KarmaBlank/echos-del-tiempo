@@ -20,6 +20,7 @@ import 'package:echos_del_tiempo/game_engine/rules/display_names.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
+import '../helpers/battle_log_helper.dart';
 
 /// Ids de mecánica de todas las pasivas de arma, a todos los niveles.
 List<String> _weaponPassiveMechanicIds() => [

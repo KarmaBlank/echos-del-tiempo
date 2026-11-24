@@ -1456,7 +1456,18 @@ class _ControlsTab extends StatelessWidget {
       'vote',
     ],
     'battle': ['action', 'target', 'pass', 'back'],
-    'menus': [],
+    // Teclas de los menús (lib/app/widgets/menu_focus.dart, kMenuKeys).
+    'menus': [
+      'arrows',
+      'tab',
+      'enter',
+      'esc',
+      'qe',
+      'ctrl_tab',
+      'digits',
+      'ctrl_arrows',
+      'inventory',
+    ],
     'chat': ['open', 'close'],
   };
 
@@ -1464,16 +1475,13 @@ class _ControlsTab extends StatelessWidget {
         for (final e in _bindings.entries)
           (
             t.t('ui.settings.controls.section.${e.key}'),
-            // Mapa de teclas de los menús (lib/app/widgets/menu_focus.dart).
-            e.key == 'menus'
-                ? kMenuKeys
-                : [
-                    for (final id in e.value)
-                      (
-                        t.t('ui.settings.controls.${e.key}.$id.keys'),
-                        t.t('ui.settings.controls.${e.key}.$id.action'),
-                      ),
-                  ],
+            [
+              for (final id in e.value)
+                (
+                  t.t('ui.settings.controls.${e.key}.$id.keys'),
+                  t.t('ui.settings.controls.${e.key}.$id.action'),
+                ),
+            ],
           ),
       ];
 

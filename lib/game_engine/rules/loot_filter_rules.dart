@@ -274,7 +274,55 @@ Ocultar # Mágicos de nivel bajo
     return b.toString().toLowerCase();
   }
 
-  static Rarity? _rarity(String s) => switch (_fold(s)) {
+  /// English keywords accepted next to the Spanish ones (folded English →
+  /// folded Spanish). Always on, whatever the language: the host parses
+  /// every player's filter, so the grammar can not depend on a locale.
+  static const englishAliases = <String, String>{
+    'show': 'mostrar',
+    'hide': 'ocultar',
+    'rarity': 'rareza',
+    'type': 'tipo',
+    'class': 'clase',
+    'itemlevel': 'nivelobjeto',
+    'relativelevel': 'nivelrelativo',
+    'hasmod': 'tienemod',
+    'weight': 'peso',
+    'passive': 'pasiva',
+    'usable': 'utilizable',
+    'item': 'objeto',
+    'buildupgrade': 'buildmejora',
+    'mybuild': 'mibuild',
+    'border': 'borde',
+    'background': 'fondo',
+    'size': 'tamano',
+    'sound': 'sonido',
+    'icon': 'icono',
+    'common': 'comun',
+    'magic': 'magico',
+    'rare': 'raro',
+    'epic': 'epico',
+    'legendary': 'legendario',
+    'unique': 'unico',
+    'weapon': 'arma',
+    'potion': 'pocion',
+    'echo': 'eco',
+    'skill': 'habilidad',
+    'skills': 'habilidades',
+    'yes': 'si',
+    'true': 'verdadero',
+    'false': 'falso',
+    'light': 'ligera',
+    'medium': 'media',
+    'heavy': 'pesada',
+  };
+
+  /// [_fold] plus [englishAliases].
+  static String _word(String s) {
+    final f = _fold(s);
+    return englishAliases[f] ?? f;
+  }
+
+  static Rarity? _rarity(String s) => switch (_word(s)) {
         'comun' || 'normal' => Rarity.comun,
         'magico' || 'magica' => Rarity.magico,
         'raro' || 'rara' => Rarity.raro,
@@ -284,7 +332,7 @@ Ocultar # Mágicos de nivel bajo
       };
 
   /// Clase de coincidencia de `Build` (`Tipo` y `Arma` = `Base`).
-  static BuildMatch? _buildMatch(String s) => switch (_fold(s)) {
+  static BuildMatch? _buildMatch(String s) => switch (_word(s)) {
         'base' || 'tipo' || 'arma' => BuildMatch.base,
         'mod' || 'mods' => BuildMatch.mod,
         'pasiva' => BuildMatch.pasiva,
@@ -294,7 +342,7 @@ Ocultar # Mágicos de nivel bajo
 
   static bool? _yesNo(List<String> a) {
     if (a.isEmpty) return true;
-    return switch (_fold(a.first)) {
+    return switch (_word(a.first)) {
       'si' || 'verdadero' => true,
       'no' || 'falso' => false,
       _ => null,
@@ -371,7 +419,7 @@ Ocultar # Mágicos de nivel bajo
         ..removeWhere((w) => w.isEmpty);
       if (words.isEmpty) continue;
       void err(String msg) => errors.add('línea ${n + 1}: $msg');
-      final key = _fold(words.first);
+      final key = _word(words.first);
       final a = words.sublist(1);
 
       if (key == 'mostrar' || key == 'ocultar') {
@@ -453,7 +501,7 @@ Ocultar # Mágicos de nivel bajo
           final cs = [
             for (final x in a)
               WeightClass.values
-                  .where((c) => _fold(c.label) == _fold(x))
+                  .where((c) => _fold(c.label) == _word(x))
                   .firstOrNull,
           ];
           if (a.isEmpty || cs.any((c) => c == null)) {
@@ -491,7 +539,7 @@ Ocultar # Mágicos de nivel bajo
           final ks = [
             for (final k in a)
               LootKind.values
-                  .where((x) => _fold(x.word) == _fold(k))
+                  .where((x) => _fold(x.word) == _word(k))
                   .firstOrNull,
           ];
           if (a.isEmpty || ks.any((k) => k == null)) {

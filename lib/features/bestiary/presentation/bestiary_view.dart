@@ -15,6 +15,7 @@ import '../../../game_engine/rules/family_rules.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../domain/bestiary_text.dart';
+import '../../../core/i18n/data_text.dart';
 import '../../../core/i18n/i18n_providers.dart';
 
 /// El BESTIARIO (docs/specs/bestiary.md § 4): búsqueda arriba, filtro por
@@ -76,6 +77,10 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
 
   BestiaryProgress get _b => widget.bestiary;
 
+  /// Nombre del enemigo en el idioma activo (i18n.md § 3.4).
+  String _name(BestiaryEntry e) =>
+      ref.strings.data(DataKeys.enemyName(e.id), e.def.name);
+
   /// Las fichas que pasan el filtro. Familia y búsqueda solo ven las
   /// descubiertas (no revelan a las que faltan).
   List<BestiaryEntry> get _visible {
@@ -86,7 +91,7 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
         if (_b.knows(e.id) &&
             (_family == null || e.family == _family) &&
             (q.isEmpty ||
-                e.def.name.toLowerCase().contains(q) ||
+                _name(e).toLowerCase().contains(q) ||
                 (e.family?.label.toLowerCase().contains(q) ?? false)))
           e,
     ];
@@ -183,7 +188,9 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
                                           ? ref.t('ui.bestiary.section.other')
                                           : ref.t('ui.bestiary.section.zone', {
                                               'zone': z,
-                                              'name': kZones[z - 1].name
+                                              'name': ref.strings.data(
+                                                  DataKeys.zoneName(kZones[z - 1].id),
+                                                  kZones[z - 1].name)
                                             })),
                                   for (final e in byZone[z]!) _row(e),
                                 ],
@@ -247,7 +254,7 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
           width: box,
           height: box,
           child: Center(
-              child: Text(known ? e.def.name.characters.first : '?',
+              child: Text(known ? _name(e).characters.first : '?',
                   style: DsText.body(
                       known ? DsColors.textPrimary : DsColors.textSecondary))));
     }
@@ -278,7 +285,7 @@ class _BestiaryViewState extends ConsumerState<BestiaryView> {
       key: ValueKey('bestiary-card-${e.id}'),
       focusNode: _node(e.id),
       leading: _sprite(e, RetroType.width(context, 20), known: known),
-      title: retroText(known ? e.def.name : '???'),
+      title: retroText(known ? _name(e) : '???'),
       titleColor: e.def.boss
           ? DsColors.reward
           : known

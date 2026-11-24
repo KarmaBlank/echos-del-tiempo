@@ -290,3 +290,9 @@ Funcionalidad pendiente:
   pantallas todavía no edita `textKey` (fase 4); en es-AR manda `text`.
 - `showQuitGameDialog` y la confirmación de la pausa siguen con su
   pregunta en español.
+
+## Idiomas fase 3 (v0.40.0)
+
+- Tres mecanismos para traducir catálogos (`CatalogText` + `item_names.dart`,
+  `catalog_names.dart` `.tr` + `GameText.current`, `DataKeys` +
+  `Strings.data`): unificarlos en uno (`docs/specs/i18n.md` §3.7).

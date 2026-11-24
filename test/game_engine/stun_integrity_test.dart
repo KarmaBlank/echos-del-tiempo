@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // "Un enemigo aturdido igual me atacó" (v0.5.1): el log nunca dice que
 // alguien quedó aturdido si el estado no entró, y un aturdido nunca

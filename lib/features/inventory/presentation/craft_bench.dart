@@ -2,6 +2,7 @@ import 'weapon_compare_view.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
@@ -272,7 +273,7 @@ class _CraftBenchState extends State<CraftBench> {
   bool _baseHit(WeaponDef w) {
     final words =
         foldSearch(_baseQ.text).split(RegExp(r'\s+')).where((x) => x.isNotEmpty);
-    final text = foldSearch('${w.name} ${w.type} ${w.classId}');
+    final text = foldSearch('${w.text} ${w.name} ${w.type} ${w.classId}');
     return words.every(text.contains);
   }
 
@@ -1203,7 +1204,7 @@ class _CraftBenchState extends State<CraftBench> {
             final w = shown[i];
             return RetroTooltip(
                 keyboardFocus: focused,
-                message: '<b>${protoEsc(w.name)}</b> '
+                message: '<b>${protoEsc(w.text)}</b> '
                     '${protoColor(ProtoColors.dim, protoEsc(w.type))} '
                     '${weightTagMarkup(w)}'
                     '${rules.ignoreRequirements ? '' : '<br>${_s.t('ui.inventory.craft.level_short', {'n': w.level})} ${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}'}',
@@ -1299,7 +1300,7 @@ class _CraftBenchState extends State<CraftBench> {
                     q.kind == TargetReqKind.passive))
               if (tr.donor(t, before, q.key, p, stash: _stash)
                   case final d? when d.inStash)
-                _s.t('ui.inventory.craft.in_stash', {'req': q.label, 'name': protoEsc(shop.rules.items.displayName(d.item))}),
+                _s.t('ui.inventory.craft.in_stash', {'req': q.label, 'name': protoEsc(localItemName(shop.rules.items, d.item))}),
         ];
         final text = after == null
             ? '$a%'
@@ -1409,11 +1410,11 @@ class _CraftBenchState extends State<CraftBench> {
     final same = protoColor(ProtoColors.dim, '=');
     out.add(cmp('', '<b style="color:#ffd166">${_s.t('ui.inventory.craft.before')}</b>',
         '<b style="color:#ffd166">${_s.t('ui.inventory.craft.after')}</b>${random ? ' ${protoColor(ProtoColors.sky, _s.t('ui.inventory.craft.random'))}' : ''}'));
-    final n0 = rules.items.displayName(target);
+    final n0 = localItemName(rules.items, target);
     out.add(cmp(
         _s.t('ui.inventory.craft.row.weapon'),
         itemNameMarkup(rules, target),
-        after == null || rules.items.displayName(after) == n0
+        after == null || localItemName(rules.items, after) == n0
             ? same
             : itemNameMarkup(rules, after),
         key: const ValueKey('craft-name')));
@@ -1446,10 +1447,10 @@ class _CraftBenchState extends State<CraftBench> {
     }
     out.add(cmp(
         _s.t('ui.inventory.craft.row.rarity'),
-        '<span style="color:${rarityHex(target.rarity)}">${target.rarity.label}</span>',
+        '<span style="color:${rarityHex(target.rarity)}">${target.rarity.text}</span>',
         after == null || after.rarity == target.rarity
             ? same
-            : '<b style="color:${rarityHex(after.rarity)}">${after.rarity.label}</b> '
+            : '<b style="color:${rarityHex(after.rarity)}">${after.rarity.text}</b> '
                 '${protoColor(ProtoColors.green, '▲')}'));
     final pBefore = rules.items.passiveText(target);
     final pAfter = after == null ? pBefore : rules.items.passiveText(after);
@@ -1491,7 +1492,7 @@ class _CraftBenchState extends State<CraftBench> {
         _s.t('ui.inventory.craft.row.mods'),
         _s.t('ui.inventory.craft.mods_count', {'n': target.modCount, 'max': target.rarity.maxMods}),
         '${_s.t('ui.inventory.craft.mods_count', {'n': shown.modCount, 'max': shown.rarity.maxMods})} '
-            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.room_of', {'rarity': shown.rarity.label}))}',
+            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.room_of', {'rarity': shown.rarity.text}))}',
         key: const ValueKey('craft-mods-title'),
         extra: RetroTooltip(
           key: const ValueKey('craft-tier-help'),

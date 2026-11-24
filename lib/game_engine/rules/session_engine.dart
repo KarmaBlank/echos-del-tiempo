@@ -149,8 +149,8 @@ class SessionEngine {
     this.cinematics,
     this.gameMode = GameModeKind.mundo,
     this.freeMovement = false,
-  })  : nowSeconds = nowSeconds ??
-            (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
+  })  : nowSeconds =
+            nowSeconds ?? (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
         tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
         _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
@@ -328,7 +328,9 @@ class SessionEngine {
   /// `Build` y la ★); el host usa `SessionPlayer.buildWants`, la UI el
   /// plan local y solo para el jugador local (build_planner.md § 6).
   FilterVerdict lootVerdict(PlayerProfile p, LootDrop d, {BuildWants? wants}) =>
-      LootFilterRules(catalog: catalog).evaluate(filterOf(p), d,
+      LootFilterRules(catalog: catalog).evaluate(
+          filterOf(p),
+          d,
           FilterContext(
               level: p.level,
               attributes: p.attributes,
@@ -615,8 +617,11 @@ class SessionEngine {
   bool canOffer(GameSession s, String id) {
     final p = s.players[id];
     final m = s.mission;
-    if (p == null || m == null || s.mode != SessionMode.field ||
-        s.result != null || !DungeonRules.persistent(s, zone: m.zone)) {
+    if (p == null ||
+        m == null ||
+        s.mode != SessionMode.field ||
+        s.result != null ||
+        !DungeonRules.persistent(s, zone: m.zone)) {
       return false;
     }
     final b = DungeonRules.boss(m);
@@ -672,7 +677,8 @@ class SessionEngine {
 
   /// `onMsg`: aplica la acción de [playerId]. `null` si no es válida en
   /// este momento (el estado no cambia).
-  SessionStep? apply(GameSession session, String playerId, SessionAction action) {
+  SessionStep? apply(
+      GameSession session, String playerId, SessionAction action) {
     final actor = session.players[playerId];
     if (actor == null) return null;
     // Un compañero solo pelea y maneja su personaje; el resto es del líder.
@@ -730,8 +736,8 @@ class SessionEngine {
   /// redondeada hacia arriba, como la muestra el HUD).
   /// [blessing]: bendición de santuario activa (worldgen.md § 11.4).
   BattlePartyMember partyMember(SessionPlayer p, {BlessingKind? blessing}) {
-    final build = ExplorationRules.blessedBuild(
-        progression.buildOf(p.profile), blessing);
+    final build =
+        ExplorationRules.blessedBuild(progression.buildOf(p.profile), blessing);
     return BattlePartyMember(
       id: p.id,
       name: p.name,
@@ -768,9 +774,8 @@ class _Op {
       s.mission?.missionId == EcoRules.missionId ? s.eco : null;
 
   /// La Prueba que se está jugando (`null` fuera de una).
-  TrialDef? get _trial => s.mission?.missionId == TrialRules.missionId
-      ? trialDef(s.trial)
-      : null;
+  TrialDef? get _trial =>
+      s.mission?.missionId == TrialRules.missionId ? trialDef(s.trial) : null;
 
   /// El Jefe del Abismo que se está peleando (`null` fuera de uno).
   AbyssBossDef? get _abyss => s.mission?.missionId == AbyssRules.missionId
@@ -887,8 +892,16 @@ class _Op {
     }
     // Primero a los costados, con lugar para los nombres sobre las
     // cabezas (x ±30); después arriba y abajo.
-    const ring = [(-30, -7), (30, -7), (-30, 7), (30, 7), (-7, -21),
-        (7, -21), (-7, 21), (7, 21)];
+    const ring = [
+      (-30, -7),
+      (30, -7),
+      (-30, 7),
+      (30, 7),
+      (-7, -21),
+      (7, -21),
+      (-7, 21),
+      (7, 21)
+    ];
     final k = (i - 4) ~/ ring.length + 1;
     final (dx, dy) = ring[(i - 4) % ring.length];
     return WorldPoint(sp.x + dx * k, sp.y + dy * k);
@@ -903,9 +916,8 @@ class _Op {
     final oh = p.maxHp, om = p.maxMp;
     final d = rules.derivedStats(p.profile);
     // Oren (overworld_biomes.md § 10.6): +% de vida máxima.
-    p.maxHp = (d.maxHp *
-            (1 + ResidentRules.frac(s.town, NpcRole.vidente)))
-        .round();
+    p.maxHp =
+        (d.maxHp * (1 + ResidentRules.frac(s.town, NpcRole.vidente))).round();
     p.maxMp = d.maxMp;
     p.hp = math.min(p.hp, p.maxHp.toDouble());
     p.mp = math.min(p.mp, d.maxMp.toDouble());
@@ -1200,8 +1212,8 @@ class _Op {
         final before = p.profile;
         if (!_profileChange(
             p,
-            rules.fuse(p.profile, a.baseWeaponId, a.sacrificeWeaponId,
-                a.skillId))) {
+            rules.fuse(
+                p.profile, a.baseWeaponId, a.sacrificeWeaponId, a.skillId))) {
           return false;
         }
         say('${p.name} fusionó '
@@ -1242,8 +1254,7 @@ class _Op {
         return _stashTake(p, a);
 
       case MoveInventoryAction():
-        return _profileChange(
-            p, InventoryRules.move(p.profile, a.from, a.to));
+        return _profileChange(p, InventoryRules.move(p.profile, a.from, a.to));
 
       case SortInventoryAction():
         return _profileChange(p, rules.inventory.sort(p.profile, a.key));
@@ -1259,7 +1270,8 @@ class _Op {
         if (t != null && t.length > SetLootFilterAction.maxLength) {
           return false;
         }
-        p.profile = p.profile.copyWith(lootFilter: t, clearLootFilter: t == null);
+        p.profile =
+            p.profile.copyWith(lootFilter: t, clearLootFilter: t == null);
         return true;
 
       case SelectUltAction(:final ultId):
@@ -1537,8 +1549,8 @@ class _Op {
     final rules = e.achievements;
     final hits = <String, AchievementHits>{};
     if (actor != null && action != null && before != null) {
-      rules.fromAction(hits.putIfAbsent(actor.id, AchievementHits.new),
-          action, before, actor.profile);
+      rules.fromAction(hits.putIfAbsent(actor.id, AchievementHits.new), action,
+          before, actor.profile);
     }
     final battle = s.battle?.state;
     for (final ev in events) {
@@ -1660,10 +1672,9 @@ class _Op {
   /// evento lo anota en la cuenta de cada uno.
   void _abyssCompleted(AbyssBossDef d) {
     for (final p in players) {
-      final drops =
-          e.abyssRules.rewards(_abyssRand, d, p.profile, rules.loot);
-      p.profile = p.profile
-          .copyWith(abyssKills: {...p.profile.abyssKills, d.number});
+      final drops = e.abyssRules.rewards(_abyssRand, d, p.profile, rules.loot);
+      p.profile =
+          p.profile.copyWith(abyssKills: {...p.profile.abyssKills, d.number});
       _deliver(p, drops, LootSource.mission, p.x, p.y);
     }
     events.add(AbyssDefeatedEvent(d.number, [for (final p in players) p.id]));
@@ -1718,8 +1729,8 @@ class _Op {
       switch (TrialRules.trapAt(map.tileAt(tx, ty))) {
         case TrapKind.spikes when s.time >= p.spikeReady:
           p.spikeReady = s.time + TrialRules.spikeEvery;
-          final dmg = math.min(
-              (p.hp - 1).floor(), jsRound(p.maxHp * t.spikeDamage));
+          final dmg =
+              math.min((p.hp - 1).floor(), jsRound(p.maxHp * t.spikeDamage));
           if (dmg <= 0) continue;
           p.hp -= dmg;
           events.add(TrapTriggeredEvent(p.id, TrapKind.spikes, dmg));
@@ -1876,8 +1887,7 @@ class _Op {
     return true;
   }
 
-  bool get _onMap =>
-      s.mode == SessionMode.lobby || s.mode == SessionMode.field;
+  bool get _onMap => s.mode == SessionMode.lobby || s.mode == SessionMode.field;
 
   /// `DropItemAction`: al piso, compartido, donde está el jugador.
   bool _drop(SessionPlayer p, DropItemAction a) {
@@ -2064,7 +2074,7 @@ class _Op {
       final p = s.players[id]!;
       _recover(p, drops);
       say('${p.name}: ${drops.length == 1 ? 'lo que quedó' : '${drops.length} '
-          'cosas que quedaron'} en el piso ${drops.length == 1 ? 'va' : 'van'} '
+              'cosas que quedaron'} en el piso ${drops.length == 1 ? 'va' : 'van'} '
           'al alijo');
     }
   }
@@ -2082,8 +2092,9 @@ class _Op {
   /// queda en el piso, invisible, y se pierde al cambiar de mapa) y lo
   /// que no entra cae al piso. El de fin de misión va siempre al
   /// inventario (el mapa se cierra). Un mensaje por jugador con lo visible.
-  void _deliver(SessionPlayer p, List<LootDrop> drops, LootSource src,
-      double x, double y, {bool stashOverflow = false}) {
+  void _deliver(
+      SessionPlayer p, List<LootDrop> drops, LootSource src, double x, double y,
+      {bool stashOverflow = false}) {
     if (drops.isEmpty) return;
     var full = false;
     final capped = <String>{};
@@ -2091,8 +2102,8 @@ class _Op {
     final saved = <LootDrop>[];
     for (final d in drops) {
       final mission = src == LootSource.mission;
-      final visible = mission ||
-          e.lootVerdict(p.profile, d, wants: p.buildWants).visible;
+      final visible =
+          mission || e.lootVerdict(p.profile, d, wants: p.buildWants).visible;
       if (visible) shown.add(d);
       // Material con la pila llena: nunca al piso (loot.md § 14.2).
       final st = d.stack;
@@ -2144,7 +2155,8 @@ class _Op {
     final firsts = <String, LootDrop>{};
     final zone = level ?? s.mission?.zoneLevel ?? 1;
     for (final p in players) {
-      final drops = _rollFor(p, src, zone, chance: chance, extraBonus: extraBonus);
+      final drops =
+          _rollFor(p, src, zone, chance: chance, extraBonus: extraBonus);
       final w = drops.where((d) => d.isItem).firstOrNull;
       if (w != null) firsts[p.id] = w;
       _deliver(p, drops, src, x ?? p.x, y ?? p.y);
@@ -2261,7 +2273,8 @@ class _Op {
               (lead == null ||
                   _dist(lead.x, lead.y, g.x, g.y) >=
                       SessionEngine.pickupRange)) ||
-          !e.lootVerdict(owner.profile, g.drop, wants: owner.buildWants)
+          !e
+              .lootVerdict(owner.profile, g.drop, wants: owner.buildWants)
               .visible) {
         continue;
       }
@@ -2294,8 +2307,7 @@ class _Op {
     if (s.mode != SessionMode.field || m == null || !p.alive) return false;
     final f = e.mapFor(s).floor(m.floor);
     final at = f == null ? null : (down ? f.stairsDown : f.stairsUp);
-    if (at == null ||
-        _dist(p.x, p.y, at.x, at.y) >= WorldRules.stairsRange) {
+    if (at == null || _dist(p.x, p.y, at.x, at.y) >= WorldRules.stairsRange) {
       return false;
     }
     changeFloor(m.floor + (down ? 1 : -1), down: down);
@@ -2443,8 +2455,7 @@ class _Op {
           startMission(prep.missionId);
         }
       case SessionMode.levelUp:
-        if (humans
-            .every((p) => !p.levelUpPending || p.profile.points <= 0)) {
+        if (humans.every((p) => !p.levelUpPending || p.profile.points <= 0)) {
           for (final p in players) {
             p.levelUpPending = false;
           }
@@ -2485,10 +2496,13 @@ class _Op {
     if (z != null) {
       // persistent_dungeons.md: la mazmorra de zona es del mundo.
       if (DungeonRules.persistent(s, zone: m.zone)) {
-        if (DungeonRules.restore(s.town, m.id, catalog) case (final run, final n)?) {
+        if (DungeonRules.restore(s.town, m.id, catalog)
+            case (final run, final n)?) {
           s.mission = run;
           _enterField(m, run.seed);
-          if (n > 0) say('Pasaron días: los enemigos de la mazmorra volvieron.');
+          if (n > 0) {
+            say('Pasaron días: los enemigos de la mazmorra volvieron.');
+          }
           return;
         }
         _startZoneMission(m, z, seed: DungeonRules.seedFor(s.worldId!, m.id));
@@ -2610,7 +2624,8 @@ class _Op {
       objectives: objectives,
       enemies: enemies,
       items: items,
-      zoneLevel: LootRules.zoneLevel(m, [for (final p in players) p.profile.level]),
+      zoneLevel:
+          LootRules.zoneLevel(m, [for (final p in players) p.profile.level]),
     );
     _enterField(m, seed);
   }
@@ -2634,8 +2649,8 @@ class _Op {
     // v0.20.22 (worldgen.md § 6.8): con el tope de pisos, cada piso
     // jugado usa los grupos de un piso de la definición (el último, los
     // del último) y hay menos grupos normales por piso.
-    List<List<String>> groupsOf(int f) => m.groupsFor(
-        ZoneRules.sourceFloor(f, map.floors.length, m.floors));
+    List<List<String>> groupsOf(int f) =>
+        m.groupsFor(ZoneRules.sourceFloor(f, map.floors.length, m.floors));
     final perFloor = ZoneRules.groupsPerFloor(m.floorGoal);
     for (final fl in map.floors) {
       final spots = fl.spots;
@@ -2770,8 +2785,7 @@ class _Op {
       final commons = enemies
           .where((x) => x.floor == fl.index && !x.elite && !x.boss)
           .length;
-      final have =
-          enemies.where((x) => x.floor == fl.index && x.elite).length;
+      final have = enemies.where((x) => x.floor == fl.index && x.elite).length;
       final want = curve.eliteEveryC <= 1
           ? commons
           : (commons / (curve.eliteEveryC - 1)).ceil();
@@ -2809,8 +2823,7 @@ class _Op {
     // su propio azar para no mover las tiradas de siempre.
     final cr = mulberry32(seed + 13);
     ChestTier tierRoll() {
-      final total =
-          kChestTiers.values.fold(0.0, (a, d) => a + d.weight);
+      final total = kChestTiers.values.fold(0.0, (a, d) => a + d.weight);
       var x = cr() * total;
       for (final d in kChestTiers.values) {
         x -= d.weight;
@@ -2863,8 +2876,18 @@ class _Op {
         // Tesoro del guardián: un cofre dorado a 1–2 tiles de su lugar.
         WorldPoint? at;
         for (final (dx, dy) in const [
-          (1, 0), (-1, 0), (0, 1), (0, -1), (2, 0), (-2, 0), (0, 2), (0, -2),
-          (1, 1), (-1, 1), (1, -1), (-1, -1),
+          (1, 0),
+          (-1, 0),
+          (0, 1),
+          (0, -1),
+          (2, 0),
+          (-2, 0),
+          (0, 2),
+          (0, -2),
+          (1, 1),
+          (-1, 1),
+          (1, -1),
+          (-1, -1),
         ]) {
           final tx = gt.$1 + dx, ty = gt.$2 + dy;
           if (solid(tx, ty) || !fl.containsTile(tx, ty)) continue;
@@ -3035,7 +3058,8 @@ class _Op {
           source: LootSource.chest,
           extraBonus: def.rarityBonus,
           themeChance: def.themeChance)));
-    } else if (def.themeChance > 0 && _rand() < def.themeChance * def.weaponChance) {
+    } else if (def.themeChance > 0 &&
+        _rand() < def.themeChance * def.weaponChance) {
       drops.add(LootDrop.item(_themed(q, il,
           extraBonus: def.rarityBonus, source: LootSource.chest)));
     }
@@ -3048,9 +3072,8 @@ class _Op {
         extraBonus: def.rarityBonus));
     final mats = <CraftMaterial, int>{};
     for (var i = 0; i < def.extraMaterialRolls; i++) {
-      for (final e in rules.loot
-          .rollMaterials(_rand, zone, LootSource.chest)
-          .entries) {
+      for (final e
+          in rules.loot.rollMaterials(_rand, zone, LootSource.chest).entries) {
         mats[e.key] = (mats[e.key] ?? 0) + e.value;
       }
     }
@@ -3076,7 +3099,9 @@ class _Op {
   /// Un arma de [q] a nivel [il] con base temática de la zona si hay
   /// (worldgen.md § 11, `kThemeBaseWords`).
   ItemInstance _themed(SessionPlayer q, int il,
-      {Rarity? rarity, double extraBonus = 0, LootSource source = LootSource.chest}) {
+      {Rarity? rarity,
+      double extraBonus = 0,
+      LootSource source = LootSource.chest}) {
     final r = rarity ??
         rules.loot.rollRarity(_rand, il, source,
             extraBonus: extraBonus, eco: _eco != null);
@@ -3089,12 +3114,11 @@ class _Op {
           if (w.level <= il && words.any(w.id.contains)) w,
       ];
       base = LootRules.pickWeighted(
-              _rand,
-              pool,
-              (w) =>
-                  (w.level >= il - 10 ? 3.0 : 1.0) *
-                  (w.family == q.profile.classId ? 2.0 : 1.0))
-          ?.id;
+          _rand,
+          pool,
+          (w) =>
+              (w.level >= il - 10 ? 3.0 : 1.0) *
+              (w.family == q.profile.classId ? 2.0 : 1.0))?.id;
     }
     return rules.loot.generate(_rand,
         itemLevel: il,
@@ -3151,9 +3175,8 @@ class _Op {
       case PoiKind.brazier:
         m.poiUsed.add(poi.id);
         final q = f.quests.where((q) => q.id == poi.quest).firstOrNull;
-        final (a, b) = q == null
-            ? (0, 0)
-            : ExplorationRules.questProgress(q, m, f);
+        final (a, b) =
+            q == null ? (0, 0) : ExplorationRules.questProgress(q, m, f);
         say('${p.name} encendió un brasero ($a/$b).');
       case PoiKind.lantern:
         m.poiUsed.add(poi.id);
@@ -3360,10 +3383,11 @@ class _Op {
             w,
       ];
       base = LootRules.pickWeighted(
-              _rand, pool, (w) => wants.weaponBases.contains(w.id) ? 3.0 : 1.0)
-          ?.id;
+          _rand, pool, (w) => wants.weaponBases.contains(w.id) ? 3.0 : 1.0)?.id;
     }
-    if (base == null) return _themed(p, il, rarity: r, source: LootSource.elite);
+    if (base == null) {
+      return _themed(p, il, rarity: r, source: LootSource.elite);
+    }
     return rules.loot.generate(_rand,
         itemLevel: il,
         rarity: r,
@@ -3378,8 +3402,8 @@ class _Op {
     if (m == null) return;
     for (final en in m.enemies) {
       if (!en.alive || en.boss || en.floor != m.floor) continue;
-      if (players.any((p) =>
-          _dist(p.x, p.y, en.x, en.y) < SessionEngine.calmRange)) {
+      if (players
+          .any((p) => _dist(p.x, p.y, en.x, en.y) < SessionEngine.calmRange)) {
         en
           ..x = en.homeX
           ..y = en.homeY
@@ -3519,8 +3543,9 @@ class _Op {
       if (!en.alive || en.floor != m.floor) continue;
       if (!en.boss) _enemyAi(en, map, dt);
       if (s.time > s.graceUntil) {
-        final range =
-            en.boss ? SessionEngine.bossContactRange : SessionEngine.contactRange;
+        final range = en.boss
+            ? SessionEngine.bossContactRange
+            : SessionEngine.contactRange;
         final p = _touching(en.x, en.y, range, any: true);
         if (p != null) {
           startBattle(en, p);
@@ -3562,8 +3587,7 @@ class _Op {
       if (!p.alive) continue;
       // Distancia relativa a su radio: el que más llama la atención gana.
       final d = _dist(p.x, p.y, en.x, en.y) /
-          LightRules.aggroFactor(
-              wisp: p.wisp, dark: dark, outdoor: outdoor);
+          LightRules.aggroFactor(wisp: p.wisp, dark: dark, outdoor: outdoor);
       if (d < nd) {
         nd = d;
         near = p;
@@ -3611,7 +3635,9 @@ class _Op {
       ..townPotion = ResidentRules.frac(s.town, NpcRole.herbolaria)
       ..townHp = ResidentRules.frac(s.town, NpcRole.vidente);
     final step = e.battles.start(
-      party: [for (final p in players) e.partyMember(p, blessing: s.mission?.blessing)],
+      party: [
+        for (final p in players) e.partyMember(p, blessing: s.mission?.blessing)
+      ],
       enemyTypes: en.group,
       elite: en.elite,
       triggeredBy: trigger.id,
@@ -3637,7 +3663,8 @@ class _Op {
         ..moving = false;
     }
     s.mode = SessionMode.battle;
-    events.add(BattleStartedEvent(s.seq, en.id, boss: en.boss, elite: en.elite));
+    events
+        .add(BattleStartedEvent(s.seq, en.id, boss: en.boss, elite: en.elite));
   }
 
   bool _battleCommand(SessionPlayer p, BattleCommand cmd) {
@@ -3689,7 +3716,8 @@ class _Op {
       final xp = jsRound(ZoneRules.battleXp(won.xp, b.level) * (1 + xpBonus));
       step.state
         ..outcome = BattleOutcome(victory: true, xp: xp, credits: won.credits)
-        ..log = '¡Victoria! +$xp XP · +${won.credits} créditos para cada uno';
+        ..logLine = LogLine(
+            'ui.battle_log.victory_credits', {'x': xp, 'c': won.credits});
       evs = [
         for (final ev in evs)
           ev is BattleEndedEvent && ev.victory
@@ -3702,7 +3730,9 @@ class _Op {
     final m = s.mission;
     final partyIds = {for (final c in step.state.party) c.id};
     for (final ev in step.events) {
-      if (ev is KnockedOutEvent && partyIds.contains(ev.targetId) && m != null) {
+      if (ev is KnockedOutEvent &&
+          partyIds.contains(ev.targetId) &&
+          m != null) {
         m.kos++;
       }
     }
@@ -3730,8 +3760,8 @@ class _Op {
         ..hp = c.hp.toDouble()
         ..mp = c.mp
         ..ult = c.ult
-        ..profile = p.profile.copyWith(
-            potions: c.potions, ethers: c.ethers, aethers: c.aethers);
+        ..profile = p.profile
+            .copyWith(potions: c.potions, ethers: c.ethers, aethers: c.aethers);
     }
     if (!outcome.victory) return;
     // Travesía: sin XP ni créditos de batalla (las recompensas los
@@ -3739,9 +3769,9 @@ class _Op {
     if (s.run != null) return;
     final m = s.mission;
     // Kael (overworld_biomes.md § 10.6): +% de XP para toda la sala.
-    final xp = (outcome.xp *
-            (1 + ResidentRules.frac(s.town, NpcRole.instructor)))
-        .round();
+    final xp =
+        (outcome.xp * (1 + ResidentRules.frac(s.town, NpcRole.instructor)))
+            .round();
     if (m != null) {
       m.xp += xp;
       m.credits += outcome.credits;
@@ -3749,8 +3779,7 @@ class _Op {
     }
     for (final p in players) {
       final g = rules.gainXp(
-          p.profile.copyWith(credits: p.profile.credits + outcome.credits),
-          xp);
+          p.profile.copyWith(credits: p.profile.credits + outcome.credits), xp);
       final oldLevel = p.profile.level;
       p.profile = g.profile;
       if (g.levelsGained > 0) {
@@ -3880,7 +3909,8 @@ class _Op {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);
       if (k != null) {
-        events.add(ObjectiveProgressEvent(ObjectiveKind.kills, m.kills, k.goal));
+        events
+            .add(ObjectiveProgressEvent(ObjectiveKind.kills, m.kills, k.goal));
       }
       _lootAll(LootSource.battle, lx, ly, level: lootLevel);
     }
@@ -3892,9 +3922,8 @@ class _Op {
     }
     s.battle = null;
 
-    final pending = humans
-        .where((p) => p.levelUpPending && p.profile.points > 0)
-        .toList();
+    final pending =
+        humans.where((p) => p.levelUpPending && p.profile.points > 0).toList();
     if (pending.isNotEmpty) {
       s.mode = SessionMode.levelUp;
       s.afterLevelUp = b.boss ? AfterLevelUp.result : AfterLevelUp.field;
@@ -3933,7 +3962,11 @@ class _Op {
       MissionRank.b: 0.0,
       MissionRank.d: 0.0,
     };
-    const dropChance = {MissionRank.s: 0.9, MissionRank.a: 0.7, MissionRank.b: 0.5};
+    const dropChance = {
+      MissionRank.s: 0.9,
+      MissionRank.a: 0.7,
+      MissionRank.b: 0.5
+    };
     // Bonus de rareza del arma de fin de misión según el rango.
     const rankBonus = {MissionRank.s: 1.0, MissionRank.a: 0.5};
     final pct = bonusPct[rank]!;
@@ -4028,8 +4061,7 @@ class _Op {
   /// LISTO para volver tras la victoria ([ready] `false` lo saca).
   bool _leaveReady(SessionPlayer p, bool ready) {
     if (!s.victoryLap || p.isCompanion) return false;
-    final changed =
-        ready ? s.leaveReady.add(p.id) : s.leaveReady.remove(p.id);
+    final changed = ready ? s.leaveReady.add(p.id) : s.leaveReady.remove(p.id);
     if (!changed) return false;
     if (ready) {
       final n = humans.where((h) => s.leaveReady.contains(h.id)).length;

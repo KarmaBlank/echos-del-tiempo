@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/battle_log_helper.dart';
 
 // Solo los nodos de inicio del árbol del prototipo (`TREE_START`): cada
 // clase siempre los tiene, así que entran en todos los stats.

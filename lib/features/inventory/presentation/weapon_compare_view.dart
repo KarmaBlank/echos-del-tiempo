@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import '../domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -715,7 +716,7 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
               '${s.t('ui.inventory.compare.craft_question', {
                     'op': sell ? 'sell' : 'salvage',
                     'letter': confirm.$1,
-                    'name': protoEsc(rules.items.displayName(it)),
+                    'name': protoEsc(localItemName(rules.items, it)),
                     'gains': protoColor(
                         ProtoColors.green,
                         protoEsc(gainsText(

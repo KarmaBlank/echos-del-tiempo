@@ -30,6 +30,7 @@ import 'skill_requirements.dart';
 import 'stats_calculator.dart';
 import 'summon_rules.dart';
 import 'break_rules.dart';
+import '../catalog_text_keys.dart';
 import 'ult_rules.dart';
 
 part 'battle_engine_abyss.dart';
@@ -72,7 +73,11 @@ bool ultReady(Combatant c, [GameCatalog catalog = GameCatalog.standard]) {
 }
 
 /// Los 3 estados elementales (Elementalista).
-const kElementalStatuses = [StatusKind.burn, StatusKind.freeze, StatusKind.poison];
+const kElementalStatuses = [
+  StatusKind.burn,
+  StatusKind.freeze,
+  StatusKind.poison
+];
 
 /// Resultado de un paso del motor: el estado nuevo y lo que pasó, en orden.
 class BattleStep {
@@ -133,7 +138,6 @@ class BattleEngine {
   static const vulnerableTurns = 2;
   static const vulnerableBonus = 0.5;
 
-
   /// Golpe esquivado por un común (Eco Sombrío): solo lo roza.
   static const evadeFactor = 0.3;
 
@@ -162,7 +166,8 @@ class BattleEngine {
 
   // ---- ULT enemiga ----
   /// Carga por turno propio.
-  static double get enemyUltPerTurn => tuning(TuningId.ultCharge).d('enemyPerTurn');
+  static double get enemyUltPerTurn =>
+      tuning(TuningId.ultCharge).d('enemyPerTurn');
 
   /// Carga por vida perdida: +1 por cada 1% (= 100 × fracción).
   static double get enemyUltPerHp => tuning(TuningId.ultCharge).d('enemyPerHp');
@@ -247,9 +252,8 @@ class BattleEngine {
     final iv = interval(a);
     final k = turnsPerSlowest;
     if (k <= 0) return iv;
-    final side = a.isPlayer || a.isSummon
-        ? [...s.party, ...s.summons]
-        : s.enemies;
+    final side =
+        a.isPlayer || a.isSummon ? [...s.party, ...s.summons] : s.enemies;
     var slowest = 0.0;
     for (final c in side) {
       if (!c.alive ||
@@ -280,8 +284,7 @@ class BattleEngine {
     // que no están en la pelea, ya ponderados (overworld_biomes.md § 6).
     final curve = catalog.curve;
     final n = party.length;
-    double lerp(double Function(int) f) =>
-        f(n) + (f(n + 1) - f(n)) * roomExtra;
+    double lerp(double Function(int) f) => f(n) + (f(n + 1) - f(n)) * roomExtra;
     final mult = lerp(curve.groupHp);
     final atkMult = lerp(curve.groupAtk);
     final solo = party.length == 1;
@@ -297,10 +300,8 @@ class BattleEngine {
       final el = elite && i == 0;
       // Jefe en solitario (§ 3.3, ajuste del paso 5).
       final soloBoss = solo && d.boss;
-      final hp = jsRound(d.hp *
-          mult *
-          (el ? 2.6 : 1) *
-          (soloBoss ? curve.soloBossHp : 1));
+      final hp = jsRound(
+          d.hp * mult * (el ? 2.6 : 1) * (soloBoss ? curve.soloBossHp : 1));
       // Élite: su ULT propia (ultimates_v2.md § 4.3) o Furia Élite.
       final ultId = el ? (d.eliteUltId ?? kEliteUltId) : d.ultId;
       enemies.add(Combatant(
@@ -354,7 +355,9 @@ class BattleEngine {
       if (abyss != null) {
         final ph = abyss.phases.first;
         boss.phase = 1;
-        if (ph.aspects.isNotEmpty) boss.abyssAspect = ph.aspects.first.index + 1;
+        if (ph.aspects.isNotEmpty) {
+          boss.abyssAspect = ph.aspects.first.index + 1;
+        }
       }
       final add = abyss != null && !abyss.phases.first.summon
           ? null
@@ -385,11 +388,11 @@ class BattleEngine {
       boss: first.boss,
       elite: elite,
       turnRule: turnRule,
-      log: first.boss
-          ? '¡Jefe: ${first.name}!'
+      logLine: first.boss
+          ? _l('start_boss', {'a': first.name})
           : elite
-              ? '¡ÉLITE: ${first.name} Élite! (opcional, mucho más fuerte)'
-              : '¡Emboscada!',
+              ? _l('start_elite', {'a': first.name})
+              : _l('start_ambush'),
     );
     assignCombatantTags(state);
     return BattleStep(state, const []);
@@ -473,7 +476,7 @@ class BattleEngine {
       ..remove(playerId)
       ..add(playerId);
     s.waited.add(playerId);
-    s.log = '${p.name} espera al final de la ronda';
+    s.logLine = _l('wait_round', {'a': p.name});
     return BattleStep(s, const []);
   }
 
@@ -489,7 +492,7 @@ class BattleEngine {
     // Si ya actuó (acción extra pendiente), sus efectos ya contaron.
     if (p.extraTurn != 2 && !p.chained) t.tickEffects(p);
     p.extraTurn = 0;
-    t.state.log = '${p.name} termina su turno';
+    t.state.logLine = _l('end_turn', {'a': p.name});
     t.endTurn();
     return t.result;
   }
@@ -668,7 +671,7 @@ class _Hit {
   final Combatant target;
 
   /// Multiplicadores del árbol que entraron en el golpe (`× 1.15 Marca`).
-  final List<String> mods;
+  final List<LogLine> mods;
   const _Hit(this.damage, this.critical, this.target, [this.mods = const []]);
 }
 
@@ -759,7 +762,7 @@ class _Turn {
   _Action? _act;
 
   /// Efectos disparados que se agregan al log, con su origen.
-  final _notes = <String>[];
+  final _notes = <LogLine>[];
   int _procBudget = BattleEngine.maxProcsPerStep;
 
   /// Profundidad de la cadena de disparos en curso (`_fire` dentro de
@@ -804,9 +807,7 @@ class _Turn {
   /// Agrega los efectos disparados a la línea del log.
   void _flush() {
     if (_notes.isEmpty) return;
-    state.log = state.log.isEmpty
-        ? _notes.join(' · ')
-        : '${state.log} · ${_notes.join(' · ')}';
+    state.logLine = LogLine.join([state.logLine, ..._notes]);
     _notes.clear();
   }
 
@@ -821,7 +822,7 @@ class _Turn {
     _gainPulse(p);
     tickEffects(p);
     p.nextTurn = state.clock + _iv(p);
-    state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
+    state.logLine = _l('timeout_defend', {'a': p.name});
     endTurn();
   }
 
@@ -861,9 +862,9 @@ class _Turn {
     }
     if (!state.ended) {
       final names = [for (final p in state.pendingGroup) p.name];
-      state.log = names.isEmpty
-          ? 'Turno del grupo: nadie puede actuar'
-          : 'Turno del grupo · ${names.join(', ')}';
+      state.logLine = names.isEmpty
+          ? _l('group_turn_none')
+          : _l('group_turn', {'a': names.join(', ')});
     }
   }
 
@@ -911,9 +912,9 @@ class _Turn {
     }
     if (!state.ended) {
       final names = [for (final p in state.pendingGroup) p.name];
-      state.log = names.isEmpty
-          ? 'Fase de jugadores: nadie puede actuar'
-          : 'Fase de jugadores · ${names.join(', ')}';
+      state.logLine = names.isEmpty
+          ? _l('player_phase_none')
+          : _l('player_phase', {'a': names.join(', ')});
     }
   }
 
@@ -944,8 +945,8 @@ class _Turn {
         ..acted.clear()
         ..waited.clear()
         ..clock += 1
-        ..roundOrder
-            .replaceRange(0, state.roundOrder.length, [for (final c in all) c.id]);
+        ..roundOrder.replaceRange(
+            0, state.roundOrder.length, [for (final c in all) c.id]);
       if (all.isEmpty) return;
     }
     final rest = state.roundRemaining;
@@ -966,7 +967,7 @@ class _Turn {
     if (!state.ended) {
       final names = [for (final p in state.pendingGroup) p.name];
       if (names.isNotEmpty) {
-        state.log = 'Ronda ${state.round} · ${names.join(', ')}';
+        state.logLine = _l('round', {'n': state.round, 'a': names.join(', ')});
       }
     }
   }
@@ -1005,7 +1006,7 @@ class _Turn {
     best.ultBonusTurn = 0;
     events.add(TurnStartedEvent(best.id));
     if (best.isSummon) {
-      state.log = 'Turno de ${best.name}';
+      state.logLine = _l('turn_of', {'a': best.name});
       return;
     }
     if (best.isPlayer) {
@@ -1018,7 +1019,7 @@ class _Turn {
       // Pulso (combo_balance.md § 5.2): +1 al empezar su turno.
       best.chained = false;
       _gainPulse(best);
-      state.log = 'Turno de ${best.name}';
+      state.logLine = _l('turn_of', {'a': best.name});
     } else {
       _decayBreak(best);
     }
@@ -1036,8 +1037,8 @@ class _Turn {
       best.breakSkip = false;
       events.add(BreakEvent(
           best.id, BreakPhase.skipped, best.breakGauge, best.breakMax));
-      final t = '${best.name} está QUEBRADO y pierde su turno';
-      text = text == null ? t : '$text · $t';
+      final t = _l('broken_skip', {'a': best.name});
+      text = text == null ? t : text.plus(t);
     }
     var struggle = false;
     if (!skip && best.alive && best.isPlayer && best.webbed) {
@@ -1049,11 +1050,11 @@ class _Turn {
           struggle ? BossMechanicPhase.webStruggle : BossMechanicPhase.webSkip,
           targetId: best.id));
       final t = struggle
-          ? '${best.name} forcejea con la telaraña y pierde medio turno'
-          : '${best.name} está atrapado en la telaraña y pierde su turno';
-      text = text == null ? t : '$text · $t';
+          ? _l('web_struggle', {'a': best.name})
+          : _l('web_skip', {'a': best.name});
+      text = text == null ? t : text.plus(t);
     }
-    if (text != null) state.log = text;
+    if (text != null) state.logLine = text;
     // Regeneración del arma (afijo `del Renacer`, loot.md § 12).
     if (best.alive &&
         best.isPlayer &&
@@ -1061,7 +1062,7 @@ class _Turn {
         best.hp < best.maxHp) {
       final h = math.max(1, jsRound(best.maxHp * best.regenPerTurn));
       _heal(best, h);
-      _notes.add('${best.name} regenera $h HP (arma)');
+      _notes.add(_l('weapon_regen', {'a': best.name, 'h': h}));
     }
     if (best.alive) _fire(ProcTrigger.onTurnStart, best);
     if (best.alive && best.isPlayer) _summonPactTick(best);
@@ -1139,13 +1140,13 @@ class _Turn {
       state
         ..outcome = BattleOutcome(victory: true, xp: xp, credits: credits)
         ..currentId = null
-        ..log = '¡Victoria! +$xp XP · +$credits créditos para cada uno';
+        ..logLine = _l('victory', {'xp': xp, 'c': credits});
       events.add(BattleEndedEvent(true, xp, credits));
     } else if (state.party.every((p) => !p.alive)) {
       state
         ..outcome = const BattleOutcome(victory: false)
         ..currentId = null
-        ..log = 'El equipo ha caído…';
+        ..logLine = _l('defeat');
       events.add(const BattleEndedEvent(false, 0, 0));
     }
   }
@@ -1157,8 +1158,8 @@ class _Turn {
       state.party.any((p) => p.alive && p.keystones.contains('almaHielo'));
 
   /// `statusTick`: devuelve (pierde el turno, texto para el log).
-  (bool, String?) _statusTick(Combatant a) {
-    final parts = <String>[];
+  (bool, LogLine?) _statusTick(Combatant a) {
+    final parts = <LogLine>[];
     var total = 0;
     // El control se mira como estaba al EMPEZAR el turno: si el daño de
     // los estados transforma al Devorador (fase 2 limpia los estados), el
@@ -1181,7 +1182,7 @@ class _Turn {
     if (burn > 0) {
       final d = math.max(1, math.min(8 * burn, jsRound(a.maxHp * 0.04 * burn)));
       total += d;
-      parts.add('Quemadura $d');
+      parts.add(_l('tick_part', {'s': _st(StatusKind.burn), 'd': d}));
       a.statuses[StatusKind.burn] = burn ~/ 2;
     }
     final poison = a.stacks(StatusKind.poison);
@@ -1189,7 +1190,7 @@ class _Turn {
       final d =
           math.max(1, math.min(5 * poison, jsRound(a.maxHp * 0.03 * poison)));
       total += d;
-      parts.add('Veneno $d');
+      parts.add(_l('tick_part', {'s': _st(StatusKind.poison), 'd': d}));
       a.statuses[StatusKind.poison] = poison - 1;
     }
     final holy = a.stacks(StatusKind.holy);
@@ -1202,12 +1203,12 @@ class _Turn {
           (a.isPlayer ? 1 : 1 + _aura(BuffStat.holyPower)) *
           (_fam(a)?.holyTick ?? 1));
       total += d;
-      parts.add('Sagrado $d');
+      parts.add(_l('tick_part', {'s': _st(StatusKind.holy), 'd': d}));
       a.holyTurns = (a.holyTurns == 0 ? 1 : a.holyTurns) - 1;
       if (a.holyTurns <= 0) a.statuses[StatusKind.holy] = 0;
     }
 
-    String? healText;
+    LogLine? healText;
     final regen = a.stacks(StatusKind.regen);
     if (regen > 0 && a.alive) {
       final hh = jsRound(a.maxHp * 0.05);
@@ -1216,14 +1217,16 @@ class _Turn {
       if (harm > 0) {
         // Raza / familia a la que las curas dañan (no muertos).
         a.statuses[StatusKind.regen] = regen - 1;
-        final d = _rawDamage(null, a, math.max(1, jsRound(hh * harm)),
-            kHealHarmSourceId);
-        healText = '¡La regeneración quema a ${a.name}! $d';
+        final d = _rawDamage(
+            null, a, math.max(1, jsRound(hh * harm)), kHealHarmSourceId);
+        healText = _l('regen_burns', {'a': a.name, 'd': d});
       } else {
         a.hp = math.min(a.maxHp, a.hp + hh);
         if (a.maxMp > 0) a.mp = math.min(a.maxMp.toDouble(), a.mp + mm);
         a.statuses[StatusKind.regen] = regen - 1;
-        healText = '${a.name} regenera +$hh HP${mm > 0 ? ' +$mm MP' : ''}';
+        healText = mm > 0
+            ? _l('regen_hp_mp', {'a': a.name, 'h': hh, 'm': mm})
+            : _l('regen_hp', {'a': a.name, 'h': hh});
         events.add(HealEvent(a.id, hh));
         if (mm > 0) events.add(HealEvent(a.id, mm, mana: true));
       }
@@ -1253,8 +1256,7 @@ class _Turn {
       stunned = true;
       // Martillo Bendito: el aturdimiento dura un turno más (salvo que la
       // transformación se lo haya quitado).
-      locked = a.hasEffect(BuffStat.stunLock) &&
-          a.stacks(StatusKind.stun) > 0;
+      locked = a.hasEffect(BuffStat.stunLock) && a.stacks(StatusKind.stun) > 0;
       if (a.hasEffect(BuffStat.stunLock)) {
         a.effects =
             a.effects.where((e) => e.stat != BuffStat.stunLock).toList();
@@ -1272,36 +1274,39 @@ class _Turn {
       // Nadie lo rompió: se descongela solo (salvo Alma de Hielo).
       if (a.isPlayer || !_almaHielo) {
         _thawFreeze(a);
-        _notes.add('${a.name} se descongela');
+        _notes.add(_l('thaws', {'a': a.name}));
       }
     } else if (a.stacks(StatusKind.freeze) > 0 && (a.isPlayer || !_almaHielo)) {
       a.statuses[StatusKind.freeze] = a.stacks(StatusKind.freeze) - 1;
     }
 
-    final texts = <String>[
+    final texts = <LogLine>[
       if (total > 0)
-        '${a.name} sufre ${parts.join(' + ')} = $total de daño'
-            '${a.alive ? '' : ' y cae'}',
+        _l(a.alive ? 'tick_damage' : 'tick_damage_falls', {
+          'a': a.name,
+          'p': LogLine.join(parts, ' + '),
+          'd': total,
+        }),
       if (healText != null) healText,
       if (skip)
-        '${a.name} está ${stunned ? 'ATURDIDO' : 'CONGELADO'} y pierde su turno'
-            '${locked ? ' (Martillo Bendito: sigue aturdido 1 turno más)' : ''}'
-            '${stunned ? '' : ' · queda QUEBRADIZO (próximo golpe físico ×'
-                '${fm(_frz.brittleMult)})'}',
+        _l(stunned ? 'stun_skip' : 'freeze_skip', {
+          'a': a.name,
+          'lock': locked ? 'yes' : 'no',
+          'x': fm(_frz.brittleMult),
+        }),
     ];
-    return (skip, texts.isEmpty ? null : texts.join(' · '));
+    return (skip, texts.isEmpty ? null : LogLine.join(texts));
   }
 
   /// `addStatus`. [source]: quién lo aplica; con [primary] (golpe
   /// primario de su acción) dispara `onStatusApplied`.
   /// Escudo compartido: aturdir extra de [s] si tiene un aliado vivo.
-  double _duoStun(Combatant? s) =>
-      s != null &&
-              s.isPlayer &&
-              s.duoStunBonus > 0 &&
-              _aliveParty.any((q) => q.id != s.id)
-          ? s.duoStunBonus
-          : 0;
+  double _duoStun(Combatant? s) => s != null &&
+          s.isPlayer &&
+          s.duoStunBonus > 0 &&
+          _aliveParty.any((q) => q.id != s.id)
+      ? s.duoStunBonus
+      : 0;
 
   bool _addStatus(Combatant a, StatusApplication st,
       {int bonus = 0, Combatant? source, bool primary = false}) {
@@ -1310,7 +1315,7 @@ class _Turn {
     if (!a.isPlayer && _immune(a)) {
       if (_immuneShown.add(a.id)) {
         events.add(BossMechanicEvent(a.id, BossMechanicPhase.immune));
-        _notes.add('${a.name} es INMUNE a los estados (séquito vivo)');
+        _notes.add(_l('immune_retinue', {'a': a.name}));
       }
       return false;
     }
@@ -1322,15 +1327,14 @@ class _Turn {
     }
     if (st.chance != null &&
         _rand() >=
-            st.chance! +
-                (st.kind == StatusKind.stun ? _duoStun(source) : 0)) {
+            st.chance! + (st.kind == StatusKind.stun ? _duoStun(source) : 0)) {
       return false;
     }
     // Recién descongelado: resiste la Congelación (§ 7).
     if (st.kind == StatusKind.freeze && a.freezeResist > 0) {
       if (_immuneShown.add('${a.id}|resist')) {
         events.add(IceEvent(a.id, IcePhase.resisted));
-        _notes.add('${a.name} resiste la Congelación (recién descongelado)');
+        _notes.add(_l('freeze_resist', {'a': a.name}));
       }
       return false;
     }
@@ -1338,8 +1342,12 @@ class _Turn {
     final family = _fam(a);
     if (family != null && family.immune.contains(st.kind)) {
       if (_immuneShown.add('${a.id}|${st.kind.name}')) {
-        _notes.add('${a.name} es INMUNE a ${st.kind.label} '
-            '(${family.family.label})');
+        _notes.add(_l('immune_family', {
+          'a': a.name,
+          's': _st(st.kind),
+          'f': LogLine.named(
+              'data.families.${family.family.name}', family.family.label),
+        }));
       }
       return false;
     }
@@ -1411,7 +1419,7 @@ class _Turn {
         events.add(ProcEvent(source.id, m.id, targetId: target.id));
         events.add(
             BuffAppliedEvent(target.id, m.id, BuffStat.stunLock, 1, fx.turns));
-        _notes.add('${m.name}: ${target.name} queda aturdido 1 turno más');
+        _notes.add(_l('stun_more', {'m': _mech(m), 'a': target.name}));
         return;
       }
     }
@@ -1537,8 +1545,11 @@ class _Turn {
       final sk = engine.catalog.skills[e.sourceId];
       if (sk != null && use > 0) {
         if (sk.shieldGrow > 0) {
-          rest = math.max(rest,
-              math.min(p.maxHp * 0.5, rest + use * sk.shieldGrow).roundToDouble());
+          rest = math.max(
+              rest,
+              math
+                  .min(p.maxHp * 0.5, rest + use * sk.shieldGrow)
+                  .roundToDouble());
         }
         if (sk.shieldReflect > 0 && o != null) reflects.add((o, sk, use));
         if (sk.shieldBurst > 0 && rest <= 0 && o != null) bursts.add((o, sk));
@@ -1549,7 +1560,7 @@ class _Turn {
     final absorbed = dmg - left;
     if (absorbed > 0) {
       events.add(ShieldEvent(p.id, absorbed, absorbed: true));
-      _notes.add('escudo de ${p.name} absorbe $absorbed');
+      _notes.add(_l('shield_absorbs', {'a': p.name, 'd': absorbed}));
     }
     for (final (o, sk, use) in reflects) {
       final owner = state.byId(o);
@@ -1559,7 +1570,7 @@ class _Turn {
       events.add(ProcEvent(owner.id, sk.id, targetId: from.id));
       final d = _procDamage(
           owner, from, math.max(1, jsRound(use * sk.shieldReflect)), sk.id);
-      _notes.add('${sk.name}: refleja $d a ${from.name}');
+      _notes.add(_l('reflects', {'s': _sk(sk), 'd': d, 'a': from.name}));
     }
     for (final (o, sk) in bursts) {
       final owner = state.byId(o);
@@ -1571,7 +1582,7 @@ class _Turn {
       for (final e in foes) {
         _procDamage(owner, e, d, sk.id);
       }
-      _notes.add('¡${sk.name} explota! $d a cada enemigo');
+      _notes.add(_l('shield_burst', {'s': _sk(sk), 'd': d}));
     }
     if (from != null && from.alive && !from.isPlayer) {
       for (final e in byOwner.entries) {
@@ -1581,8 +1592,9 @@ class _Turn {
         if (r <= 0 || !_spend()) continue;
         final src = _sourceOf(owner, BuffStat.shieldReflect) ?? 'escudo';
         events.add(ProcEvent(owner.id, src, targetId: from.id));
-        final d = _procDamage(owner, from, math.max(1, jsRound(e.value * r)), src);
-        _notes.add('${displayName(src)}: $d a ${from.name}');
+        final d =
+            _procDamage(owner, from, math.max(1, jsRound(e.value * r)), src);
+        _notes.add(_l('src_dmg_to', {'m': _disp(src), 'd': d, 'a': from.name}));
       }
     }
     return absorbed;
@@ -1638,7 +1650,8 @@ class _Turn {
           final taken = part - _absorb(g, part);
           g.hp = math.max(g.practice ? 1 : 0, g.hp - taken);
           events.add(DamageEvent(g.id, taken, sourceId: m.id));
-          _notes.add('${m.name}: ${g.name} recibe $part por ${p.name}');
+          _notes.add(_l('share_dmg',
+              {'m': _mech(m), 'a': g.name, 'd': part, 'b': p.name}));
           if (!g.alive) {
             events.add(KnockedOutEvent(g.id));
             g.voidMarked = false;
@@ -1671,7 +1684,7 @@ class _Turn {
           }
           owner.once.add(m.id);
           events.add(ProcEvent(owner.id, m.id, targetId: p.id));
-          _notes.add('${m.name}: ${p.name} queda en 1 HP');
+          _notes.add(_l('cheat_death', {'m': _mech(m), 'a': p.name}));
           return math.max(0, p.hp - 1);
         }
       }
@@ -1698,7 +1711,7 @@ class _Turn {
       if (owner == null) continue;
       events.add(ProcEvent(owner.id, t.sourceId, targetId: e.id));
       final d = _procDamage(owner, e, math.max(1, t.value.round()), t.sourceId);
-      _notes.add('¡Trampa de ${owner.name}! $d a ${e.name}');
+      _notes.add(_l('trap_springs', {'a': owner.name, 'd': d, 'b': e.name}));
       _fire(ProcTrigger.onTrap, owner, target: e, amount: d);
     }
   }
@@ -1730,7 +1743,7 @@ class _Turn {
   /// Remata a [target] (no jefes ni élites) si quedó por debajo de
   /// [threshold] de su vida.
   void _execute(Combatant owner, Combatant target, double threshold,
-      String sourceId, String name) {
+      String sourceId, LogLine name) {
     if (!target.alive ||
         target.isPlayer ||
         target.boss ||
@@ -1746,17 +1759,18 @@ class _Turn {
     events.add(DamageEvent(target.id, d, sourceId: sourceId));
     if (target.alive) return;
     _knockedOut(target);
-    _notes.add('$name: ¡${target.name} rematado!');
+    _notes.add(_l('executed', {'m': name, 'a': target.name}));
   }
 
   /// Buff de grupo de [owner] (con Eco del Grito y Señor de la Guerra).
-  void _partyBuff(Combatant owner, String sourceId, String name,
-      BuffStat stat, double value, int turns) {
+  void _partyBuff(Combatant owner, String sourceId, LogLine name, BuffStat stat,
+      double value, int turns,
+      {String nameText = ''}) {
     final v = value * (1 + _conditionBonus(owner, BuffStat.buffPower));
     final n = turns + _conditionBonus(owner, BuffStat.buffTurns).round();
     final m = PassiveMechanic(
         id: sourceId,
-        name: name,
+        name: nameText,
         trigger: ProcTrigger.onSkill,
         effects: const [],
         description: '');
@@ -1764,8 +1778,12 @@ class _Turn {
       _giveEffect(q, owner, m, stat, v, n);
       events.add(BuffAppliedEvent(q.id, sourceId, stat, v, n));
     }
-    _notes.add('$name: grupo ${v < 0 ? '−' : '+'}${_pct(v)} ${stat.label} '
-        '${_turns(n)}');
+    _notes.add(_l('party_buff', {
+      'm': name,
+      'v': '${v < 0 ? '−' : '+'}${_pct(v)}',
+      's': _stat(stat),
+      't': _turnsL(n),
+    }));
   }
 
   /// Escudo a todo el grupo: [frac] de la vida máx. de [owner].
@@ -1781,14 +1799,15 @@ class _Turn {
 
   /// Adelanta a [allies] la fracción [frac] de su espera; sin aliados,
   /// adelanta el próximo turno de [owner] (tope [soloCap]).
-  void _advance(Combatant owner, List<Combatant> allies, double frac,
-      String name, {double soloCap = 1}) {
+  void _advance(
+      Combatant owner, List<Combatant> allies, double frac, LogLine name,
+      {double soloCap = 1}) {
     if (allies.isEmpty) {
       final act = _act;
       if (act == null || act.extraTurn) return;
       final f = math.min(frac, soloCap);
       act.turnFactor = math.min(act.turnFactor, 1 - f);
-      _notes.add('$name: tu próximo turno llega ${_pct(f)} antes');
+      _notes.add(_l('next_turn_sooner', {'m': name, 'p': _pct(f)}));
       return;
     }
     for (final (i, q) in allies.indexed) {
@@ -1797,11 +1816,12 @@ class _Turn {
           ? math.min(q.nextTurn, state.clock + 0.01 * (i + 1))
           : math.max(state.clock + 0.01, q.nextTurn - _iv(q) * frac);
     }
-    _notes.add(frac >= 1
-        ? '$name: ${allies.map((q) => q.name).join(', ')} actúa'
-            '${allies.length == 1 ? '' : 'n'} ya'
-        : '$name: ${allies.map((q) => q.name).join(', ')} se adelanta'
-            '${allies.length == 1 ? '' : 'n'} ${_pct(frac)}');
+    _notes.add(_l(frac >= 1 ? 'allies_act_now' : 'allies_advance', {
+      'm': name,
+      'a': allies.map((q) => q.name).join(', '),
+      'n': allies.length,
+      'p': _pct(frac),
+    }));
   }
 
   /// Una habilidad como "mecánica" (origen de sus efectos con duración).
@@ -1825,29 +1845,33 @@ class _Turn {
     }
     if (tk.ultDrain > 0 && e.ultId != null && !e.ultPending && e.ult > 0) {
       e.ult = math.max(0, e.ult - tk.ultDrain);
-      _notes.add('${tk.name}: ${e.name} −${jsRound(tk.ultDrain)} carga de ULT');
+      _notes.add(_l(
+          'ult_drain', {'s': _sk(tk), 'a': e.name, 'n': jsRound(tk.ultDrain)}));
     } else if (tk.ultDrain > 0 && e.ultPending) {
       // Avisada (ultimates_v2.md § 4.1): −1% de poder por punto, tope −40%.
       final before = e.ultWeaken;
-      e.ultWeaken = math.min(BattleEngine.ultWeakenMax,
-          e.ultWeaken + tk.ultDrain / 100);
+      e.ultWeaken =
+          math.min(BattleEngine.ultWeakenMax, e.ultWeaken + tk.ultDrain / 100);
       if (e.ultWeaken > before) {
-        _notes.add('${tk.name}: la ULT de ${e.name} pierde '
-            '${_pct(e.ultWeaken)} de poder');
+        _notes.add(_l(
+            'ult_weaken', {'s': _sk(tk), 'a': e.name, 'p': _pct(e.ultWeaken)}));
       }
     }
   }
 
   /// Texto de los debuffs de [tk] para el log.
-  String _debuffText(SkillDef tk) => [
+  List<LogLine> _debuffText(SkillDef tk) => [
         for (final d in tk.debuffs)
-          ' · ${switch (d.stat) {
-            BuffStat.damageTaken => 'Marca +${_pct(d.value)}',
-            BuffStat.attack => 'ATQ −${_pct(d.value)}',
-            BuffStat.speed => 'velocidad −${_pct(d.value)}',
-            _ => '${d.stat.label} ${_pct(d.value)}',
-          }} ${_turns(d.turns)}',
-      ].join();
+          _l('debuff', {
+            'x': switch (d.stat) {
+              BuffStat.damageTaken => _l('debuff_mark', {'p': _pct(d.value)}),
+              BuffStat.attack => _l('debuff_atk', {'p': _pct(d.value)}),
+              BuffStat.speed => _l('debuff_speed', {'p': _pct(d.value)}),
+              _ => _l('debuff_other', {'s': _stat(d.stat), 'p': _pct(d.value)}),
+            },
+            't': _turnsL(d.turns),
+          }),
+      ];
 
   /// Revive a [q] con la fracción `revive` de su vida (Resurrección),
   /// más la sinergia del árbol (combat.md § Revivir, [ReviveRules]).
@@ -1881,21 +1905,28 @@ class _Turn {
       ];
       events.add(ShieldEvent(q.id, shield));
     }
-    state.log = '${p.name} · ${tk.name}: ¡${q.name} revive con $h HP '
-        '(${_pct(frac)} de su vida)!'
-        '${shield > 0 ? ' · Velo del Retorno: escudo de $shield' : ''}';
+    state.logLine = LogLine.join([
+      _l('revive', {
+        'a': p.name,
+        's': _sk(tk),
+        'b': q.name,
+        'h': h,
+        'p': _pct(frac),
+      }),
+      if (shield > 0) _l('revive_veil', {'n': shield}),
+    ]);
   }
 
   /// Atraviesa y rebota (variantes): golpes secundarios tras el golpe a
   /// [target]. Aplican el estado (sin disparar el árbol) y los debuffs.
-  void _pierceAndBounce(Combatant p, SkillDef tk, Combatant target,
-      double base, StatusApplication? st, int bonus,
+  void _pierceAndBounce(Combatant p, SkillDef tk, Combatant target, double base,
+      StatusApplication? st, int bonus,
       {bool blocked = false}) {
-    void extra(Combatant e, double dmg, List<String> parts,
+    void extra(Combatant e, double dmg, List<LogLine> parts,
         {String? from, bool pierced = false}) {
       final h = _damageEnemy(e, dmg, p.critChance + tk.critBonus,
           primary: false, chainFrom: from, pierced: pierced);
-      parts.add('${h.damage} a ${e.name}');
+      parts.add(_l('dmg_to', {'d': h.damage, 'a': e.name}));
       if (st != null && !blocked) _addStatus(e, st, bonus: bonus, source: p);
       _variantOnHit(p, e, tk);
     }
@@ -1906,16 +1937,18 @@ class _Turn {
         for (final e in state.enemies.skip(i + 1))
           if (e.alive) e
       ];
-      final parts = <String>[];
+      final parts = <LogLine>[];
       for (final e in behind) {
         extra(e, base * tk.pierce, parts, pierced: true);
       }
-      if (parts.isNotEmpty) _notes.add('atraviesa: ${parts.join(', ')}');
+      if (parts.isNotEmpty) {
+        _notes.add(_l('pierces', {'p': LogLine.join(parts, ', ')}));
+      }
     }
     if (tk.bounces > 0) {
       var last = target;
       var f = 1.0;
-      final parts = <String>[];
+      final parts = <LogLine>[];
       for (var i = 0; i < tk.bounces; i++) {
         f *= 0.7;
         final others = [
@@ -1924,33 +1957,47 @@ class _Turn {
         ];
         final pick = others.isEmpty
             ? (last.alive ? last : null)
-            : others[math.min(others.length - 1, (_rand() * others.length).floor())];
+            : others[
+                math.min(others.length - 1, (_rand() * others.length).floor())];
         if (pick == null) break;
         extra(pick, base * f, parts, from: last.id);
         last = pick;
       }
-      if (parts.isNotEmpty) _notes.add('rebota: ${parts.join(', ')}');
+      if (parts.isNotEmpty) {
+        _notes.add(_l('bounces', {'p': LogLine.join(parts, ', ')}));
+      }
     }
   }
 
   /// Disparo cargado: al empezar el turno de [p] cae sobre su objetivo
   /// (o el primer enemigo en pie).
   void _fireCharge(Combatant p) {
-    final ch = [for (final e in p.effects) if (e.stat == BuffStat.charge) e];
+    final ch = [
+      for (final e in p.effects)
+        if (e.stat == BuffStat.charge) e
+    ];
     if (ch.isEmpty) return;
-    p.effects = [for (final e in p.effects) if (e.stat != BuffStat.charge) e];
+    p.effects = [
+      for (final e in p.effects)
+        if (e.stat != BuffStat.charge) e
+    ];
     for (final c in ch) {
       final foes = state.enemies.where((e) => e.alive).toList();
       if (foes.isEmpty) return;
       final t = foes.where((e) => e.id == c.ownerId).firstOrNull ?? foes.first;
       final sk = engine.catalog.skills[c.sourceId] ?? _ultById(c.sourceId);
       events.add(ProcEvent(p.id, c.sourceId, targetId: t.id));
-      final d = _skillProcDamage(
-          p, t, math.max(1, c.value.round()), c.sourceId, sk);
-      var note = '¡${sk?.name ?? 'Disparo cargado'} de ${p.name}! $d a ${t.name}';
+      final d =
+          _skillProcDamage(p, t, math.max(1, c.value.round()), c.sourceId, sk);
+      var note = _l('charged_shot', {
+        's': sk == null ? _l('charged_shot_name') : _sk(sk),
+        'a': p.name,
+        'd': d,
+        'b': t.name,
+      });
       final st = sk?.status;
       if (st != null && t.alive && _addStatus(t, st, source: p)) {
-        note += ' · ${st.kind.label}';
+        note = note.plus(_st(st.kind));
       }
       _notes.add(note);
     }
@@ -1965,7 +2012,8 @@ class _Turn {
         effects: const [],
         description: '');
     for (final b in sk.partyBuffs) {
-      _partyBuff(p, sk.id, sk.name, b.stat, b.value, b.turns);
+      _partyBuff(p, sk.id, _sk(sk), b.stat, b.value, b.turns,
+          nameText: sk.name);
     }
     if (sk.partyShield > 0) {
       _partyShield(p, asMech, sk.partyShield, sk.partyShieldTurns);
@@ -1981,15 +2029,25 @@ class _Turn {
       _partyShield(p, asMech, sk.selfShield, sk.shieldTurns, only: [p]);
     }
     if (sk.advanceAllies > 0) {
-      _advance(p, [for (final q in _aliveParty) if (q != p) q],
-          sk.advanceAllies, sk.name);
+      _advance(
+          p,
+          [
+            for (final q in _aliveParty)
+              if (q != p) q
+          ],
+          sk.advanceAllies,
+          _sk(sk));
     }
     final sb = sk.selfBuff;
     if (sb != null) {
       _giveEffect(p, p, asMech, sb.stat, sb.value, sb.turns);
       events.add(BuffAppliedEvent(p.id, sk.id, sb.stat, sb.value, sb.turns));
-      _notes.add('${sk.name}: +${_pct(sb.value)} ${sb.stat.label} '
-          '${_turns(sb.turns)}');
+      _notes.add(_l('self_buff', {
+        's': _sk(sk),
+        'p': _pct(sb.value),
+        'x': _stat(sb.stat),
+        't': _turnsL(sb.turns),
+      }));
     }
     if (sk.selfTurn < 1) {
       final act = _act;
@@ -2001,12 +2059,12 @@ class _Turn {
       for (final q in _aliveParty) {
         _gainPulse(q, sk.pulseParty);
       }
-      _notes.add('${sk.name}: +${sk.pulseParty} Pulso al grupo');
+      _notes.add(_l('pulse_party', {'s': _sk(sk), 'n': sk.pulseParty}));
     }
   }
 
   /// Fin Prestado: quita los buffs (efectos positivos y escudos) de [e].
-  void _stripBuffs(Combatant e, String name) {
+  void _stripBuffs(Combatant e, LogLine name) {
     if (!e.alive) return;
     final before = e.effects.length;
     e.effects = [
@@ -2017,7 +2075,7 @@ class _Turn {
           fx,
     ];
     if (e.effects.length < before) {
-      _notes.add('$name: ${e.name} pierde sus buffs');
+      _notes.add(_l('strip_buffs', {'m': name, 'a': e.name}));
     }
   }
 
@@ -2034,10 +2092,14 @@ class _Turn {
       ..doomBy = null;
     events.add(ProcEvent(owner.id, 'ult2_loQueSera', targetId: e.id));
     final d = _procDamage(owner, e, dmg, 'ult2_loQueSera');
-    var note = '¡Lo Que Será! ${e.name} recibe $d';
+    var note = _l('doom', {
+      's': LogLine.named(CatalogKeys.ultName('ult2_loQueSera'), 'Lo Que Será'),
+      'a': e.name,
+      'd': d,
+    });
     if (e.alive && e.fissured) {
       _break(e);
-      note += ' · QUEBRADO';
+      note = note.plus(_l('broken_tag'));
     }
     _notes.add(note);
   }
@@ -2142,11 +2204,12 @@ class _Turn {
   }
 
   /// Texto de la fuente de daño con ATQ efectivo (`ATQ 36 (30 +20%)`).
-  String _atkText(Combatant p) {
+  LogLine _atkText(Combatant p) {
     final a = _atk(p);
-    if (a == p.attack) return 'ATQ ${p.attack}';
+    if (a == p.attack) return _l('src_atk', {'n': p.attack});
     final pct = jsRound((a / p.attack - 1) * 100);
-    return 'ATQ $a (${p.attack} ${pct >= 0 ? '+' : ''}$pct%)';
+    return _l('src_atk_mod',
+        {'n': a, 'b': p.attack, 'p': '${pct >= 0 ? '+' : ''}$pct%'});
   }
 
   /// `dmgEnemy`: jugador → enemigo. Con [primary] (golpe de la acción,
@@ -2179,10 +2242,10 @@ class _Turn {
         (_act?.skill == null || _act!.skill!.kind == SkillKind.physical);
     var chance = critChance;
     var mult = 1.0;
-    final mods = <String>[];
+    final mods = <LogLine>[];
     if (a != null) {
-      chance += _conditionBonus(a, BuffStat.crit, e) +
-          a.effectTotal(BuffStat.crit);
+      chance +=
+          _conditionBonus(a, BuffStat.crit, e) + a.effectTotal(BuffStat.crit);
       if (a.keystones.contains('danza')) chance = math.min(chance, 0.40);
       final parts = _conditionParts(a, BuffStat.damage, e);
       var dmgBonus = 0.0;
@@ -2195,18 +2258,23 @@ class _Turn {
       final buff = a.effectTotal(BuffStat.damage);
       if (buff != 0) {
         mult *= 1 + buff;
-        mods.add('× ${fm(1 + buff)} buff');
+        mods.add(_mod(1 + buff, _l('mod.buff')));
       }
       // Aura Sagrada (Templario): todo el grupo hace más daño.
       final aura = a.isPlayer ? _aura(BuffStat.damage) : 0.0;
       if (dmgBonus != 0) {
         mult *= 1 + dmgBonus;
-        mods.add('× ${fm(1 + dmgBonus)} '
-            '${parts.map((p) => p.$1.name).toSet().join(' + ')}');
+        final seen = <String>{};
+        mods.add(_mod(
+            1 + dmgBonus,
+            LogLine.join([
+              for (final p in parts)
+                if (seen.add(p.$1.name)) _mech(p.$1),
+            ], ' + ')));
       }
       if (aura != 0) {
         mult *= 1 + aura;
-        mods.add('× ${fm(1 + aura)} aura');
+        mods.add(_mod(1 + aura, _l('mod.aura')));
       }
       if (weaponEl != null &&
           primary &&
@@ -2214,11 +2282,15 @@ class _Turn {
           el == weaponEl &&
           kWeaponElementSynergy != 0) {
         mult *= 1 + kWeaponElementSynergy;
-        mods.add('× ${fm(1 + kWeaponElementSynergy)} arma ${weaponEl.label}');
+        mods.add(_mod(1 + kWeaponElementSynergy,
+            _l('mod.weapon_el', {'e': _el(weaponEl)})));
       }
       if (single && primary && a.keystones.contains('cadena')) {
         mult *= 0.8;
-        mods.add('× 0.8 Cadena Infinita');
+        mods.add(_mod(
+            0.8,
+            LogLine.named(
+                CatalogKeys.nodeName('viento_k'), 'Cadena Infinita')));
       }
     }
     final family = _fam(e);
@@ -2227,7 +2299,7 @@ class _Turn {
     if (taken > 0) taken *= family?.markMult ?? 1;
     if (taken != 0) {
       mult *= 1 + taken;
-      mods.add('× ${fm(1 + taken)} Marca');
+      mods.add(_mod(1 + taken, _l('mod.mark')));
     }
     // Área (combo_balance.md § 4): las habilidades a todos pegan menos
     // por blanco; sus estados entran completos. Las ULT no.
@@ -2239,17 +2311,17 @@ class _Turn {
     final areaMult = engine.catalog.combo.areaMult;
     if (areaSkill && areaMult != 1) {
       mult *= areaMult;
-      mods.add('× ${fm(areaMult)} área');
+      mods.add(_mod(areaMult, _l('mod.area')));
     }
     final vul = e.broken;
     if (vul) {
       mult *= 1 + BattleEngine.vulnerableBonus;
-      mods.add('× ${fm(1 + BattleEngine.vulnerableBonus)} QUIEBRE');
+      mods.add(_mod(1 + BattleEngine.vulnerableBonus, _l('mod.break')));
     }
     final armor = engine.catalog.enemies[e.enemyType]?.armor ?? 0;
     if (armor > 0) {
       mult *= 1 - armor;
-      mods.add('× ${fm(1 - armor)} armadura');
+      mods.add(_mod(1 - armor, _l('mod.armor')));
     }
     // Familia: debilidades y resistencias por tipo de daño
     // (bestiary.md § 1.3).
@@ -2281,26 +2353,26 @@ class _Turn {
       final rm = _reactionMult(reaction);
       if (rm != 1) {
         mult *= rm;
-        mods.add('× ${fm(rm)} ${reaction.label.toUpperCase()}');
+        mods.add(_mod(rm, LogLine.upper(_rxL(reaction))));
       }
       if (catalyst > 0) {
         mult *= 1 + catalyst;
-        mods.add('× ${fm(1 + catalyst)} CATALIZADOR');
+        mods.add(_mod(1 + catalyst, _l('mod.catalyst')));
       }
       final rb = a == null ? 0.0 : _modTotal(a, ProcEffectKind.reactionBonus);
       if (rb > 0) {
         mult *= 1 + rb;
-        mods.add('× ${fm(1 + rb)} reacción');
+        mods.add(_mod(1 + rb, _l('mod.reaction')));
       }
     } else if (phys && _isBrittle(e)) {
       shatter = true;
       mult *= _frz.brittleMult;
-      mods.add('× ${fm(_frz.brittleMult)} QUEBRADIZO');
+      mods.add(_mod(_frz.brittleMult, _l('mod.brittle')));
     }
     final res = primary ? _stanceResist(e) : 0.0;
     if (res > 0) {
       mult *= 1 - res;
-      mods.add('× ${fm(1 - res)} POSTURA');
+      mods.add(_mod(1 - res, _l('mod.stance')));
       if (_resisted.add(e.id)) {
         events.add(
             BossMechanicEvent(e.id, BossMechanicPhase.resisted, value: res));
@@ -2310,7 +2382,7 @@ class _Turn {
     final echo = _echoFactor(e);
     if (echo < 1) {
       mult *= echo;
-      mods.add('× ${fm(echo)} ECO');
+      mods.add(_mod(echo, _l('mod.echo')));
       if (_resisted.add(e.id)) {
         events.add(
             BossMechanicEvent(e.id, BossMechanicPhase.echoResist, value: echo));
@@ -2323,7 +2395,7 @@ class _Turn {
     final ev = engine.catalog.enemies[e.enemyType]?.evasion ?? 0;
     if (primary && ev > 0 && _rand() < ev) {
       mult *= BattleEngine.evadeFactor;
-      mods.add('× ${fm(BattleEngine.evadeFactor)} ESQUIVA');
+      mods.add(_mod(BattleEngine.evadeFactor, _l('mod.evade')));
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.evaded));
     }
     // Mitigación de grupo (combo_balance.md § 3.3): todo el daño directo
@@ -2337,13 +2409,13 @@ class _Turn {
       if (gm != 1) {
         mult *= gm;
         mitigation *= gm;
-        mods.add('× ${fm(gm)} grupo ($n jug.)');
+        mods.add(_mod(gm, _l('mod.group', {'n': n})));
       }
       final zc = curve.zoneCMult(e.level);
       if (zc != 1) {
         mult *= zc;
         mitigation *= zc;
-        mods.add('× ${fm(zc)} zona C');
+        mods.add(_mod(zc, _l('mod.zone_c')));
       }
     }
     final crit = _rand() < chance;
@@ -2355,14 +2427,15 @@ class _Turn {
       final cap = _hitCapFor(a, e,
           weak: weakHit, reacted: reaction != null, broken: vul);
       if (cap != null && dmg > cap) {
-        mods.add('→ $cap (resiste el golpe)');
+        mods.add(_l('mod.cap_resist', {'n': cap}));
         dmg = cap;
       }
     }
     // Límites (combat.md § "Límites"): tope absoluto y aguanta una ronda.
     final limited = _limitEnemyHit(e, dmg);
     if (limited != dmg) {
-      mods.add('→ $limited (${limited == e.hp - 1 ? 'aguanta' : 'tope'})');
+      mods.add(_l(limited == e.hp - 1 ? 'mod.cap_hold' : 'mod.cap_top',
+          {'n': limited}));
       dmg = limited;
     }
     // Quebrar (combo_balance.md § 5): el golpe quiebra a un Fisurado de
@@ -2477,8 +2550,7 @@ class _Turn {
   // ---------------- elementos v0.7 (elemental_reactions.md) ------------
 
   /// Reglas de la Congelación (§ 7).
-  ElementStatusDef get _frz =>
-      engine.catalog.elementStatus(StatusKind.freeze);
+  ElementStatusDef get _frz => engine.catalog.elementStatus(StatusKind.freeze);
 
   /// La reacción que detonaría un golpe de [el] sobre [t] (§ 2), o
   /// `null`. Congelación súbita solo si [t] se puede congelar.
@@ -2508,8 +2580,8 @@ class _Turn {
   /// La reacción que detonaría un golpe de la habilidad [tk] sobre [t]
   /// (como la calcula `_damageEnemy`), o `null`.
   ReactionKind? _skillReaction(Combatant t, SkillDef tk) {
-    final el = (tk.catalyst > 0 ? _catalystElement(t) : null) ??
-        elementOf(tk.id);
+    final el =
+        (tk.catalyst > 0 ? _catalystElement(t) : null) ?? elementOf(tk.id);
     final prime = kPrimeOnlySkills.contains(tk.id);
     return _reactionFor(t, el) ??
         _carriedReaction(t, [
@@ -2528,8 +2600,8 @@ class _Turn {
   /// Daño de mecánica que repite / difiere un golpe de la habilidad [sk]
   /// (Eco Arcano, Disparo cargado): lleva su elemento, así que detona
   /// como el golpe original (§ 9). Devuelve el daño hecho.
-  int _skillProcDamage(Combatant owner, Combatant e, int amount,
-      String sourceId, SkillDef? sk) {
+  int _skillProcDamage(
+      Combatant owner, Combatant e, int amount, String sourceId, SkillDef? sk) {
     final k = sk == null || !e.alive ? null : _skillReaction(e, sk);
     final d = _procDamage(
         owner,
@@ -2612,14 +2684,13 @@ class _Turn {
       };
 
   /// Quebradizo con Congelación encima.
-  bool _isBrittle(Combatant c) =>
-      c.brittle && c.stacks(StatusKind.freeze) > 0;
+  bool _isBrittle(Combatant c) => c.brittle && c.stacks(StatusKind.freeze) > 0;
 
   /// Se descongela: sin Congelación ni Quebradizo y, si estaba congelado,
   /// resistencia a la Congelación ([ElementStatusDef.turns]).
   void _thawFreeze(Combatant c, {bool resist = true}) {
-    final wasFrozen = c.brittle ||
-        c.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks;
+    final wasFrozen =
+        c.brittle || c.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks;
     c.statuses[StatusKind.freeze] = 0;
     c.brittle = false;
     if (resist && wasFrozen) {
@@ -2633,8 +2704,7 @@ class _Turn {
     _thawFreeze(c, resist: false);
     c.freezeResist = math.max(c.freezeResist, _frz.turns);
     events.add(IceEvent(c.id, IcePhase.shattered));
-    _notes.add('¡${c.name} se rompe! (Quebradizo ×${fm(_frz.brittleMult)}, '
-        'se descongela)');
+    _notes.add(_l('shatter', {'a': c.name, 'x': fm(_frz.brittleMult)}));
   }
 
   /// Los demás vivos del bando de [t], en orden de formación desde [t].
@@ -2670,8 +2740,8 @@ class _Turn {
         final stunned = def.stunTurns > 0 &&
             _addStatus(t, StatusApplication(StatusKind.stun, def.stunTurns),
                 source: by);
-        _notes.add('¡ELECTROCUCIÓN! ${t.name} ×${fm(def.damageMult)}'
-            '${stunned ? ' y queda aturdido' : ''}');
+        _notes.add(_l(stunned ? 'rx_electro_stun' : 'rx_electro',
+            {'a': t.name, 'x': fm(def.damageMult)}));
       case ReactionKind.explosionToxica || ReactionKind.combustion:
         amount = _converge(by, t, k, def, consumed, splash);
       case ReactionKind.congelacionSubita:
@@ -2681,14 +2751,13 @@ class _Turn {
         events.add(ReactionEvent(t.id, k, 0,
             sourceId: by?.id, consumedStacks: consumed));
         events.add(StatusAppliedEvent(t.id, StatusKind.freeze, n));
-        _notes.add('¡CONGELACIÓN SÚBITA! ${t.name} queda CONGELADO');
+        _notes.add(_l('rx_flash_freeze', {'a': t.name}));
       case ReactionKind.derretir:
         events.add(ReactionEvent(t.id, k, amount,
             sourceId: by?.id, consumedStacks: consumed));
         _meltedNow.add(t.id);
         _thawFreeze(t);
-        _notes.add('¡DERRETIR! ${t.name} ×${fm(def.damageMult)} y pierde la '
-            'Congelación');
+        _notes.add(_l('rx_melt', {'a': t.name, 'x': fm(def.damageMult)}));
       case ReactionKind.cortocircuito:
         t.statuses[StatusKind.charged] = 0;
         final next = _sideOf(t).firstOrNull;
@@ -2704,9 +2773,9 @@ class _Turn {
           if (hitStatus != null && next.alive) {
             _addStatus(next, hitStatus, source: by);
           }
-          _notes.add('¡CORTOCIRCUITO! salta a ${next.name}: $d');
+          _notes.add(_l('rx_short', {'a': next.name, 'd': d}));
         } else {
-          _notes.add('¡CORTOCIRCUITO! (nadie a quien saltar)');
+          _notes.add(_l('rx_short_none'));
         }
     }
     // Quiebre (combo_balance.md § 5): toda reacción suma puntos; una
@@ -2719,15 +2788,18 @@ class _Turn {
       }
     }
     // Combo entre jugadores: si detona otro, carga de ULT para los dos.
-    if (k.convergence && by != null && by.isPlayer && primer != null &&
+    if (k.convergence &&
+        by != null &&
+        by.isPlayer &&
+        primer != null &&
         primer != by.id) {
       final q = state.party.where((c) => c.id == primer).firstOrNull;
       final bonus = engine.catalog.combo.ultBonus;
       if (q != null && q.alive && bonus > 0) {
         by.ult = math.min(100, by.ult + bonus);
         q.ult = math.min(100, q.ult + bonus);
-        _notes.add('combo de ${q.name} y ${by.name}: +${fm(bonus)} de ULT '
-            'a los dos');
+        _notes
+            .add(_l('combo_ult', {'a': q.name, 'b': by.name, 'n': fm(bonus)}));
       }
     }
     _reactionTriggers(by, t, k, hitDamage, consumed, primer,
@@ -2780,15 +2852,24 @@ class _Turn {
       final d = splash[c.id];
       if (d != null) _rawDamage(by, c, d, reactionSourceId(k));
     }
-    final affNote = aff == 1 ? '' : ' × ${fm(aff)}';
-    final capNote = amount > 0 && amount < jsRound(raw) ? ' (tope)' : '';
-    final splashNote = splash.isEmpty
-        ? ''
-        : ' · salpica a ${splash.length} '
-            '(${splash.values.map((d) => '$d').join(', ')})';
-    _notes.add('¡${k.label.toUpperCase()}! $consumed ${k.primer.label} × '
-        '${fm(def.perStack * 100)}% = ${fm(pct * 100)}%$affNote → $amount a '
-        '${t.name}$capNote$splashNote');
+    _notes.add(LogLine.join([
+      _l('converge', {
+        'r': LogLine.upper(_rxL(k)),
+        'n': consumed,
+        's': _st(k.primer),
+        'p': '${fm(def.perStack * 100)}%',
+        'q': '${fm(pct * 100)}%',
+        'aff': aff == 1 ? '' : ' × ${fm(aff)}',
+        'd': amount,
+        'a': t.name,
+        'cap': amount > 0 && amount < jsRound(raw) ? 'yes' : 'no',
+      }),
+      if (splash.isNotEmpty)
+        _l('converge_splash', {
+          'n': splash.length,
+          'd': splash.values.map((d) => '$d').join(', '),
+        }),
+    ]));
     return amount;
   }
 
@@ -2874,22 +2955,23 @@ class _Turn {
       _heal(q, amount);
       return amount;
     }
-    final d = _rawDamage(null, q, math.max(1, jsRound(amount * harm)),
-        kHealHarmSourceId);
-    _notes.add('¡La cura quema a ${q.name}! $d');
+    final d = _rawDamage(
+        null, q, math.max(1, jsRound(amount * harm)), kHealHarmSourceId);
+    _notes.add(_l('heal_burns', {'a': q.name, 'd': d}));
     return 0;
   }
 
   /// Factor de la familia [r] para un golpe con [tags]; agrega cada
   /// factor a [mods] (`× 1.5 DÉBIL Sagrado`).
-  double _familyMods(FamilyRule? r, Set<DamageTag> tags, List<String> mods) {
+  double _familyMods(FamilyRule? r, Set<DamageTag> tags, List<LogLine> mods) {
     var m = 1.0;
     for (final f in familyFactors(r, tags)) {
       m *= f.value;
+      final tag = LogLine.named(CatalogKeys.damageTag(f.tag), f.tag.label);
       mods.add(f.value == 0
-          ? '× 0 INMUNE ${f.tag.label}'
-          : '× ${fm(f.value)} ${f.weak ? 'DÉBIL' : 'RESISTE'} '
-              '${f.tag.label}');
+          ? _l('mod.immune_tag', {'t': tag})
+          : _mod(f.value,
+              _l(f.weak ? 'mod.weak_tag' : 'mod.resist_tag', {'t': tag})));
     }
     return m;
   }
@@ -2910,7 +2992,7 @@ class _Turn {
     if (dmg >= e.hp && e.hp > 1 && _holds(e)) {
       state.acted.add(holdKey(e.id));
       dmg = e.hp - 1;
-      _notes.add('${e.name} aguanta la ronda (queda en 1)');
+      _notes.add(_l('holds_round', {'a': e.name}));
     }
     return dmg;
   }
@@ -2997,7 +3079,7 @@ class _Turn {
   /// `healHarm` (no muertos, espectros): cada enemigo vivo así recibe
   /// [amount] × `healHarm` (más Marca y quiebre). Devuelve el texto del
   /// log ("¡La cura quema al Esqueleto! 34") o vacío.
-  String _healHarm(Combatant p, int amount) {
+  LogLine _healHarm(Combatant p, int amount) {
     final hit = <(Combatant, int)>[];
     for (final e in state.enemies) {
       if (!e.alive) continue;
@@ -3008,14 +3090,14 @@ class _Turn {
       final d = math.max(1, jsRound(amount * r.healHarm * bonus));
       hit.add((e, _procDamage(p, e, d, kHealHarmSourceId)));
     }
-    if (hit.isEmpty) return '';
+    if (hit.isEmpty) return LogLine.empty;
     if (hit.length == 1) {
       final (e, d) = hit.first;
       final fem = engine.catalog.enemies[e.enemyType]?.feminine ?? false;
-      return ' · ¡La cura quema ${fem ? 'a la' : 'al'} ${e.name}! $d';
+      return _l('heal_burns_one', {'g': fem ? 'f' : 'm', 'a': e.name, 'd': d});
     }
-    return ' · ¡La cura quema a los no muertos! '
-        '${hit.map((h) => '${h.$1.name} ${h.$2}').join(', ')}';
+    return _l('heal_burns_all',
+        {'p': hit.map((h) => '${h.$1.name} ${h.$2}').join(', ')});
   }
 
   /// Un actor cae. Si es un enemigo: cuenta para `onKill` de la acción y
@@ -3025,8 +3107,8 @@ class _Turn {
     if (c.practice) {
       c.hp = 1;
       _notes.add(c.isPlayer
-          ? '${c.name} aguanta con 1 de vida (práctica)'
-          : 'el ${c.name.toLowerCase()} se recompone');
+          ? _l('practice_hold', {'a': c.name})
+          : _l('practice_recover', {'a': c.name.toLowerCase()}));
       return;
     }
     events.add(KnockedOutEvent(c.id));
@@ -3049,9 +3131,9 @@ class _Turn {
 
   /// `dmgLog`: el desglose que ve el jugador. Muestra siempre el
   /// multiplicador de crítico real del atacante.
-  String _damageLog(
-    String head,
-    String source,
+  LogLine _damageLog(
+    LogLine head,
+    LogLine source,
     num sourceValue,
     double power,
     List<_Hit> hits, {
@@ -3059,50 +3141,71 @@ class _Turn {
     double tormenta = 1,
   }) {
     final cm = _critMult(_attacker);
-    final formula = '$source × ${fm(power)}'
-        '${tormenta != 1 ? ' × ${fm(tormenta)} Tormenta' : ''}';
+    final formula = _l(tormenta != 1 ? 'formula_storm' : 'formula',
+        {'s': source, 'p': fm(power), 't': fm(tormenta)});
     if (!all) {
       final r = hits.first;
-      return '$head: ${r.damage} = $formula'
-          '${r.critical ? ' × ${fm(cm)} CRÍTICO' : ''}'
-          '${r.mods.isEmpty ? '' : ' ${r.mods.join(' ')}'}';
+      return _l('dmg_one', {
+        'h': head,
+        'd': r.damage,
+        'f': formula,
+        'crit': r.critical ? 'yes' : 'no',
+        'c': fm(cm),
+        'm': LogLine.join(r.mods, ' '),
+        'mods': r.mods.isEmpty ? 'no' : 'yes',
+      });
     }
     final base = jsRound(sourceValue * power * tormenta);
     final crits = hits.where((h) => h.critical).length;
     final modded = [
       for (final h in hits)
         if (h.mods.isNotEmpty)
-          '${h.target.name} ${h.mods.join(' ')} = ${h.damage}',
+          _l('dmg_modded', {
+            'a': h.target.name,
+            'm': LogLine.join(h.mods, ' '),
+            'd': h.damage,
+          }),
     ];
-    return '$head: $base c/u = $formula'
-        '${crits > 0 ? ' ($crits crítico${crits > 1 ? 's' : ''} → ${jsRound(base * cm)})' : ''}'
-        '${modded.isEmpty ? '' : ' · ${modded.join(', ')}'}';
+    return LogLine.join([
+      _l(crits > 0 ? 'dmg_all_crit' : 'dmg_all', {
+        'h': head,
+        'd': base,
+        'f': formula,
+        'n': crits,
+        'c': jsRound(base * cm),
+      }),
+      if (modded.isNotEmpty) LogLine.join(modded, ', '),
+    ]);
   }
 
-  String _statusText(StatusApplication? st, {int bonus = 0}) =>
-      st == null ? '' : ' · +${st.stacks + bonus} ${st.kind.label}';
+  LogLine _statusText(StatusApplication? st, {int bonus = 0}) => st == null
+      ? LogLine.empty
+      : _l('status_plus', {'n': st.stacks + bonus, 's': _st(st.kind)});
 
   /// Texto del estado principal de una acción del grupo según lo que
   /// PASÓ: intentado en [tried] objetivos vivos, entró en [landed]. Nunca
   /// dice que un estado entró si no entró (falló la probabilidad o el
   /// objetivo es inmune: "un enemigo aturdido igual me atacó", v0.5.1).
-  String _statusOutcome(
+  LogLine _statusOutcome(
       StatusApplication st, int bonus, int tried, int landed) {
     final n = st.stacks + bonus;
     final chance = st.chance;
     final pct = chance == null ? '' : ' (${jsRound(chance * 100)}%)';
     if (tried == 0) {
       // Los objetivos cayeron con el golpe: nada que informar.
-      return chance == null ? _statusText(st, bonus: bonus) : '';
+      return chance == null ? _statusText(st, bonus: bonus) : LogLine.empty;
     }
     if (landed == 0) {
       // Inmune (el aviso de INMUNE ya va en el log) o falló la tirada.
-      return chance == null ? '' : ' · ${st.kind.label}: falla$pct';
+      return chance == null
+          ? LogLine.empty
+          : _l('status_miss', {'s': _st(st.kind), 'p': pct});
     }
     if (tried == 1 || (landed == tried && chance == null)) {
-      return ' · +$n ${st.kind.label}$pct';
+      return _l('status_pct', {'n': n, 's': _st(st.kind), 'p': pct});
     }
-    return ' · +$n ${st.kind.label} a $landed de $tried$pct';
+    return _l('status_some',
+        {'n': n, 's': _st(st.kind), 'a': landed, 'b': tried, 'p': pct});
   }
 
   // ---------------- disparadores del árbol ----------------
@@ -3217,7 +3320,6 @@ class _Turn {
   }
 
   String _pct(double v) => '${jsRound(v.abs() * 100)}%';
-  String _turns(int n) => '($n turno${n == 1 ? '' : 's'})';
 
   /// Pone (o renueva) un efecto con duración de [m] sobre [c]. Los
   /// escudos del mismo origen no acumulan: queda el mayor.
@@ -3247,17 +3349,20 @@ class _Turn {
     events.add(ProcEvent(owner.id, m.id, targetId: c.id));
     _giveEffect(c, owner, m, BuffStat.shield, amount.toDouble(), turns);
     events.add(ShieldEvent(c.id, amount));
-    _notes.add('${m.name}: escudo de $amount a ${c.name} ${_turns(turns)}');
+    _notes.add(_l('mech_shield',
+        {'m': _mech(m), 'n': amount, 'a': c.name, 't': _turnsL(turns)}));
   }
 
   void _applyEffect(PassiveMechanic m, ProcEffect fx, Combatant owner,
-      Combatant? target, int amount, [StatusKind? status]) {
+      Combatant? target, int amount,
+      [StatusKind? status]) {
     final act = _act;
     switch (fx.kind) {
       // ---- ascensión (docs/specs/ascension.md § 3.1) ----
       case ProcEffectKind.buffParty:
         events.add(ProcEvent(owner.id, m.id));
-        _partyBuff(owner, m.id, m.name, fx.stat!, fx.value, fx.turns);
+        _partyBuff(owner, m.id, _mech(m), fx.stat!, fx.value, fx.turns,
+            nameText: m.name);
       case ProcEffectKind.shieldParty:
         _partyShield(owner, m, fx.value, fx.turns);
       case ProcEffectKind.shieldLowestAlly:
@@ -3269,7 +3374,7 @@ class _Turn {
         for (final q in _aliveParty) {
           _heal(q, math.max(1, jsRound(q.maxHp * fx.value)));
         }
-        _notes.add('${m.name}: el grupo se cura ${_pct(fx.value)}');
+        _notes.add(_l('party_heals', {'m': _mech(m), 'p': _pct(fx.value)}));
       case ProcEffectKind.advanceAlly:
         Combatant? slow;
         for (final q in _aliveParty) {
@@ -3278,20 +3383,29 @@ class _Turn {
           }
         }
         events.add(ProcEvent(owner.id, m.id, targetId: slow?.id));
-        _advance(owner, [if (slow != null) slow], fx.value, m.name);
+        _advance(owner, [if (slow != null) slow], fx.value, _mech(m));
       case ProcEffectKind.advanceParty:
         events.add(ProcEvent(owner.id, m.id));
-        _advance(owner, [for (final q in _aliveParty) if (q != owner) q],
-            fx.value, m.name,
+        _advance(
+            owner,
+            [
+              for (final q in _aliveParty)
+                if (q != owner) q
+            ],
+            fx.value,
+            _mech(m),
             soloCap: 0.5);
       case ProcEffectKind.ultChargeParty:
-        final allies = [for (final q in _aliveParty) if (q != owner) q];
+        final allies = [
+          for (final q in _aliveParty)
+            if (q != owner) q
+        ];
         if (allies.isEmpty) return;
         events.add(ProcEvent(owner.id, m.id));
         for (final q in allies) {
           _bonusUlt(q, fx.value);
         }
-        _notes.add('${m.name}: aliados +${jsRound(fx.value)} carga de ULT');
+        _notes.add(_l('allies_ult', {'m': _mech(m), 'n': jsRound(fx.value)}));
       case ProcEffectKind.drainUlt:
         if (target == null ||
             !target.alive ||
@@ -3302,11 +3416,11 @@ class _Turn {
         }
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         target.ult = math.max(0, target.ult - fx.value);
-        _notes.add('${m.name}: ${target.name} −${jsRound(fx.value)} carga '
-            'de ULT');
+        _notes.add(_l('ult_drain',
+            {'s': _mech(m), 'a': target.name, 'n': jsRound(fx.value)}));
       case ProcEffectKind.execute:
         if (target == null) return;
-        _execute(owner, target, fx.value, m.id, m.name);
+        _execute(owner, target, fx.value, m.id, _mech(m));
       case ProcEffectKind.plantTrap:
         if (target == null || !target.alive) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
@@ -3319,9 +3433,11 @@ class _Turn {
         final d = math.max(1, jsRound(amount * fx.value));
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         final parts = [
-          for (final e in others) '${_procDamage(owner, e, d, m.id)} a ${e.name}',
+          for (final e in others)
+            _l('dmg_to', {'d': _procDamage(owner, e, d, m.id), 'a': e.name}),
         ];
-        _notes.add('${m.name}: ${parts.join(', ')}');
+        _notes.add(
+            _l('mech_parts', {'m': _mech(m), 'p': LogLine.join(parts, ', ')}));
       case ProcEffectKind.spreadAll:
         if (target == null) return;
         final stacks = {
@@ -3335,7 +3451,7 @@ class _Turn {
           stacks.forEach(
               (k, n) => _addStatus(e, StatusApplication(k, n), source: owner));
         }
-        _notes.add('${m.name}: los estados de ${target.name} se esparcen');
+        _notes.add(_l('spread_all', {'m': _mech(m), 'a': target.name}));
       case ProcEffectKind.addElement:
         if (target == null ||
             !target.alive ||
@@ -3350,8 +3466,12 @@ class _Turn {
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         if (_addStatus(target, StatusApplication(k, fx.value.round()),
             source: owner)) {
-          _notes.add('${m.name}: ${target.name} +${fx.value.round()} '
-              '${k.label}');
+          _notes.add(_l('target_plus_status', {
+            'm': _mech(m),
+            'a': target.name,
+            'n': fx.value.round(),
+            's': _st(k),
+          }));
         }
       case ProcEffectKind.cheatDeath:
         break; // modificador: lo aplica `_cheatDeath`
@@ -3368,23 +3488,24 @@ class _Turn {
         ].take(math.max(1, fx.value.round())).toList();
         if (next.isEmpty || def.splash <= 0) return;
         events.add(ProcEvent(owner.id, m.id, targetId: next.first.id));
-        final parts = <String>[];
+        final parts = <LogLine>[];
         for (final c in next) {
           rx.hitIds.add(c.id);
           final dealt = _rawDamage(owner, c, d, reactionSourceId(rx.kind));
           if (rx.hitStatus != null && c.alive) {
             _addStatus(c, rx.hitStatus!, source: owner);
           }
-          parts.add('$dealt a ${c.name}');
+          parts.add(_l('dmg_to', {'d': dealt, 'a': c.name}));
         }
-        _notes.add('${m.name}: salta otra vez · ${parts.join(', ')}');
+        _notes.add(
+            _l('jumps_again', {'m': _mech(m), 'p': LogLine.join(parts, ', ')}));
       case ProcEffectKind.refundMp:
         final sk = act?.skill;
         if (act == null || sk == null || act.ultimate || sk.mp <= 0) return;
         events.add(ProcEvent(owner.id, m.id));
         owner.mp = math.min(owner.maxMp.toDouble(), owner.mp + sk.mp);
         events.add(HealEvent(owner.id, sk.mp, mana: true));
-        _notes.add('${m.name}: +${sk.mp} MP');
+        _notes.add(_l('mech_mp', {'m': _mech(m), 'n': sk.mp}));
       case ProcEffectKind.reactionStatus:
         final rx = _rx;
         final st = fx.status;
@@ -3395,7 +3516,8 @@ class _Turn {
         if (n <= 0) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         if (_addStatus(target, StatusApplication(st, n), source: owner)) {
-          _notes.add('${m.name}: ${target.name} +$n ${st.label}');
+          _notes.add(_l('target_plus_status',
+              {'m': _mech(m), 'a': target.name, 'n': n, 's': _st(st)}));
         }
       case ProcEffectKind.brittleAll:
         final hit = [
@@ -3413,8 +3535,8 @@ class _Turn {
           e.brittle = true;
           events.add(IceEvent(e.id, IcePhase.brittle));
         }
-        _notes.add('${m.name}: ${hit.map((e) => e.name).join(', ')} '
-            'quedan QUEBRADIZOS');
+        _notes.add(_l('brittle_all',
+            {'m': _mech(m), 'a': hit.map((e) => e.name).join(', ')}));
       case ProcEffectKind.lockStun:
         if (target == null ||
             !target.alive ||
@@ -3436,7 +3558,7 @@ class _Turn {
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         events.add(
             BuffAppliedEvent(target.id, m.id, BuffStat.stunLock, 1, turns));
-        _notes.add('${m.name}: ${target.name} queda aturdido 1 turno más');
+        _notes.add(_l('stun_more', {'m': _mech(m), 'a': target.name}));
       case ProcEffectKind.buffDuo:
         final rx = _rx;
         events.add(ProcEvent(owner.id, m.id));
@@ -3446,11 +3568,18 @@ class _Turn {
         ];
         for (final c in who) {
           _giveEffect(c, owner, m, fx.stat!, fx.value, fx.turns);
-          events.add(
-              BuffAppliedEvent(c.id, m.id, fx.stat!, fx.value, fx.turns));
+          events
+              .add(BuffAppliedEvent(c.id, m.id, fx.stat!, fx.value, fx.turns));
         }
-        _notes.add('${m.name}: ${who.map((c) => c.name).join(' y ')} '
-            '+${_pct(fx.value)} ${fx.stat!.label} ${_turns(fx.turns)}');
+        _notes.add(_l('buff_duo', {
+          'm': _mech(m),
+          'a': who.first.name,
+          'b': who.length > 1 ? who[1].name : '',
+          'two': who.length > 1 ? 'yes' : 'no',
+          'p': _pct(fx.value),
+          's': _stat(fx.stat!),
+          't': _turnsL(fx.turns),
+        }));
       case ProcEffectKind.reactionBonus:
       case ProcEffectKind.healHarmBonus:
       case ProcEffectKind.summon:
@@ -3461,8 +3590,12 @@ class _Turn {
         _giveEffect(owner, owner, m, fx.stat!, fx.value, fx.turns);
         events.add(
             BuffAppliedEvent(owner.id, m.id, fx.stat!, fx.value, fx.turns));
-        _notes.add('${m.name}: +${_pct(fx.value)} ${fx.stat!.label} '
-            '${_turns(fx.turns)}');
+        _notes.add(_l('self_buff', {
+          's': _mech(m),
+          'p': _pct(fx.value),
+          'x': _stat(fx.stat!),
+          't': _turnsL(fx.turns),
+        }));
       case ProcEffectKind.debuffTarget:
       case ProcEffectKind.markTarget:
         if (target == null || !target.alive) return;
@@ -3475,33 +3608,43 @@ class _Turn {
         events.add(
             BuffAppliedEvent(target.id, m.id, fx.stat!, fx.value, fx.turns));
         _notes.add(fx.kind == ProcEffectKind.markTarget
-            ? '${m.name}: ${target.name} recibe +${_pct(fx.value)} de daño '
-                '${_turns(fx.turns)}'
-            : '${m.name}: ${target.name} ${fx.value < 0 ? '−' : '+'}'
-                '${_pct(fx.value)} ${fx.stat!.label} ${_turns(fx.turns)}');
+            ? _l('mark_target', {
+                'm': _mech(m),
+                'a': target.name,
+                'p': _pct(fx.value),
+                't': _turnsL(fx.turns),
+              })
+            : _l('debuff_target', {
+                'm': _mech(m),
+                'a': target.name,
+                'v': '${fx.value < 0 ? '−' : '+'}${_pct(fx.value)}',
+                's': _stat(fx.stat!),
+                't': _turnsL(fx.turns),
+              }));
       case ProcEffectKind.advanceTurn:
         if (act == null) return;
         events.add(ProcEvent(owner.id, m.id));
         act.turnFactor = math.min(act.turnFactor, 1 - fx.value);
-        _notes.add('${m.name}: tu próximo turno llega ${_pct(fx.value)} antes');
+        _notes
+            .add(_l('next_turn_sooner', {'m': _mech(m), 'p': _pct(fx.value)}));
       case ProcEffectKind.extraTurn:
         if (act == null || owner.extraTurn == 2 || act.extraTurn) return;
         events.add(ProcEvent(owner.id, m.id));
         act.extraTurn = true;
-        _notes.add('${m.name}: ¡turno extra!');
+        _notes.add(_l('extra_turn', {'m': _mech(m)}));
       case ProcEffectKind.healSelf:
         if (!owner.alive) return;
         final h = math.max(1, jsRound(owner.maxHp * fx.value));
         events.add(ProcEvent(owner.id, m.id, targetId: owner.id));
         _heal(owner, h);
-        _notes.add('${m.name}: +$h HP');
+        _notes.add(_l('mech_hp', {'m': _mech(m), 'h': h}));
       case ProcEffectKind.healLowestAlly:
         final q = _lowest(_aliveParty, (c) => c.hp / c.maxHp);
         if (q == null || q.hp >= q.maxHp) return;
         final h = math.max(1, jsRound(q.maxHp * fx.value));
         events.add(ProcEvent(owner.id, m.id, targetId: q.id));
         _heal(q, h);
-        _notes.add('${m.name}: ${q.name} +$h HP');
+        _notes.add(_l('mech_ally_hp', {'m': _mech(m), 'a': q.name, 'h': h}));
       case ProcEffectKind.chain:
         if (act == null || fx.value <= act.chain) return;
         act
@@ -3515,7 +3658,8 @@ class _Turn {
         final d = math.max(1, jsRound(amount * fx.value));
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         final dealt = _procDamage(owner, target, d, m.id);
-        _notes.add('${m.name}: $dealt a ${target.name}');
+        _notes.add(
+            _l('src_dmg_to', {'m': _mech(m), 'd': dealt, 'a': target.name}));
       case ProcEffectKind.shatterStun:
         if (target == null ||
             !target.alive ||
@@ -3530,8 +3674,8 @@ class _Turn {
         final stunned = _addStatus(
             target, const StatusApplication(StatusKind.stun, 1),
             source: owner);
-        _notes.add('${m.name}: ${target.name} pierde la Congelación'
-            '${stunned ? ' y queda aturdido' : ''}');
+        _notes.add(_l(stunned ? 'loses_freeze_stun' : 'loses_freeze',
+            {'m': _mech(m), 'a': target.name}));
       case ProcEffectKind.delayTarget:
         if (target == null || !target.alive) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
@@ -3540,7 +3684,8 @@ class _Turn {
             (_fam(target)?.delayMult ?? 1) *
             _delayFalloff(target);
         events.add(DelayedEvent(target.id));
-        _notes.add('${m.name}: ${target.name} se retrasa ${_pct(fx.value)}');
+        _notes.add(_l(
+            'delayed', {'m': _mech(m), 'a': target.name, 'p': _pct(fx.value)}));
       case ProcEffectKind.repeatSkill:
         if (act == null || act.repeat != null) return;
         act.repeat = (fx.value, m);
@@ -3557,7 +3702,8 @@ class _Turn {
         if (n <= 0 || dest == null) return;
         events.add(ProcEvent(owner.id, m.id, targetId: dest.id));
         if (_addStatus(dest, StatusApplication(st, n), source: owner)) {
-          _notes.add('${m.name}: $n ${st.label} pasan a ${dest.name}');
+          _notes.add(_l('spread_status',
+              {'m': _mech(m), 'n': n, 's': _st(st), 'a': dest.name}));
         }
       case ProcEffectKind.freeAttack:
         if (act == null || act.freeAttack != null) return;
@@ -3570,14 +3716,19 @@ class _Turn {
       case ProcEffectKind.ultCharge:
         events.add(ProcEvent(owner.id, m.id));
         _bonusUlt(owner, fx.value);
-        _notes.add('${m.name}: +${jsRound(fx.value)} carga de ULT');
+        _notes.add(_l('mech_ult', {'m': _mech(m), 'n': jsRound(fx.value)}));
       case ProcEffectKind.holyDamage:
         if (target == null || !target.alive) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         final dealt = _procDamage(
             owner, target, math.max(1, jsRound(owner.magic * fx.value)), m.id);
-        _notes.add('${m.name}: $dealt sagrado a ${target.name} '
-            '(MAG ${owner.magic} × ${fm(fx.value)})');
+        _notes.add(_l('holy_dmg', {
+          'm': _mech(m),
+          'd': dealt,
+          'a': target.name,
+          'g': owner.magic,
+          'x': fm(fx.value),
+        }));
       case ProcEffectKind.extraStacks:
         final st = fx.status ?? m.status;
         if (target == null || !target.alive || st == null) return;
@@ -3585,7 +3736,8 @@ class _Turn {
         if (n <= 0) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         if (_addStatus(target, StatusApplication(st, n), source: owner)) {
-          _notes.add('${m.name}: +$n ${st.label} a ${target.name}');
+          _notes.add(_l('plus_status_to',
+              {'m': _mech(m), 'n': n, 's': _st(st), 'a': target.name}));
         }
       case ProcEffectKind.inflict:
         final st = fx.status;
@@ -3596,7 +3748,8 @@ class _Turn {
         _procHitReact(owner, target, m, StatusApplication(st, n));
         if (!target.alive) return;
         if (_addStatus(target, StatusApplication(st, n), source: owner)) {
-          _notes.add('${m.name}: ${target.name} +$n ${st.label}');
+          _notes.add(_l('target_plus_status',
+              {'m': _mech(m), 'a': target.name, 'n': n, 's': _st(st)}));
         }
       case ProcEffectKind.stunExtend:
       case ProcEffectKind.statBonus:
@@ -3619,21 +3772,22 @@ class _Turn {
       final start = state.enemies.indexOf(hit.target);
       var prev = hit.damage.toDouble();
       var frac = act.chain;
-      final parts = <String>[];
+      final parts = <LogLine>[];
       for (var k = 1; k < state.enemies.length; k++) {
         final e = state.enemies[(start + k) % state.enemies.length];
         if (!e.alive || hitIds.contains(e.id)) continue;
         final d = math.max(1, jsRound(prev * frac));
         events.add(ProcEvent(p.id, src.id, targetId: e.id));
-        parts.add('${_procDamage(p, e, d, src.id)} a ${e.name}');
+        parts.add(
+            _l('dmg_to', {'d': _procDamage(p, e, d, src.id), 'a': e.name}));
         hitIds.add(e.id);
         prev = d.toDouble();
         frac = 0.6;
         if (!infinite) break;
       }
       if (parts.isNotEmpty) {
-        _notes.add('${src.name}${infinite ? ' (Cadena Infinita)' : ''}: '
-            '${parts.join(', ')}');
+        _notes.add(_l(infinite ? 'chain_infinite' : 'mech_parts',
+            {'m': _mech(src), 'p': LogLine.join(parts, ', ')}));
       }
     }
 
@@ -3646,9 +3800,14 @@ class _Turn {
       if (others.isNotEmpty) {
         events.add(ProcEvent(p.id, m.id, targetId: center.id));
         final parts = [
-          for (final e in others) '${_procDamage(p, e, d, m.id)} a ${e.name}',
+          for (final e in others)
+            _l('dmg_to', {'d': _procDamage(p, e, d, m.id), 'a': e.name}),
         ];
-        _notes.add('${m.name}: ${center.name} explota → ${parts.join(', ')}');
+        _notes.add(_l('explodes', {
+          'm': _mech(m),
+          'a': center.name,
+          'p': LogLine.join(parts, ', '),
+        }));
       }
     }
 
@@ -3670,16 +3829,21 @@ class _Turn {
       if (targets.isNotEmpty) {
         events.add(ProcEvent(p.id, m.id));
         final d = math.max(1, jsRound(act.skillBase * frac));
-        final parts = <String>[];
+        final parts = <LogLine>[];
         for (final e in targets) {
-          parts.add('${_skillProcDamage(p, e, d, m.id, sk)} a ${e.name}');
+          parts.add(_l('dmg_to',
+              {'d': _skillProcDamage(p, e, d, m.id, sk), 'a': e.name}));
           final st = sk.status;
           if (st != null && e.alive) {
             _addStatus(e, st, bonus: act.skillStatusBonus, source: p);
           }
         }
-        _notes.add('${m.name}: ${sk.name} se repite al ${_pct(frac)} '
-            '(${parts.join(', ')})');
+        _notes.add(_l('repeats', {
+          'm': _mech(m),
+          's': _sk(sk),
+          'p': _pct(frac),
+          'x': LogLine.join(parts, ', '),
+        }));
       }
     }
 
@@ -3694,8 +3858,8 @@ class _Turn {
             ActionEvent(p.id, BattleActionKind.attack, targetId: target.id));
         final h = _damageEnemy(target, _atk(p).toDouble(), p.critChance,
             primary: false, element: GameElement.fisico, physical: true);
-        _notes.add('${free.name}: ataque gratis → ${target.name}: ${h.damage}'
-            '${h.critical ? ' CRÍTICO' : ''}');
+        _notes.add(_l(h.critical ? 'free_attack_crit' : 'free_attack',
+            {'m': _mech(free), 'a': target.name, 'd': h.damage}));
       }
     }
 
@@ -3729,8 +3893,7 @@ class _Turn {
       e.fissured = true;
       _fissuredNow.add(e.id);
       events.add(BreakEvent(e.id, BreakPhase.fissured, max, max));
-      _notes.add('¡${e.name} queda FISURADO! (un golpe con Quebrar lo '
-          'quiebra antes de su turno)');
+      _notes.add(_l('fissured', {'a': e.name}));
     } else {
       events.add(BreakEvent(e.id, BreakPhase.fill, e.breakGauge, max));
     }
@@ -3745,7 +3908,7 @@ class _Turn {
       ..fissured = false
       ..breakGauge = _r1(max * engine.catalog.combo.steadyGauge);
     events.add(BreakEvent(e.id, BreakPhase.steadied, e.breakGauge, max));
-    _notes.add('${e.name} se recompone (ya no está Fisurado)');
+    _notes.add(_l('steadied', {'a': e.name}));
   }
 
   /// Quiebre: pierde su próximo turno, su ULT vuelve a 0 (y se cancela
@@ -3764,8 +3927,10 @@ class _Turn {
     events.add(
         BreakEvent(e.id, BreakPhase.broken, max, max, cancelledUlt: cancelled));
     final ult = engine.catalog.enemyUlts[e.ultId];
-    _notes.add('¡QUIEBRE! ${e.name}: pierde su turno, +50% de daño'
-        '${cancelled && ult != null ? ' · ${ult.name} cancelada' : ''}');
+    _notes.add(LogLine.join([
+      _l('break', {'a': e.name}),
+      if (cancelled && ult != null) _l('ult_cancelled', {'u': _eult(ult)}),
+    ]));
     // Estratega (Señor de la Guerra): cualquier quiebre del grupo.
     for (final q in state.party) {
       if (q.alive) _fire(ProcTrigger.onBreak, q, target: e);
@@ -3785,9 +3950,11 @@ class _Turn {
         c.hp = 0;
         events.add(
             BossMechanicEvent(e.id, BossMechanicPhase.shatter, targetId: c.id));
-        _notes.add(m.kind == BossMechanicKind.echo
-            ? 'el quiebre disipa un ${c.name}'
-            : 'el quiebre rompe un ${c.name}');
+        _notes.add(_l(
+            m.kind == BossMechanicKind.echo
+                ? 'break_dispels'
+                : 'break_shatters',
+            {'a': c.name}));
         _knockedOut(c);
       }
     }
@@ -3820,7 +3987,7 @@ class _Turn {
         ..breaks += 1;
       if (!e.alive) continue;
       events.add(BreakEvent(e.id, BreakPhase.recovered, 0, e.breakMax));
-      _notes.add('${e.name} se recupera del quiebre');
+      _notes.add(_l('break_recovers', {'a': e.name}));
     }
   }
 
@@ -3866,8 +4033,8 @@ class _Turn {
         e.ultPending = true;
         events.add(EnemyUltWarningEvent(e.id, ult.id, ult.name));
         final fem = engine.catalog.enemies[e.enemyType]?.feminine ?? false;
-        state.log = '¡${fem ? 'La' : 'El'} ${e.name} se prepara para '
-            '${ult.name}! · Quiébralo, defiéndete o protégete';
+        state.logLine = _l('ult_warning',
+            {'g': fem ? 'f' : 'm', 'a': e.name, 'u': _eult(ult)});
         return;
       }
       e.ult = math.min(100, e.ult + BattleEngine.enemyUltPerTurn);
@@ -3918,14 +4085,14 @@ class _Turn {
 
   /// Efectos de los comunes v0.3 sobre el jugador que golpean: retraso
   /// (Guardián del Reloj, Fragmento) y marca (Vigilante). Texto del log.
-  String _onHitExtras(Combatant e, Combatant p) {
+  List<LogLine> _onHitExtras(Combatant e, Combatant p) {
     final d = engine.catalog.enemies[e.enemyType];
-    if (d == null || !p.alive) return '';
-    var log = '';
+    if (d == null || !p.alive) return const [];
+    final log = <LogLine>[];
     if (d.delayHit > 0) {
       p.nextTurn += _iv(p) * d.delayHit;
       events.add(DelayedEvent(p.id));
-      log += ' · retrasa ${_pct(d.delayHit)}';
+      log.add(_l('hit_delays', {'p': _pct(d.delayHit)}));
     }
     if (d.markHit > 0) {
       const src = 'vigilancia';
@@ -3941,7 +4108,7 @@ class _Turn {
       ];
       events
           .add(BuffAppliedEvent(p.id, src, BuffStat.damageTaken, d.markHit, 2));
-      log += ' · marcado +${_pct(d.markHit)} daño recibido (2 turnos)';
+      log.add(_l('hit_marks', {'p': _pct(d.markHit)}));
     }
     return log;
   }
@@ -3958,8 +4125,8 @@ class _Turn {
         protector != null && q != protector ? protector : q;
     final pick = victim(pick0);
     final protText = protector != null && pick0 != protector
-        ? ' (Protección: ${protector.name} recibe el golpe dirigido a ${pick0.name})'
-        : '';
+        ? _l('protected', {'a': protector.name, 'b': pick0.name})
+        : LogLine.empty;
     final inf = _inflictsOf(e);
     // Elemento del golpe (v0.7): reacciones sobre los jugadores.
     final el = enemyAttackElement(engine.catalog.enemies[e.enemyType], inf);
@@ -3984,20 +4151,27 @@ class _Turn {
     final atkMod = e.effectTotal(BuffStat.attack);
     final atk =
         atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
-    final atkText = atkMod == 0 ? 'ATQ ${e.attack}' : 'ATQ $atk (debilitado)';
+    final atkText = atkMod == 0
+        ? _l('src_atk', {'n': e.attack})
+        : _l('src_atk_weak', {'n': atk});
 
-    String detail(_Hurt h, double mult, Combatant p) => '$atkText'
-        '${mult != 1 ? ' × ${fm(mult)}' : ''}'
-        '${h.critical ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}'
-        '${h.pierce > 1 ? ' × ${fm(h.pierce)} perforante' : ''}'
-        '${p.defending ? ' × ½ defender' : ''}'
-        '${p.effectTotal(BuffStat.damageTaken) > 0 ? ' × ${fm(1 + p.effectTotal(BuffStat.damageTaken))} marca' : ''}'
-        '${h.defensePercent > 0 ? ' − ${jsRound(h.defensePercent * 100)}% DEF' : ''}';
-    String infText(Combatant p) => p.alive && inf != null
+    LogLine detail(_Hurt h, double mult, Combatant p) => LogLine.join([
+          atkText,
+          if (mult != 1) _l('x_mult', {'x': fm(mult)}),
+          if (h.critical)
+            _l('x_crit', {'x': fm(BattleEngine.enemyCritMultiplier)}),
+          if (h.pierce > 1) _l('x_pierce', {'x': fm(h.pierce)}),
+          if (p.defending) _l('x_defend'),
+          if (p.effectTotal(BuffStat.damageTaken) > 0)
+            _l('x_mark', {'x': fm(1 + p.effectTotal(BuffStat.damageTaken))}),
+          if (h.defensePercent > 0)
+            _l('x_def', {'n': jsRound(h.defensePercent * 100)}),
+        ], ' ');
+    LogLine infText(Combatant p) => p.alive && inf != null
         ? _statusText(inf,
             bonus: inf.kind == StatusKind.regen ? 0 : p.statusWeakness)
-        : '';
-    final tauntText = taunter != null ? ' (provocado)' : '';
+        : LogLine.empty;
+    final tauntText = taunter != null ? _l('taunted') : LogLine.empty;
     // Guardián: el protector recibió un golpe dirigido a un aliado.
     void guarded(Combatant p, Combatant p0, int dmg) {
       if (p != p0 && p.alive) {
@@ -4006,11 +4180,11 @@ class _Turn {
     }
 
     if (area) {
-      final parts = <String>[];
+      final parts = <LogLine>[];
       for (final p0 in alive) {
         final p = victim(p0);
         if (!p.alive) {
-          parts.add('${p0.name} 0');
+          parts.add(_l('who_dmg', {'w': p0.name, 'd': 0, 'c': ''}));
           continue;
         }
         final h = _hurt(p, atk * 0.7, e.critChance, e.pierce,
@@ -4019,18 +4193,34 @@ class _Turn {
         p.nextTurn += _iv(p) * 0.4;
         if (inf != null) _addStatus(p, inf);
         events.add(DelayedEvent(p.id));
-        final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
-        parts.add('$who ${h.damage}${h.critical ? '!' : ''}');
+        final who = p != p0
+            ? _l('for_ally', {'a': p.name, 'b': p0.name})
+            : LogLine.raw(p.name);
+        parts.add(_l(
+            'who_dmg', {'w': who, 'd': h.damage, 'c': h.critical ? '!' : ''}));
       }
-      state.log = '${e.name} · Colapso Temporal (todos, $atkText × 0.7, '
-          'retrasa): ${parts.join(', ')}';
+      state.logLine = _l('time_collapse', {
+        'a': e.name,
+        's': atkText,
+        'p': LogLine.join(parts, ', '),
+      });
     } else if (e.boss && e.actions % 4 == 0) {
       final h = _hurt(pick, atk * 1.6, e.critChance, e.pierce,
           from: e, element: el, inflicted: inf);
       guarded(pick, pick0, h.damage);
       final got = inf != null && _addStatus(pick, inf);
-      state.log = '${e.name} · Golpe Brutal → ${pick.name}: ${h.damage} = '
-          '${detail(h, 1.6, pick)}${got ? infText(pick) : ''}$tauntText$protText${_onHitExtras(e, pick)}';
+      state.logLine = _enemyHitLine(
+        _l('brutal_hit', {
+          'a': e.name,
+          'b': pick.name,
+          'd': h.damage,
+          'x': detail(h, 1.6, pick),
+        }),
+        got ? infText(pick) : LogLine.empty,
+        tauntText,
+        protText,
+        _onHitExtras(e, pick),
+      );
     } else {
       final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce,
           from: e, element: el, inflicted: inf);
@@ -4042,9 +4232,18 @@ class _Turn {
           h.defensePercent > 0 ||
           pick.effectTotal(BuffStat.damageTaken) > 0 ||
           atkMod != 0;
-      state.log = '${e.name} → ${pick.name}: ${h.damage}'
-          '${explain ? ' = ${detail(h, 1, pick)}' : ''}'
-          '${got ? infText(pick) : ''}$tauntText$protText${_onHitExtras(e, pick)}';
+      state.logLine = _enemyHitLine(
+        _l(explain ? 'enemy_hit_x' : 'enemy_hit', {
+          'a': e.name,
+          'b': pick.name,
+          'd': h.damage,
+          'x': explain ? detail(h, 1, pick) : LogLine.empty,
+        }),
+        got ? infText(pick) : LogLine.empty,
+        tauntText,
+        protText,
+        _onHitExtras(e, pick),
+      );
     }
   }
 
@@ -4073,12 +4272,14 @@ class _Turn {
     final atkMod = e.effectTotal(BuffStat.attack);
     final atk =
         atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
-    final atkText = atkMod == 0 ? 'ATQ ${e.attack}' : 'ATQ $atk (debilitado)';
+    final atkText = atkMod == 0
+        ? _l('src_atk', {'n': e.attack})
+        : _l('src_atk_weak', {'n': atk});
     final crit = ult.guaranteedCrit ? 1.0 : e.critChance;
     final mech = _mechanicOf(e);
     // Coro de Ecos: más poder por cada eco vivo.
     var power = ult.power * (1 - weaken);
-    if (weaken > 0) _notes.add('drenada: −${_pct(weaken)} de poder');
+    if (weaken > 0) _notes.add(_l('drained', {'p': _pct(weaken)}));
     // Anuncio de las Eras: el estado de su ciclo.
     final def = engine.catalog.enemies[e.enemyType];
     final cycle = def?.inflictCycle ?? const <StatusApplication>[];
@@ -4093,11 +4294,11 @@ class _Turn {
               .length;
     }
     final solo = alive.length == 1;
-    final parts = <String>[];
+    final parts = <LogLine>[];
     void strike(Combatant p0) {
       final p = victim(p0);
       if (!p.alive) {
-        parts.add('${p0.name} 0');
+        parts.add(_l('who_dmg', {'w': p0.name, 'd': 0, 'c': ''}));
         return;
       }
       // Colapso del Vacío: el marcado sin proteger recibe × value.
@@ -4137,9 +4338,17 @@ class _Turn {
         p.nextTurn += _iv(p) * ult.delayTarget;
         events.add(DelayedEvent(p.id));
       }
-      final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
-      parts.add('$who ${h.damage}${h.critical ? '!' : ''}'
-          '${mult != 1 ? ' (MARCA ×${fm(mult)})' : ''}');
+      final who = p != p0
+          ? _l('for_ally', {'a': p.name, 'b': p0.name})
+          : LogLine.raw(p.name);
+      final hit =
+          _l('who_dmg', {'w': who, 'd': h.damage, 'c': h.critical ? '!' : ''});
+      parts.add(mult != 1
+          ? LogLine.join([
+              hit,
+              _l('void_mark_x', {'x': fm(mult)})
+            ], ' ')
+          : hit);
     }
 
     for (var i = 0; i < math.max(1, ult.hits); i++) {
@@ -4160,7 +4369,7 @@ class _Turn {
       final h = math.max(1, jsRound(dealt * ult.drainHeal));
       e.hp = math.min(e.maxHp, e.hp + h);
       events.add(HealEvent(e.id, h));
-      parts.add('se cura $h');
+      parts.add(_l('heals_self', {'n': h}));
     }
     if (ult.selfShield > 0 && e.alive) {
       _shield(e, e, _ultMech(ult), jsRound(e.maxHp * ult.selfShield),
@@ -4188,14 +4397,26 @@ class _Turn {
       }
     }
     final extra = _ultExtra(e, ult);
-    state.log = '${e.name} · ULT ${ult.name} '
-        '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(power)}'
-        '${ult.guaranteedCrit ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}): '
-        '${parts.join(', ')}'
-        '${status != null ? _statusText(status) : ''}'
-        '${ult.delayAll > 0 ? ' · retrasa a todos' : ''}'
-        '${ult.wipeBuffs ? ' · borra los buffs del grupo' : ''}'
-        '$extra';
+    state.logLine = LogLine.join([
+      _l('enemy_ult', {
+        'a': e.name,
+        'u': _eult(ult),
+        'f': LogLine.join([
+          LogLine.join([
+            if (ult.allTargets) _l('all_tag'),
+            atkText,
+          ], ', '),
+          _l('x_mult', {'x': fm(power)}),
+          if (ult.guaranteedCrit)
+            _l('x_crit', {'x': fm(BattleEngine.enemyCritMultiplier)}),
+        ], ' '),
+        'p': LogLine.join(parts, ', '),
+      }),
+      if (status != null) _statusText(status),
+      if (ult.delayAll > 0) _l('delays_all'),
+      if (ult.wipeBuffs) _l('wipes_buffs'),
+      extra,
+    ]);
   }
 
   /// La ULT enemiga [ult] como fuente de efectos (debuffs, escudo).
@@ -4301,10 +4522,10 @@ class _Turn {
     e.mechTurns = 0;
     final k = _summonAdds(e, m);
     if (k > 0) {
-      _notes.add(m.kind == BossMechanicKind.echo
+      _notes.add(LogLine.of(m.kind == BossMechanicKind.echo
           ? '${m.name}: ${e.name} se desdobla en $k eco${k == 1 ? '' : 's'}'
           : '${m.name}: ${e.name} invoca $k siervo${k == 1 ? '' : 's'}'
-              ' (inmune a estados mientras vivan)');
+              ' (inmune a estados mientras vivan)'));
     }
   }
 
@@ -4385,14 +4606,14 @@ class _Turn {
       parts.add('${p.name} $taken');
     }
     if (parts.isNotEmpty) {
-      _notes.add('${m.name}: se queman por defenderse (ATQ $atk × '
-          '${fm(power)} + $stacks Quemadura): ${parts.join(', ')}');
+      _notes.add(LogLine.of('${m.name}: se queman por defenderse (ATQ $atk × '
+          '${fm(power)} + $stacks Quemadura): ${parts.join(', ')}'));
     }
     e.lava--;
     if (e.lava <= 0) {
       e.lava = 0;
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaFade));
-      _notes.add('la lava se enfría');
+      _notes.add(LogLine.of('la lava se enfría'));
     }
   }
 
@@ -4402,7 +4623,8 @@ class _Turn {
     e.lava = math.max(e.lava, turns);
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaRise,
         value: e.lava.toDouble()));
-    _notes.add('¡la lava sube ${e.lava} turnos! No te defiendas sobre ella');
+    _notes.add(LogLine.of(
+        '¡la lava sube ${e.lava} turnos! No te defiendas sobre ella'));
   }
 
   /// El Centinela marca a un jugador (el provocador si hay).
@@ -4414,9 +4636,10 @@ class _Turn {
     events.add(
         BossMechanicEvent(e.id, BossMechanicPhase.markCast, targetId: p.id));
     final solo = alive.length == 1;
-    state.log = '${e.name} · ${m.name} → ${p.name}: su próximo golpe pega '
+    state.logLine = LogLine.of(
+        '${e.name} · ${m.name} → ${p.name}: su próximo golpe pega '
         '×${fm(solo ? m.soloValue : m.value)} · '
-        '${solo ? 'defendete para contrarrestarla' : 'que un aliado lo proteja'}';
+        '${solo ? 'defendete para contrarrestarla' : 'que un aliado lo proteja'}');
   }
 
   /// El golpe al marcado: × value, salvo que otro lo proteja (o, en solo,
@@ -4450,16 +4673,30 @@ class _Turn {
       _fire(ProcTrigger.onProtectHit, victim, target: e, amount: h.damage);
     }
     final got = inf != null && _addStatus(victim, inf);
-    state.log = guarded
-        ? '${e.name} · ${m.name} → ${marked.name}: '
-            '${protector != null ? '${protector.name} lo protege' : 'se defiende'}'
-            ' y la marca se disipa: ${h.damage}'
-            '${got ? _statusText(inf) : ''}'
-        : '${e.name} · ${m.name} → ${marked.name}: ${h.damage} = ATQ $atk × '
-            '${fm(mult)} (MARCA)'
-            '${h.critical ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}'
-            '${marked.defending ? ' × ½ defender' : ''}'
-            '${got ? _statusText(inf) : ''}';
+    state.logLine = LogLine.join([
+      guarded
+          ? _l(protector != null ? 'mark_protected' : 'mark_defended', {
+              'a': e.name,
+              'm': m.name,
+              'b': marked.name,
+              'p': protector?.name ?? '',
+              'd': h.damage,
+            })
+          : _l('mark_hits', {
+              'a': e.name,
+              'm': m.name,
+              'b': marked.name,
+              'd': h.damage,
+              'n': atk,
+              'x': LogLine.join([
+                LogLine.raw(fm(mult)),
+                if (h.critical)
+                  _l('x_crit', {'x': fm(BattleEngine.enemyCritMultiplier)}),
+                if (marked.defending) _l('x_defend'),
+              ], ' '),
+            }),
+      if (got) _statusText(inf),
+    ]);
   }
 
   /// Fases (Devorador): si [e] llegó al umbral, la vida queda en él y
@@ -4500,8 +4737,9 @@ class _Turn {
         ..fissured = false;
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
-    _notes.add('¡${e.name} se transforma! FASE 2: pierde sus estados, ATQ '
-        '+${_pct(m.power - 1)} y Colapso Temporal cada ${m.every} acciones');
+    _notes.add(LogLine.of(
+        '¡${e.name} se transforma! FASE 2: pierde sus estados, ATQ '
+        '+${_pct(m.power - 1)} y Colapso Temporal cada ${m.every} acciones'));
   }
 
   void _shiftStance(Combatant e, BossMechanicDef m) {
@@ -4510,8 +4748,11 @@ class _Turn {
       ..stanceTurns = m.every;
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.stanceShift,
         value: e.stance.toDouble()));
-    _notes.add('${e.name} cambia a postura de ${stanceName(e.stance)} '
-        '(−${_pct(m.value)} daño ${e.stance == 1 ? 'físico' : 'mágico'})');
+    _notes.add(_l(e.stance == 1 ? 'stance_shift_phys' : 'stance_shift_mag', {
+      'a': e.name,
+      's': stanceName(e.stance),
+      'p': _pct(m.value),
+    }));
   }
 
   /// −[BossMechanicDef.value] de velocidad a todo el grupo (tope `cap`).
@@ -4533,8 +4774,9 @@ class _Turn {
       total = math.max(total, _r2(-v));
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.frost, value: total));
-    _notes.add('${m.name}: el grupo pierde ${_pct(m.value)} de velocidad '
-        '(−${_pct(total)}) · rompé los cristales');
+    _notes.add(
+        LogLine.of('${m.name}: el grupo pierde ${_pct(m.value)} de velocidad '
+            '(−${_pct(total)}) · rompé los cristales'));
   }
 
   static double _r2(double v) => (v * 100).round() / 100;
@@ -4548,7 +4790,7 @@ class _Turn {
       ];
     }
     events.add(BossMechanicEvent(boss.id, BossMechanicPhase.thaw));
-    _notes.add('¡Cristales rotos! El campo se descongela');
+    _notes.add(LogLine.of('¡Cristales rotos! El campo se descongela'));
   }
 
   /// Murió [c]: si es un jefe, sus invocaciones caen con él; si era la
@@ -4599,17 +4841,16 @@ class _Turn {
     final atk =
         atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
     final h = _hurt(p, atk * m.value, e.critChance, e.pierce, from: e);
-    var log = '${e.name} · ${m.name} → ${p.name}: ${h.damage}';
+    var log =
+        _l('mech_hit', {'a': e.name, 'm': m.name, 'b': p.name, 'd': h.damage});
     if (p.alive) {
       p.webbed = true;
       events.add(
           BossMechanicEvent(e.id, BossMechanicPhase.webCast, targetId: p.id));
-      log += _aliveParty.length > 1
-          ? ' · ¡atrapado! Pierde su próximo turno si nadie lo libera '
-              '(Atacar sobre él)'
-          : ' · ¡atrapado! Forcejeará medio turno';
+      log =
+          log.plus(_l(_aliveParty.length > 1 ? 'webbed_party' : 'webbed_solo'));
     }
-    state.log = log;
+    state.logLine = log;
     return true;
   }
 
@@ -4622,8 +4863,9 @@ class _Turn {
     events.add(ActionEvent(p.id, BattleActionKind.attack, targetId: ally.id));
     events.add(
         BossMechanicEvent(p.id, BossMechanicPhase.webFreed, targetId: ally.id));
-    state.log = '${p.name} corta la telaraña: ¡${ally.name} queda libre! '
-        '(medio turno)';
+    state.logLine =
+        LogLine.of('${p.name} corta la telaraña: ¡${ally.name} queda libre! '
+            '(medio turno)');
     tickEffects(p);
     p.nextTurn = state.clock + _iv(p) * 0.5;
     endTurn();
@@ -4631,21 +4873,21 @@ class _Turn {
   }
 
   /// Efecto extra de la ULT de un jefe; devuelve el texto del log.
-  String _ultExtra(Combatant e, EnemyUltDef ult) {
+  LogLine _ultExtra(Combatant e, EnemyUltDef ult) {
     final m = _mechanicOf(e);
     switch (ult.extra) {
       case EnemyUltExtra.none:
-        return '';
+        return LogLine.empty;
       case EnemyUltExtra.web:
         final free = _aliveParty.where((p) => !p.webbed).toList();
-        if (_aliveParty.length < 2 || free.isEmpty) return '';
+        if (_aliveParty.length < 2 || free.isEmpty) return LogLine.empty;
         final p = _lowest(free, (c) => -c.hp.toDouble())!;
         p.webbed = true;
         events.add(
             BossMechanicEvent(e.id, BossMechanicPhase.webCast, targetId: p.id));
-        return ' · ${p.name} queda atrapado en la telaraña';
+        return _l('web_caught', {'a': p.name});
       case EnemyUltExtra.reformCrystals:
-        if (m == null || m.addType == null) return '';
+        if (m == null || m.addType == null) return LogLine.empty;
         var n = 0;
         for (final c in state.enemies) {
           if (c.alive || c.enemyType != m.addType) continue;
@@ -4654,36 +4896,36 @@ class _Turn {
           events.add(BossMechanicEvent(e.id, BossMechanicPhase.reform,
               targetId: c.id));
         }
-        return n == 0 ? '' : ' · se forman $n cristal${n == 1 ? '' : 'es'}';
+        return n == 0 ? LogLine.empty : _l('crystals_form', {'n': n});
       case EnemyUltExtra.stanceShift:
-        if (m == null || e.stance == 0) return '';
+        if (m == null || e.stance == 0) return LogLine.empty;
         _shiftStance(e, m);
-        return '';
+        return LogLine.empty;
       case EnemyUltExtra.echoChorus:
-        if (m == null) return '';
+        if (m == null) return LogLine.empty;
         e.mechTurns = 0;
         final n = _summonAdds(e, m);
-        return n == 0 ? '' : ' · vuelven $n eco${n == 1 ? '' : 's'}';
+        return n == 0 ? LogLine.empty : _l('echoes_return', {'n': n});
       case EnemyUltExtra.summonAll:
-        if (m == null) return '';
+        if (m == null) return LogLine.empty;
         e.mechTurns = 0;
         final n = _summonAdds(e, m);
-        return n == 0 ? '' : ' · invoca $n siervo${n == 1 ? '' : 's'}';
+        return n == 0 ? LogLine.empty : _l('summons_servants', {'n': n});
       case EnemyUltExtra.lavaFlood:
         e.lava = math.max(e.lava, ult.turns);
         events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaRise,
             value: e.lava.toDouble()));
-        return ' · ¡la lava sube ${e.lava} turnos!';
+        return _l('lava_rises_short', {'n': e.lava});
       case EnemyUltExtra.voidMark:
         for (final p in state.party) {
           p.voidMarked = false;
         }
         final p = _lowest(_aliveParty, (c) => -c.hp.toDouble());
-        if (p == null || m == null) return '';
+        if (p == null || m == null) return LogLine.empty;
         p.voidMarked = true;
         events.add(BossMechanicEvent(e.id, BossMechanicPhase.markCast,
             targetId: p.id));
-        return ' · marca a ${p.name}';
+        return _l('marks_target', {'a': p.name});
     }
   }
 
@@ -4750,7 +4992,7 @@ class _Turn {
           if (cost > 0) {
             p.hp -= cost;
             events.add(DamageEvent(p.id, cost, sourceId: sk.id));
-            _notes.add('${sk.name}: cuesta $cost HP');
+            _notes.add(LogLine.of('${sk.name}: cuesta $cost HP'));
           }
         }
         // Curas (bestiary.md § 1.4.1): el objetivo elegido puede ser un
@@ -4765,8 +5007,7 @@ class _Turn {
                   : null) ??
               (engine.familiesEnabled
                   ? foes
-                      .where(
-                          (e) => e.id == targetId && healCanTargetFoe(sk, e))
+                      .where((e) => e.id == targetId && healCanTargetFoe(sk, e))
                       .firstOrNull
                   : null);
         }
@@ -4781,8 +5022,8 @@ class _Turn {
         p.lastSkillId = sk.id;
         // Reflejo de los Jefes del Abismo: copian la última habilidad.
         _abyssCopied(sk.id);
-        final gain = _useSkill(p, sk, foes, target,
-            ultimate: false, healPick: healPick);
+        final gain =
+            _useSkill(p, sk, foes, target, ultimate: false, healPick: healPick);
         // Prisa sin aliados: ya terminó el turno.
         if (gain == null) return true;
         ultGain = gain;
@@ -4799,7 +5040,7 @@ class _Turn {
           if (cost > 0) {
             p.hp -= cost;
             events.add(DamageEvent(p.id, cost, sourceId: sk.id));
-            _notes.add('${sk.name}: cuesta $cost HP');
+            _notes.add(LogLine.of('${sk.name}: cuesta $cost HP'));
           }
         }
         events.add(UltimateUsedEvent(p.id, sk.name));
@@ -4813,13 +5054,13 @@ class _Turn {
           ..breakPoints = engine.catalog.combo.breakUltimate
           ..canBreak = true;
         // Eco Doble: repite la última habilidad al `echoLast` de poder.
-        final last = sk.echoLast > 0
-            ? engine.catalog.skills[p.lastSkillId ?? '']
-            : null;
+        final last =
+            sk.echoLast > 0 ? engine.catalog.skills[p.lastSkillId ?? ''] : null;
         if (last != null) {
           final copy = last.scaled(sk.echoLast);
           act.skill = copy;
-          _notes.add('${sk.name}: repite ${last.name} al ${_pct(sk.echoLast)}');
+          _notes.add(LogLine.of(
+              '${sk.name}: repite ${last.name} al ${_pct(sk.echoLast)}'));
           _useSkill(p, copy, foes, target, ultimate: true);
           _skillExtras(p, copy);
         } else {
@@ -4852,7 +5093,7 @@ class _Turn {
         p.guardStreak = true;
         p.guardHitPending = true;
         _ultWithBonus(p, BattleEngine.defendUlt);
-        state.log = '${p.name} se defiende (actúa antes)';
+        state.logLine = LogLine.of('${p.name} se defiende (actúa antes)');
         _act = null;
         tickEffects(p);
         p.nextTurn = state.clock + _iv(p) * 0.7;
@@ -4864,14 +5105,14 @@ class _Turn {
         // Después de una Instante ya actuó: termina el turno sin el
         // adelanto de Pasar (combat.md § "Pulso e Instante").
         final acted = p.chained;
-        state.log = acted
+        state.logLine = LogLine.of(acted
             ? '${p.name} termina el turno'
-            : '${p.name} pasa el turno (el próximo llega antes)';
+            : '${p.name} pasa el turno (el próximo llega antes)');
         _act = null;
         _attacker = null;
         tickEffects(p);
-        p.nextTurn = state.clock +
-            _iv(p) * (acted ? 1 : BattleEngine.passTurnFactor);
+        p.nextTurn =
+            state.clock + _iv(p) * (acted ? 1 : BattleEngine.passTurnFactor);
         endTurn();
         return true;
       // Los resuelve BattleEngine.command antes de llegar acá.
@@ -4892,7 +5133,7 @@ class _Turn {
     if (steal > 0 && _dealt > 0 && p.alive && p.hp < p.maxHp) {
       final h = math.max(1, jsRound(_dealt * steal));
       _heal(p, h);
-      _notes.add('robo de vida +$h HP');
+      _notes.add(LogLine.of('robo de vida +$h HP'));
     }
     // Drenaje (variantes): el daño cura al aliado más herido.
     final drain = act.skill?.drainHeal ?? 0;
@@ -4902,17 +5143,19 @@ class _Turn {
         final h = math.max(1, jsRound(_dealt * drain));
         _heal(q, h);
         _fire(ProcTrigger.onHeal, p, target: q, amount: h);
-        _notes.add('${act.skill!.name}: ${q.name} +$h HP '
-            '(${_pct(drain)} del daño)');
+        _notes.add(LogLine.of('${act.skill!.name}: ${q.name} +$h HP '
+            '(${_pct(drain)} del daño)'));
       }
     }
     if (!usedUlt) {
-      final dealtBonus =
-          _dealt > 0
-              ? math.min(tuning(TuningId.ultCharge).d('dealtCap'),
-                  tuning(TuningId.ultCharge).d('dealtBase') +
-                      _dealt / _dealtMaxHp * tuning(TuningId.ultCharge).d('dealtScale'))
-              : 0.0;
+      final dealtBonus = _dealt > 0
+          ? math.min(
+              tuning(TuningId.ultCharge).d('dealtCap'),
+              tuning(TuningId.ultCharge).d('dealtBase') +
+                  _dealt /
+                      _dealtMaxHp *
+                      tuning(TuningId.ultCharge).d('dealtScale'))
+          : 0.0;
       _ultWithBonus(p, (ultGain + dealtBonus));
     }
     _attacker = null;
@@ -4923,7 +5166,7 @@ class _Turn {
         (act.skill?.instant ?? false);
     if (instant && !p.chained && p.alive) {
       p.chained = true;
-      _notes.add('Instante: una acción más');
+      _notes.add(LogLine.of('Instante: una acción más'));
       _flush();
       _checkEnd();
       if (state.ended) state.currentId = null;
@@ -4953,9 +5196,13 @@ class _Turn {
           _damageEnemy(e, atk * 0.6, p.critChance, element: wel),
       ];
       _weaponElementStack(p, wel, foes);
-      state.log = _damageLog(
-          '${p.name} · Golpe Imparable (todos)', _atkText(p), atk, 0.6, hits,
-          all: true);
+      state.logLine = LogLine.of(_damageLog(
+          LogLine.of('${p.name} · Golpe Imparable (todos)'),
+          _atkText(p),
+          atk,
+          0.6,
+          hits,
+          all: true));
       return;
     }
     final act = _act!..single = true;
@@ -4964,15 +5211,14 @@ class _Turn {
     act
       ..mainTarget = target
       ..mainHit = hit;
-    var log = _damageLog(
-        '${p.name} ataca → ${target.name}', _atkText(p), atk, 1, [hit],
+    var log = _damageLog(LogLine.of('${p.name} ataca → ${target.name}'),
+        _atkText(p), atk, 1, [hit],
         all: false);
     if (_weaponElementStack(p, wel, [target])) {
       log += ' · ${wel!.label}: +1 pila';
     }
-    final stunChance = p.stunOnAttackChance > 0
-        ? p.stunOnAttackChance + _duoStun(p)
-        : 0.0;
+    final stunChance =
+        p.stunOnAttackChance > 0 ? p.stunOnAttackChance + _duoStun(p) : 0.0;
     if (stunChance > 0 &&
         target.alive &&
         _rand() < stunChance &&
@@ -4994,7 +5240,7 @@ class _Turn {
             source: p, primary: true)) {
       log += ' · Sagrado (5/turno, 3 turnos)';
     }
-    state.log = log;
+    state.logLine = LogLine.of(log);
   }
 
   /// Cuenta un básico con elemento de arma y, cada
@@ -5027,7 +5273,7 @@ class _Turn {
     required bool ultimate,
     Combatant? healPick,
   }) {
-    state.log = '${p.name} · ${tk.name}';
+    state.logLine = LogLine.of('${p.name} · ${tk.name}');
     final allies = _aliveParty.toList();
 
     switch (tk.kind) {
@@ -5040,18 +5286,20 @@ class _Turn {
           for (final e in tk.allTargets ? foes : [target]) {
             _plantTrap(p, e, tk.id, tk.trap, 1);
           }
-          state.log = '${p.name} · ${tk.name}: trampa en '
-              '${tk.allTargets ? 'todos los enemigos' : target.name}';
+          state.logLine = LogLine.of('${p.name} · ${tk.name}: trampa en '
+              '${tk.allTargets ? 'todos los enemigos' : target.name}');
         } else if (tk.debuffs.isNotEmpty || tk.ultDrain > 0) {
           // Variantes sin daño: Rugido, Señalar Presa.
           for (final e in tk.allTargets ? foes : [target]) {
             _variantOnHit(p, e, tk);
           }
-          state.log = '${p.name} · ${tk.name} → '
-              '${tk.allTargets ? 'todos los enemigos' : target.name}'
-              '${_debuffText(tk)}';
+          state.logLine = LogLine.join([
+            _l(tk.allTargets ? 'skill_all_foes' : 'skill_on',
+                {'a': p.name, 's': _sk(tk), 'b': target.name}),
+            ..._debuffText(tk),
+          ]);
         } else {
-          state.log = '${p.name} · ${tk.name}';
+          state.logLine = LogLine.of('${p.name} · ${tk.name}');
         }
         return 6;
 
@@ -5065,9 +5313,18 @@ class _Turn {
           _addStatus(q, const StatusApplication(StatusKind.regen, 3));
           _fire(ProcTrigger.onHeal, p, target: q, amount: a);
         }
-        var log = '${p.name} · ${tk.name}: +$a '
-            '${tk.lowestAlly && regenTo.isNotEmpty ? 'a ${regenTo.first.name}' : 'a cada aliado'} '
-            '(MAG ${p.magic} × ${fm(tk.power)} + 4) y Regeneración 5% vida y maná × 3 turnos';
+        var log = _l(
+            tk.lowestAlly && regenTo.isNotEmpty
+                ? 'heal_regen_one'
+                : 'heal_regen_all',
+            {
+              'a': p.name,
+              's': _sk(tk),
+              'n': a,
+              'b': regenTo.isNotEmpty ? regenTo.first.name : '',
+              'm': p.magic,
+              'x': fm(tk.power),
+            });
         log += _healHarm(p, a);
         if (p.branch == 'creyente') {
           final base = p.magic * 0.8;
@@ -5076,21 +5333,22 @@ class _Turn {
           }
           log += ' · Luz: ${jsRound(base)} a cada enemigo (MAG × 0.8)';
         }
-        state.log = log;
+        state.logLine = LogLine.of(log);
         return 8;
 
       case SkillKind.defenseUp:
         p.bonusDefense =
             math.min(BattleEngine.maxBonusDefense, p.bonusDefense + tk.amount);
         engine._refreshStats(p);
-        state.log = '${p.name} · ${tk.name}: DEF ${p.defense} '
-            '(−${jsRound(p.defensePercent * 100)}% daño recibido)';
+        state.logLine = LogLine.of('${p.name} · ${tk.name}: DEF ${p.defense} '
+            '(−${jsRound(p.defensePercent * 100)}% daño recibido)');
         return 6;
 
       case SkillKind.protect:
         p.protecting = true;
-        state.log = '${p.name} · ${tk.name}: absorbe todo el daño dirigido a '
-            'sus aliados hasta su próximo turno';
+        state.logLine = LogLine.of(
+            '${p.name} · ${tk.name}: absorbe todo el daño dirigido a '
+            'sus aliados hasta su próximo turno');
         return 8;
 
       case SkillKind.bulwark:
@@ -5104,8 +5362,9 @@ class _Turn {
         p.bonusDefense =
             math.min(BattleEngine.maxBonusDefense, p.bonusDefense + 4);
         engine._refreshStats(p);
-        state.log = '${p.name} · ${tk.name}: cura 30% a todos, todos '
-            'defienden, Protección y DEF +4';
+        state.logLine =
+            LogLine.of('${p.name} · ${tk.name}: cura 30% a todos, todos '
+                'defienden, Protección y DEF +4');
         return 0;
 
       case SkillKind.heal:
@@ -5135,14 +5394,13 @@ class _Turn {
           final dealt = _procDamage(p, healPick, d, kHealHarmSourceId);
           final fem =
               engine.catalog.enemies[healPick.enemyType]?.feminine ?? false;
-          state.log = '${p.name} · ${tk.name}: ¡la cura quema '
-              '${fem ? 'a la' : 'al'} ${healPick.name}! $dealt';
+          state.logLine = LogLine.of('${p.name} · ${tk.name}: ¡la cura quema '
+              '${fem ? 'a la' : 'al'} ${healPick.name}! $dealt');
           return 8;
         }
         final healed = tk.lowestAlly
             ? [
-                if (healPick ??
-                        _lowest(allies, (c) => c.hp / c.maxHp)
+                if (healPick ?? _lowest(allies, (c) => c.hp / c.maxHp)
                     case final q?)
                   q
               ]
@@ -5165,29 +5423,35 @@ class _Turn {
           }
           _fire(ProcTrigger.onHeal, p, target: q, amount: a);
         }
-        final cleanseText = tk.cleanse <= 0
-            ? ''
-            : tk.cleanse >= 5
-                ? ' · quita todos los estados'
-                : ' · quita 1 stack de cada estado';
-        state.log = '${p.name} · ${tk.name}: +$a '
-            '${tk.lowestAlly && healed.isNotEmpty ? 'a ${healed.first.name}' : 'a cada aliado'} = '
-            'MAG ${p.magic} × ${fm(tk.power)} + 6$cleanseText'
-            '${_healHarm(p, a)}';
+        state.logLine = LogLine.join([
+          _l(tk.lowestAlly && healed.isNotEmpty ? 'heal_one' : 'heal_all', {
+            'a': p.name,
+            's': _sk(tk),
+            'n': a,
+            'b': healed.isNotEmpty ? healed.first.name : '',
+            'm': p.magic,
+            'x': fm(tk.power),
+          }),
+          if (tk.cleanse > 0)
+            _l(tk.cleanse >= 5 ? 'cleanse_all' : 'cleanse_one'),
+          _healHarm(p, a),
+        ]);
         return 8;
 
       case SkillKind.taunt:
         p.taunt = tk.amount;
-        state.log = '${p.name} · ${tk.name}: los próximos ${tk.amount} '
-            'ataques enemigos van contra ${p.name}';
+        state.logLine =
+            LogLine.of('${p.name} · ${tk.name}: los próximos ${tk.amount} '
+                'ataques enemigos van contra ${p.name}');
         return 0;
 
       case SkillKind.guard:
         for (final q in allies) {
           q.defending = true;
         }
-        state.log = '${p.name} · ${tk.name}: todo el equipo recibe ½ daño '
-            'hasta su próximo turno';
+        state.logLine =
+            LogLine.of('${p.name} · ${tk.name}: todo el equipo recibe ½ daño '
+                'hasta su próximo turno');
         return 0;
 
       case SkillKind.haste:
@@ -5197,7 +5461,7 @@ class _Turn {
         if (state.party.length == 1) {
           p.mp += tk.mp;
           p.nextTurn = state.clock;
-          state.log = 'Prisa necesita aliados';
+          state.logLine = LogLine.of('Prisa necesita aliados');
           _act = null;
           endTurn();
           return null;
@@ -5222,11 +5486,16 @@ class _Turn {
                 ownerId: target.id,
                 fresh: true),
           ];
-          events.add(
-              BuffAppliedEvent(p.id, tk.id, BuffStat.charge, dmg.toDouble(), 1));
-          state.log = '${p.name} · ${tk.name} → ${target.name}: carga $dmg '
-              '(${_atkText(p)} × ${fm(tk.charge)}) · cae al empezar su '
-              'próximo turno';
+          events.add(BuffAppliedEvent(
+              p.id, tk.id, BuffStat.charge, dmg.toDouble(), 1));
+          state.logLine = _l('charge_set', {
+            'a': p.name,
+            's': _sk(tk),
+            'b': target.name,
+            'd': dmg,
+            'f': _atkText(p),
+            'x': fm(tk.charge),
+          });
           return 6;
         }
         if (tk.pureBreak) {
@@ -5236,8 +5505,8 @@ class _Turn {
               target.fissured &&
               !_fissuredNow.contains(target.id);
           if (ok) _break(target);
-          state.log = '${p.name} · ${tk.name} → ${target.name}'
-              '${ok ? ': QUEBRADO' : ': no está Fisurado'}';
+          state.logLine = LogLine.of('${p.name} · ${tk.name} → ${target.name}'
+              '${ok ? ': QUEBRADO' : ': no está Fisurado'}');
           return 0;
         }
         if (tk.delayedHit > 0) {
@@ -5249,10 +5518,11 @@ class _Turn {
             ..doomTurns = 2
             ..doomBy = p.id;
           events.add(ProcEvent(p.id, tk.id, targetId: target.id));
-          state.log = '${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name} → '
-              '${target.name}: en 2 turnos recibe ${target.doom} '
-              '(${tk.kind == SkillKind.magical ? 'MAG' : 'ATQ'} $v × '
-              '${fm(tk.delayedHit)}) y se quiebra si está Fisurado';
+          state.logLine =
+              LogLine.of('${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name} → '
+                  '${target.name}: en 2 turnos recibe ${target.doom} '
+                  '(${tk.kind == SkillKind.magical ? 'MAG' : 'ATQ'} $v × '
+                  '${fm(tk.delayedHit)}) y se quiebra si está Fisurado');
           return 0;
         }
         final tormenta = p.keystones.contains('tormenta')
@@ -5266,7 +5536,8 @@ class _Turn {
                 _aliveParty.where((q) => q != p && !q.isSummon).length
             : 0.0;
         if (allyPower > 0) {
-          _notes.add('${tk.name}: +${fm(allyPower)} de poder por aliados');
+          _notes.add(
+              LogLine.of('${tk.name}: +${fm(allyPower)} de poder por aliados'));
         }
         final base = sourceValue * (tk.power + allyPower) * tormenta;
         final st = tk.status;
@@ -5302,12 +5573,13 @@ class _Turn {
           // Primer Golpe: +daño si el objetivo tiene la vida llena.
           if (tk.openerBonus > 0 && e.hp >= e.maxHp) {
             b *= 1 + tk.openerBonus;
-            _notes.add('${tk.name}: vida llena, +${_pct(tk.openerBonus)}');
+            _notes.add(
+                LogLine.of('${tk.name}: vida llena, +${_pct(tk.openerBonus)}'));
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
           hits.add(hit);
-          if (tk.stripBuffs) _stripBuffs(e, tk.name);
+          if (tk.stripBuffs) _stripBuffs(e, LogLine.of(tk.name));
           if (!tk.allTargets) {
             act
               ..mainTarget = e
@@ -5321,8 +5593,9 @@ class _Turn {
                       single: !tk.allTargets, hitIndex: h)
                   .damage);
             }
-            _notes.add('${more.length} golpes: ${more.join(' + ')} = '
-                '${more.fold(0, (s, d) => s + d)}');
+            _notes
+                .add(LogLine.of('${more.length} golpes: ${more.join(' + ')} = '
+                    '${more.fold(0, (s, d) => s + d)}'));
           }
           _variantOnHit(p, e, tk);
           if (st != null && !burnBlocked) {
@@ -5332,7 +5605,8 @@ class _Turn {
             }
           }
           for (final x in tk.extraStatuses) {
-            if (x.kind == StatusKind.burn && p.keystones.contains('almaHielo')) {
+            if (x.kind == StatusKind.burn &&
+                p.keystones.contains('almaHielo')) {
               continue;
             }
             _addStatus(e, x,
@@ -5347,12 +5621,12 @@ class _Turn {
             events.add(DelayedEvent(e.id));
             _fire(ProcTrigger.onDelayApplied, p, target: e);
           }
-          if (tk.execute > 0) _execute(p, e, tk.execute, tk.id, tk.name);
+          if (tk.execute > 0) _execute(p, e, tk.execute, tk.id, _sk(tk));
           if (tk.trap > 0 && e.alive) _plantTrap(p, e, tk.id, tk.trap, 1);
         }
         if (detonated > 0) {
-          _notes.add('${tk.name}: detona $detonated stack'
-              '${detonated == 1 ? '' : 's'} (+${_pct(tk.detonate * detonated)})');
+          _notes.add(LogLine.of('${tk.name}: detona $detonated stack'
+              '${detonated == 1 ? '' : 's'} (+${_pct(tk.detonate * detonated)})'));
         }
         if (!tk.allTargets) {
           _pierceAndBounce(p, tk, target, base, st, burnBlocked ? 0 : bonus,
@@ -5360,9 +5634,14 @@ class _Turn {
         }
         final head = '${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name}'
             '${tk.allTargets ? ' (todos)' : ' → ${target.name}'}';
-        var log = _damageLog(head, magical ? 'MAG $sourceValue' : _atkText(p),
-            sourceValue, tk.power, hits,
-            all: tk.allTargets, tormenta: tormenta);
+        var log = _damageLog(
+            LogLine.of(head),
+            magical ? _l('src_mag', {'n': sourceValue}) : _atkText(p),
+            sourceValue,
+            tk.power,
+            hits,
+            all: tk.allTargets,
+            tormenta: tormenta);
         if (tk.delay > 0) log += ' · retrasa';
         log += _debuffText(tk);
         if (burnBlocked) {
@@ -5370,7 +5649,7 @@ class _Turn {
         } else if (st != null) {
           log += _statusOutcome(st, bonus, tried, landed);
         }
-        state.log = log;
+        state.logLine = LogLine.of(log);
         return 0;
     }
   }
@@ -5415,10 +5694,14 @@ class _Turn {
         landed++;
       }
     }
-    state.log = _damageLog('${p.name} + ${q.name} · ${du.name} (todos)',
-            '($pv + $qv)', pv + qv, du.power, hits,
+    state.logLine = LogLine.of(_damageLog(
+            LogLine.of('${p.name} + ${q.name} · ${du.name} (todos)'),
+            LogLine.of('($pv + $qv)'),
+            pv + qv,
+            du.power,
+            hits,
             all: true) +
-        _statusOutcome(du.status, bonus, tried, landed);
+        _statusOutcome(du.status, bonus, tried, landed));
     return true;
   }
 
@@ -5444,8 +5727,8 @@ class _Turn {
     final a = jsRound(t.maxMp * 0.5);
     t.mp = math.min(t.maxMp.toDouble(), t.mp + a);
     events.add(HealEvent(t.id, a, mana: true));
-    state.log =
-        '${p.name} usa Poción de maná en ${t.name}: +$a MP = 50% de ${t.maxMp}';
+    state.logLine =
+        _l('ether', {'a': p.name, 'b': t.name, 'n': a, 'm': t.maxMp});
     return true;
   }
 
@@ -5454,12 +5737,10 @@ class _Turn {
   bool _aether(Combatant p, String? targetId) {
     if (p.aethers <= 0) return false;
     final chosen = targetId == null ? null : state.byId(targetId);
-    final t = chosen != null &&
-            chosen.isPlayer &&
-            !chosen.isSummon &&
-            !chosen.alive
-        ? chosen
-        : state.party.where((c) => !c.alive && !c.isSummon).firstOrNull;
+    final t =
+        chosen != null && chosen.isPlayer && !chosen.isSummon && !chosen.alive
+            ? chosen
+            : state.party.where((c) => !c.alive && !c.isSummon).firstOrNull;
     if (t == null) return false;
     events.add(ActionEvent(p.id, BattleActionKind.potion, targetId: t.id));
     p.aethers--;
@@ -5468,8 +5749,9 @@ class _Turn {
     t.statuses[StatusKind.poison] = 0;
     t.nextTurn = state.clock + _iv(t);
     events.add(RevivedEvent(t.id));
-    state.log = '${p.name} usa Éter en ${t.name}: ¡revive con toda la '
-        'vida (${t.hp}/${t.maxHp})!';
+    state.logLine =
+        LogLine.of('${p.name} usa Éter en ${t.name}: ¡revive con toda la '
+            'vida (${t.hp}/${t.maxHp})!');
     return true;
   }
 
@@ -5491,8 +5773,9 @@ class _Turn {
       t.nextTurn = state.clock + _iv(t);
       events.add(RevivedEvent(t.id));
     }
-    state.log = '${p.name} usa Poción de vida en ${t.name}: +$a HP = 45% de '
-        '${t.maxHp}${was == 0 ? ' (¡revive!)' : ''} · quita Quemadura y Veneno';
+    state.logLine = LogLine.of(
+        '${p.name} usa Poción de vida en ${t.name}: +$a HP = 45% de '
+        '${t.maxHp}${was == 0 ? ' (¡revive!)' : ''} · quita Quemadura y Veneno');
     return true;
   }
 }
@@ -5501,8 +5784,46 @@ class _Turn {
 const kReviveVeilId = 'veloRetorno';
 
 /// Nombre de la postura del Caballero Hueco (`Combatant.stance`).
-String stanceName(int stance) => stance == 1
-    ? 'ESCUDO'
+LogLine stanceName(int stance) => stance == 1
+    ? _l('stance.shield')
     : stance == 2
-        ? 'ESPADA'
-        : '—';
+        ? _l('stance.sword')
+        : const LogLine.raw('—');
+
+// ---------------- log (docs/specs/i18n.md § 3.4) ----------------
+
+/// A battle log line `ui.battle_log.<key>` with [args].
+LogLine _l(String key, [Map<String, Object?> args = const {}]) =>
+    LogLine('ui.battle_log.$key', args);
+
+LogLine _sk(SkillDef s) => LogLine.skill(s.id, s.name);
+LogLine _st(StatusKind k) => LogLine.status(k.name, k.label);
+LogLine _mech(PassiveMechanic m) =>
+    LogLine.named(displayNameKey(m.id) ?? CatalogKeys.mechName(m.id), m.name);
+
+/// "(N turnos)".
+LogLine _turnsL(int n) => _l('turns', {'n': n});
+LogLine _stat(BuffStat s) => _l('stat.${s.name}');
+LogLine _eult(EnemyUltDef u) => LogLine.enemyUlt(u.id, u.name);
+
+/// An enemy hit line: `head` + status (` · `), then taunt / protection
+/// (with a leading space) and the extras (` · `), as the old text.
+LogLine _enemyHitLine(LogLine head, LogLine status, LogLine taunt, LogLine prot,
+    List<LogLine> extras) {
+  final tail = LogLine.join([taunt, prot], ' ');
+  return LogLine.join([
+    LogLine.join([head, status]),
+    if (!tail.isEmpty) _l('pre_space', {'x': tail}),
+    for (final x in extras) _l('pre_dot', {'x': x}),
+  ], '');
+}
+
+LogLine _rxL(ReactionKind k) => LogLine.reaction(k.name, k.label);
+LogLine _el(GameElement e) => LogLine.named(CatalogKeys.element(e), e.label);
+
+/// `× 1.15 Marca`.
+LogLine _mod(num x, LogLine label) => _l('mod', {'x': fm(x), 'l': label});
+
+/// Name of any effect source id ([displayName]) as a log ref.
+LogLine _disp(String id) =>
+    LogLine.named(displayNameKey(id) ?? '', displayName(id));

@@ -1,3 +1,6 @@
+export 'battle_log.dart';
+
+import 'battle_log.dart';
 import '../data/enemy_families.dart';
 import 'passive_mechanic.dart';
 import 'player_state.dart';
@@ -589,8 +592,7 @@ String _baseName(Combatant c) => c.tag == null
     ? c.name
     : c.name.substring(0, c.name.length - c.tag!.length - 1);
 
-String _tagLetter(int i) =>
-    i < 26 ? String.fromCharCode(65 + i) : '${i + 1}';
+String _tagLetter(int i) => i < 26 ? String.fromCharCode(65 + i) : '${i + 1}';
 
 void _tagGroup(List<Combatant> list, String Function(Combatant) key) {
   final groups = <String, List<Combatant>>{};
@@ -599,7 +601,10 @@ void _tagGroup(List<Combatant> list, String Function(Combatant) key) {
   }
   for (final g in groups.values) {
     if (g.length < 2) continue;
-    final used = {for (final c in g) if (c.tag != null) c.tag!};
+    final used = {
+      for (final c in g)
+        if (c.tag != null) c.tag!
+    };
     var i = 0;
     for (final c in g) {
       if (c.tag != null) continue;
@@ -652,7 +657,7 @@ class BattleState {
     List<Combatant>? summons,
     this.clock = 0,
     this.currentId,
-    this.log = '',
+    this.logLine = LogLine.empty,
     this.outcome,
     this.boss = false,
     this.elite = false,
@@ -679,8 +684,9 @@ class BattleState {
   /// `BattleEngine.nextTurn`.
   String? currentId;
 
-  /// Última línea del log de batalla, con el desglose de los números.
-  String log;
+  /// Última línea del log de batalla, con el desglose de los números,
+  /// como clave + argumentos (cada cliente la arma en su idioma).
+  LogLine logLine;
   BattleOutcome? outcome;
   final bool boss;
   final bool elite;
@@ -738,9 +744,9 @@ class BattleState {
       : porRonda
           ? roundBlock
           : [
-          for (final p in party)
-            if (p.alive && !acted.contains(p.id)) p
-        ];
+              for (final p in party)
+                if (p.alive && !acted.contains(p.id)) p
+            ];
 
   /// `porBando`: nadie tiene el turno y el grupo puede mandar comandos
   /// (el primero que manda, actúa).
@@ -772,7 +778,7 @@ class BattleState {
         summons: [for (final c in summons) c.copy()],
         clock: clock,
         currentId: currentId,
-        log: log,
+        logLine: logLine,
         outcome: outcome,
         boss: boss,
         elite: elite,

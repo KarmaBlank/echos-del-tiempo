@@ -23,6 +23,7 @@ import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart' show newProfile, progression;
+import '../helpers/battle_log_helper.dart';
 
 final _stats = StatsCalculator(
     classes: kClasses, treeRules: PassiveTreeRules(kPassiveTree));

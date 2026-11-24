@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../inventory/domain/item_names.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/retro_bar.dart';
@@ -439,7 +440,7 @@ class BuildCoachView extends StatelessWidget {
           final r = _coach.targetRatio(w, plan);
           final name = w.item == null
               ? w.base.name
-              : rules.progression.items.displayName(w.item!);
+              : localItemName(rules.progression.items, w.item!);
           return DsTooltip(
             key: ValueKey('build-weapon-$i'),
             card: DsTooltipCard(title: retroText(name), children: [

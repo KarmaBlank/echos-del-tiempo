@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'item_names.dart';
 
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -206,11 +207,11 @@ class CraftHelp {
       _ => 'lo que elijas',
     };
     return [
-      '<b>${craftHelpEsc(rules.items.displayName(s))}</b>',
+      '<b>${craftHelpEsc(localItemName(rules.items, s))}</b>',
       '<span class="k">Te llevas:</span> ${craftHelpEsc(takes)}.',
       '<span style="color:#ff6b81">Se destruye</span> con todo lo demás: '
           '${craftHelpEsc([
-        '${s.rarity.label} nivel ${s.itemLevel}',
+        '${s.rarity.text} nivel ${s.itemLevel}',
         'Mods ${s.modCount}/${s.rarity.maxMods}',
         if (passive != null && s.rarity.hasPassive) 'pasiva ${passive.name}',
         if (s.forgeLevel > 0) 'forja +${s.forgeLevel}',
@@ -247,7 +248,7 @@ class CraftHelp {
     final next =
         r.index + 1 < Rarity.values.length ? Rarity.values[r.index + 1] : null;
     final base = rules.items.baseOf(t);
-    final name = rules.items.displayName(t);
+    final name = localItemName(rules.items, t);
     final passive = rules.items.passiveOf(t);
     final removable = [
       for (final a in t.affixes)
@@ -403,7 +404,7 @@ class CraftHelp {
               'forja y habilidades traídas.',
           change: r == Rarity.legendario
               ? 'Un Legendario no cambia de base.'
-              : 'Base ${base?.name ?? t.baseId} (${base?.type ?? '?'}) → '
+              : 'Base ${base?.text ?? t.baseId} (${base?.type ?? '?'}) → '
                   'otra de nivel ${t.itemLevel} o menos.',
           cost: switch (CraftRules.reforgeCost(t)) {
             (final credits, final mats) => cost(credits, mats),

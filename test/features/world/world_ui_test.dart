@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/features/world/presentation/world_strings.dart';
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:ui' as ui;
 
@@ -291,7 +292,7 @@ void main() {
             missions: _cat.missions,
             zones: zones,
             voteOpen: false,
-            bossName: (m) => missionBossName(_cat, m),
+            bossName: (m) => missionBossName(worldFallbackStrings(), _cat, m),
             onPropose: (id) => proposed = id,
             onClose: () {},
           ));
@@ -345,7 +346,7 @@ void main() {
             weaponName: (id) => id,
             onBack: () {},
             zoneProgress: 'Zona 1 · Pradera Esmeralda · Piso 2/2',
-            unlocked: zoneUnlockedText(2, _cat.zone(2)!.name),
+            unlocked: zoneUnlockedText(worldFallbackStrings(), 2, _cat.zone(2)!.name),
             othersUnlocked: 'También desbloquearon · Bo: Zona 2',
           ));
       expect(find.text('Zona 1 · Pradera Esmeralda · Piso 2/2'), findsOneWidget);
@@ -355,8 +356,8 @@ void main() {
   });
 
   test('textos de piso', () {
-    expect(floorLabelText('Bosque Hondo', 1, 3), 'Bosque Hondo · Piso 2/3');
-    expect(zoneLineText(_cat.zone(5)!),
+    expect(floorLabelText(worldFallbackStrings(), 'Bosque Hondo', 1, 3), 'Bosque Hondo · Piso 2/3');
+    expect(zoneLineText(worldFallbackStrings(), _cat.zone(5)!),
         startsWith('Zona 5 · Fortaleza Caída · Lv 21-25 · 3 pisos · Jefe: '));
   });
 }

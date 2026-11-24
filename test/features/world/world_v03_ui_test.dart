@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/features/world/presentation/world_strings.dart';
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:ui' as ui;
 
@@ -292,7 +293,7 @@ void main() {
             missions: _cat.missions,
             zones: zones,
             voteOpen: false,
-            bossName: (m) => missionBossName(_cat, m),
+            bossName: (m) => missionBossName(worldFallbackStrings(), _cat, m),
             onPropose: (_) {},
             onClose: () {},
           ));
@@ -351,7 +352,7 @@ void main() {
             playerName: (_) => 'Ana',
             weaponName: (id) => id,
             onBack: () {},
-            unlocked: zoneUnlockedText(10, _cat.zone(10)!.name),
+            unlocked: zoneUnlockedText(worldFallbackStrings(), 10, _cat.zone(10)!.name),
             finalVictory: ResultsPanel.isFinalVictory(r),
           ));
       expect(find.text('¡Zona 10 desbloqueada! Corazón del Tiempo'),

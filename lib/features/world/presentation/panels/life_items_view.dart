@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../../inventory/domain/item_names.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
@@ -248,12 +249,12 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         return [
           for (final id in life.rods)
             if (kRods[id] case final r?)
-              tool(id, r.name, r.rarity, context.t('ui.town.bag.rod'), r.reqLevel, life.rod == id,
+              tool(id, r.text, r.rarity, context.t('ui.town.bag.rod'), r.reqLevel, life.rod == id,
                   () => c.equipRod(id), rodLines(r, fishLv),
                   rodCompare(r, kRods[life.rod] ?? kRods[kStarterRod]!, fishLv)),
           for (final id in [...f.hoes, ...f.cans])
             if (kFarmTools[id] case final d?)
-              tool(id, d.name, d.rarity, d.kind.label, d.reqLevel,
+              tool(id, d.text, d.rarity, d.kind.label, d.reqLevel,
                   f.hoe == id || f.can == id, () => c.equipFarmTool(id),
                   farmToolLines(d, farmLv),
                   farmToolCompare(
@@ -274,11 +275,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 id: 'life-fish-${d.id}',
                 icon: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
                 border: fishRarityColor(d.rarity),
-                search: d.name,
+                search: '${d.text} ${d.name}',
                 count: life.count(d.id),
                 caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
-                  name: d.name,
+                  name: d.text,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
                     (context.t('ui.town.trader.tag_fish'), DsColors.textSecondary),
@@ -319,11 +320,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 id: 'life-junk-${d.id}',
                 icon: LifeIcon(d.id, LifeIconKind.basura, size: _icon),
                 border: DsColors.textSecondary,
-                search: d.name,
+                search: '${d.text} ${d.name}',
                 count: life.count(d.id),
                 caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
-                  name: d.name,
+                  name: d.text,
                   nameColor: DsColors.text,
                   tags: [(context.t('ui.town.trader.tag_junk'), DsColors.textSecondary)],
                   lines: [
@@ -342,10 +343,10 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   id: 'life-log-${d.biome}-${d.id}',
                   icon: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
                   border: fishRarityColor(d.rarity),
-                  search: d.name,
+                  search: '${d.text} ${d.name}',
                   caption: context.t('ui.town.bag.cm', {'n': rec}),
                   detail: LifeItemDetail(
-                    name: d.name,
+                    name: d.text,
                     nameColor: fishRarityColor(d.rarity),
                     tags: [
                       (_biomeLabel(d.biome), DsColors.textSecondary),
@@ -392,12 +393,12 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 icon: LifeIcon('semilla_${d.id}', LifeIconKind.semilla,
                     size: _icon),
                 border: fishRarityColor(d.rarity),
-                search: d.seedName,
+                search: '${d.seedText} ${d.seedName}',
                 count: e.value,
                 equipped: f.activeSeed == d.id,
                 caption: context.t('ui.town.npc.minutes', {'n': (d.growSec / 60).round()}),
                 detail: LifeItemDetail(
-                  name: d.seedName,
+                  name: d.seedText,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
                     (context.t('ui.town.trader.tag_seed'), DsColors.textSecondary),
@@ -426,10 +427,10 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 id: 'life-fert-${d.id}',
                 icon: LifeIcon(d.id, LifeIconKind.semilla, size: _icon),
                 border: fishRarityColor(d.rarity),
-                search: d.name,
+                search: '${d.text} ${d.name}',
                 count: e.value,
                 detail: LifeItemDetail(
-                  name: d.name,
+                  name: d.text,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [(context.t('ui.town.trader.tag_fert'), DsColors.textSecondary)],
                   lines: [context.t('ui.town.trader.have', {'n': e.value})],
@@ -453,10 +454,10 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                       },
                       size: _icon),
                   border: DsColors.border,
-                  search: d.name,
+                  search: '${d.text} ${d.name}',
                   count: life.craft(id),
                   detail: LifeItemDetail(
-                    name: d.name,
+                    name: d.text,
                     nameColor: DsColors.textTitle,
                     tags: [
                       (context.t('ui.town.bag.tag_material'), DsColors.textSecondary)
@@ -475,11 +476,11 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 icon: LifeIcon('cosecha_${d.id}', LifeIconKind.cosecha,
                     size: _icon),
                 border: cropQualityColor(q),
-                search: '${d.name} ${q.label}',
+                search: '${d.text} ${d.name} ${q.label}',
                 count: e.value,
                 caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
-                  name: d.name,
+                  name: d.text,
                   nameColor: cropQualityColor(q),
                   tags: [
                     (context.t('ui.town.trader.tag_crop'), DsColors.textSecondary),

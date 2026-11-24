@@ -23,7 +23,8 @@ import '../theme/proto_colors.dart';
 ///
 /// Con un campo de texto enfocado nada de esto toca las teclas.
 
-/// Las teclas de los menús, para el `[?]`, CONTROLES y el spec.
+/// Las teclas de los menús en es-AR (referencia del spec). CONTROLES las
+/// muestra traducidas: `ui.settings.controls.menus.<id>.keys/.action`.
 const kMenuKeys = <(String, String)>[
   ('Flechas', 'Mover el foco (aro dorado ▶) dentro de la lista o grilla'),
   ('Tab / Shift+Tab', 'Saltar a la sección siguiente / anterior'),

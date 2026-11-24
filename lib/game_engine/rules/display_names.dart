@@ -13,6 +13,7 @@ import '../data/summoner_catalog.dart';
 import '../data/uniques_catalog.dart';
 import '../data/ults_v2_catalog.dart';
 import '../data/weapon_passives.dart';
+import '../catalog_text_keys.dart';
 import '../models/status.dart';
 
 // Nombre legible (en español) de cualquier fuente de un proc, efecto o
@@ -78,6 +79,46 @@ String? _enumLabel(String id) {
   return null;
 }
 
+/// String key of [id]'s name when it is a combat catalog entry
+/// (docs/specs/i18n.md § 3.4): mechanic, skill, ULT, tree node, status
+/// or reaction. `null` for the rest (shown with [displayName]).
+String? displayNameKey(String id) {
+  String? k(String x) {
+    if (mechanicById(x) != null || kAscensionMechanics[x] != null) {
+      return CatalogKeys.mechName(x);
+    }
+    if (kSkills[x] != null) return CatalogKeys.skillName(x);
+    if (kAllUltimates[x] != null) {
+      return CatalogKeys.ultName(kAllUltimates[x]!.id);
+    }
+    if (kWeaponUltSkills[x] != null ||
+        kAscensionUltimatesById[x] != null ||
+        kUltV2[x] != null) {
+      return CatalogKeys.ultName(x);
+    }
+    if (kPassiveTree.nodes[x] != null) return CatalogKeys.nodeName(x);
+    for (final s in StatusKind.values) {
+      if (s.name == x) return CatalogKeys.status(s);
+    }
+    for (final r in ReactionKind.values) {
+      if (r.name == x) return CatalogKeys.reaction(r);
+    }
+    final rx = kReactions[x]?.kind;
+    if (rx != null) return CatalogKeys.reaction(rx);
+    return null;
+  }
+
+  if (_named(id) != null) return k(id);
+  final head = id.split('#').first;
+  if (head.contains(':')) {
+    for (final part in head.split(':').reversed) {
+      if (part.isEmpty || int.tryParse(part) != null) continue;
+      if (_named(part) != null) return k(part);
+    }
+  }
+  return null;
+}
+
 /// Fuentes sin catálogo propio que emite el motor.
 const Map<String, String> _special = {
   'vigilancia': 'Vigilante del Vacío',
@@ -97,8 +138,8 @@ String humanizeId(String id) {
   final words = [
     for (final p in parts)
       for (final w in p
-          .replaceAllMapped(
-              RegExp(r'([a-záéíóúñ])([A-ZÁÉÍÓÚÑ0-9])'), (m) => '${m[1]} ${m[2]}')
+          .replaceAllMapped(RegExp(r'([a-záéíóúñ])([A-ZÁÉÍÓÚÑ0-9])'),
+              (m) => '${m[1]} ${m[2]}')
           .split(' '))
         if (w.isNotEmpty) w,
   ];
@@ -109,5 +150,15 @@ String humanizeId(String id) {
 }
 
 const Set<String> _prefixes = {
-  'wp', 'mod', 'node', 'ult', 'ult2', 'ult1', 'sk', 'mech', 'proc', 'v6', 'v7',
+  'wp',
+  'mod',
+  'node',
+  'ult',
+  'ult2',
+  'ult1',
+  'sk',
+  'mech',
+  'proc',
+  'v6',
+  'v7',
 };

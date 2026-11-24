@@ -5,6 +5,7 @@ import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/revive_rules.dart';
+import '../../../core/i18n/catalog_names.dart';
 import '../../../core/text/text_detail.dart';
 import 'element_text.dart';
 import 'skill_short_text.dart';
@@ -66,6 +67,7 @@ String statusFullDescriptionOf(StatusKind k) => switch (k) {
 
 /// Color del MP (azul) y del Pulso (dorado) en los costos.
 const kMpHex = '#74b9ff';
+
 /// Mismo dorado que la fila PULSO de la tarjeta (`ProtoColors.gold`).
 const kPulseHex = '#ffd166';
 
@@ -97,7 +99,7 @@ String hexSpan(String hex, String text) =>
     '<span style="color:$hex">$text</span>';
 
 /// Nombre del estado en su color.
-String statusNameMarkup(StatusKind k) => hexSpan(statusHex(k), k.label);
+String statusNameMarkup(StatusKind k) => hexSpan(statusHex(k), k.tr);
 
 /// Letra + stacks del estado en su color (`icon+n` del prototipo).
 String statusBadgeMarkup(StatusKind k, int n) =>
@@ -140,7 +142,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
   final el = elementOf(tk.id);
   final l = <String>[
     '<b${nameColor == null ? '' : ' style="color:$nameColor"'}>'
-        '${ultimate ? '★ ULTIMATE: ' : ''}${tk.name}</b> '
+        '${ultimate ? '★ ULTIMATE: ' : ''}${tk.tr}</b> '
         '${ultimate ? '<span class="k">(barra ULT llena)</span>' : skillCostLongMarkup(tk)}',
     if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
@@ -160,8 +162,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
           '${p != null ? ' · ${critLineMarkup(p, v * tk.charge, bonus: tk.critBonus)}' : ''}');
       final st = tk.status;
       if (st != null) {
-        l.add(statusApplicationMarkup(st,
-            bonus: p?.statusBonus[st.kind] ?? 0));
+        l.add(statusApplicationMarkup(st, bonus: p?.statusBonus[st.kind] ?? 0));
       }
     case SkillKind.physical || SkillKind.magical:
       final v = p == null ? 0 : (mag ? p.magic : p.attack);
@@ -189,8 +190,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
       }
       final st = tk.status;
       if (st != null) {
-        l.add(statusApplicationMarkup(st,
-            bonus: p?.statusBonus[st.kind] ?? 0));
+        l.add(statusApplicationMarkup(st, bonus: p?.statusBonus[st.kind] ?? 0));
       }
     case SkillKind.heal:
       if (tk.revive > 0) l.addAll(reviveLinesMarkup(tk, p));
@@ -232,7 +232,8 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
 List<String> kitEffectLines(SkillDef tk) {
   String pct(double v) => '${jsRound(v * 100)}%';
   return [
-    if (tk.hpCost > 0) hexSpan('#ff4757', 'Cuesta ${pct(tk.hpCost)} de tu vida máx.'),
+    if (tk.hpCost > 0)
+      hexSpan('#ff4757', 'Cuesta ${pct(tk.hpCost)} de tu vida máx.'),
     for (final x in tk.extraStatuses) statusApplicationMarkup(x),
     if (tk.detonate > 0)
       '+${pct(tk.detonate)} de daño por cada stack de Quemadura, '
@@ -260,8 +261,7 @@ List<String> kitEffectLines(SkillDef tk) {
           'a vos)',
     if (tk.selfBuff case final b?)
       '+${pct(b.value)} ${b.stat.label} (${b.turns} turno${b.turns == 1 ? '' : 's'})',
-    if (tk.selfTurn < 1)
-      'Tu próximo turno llega ${pct(1 - tk.selfTurn)} antes',
+    if (tk.selfTurn < 1) 'Tu próximo turno llega ${pct(1 - tk.selfTurn)} antes',
     if (tk.protect) 'Protección: recibís el daño dirigido a tus aliados',
     ...variantEffectLines(tk),
   ];
@@ -275,25 +275,39 @@ List<String> variantEffectLines(SkillDef tk) {
   const heal = '#7bed9f', shield = '#ffeaa7', debuff = '#ff6b81';
   return [
     if (tk.overheal > 0)
-      hexSpan(heal, 'Desborde: ${pct(tk.overheal)} de la cura que sobra '
+      hexSpan(
+          heal,
+          'Desborde: ${pct(tk.overheal)} de la cura que sobra '
           '(vida llena) se vuelve escudo (${t(tk.shieldTurns)})'),
     if (tk.drainHeal > 0)
-      hexSpan(heal, 'Drena: ${pct(tk.drainHeal)} del daño cura al aliado '
+      hexSpan(
+          heal,
+          'Drena: ${pct(tk.drainHeal)} del daño cura al aliado '
           'más herido'),
     if (tk.allyShield > 0)
-      hexSpan(shield, 'Escudo del ${pct(tk.allyShield)} de tu vida máx. al '
+      hexSpan(
+          shield,
+          'Escudo del ${pct(tk.allyShield)} de tu vida máx. al '
           'aliado más herido (${t(tk.shieldTurns)})'),
     if (tk.selfShield > 0)
-      hexSpan(shield, 'Escudo del ${pct(tk.selfShield)} de tu vida máx. '
+      hexSpan(
+          shield,
+          'Escudo del ${pct(tk.selfShield)} de tu vida máx. '
           'para vos (${t(tk.shieldTurns)})'),
     if (tk.shieldReflect > 0)
-      hexSpan(shield, 'Espinoso: el escudo devuelve ${pct(tk.shieldReflect)} '
+      hexSpan(
+          shield,
+          'Espinoso: el escudo devuelve ${pct(tk.shieldReflect)} '
           'de lo que absorbe al enemigo que pega'),
     if (tk.shieldBurst > 0)
-      hexSpan(shield, 'Volátil: al romperse explota, ATQ × '
+      hexSpan(
+          shield,
+          'Volátil: al romperse explota, ATQ × '
           '${fm(tk.shieldBurst)} a todos los enemigos'),
     if (tk.shieldGrow > 0)
-      hexSpan(shield, 'Creciente: cada golpe que para lo agranda '
+      hexSpan(
+          shield,
+          'Creciente: cada golpe que para lo agranda '
           '${pct(tk.shieldGrow)} de lo absorbido (máx. 50% de la vida)'),
     for (final d in tk.debuffs)
       hexSpan(
@@ -308,27 +322,38 @@ List<String> variantEffectLines(SkillDef tk) {
             _ => '${d.stat.label} ${pct(d.value)} (${t(d.turns)})',
           }),
     if (tk.breakBonus > 0)
-      hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de puntos de quiebre'),
+      hexSpan(
+          '#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de puntos de quiebre'),
     if (tk.pureBreak)
-      hexSpan('#ffe14d', 'Quebrar: no hace daño; quiebra a un enemigo '
-          'FISURADO (barra llena). Se puede reemplazar por fusión')
+      hexSpan(
+          '#ffe14d',
+          'Quebrar: no hace daño; quiebra a un enemigo '
+              'FISURADO (barra llena). Se puede reemplazar por fusión')
     else if (tk.breaks)
-      hexSpan('#ffe14d', 'Puede quebrar: si el objetivo está FISURADO, lo '
-          'quiebra; si no, pega normal'),
+      hexSpan(
+          '#ffe14d',
+          'Puede quebrar: si el objetivo está FISURADO, lo '
+              'quiebra; si no, pega normal'),
     // Pulso, Instante y precondiciones (combo_balance.md § 5.2).
     if (tk.pulse > 0)
-      hexSpan('#ffb142', 'Cuesta ${tk.pulse} de Pulso (+1 al empezar tu '
-          'turno, por ataque básico, por golpe a una debilidad o reacción y '
-          'al defender; máx. 5)'),
+      hexSpan(
+          '#ffb142',
+          'Cuesta ${tk.pulse} de Pulso (+1 al empezar tu '
+              'turno, por ataque básico, por golpe a una debilidad o reacción y '
+              'al defender; máx. 5)'),
     if (tk.instant)
-      hexSpan('#9fe8ff', 'Instante: no termina el turno; después podés hacer '
-          'una acción más (una Instante por turno)'),
+      hexSpan(
+          '#9fe8ff',
+          'Instante: no termina el turno; después podés hacer '
+              'una acción más (una Instante por turno)'),
     if (tk.requires.isNotEmpty)
       hexSpan('#ff9f43',
           'Necesita: ${tk.requires.map((r) => r.label).join(' · ')}'),
     if (tk.ultDrain > 0)
-      hexSpan('#a29bfe', 'Silencio: le quita ${jsRound(tk.ultDrain)} de '
-          'carga de ULT'),
+      hexSpan(
+          '#a29bfe',
+          'Silencio: le quita ${jsRound(tk.ultDrain)} de '
+              'carga de ULT'),
   ];
 }
 
@@ -414,6 +439,7 @@ String skillReachMarkup(SkillDef sk) {
   final r = skillReach(sk);
   return hexSpan(r.hex, '[${r.label}]');
 }
+
 /// Resumen de una línea, arriba del detalle: "A TODOS · Fuego · 32 c/u ·
 /// +2 Quemadura".
 String skillSummaryMarkup(SkillDef sk, Combatant p) {
@@ -424,20 +450,23 @@ String skillSummaryMarkup(SkillDef sk, Combatant p) {
       : (sk.kind == SkillKind.magical ? p.magic : p.attack) * sk.power;
   final st = sk.status;
   return [
-    hexSpan(r.hex, switch (r) {
-      SkillReach.oneFoe => 'A 1 enemigo',
-      SkillReach.allFoes => 'A TODOS',
-      SkillReach.ally => 'A un aliado',
-      SkillReach.party => 'Al grupo',
-      SkillReach.self => 'A vos',
-    }),
-    if (dmg) elementOf(sk.id).label,
+    hexSpan(
+        r.hex,
+        switch (r) {
+          SkillReach.oneFoe => 'A 1 enemigo',
+          SkillReach.allFoes => 'A TODOS',
+          SkillReach.ally => 'A un aliado',
+          SkillReach.party => 'Al grupo',
+          SkillReach.self => 'A vos',
+        }),
+    if (dmg) elementOf(sk.id).tr,
     if (dmg) hexSpan('#ffd166', '${jsRound(v)}${sk.allTargets ? ' c/u' : ''}'),
     if (st != null)
       hexSpan(statusHex(st.kind),
-          '${st.chance != null ? '${jsRound(st.chance! * 100)}%' : '+${st.stacks}'} ${st.kind.label}'),
+          '${st.chance != null ? '${jsRound(st.chance! * 100)}%' : '+${st.stacks}'} ${st.kind.tr}'),
   ].join(' · ');
 }
+
 /// Líneas de revivir con la sinergia del árbol (combat.md § Revivir):
 /// con [p] muestra los números del lanzador; sin él, la regla.
 List<String> reviveLinesMarkup(SkillDef tk, Combatant? p) {
