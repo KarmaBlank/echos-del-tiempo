@@ -1982,7 +1982,7 @@ class BattleQueueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xCC10121C),
+        color: DsColors.surface.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Padding(
