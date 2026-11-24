@@ -6,7 +6,9 @@ import '../data/biomes_catalog.dart';
 import '../data/town_layout.dart';
 import 'lantern_rules.dart';
 import 'light_rules.dart';
+import 'mine_generator.dart';
 import 'mulberry32.dart';
+import '../data/tuning_catalog.dart';
 import 'zone_generators.dart';
 import 'town_plan.dart';
 import 'zone_rules.dart';
@@ -400,19 +402,37 @@ abstract final class MapGenerator {
                 gens[f], (seed + 7919 * f + 104729 * z.index).toSigned(32))
             : const <(int, int)>[],
     ];
+    // Rare ore veins (mining_smithing.md § 1.4): own PRNG, open tiles.
+    final veinChance = tuning(TuningId.smithing).d('dungeonOreChance');
+    final veins = [
+      for (var f = 0; f < n; f++)
+        MineGenerator.dungeonVeins(
+            gens[f].rows,
+            [
+              for (final s in gens[f].spots)
+                if (!lanterns[f].any((l) =>
+                    (l.$1 - s.$1).abs() <= 2 && (l.$2 - s.$2).abs() <= 2))
+                  s
+            ],
+            (seed + 7919 * f + 104729 * z.index).toSigned(32),
+            chance: veinChance),
+    ];
     final floorRows = [
       for (var f = 0; f < n; f++)
-        if (lanterns[f].isEmpty)
+        if (lanterns[f].isEmpty && veins[f].isEmpty)
           gens[f].rows
         else
           [
             for (var y = 0; y < gens[f].rows.length; y++)
-              lanterns[f].any((l) => l.$2 == y)
+              lanterns[f].any((l) => l.$2 == y) ||
+                      veins[f].any((l) => l.$2 == y)
                   ? [
                       for (var x = 0; x < gens[f].rows[y].length; x++)
                         lanterns[f].contains((x, y))
                             ? Tile.lantern
-                            : gens[f].rows[y][x],
+                            : veins[f].contains((x, y))
+                                ? Tile.ore
+                                : gens[f].rows[y][x],
                     ].join()
                   : gens[f].rows[y],
           ],
@@ -443,7 +463,8 @@ abstract final class MapGenerator {
       final ar = sh(g.arena, ox);
       final fspots = [
         for (final s in g.spots)
-          if (!lanterns[f].contains(s)) (s.$1 + ox, s.$2),
+          if (!lanterns[f].contains(s) && !veins[f].contains(s))
+            (s.$1 + ox, s.$2),
       ];
       final down = g.stairsDown;
       floors.add(MapFloor(
@@ -475,6 +496,14 @@ abstract final class MapGenerator {
               kind: PoiKind.lantern,
               tx: lanterns[f][k].$1 + ox,
               ty: lanterns[f][k].$2,
+              floor: f,
+            ),
+          for (var k = 0; k < veins[f].length; k++)
+            MapPoi(
+              id: f * 100 + 70 + k,
+              kind: PoiKind.ore,
+              tx: veins[f][k].$1 + ox,
+              ty: veins[f][k].$2,
               floor: f,
             ),
         ],

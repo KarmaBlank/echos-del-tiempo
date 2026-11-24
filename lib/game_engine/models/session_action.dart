@@ -71,6 +71,29 @@ class ForageAction extends SessionAction {
   const ForageAction(this.spot);
 }
 
+/// `mine` (protocol 69, mining_smithing.md § 1.3): mine vein [vein] of
+/// the mine the player is in.
+class MineAction extends SessionAction {
+  final int vein;
+  const MineAction(this.vein);
+}
+
+/// Smithing operation (mining_smithing.md § 3–5).
+enum SmithOp { smelt, forge, brann }
+
+/// `smith` (protocol 69): [SmithOp.smelt] smelts [n] ingots from the ore
+/// [material]; [SmithOp.forge] / [SmithOp.brann] forge [base] with the
+/// ingot [material] at rarity index [rarity] (by yourself or by Brann).
+class SmithAction extends SessionAction {
+  final SmithOp op;
+  final String material;
+  final String? base;
+  final int rarity;
+  final int n;
+  const SmithAction(this.op, this.material,
+      {this.base, this.rarity = 0, this.n = 1});
+}
+
 /// Pausa de grupo (docs/specs/settings.md § "Pausa"): cualquier jugador
 /// pausa ([paused] `true`) o reanuda (`false`) la sala entera.
 class PauseAction extends SessionAction {
@@ -691,7 +714,13 @@ enum FarmShopOp {
   sell,
   sellAll,
   exchange,
-  selectSeed
+  selectSeed,
+  // Cebos (fishing.md § 14): buy at the trader, pick / cycle on the CEBO
+  // slot and craft from pressed bait.
+  buyBait,
+  selectBait,
+  cycleBait,
+  craftBait
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.

@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import 'light_layer.dart';
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
@@ -34,6 +35,7 @@ import '../../../../game_engine/rules/dungeon_rules.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
+import '../../../../game_engine/rules/weather_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../combat/presentation/game_sprites.dart';
@@ -45,6 +47,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_labels.dart';
 import 'map_themes.dart';
+import 'ground_layer.dart';
 import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
@@ -155,6 +158,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
+
+  /// Ground marks of the seasons and the weather.
+  final ground = MapGroundLayer();
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -877,6 +883,18 @@ class MapGame extends Game {
         gateOpen: s.gateOpen,
         density: particleDensity,
         pulse: pulse);
+    // Season and weather marks on the ground (weather_seasons.md § 6.3).
+    if (map.lobby && s.town.sky.started && !controller.editingTown) {
+      ground.draw(
+          c,
+          map,
+          worldView,
+          MapGroundLayer.markFor(
+              lobby: true,
+              place: map.place,
+              season: WeatherRules.season(s.town.sky.day),
+              weather: SkyRules.nowIn(s.town.sky, map.place)));
+    }
     _prefetchMap = map;
     _prefetchView = worldView;
     // Arcos de las entradas de zona (sobresalen de su tile).
@@ -899,6 +917,11 @@ class MapGame extends Game {
           in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
         _placeText(
             c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
+      }
+      for (final (x, y)
+          in biomeLayout(map.place)?.mines ?? const <(int, int)>[]) {
+        _placeText(c, controller.strings.t('ui.world.mine.label'),
+            (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
       }
     } else if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
@@ -1018,6 +1041,25 @@ class MapGame extends Game {
       // World event actors (world_events.md § 3): visitors, wanderers,
       // caravans and echo rift portals, for their days.
       _drawWorldEvents(c, s, map.place ?? kPueblo, t);
+      // PNJ de la mina (mining_smithing.md § 1.2): quieto, con su nombre.
+      if (controller.mineLayout?.npc case (final id, final nx, final ny)?) {
+        final im = sprites.lifeIcon('npc_mina_$id', 'herramienta');
+        final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
+        if (im != null) {
+          final w = im.width.toDouble(), h = im.height.toDouble();
+          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+              Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
+              SpriteCatalog.pixelPaint());
+        }
+        _rankedText(
+            c,
+            controller.strings.t('ui.world.mine.npc.$id.name').toUpperCase(),
+            cx,
+            bottom - ts - 6,
+            TownPalette.label,
+            6,
+            897);
+      }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);
@@ -1032,12 +1074,14 @@ class MapGame extends Game {
     final outdoor = SkyRules.outdoor(map.theme, town: map.lobby);
     final night = outdoor && SkyRules.darkness(s.town.sky) > 0.25;
     final lights = <Offset>[];
-    // Mazmorra oscura (lighting.md § 5): solo con misión en curso.
-    final darkMap = !map.lobby &&
-        s.mission != null &&
-        (debugForceDark ||
-            LightRules.isDark(map.theme,
-                floor: currentFloor(view)?.index ?? 0));
+    // Mazmorra oscura (lighting.md § 5): solo con misión en curso. Las
+    // minas (mining_smithing.md § 1.2) son oscuras siempre.
+    final darkMap = (!map.lobby &&
+            s.mission != null &&
+            (debugForceDark ||
+                LightRules.isDark(map.theme,
+                    floor: currentFloor(view)?.index ?? 0))) ||
+        (map.lobby && MiningRules.isMine(map.place));
     final movingLights = <LightSource>[];
     final placed = <(double, double)>[];
     sky.placedLights = placed;
@@ -1285,12 +1329,14 @@ class MapGame extends Game {
     if ((outdoor || darkMap) && !controller.editingTown) {
       // Luz por tile multiplicada sobre el mapa (lighting.md § 4).
       final dk = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
-      final w = SkyRules.now(s.town.sky);
+      final w = SkyRules.nowIn(s.town.sky, s.place);
       final overcast = !outdoor
           ? 0.0
           : switch (w) {
               Weather.tormenta => 1.0,
               Weather.lluvia => 0.5,
+              Weather.fog => 0.35,
+              Weather.snow => 0.25,
               Weather.despejado => 0.0,
             };
       final ambient = darkMap
@@ -1359,7 +1405,9 @@ class MapGame extends Game {
             density: particleDensity,
             flash: flashFactor,
             motion: !reduceMotion,
-            tint: false);
+            tint: false,
+            weather: SkyRules.nowIn(s.town.sky, s.place),
+            precipitation: climateOf(s.place).showsPrecipitation);
       }
     }
 
@@ -1412,7 +1460,9 @@ class MapGame extends Game {
           worldSize: labelPx(p.loot.style.size)));
     }
     c.restore();
-    if (outdoor && !controller.editingTown) _drawSkyNotice(c, s.town.sky);
+    if (outdoor && !controller.editingTown) {
+      _drawSkyNotice(c, s.town.sky, SkyRules.nowIn(s.town.sky, s.place));
+    }
     if (showingFallToast) {
       final q = (t - _myFallT0!) / fallToastMs;
       final a = q < 0.8 ? 1.0 : (1 - q) / 0.2;
@@ -1436,16 +1486,15 @@ class MapGame extends Game {
 
   /// Cartel chico arriba (day_night_weather.md § 3.4): de noche, el
   /// pronóstico de mañana; de día con lluvia o tormenta, el clima.
-  void _drawSkyNotice(Canvas c, SkyState sky) {
+  void _drawSkyNotice(Canvas c, SkyState sky, Weather w) {
     if (!sky.started) return;
-    final w = SkyRules.now(sky);
     final txt = SkyRules.isNight(sky)
         ? 'Noche · ${SkyRules.forecast(sky)}'
         : w == Weather.despejado
             ? null
-            : w == Weather.tormenta
-                ? 'Tormenta'
-                : 'Llueve';
+            : w == Weather.lluvia
+                ? 'Llueve'
+                : w.label;
     if (txt == null) return;
     c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
         Paint()..color = SkyPalette.forecastBack);

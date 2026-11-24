@@ -451,5 +451,209 @@
   "ui.inventory.filter.err.unknown_material": "",
   "ui.inventory.filter.err.unknown_sound": "",
   "ui.inventory.filter.err.unknown_word": "",
-  "ui.inventory.tag.new": ""
+  "ui.inventory.tag.new": "",
+  "ui.inventory.shop.forge_tab.smith.label": {
+    "text": "锻造",
+    "status": "draft"
+  },
+  "ui.inventory.shop.forge_tab.smith.hint": {
+    "text": "熔炼矿石、锻造武器或委托布兰。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.world_only": {
+    "text": "仅限世界模式",
+    "status": "draft"
+  },
+  "ui.inventory.smith.smelt_recipe": {
+    "text": "{n} {ore} + ₵{gold} → 1 锭",
+    "status": "draft"
+  },
+  "ui.inventory.smith.have": {
+    "text": "你有 {n} 矿石 · 可熔炼 {max}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.forge_desc": {
+    "text": "{type} · 物品等级 {il}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cost_ingots": {
+    "text": "锭：{n} {ingot}（拥有 {have}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cost_rare": {
+    "text": "稀有：{n} {rare}（拥有 {have}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cost_recipe": {
+    "text": "配方：1 古代图纸或 1 守护者核心",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cost_gold": {
+    "text": "金币：₵{gold}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cap": {
+    "text": "最高稀有度：{rarity}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.go_forge": {
+    "text": "锻造",
+    "status": "draft"
+  },
+  "ui.inventory.smith.go_brann": {
+    "text": "委托布兰",
+    "status": "draft"
+  },
+  "ui.inventory.smith.search": {
+    "text": "搜索底材",
+    "status": "draft"
+  },
+  "ui.inventory.smith.empty": {
+    "text": "该锭无可锻造之物。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.tab.smelt": {
+    "text": "熔炼",
+    "status": "draft"
+  },
+  "ui.inventory.smith.tab.forge": {
+    "text": "锻造",
+    "status": "draft"
+  },
+  "ui.inventory.smith.tab.brann": {
+    "text": "布兰",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.notOre": {
+    "text": "不是矿石",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.noOre": {
+    "text": "矿石不足",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.noGold": {
+    "text": "金币不足",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.notIngot": {
+    "text": "不是锭",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.noIngots": {
+    "text": "锭不足",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.noRare": {
+    "text": "缺少稀有材料",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.noRecipe": {
+    "text": "需要古代图纸或守护者核心",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.level": {
+    "text": "锻造等级不足以制作该稀有度",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.brannAbsent": {
+    "text": "布兰必须住在镇上的房子里",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.brannRarity": {
+    "text": "布兰还不会为你锻造该稀有度",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.badBase": {
+    "text": "请选择底材",
+    "status": "draft"
+  },
+  "ui.inventory.smith.why.baseLevel": {
+    "text": "底材需要更高物品等级",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.found": {
+    "text": "发现于：{source}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.day": {
+    "text": "首次发现：第 {n} 天",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.count": {
+    "text": "累计发现：{n}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.rarity.ore": {
+    "text": "普通（矿石）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.rarity.ingot": {
+    "text": "普通（锭）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.rarity.rare": {
+    "text": "稀有",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.rarity.special": {
+    "text": "特殊",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.use.smelt": {
+    "text": "熔炼为 {id}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.use.forge": {
+    "text": "锻造武器（{id}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.use.rare": {
+    "text": "用 {id} 锻造稀有及以上武器",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.use.legend": {
+    "text": "锻造传说武器的配方（{id}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.mine": {
+    "text": "{biome}矿洞",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.dungeon": {
+    "text": "{biome}地牢矿脉（区域 {zone}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.smelt": {
+    "text": "在锻炉熔炼",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.src.boss": {
+    "text": "区域守护者",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.have": {
+    "text": "持有：{n}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.unknown": {
+    "text": "你还没有发现这种材料。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.ore": {
+    "text": "矿石",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.ingot": {
+    "text": "锭",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.rare": {
+    "text": "稀有",
+    "status": "draft"
+  },
+  "ui.inventory.smith.col.tab.special": {
+    "text": "特殊",
+    "status": "draft"
+  }
 }

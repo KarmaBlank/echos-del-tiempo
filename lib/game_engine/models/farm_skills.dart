@@ -12,6 +12,7 @@ class FarmSkills {
     String? can,
     Map<String, int> seeds = const {},
     Map<String, int> crops = const {},
+    Map<String, int>? cropLog,
     String? seed,
     Map<String, int> ferts = const {},
     this.pity = 0,
@@ -30,11 +31,29 @@ class FarmSkills {
           for (final e in crops.entries)
             if (e.value > 0 && parseCropKey(e.key) != null) e.key: e.value,
         }),
+        cropLog = Map.unmodifiable(_logOf(cropLog, crops)),
         ferts = Map.unmodifiable({
           for (final e in ferts.entries)
             if (e.value > 0 && kFertilizers.containsKey(e.key)) e.key: e.value,
         }),
         seed = seed != null && kCrops.containsKey(seed) ? seed : null;
+
+  /// The crop log, or (old saves without one) the crops in the bag.
+  static Map<String, int> _logOf(
+      Map<String, int>? log, Map<String, int> crops) {
+    final out = <String, int>{
+      for (final e in (log ?? const {}).entries)
+        if (kCrops.containsKey(e.key)) e.key: e.value.clamp(0, 3),
+    };
+    for (final e in crops.entries) {
+      if (e.value <= 0) continue;
+      final pc = parseCropKey(e.key);
+      if (pc == null) continue;
+      final q = pc.$2.index;
+      if ((out[pc.$1.id] ?? -1) < q) out[pc.$1.id] = q;
+    }
+    return out;
+  }
 
   static bool _isHoe(String id) => kFarmTools[id]?.kind == FarmToolKind.azada;
   static bool _isCan(String id) =>
@@ -53,6 +72,12 @@ class FarmSkills {
 
   /// Cosechas: `cropKey(cultivo, calidad)` → cantidad.
   final Map<String, int> crops;
+
+  /// COLECCIÓN de Cultivo (weather_seasons.md § 7): crop id → best
+  /// quality ever harvested (index of `CropQuality`). Migrated from the
+  /// bag on old saves.
+  final Map<String, int> cropLog;
+  bool cropDiscovered(String id) => cropLog.containsKey(id);
 
   /// Semilla elegida para plantar (`null` = la primera que haya).
   final String? seed;
@@ -92,6 +117,7 @@ class FarmSkills {
     String? can,
     Map<String, int>? seeds,
     Map<String, int>? crops,
+    Map<String, int>? cropLog,
     String? seed,
     Map<String, int>? ferts,
     int? pity,
@@ -106,6 +132,7 @@ class FarmSkills {
           can: can ?? this.can,
           seeds: seeds ?? this.seeds,
           crops: crops ?? this.crops,
+          cropLog: cropLog ?? this.cropLog,
           seed: seed ?? this.seed,
           ferts: ferts ?? this.ferts,
           pity: pity ?? this.pity,
@@ -125,6 +152,7 @@ class FarmSkills {
         'can': can,
         if (seeds.isNotEmpty) 'seeds': seeds,
         if (crops.isNotEmpty) 'crops': crops,
+        if (cropLog.isNotEmpty) 'cl': cropLog,
         if (seed != null) 'sd': seed,
         if (ferts.isNotEmpty) 'ferts': ferts,
         if (pity > 0) 'pity': pity,
@@ -149,6 +177,7 @@ class FarmSkills {
       can: raw['can'] is String ? raw['can'] as String : null,
       seeds: m(raw['seeds']),
       crops: m(raw['crops']),
+      cropLog: raw['cl'] is Map ? m(raw['cl']) : null,
       seed: raw['sd'] is String ? raw['sd'] as String : null,
       ferts: m(raw['ferts']),
       pity: n(raw['pity']),
@@ -174,7 +203,8 @@ class FarmSkills {
       other.hoes.join(',') == hoes.join(',') &&
       other.cans.join(',') == cans.join(',') &&
       _mapEq(other.seeds, seeds) &&
-      _mapEq(other.crops, crops);
+      _mapEq(other.crops, crops) &&
+      _mapEq(other.cropLog, cropLog);
 
   @override
   int get hashCode => Object.hash(xp, hoe, can, seeds.length, crops.length);

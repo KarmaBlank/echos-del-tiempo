@@ -35,4 +35,14 @@ List<String> seedInfoLines(BuildContext context, CropDef s) => [
       context.t('ui.town.bag.origin',
           {'place': lifeBiomeLabel(context, s.biome).toLowerCase()}),
       LifeTimeRules.cropAffinity(s.id).text,
+      ...seedSeasonLines(context, s),
+    ];
+
+/// Seasons a seed grows in (farming.md § 15) and, for winter crops, that
+/// they are only harvested in winter.
+List<String> seedSeasonLines(BuildContext context, CropDef s) => [
+      context.t('ui.town.bag.seasons',
+          {'list': seasonsText(LifeTimeRules.cropSeasons(s.id))}),
+      if (LifeTimeRules.cropWinterOnly(s.id))
+        context.t('ui.town.bag.winter_only'),
     ];

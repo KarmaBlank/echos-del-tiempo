@@ -19,8 +19,8 @@ Song zone5Fortaleza() {
     // A
     bar('C5:6 C5:2 Eb5:4 G5:4'),
     bar('Ab5:8 G5:4 Eb5:4'),
-    bar('F5:6 Eb5:2 C5:4 Ab4:4'),
-    bar('G4:8 B4:4 D5:4'),
+    bar('F5:6 Eb5:2 C5:8'),
+    bar('B4:8 D5:4 G5:4'),
     bar('C5:6 C5:2 Eb5:4 G5:4'),
     bar('C6:8 Bb5:4 Ab5:4'),
     bar('Bb5:6 Ab5:2 F5:4 D5:4'),
@@ -33,7 +33,7 @@ Song zone5Fortaleza() {
     bar('Ab5:6 G5:2 F5:4 Eb5:4'),
     bar('D5:6 Eb5:2 F5:4 Bb4:4'),
     bar('B4:6 C5:2 D5:4 F5:4'),
-    bar('D5:8 B4:4 G4:4'),
+    bar('D5:8 B4:8'),
   ]);
 
   final march = bar('k:4 s:2 s:1 s:1 k:4 s:4', drums: true);

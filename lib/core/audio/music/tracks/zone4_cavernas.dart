@@ -1,6 +1,7 @@
 import '../instruments.dart';
 import '../music_dsl.dart';
 import '../music_score.dart';
+import 'dungeon_variant.dart';
 
 /// Zona 4 · Cavernas Heladas.
 ///
@@ -47,7 +48,17 @@ Song zone4Cavernas() {
       Track('colchón', Inst.pad.copyWith(volume: 0.06),
           comp(chords, 'x:16', center: 62, count: 3)),
       Track('bajo', Inst.bass.copyWith(volume: 0.2), bassLine(chords, 'R:16')),
+      Track('frost', Inst.pad.copyWith(volume: 0.03, lowpass: 700),
+          rep('B1+F#2:64', 3)),
       Track.drums('goteo', rep(drips, 4), gain: 0.5),
     ],
   );
 }
+
+/// Caverns dungeon: the frozen theme with a phrygian C natural, lower
+/// chimes, pulsing bass and a heartbeat kick.
+Song zone4CavernasDungeon() => dungeonVariant(zone4Cavernas(),
+    id: 'zone4.dungeon',
+    title: 'Caverns (depths)',
+    tonic: 11,
+    flatten: const {2});

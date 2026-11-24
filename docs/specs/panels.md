@@ -281,6 +281,13 @@ Antes un solo panel ARMERÍA abría desde el edificio con el cartel FORJA
 - Preparación: las pestañas de las dos (ARMERÍA y después FORJA).
 - Sin cartel ni cofre: son lugares fijos, no construcciones.
 
+### FORJA → HERRERÍA (v0.44.0)
+
+Cuarta pestaña de la FORJA (`ForgeHallTab.smith`, mining_smithing.md):
+plantilla TALLER (`DsCraftGridTemplate`), grilla estilo INVENTARIO con el
+detalle a la derecha y las recetas como subpestañas (chips): FUNDIR,
+FORJAR y BRANN. Sin secciones apiladas.
+
 ## Armería (`shop`, 1352-1358) — referencia anterior a v0.32.3
 
 Título `ARMERÍA` [?], a la derecha `Créditos $N`. Pestañas `COMPRAR ·

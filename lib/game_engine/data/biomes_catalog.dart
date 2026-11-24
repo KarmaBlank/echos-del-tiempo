@@ -185,7 +185,8 @@ class BiomeLayout {
       required this.fish,
       required this.junk,
       required this.seeds,
-      required this.npc});
+      required this.npc,
+      this.mines = const [(4, 3), (20, 3)]});
 
   static const width = 34;
   static const height = 22;
@@ -210,6 +211,9 @@ class BiomeLayout {
   /// Semillas exclusivas (farming.md § 2): id → peso.
   final Map<String, double> seeds;
   final BiomeNpcDef npc;
+
+  /// Mine entrances (mining_smithing.md § 1.1): tiles on the entrance row.
+  final List<(int, int)> mines;
 
   /// Llegada desde el pueblo: el camino del sur.
   WorldPoint get spawn => const WorldPoint(17.0 * 16, 19.5 * 16);
@@ -272,6 +276,10 @@ class BiomeLayout {
         g[y][x + dx] = Tile.portal;
         g[y + 1][x + dx] = Tile.path;
       }
+    }
+    for (final (x, y) in mines) {
+      g[y][x] = Tile.mineEntrance;
+      g[y + 1][x] = Tile.path;
     }
     for (final (x, y) in docks) {
       g[y][x] = Tile.fishing;

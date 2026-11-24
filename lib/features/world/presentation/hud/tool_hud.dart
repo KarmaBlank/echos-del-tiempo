@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../core/i18n/catalog_text.dart';
+import '../../../../game_engine/data/bait_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
@@ -93,7 +95,51 @@ class ToolHud extends StatelessWidget {
           SizedBox(
               width: seedW,
               child: many ? card.tip(context.t('ui.world.tools.next_rod')) : card),
+          SizedBox(width: DsSpace.sm),
+          _bait(context),
         ]);
+  }
+
+  /// CEBO slot (fishing.md § 14.5), like ABONO: icon, "Cebo [F]" and the
+  /// count; click (or F) picks the next owned bait; best by default.
+  Widget _bait(BuildContext context) {
+    final id = controller.activeBait;
+    final b = id == null ? null : kBaits[id];
+    final n = id == null ? 0 : profile.life.baitCount(id);
+    final count = '×$n';
+    final name = b == null ? '' : CatalogText.of(baitNameKey(b.id), b.name);
+    final tip = b == null
+        ? context.t('ui.world.tools.no_bait_tip')
+        : controller.ownedBaits.length > 1
+            ? context.t('ui.world.tools.bait_tip_more', {'name': name})
+            : name;
+    return SizedBox(
+      width: slotW,
+      child: DsCard(
+        key: const ValueKey('hud-tool-bait'),
+        padding: EdgeInsets.all(DsSpace.xs),
+        onTap: controller.ownedBaits.length > 1 ? controller.cycleBait : null,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+              height: seedSize,
+              child: Center(
+                  child: b == null
+                      ? const SizedBox(width: iconSize, height: iconSize)
+                      : LifeIcon('cebo_${b.id}', LifeIconKind.pescado,
+                          key: const ValueKey('hud-bait-icon'),
+                          size: iconSize))),
+          Text(context.t('ui.world.tools.bait'),
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              style: DsText.subtitle(DsColors.text)),
+          if (b != null)
+            Text(count,
+                key: const ValueKey('hud-bait-count'),
+                textAlign: TextAlign.center,
+                style: DsText.body()),
+        ]),
+      ).tip(tip),
+    );
   }
 
   /// Barra de tres casilleros (Azada | Semilla | Regadera), de ancho fijo

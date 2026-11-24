@@ -30,13 +30,13 @@ Song zone8Cementerio() {
   final melody = join([
     // A
     m('C5:8 Db5:2 C5:2'),
-    m('Ab4:12'),
+    m('Ab5:12'),
     m('Bb4:4 Db5:4 F5:4'),
     m('Eb5:9 .:3'),
     m('F5:6 Eb5:3 Db5:3'),
     m('C5:8 Eb5:4'),
-    m('Bb4:6 G4:3 Bb4:3'),
-    m('F4:6 .:6'),
+    m('Bb4:6 C5:3 Bb4:3'),
+    m('F5:6 .:6'),
     // B
     m('.:3 Ab5:6 F5:3'),
     m('Eb5:9 C5:3'),
@@ -48,7 +48,7 @@ Song zone8Cementerio() {
     m('E5:6 .:6'),
     // Coda
     m('C5:6 Db5:3 C5:3'),
-    m('Ab4:6 Bb4:3 C5:3'),
+    m('Ab5:6 G5:3 F5:3'),
     m('Db5:6 C5:3 Bb4:3'),
     m('C5:6 .:6'),
   ]);

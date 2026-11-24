@@ -13,6 +13,7 @@ import '../models/world_save.dart';
 import '../models/zone_def.dart';
 import 'js_math.dart';
 import 'mulberry32.dart';
+import 'weather_rules.dart';
 
 /// What the roll needs to know about the world (world_events.md § 2).
 class WorldEventContext {
@@ -25,9 +26,9 @@ class WorldEventContext {
   /// Biomes an event may pick (null = every open biome but the town).
   final List<String>? openBiomes;
 
-  /// Hook (§ 1): an extra per-event condition, e.g. a future event that
-  /// depends on the current weather or season. `null` = no condition.
-  /// Not used yet on purpose.
+  /// Hook (§ 1): an extra per-event condition. The host passes
+  /// [WorldEventRules.climateCondition] (the event's `season` /
+  /// `weather`). `null` = no condition.
   final bool Function(WorldEventDef def)? extraCondition;
 
   List<String> get biomes =>
@@ -83,6 +84,18 @@ class LoreQuest {
 abstract final class WorldEventRules {
   static int _mix(int seed, int day) =>
       (seed * 0x9E3779B1 + day * 0x85EBCA77 + 0x165667B1) & 0xFFFFFFFF;
+
+  /// The climate condition of events (§ 1, weather_seasons.md): an
+  /// event with `season` only rolls in that season of [day], one with
+  /// `weather` only when the town weather of [day] (sky [skySeed]) is
+  /// that one.
+  static bool Function(WorldEventDef) climateCondition(int skySeed, int day) {
+    final season = WeatherRules.season(day).name;
+    final weather = WeatherRules.dayWeather(skySeed, day, null).name;
+    return (d) =>
+        (d.season == null || d.season == season) &&
+        (d.weather == null || d.weather == weather);
+  }
 
   /// A roll is due on [day] (§ 2).
   static bool due(WorldEventsState s, int day, WorldEventsConfig cfg) =>

@@ -166,7 +166,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// battle snapshot; Por fases may send `ro`.
 /// 70: world events (world_events.md § 5): `wev` in the town, the
 /// `riftGo` action and lore quest progress.
-const kProtocolVersion = 70;
+/// 71: mining and smithing (mining_smithing.md § 6): `ore` in the
+/// profile life skills, `mine` and `smith` actions, `PoiKind.ore` and
+/// mine places `mine:<biome>:<i>`.
+/// 72: weather and seasons (weather_seasons.md): sky seed `sd`, baits,
+/// crop log `cl`, bait actions.
+const kProtocolVersion = 72;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

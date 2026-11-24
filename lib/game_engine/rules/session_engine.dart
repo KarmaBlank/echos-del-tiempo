@@ -1,4 +1,6 @@
 import 'oficio_storage_rules.dart';
+import 'weather_rules.dart';
+import 'bait_rules.dart';
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
@@ -78,6 +80,8 @@ import 'biome_fisher_rules.dart';
 import 'life_time_rules.dart';
 import 'helper_rules.dart';
 import 'light_rules.dart';
+import 'mining_rules.dart';
+import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
@@ -94,6 +98,7 @@ part 'session_engine_run.dart';
 part 'session_engine_fishing.dart';
 part 'session_engine_farming.dart';
 part 'session_engine_biome.dart';
+part 'session_engine_mining.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -476,6 +481,13 @@ class SessionEngine {
       if (biomeLayout(s.place) case final lay?) {
         return MapGenerator.biome(
             lay, BiomeRules.picked(s.town, lay.id, s.time));
+      }
+      // Mine (mining_smithing.md § 1): a calm lobby map, no enemies.
+      if (MiningRules.layout(s.place,
+              worldId: s.worldId, day: s.town.sky.day)
+          case final mine?) {
+        return MiningRules.mapOf(
+            mine, MiningRules.spent(s.town, s.place!, s.time));
       }
       return MapGenerator.townOf(s.town);
     }
@@ -1396,6 +1408,8 @@ class _Op {
         return _offerBoss(p);
       case TravelAction() || ForageAction():
         return biomeAction(p, a);
+      case MineAction() || SmithAction():
+        return miningAction(p, a);
 
       case BuyItemAction():
         if (!s.canShop) return false;
@@ -3410,6 +3424,10 @@ class _Op {
       case PoiKind.lantern:
         m.poiUsed.add(poi.id);
         say('${p.name} encendió un farol.');
+      case PoiKind.ore:
+        if (p.isCompanion) return false;
+        m.poiUsed.add(poi.id);
+        _mineDungeonVein(p, m.zone);
       case PoiKind.shrine:
         m.poiUsed.add(poi.id);
         _bless(BlessingKind.values[poi.variant % BlessingKind.values.length],
@@ -4257,6 +4275,7 @@ class _Op {
       _lootAll(LootSource.boss, lx, ly, level: lootLevel);
       _bossLegendary(b, lx, ly, lootLevel);
       if (s.tutorial == null) _bossFragment(b);
+      _bossCores();
     } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);

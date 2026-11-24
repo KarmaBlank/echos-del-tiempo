@@ -238,6 +238,16 @@ abstract final class ActionJson {
             if (a.ecoZone != null) 'ez': a.ecoZone,
           },
         ForageAction() => {'t': 'forage', 'i': a.spot},
+        // Protocol 69: mining and smithing (mining_smithing.md § 6).
+        MineAction() => {'t': 'mine', 'i': a.vein},
+        SmithAction() => {
+            't': 'smith',
+            'o': a.op.name,
+            'g': a.material,
+            if (a.base != null) 'b': a.base,
+            if (a.rarity != 0) 'r': a.rarity,
+            if (a.n != 1) 'n': a.n,
+          },
         // Protocolo 57 (v0.33.0): salir solo de la mazmorra.
         LeaveDungeonAction() => {
             't': 'leaveD',
@@ -492,6 +502,15 @@ abstract final class ActionJson {
             ecoZone: j['ez'] is num ? (j['ez'] as num).toInt() : null);
       case 'forage':
         return ForageAction(j.integer('i'));
+      case 'mine':
+        return MineAction(j.integer('i'));
+      case 'smith':
+        final op = SmithOp.values.asNameMap()[j.str('o')] ??
+            (throw FormatException('JSON inválido: smith', j['o']));
+        return SmithAction(op, j.str('g'),
+            base: j.strOrNull('b'),
+            rarity: j.intOrNull('r') ?? 0,
+            n: j.intOrNull('n') ?? 1);
       case 'leaveD':
         return LeaveDungeonAction(poiId: j.intOrNull('i'));
       case 'offer':

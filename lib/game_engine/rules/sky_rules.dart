@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/tuning_catalog.dart';
-import '../models/sky.dart';
+import 'weather_rules.dart';
 
 export '../models/sky.dart';
 
@@ -22,47 +22,55 @@ abstract final class SkyRules {
 
   /// Exteriores de bioma sin cielo (overworld_biomes.md § 3.5): ni noche
   /// ni clima aunque sean zona segura.
-  static const undergroundThemes = {'cavernas_ext'};
+  static const undergroundThemes = {
+    'cavernas_ext',
+    // Minas (mining_smithing.md § 1.2): bajo tierra, sin cielo.
+    'mina_bosque', 'mina_ruinas', 'mina_cavernas', 'mina_grieta',
+    'mina_abismo',
+  };
 
   static bool outdoor(String theme, {bool town = false}) =>
       !undergroundThemes.contains(theme) &&
       (town || outdoorThemes.contains(theme));
 
   /// El primer día: arranca a media mañana, despejado, con pronóstico.
-  static SkyState start(double Function() rand) => SkyState(
-      day: 1, clock: daySec * 0.15, tomorrow: rollWeather(rand()));
-
-  /// Un clima al azar con [roll] en [0, 1): tormenta, lluvia o despejado.
-  static Weather rollWeather(double roll) {
-    final storm = t.d('stormChance').clamp(0.0, 1.0);
-    final rain = t.d('rainChance').clamp(0.0, 1.0 - storm);
-    if (roll < storm) return Weather.tormenta;
-    if (roll < storm + rain) return Weather.lluvia;
-    return Weather.despejado;
+  /// The host picks the world weather seed once ([rand] only here); the
+  /// forecast and every day after come from it (weather_seasons.md § 3).
+  static SkyState start(double Function() rand) {
+    final seed = 1 + (rand() * 0x7ffffffe).floor();
+    return SkyState(
+        day: 1,
+        clock: daySec * 0.15,
+        seed: seed,
+        tomorrow: WeatherRules.dayWeather(seed, 2, null));
   }
 
   /// Avanza [dt] segundos. Al pasar el final del día empieza el siguiente
-  /// con el clima pronosticado (en un tramo al azar del día) y se tira el
-  /// pronóstico nuevo.
+  /// con el clima pronosticado (en su tramo del día) y se calcula el
+  /// pronóstico nuevo. Determinista: sale de la semilla del cielo
+  /// (weather_seasons.md § 3); [rand] solo arranca un cielo nuevo.
   static SkyState advance(SkyState s0, double dt, double Function() rand) {
     var s = s0.started ? s0 : start(rand);
     var c = s.clock + dt;
     while (c >= length) {
       c -= length;
       final w = s.tomorrow;
-      final lo = t.d('weatherMinFrac').clamp(0.05, 1.0);
-      final hi = math.max(lo, t.d('weatherMaxFrac').clamp(0.05, 1.0));
-      final frac = lo + (hi - lo) * rand();
-      final from = (1 - frac) * rand();
+      final day = s.day + 1;
+      final (from, to) = WeatherRules.window(s.seed, day, null);
       s = SkyState(
-          day: s.day + 1,
+          day: day,
+          seed: s.seed,
           weather: w,
           from: w == Weather.despejado ? 0 : from,
-          to: w == Weather.despejado ? 0 : from + frac,
-          tomorrow: rollWeather(rand()));
+          to: w == Weather.despejado ? 0 : to,
+          tomorrow: WeatherRules.dayWeather(s.seed, day + 1, null));
     }
     return s.copyWith(clock: c);
   }
+
+  /// The weather now in [place] (`null` = the town).
+  static Weather nowIn(SkyState s, String? place) =>
+      WeatherRules.current(s, biome: place);
 
   /// Parte del día completo que pasó (0–1).
   static double phase(SkyState s) => (s.clock / length).clamp(0.0, 1.0);
@@ -125,14 +133,12 @@ abstract final class SkyRules {
   static String forecast(SkyState s) =>
       'Mañana: ${s.tomorrow.label.toLowerCase()}';
 
-  /// Chance de que pique con el clima de ahora (`stormBite` con
-  /// tormenta; 1 si no).
-  static double biteChance(SkyState s) => now(s) == Weather.tormenta
-      ? t.d('stormBite').clamp(0.0, 1.0)
-      : 1;
+  /// Chance de que pique con el clima de ahora en [place] (`stormBite`,
+  /// `fogBite`, `snowBite`; 1 si no).
+  static double biteChance(SkyState s, [String? place]) =>
+      WeatherRules.biteChance(nowIn(s, place));
 
-  /// Parte de la pesca de los pescadores con el clima de ahora.
-  static double fisherFactor(SkyState s) => now(s) == Weather.tormenta
-      ? t.d('stormFisher').clamp(0.0, 1.0)
-      : 1;
+  /// Parte de la pesca de los pescadores con el clima de ahora (pueblo).
+  static double fisherFactor(SkyState s) =>
+      WeatherRules.fisherFactor(now(s));
 }

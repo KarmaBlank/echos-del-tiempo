@@ -270,6 +270,20 @@ Dónde se usa `DsItemGrid`: INVENTARIO (grilla 8 × 5 con arrastre), ALIJO
 reforjar) y FORJA (arma a forjar). COMPRAR sigue en lista: elige bases
 del catálogo con precio y "TIENES" a la vista, no ítems propios.
 
+### 6.1 `DsCollectionTemplate` (colecciones)
+
+Plantilla única para colecciones (pesca, cultivo y herrería):
+- `DsCollectionEntry`: id, ícono, descubierto, título, color, borde,
+  etiquetas, filas del detalle y grupos (para los filtros).
+- Subtabs de filtro (`(id, label)`, `all` = todos) y contador
+  descubiertos/total (`DsBadge`, key `<prefijo>-progress`).
+- Grilla de celdas de 44 px; sin descubrir: "?" gris sin pistas
+  (key `<prefijo>-unknown-<id>`).
+- Detalle a la derecha (`DsDetailPane`) desde 460 px de ancho; abajo si no.
+- Tipografía por rol (`DsText.title/body/detail`), sin cortes; tooltips
+  de ancho fijo.
+- Test de overflow a 1024×640 y 1920×1080 con escala 1.0 y 2.0.
+
 ## 7. Tema (`DsTheme`)
 
 `DsTheme.extension()` es una `ThemeExtension` con los roles de color y

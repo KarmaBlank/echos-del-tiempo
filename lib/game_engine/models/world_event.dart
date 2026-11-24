@@ -1,4 +1,5 @@
 import 'localized_text.dart';
+import 'sky.dart' show Season, Weather;
 
 /// Kind of world event (docs/specs/world_events.md § 3).
 enum WorldEventCategory {
@@ -56,7 +57,17 @@ class WorldEventDef {
     this.target = '',
     this.n = 1,
     this.sprite = '',
+    this.season,
+    this.weather,
   });
+
+  /// Climate condition (weather_seasons.md, world_events.md § 1): the
+  /// event only rolls in this season (`Season.name`; `null` = any) …
+  final String? season;
+
+  /// … and with this town weather that day (`Weather.name`; `null` =
+  /// any).
+  final String? weather;
 
   /// Sprite of the event's NPC (`items.vida_<sprite>` of the manifest;
   /// visitors, wanderers and caravans). Empty = none.
@@ -111,6 +122,8 @@ class WorldEventDef {
         'body': body.toJson(),
         if (params.isNotEmpty) 'params': params,
         if (sprite.isNotEmpty) 'sprite': sprite,
+        if (season != null) 'season': season,
+        if (weather != null) 'weather': weather,
         if (objective != null) ...{
           'objective': objective!.name,
           'target': target,
@@ -152,6 +165,13 @@ class WorldEventDef {
       target: raw['target'] is String ? raw['target'] as String : '',
       n: i(raw['n'], 1),
       sprite: raw['sprite'] is String ? raw['sprite'] as String : '',
+      season: raw['season'] is String && (raw['season'] as String).isNotEmpty
+          ? raw['season'] as String
+          : null,
+      weather:
+          raw['weather'] is String && (raw['weather'] as String).isNotEmpty
+              ? raw['weather'] as String
+              : null,
     );
   }
 }
@@ -251,6 +271,14 @@ class WorldEventsConfig {
           e.resident != null &&
           !residents.contains(e.resident)) {
         out.add('${e.id}: habitante desconocido ${e.resident}.');
+      }
+      if (e.season != null &&
+          !Season.values.any((s) => s.name == e.season)) {
+        out.add('${e.id}: estación desconocida ${e.season}.');
+      }
+      if (e.weather != null &&
+          !Weather.values.any((w) => w.name == e.weather)) {
+        out.add('${e.id}: clima desconocido ${e.weather}.');
       }
     }
     for (final m in missingLocales(tags)) {

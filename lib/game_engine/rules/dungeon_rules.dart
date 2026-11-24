@@ -44,6 +44,8 @@ abstract final class DungeonRules {
   /// (se revive con la Ofrenda). Devuelve cuántos revivieron.
   static int respawn(MissionRun m, {required int parkedDay, required int today}) {
     if (today - parkedDay < respawnDays) return 0;
+    // Rare ore veins regrow with the enemies (mining_smithing.md § 1.4).
+    m.poiUsed.removeWhere((id) => isOreVein(id));
     var n = 0;
     for (final e in m.enemies) {
       if (e.alive || e.boss) continue;
@@ -56,6 +58,9 @@ abstract final class DungeonRules {
     }
     return n;
   }
+
+  /// Poi id of a rare ore vein (`floor × 100 + 70..79`).
+  static bool isOreVein(int id) => id % 100 >= 70 && id % 100 < 80;
 
   /// Lo de cada visita vuelve a cero (rango, XP, élites de la visita) y
   /// las misiones opcionales falladas se pueden volver a intentar.

@@ -384,7 +384,7 @@ class WorldHud extends StatelessWidget {
                             if (s.mode == SessionMode.lobby &&
                                 s.town.sky.started) ...[
                               const SizedBox(height: 4),
-                              DayClock(sky: s.town.sky),
+                              DayClock(sky: s.town.sky, place: s.place),
                             ],
                             // Encargos seguidos (roles.md § 8.2).
                             if (s.mode == SessionMode.lobby &&

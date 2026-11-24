@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "biomes": {
+    "pueblo": {
+      "exposure": "outdoor",
+      "allowed": [
+        "despejado",
+        "lluvia",
+        "tormenta",
+        "fog",
+        "snow"
+      ],
+      "snowMelt": "despejado",
+      "ground": {
+        "snow": true,
+        "puddles": true,
+        "leaves": true,
+        "flowers": true
+      }
+    },
+    "bosque": {
+      "exposure": "outdoor",
+      "allowed": [
+        "despejado",
+        "lluvia",
+        "tormenta",
+        "fog",
+        "snow"
+      ],
+      "snowMelt": "despejado",
+      "ground": {
+        "snow": true,
+        "puddles": true,
+        "leaves": true,
+        "flowers": true
+      }
+    },
+    "ruinas": {
+      "exposure": "outdoor",
+      "allowed": [
+        "despejado",
+        "lluvia",
+        "tormenta",
+        "fog",
+        "snow"
+      ],
+      "snowMelt": "despejado",
+      "ground": {
+        "snow": true,
+        "puddles": true,
+        "leaves": true,
+        "flowers": true
+      }
+    },
+    "cavernas": {
+      "exposure": "sheltered",
+      "allowed": [
+        "despejado"
+      ],
+      "snowMelt": "despejado",
+      "ground": {
+        "snow": false,
+        "puddles": false,
+        "leaves": false,
+        "flowers": false
+      }
+    },
+    "grieta": {
+      "exposure": "volcanic",
+      "allowed": [
+        "despejado",
+        "tormenta",
+        "fog"
+      ],
+      "snowMelt": "fog",
+      "ground": {
+        "snow": false,
+        "puddles": false,
+        "leaves": false,
+        "flowers": false
+      }
+    },
+    "abismo": {
+      "exposure": "outdoor",
+      "allowed": [
+        "despejado",
+        "lluvia",
+        "tormenta",
+        "fog",
+        "snow"
+      ],
+      "snowMelt": "despejado",
+      "ground": {
+        "snow": true,
+        "puddles": true,
+        "leaves": true,
+        "flowers": true
+      }
+    }
+  },
+  "fishSeasons": {},
+  "cropSeasons": {},
+  "names": {
+    "weather.despejado": {
+      "es-AR": "Despejado",
+      "en": "Clear",
+      "zh-Hans": "晴朗"
+    },
+    "weather.lluvia": {
+      "es-AR": "Lluvia",
+      "en": "Rain",
+      "zh-Hans": "下雨"
+    },
+    "weather.tormenta": {
+      "es-AR": "Tormenta",
+      "en": "Storm",
+      "zh-Hans": "暴风雨"
+    },
+    "weather.fog": {
+      "es-AR": "Niebla",
+      "en": "Fog",
+      "zh-Hans": "雾"
+    },
+    "weather.snow": {
+      "es-AR": "Nieve",
+      "en": "Snow",
+      "zh-Hans": "下雪"
+    },
+    "season.spring": {
+      "es-AR": "Primavera",
+      "en": "Spring",
+      "zh-Hans": "春"
+    },
+    "season.summer": {
+      "es-AR": "Verano",
+      "en": "Summer",
+      "zh-Hans": "夏"
+    },
+    "season.autumn": {
+      "es-AR": "Otoño",
+      "en": "Autumn",
+      "zh-Hans": "秋"
+    },
+    "season.winter": {
+      "es-AR": "Invierno",
+      "en": "Winter",
+      "zh-Hans": "冬"
+    }
+  }
+}

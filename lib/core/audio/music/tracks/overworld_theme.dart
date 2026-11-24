@@ -38,7 +38,7 @@ Song overworldTheme() {
   final head = [
     m('D5:4 C5:2 B4:4 A4:2'),
     m('E5:4 D5:2 C5:4 E5:2'),
-    m('D5:6 B4:4 G4:2'),
+    m('D5:6 B4:4 A4:2'),
     m('B4:1 A4:11'), // adorno leve
   ];
   final themeA = join([
@@ -46,7 +46,7 @@ Song overworldTheme() {
     m('D5:4 C5:2 B4:4 A4:2'),
     m('E5:4 G5:2 E5:4 C5:2'),
     m('A4:4 B4:2 C5:4 A4:2'),
-    m('A4:1 G4:11'),
+    m('B4:1 A4:11'),
   ]);
   final themeA2 = join([
     ...head,
@@ -56,7 +56,7 @@ Song overworldTheme() {
     m('A5:1 G5:11'),
   ]);
   final themeB = join([
-    m('B4:4 C5:2 B4:4 G4:2'),
+    m('B4:4 C5:2 B4:4 A4:2'),
     m('C5:4 B4:2 A4:6'),
     m('B4:4 C5:2 D5:6'),
     m('E5:4 D5:2 A4:6'),

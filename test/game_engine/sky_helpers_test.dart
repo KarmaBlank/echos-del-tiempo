@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/game_engine/rules/helper_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/life_craft_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/sky_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/town_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/weather_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -57,16 +58,17 @@ void main() {
       expect(back.from, closeTo(s.from, 0.001));
     });
 
-    test('reparto del clima: casi siempre despejado, ~25 % lluvia, tormenta rara', () {
+    test('reparto del clima en verano en el pueblo: sigue los pesos', () {
       final r = math.Random(11);
       final n = {for (final w in Weather.values) w: 0};
       for (var i = 0; i < 20000; i++) {
-        final w = SkyRules.rollWeather(r.nextDouble());
+        final w = WeatherRules.pick(r.nextDouble(), Season.summer, null);
         n[w] = n[w]! + 1;
       }
-      expect(n[Weather.despejado]! / 20000, closeTo(0.69, 0.03));
-      expect(n[Weather.lluvia]! / 20000, closeTo(0.25, 0.03));
-      expect(n[Weather.tormenta]! / 20000, closeTo(0.06, 0.02));
+      expect(n[Weather.despejado]! / 20000, closeTo(0.68, 0.03));
+      expect(n[Weather.lluvia]! / 20000, closeTo(0.15, 0.03));
+      expect(n[Weather.tormenta]! / 20000, closeTo(0.12, 0.02));
+      expect(n[Weather.snow], 0, reason: 'no nieva fuera del invierno');
     });
   });
 

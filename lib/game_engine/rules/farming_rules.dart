@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/climate_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/farm_plot.dart';
@@ -111,6 +112,15 @@ abstract final class FarmingRules {
       p.seed == null ? 0 : (p.grow / growSec(p.seed!)).clamp(0.0, 1.0);
 
   static bool ripe(FarmPlot p) => p.seed != null && ratio(p) >= 1;
+
+  /// Ripe and allowed to be picked in [season] (farming.md § 15): winter
+  /// crops are only harvested in winter. `null` season = no gate.
+  static bool harvestable(FarmPlot p, Season? season) =>
+      ripe(p) &&
+      (season == null ||
+          !(kCropSeasonOverrides[p.seed] ?? kCrops[p.seed]?.seasons ?? kAllSeasons)
+              .every((s) => s == Season.winter) ||
+          season == Season.winter);
 
   static CropStage stage(FarmPlot p) {
     if (p.seed == null) return CropStage.arada;

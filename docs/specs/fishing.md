@@ -165,8 +165,7 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   de oro; el resto se paga en oro.
 - Legendario: CANJEAR → `legendCristales` (3) Cristales de Era +
   `legendPrismas` (1) Prisma Roto.
-- Cebos y ofertas rotativas: más adelante (la tabla de cañas ya tiene
-  precio, el panel lista lo que está en el catálogo).
+- Cebos: ver § 14. Ofertas rotativas: más adelante.
 
 ### 5.3 Puesto del agropecuario (v0.23.2)
 - Desde v0.24.4: grilla de casillas por categoría (farming.md § 11) con
@@ -324,7 +323,9 @@ dueño.
 - Primera captura de una especie: XP de Pesca extra (`firstCatchFishXp` ×
   la de la captura) y XP de personaje (`firstCatchCharXp` × la de la
   captura, sin el tope por estadía). Se anuncia en el chat.
-- PERSONAJE → PESCA Y CULTIVO → BESTIARIO DE PESCA: grilla como el
+- (Reemplazado: los peces viven en OFICIOS → Pesca → COLECCIÓN,
+  weather_seasons.md § 7; el BESTIARIO es solo de enemigos.)
+- Antes: PERSONAJE → PESCA Y CULTIVO → BESTIARIO DE PESCA: grilla como el
   inventario, filtro por bioma (botones con descubiertos / total, nunca
   secciones apiladas); descubiertas con ícono y récord, sin descubrir en
   silueta gris con "?"; detalle a la derecha.
@@ -365,3 +366,52 @@ dueño.
 - BESTIARIO: cada pez muestra bioma, tamaño, "Pica: <franja> · <clima>",
   récord; sin descubrir muestra "Pica: ???". Filtros por bioma y por hora
   (botones, no secciones).
+
+### 13.1 Estaciones y clima (protocolo 69)
+
+- `FishDef.seasons` (por defecto todo el año) y `FishDef.weather`
+  (estricto). Fuera de estación no pica. Overrides en climate.json.
+- Etiquetas: carpa_musgo y dorado_igneo cálidas; trucha_cobre otoño,
+  invierno, primavera; salmon_eco y pez_invierno otoño e invierno;
+  medusa_manana primavera y verano.
+- Visitantes (`visitor`, se suman a la tabla del bioma):
+  mojarra_primavera (pueblo, primavera), carpa_nevada (pueblo, invierno),
+  pez_copo (pueblo, invierno + nieve), pez_bruma (pueblo, niebla),
+  perca_hojas (bosque, otoño), trucha_tormenta (bosque, tormenta),
+  anguila_niebla (ruinas, niebla), dorado_estival (grieta, verano),
+  raya_relampago (abismo, tormenta).
+
+## 14. Cebos (protocolo 69)
+
+### 14.1 Catálogo
+
+| id | atrae | receta (cebo prensado + extra → n) |
+|---|---|---|
+| lombriz | comunes | 1 → 4 |
+| larva_brillante | niebla | 1 + hongo ámbar → 2 |
+| cebo_escarcha | invierno + nieve | 1 + cristal de escarcha → 2 |
+| cebo_tormenta | tormenta | 2 + pez ceniza → 2 |
+| senuelo_eco | legendarios | 3 + pez eco → 1 |
+
+"Cebo prensado" sigue siendo el material base de la receta.
+
+### 14.2 Efectos
+
+`bait<Id>{Bite,Rare,Size,Price,Gold}` en tuning `fishing`: picada,
+rareza, tamaño (empuja hacia el máximo), precio y oro de la receta. Los
+peces que atrae pesan × `baitAffinity` (4) en la tirada.
+
+### 14.3 Consumo
+
+Uno por pez (no por basura ni botín), igual en pesca manual y auto.
+
+### 14.4 Fuentes
+
+Comerciante (CEBOS, de a 1 o 5), fabricar en OFICIOS → Pesca → CEBOS,
+botín del agua (`baitWaterChance`) y minas (`BaitRules.foundBait`).
+
+### 14.5 HUD
+
+Con la caña afuera, casillero CEBO junto a la caña: ícono, "Cebo [F]",
+cantidad. Clic o F pasa al siguiente; por defecto el mejor que tengas.
+La COLECCIÓN muestra el mejor cebo de cada pez.

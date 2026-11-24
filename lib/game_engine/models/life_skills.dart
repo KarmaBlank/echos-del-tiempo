@@ -1,4 +1,6 @@
+import '../data/bait_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/smithing_catalog.dart' show kSmithMaterials;
 import 'farm_skills.dart';
 
 export 'farm_skills.dart';
@@ -24,7 +26,25 @@ class LifeSkills {
     this.smithXp = 0,
     List<String> smithTree = const [],
     Map<String, int> log = const {},
-  })  : farm = farm ?? FarmSkills.initial,
+    Map<String, int> ores = const {},
+    Map<String, OreFind> oreLog = const {},
+    Map<String, int> baits = const {},
+    String? bait,
+  })  : oreLog = Map.unmodifiable({
+          for (final e in oreLog.entries)
+            if (kSmithMaterials.containsKey(e.key)) e.key: e.value,
+        }),
+        ores = Map.unmodifiable({
+          for (final e in ores.entries)
+            if (e.value > 0 && kSmithMaterials.containsKey(e.key))
+              e.key: e.value,
+        }),
+        baits = Map.unmodifiable({
+          for (final e in baits.entries)
+            if (e.value > 0 && kBaits.containsKey(e.key)) e.key: e.value,
+        }),
+        bait = bait != null && kBaits.containsKey(bait) ? bait : null,
+        farm = farm ?? FarmSkills.initial,
         crafts = Map.unmodifiable({
           for (final e in crafts.entries)
             if (e.value > 0 && kLifeMaterialIds.contains(e.key)) e.key: e.value,
@@ -91,7 +111,49 @@ class LifeSkills {
   /// Una especie está descubierta si tiene entrada.
   final Map<String, int> log;
 
+  /// Smithing materials (mining_smithing.md § 2): id of
+  /// `kSmithMaterials` → amount. JSON `ore`.
+  final Map<String, int> ores;
+
+  int ore(String id) => ores[id] ?? 0;
+
+  /// Material collection (mining_smithing.md § 2.1): id → first find,
+  /// where and how many were found in total. JSON `ol`.
+  final Map<String, OreFind> oreLog;
+
+  /// [oreLog] with the positive amounts of [got] found at [source] on
+  /// world day [day].
+  LifeSkills logOres(Map<String, int> got, String source, int day) {
+    final next = {...oreLog};
+    for (final e in got.entries) {
+      if (e.value <= 0 || !kSmithMaterials.containsKey(e.key)) continue;
+      final f = next[e.key];
+      next[e.key] = f == null
+          ? OreFind(day, source, e.value)
+          : OreFind(f.day, f.source, f.count + e.value);
+    }
+    return copyWith(oreLog: next);
+  }
+
+  /// [ores] plus [delta] of each id (negative takes), clamped to 0..[cap].
+  LifeSkills addOres(Map<String, int> delta, {int cap = 999}) => copyWith(
+          ores: {
+        ...ores,
+        for (final e in delta.entries)
+          e.key: (ore(e.key) + e.value).clamp(0, cap),
+      });
+
   bool discovered(String species) => log.containsKey(species);
+
+  /// Baits (fishing.md § 14): id → count, and the one picked on the
+  /// CEBO slot (`null` = the best owned).
+  final Map<String, int> baits;
+  final String? bait;
+  int baitCount(String id) => baits[id] ?? 0;
+  LifeSkills addBait(String id, [int n = 1]) {
+    final left = baitCount(id) + n;
+    return copyWith(baits: {...baits, id: left < 0 ? 0 : left});
+  }
 
   int count(String species) => bag[species] ?? 0;
   int get bagTotal => bag.values.fold(0, (a, b) => a + b);
@@ -109,6 +171,10 @@ class LifeSkills {
     int? smithXp,
     List<String>? smithTree,
     Map<String, int>? log,
+    Map<String, int>? ores,
+    Map<String, OreFind>? oreLog,
+    Map<String, int>? baits,
+    String? bait,
   }) =>
       LifeSkills(
           fishXp: fishXp ?? this.fishXp,
@@ -122,7 +188,11 @@ class LifeSkills {
           crafts: crafts ?? this.crafts,
           smithXp: smithXp ?? this.smithXp,
           smithTree: smithTree ?? this.smithTree,
-          log: log ?? this.log);
+          log: log ?? this.log,
+          ores: ores ?? this.ores,
+          oreLog: oreLog ?? this.oreLog,
+          baits: baits ?? this.baits,
+          bait: bait ?? this.bait);
 
   /// Anota la captura en el bestiario (récord de tamaño).
   LifeSkills logCatch(String species, int cm) =>
@@ -144,6 +214,11 @@ class LifeSkills {
         if (smithXp > 0) 'sx': smithXp,
         if (smithTree.isNotEmpty) 'st': smithTree,
         if (log.isNotEmpty) 'lg': log,
+        if (ores.isNotEmpty) 'ore': ores,
+        if (oreLog.isNotEmpty)
+          'ol': {for (final e in oreLog.entries) e.key: e.value.toJson()},
+        if (baits.isNotEmpty) 'bt': baits,
+        if (bait != null) 'bs': bait,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -182,6 +257,25 @@ class LifeSkills {
                 '${e.key}': n(e.value)
             }
           : const {},
+      oreLog: raw['ol'] is Map
+          ? {
+              for (final e in (raw['ol'] as Map).entries)
+                if (OreFind.fromJson(e.value) case final f?) '${e.key}': f
+            }
+          : const {},
+      ores: raw['ore'] is Map
+          ? {
+              for (final e in (raw['ore'] as Map).entries)
+                '${e.key}': n(e.value)
+            }
+          : const {},
+      baits: raw['bt'] is Map
+          ? {
+              for (final e in (raw['bt'] as Map).entries)
+                '${e.key}': n(e.value)
+            }
+          : const {},
+      bait: raw['bs'] is String ? raw['bs'] as String : null,
     );
   }
 
@@ -202,8 +296,43 @@ class LifeSkills {
       other.log.length == log.length &&
       log.entries.every((e) => other.log[e.key] == e.value) &&
       other.crafts.length == crafts.length &&
-      crafts.entries.every((e) => other.crafts[e.key] == e.value);
+      crafts.entries.every((e) => other.crafts[e.key] == e.value) &&
+      other.ores.length == ores.length &&
+      ores.entries.every((e) => other.ores[e.key] == e.value) &&
+      other.oreLog.length == oreLog.length &&
+      oreLog.entries.every((e) => other.oreLog[e.key] == e.value) &&
+      other.bait == bait &&
+      other.baits.length == baits.length &&
+      baits.entries.every((e) => other.baits[e.key] == e.value);
 
   @override
   int get hashCode => Object.hash(fishXp, rod, pity, rods.length, bag.length);
+}
+
+/// First find of a smithing material: world [day], [source]
+/// (`mine:<biome>`, `dungeon:<zone>`, `boss`, `smelt`) and total [count].
+class OreFind {
+  const OreFind(this.day, this.source, this.count);
+  final int day;
+  final String source;
+  final int count;
+
+  List<Object> toJson() => [day, source, count];
+
+  static OreFind? fromJson(Object? raw) {
+    if (raw is! List || raw.length != 3) return null;
+    final (d, s, c) = (raw[0], raw[1], raw[2]);
+    if (d is! num || s is! String || c is! num) return null;
+    return OreFind(d.toInt(), s, c.toInt());
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is OreFind &&
+      other.day == day &&
+      other.source == source &&
+      other.count == count;
+
+  @override
+  int get hashCode => Object.hash(day, source, count);
 }

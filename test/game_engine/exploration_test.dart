@@ -129,6 +129,10 @@ void main() {
                   expect(c, Tile.lantern, reason: why);
                   expect(LightRules.isDark(z.theme, floor: f.index), isTrue,
                       reason: why);
+                case PoiKind.ore:
+                  // Rare ore vein (mining_smithing.md § 1.4).
+                  expect(c, Tile.ore, reason: why);
+                  expect(p.id % 100, inInclusiveRange(70, 79), reason: why);
               }
               if (p.kind != PoiKind.relic && p.kind != PoiKind.secret &&
                   p.kind != PoiKind.shortcut) {
@@ -210,7 +214,10 @@ void main() {
           expect(count(m, f, Tile.pulse), greaterThanOrEqualTo(t.pulses * 3));
           for (final p in f.pois) {
             if (p.kind == PoiKind.relic) continue;
-            expect(Tile.poiTiles.contains(m.tileAt(p.tx, p.ty)), isTrue);
+            expect(
+                Tile.poiTiles.contains(m.tileAt(p.tx, p.ty)) ||
+                    m.tileAt(p.tx, p.ty) == Tile.ore,
+                isTrue);
           }
         }
       }

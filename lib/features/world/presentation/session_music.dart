@@ -75,11 +75,15 @@ abstract final class MusicSelector {
 
   /// Piezas de batalla (se cortan rápido al terminar la pelea).
   static bool isBattleTrack(String id) =>
-      id == Music.battle ||
-      id == Music.boss ||
-      id == Music.bossFinal ||
-      id == Music.bossAbyss ||
-      id == Music.bossSecret;
+      id.startsWith('battle') || id.startsWith('boss');
+
+  /// Battle theme for a battle with [seed] (its shared battle id): the
+  /// same on every peer, and all three come up over consecutive battles.
+  static String battleVariant(int seed) {
+    var h = seed * 0x9E3779B1 & 0x7fffffff;
+    h ^= h >> 15;
+    return Music.battles[h % Music.battles.length];
+  }
 
   /// Pieza de un Jefe del Abismo (v0.8): el secreto tiene la suya.
   static String? abyssTrack(String? bossId) {
@@ -98,13 +102,21 @@ abstract final class MusicSelector {
     String? bossId,
     bool fishing = false,
     bool night = false,
+    String? place,
+    int battleSeed = 0,
   }) {
+    final z = Music.zones.contains(zone) ? zone : zoneForTheme(theme);
+    final biome = Music.biomeZones.contains(z);
     switch (mode) {
       case SessionMode.lobby:
         // Pescando en el pueblo: la variante de ocarina (music.md § 5.2);
         // gana aun de noche.
         if (inTown && fishing) return Music.fishing;
         // De noche, la variante calma (§ 5.3).
+        // Biome exterior (overworld_biomes.md): the biome's theme.
+        if (place != null && Music.biomeZones.contains(zoneForTheme(place))) {
+          return Music.zone(zoneForTheme(place));
+        }
         if (inTown && night) return Music.townNight;
         return inTown ? Music.town : Music.overworld;
       case SessionMode.prep:
@@ -114,13 +126,16 @@ abstract final class MusicSelector {
       case SessionMode.run:
         return Music.overworld;
       case SessionMode.battle:
-        if (!boss) return Music.battle;
+        if (!boss) return battleVariant(battleSeed);
         return abyssTrack(bossId) ??
-            (bossId == finalBossId ? Music.bossFinal : Music.boss);
+            (bossId == finalBossId
+                ? Music.bossFinal
+                : biome
+                    ? Music.zoneBoss(z)
+                    : Music.boss);
       case SessionMode.field:
       case SessionMode.levelUp:
-        final z = Music.zones.contains(zone) ? zone : zoneForTheme(theme);
-        return Music.zone(z);
+        return biome ? Music.dungeon(z) : Music.zone(z);
     }
   }
 
@@ -240,6 +255,8 @@ class SessionMusic {
       bossId: MusicSelector.bossIdOf(s.battle?.state),
       fishing: fishing?.call() ?? false,
       night: night?.call() ?? false,
+      place: s.place,
+      battleSeed: s.battle?.id ?? 0,
     );
     if (t != _track) {
       final leavingBattle =

@@ -19,6 +19,13 @@ import '../../core/audio/fake_music_player.dart';
 import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
 
+/// Field track of zone [z]: biome zones play their dungeon variant.
+String _field(int z) =>
+    Music.biomeZones.contains(z) ? Music.dungeon(z) : Music.zone(z);
+
+/// The battle theme of the first battle of a session (id 1).
+final _battle = MusicSelector.battleVariant(1);
+
 void main() {
   useTimelineSoloDefault();
   test('de noche suena la variante calma del pueblo; la pesca gana', () {
@@ -64,9 +71,9 @@ void main() {
     test('cada zona en el campo (y en la pausa de nivel)', () {
       for (var z = 1; z <= 10; z++) {
         expect(
-            MusicSelector.trackFor(mode: SessionMode.field, zone: z), 'zone$z');
+            MusicSelector.trackFor(mode: SessionMode.field, zone: z), _field(z));
         expect(MusicSelector.trackFor(mode: SessionMode.levelUp, zone: z),
-            'zone$z');
+            _field(z));
         expect(kMusicCatalog.containsKey(Music.zone(z)), isTrue, reason: '$z');
       }
     });
@@ -78,9 +85,9 @@ void main() {
               mode: SessionMode.field, zone: z, theme: 'abismo'),
       ], [
         'zone6',
-        'zone7',
+        'zone7.dungeon',
         'zone8',
-        'zone9',
+        'zone9.dungeon',
         'zone10'
       ]);
     });
@@ -103,24 +110,24 @@ void main() {
         expect(
             MusicSelector.trackFor(
                 mode: SessionMode.field, zone: 0, theme: theme),
-            Music.zone(z),
+            _field(z),
             reason: '$theme');
       }
     });
 
     test('batalla y jefe', () {
       expect(MusicSelector.trackFor(mode: SessionMode.battle, zone: 2),
-          Music.battle);
+          MusicSelector.battleVariant(0));
       expect(
           MusicSelector.trackFor(mode: SessionMode.battle, zone: 2, boss: true),
-          Music.boss);
+          Music.zoneBoss(2));
       expect(
           MusicSelector.trackFor(
               mode: SessionMode.battle,
               zone: 7,
               boss: true,
               bossId: 'bestiaMagma'),
-          Music.boss);
+          Music.zoneBoss(7));
     });
 
     test('jefe final: el Devorador tiene su variante', () {
@@ -137,7 +144,7 @@ void main() {
       expect(
           MusicSelector.trackFor(
               mode: SessionMode.battle, zone: 10, bossId: 'devorador'),
-          Music.battle);
+          MusicSelector.battleVariant(0));
     });
 
     test('Jefes del Abismo: su pieza; el secreto, la suya (v0.8)', () {
@@ -266,7 +273,7 @@ void main() {
 
       startBattleWithFirstGroup(ctrl);
       expect(ctrl.view!.mode, SessionMode.battle);
-      expect(music.current, Music.battle);
+      expect(music.current, _battle);
 
       playUntilResult(ctrl);
       expect(ctrl.view!.mode, SessionMode.result);
@@ -276,7 +283,7 @@ void main() {
           containsAllInOrder([
             Music.town,
             Music.zone(1),
-            Music.battle,
+            _battle,
             Music.boss,
             Music.town,
           ]));
@@ -384,7 +391,7 @@ void main() {
         kMusicCatalog[id]!.seconds + MusicService.jingleTailSeconds;
 
     const won = BattleOutcome(victory: true, xp: 10);
-    final zone = Music.zone(3); // sin misión: tema por defecto
+    final zone = Music.dungeon(3); // sin misión: tema por defecto (mazmorra)
     const bed = MusicService.jingleBedLevel;
 
     setUp(() {
@@ -394,7 +401,7 @@ void main() {
       run(2);
       sm.onView(view(session(SessionMode.battle)));
       run(2);
-      expect(music.current, Music.battle);
+      expect(music.current, _battle);
     });
 
     test(
@@ -405,9 +412,9 @@ void main() {
       expect(music.jingle, Music.victory);
       expect(music.current, zone, reason: 'la zona entra ya, de fondo');
       expect(music.bedHeld, isTrue);
-      final battleDeck = deckOf(Music.battle);
+      final battleDeck = deckOf(_battle);
       run(0.2);
-      expect(deckOf(Music.battle), -1, reason: 'cortada en ≤ 200 ms');
+      expect(deckOf(_battle), -1, reason: 'cortada en ≤ 200 ms');
       expect(music.player.track[battleDeck], isNull);
       run(1.5);
       expect(music.deckVolume(deckOf(zone)), closeTo(bed, 1e-9),
@@ -439,7 +446,7 @@ void main() {
         run(0.04);
       }
       expect(music.played, isEmpty);
-      expect(music.current, Music.battle);
+      expect(music.current, _battle);
       expect(music.bedHeld, isFalse);
       sm.onView(view(session(SessionMode.battle, outcome: won)));
       expect(music.played, [Music.victory]);
@@ -452,7 +459,7 @@ void main() {
       const lost = BattleOutcome(victory: false);
       sm.onView(view(session(SessionMode.battle, outcome: lost, hold: 2.3)));
       expect(music.played, isEmpty);
-      expect(music.current, Music.battle);
+      expect(music.current, _battle);
       sm.onView(view(session(SessionMode.battle, outcome: lost)));
       expect(music.played, [Music.defeat]);
     });
@@ -497,7 +504,7 @@ void main() {
           outcome: const BattleOutcome(victory: false))));
       expect(music.played, [Music.defeat]);
       run(0.2);
-      expect(deckOf(Music.battle), -1);
+      expect(deckOf(_battle), -1);
       sm.onView(
           view(session(SessionMode.result, result: _result(success: false))));
       expect(music.played, [Music.defeat], reason: 'no repite');
