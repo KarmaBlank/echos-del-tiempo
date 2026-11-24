@@ -77,7 +77,7 @@ const Map<String, LightDef> kLightDefs = {
   LightId.botin: LightDef(radius: 2.5, intensity: 0.5, tint: 'botin'),
   LightId.jugadorPueblo: LightDef(radius: 4.5, intensity: 0.6, tint: 'calida'),
   LightId.jugadorOscuro:
-      LightDef(radius: 11, intensity: 1, tint: 'calida', flicker: 0.04),
+      LightDef(radius: 5.5, intensity: 1, tint: 'calida', flicker: 0.04),
   LightId.hongo: LightDef(radius: 4, intensity: 0.6, tint: 'hongo'),
   LightId.cristal: LightDef(radius: 4.5, intensity: 0.65, tint: 'runa'),
   LightId.magitec: LightDef(radius: 5, intensity: 0.7, tint: 'eco'),

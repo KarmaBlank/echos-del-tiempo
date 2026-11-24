@@ -84,27 +84,44 @@ abstract final class LightRules {
       (kDarkFloorThemes.contains(theme) && floor.isOdd);
 
   /// Luz que lleva un jugador. [bonus]: tiles extra de radio (linternas,
-  /// pasivas). [wisp]: con la Llama errante (lighting.md § 3.1.1) suma
-  /// [wispBonus] al radio y sube la intensidad a [wispIntensity] como
-  /// mínimo: estirar solo el radio dejaba la ganancia en la franja tenue
-  /// (caída cuadrática) y casi no se notaba.
+  /// pasivas). [wisp]: con la Llama errante (lighting.md § 3.1.1). Al aire
+  /// libre suma [wispBonus] al radio y sube la intensidad a
+  /// [wispIntensity] como mínimo. En mazmorra oscura multiplica el radio
+  /// por [wispDarkRadiusFactor] (sin ella se ve la mitad) y sube la
+  /// intensidad a [wispDarkIntensity].
   static LightDef carried(
       {required bool dark, double bonus = 0, bool wisp = false}) {
     final d = kLightDefs[dark ? LightId.jugadorOscuro : LightId.jugadorPueblo]!;
-    final extra = bonus + (wisp ? wispBonus : 0);
-    if (extra == 0) return d;
+    if (!wisp && bonus == 0) return d;
+    if (!wisp) {
+      return LightDef(
+          radius: d.radius + bonus,
+          intensity: d.intensity,
+          tint: d.tint,
+          flicker: d.flicker);
+    }
     return LightDef(
-        radius: d.radius + extra,
-        intensity: wisp ? math.max(d.intensity, wispIntensity) : d.intensity,
+        radius: dark
+            ? d.radius * wispDarkRadiusFactor + bonus
+            : d.radius + wispBonus + bonus,
+        intensity: math.max(
+            d.intensity, dark ? wispDarkIntensity : wispIntensity),
         tint: d.tint,
         flicker: d.flicker);
   }
 
-  /// Tiles extra de radio con la Llama errante (lighting.md § 3.1.1).
+  /// Tiles extra de radio con la Llama errante al aire libre
+  /// (lighting.md § 3.1.1).
   static const wispBonus = 5.0;
 
-  /// Intensidad mínima de la luz con la Llama errante.
+  /// Intensidad mínima de la luz con la Llama errante al aire libre.
   static const wispIntensity = 1.0;
+
+  /// Factor del radio con la Llama errante en mazmorra oscura.
+  static const wispDarkRadiusFactor = 2.0;
+
+  /// Intensidad de la luz con la Llama errante en mazmorra oscura.
+  static const wispDarkIntensity = 1.5;
 
   /// Si la Llama errante está prendida (lighting.md § 3.1.1): al aire
   /// libre (mundo y pueblo) sola de noche, sin importar [toggled]; en
