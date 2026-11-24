@@ -86,6 +86,7 @@ flutter:
     - assets/data/npcs/
     - assets/data/events/
     - assets/data/climate/
+    - assets/data/renown/
     # Textos por idioma (docs/specs/i18n.md § 3): locales.json + una
     # carpeta por idioma (no recursivo: cada una listada).
     - assets/i18n/

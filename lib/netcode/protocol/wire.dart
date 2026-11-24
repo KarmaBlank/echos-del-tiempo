@@ -171,7 +171,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// mine places `mine:<biome>:<i>`.
 /// 72: weather and seasons (weather_seasons.md): sky seed `sd`, baits,
 /// crop log `cl`, bait actions.
-const kProtocolVersion = 72;
+/// 73: renown and town tier (renown_town_growth.md): `rn` in the town,
+/// `tourney` session state, `tev`/`tourney` actions.
+const kProtocolVersion = 73;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -773,6 +773,9 @@ class _TopicNode extends StatelessWidget {
             tip: 'Pedidos o encargos cumplidos para que aparezca.'),
         _Num('Amistad', n('rep'), (v) => set('rep', v),
             tip: 'Relación o amistad para que aparezca.'),
+        _Num('Renombre', n('renown'), (v) => set('renown', v),
+            tip: 'Renombre del mundo para que aparezca '
+                '(renown_town_growth.md § 4.1).'),
         _Pick<TalkWhere>(
             id: '$id-where',
             values: TalkWhere.values,
@@ -1024,7 +1027,7 @@ class _PreviewBox extends StatefulWidget {
 }
 
 class _PreviewBoxState extends State<_PreviewBox> {
-  int talks = 0, orders = 0, rep = 0, greet = 0;
+  int talks = 0, orders = 0, rep = 0, renown = 0, greet = 0;
   bool inTown = false, night = false, talking = false;
   late String locale = widget.c.locales.first;
   String? text;
@@ -1042,7 +1045,7 @@ class _PreviewBoxState extends State<_PreviewBox> {
   Widget build(BuildContext context) {
     final s = worldStrings(context);
     final t = widget.talk;
-    final g = (talks: talks, orders: orders, rep: rep);
+    final g = (talks: talks, orders: orders, rep: rep, renown: renown);
     final list = path.isEmpty ? t.topics : path.last.sub;
     final open = [
       for (final x in list)
@@ -1066,6 +1069,8 @@ class _PreviewBoxState extends State<_PreviewBox> {
                   _Num('Pedidos', orders,
                       (v) => setState(() => orders = v.toInt())),
                   _Num('Amistad', rep, (v) => setState(() => rep = v.toInt())),
+                  _Num('Renombre', renown,
+                      (v) => setState(() => renown = v.toInt())),
                   DsButton(inTown ? 'EN EL PUEBLO' : 'EN SU BIOMA',
                       key: const ValueKey('npc-preview-where'),
                       size: DsButtonSize.compact,

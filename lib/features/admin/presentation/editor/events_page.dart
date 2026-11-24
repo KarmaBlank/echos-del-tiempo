@@ -343,6 +343,13 @@ class _Sheet extends StatelessWidget {
           min: 1),
       _Num('Día mínimo del mundo', n('minDay', 0),
           (v) => c.edit(() => e['minDay'] = v.round())),
+      _Num('Renombre mínimo', n('minRenown', 0), (v) => c.edit(() {
+            if (v.round() == 0) {
+              e.remove('minRenown');
+            } else {
+              e['minRenown'] = v.round();
+            }
+          })),
       if (!cat.inTown && cat != WorldEventCategory.lore) ...[
         const DsSectionHeader('BIOMAS (NINGUNO = CUALQUIERA)'),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [

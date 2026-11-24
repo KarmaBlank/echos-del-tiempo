@@ -47,6 +47,7 @@ class WorldEventDef {
     this.weight = 1,
     this.duration = 3,
     this.minDay = 0,
+    this.minRenown = 0,
     this.biomes = const [],
     this.resident,
     this.title = LocalizedText.empty,
@@ -84,6 +85,9 @@ class WorldEventDef {
   /// Minimum world day.
   final int minDay;
 
+  /// Minimum world renown (renown_town_growth.md § 4.3).
+  final int minRenown;
+
   /// Where it may appear (empty = any open biome).
   final List<String> biomes;
 
@@ -115,6 +119,7 @@ class WorldEventDef {
         'weight': weight,
         'duration': duration,
         if (minDay != 0) 'minDay': minDay,
+        if (minRenown != 0) 'minRenown': minRenown,
         if (biomes.isNotEmpty) 'biomes': biomes,
         if (resident != null) 'resident': resident,
         'title': title.toJson(),
@@ -145,6 +150,7 @@ class WorldEventDef {
       weight: i(raw['weight'], 1),
       duration: i(raw['duration'], 3),
       minDay: i(raw['minDay'], 0),
+      minRenown: i(raw['minRenown'], 0),
       biomes: [
         if (raw['biomes'] case final List l)
           for (final b in l)

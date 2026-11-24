@@ -25,7 +25,8 @@ efectos de juego de cada categoría se conectan de a poco (§ 7).
 - `WorldEventDef` (una entrada del catálogo):
   - `id`, `category`, `enabled`, `weight` (≥ 0; 0 = nunca sale),
     `duration` (días, ≥ 1).
-  - Condiciones: `minDay` (día mínimo del mundo), `biomes` (lista de
+  - Condiciones: `minDay` (día mínimo del mundo), `minRenown` (renombre
+    mínimo del mundo, renown_town_growth.md § 4.3), `biomes` (lista de
     biomas donde puede aparecer; vacía = cualquiera abierto; las
     categorías del pueblo siempre van al pueblo), `resident` (habitante
     que tiene que vivir en el pueblo; vacío = ninguno), `season`
@@ -218,6 +219,7 @@ Líneas es-AR (BORRADOR):
 - Área nueva del Editor, mismo estilo que NPC: grilla de eventos a la
   izquierda con filtro por categoría (subpestañas, nunca secciones
   apiladas) y el detalle a la derecha.
+- FICHA incluye el renombre mínimo (renown_town_growth.md § 4.3).
 - Botón GENERAL arriba de la grilla: intervalo, mínimo y máximo por
   tirada y probabilidad.
 - Detalle con subpestañas FICHA (habilitado, peso, duración, día mínimo,

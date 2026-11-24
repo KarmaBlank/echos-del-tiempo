@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
+import '../../../../game_engine/data/renown_catalog.dart';
+import '../../../../game_engine/rules/renown_rules.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/data/npc_talk_catalog.dart';
@@ -213,6 +215,11 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
   String? _spokenTo;
   NpcTalk? _talk;
 
+  /// A town event this resident offers in the dialogue
+  /// (renown_town_growth.md § 6): proposing it, or signing up on its day.
+  TownEventDef? _offer;
+  bool _offerSignup = false;
+
   /// Aceptó la invitación (overworld_biomes.md § 10.1): dice que sí y, al
   /// cerrar el diálogo, se manda la invitación y sale caminando.
   /// Id del habitante que aceptó (o `null`).
@@ -255,7 +262,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           q.text.isNotEmpty)
         q.text
       else
-        NpcTalk.greet(n.id, extra: npcTalk(n.id)?.ambient ?? const []),
+        NpcTalk.greet(n.id, extra: [
+          ...?npcTalk(n.id)?.ambient,
+          // Recognition (renown_town_growth.md § 4.2).
+          if (RenownRules.recognition(n.id, RenownRules.score(c.town))
+              case final l?)
+            l.text,
+        ]),
       if (fresh && r.request != null)
         _s.t('ui.town.npc.line_request',
             {'what': r.request!.label.toLowerCase()}),
@@ -331,6 +344,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final stock = ResidentRules.stock(n, tier, home: !home);
     final talk = _talk ??= NpcTalk(n.id);
     void refresh() => setState(() {});
+    // Town events (renown_town_growth.md § 6): propose, or sign up today.
+    final day = town.sky.day;
+    final proposals =
+        home ? RenownRules.proposals(town, n.id, day) : const <TownEventDef>[];
+    final live = home ? RenownRules.live(town, n.id, day) : null;
+    final offer = _offer;
     // Topic actions (npc_editor.md § 3.3): same rules as the menu.
     final actions = TalkActions(
       why: (a) => switch (a) {
@@ -366,7 +385,9 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             role: n.role.label,
             text: _accepted
                 ? (NpcTalkRules.inviteAccept(n.id) ?? '')
-                : talk.text(_spoken ?? c.npcLine(n)),
+                : offer != null
+                    ? (_offerSignup ? offer.signup.text : offer.propose.text)
+                    : talk.text(_spoken ?? c.npcLine(n)),
             onCancel: () => _close(c, n),
             skipLabel: _s.t('ui.town.npc.skip'),
             choices: _accepted
@@ -375,11 +396,46 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                         key: const ValueKey('npc-close'),
                         onSelected: () => _close(c, n)),
                   ]
-                : talk.active
+                : offer != null
+                    ? [
+                        DsChoice(
+                            _offerSignup
+                                ? _s.t('ui.town.npc.event_signup')
+                                : _s.t('ui.town.npc.event_accept'),
+                            key: const ValueKey('npc-event-yes'), onSelected: () {
+                          setState(() => _offer = null);
+                          if (_offerSignup) {
+                            c.signUpTourney(offer.id);
+                          } else {
+                            c.scheduleTownEvent(offer.id);
+                          }
+                        }),
+                        DsChoice(_s.t('ui.town.npc.event_back'),
+                            key: const ValueKey('npc-event-no'),
+                            onSelected: () => setState(() => _offer = null)),
+                      ]
+                    : talk.active
                     ? talk.choices(town, refresh,
                         inTown: home, strings: _s, actions: actions)
                     : [
                         talk.entry(town, refresh, inTown: home, strings: _s),
+                        if (live != null &&
+                            live.kind == TownEventKind.tournament)
+                          DsChoice(
+                              _s.t('ui.town.npc.event_today',
+                                  {'title': live.title.text}),
+                              key: ValueKey('npc-event-live-${live.id}'),
+                              onSelected: () => setState(() {
+                                    _offer = live;
+                                    _offerSignup = true;
+                                  })),
+                        for (final d in proposals)
+                          DsChoice(d.title.text,
+                              key: ValueKey('npc-event-${d.id}'),
+                              onSelected: () => setState(() {
+                                    _offer = d;
+                                    _offerSignup = false;
+                                  })),
                         opt(
                             NpcMenu.comprar,
                             _s.t('ui.town.npc.menu_buy'),
