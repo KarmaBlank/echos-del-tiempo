@@ -567,6 +567,14 @@ extension _FarmingOp on _Op {
   /// encargos también en su bioma; lo demás, en el pueblo.
   bool _residentAction(SessionPlayer p, TownAction a) {
     final npc = a.id;
+    // NPC hecho con datos (npc_editor.md § 6.3): solo INVITAR.
+    if (npc != null && a.op == TownOp.invite && kCustomNpcs[npc] != null) {
+      final r = CustomNpcRules.invite(s.town, npc, s.place);
+      if (r == null) return false;
+      s.town = r;
+      say('${kCustomNpcs[npc]!.name.text} se muda al pueblo.');
+      return true;
+    }
     final n = npc == null ? null : biomeNpc(npc);
     if (npc == null || n == null) return false;
     final home = s.place == null;

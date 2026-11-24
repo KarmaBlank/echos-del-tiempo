@@ -53,6 +53,7 @@ import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/biome_npc_panel.dart';
 import 'panels/biome_fisher_panel.dart';
+import 'panels/custom_npc_panel.dart';
 import 'panels/world_event_panel.dart';
 import 'panels/quest_log_panel.dart';
 import 'panels/travel_panel.dart';
@@ -486,6 +487,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     controller.openResident(n);
                   } else if (controller.fisherAt(tile.$1, tile.$2)) {
                     controller.openPanel(WorldPanel.biomeFisher);
+                  } else if (controller.customNpcAt(tile.$1, tile.$2)
+                      case final n?) {
+                    controller.openCustomNpc(n.def.id);
                   }
                 },
                 child: MouseRegion(
@@ -549,7 +553,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   final tile = game.tileAtScreen(e.localPosition);
                   if (tile != null &&
                       (controller.residentAt(tile.$1, tile.$2) != null ||
-                          controller.fisherAt(tile.$1, tile.$2))) {
+                          controller.fisherAt(tile.$1, tile.$2) ||
+                          controller.customNpcAt(tile.$1, tile.$2) != null)) {
                     return;
                   }
                   if (controller.activeTool == ActiveTool.rod) {
@@ -1096,6 +1101,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return BiomeNpcPanel(view: view, controller: controller);
       case WorldPanel.biomeFisher:
         return BiomeFisherPanel(view: view, controller: controller);
+      case WorldPanel.customNpc:
+        return CustomNpcPanel(view: view, controller: controller);
       case WorldPanel.worldEvent:
         return WorldEventPanel(view: view, controller: controller);
       case WorldPanel.questLog:

@@ -64,6 +64,9 @@ enum WorldPanel {
   /// Pescador nativo del bioma (fishing.md § 12).
   biomeFisher,
 
+  /// NPC hecho con datos (npc_editor.md § 6): charla del cuadro de diálogo.
+  customNpc,
+
   /// A world event actor: talk, shop or rift (world_events.md § 6).
   worldEvent,
 

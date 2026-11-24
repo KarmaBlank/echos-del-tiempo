@@ -180,9 +180,40 @@ class _AdminShellState extends State<AdminShell> {
     final o = s.overrides;
     return _variants ??= NpcVariantsController(
         catalog: s.catalog,
+        repoPath: s.repoPath,
         store: o is NpcVariantsOverrideSource
             ? o as NpcVariantsOverrideSource
             : null);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // El editor NPC ve las variantes (npc_editor.md § 6.2) y los eventos
+    // (el evento vinculado, § 6.4).
+    final n = widget.npcs;
+    if (n != null) {
+      n.events = widget.events;
+      n.variantImage = (id) => variants?.previews[id];
+      n.variantIds = () => variants?.doc.variants.keys ?? const [];
+    }
+  }
+
+  /// NUEVO NPC / USAR EN NPC (npc_variants.md § 5): crea o abre el NPC de
+  /// datos con esa variante y va al área NPC.
+  void _useInNpc(String variant) {
+    final n = widget.npcs;
+    if (n == null) return;
+    n.createCustom(variant);
+    setState(() => area = EditorArea.npcs);
+  }
+
+  /// Abre el evento vinculado de un NPC de datos en EVENTOS.
+  void _openEvent(String id) {
+    final ev = widget.events;
+    if (ev == null) return;
+    ev.select(id);
+    setState(() => area = EditorArea.events);
   }
 
   @override
@@ -297,7 +328,7 @@ class _AdminShellState extends State<AdminShell> {
         final n = widget.npcs;
         return n == null
             ? Center(child: Text('SIN ÁREA DE NPC', style: DsText.detail()))
-            : NpcsPage(c: n);
+            : NpcsPage(c: n, onOpenEvent: _openEvent);
       case EditorArea.events:
         final ev = widget.events;
         return ev == null
@@ -361,7 +392,7 @@ class _AdminShellState extends State<AdminShell> {
             child: visualTab == 2
                 ? variants == null
                     ? const SizedBox.shrink()
-                    : NpcVariantsPage(c: variants!)
+                    : NpcVariantsPage(c: variants!, onUseInNpc: _useInNpc)
                 : visualTab == 1
                 ? widget.animations == null
                     ? Center(

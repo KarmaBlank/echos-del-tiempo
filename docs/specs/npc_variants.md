@@ -72,8 +72,14 @@ Grilla de NPCs con variante | vista previa grande | receta:
   Sin `fixed`, el NPC se regenera de la semilla en cada carga (mismo
   resultado siempre);
 - **GUARDAR RECETA**: guarda semilla/paleta/partes;
-- **NUEVO NPC**: copia el aspecto actual a un id nuevo (`a-z0-9_`); ese
-  id se usa como `sprite` en los datos del NPC.
+- **NUEVO NPC**: copia el aspecto actual a un id nuevo (`a-z0-9_`) y crea
+  el NPC de datos con ese sprite y su evento de visita apagado
+  (npc_editor.md § 6.1);
+- **USAR EN NPC**: abre (o crea) el NPC de datos con la variante elegida;
+- GUARDAR escribe el override local y, con repo, también
+  `assets/sprites/npc_variants.yaml` (un NPC nuevo necesita su variante en
+  el juego publicado). Los NPC hechos con datos eligen su sprite de esta
+  misma lista en el editor NPC.
 
 ## 6. Tests (`test/core/procedural/npc_variants_test.dart`)
 

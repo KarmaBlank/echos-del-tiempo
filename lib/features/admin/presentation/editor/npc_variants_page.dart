@@ -12,8 +12,12 @@ import 'npc_variants_controller.dart';
 /// NPCs con variante | vista previa grande | receta (semilla, paleta,
 /// partes) y acciones GENERAR / RE-ROLL / GUARDAR COMO FIJO / NUEVO NPC.
 class NpcVariantsPage extends StatelessWidget {
-  const NpcVariantsPage({super.key, required this.c});
+  const NpcVariantsPage({super.key, required this.c, this.onUseInNpc});
   final NpcVariantsController c;
+
+  /// USAR EN NPC / NUEVO NPC: abre (o crea) el NPC de datos con esa
+  /// variante en el editor NPC (npc_editor.md § 6.1).
+  final ValueChanged<String>? onUseInNpc;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +34,7 @@ class NpcVariantsPage extends StatelessWidget {
                       image: c.previews[c.selectedId],
                       size: 256))),
           const VerticalDivider(width: 2, thickness: 2, color: DsColors.border),
-          SizedBox(width: 360, child: _Recipe(c: c)),
+          SizedBox(width: 360, child: _Recipe(c: c, onUseInNpc: onUseInNpc)),
         ]),
         if (c.notice != null)
           Positioned(
@@ -92,8 +96,9 @@ class _Grid extends StatelessWidget {
 }
 
 class _Recipe extends StatefulWidget {
-  const _Recipe({required this.c});
+  const _Recipe({required this.c, this.onUseInNpc});
   final NpcVariantsController c;
+  final ValueChanged<String>? onUseInNpc;
 
   @override
   State<_Recipe> createState() => _RecipeState();
@@ -200,6 +205,14 @@ class _RecipeState extends State<_Recipe> {
             kind: DsButtonKind.primary,
             onPressed: c.canWrite ? c.saveFixed : null),
         SizedBox(height: DsSpace.xs),
+        DsButton(GameText.t('ui.world.npcv.use_in_npc'),
+            key: const ValueKey('npcv-use-in-npc'),
+            tooltip: GameText.t('ui.world.npcv.use_in_npc_tip'),
+            kind: DsButtonKind.ghost,
+            onPressed: widget.onUseInNpc == null
+                ? null
+                : () => widget.onUseInNpc!(s.id)),
+        SizedBox(height: DsSpace.xs),
         DsButton(GameText.t('ui.world.npcv.save'),
             key: const ValueKey('npcv-save'),
             tooltip: GameText.t('ui.world.npcv.save_tip'),
@@ -218,7 +231,11 @@ class _RecipeState extends State<_Recipe> {
           tooltip: GameText.t('ui.world.npcv.create_tip'),
           size: DsButtonSize.compact,
           onPressed: () {
-            if (c.createFrom(_newId.text)) _newId.clear();
+            if (c.createFrom(_newId.text)) {
+              _newId.clear();
+              // NUEVO NPC: también el NPC de datos (con su evento).
+              widget.onUseInNpc?.call(c.selectedId!);
+            }
           }),
     ]);
   }

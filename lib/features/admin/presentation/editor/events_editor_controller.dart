@@ -125,6 +125,36 @@ class EventsEditorController extends ChangeNotifier {
         selectedId = id;
       });
 
+  /// Evento de visita vinculado a un NPC hecho con datos
+  /// (npc_editor.md § 6.4): apagado hasta que el dueño lo prenda, 3 días,
+  /// con el sprite del NPC. Devuelve su id.
+  String addLinked(String npc, String sprite, String name) {
+    final ids = {for (final e in events) e['id']};
+    var id = 'visitor_$npc';
+    for (var n = 2; ids.contains(id); n++) {
+      id = 'visitor_${npc}_$n';
+    }
+    Map<String, dynamic> all(String v) => {for (final t in locales) t: v};
+    edit(() {
+      (_doc['events'] as List).add(<String, dynamic>{
+        'id': id,
+        'category': WorldEventCategory.visitor.name,
+        'weight': 1,
+        'duration': 3,
+        'enabled': false,
+        'title': all(name),
+        'notice': all(name),
+        'body': all(name),
+        'sprite': sprite,
+      });
+    });
+    return id;
+  }
+
+  /// El borrador del evento [id], o `null`.
+  Map<String, dynamic>? eventOf(String id) =>
+      events.where((e) => e['id'] == id).firstOrNull;
+
   void remove(String id) => edit(() {
         (_doc['events'] as List).removeWhere((e) => (e as Map)['id'] == id);
         if (selectedId == id) selectedId = null;

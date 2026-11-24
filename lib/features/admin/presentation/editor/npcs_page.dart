@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../core/i18n/game_text.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
+import '../../../../game_engine/models/custom_npc.dart';
 import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/rules/npc_talk_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
@@ -12,8 +14,11 @@ import 'npc_editor_controller.dart';
 /// Editor → NPC (docs/specs/npc_editor.md): grilla de habitantes | ficha,
 /// DIÁLOGO y PEDIDOS del elegido.
 class NpcsPage extends StatelessWidget {
-  const NpcsPage({super.key, required this.c});
+  const NpcsPage({super.key, required this.c, this.onOpenEvent});
   final NpcEditorController c;
+
+  /// Abre el evento vinculado en Editor → EVENTOS (npc_editor.md § 6.4).
+  final ValueChanged<String>? onOpenEvent;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -29,7 +34,9 @@ class NpcsPage extends StatelessWidget {
                         child: Text('ELEGÍ UN HABITANTE A LA IZQUIERDA',
                             style: DsText.detail()))
                     : _NpcDetail(
-                        key: ValueKey('npc-detail-${c.selectedId}'), c: c)),
+                        key: ValueKey('npc-detail-${c.selectedId}'),
+                        c: c,
+                        onOpenEvent: onOpenEvent)),
           ]),
           if (c.message != null)
             Positioned(
@@ -390,8 +397,9 @@ String _actionLabel(TalkAction a) => switch (a) {
 // ---------------------------------------------------------------------
 
 class _NpcDetail extends StatefulWidget {
-  const _NpcDetail({super.key, required this.c});
+  const _NpcDetail({super.key, required this.c, this.onOpenEvent});
   final NpcEditorController c;
+  final ValueChanged<String>? onOpenEvent;
 
   @override
   State<_NpcDetail> createState() => _NpcDetailState();
@@ -472,7 +480,15 @@ class _NpcDetailState extends State<_NpcDetail> {
               ? _Dialogue(c: c, e: e)
               : SingleChildScrollView(
                   padding: EdgeInsets.only(top: DsSpace.sm, right: DsSpace.sm),
-                  child: tab == 0 ? _Sheet(c: c, e: e) : _Quests(c: c, e: e),
+                  child: tab == 0
+                      ? e.custom
+                          ? _CustomSheet(
+                              c: c, e: e, onOpenEvent: widget.onOpenEvent)
+                          : _Sheet(c: c, e: e)
+                      : e.custom
+                          ? Text(GameText.t('ui.world.npcv.no_quests'),
+                              style: DsText.detail())
+                          : _Quests(c: c, e: e),
                 ),
         ),
       ]),
@@ -499,6 +515,150 @@ class _Sheet extends StatelessWidget {
         const DsSectionHeader('UMBRALES DE AMISTAD'),
         for (final (k, v) in c.thresholds(e)) _kv(k, v),
       ]);
+}
+
+/// FICHA de un NPC hecho con datos (npc_editor.md § 6.2): nombre y lore
+/// por idioma, sprite (variantes), dónde aparece, hora e invitación.
+class _CustomSheet extends StatelessWidget {
+  const _CustomSheet({required this.c, required this.e, this.onOpenEvent});
+  final NpcEditorController c;
+  final NpcEntry e;
+  final ValueChanged<String>? onOpenEvent;
+
+  static String t(String k) => GameText.t('ui.world.npcv.$k');
+
+  @override
+  Widget build(BuildContext context) {
+    final d = c.defOf(e.id)!;
+    final spawn =
+        CustomNpcSpawn.values.where((v) => v.name == d['spawn']).firstOrNull ??
+            CustomNpcSpawn.town;
+    final time =
+        TalkTime.values.where((v) => v.name == d['time']).firstOrNull ??
+            TalkTime.any;
+    final draft = d['bio_final'] != true;
+    final place = '${d['place'] ?? ''}';
+    final ids = {...?c.variantIds?.call(), e.sprite}.toList();
+    final ev =
+        spawn == CustomNpcSpawn.event ? c.events?.eventOf(place) : null;
+    void set(String k, Object? v) => c.edit(() {
+          if (v == null) {
+            d.remove(k);
+          } else {
+            d[k] = v;
+          }
+        });
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _kv('Id', e.id),
+      DsSectionHeader(t('name')),
+      _TextField(c: c, m: _textOf(c, d, 'name'), id: 'npc-custom-name'),
+      DsSectionHeader(t('bio'), trailing: draft ? DsBadge(t('draft')) : null),
+      _TextField(c: c, m: _textOf(c, d, 'bio'), id: 'npc-custom-bio'),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: DsButton(draft ? t('bio_finish') : t('bio_reopen'),
+            key: const ValueKey('npc-custom-bio-final'),
+            size: DsButtonSize.compact,
+            tooltip: t('bio_tip'),
+            onPressed: () => set('bio_final', draft ? true : null)),
+      ),
+      DsSectionHeader(t('sprite')),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        for (final id in ids)
+          DsItemCell(
+            key: ValueKey('npc-custom-sprite-$id'),
+            icon: DsSpriteIcon(c.imageOf(id), size: 36),
+            border: DsColors.border,
+            selected: e.sprite == id,
+            onTap: () => set('sprite', id),
+          ).tip(id),
+      ]),
+      DsSectionHeader(t('where')),
+      Wrap(children: [
+        _Pick<CustomNpcSpawn>(
+            id: 'npc-custom-spawn',
+            values: CustomNpcSpawn.values,
+            selected: spawn,
+            label: (v) => t('spawn_${v.name}'),
+            tip: t('where_tip'),
+            onPick: (v) => set('spawn', v.name)),
+      ]),
+      if (spawn == CustomNpcSpawn.biome || spawn == CustomNpcSpawn.mine)
+        Wrap(children: [
+          _Pick<String>(
+              id: 'npc-custom-place',
+              values: [
+                if (spawn == CustomNpcSpawn.mine) '',
+                for (final b in kBiomes) b.id,
+              ],
+              selected: place,
+              label: (v) => v.isEmpty ? t('all_mines') : v.toUpperCase(),
+              tip: t('place_tip'),
+              onPick: (v) => set('place', v.isEmpty ? null : v)),
+        ]),
+      if (spawn == CustomNpcSpawn.event) ...[
+        _kv(t('event'), place.isEmpty ? '-' : place),
+        if (ev != null)
+          Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
+            DsButton(ev['enabled'] == false ? t('event_off') : t('event_on'),
+                key: const ValueKey('npc-custom-event-enabled'),
+                size: DsButtonSize.compact,
+                selected: ev['enabled'] != false,
+                tooltip: t('event_enabled_tip'),
+                onPressed: () {
+                  c.events!.edit(() {
+                    if (ev['enabled'] == false) {
+                      ev.remove('enabled');
+                    } else {
+                      ev['enabled'] = false;
+                    }
+                  });
+                  c.edit(() {});
+                }),
+            _Num(t('days'), (ev['duration'] as num? ?? 3).toInt(), (v) {
+              c.events!.edit(() => ev['duration'] = v.toInt().clamp(1, 99));
+              c.edit(() {});
+            }),
+            DsButton(t('open_event'),
+                key: const ValueKey('npc-custom-open-event'),
+                size: DsButtonSize.compact,
+                tooltip: t('open_event_tip'),
+                onPressed:
+                    onOpenEvent == null ? null : () => onOpenEvent!(place)),
+          ])
+        else
+          Text(t('event_missing'), style: DsText.detail(DsColors.danger)),
+      ],
+      Wrap(spacing: DsSpace.md, children: [
+        _Num(spawn == CustomNpcSpawn.event ? t('offset_x') : t('tile_x'),
+            (d['x'] as num? ?? 0).toInt(), (v) => set('x', v.toInt())),
+        _Num(spawn == CustomNpcSpawn.event ? t('offset_y') : t('tile_y'),
+            (d['y'] as num? ?? 0).toInt(), (v) => set('y', v.toInt())),
+      ]),
+      DsSectionHeader(t('time')),
+      Wrap(children: [
+        _Pick<TalkTime>(
+            id: 'npc-custom-time',
+            values: TalkTime.values,
+            selected: time,
+            label: _timeLabel,
+            tip: t('time_tip'),
+            onPick: (v) => set('time', v == TalkTime.any ? null : v.name)),
+      ]),
+      if (spawn == CustomNpcSpawn.biome)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: DsButton(
+              d['invitable'] == true ? t('invitable_on') : t('invitable_off'),
+              key: const ValueKey('npc-custom-invitable'),
+              size: DsButtonSize.compact,
+              selected: d['invitable'] == true,
+              tooltip: t('invitable_tip'),
+              onPressed: () =>
+                  set('invitable', d['invitable'] == true ? null : true)),
+        ),
+    ]);
+  }
 }
 
 /// DIÁLOGO (npc_editor.md § 3): one sub-tab per kind of text (no stacked
@@ -547,7 +707,14 @@ class _DialogueState extends State<_Dialogue> {
             list: NpcEditorController.listOf(m, 'ambient'),
             id: 'npc-ambient'),
       ),
-      if (e.rooted)
+      if (e.custom)
+        (
+          GameText.t('ui.world.npcv.accept_tab'),
+          'accept',
+          () => _TextField(
+              c: c, m: _textOf(c, m, 'invite_accept'), id: 'npc-invite-accept'),
+        )
+      else if (e.rooted)
         (
           'AL INVITARLO',
           'decline',
