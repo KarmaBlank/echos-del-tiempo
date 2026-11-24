@@ -3729,9 +3729,9 @@ class _Op {
       return false;
     }
     // Action queue (turn_modes.md § 3.1): only in the party phase of Por
-    // fases / porBando with 2+ humans; a command that arrives while another
-    // one resolves waits its turn (arrival order). Por rondas, timeline
-    // and solo never queue: the command runs now or is refused.
+    // fases / porBando, or the front party block of a Por rondas round, with
+    // 2+ humans; a command that arrives while another one resolves waits
+    // its turn (arrival order). Timeline and solo never queue: the command runs now or is refused.
     if (queueOpen(b, p.id) &&
         (b.wait > 0 ||
             b.queue.isNotEmpty ||
@@ -3743,8 +3743,8 @@ class _Op {
     return _runBattleCommand(p, cmd);
   }
 
-  /// The battle uses the action queue at all: Por fases / porBando (not
-  /// Por rondas, not timeline) with 2+ human players in it (solo-party
+  /// The battle uses the action queue at all: Por fases / porBando / Por
+  /// rondas (party blocks; not timeline) with 2+ human players in it (solo-party
   /// companions don't count), outside the TUTORIAL.
   bool queueEnabled(SessionBattle b) => battleQueueEnabled(s);
 
@@ -3755,8 +3755,14 @@ class _Op {
       return false;
     }
     final st = b.state;
-    return st.porBando &&
-        st.awaitingGroup &&
+    // Por rondas: pendingGroup is the round's front block of players (no
+    // enemy between them); a player behind an enemy is not in it.
+    // A player holding the turn after an INSTANT keeps the block open:
+    // its follow-up and its partners' entries stay queued (the holder's
+    // entry resolves first, see _nextQueued).
+    final holder = st.current;
+    return st.grouped &&
+        (st.awaitingGroup || holder != null && holder.isPlayer) &&
         st.pendingGroup.any((c) => c.id == playerId);
   }
 
@@ -4367,12 +4373,12 @@ class _Op {
 }
 
 /// The battle of [s] uses the action queue (turn_modes.md section 3.1):
-/// Por fases / porBando (never Por rondas or timeline) with 2+ human
-/// players in it (solo-party companions don't count), outside the
+/// Por fases / porBando, or Por rondas for the party block at the front
+/// of the round (never timeline), with 2+ human players in it (solo-party companions don't count), outside the
 /// TUTORIAL. Clients mirror it in `SessionView.canQueue`.
 bool battleQueueEnabled(GameSession s) {
   final st = s.battle?.state;
-  if (st == null || s.tutorial != null || !st.porBando || st.porRonda) {
+  if (st == null || s.tutorial != null || !st.grouped) {
     return false;
   }
   var humans = 0;

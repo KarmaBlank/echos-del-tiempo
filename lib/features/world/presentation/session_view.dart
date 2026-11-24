@@ -304,14 +304,14 @@ class SessionView {
 
   /// [id] may confirm a command now even if the host is animating (it
   /// goes to the action queue; mirrors `SessionEngine.queueOpen`): only in
-  /// Por fases / porBando with 2+ human players (never Por rondas,
-  /// timeline or solo, where companions don't count).
+  /// Por fases / porBando or the front party block of a Por rondas round,
+  /// with 2+ human players (never timeline or solo, where companions don't count).
   bool canQueue(String? id) {
     final b = session.battle;
     if (id == null || b == null || session.tutorial != null) return false;
     final st = b.state;
     if (b.endTimer != null || st.ended || b.queued(id)) return false;
-    if (st.porRonda || !st.porBando) return false;
+    if (!st.grouped) return false;
     final humans = st.party
         .where((c) =>
             c.isPlayer &&
@@ -321,8 +321,8 @@ class SessionView {
             session.players[c.id]?.isCompanion != true)
         .length;
     if (humans < 2) return false;
-    return st.porBando &&
-        st.awaitingGroup &&
+    final holder = st.current;
+    return (st.awaitingGroup || holder != null && holder.isPlayer) &&
         st.pendingGroup.any((c) => c.id == id);
   }
 
