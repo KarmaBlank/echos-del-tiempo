@@ -55,8 +55,8 @@ Widget trackButton(
 /// Casillas de la cadena de encargos de [n] (también en el registro):
 /// solo los que ya pidió (cumplidos + el activo). Los pasos futuros no se
 /// listan nunca; el próximo lo cuenta él en el diálogo.
-List<LifeItemCellData> questCells(Strings s,
-    SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p) {
+List<LifeItemCellData> questCells(Strings s, SessionController c, BiomeNpcDef n,
+    ResidentState r, PlayerProfile? p) {
   final chain = kResidentQuests[n.id] ?? const <QuestStepDef>[];
   // El activo aparece recién cuando él lo pidió en el diálogo.
   final asked = p == null || r.progress > 0 || QuestTrackRules.questSeen(p, r);
@@ -66,8 +66,8 @@ List<LifeItemCellData> questCells(Strings s,
   ];
 }
 
-LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n, ResidentState r,
-    PlayerProfile? p, List<QuestStepDef> chain, int i) {
+LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
+    ResidentState r, PlayerProfile? p, List<QuestStepDef> chain, int i) {
   final q = chain[i];
   final done = i < r.quest, now = i == r.quest;
   final have = p == null ? 0 : ResidentRules.questHave(p, q);
@@ -88,7 +88,9 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n, Resid
             ? DsColors.selected
             : DsColors.border,
     search: what,
-    caption: done ? s.t('ui.town.npc.done') : (now ? '${r.progress}/${q.n}' : '${i + 1}'),
+    caption: done
+        ? s.t('ui.town.npc.done')
+        : (now ? '${r.progress}/${q.n}' : '${i + 1}'),
     detail: LifeItemDetail(
       name: s.t('ui.town.npc.quest_name', {'name': n.name, 'n': i + 1}),
       nameColor: DsColors.textTitle,
@@ -118,8 +120,8 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n, Resid
 }
 
 /// Casilla de la orden de entrega de [r] (§ 10.5), o `null`.
-LifeItemCellData? orderCell(Strings s,
-    SessionController c, BiomeNpcDef n, ResidentState r, PlayerProfile? p,
+LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
+    ResidentState r, PlayerProfile? p,
     {required bool home}) {
   final o = r.order;
   if (o == null) return null;
@@ -142,7 +144,9 @@ LifeItemCellData? orderCell(Strings s,
         (s.t('ui.town.npc.order'), DsColors.reward),
         if (r.orderQ > 0)
           (
-            fish ? s.t('ui.town.npc.from_cm', {'cm': cm}) : q.label.toUpperCase(),
+            fish
+                ? s.t('ui.town.npc.from_cm', {'cm': cm})
+                : q.label.toUpperCase(),
             DsColors.textSecondary
           ),
       ],
@@ -150,8 +154,10 @@ LifeItemCellData? orderCell(Strings s,
         r.orderQ <= 0
             ? '${r.orderN} × ${residentItemName(o)}'
             : fish
-                ? s.t('ui.town.npc.order_line_cm', {'n': r.orderN, 'item': residentItemName(o), 'cm': cm})
-                : s.t('ui.town.npc.order_line_q', {'n': r.orderN, 'item': residentItemName(o), 'q': q.label}),
+                ? s.t('ui.town.npc.order_line_cm',
+                    {'n': r.orderN, 'item': residentItemName(o), 'cm': cm})
+                : s.t('ui.town.npc.order_line_q',
+                    {'n': r.orderN, 'item': residentItemName(o), 'q': q.label}),
         if (fish && cm > 0)
           s.t('ui.town.npc.record', {'cm': p?.life.log[o] ?? 0}),
         s.t('ui.town.npc.have', {'n': have}),
@@ -221,9 +227,11 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       else
         NpcTalk.greet(n.id, extra: n.lines),
       if (fresh && r.request != null)
-        _s.t('ui.town.npc.line_request', {'what': r.request!.label.toLowerCase()}),
+        _s.t('ui.town.npc.line_request',
+            {'what': r.request!.label.toLowerCase()}),
       if (fresh && r.order != null)
-        _s.t('ui.town.npc.line_order', {'n': r.orderN, 'item': residentItemName(r.order!)}),
+        _s.t('ui.town.npc.line_order',
+            {'n': r.orderN, 'item': residentItemName(r.order!)}),
     ];
     return parts.join(' ');
   }
@@ -290,8 +298,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                 ? talk.choices(town, refresh, inTown: home)
                 : [
                     talk.entry(town, refresh, inTown: home),
-                    opt(NpcMenu.comprar, _s.t('ui.town.npc.menu_buy'),
-                        stock.isEmpty ? _s.t('ui.town.npc.sells_nothing') : null),
+                    opt(
+                        NpcMenu.comprar,
+                        _s.t('ui.town.npc.menu_buy'),
+                        stock.isEmpty
+                            ? _s.t('ui.town.npc.sells_nothing')
+                            : null),
                     opt(
                         NpcMenu.encargos,
                         _s.t('ui.town.npc.menu_quests'),
@@ -354,7 +366,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_s.t('ui.town.npc.rep_value', {'n': r.rep, 'goal': goal}), style: DsText.body(DsColors.mp)),
+              Text(_s.t('ui.town.npc.rep_value', {'n': r.rep, 'goal': goal}),
+                  style: DsText.body(DsColors.mp)),
               SizedBox(height: DsSpace.xs),
               DsMeter(r.rep, goal, color: DsColors.mp),
             ],
@@ -368,7 +381,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                   text: ResidentRules.stage(r).label,
                   style: DsText.body(DsColors.conditionReady)),
               TextSpan(
-                  text: '\n${r.invited ? _s.t('ui.town.npc.lives_in_town') : _s.t('ui.town.npc.in_biome')}',
+                  text:
+                      '\n${r.invited ? _s.t('ui.town.npc.lives_in_town') : _s.t('ui.town.npc.in_biome')}',
                   style: DsText.detail(DsColors.textSecondary)),
               if (r.unhappy)
                 TextSpan(
@@ -382,7 +396,10 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           Text(
               tier < 0
                   ? _s.t('ui.town.npc.benefit_none')
-                  : _s.t('ui.town.npc.benefit_level', {'benefit': ResidentRules.benefitText(n, tier), 'n': tier}),
+                  : _s.t('ui.town.npc.benefit_level', {
+                      'benefit': ResidentRules.benefitText(n, tier),
+                      'n': tier
+                    }),
               style: DsText.body(DsColors.success))),
       DsStatusCell(
           _s.t('ui.town.npc.next'),
@@ -390,7 +407,10 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           Text(
               next == null
                   ? _s.t('ui.town.npc.maxed')
-                  : _s.t('ui.town.npc.benefit_level', {'benefit': ResidentRules.benefitText(n, next), 'n': next}),
+                  : _s.t('ui.town.npc.benefit_level', {
+                      'benefit': ResidentRules.benefitText(n, next),
+                      'n': next
+                    }),
               style: DsText.body(DsColors.reward))),
       if (shop)
         DsStatusCell(
@@ -417,17 +437,18 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       NpcMenu.comprar => _shopView(c, n, tier, p, inBiome: !home),
       NpcMenu.encargos =>
         _grid(questCells(_s, c, n, r, p), _s.t('ui.town.npc.nothing_yet')),
-      NpcMenu.pedidos => _grid(
-          _requests(c, n, r, p, town, home: home), _s.t('ui.town.npc.no_requests')),
-      NpcMenu.regalar =>
-        _grid(_gifts(c, n, p), _s.t('ui.town.npc.no_gifts')),
-      NpcMenu.casa => _grid(
-          _house(c, n, r, p, town, home: home), _s.t('ui.town.npc.invite_first_dot')),
+      NpcMenu.pedidos => _grid(_requests(c, n, r, p, town, home: home),
+          _s.t('ui.town.npc.no_requests')),
+      NpcMenu.regalar => _grid(_gifts(c, n, p), _s.t('ui.town.npc.no_gifts')),
+      NpcMenu.casa => _grid(_house(c, n, r, p, town, home: home),
+          _s.t('ui.town.npc.invite_first_dot')),
     };
     return PanelFrame(
       key: const ValueKey('panel-biome-npc'),
       title: '${n.name.toUpperCase()} · ${n.role.label.toUpperCase()} · $title',
       width: 1000,
+      // Grid + detail use the whole body; the detail pins its actions.
+      fill: true,
       onClose: back,
       header: _status(n, r, p,
           shop: menu == NpcMenu.comprar, inTown: home && r.invited),
@@ -475,116 +496,124 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final maxQ = price <= 0 ? 1 : (gold ~/ price).clamp(1, 99);
     final qty = _qty.clamp(1, maxQ);
     final owned = f?.seedCount(s.id) ?? 0;
-    return SizedBox(
-      height: (MediaQuery.sizeOf(context).height * 0.42).clamp(200.0, 340.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Same cell as INVENTARIO; name and data in the hover card.
-          Expanded(
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: LifeItemGrid.gap,
-                runSpacing: LifeItemGrid.gap,
-                children: [
-                  for (final (g, pr) in goods)
-                    LifeItemCell(
-                      key: ValueKey('npc-seed-${g.id}'),
-                      selected: g.id == s.id,
-                      onTap: () => setState(() {
-                        _sel = g.id;
-                        _qty = 1;
-                      }),
-                      data: LifeItemCellData(
-                        id: 'npc-seed-cell-${g.id}',
-                        icon: LifeIcon('semilla_${g.id}', LifeIconKind.semilla,
-                            size: LifeItemGrid.iconSize),
-                        border: fishRarityColor(g.rarity),
-                        search: g.seedText,
-                        count: (f?.seedCount(g.id) ?? 0) > 0
-                            ? f!.seedCount(g.id)
-                            : null,
-                        detail: LifeItemDetail(
-                          name: g.seedText,
-                          nameColor: fishRarityColor(g.rarity),
-                          tags: [
-                            (_s.t('ui.town.npc.seed'), DsColors.textSecondary),
-                            (g.rarity.text.toUpperCase(),
-                                fishRarityColor(g.rarity)),
-                          ],
-                          lines: [
-                            ...seedInfoLines(context, g),
-                            _s.t('ui.town.npc.gold_each', {'n': pr}),
-                          ],
-                        ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Same cell as INVENTARIO; name and data in the hover card.
+        Expanded(
+          child: SingleChildScrollView(
+            child: Wrap(
+              spacing: LifeItemGrid.gap,
+              runSpacing: LifeItemGrid.gap,
+              children: [
+                for (final (g, pr) in goods)
+                  LifeItemCell(
+                    key: ValueKey('npc-seed-${g.id}'),
+                    selected: g.id == s.id,
+                    onTap: () => setState(() {
+                      _sel = g.id;
+                      _qty = 1;
+                    }),
+                    data: LifeItemCellData(
+                      id: 'npc-seed-cell-${g.id}',
+                      icon: LifeIcon('semilla_${g.id}', LifeIconKind.semilla,
+                          size: LifeItemGrid.iconSize),
+                      border: fishRarityColor(g.rarity),
+                      search: g.seedText,
+                      count: (f?.seedCount(g.id) ?? 0) > 0
+                          ? f!.seedCount(g.id)
+                          : null,
+                      detail: LifeItemDetail(
+                        name: g.seedText,
+                        nameColor: fishRarityColor(g.rarity),
+                        tags: [
+                          (_s.t('ui.town.npc.seed'), DsColors.textSecondary),
+                          (
+                            g.rarity.text.toUpperCase(),
+                            fishRarityColor(g.rarity)
+                          ),
+                        ],
+                        lines: [
+                          ...seedInfoLines(context, g),
+                          _s.t('ui.town.npc.gold_each', {'n': pr}),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
-          SizedBox(width: DsSpace.md),
-          Container(
-            width: LifeItemGrid.detailWidth,
-            padding: EdgeInsets.all(DsSpace.md),
-            decoration: BoxDecoration(
-                color: DsColors.surfaceSunken,
-                border: Border.all(color: DsColors.border)),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: 48),
-                    SizedBox(width: DsSpace.sm),
-                    Expanded(
-                      child: Text(s.seedText,
-                          style: DsText.title(fishRarityColor(s.rarity))),
-                    ),
-                  ]),
+        ),
+        SizedBox(width: DsSpace.md),
+        SizedBox(
+          width: LifeItemGrid.detailWidth,
+          child: DsDetailPane(
+            key: const ValueKey('npc-shop-detail'),
+            sunken: true,
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: 48),
+                  SizedBox(width: DsSpace.sm),
+                  Expanded(
+                    child: Text(s.seedText,
+                        style: DsText.title(fishRarityColor(s.rarity))),
+                  ),
+                ]),
+                SizedBox(height: DsSpace.sm),
+                Wrap(spacing: DsSpace.xs, children: [
+                  DsTag(_s.t('ui.town.npc.seed'),
+                      color: DsColors.textSecondary),
+                  DsTag(s.rarity.text.toUpperCase(),
+                      color: fishRarityColor(s.rarity)),
+                ]),
+                if (s.lore.isNotEmpty) ...[
                   SizedBox(height: DsSpace.sm),
-                  Wrap(spacing: DsSpace.xs, children: [
-                    DsTag(_s.t('ui.town.npc.seed'), color: DsColors.textSecondary),
-                    DsTag(s.rarity.text.toUpperCase(),
-                        color: fishRarityColor(s.rarity)),
-                  ]),
-                  if (s.lore.isNotEmpty) ...[
-                    SizedBox(height: DsSpace.sm),
-                    Text(s.lore,
-                        softWrap: true,
-                        style: DsText.detail(DsColors.textSecondary)),
-                  ],
-                  SizedBox(height: DsSpace.sm),
-                  _kv(_s.t('ui.town.npc.grows_in'),
-                      _s.t('ui.town.npc.minutes', {'n': (s.growSec / 60).round()})),
-                  _kv(_s.t('ui.town.npc.owned'), owned.toString()),
-                  _kv(_s.t('ui.town.npc.price'), _s.t('ui.town.npc.gold_each', {'n': price})),
-                  SizedBox(height: DsSpace.md),
-                  Row(children: [
-                    DsQuantity(
-                        value: qty,
-                        max: maxQ,
-                        onChanged: (v) => setState(() => _qty = v)),
-                    SizedBox(width: DsSpace.sm),
-                    Text(_s.t('ui.town.npc.total', {'n': price * qty}),
+                  Text(s.lore,
+                      softWrap: true,
+                      style: DsText.detail(DsColors.textSecondary)),
+                ],
+                SizedBox(height: DsSpace.sm),
+                _kv(
+                    _s.t('ui.town.npc.grows_in'),
+                    _s.t('ui.town.npc.minutes',
+                        {'n': (s.growSec / 60).round()})),
+                _kv(_s.t('ui.town.npc.owned'), owned.toString()),
+                _kv(_s.t('ui.town.npc.price'),
+                    _s.t('ui.town.npc.gold_each', {'n': price})),
+              ],
+            ),
+            actions: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  DsQuantity(
+                      value: qty,
+                      max: maxQ,
+                      onChanged: (v) => setState(() => _qty = v)),
+                  SizedBox(width: DsSpace.sm),
+                  Flexible(
+                    child: Text(_s.t('ui.town.npc.total', {'n': price * qty}),
                         key: const ValueKey('npc-shop-total'),
                         style: DsText.body(gold >= price * qty
                             ? DsColors.reward
                             : DsColors.danger)),
-                  ]),
-                  SizedBox(height: DsSpace.sm),
-                  DsButton(_s.t('ui.town.npc.buy'),
-                      key: ValueKey('npc-seed-buy-${s.id}'),
-                      kind: DsButtonKind.primary,
-                      onPressed: gold >= price * qty
-                          ? () => c.buySeed(s.id, qty)
-                          : null),
-                ],
-              ),
+                  ),
+                ]),
+                SizedBox(height: DsSpace.sm),
+                DsButton(_s.t('ui.town.npc.buy'),
+                    key: ValueKey('npc-seed-buy-${s.id}'),
+                    kind: DsButtonKind.primary,
+                    onPressed: gold >= price * qty
+                        ? () => c.buySeed(s.id, qty)
+                        : null),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -612,7 +641,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             ],
             lines: [
               _s.t('ui.town.npc.requested_day', {'day': r.requestDay}),
-              _s.t('ui.town.npc.request_reward', {'rep': ResidentRules.t.i('resRequestRep')}),
+              _s.t('ui.town.npc.request_reward',
+                  {'rep': ResidentRules.t.i('resRequestRep')}),
               if (why != null) why,
             ],
             description: r.unhappy
@@ -652,8 +682,15 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         nameColor: DsColors.textTitle,
         tags: [(rr.label.toUpperCase(), DsColors.reward)],
         lines: [
-          _s.t('ui.town.npc.commission_weapon', {'rarity': rr.label.toLowerCase(), 'level': ResidentRules.commissionItemLevel(p.level)}),
-          _s.t('ui.town.npc.cost_line', {'cost': HelperRules.costText(cost.cost), 'n': cost.lootN, 'item': residentItemName(cost.loot)}),
+          _s.t('ui.town.npc.commission_weapon', {
+            'rarity': rr.label.toLowerCase(),
+            'level': ResidentRules.commissionItemLevel(p.level)
+          }),
+          _s.t('ui.town.npc.cost_line', {
+            'cost': HelperRules.costText(cost.cost),
+            'n': cost.lootN,
+            'item': residentItemName(cost.loot)
+          }),
           _s.t('ui.town.npc.commission_rarity'),
           if (why != null) why,
         ],
@@ -710,8 +747,9 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final max = ResidentRules.t.i('resMaxHouse');
     final lv = h?.level ?? 0;
     final cost = lv < max ? ResidentRules.investCost(n, lv + 1) : null;
-    final why =
-        p == null ? _s.t('ui.town.npc.no_profile') : ResidentRules.cannotInvest(p, town, n.id);
+    final why = p == null
+        ? _s.t('ui.town.npc.no_profile')
+        : ResidentRules.cannotInvest(p, town, n.id);
     final relicId = kResidentQuests[n.id]?.last.reward;
     final relic = r.relic ? kResidentRelics[relicId] : null;
     return [
@@ -721,18 +759,27 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             size: 32),
         border: DsColors.border,
         search: _s.t('ui.town.npc.title_house'),
-        caption: h == null ? _s.t('ui.town.npc.no_house_caps') : _s.t('ui.town.npc.level_caps', {'n': lv}),
+        caption: h == null
+            ? _s.t('ui.town.npc.no_house_caps')
+            : _s.t('ui.town.npc.level_caps', {'n': lv}),
         detail: LifeItemDetail(
-          name: h == null ? _s.t('ui.town.npc.no_house') : _s.t('ui.town.npc.house_of', {'name': n.name}),
+          name: h == null
+              ? _s.t('ui.town.npc.no_house')
+              : _s.t('ui.town.npc.house_of', {'name': n.name}),
           nameColor: DsColors.textTitle,
           tags: [(_s.t('ui.town.npc.title_house'), DsColors.textSecondary)],
           lines: [
             if (h == null)
-              _s.t('ui.town.npc.house_hint', {'cost': HelperRules.costText(ResidentRules.placeCost())})
+              _s.t('ui.town.npc.house_hint',
+                  {'cost': HelperRules.costText(ResidentRules.placeCost())})
             else
               _s.t('ui.town.npc.level_of', {'n': lv, 'max': max}),
             if (h != null && cost != null)
-              _s.t('ui.town.npc.upgrade_line', {'cost': HelperRules.costText(cost.cost), 'n': cost.lootN, 'item': residentItemName(cost.loot)}),
+              _s.t('ui.town.npc.upgrade_line', {
+                'cost': HelperRules.costText(cost.cost),
+                'n': cost.lootN,
+                'item': residentItemName(cost.loot)
+              }),
             if (h != null && why != null && cost != null) why,
             _s.t('ui.town.npc.house_levels'),
           ],
