@@ -1,6 +1,7 @@
 import '../instruments.dart';
 import '../music_dsl.dart';
 import '../music_score.dart';
+import 'dungeon_variant.dart';
 
 /// Zona 9 · Abismo del Tiempo.
 ///
@@ -53,7 +54,7 @@ Song zone9Abismo() {
   return Song(
     id: 'zone9',
     title: 'Abismo del Tiempo',
-    bpm: 76,
+    bpm: 70,
     tracks: [
       Track('ocarina',
           Inst.ocarinaEcho.copyWith(
@@ -78,7 +79,17 @@ Song zone9Abismo() {
               rhythm: '.:4 x:2 .:6 x:2 .:2')),
       Track('bajo', Inst.bass.copyWith(volume: 0.18, release: 0.3),
           bassLine(chords, 'R:16')),
+      Track('unease', Inst.pad.copyWith(volume: 0.035, attack: 1.2, lowpass: 900),
+          rep('A2+D#3:64', 4)),
       Track.drums('aire', rep(breath, 4), gain: 0.5),
     ],
   );
 }
+
+/// Abyss dungeon: the abyss theme with C, F and G naturals over the
+/// raised fourth, lower pads, pulsing bass and a heartbeat kick.
+Song zone9AbismoDungeon() => dungeonVariant(zone9Abismo(),
+    id: 'zone9.dungeon',
+    title: 'Abyss (depths)',
+    tonic: 9,
+    flatten: const {4, 9, 11});

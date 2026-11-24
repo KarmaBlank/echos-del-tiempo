@@ -1,6 +1,7 @@
 import 'music_score.dart';
 import 'tracks/abyss_boss_theme.dart';
 import 'tracks/battle_theme.dart';
+import 'tracks/battle_variations.dart';
 import 'tracks/secret_boss_theme.dart';
 import 'tracks/boss_theme.dart';
 import 'tracks/final_boss_theme.dart';
@@ -59,6 +60,20 @@ abstract final class Music {
 
   /// La pieza de la zona [z] (1–10).
   static String zone(int z) => 'zone$z';
+
+  /// Biome zones (forest, ruins, caverns, rift, abyss): their theme plays
+  /// on the biome exterior, a darker variant in their dungeons and their
+  /// own boss arrangement (music.md § 4.3–4.4).
+  static const biomeZones = [2, 3, 4, 7, 9];
+
+  /// Dungeon variant of the biome theme of zone [z].
+  static String dungeon(int z) => 'zone$z.dungeon';
+
+  /// Boss arrangement for the biome of zone [z].
+  static String zoneBoss(int z) => 'boss.zone$z';
+
+  /// The three battle themes; one is picked per battle (§ 5.4).
+  static const battles = [battle, 'battle2', 'battle3'];
 }
 
 /// Todas las piezas por id. Se arman una vez (al primer uso).
@@ -80,7 +95,15 @@ final Map<String, Song> kMusicCatalog = {
     zone9Abismo(),
     zone10Corazon(),
     battleTheme(),
+    battleTheme2(),
+    battleTheme3(),
     bossTheme(),
+    for (final style in BossStyle.values.skip(1)) bossArrangement(style),
+    zone2BosqueDungeon(),
+    zone3RuinasDungeon(),
+    zone4CavernasDungeon(),
+    zone7GrietaDungeon(),
+    zone9AbismoDungeon(),
     finalBossTheme(),
     abyssBossTheme(),
     secretBossTheme(),

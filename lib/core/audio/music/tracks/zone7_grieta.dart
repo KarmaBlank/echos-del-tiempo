@@ -1,6 +1,7 @@
 import '../instruments.dart';
 import '../music_dsl.dart';
 import '../music_score.dart';
+import 'dungeon_variant.dart';
 
 /// Zona 7 · Grieta Ígnea.
 ///
@@ -71,7 +72,7 @@ Song zone7Grieta() {
   return Song(
     id: 'zone7',
     title: 'Grieta Ígnea',
-    bpm: 88,
+    bpm: 96,
     tracks: [
       Track('ocarina', Inst.ocarina.copyWith(volume: 0.35), melody),
       Track('zampoña', Inst.zampona, '.:128 ${shift(themeB, -12)}'),
@@ -81,8 +82,18 @@ Song zone7Grieta() {
           comp(chords, 'x:2 .:6 x:2 .:2 x:2 .:2', center: 55, count: 3),
           gain: 0.8),
       Track('bajo', Inst.bassStaccato.copyWith(volume: 0.28), bass),
+      Track('tension', Inst.arp.copyWith(volume: 0.04, lowpass: 2400),
+          '${rep('E4:1 F4:1', 64)} .:128'),
       Track.drums('bombo', drums, gain: 0.5),
     ],
   );
 }
 
+
+/// Volcano dungeon: the rift theme with a flat fifth (B flat), lower
+/// brass, pulsing bass and a heartbeat kick.
+Song zone7GrietaDungeon() => dungeonVariant(zone7Grieta(),
+    id: 'zone7.dungeon',
+    title: 'Rift (depths)',
+    tonic: 4,
+    flatten: const {7});
