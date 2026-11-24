@@ -85,13 +85,20 @@ Es la fase de grupo de `porBando` con los enemigos primero:
 - Si la fase se cierra (tiempo agotado, fin de la pelea), la cola se
   vacía. Nadie solo en una fase y el Pulso no cambian: cada acción se
   resuelve como un comando normal.
-- Solo con compañeros: las órdenes del líder para cada compañero usan la
-  misma cola; la IA con AUTO no elige por un compañero que ya está en
-  cola.
-- Por rondas: el jugador que todavía no actuó en la ronda puede dejar su
-  acción confirmada (intención) aunque no sea su bloque; se resuelve
-  cuando le toca, en el orden de velocidad de la ronda (no en orden de
-  llegada).
+- **Alcance (v0.42.2):** la cola existe solo en Por fases (y porBando,
+  que comparte la fase de grupo) y solo en cooperativo: 2 o más humanos
+  en esa batalla (los compañeros IA del modo solo no cuentan;
+  `battleQueueEnabled` en el host, `SessionView.canQueue` en el
+  cliente). En Por rondas, línea de tiempo y solo no hay cola ni
+  confirmación anticipada: el jugador espera su turno como antes de
+  v0.41.6 (el menú igual no se reinicia por actualizaciones ajenas).
+  La cola solo contiene y espera a miembros de la party en su fase;
+  nunca espera el turno de un enemigo.
+- Instante: el mismo jugador sigue con el turno; al terminar la
+  animación su menú vuelve y el siguiente comando se resuelve normal.
+  Si en un modo con cola quedó una entrada del actor actual y nada se
+  anima, se resuelve en ese tick; las entradas de quien ya no puede
+  actuar se descartan (nada queda trabado).
 - No en el TUTORIAL (valida paso a paso).
 - HUD: fila "En cola" debajo de la franja, con nombre e ícono de acción
   en orden; las propias llevan ✕ para sacarlas.

@@ -121,4 +121,78 @@ void main() {
     }
     expect(host.session!.battle!.queue, isEmpty);
   });
+
+  test('solo Por rondas: INSTANT then a skill, menu back in between',
+      () async {
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub);
+    await hn.connect(SessionConfig(profile: newProfile('Host', 'guerrero')));
+    host = SessionController(
+      engine: sessionEngine(),
+      store: InMemoryProfileStore(newProfile('Host', 'guerrero')),
+      clock: const SessionClock(autoStart: false),
+      net: hn,
+      combatMode: CombatMode.rounds,
+    );
+    controllers.add(host);
+    await host.start();
+    Future<void> step([double dt = 0.05]) async {
+      host.advance(dt);
+      await pumpEventQueue();
+    }
+
+    host.setCombatMode(CombatMode.rounds);
+    host.proposeMission('m1');
+    await step(0.1);
+    host.setReady(true);
+    await step(0.1);
+    expect(host.session!.mode, SessionMode.field);
+    await step(host.session!.graceLeft + 0.1);
+    final en = host.session!.mission!.enemies
+        .firstWhere((e) => e.alive && !e.boss && !e.elite);
+    host.teleport(en.x, en.y);
+    await step();
+    await step();
+    expect(host.session!.mode, SessionMode.battle);
+    expect(host.session!.battle!.state.porRonda, isTrue);
+
+    void sturdy() {
+      final b = host.session!.battle!;
+      for (final c in [...b.state.party, ...b.state.enemies]) {
+        c.hp = c.maxHp * 50;
+      }
+    }
+
+    for (var i = 0; i < 2000 && !host.view!.myTurn; i++) {
+      sturdy();
+      await step();
+    }
+    expect(host.view!.myTurn, isTrue);
+    final me = host.view!.localId;
+    final foe =
+        host.session!.battle!.state.enemies.firstWhere((x) => x.alive).id;
+    final enemies = {for (final x in host.session!.battle!.state.enemies) x.id};
+    final actedBefore = {...host.session!.battle!.state.acted};
+    expect(host.battleCommand(SkillCommand('brasaEco', targetId: foe)), isTrue);
+    await step();
+    expect(host.session!.battle!.state.byId(me)!.chained, isTrue);
+    // Animating: no early confirm in Por rondas (menu waits).
+    expect(host.view!.canQueue(me), isFalse);
+    for (var i = 0; i < 60 && !host.view!.myTurn; i++) {
+      sturdy();
+      await step();
+    }
+    // The menu is back for the same player; no enemy acted meanwhile.
+    expect(host.view!.myTurn, isTrue);
+    expect(host.view!.turnActor, me);
+    expect(
+        host.session!.battle!.state.acted
+            .difference(actedBefore)
+            .intersection(enemies),
+        isEmpty);
+    expect(host.battleCommand(AttackCommand(targetId: foe)), isTrue);
+    await step();
+    expect(host.session!.battle!.state.acted, contains(me));
+    expect(host.session!.battle!.queue, isEmpty);
+  });
 }
