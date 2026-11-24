@@ -194,6 +194,7 @@ class NpcData {
         if (t.talks > 0) 'talks': t.talks,
         if (t.orders > 0) 'orders': t.orders,
         if (t.rep > 0) 'rep': t.rep,
+        if (t.renown > 0) 'renown': t.renown,
         if (t.where != TalkWhere.any) 'where': t.where.name,
         if (t.time != TalkTime.any) 'time': t.time.name,
         if (t.action != TalkAction.none) 'action': t.action.name,
@@ -211,6 +212,7 @@ class NpcData {
         talks: _int(j['talks']),
         orders: _int(j['orders']),
         rep: _int(j['rep']),
+        renown: _int(j['renown']),
         where:
             TalkWhere.values.where((w) => w.name == j['where']).firstOrNull ??
                 TalkWhere.any,

@@ -166,7 +166,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// battle snapshot; Por fases may send `ro`.
 /// 70: world events (world_events.md § 5): `wev` in the town, the
 /// `riftGo` action and lore quest progress.
-const kProtocolVersion = 70;
+/// 71: renown and town events (renown_town_growth.md § 7): `rn` in the
+/// town, `tourney` in the session, actions `tev` and `tourney`.
+const kProtocolVersion = 71;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

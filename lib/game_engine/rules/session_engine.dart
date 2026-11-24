@@ -1,4 +1,6 @@
 import 'oficio_storage_rules.dart';
+import 'renown_rules.dart';
+import '../data/renown_catalog.dart';
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
@@ -211,6 +213,16 @@ class SessionEngine {
     return _maps[key] = MapGenerator.zone(WorldEventRules.riftZone(r), seed);
   }
 
+  /// The arena of a town tournament (renown_town_growth.md § 6.2).
+  GameMap _tourneyMap(TownState town, TownEventDef d, int seed) {
+    final key = 'tourney:${d.id}:$seed';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] =
+        MapGenerator.zone(RenownRules.tourneyZone(town, d), seed);
+  }
+
   GameMap _abyssMap(AbyssBossDef d, int seed) {
     final key = 'abyss:${d.number}:$seed';
     final hit = _maps[key];
@@ -249,6 +261,10 @@ class SessionEngine {
     if (id == WorldEventRules.riftMissionId) {
       final r = WorldEventRules.riftOf(s.town.events, s.rift);
       return r == null ? null : WorldEventRules.riftMission(r.$2);
+    }
+    if (id == RenownRules.tourneyMissionId) {
+      final d = kRenown.event(s.tourney ?? '');
+      return d == null ? null : RenownRules.tourneyMission(s.town, d);
     }
     return catalog.mission(id);
   }
@@ -494,6 +510,11 @@ class SessionEngine {
     if (m.missionId == WorldEventRules.riftMissionId) {
       final r = WorldEventRules.riftOf(s.town.events, s.rift);
       if (r != null) return _riftMap(r.$2, m.seed);
+    }
+    if (m.missionId == RenownRules.tourneyMissionId) {
+      if (kRenown.event(s.tourney ?? '') case final d?) {
+        return _tourneyMap(s.town, d, m.seed);
+      }
     }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
   }
@@ -803,6 +824,13 @@ class _Op {
   (ActiveWorldEvent, EchoRiftBoss)? get _rift =>
       s.mission?.missionId == WorldEventRules.riftMissionId
           ? WorldEventRules.riftOf(s.town.events, s.rift)
+          : null;
+
+  /// The town tournament being fought (`null` outside one;
+  /// renown_town_growth.md § 6.2).
+  TownEventDef? get _tourney =>
+      s.mission?.missionId == RenownRules.tourneyMissionId
+          ? kRenown.event(s.tourney ?? '')
           : null;
 
   /// El Jefe del Abismo que se está peleando (`null` fuera de uno).
@@ -1557,6 +1585,10 @@ class _Op {
         return !tutorialLocked && _proposeAbyss(p, a.boss);
       case ProposeRiftAction():
         return !tutorialLocked && _proposeRift(p, a.uid);
+      case ScheduleTownEventAction():
+        return !tutorialLocked && _scheduleTownEvent(p, a.id);
+      case ProposeTourneyAction():
+        return !tutorialLocked && _proposeTourney(p, a.id);
 
       // TUTORIAL (combat_tutorial.md).
       case StartTutorialAction():
@@ -1770,7 +1802,8 @@ class _Op {
     }
     s.town = s.town.copyWith(
         events: WorldEventRules.riftCleared(s.town.events, a.uid,
-            [for (final p in players) if (!p.isCompanion) p.id]));
+            [for (final p in players) if (!p.isCompanion) p.id]),
+        renown: RenownRules.riftWon(s.town.renown));
     say('¡Grieta de eco cerrada! +$gold de oro para cada uno.');
   }
 
@@ -1814,9 +1847,123 @@ class _Op {
       p.profile = p.profile.copyWith(credits: p.profile.credits + q.gold);
     }
     final r = s.town.resident(q.npc);
-    s.town = s.town.withResident(r.copyWith(rep: r.rep + q.rep));
+    s.town = s.town
+        .withResident(r.copyWith(rep: r.rep + q.rep))
+        .copyWith(renown: RenownRules.loreDone(s.town.renown));
     say('Historia cumplida: ${d.title.source}. +${q.gold} de oro y '
         '+${q.rep} de relación con ${biomeNpcName(q.npc)}.');
+  }
+
+  // ---------------- Torneo del pueblo (renown_town_growth.md § 6) --------
+
+  /// `ScheduleTownEventAction`: accept a resident's proposal; it happens
+  /// `delay` days later.
+  bool _scheduleTownEvent(SessionPlayer p, String id) {
+    if (p.isCompanion || s.mode != SessionMode.lobby) return false;
+    final next = RenownRules.schedule(s.town, id, s.town.sky.day);
+    final d = kRenown.event(id);
+    if (next == null || d == null) return false;
+    s.town = next;
+    say('${d.accept.source} (${biomeNpcName(d.proposer)})');
+    return true;
+  }
+
+  /// `ProposeTourneyAction`: sign up on the tournament's day, in town.
+  bool _proposeTourney(SessionPlayer p, String id) {
+    final d = kRenown.event(id);
+    if (s.mode != SessionMode.lobby ||
+        s.vote != null ||
+        p.isCompanion ||
+        d == null ||
+        d.kind != TownEventKind.tournament ||
+        d.rounds.isEmpty ||
+        (s.place ?? kPueblo) != kPueblo ||
+        RenownRules.live(s.town, d.proposer, s.town.sky.day)?.id != id) {
+      return false;
+    }
+    s
+      ..tourney = id
+      ..vote = MissionVote(RenownRules.tourneyMissionId, p.name, {p.id});
+    say('${p.name} se anota en ${d.title.source}.$_voteCall');
+    return true;
+  }
+
+  /// Starts the voted tournament: three fighters in the arena; only the
+  /// first one is awake, the last one is the champion (boss).
+  void _startTourney() {
+    final d = kRenown.event(s.tourney ?? '');
+    if (d == null || d.rounds.isEmpty) {
+      say('El torneo se suspendió.');
+      s
+        ..tourney = null
+        ..mode = SessionMode.lobby;
+      return;
+    }
+    final seed = e._seeds();
+    final map = e._tourneyMap(s.town, d, seed);
+    final def = RenownRules.tourneyMission(s.town, d);
+    final z = RenownRules.tourneyZone(s.town, d);
+    final sp = map.floors.first.spawn;
+    final last = d.rounds.length - 1;
+    final fighters = [
+      for (var k = 0; k <= last; k++)
+        FieldEnemy(
+          id: k,
+          // Same spot: only one is awake at a time.
+          x: sp.x + 24,
+          y: sp.y,
+          homeX: sp.x + 24,
+          homeY: sp.y,
+          group: d.rounds[k],
+          boss: k == last,
+          alive: k == 0,
+        ),
+    ];
+    s.mission = MissionRun(
+      missionId: def.id,
+      seed: seed,
+      goal: 0,
+      objectives: [],
+      enemies: fighters,
+      items: [],
+      open: true,
+      zoneLevel: z.maxLevel,
+      zone: def.zone,
+      floors: 1,
+      levels: [z.maxLevel],
+    );
+    _enterField(def, seed);
+    say('¡Empieza ${d.title.source}! Ronda 1 de ${d.rounds.length}.');
+    final first = players.firstOrNull;
+    if (first != null) {
+      startBattle(fighters.first, first, kind: EncounterKind.firstStrike);
+    }
+  }
+
+  /// A round won: the next fighter wakes up at the arena entrance.
+  void _tourneyNext(MissionRun m, FieldEnemy beaten) {
+    final next = m.enemies.where((x) => x.id == beaten.id + 1).firstOrNull;
+    if (next == null) return;
+    next
+      ..alive = true
+      ..aggro = true;
+    say('Ronda ${next.id + 1}: ¡sale el siguiente luchador!');
+  }
+
+  /// Tournament over (won or lost): prize, renown and the cooldown.
+  void _tourneyEnded(TownEventDef d, bool won) {
+    s.town = s.town.copyWith(
+        renown: RenownRules.held(s.town.renown, d.id, s.town.sky.day,
+            won: won));
+    if (!won) {
+      say('Perdiste en ${d.title.source}. Habrá revancha.');
+      return;
+    }
+    for (final p in players) {
+      if (p.isCompanion) continue;
+      p.profile = p.profile.copyWith(credits: p.profile.credits + d.prize);
+    }
+    say('¡Ganaste ${d.title.source}! +${d.prize} de oro para cada uno.');
   }
 
   // ---------------- Jefes del Abismo (abyss_bosses.md § 1–3) ------------
@@ -2592,6 +2739,9 @@ class _Op {
     final abyss = _abyss;
     if (abyss != null) return abyss.level;
     if (_rift case final r?) return WorldEventRules.riftZone(r.$2).maxLevel;
+    if (_tourney case final d?) {
+      return RenownRules.tourneyZone(s.town, d).maxLevel;
+    }
     return _zoneDef()?.maxLevel;
   }
 
@@ -2613,6 +2763,9 @@ class _Op {
     final abyss = _abyss;
     if (abyss != null) return abyss.level;
     if (_rift case final r?) return WorldEventRules.riftZone(r.$2).maxLevel;
+    if (_tourney case final d?) {
+      return RenownRules.tourneyZone(s.town, d).maxLevel;
+    }
     final z = _zoneDef();
     if (z == null) return 0;
     if (en.boss) return ZoneRules.bossLevel(z);
@@ -2717,6 +2870,10 @@ class _Op {
     }
     if (missionId == WorldEventRules.riftMissionId) {
       _startRift();
+      return;
+    }
+    if (missionId == RenownRules.tourneyMissionId) {
+      _startTourney();
       return;
     }
     final m = catalog.mission(missionId);
@@ -4265,6 +4422,7 @@ class _Op {
             .add(ObjectiveProgressEvent(ObjectiveKind.kills, m.kills, k.goal));
       }
       _lootAll(LootSource.battle, lx, ly, level: lootLevel);
+      if (_tourney != null && fe != null) _tourneyNext(m, fe);
     }
     updateOpen();
     for (final p in players) {
@@ -4336,12 +4494,15 @@ class _Op {
     final trial = _trial;
     final abyss = _abyss;
     final rift = _rift;
-    // Un Eco, una Prueba, un Jefe del Abismo o una grieta usan el tipo de
-    // zona solo para el mapa: no desbloquean zonas.
+    final tourney = _tourney;
+    if (tourney != null) _tourneyEnded(tourney, ok);
+    // Un Eco, una Prueba, un Jefe del Abismo, una grieta o un torneo usan
+    // el tipo de zona solo para el mapa: no desbloquean zonas.
     final zone = eco != null ||
             trial != null ||
             abyss != null ||
             rift != null ||
+            tourney != null ||
             def.zone == 0
         ? null
         : catalog.zone(def.zone);
@@ -4365,6 +4526,11 @@ class _Op {
       // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
       if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
       if (zone != null) residentWin(zone.index);
+      // Renown (renown_town_growth.md § 1): the zone and its boss.
+      if (zone != null) {
+        s.town = s.town
+            .copyWith(renown: RenownRules.zoneWon(s.town.renown, zone.index));
+      }
       for (final d in firsts.entries) {
         drops[d.key] = d.value.item!.baseId;
         events.add(WeaponDropEvent(d.key, d.value.item!.baseId, 'mission'));
@@ -4552,6 +4718,7 @@ class _Op {
       ..abyss = null
       ..abyssOwner = null
       ..rift = null
+      ..tourney = null
       ..mode = SessionMode.lobby
       // De una mazmorra se vuelve siempre al pueblo (overworld_biomes.md
       // § 4): ahí está el comerciante.

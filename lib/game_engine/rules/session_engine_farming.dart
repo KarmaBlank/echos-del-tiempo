@@ -168,11 +168,16 @@ extension _FarmingOp on _Op {
     // The notice line is added by every peer in its own language when
     // the event shows up in the town (SessionController).
     final (next, _) = WorldEventRules.onDay(ev, day, kWorldEvents,
-        ctx: WorldEventContext(residents: {
-          for (final r in s.town.residents.values)
-            if (r.invited) r.npc
-        }));
+        ctx: WorldEventContext(
+            residents: {
+              for (final r in s.town.residents.values)
+                if (r.invited) r.npc
+            },
+            renown: RenownRules.score(s.town)));
     if (next != s.town.events) s.town = s.town.copyWith(events: next);
+    // Town events whose day passed unplayed (renown_town_growth.md § 6.1).
+    final rn = RenownRules.expire(s.town.renown, day);
+    if (!identical(rn, s.town.renown)) s.town = s.town.copyWith(renown: rn);
   }
 
   /// Misión ganada: los cultivos dan un salto y los peces pueden criar.

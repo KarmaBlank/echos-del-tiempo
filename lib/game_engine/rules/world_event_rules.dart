@@ -17,7 +17,14 @@ import 'mulberry32.dart';
 /// What the roll needs to know about the world (world_events.md § 2).
 class WorldEventContext {
   const WorldEventContext(
-      {this.residents = const {}, this.openBiomes, this.extraCondition});
+      {this.residents = const {},
+      this.openBiomes,
+      this.extraCondition,
+      this.renown = 0});
+
+  /// World renown (renown_town_growth.md § 4.3): events with a higher
+  /// `minRenown` stay out of the roll.
+  final int renown;
 
   /// Residents living in town.
   final Set<String> residents;
@@ -91,6 +98,7 @@ abstract final class WorldEventRules {
   static bool _eligible(WorldEventDef d, int day, WorldEventsState s,
       WorldEventContext ctx) {
     if (!d.enabled || d.weight <= 0 || d.minDay > day) return false;
+    if (d.minRenown > ctx.renown) return false;
     if (d.resident != null && !ctx.residents.contains(d.resident)) return false;
     if (s.active.any((a) => a.def == d.id)) return false;
     if (d.category == WorldEventCategory.lore && s.seen.contains(d.id)) {

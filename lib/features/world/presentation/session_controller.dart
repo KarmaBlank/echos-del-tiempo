@@ -33,6 +33,8 @@ import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
 import '../../../game_engine/data/world_events_catalog.dart';
+import '../../../game_engine/models/localized_text.dart';
+import '../../../game_engine/rules/renown_rules.dart';
 import '../../../game_engine/rules/world_event_rules.dart';
 import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
 import '../../../game_engine/rules/helper_rules.dart';
@@ -1466,6 +1468,18 @@ class SessionController extends StateNotifier<SessionView?> {
   void openWorldEvent(ActiveWorldEvent a) {
     worldEventUid = a.uid;
     openPanel(WorldPanel.worldEvent);
+  }
+
+  /// Accept a resident's town event proposal (renown_town_growth.md
+  /// § 6.1; the host schedules it).
+  bool scheduleTownEvent(String id) =>
+      _apply(ScheduleTownEventAction(id));
+
+  /// INSCRIBIRSE in the town tournament [id] on its day (§ 6.2).
+  bool signUpTourney(String id) {
+    closePanel();
+    stopFishing();
+    return _apply(ProposeTourneyAction(id));
   }
 
   /// ENTRAR to the rift [uid] (host decides; gathers like missions).
@@ -3927,6 +3941,9 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   void _step(SessionStep step) {
+    // Deed tokens for every shown text (renown_town_growth.md § 3).
+    LocalizedText.tokens = RenownRules.tokens(step.state.town,
+        worldName: step.state.worldName);
     _announceWorldEvents(_s?.town.events, step.state.town.events);
     _s = step.state;
     _saveRun();

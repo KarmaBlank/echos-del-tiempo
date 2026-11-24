@@ -13,6 +13,7 @@ import 'dungeon_rules.dart';
 import 'eco_portal_rules.dart';
 import 'session_engine.dart';
 import 'trial_rules.dart';
+import 'renown_rules.dart';
 import 'world_event_rules.dart';
 import 'zone_rules.dart';
 
@@ -162,6 +163,7 @@ class WorldEngine {
       a is ProposeTrialAction ||
       a is ProposeAbyssAction ||
       a is ProposeRiftAction ||
+      a is ProposeTourneyAction ||
       a is StartTutorialAction;
 
   /// IR CON (free_movement.md § 2.5): desde [from] a [to] solo fuera de
@@ -287,6 +289,7 @@ class _W {
       ..abyss = null
       ..abyssOwner = null
       ..rift = null
+      ..tourney = null
       ..tutorial = null
       ..townEditor = null
       ..place = place
@@ -493,6 +496,7 @@ class _W {
         ProposeTrialAction(:final trial) => (GatherKind.trial, '$trial'),
         ProposeAbyssAction(:final boss) => (GatherKind.abyss, '$boss'),
         ProposeRiftAction(:final uid) => (GatherKind.rift, uid),
+        ProposeTourneyAction(:final id) => (GatherKind.tourney, id),
         _ => null,
       };
 
@@ -507,6 +511,7 @@ class _W {
             null => null,
           },
         GatherKind.rift => ProposeRiftAction(g.target),
+        GatherKind.tourney => ProposeTourneyAction(g.target),
       };
 
   Iterable<String> get _humanIds =>
@@ -649,6 +654,8 @@ class _W {
           m.missionId == AbyssRules.missionId && r.abyss == boss,
         ProposeRiftAction(:final uid) =>
           m.missionId == WorldEventRules.riftMissionId && r.rift == uid,
+        ProposeTourneyAction(:final id) =>
+          m.missionId == RenownRules.tourneyMissionId && r.tourney == id,
         _ => false,
       };
       if (hit) return e.key;

@@ -487,6 +487,20 @@ class ProposeRiftAction extends SessionAction {
   const ProposeRiftAction(this.uid);
 }
 
+/// `tev` (protocol 71, renown_town_growth.md § 6.1): accept the town
+/// event [id] a resident proposed (it is scheduled a few days ahead).
+class ScheduleTownEventAction extends SessionAction {
+  final String id;
+  const ScheduleTownEventAction(this.id);
+}
+
+/// `tourney` (protocol 71, renown_town_growth.md § 6.2): sign up for the
+/// town tournament [id] on its day.
+class ProposeTourneyAction extends SessionAction {
+  final String id;
+  const ProposeTourneyAction(this.id);
+}
+
 /// Solo desarrollo (`FeatureFlags.devTools`): [kind] `frag` da 5 de cada
 /// Fragmento y 3 Esencias; `kills` marca los 4 jefes como vencidos.
 class DevAbyssAction extends SessionAction {

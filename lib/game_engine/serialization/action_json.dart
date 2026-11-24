@@ -147,6 +147,8 @@ abstract final class ActionJson {
         // Jefes del Abismo v0.8 (abyss_bosses.md § 5).
         ProposeAbyssAction() => {'t': 'abyss', 'n': a.boss},
         ProposeRiftAction() => {'t': 'rift', 'u': a.uid},
+        ScheduleTownEventAction() => {'t': 'tev', 'u': a.id},
+        ProposeTourneyAction() => {'t': 'tourney', 'u': a.id},
         // TUTORIAL v0.9 (combat_tutorial.md § 6).
         StartTutorialAction() => {'t': 'tut', 'cmp': a.companions},
         TutorialAckAction() => {'t': 'tutOk'},
@@ -401,6 +403,10 @@ abstract final class ActionJson {
         return ProposeAbyssAction(j.integer('n'));
       case 'rift':
         return ProposeRiftAction(j.str('u'));
+      case 'tev':
+        return ScheduleTownEventAction(j.str('u'));
+      case 'tourney':
+        return ProposeTourneyAction(j.str('u'));
       case 'tut':
         return StartTutorialAction(companions: j['cmp'] != false);
       case 'tutOk':

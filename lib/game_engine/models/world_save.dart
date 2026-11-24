@@ -8,6 +8,7 @@ import 'npc_bond.dart';
 import 'resident.dart';
 import 'sky.dart';
 import 'town_build.dart';
+import 'renown.dart';
 import 'world_event.dart';
 
 export 'dungeon_save.dart';
@@ -54,10 +55,15 @@ class TownState {
       this.daily = const {},
       this.bonds = const {},
       this.dungeons = const {},
-      this.events = const WorldEventsState()});
+      this.events = const WorldEventsState(),
+      this.renown = const RenownState()});
 
   /// World events (world_events.md § 1): travel and are saved (`wev`).
   final WorldEventsState events;
+
+  /// Renown milestones and town events (renown_town_growth.md § 1):
+  /// travel and are saved (`rn`).
+  final RenownState renown;
 
   /// Mazmorras de zona del mundo (persistent_dungeons.md), por id de
   /// misión. Solo del anfitrión: se guarda (`dg`) pero no viaja en
@@ -229,6 +235,7 @@ class TownState {
     Map<String, NpcBond>? bonds,
     Map<String, DungeonSave>? dungeons,
     WorldEventsState? events,
+    RenownState? renown,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -245,7 +252,8 @@ class TownState {
         daily: daily ?? this.daily,
         bonds: bonds ?? this.bonds,
         dungeons: dungeons ?? this.dungeons,
-        events: events ?? this.events);
+        events: events ?? this.events,
+        renown: renown ?? this.renown);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -275,6 +283,7 @@ class TownState {
           ],
         if (daily.isNotEmpty) 'dy': daily,
         if (!events.isEmpty) 'wev': events.toJson(),
+        if (!renown.isEmpty) 'rn': renown.toJson(),
         if (bonds.isNotEmpty)
           'nat': [
             for (final k in (bonds.keys.toList()..sort())) bonds[k]!.toJson()
@@ -366,6 +375,7 @@ class TownState {
           : const [],
       sky: SkyState.fromJson(raw['sky']),
       events: WorldEventsState.fromJson(raw['wev']),
+      renown: RenownState.fromJson(raw['rn']),
       residents: raw['res'] is List
           ? {
               for (final v in raw['res'] as List)

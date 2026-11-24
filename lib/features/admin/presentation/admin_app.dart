@@ -12,6 +12,8 @@ import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
 import 'editor/events_editor_controller.dart';
 import 'editor/events_page.dart';
+import 'editor/renown_editor_controller.dart';
+import 'editor/renown_page.dart';
 import 'editor/sprite_editor_controller.dart';
 import 'editor/sprites_page.dart';
 import '../../screen_editor/presentation/screen_editor_controller.dart';
@@ -20,7 +22,16 @@ import 'monitoring_page.dart';
 import 'patch_page.dart';
 
 /// Áreas del Editor (docs/specs/game_editor.md § 6).
-enum EditorArea { monitoring, balance, visuals, layout, screens, npcs, events }
+enum EditorArea {
+  monitoring,
+  balance,
+  visuals,
+  layout,
+  screens,
+  npcs,
+  events,
+  renown
+}
 
 /// El Editor del juego (game_editor.md; antes "admin de balance",
 /// balance_admin.md § 5): Monitoreo · Balance · Visuales. Tema Material
@@ -36,6 +47,7 @@ class AdminApp extends StatelessWidget {
       this.screens,
       this.npcs,
       this.events,
+      this.renown,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
@@ -51,6 +63,9 @@ class AdminApp extends StatelessWidget {
 
   /// EVENTOS (world_events.md § 7; `null`: sin área).
   final EventsEditorController? events;
+
+  /// RENOMBRE (renown_town_growth.md § 8; `null`: sin área).
+  final RenownEditorController? renown;
 
   /// Visuales → Sprites (`null`: área sin catálogo, p. ej. tests de
   /// balance).
@@ -83,6 +98,7 @@ class AdminApp extends StatelessWidget {
             screens: screens,
             npcs: npcs,
             events: events,
+            renown: renown,
             animateFx: animateFx,
             initialArea: initialArea,
             initialVisualTab: initialVisualTab),
@@ -99,6 +115,7 @@ class AdminShell extends StatefulWidget {
       this.screens,
       this.npcs,
       this.events,
+      this.renown,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
@@ -115,6 +132,9 @@ class AdminShell extends StatefulWidget {
 
   /// EVENTOS (world_events.md § 7; `null`: sin área).
   final EventsEditorController? events;
+
+  /// RENOMBRE (renown_town_growth.md § 8; `null`: sin área).
+  final RenownEditorController? renown;
 
   /// Visuales → Animaciones (`null`: sin catálogo de fx).
   final FxEditorController? animations;
@@ -157,6 +177,7 @@ class _AdminShellState extends State<AdminShell> {
       case EditorArea.screens:
       case EditorArea.npcs:
       case EditorArea.events:
+      case EditorArea.renown:
         break;
     }
   }
@@ -171,6 +192,7 @@ class _AdminShellState extends State<AdminShell> {
         if (widget.animations != null) widget.animations!,
         if (widget.npcs != null) widget.npcs!,
         if (widget.events != null) widget.events!,
+        if (widget.renown != null) widget.renown!,
       ]),
       builder: (context, _) {
         final pending = c.pendingChanges.length;
@@ -197,6 +219,8 @@ class _AdminShellState extends State<AdminShell> {
                       badge: widget.npcs?.dirty ?? false ? '!' : null),
                   DsTab('EVENTOS',
                       badge: widget.events?.dirty ?? false ? '!' : null),
+                  DsTab('RENOMBRE',
+                      badge: widget.renown?.dirty ?? false ? '!' : null),
                 ],
               ),
               actions: [
@@ -243,6 +267,11 @@ class _AdminShellState extends State<AdminShell> {
         return ev == null
             ? Center(child: Text('SIN ÁREA DE EVENTOS', style: DsText.detail()))
             : EventsPage(c: ev);
+      case EditorArea.renown:
+        final rn = widget.renown;
+        return rn == null
+            ? Center(child: Text('SIN ÁREA DE RENOMBRE', style: DsText.detail()))
+            : RenownPage(c: rn);
       case EditorArea.layout:
         final l = widget.layouts;
         return l == null
