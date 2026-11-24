@@ -243,3 +243,9 @@ toma ese elemento: reacciona como un golpe de habilidad de ese elemento
 y sus pilas (1 cada 2 básicos) cuentan para las reacciones y las
 Convergencias. El arma no provoca una Convergencia sola: prepara y la
 habilidad detona. Habilidades del mismo elemento que el arma: +8 %.
+
+## 11. Convergencias enemigas
+
+Los enemigos también preparan y detonan Convergencias sobre los
+jugadores, usando solo los elementos que tienen. Reglas, topes e IA en
+combo_balance.md § 4.1.

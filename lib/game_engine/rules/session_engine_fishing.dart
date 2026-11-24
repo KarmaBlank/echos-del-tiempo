@@ -14,9 +14,23 @@ class FishPending {
   final WaterLootKind kind;
 }
 
+/// One player's auto-fishing on the host (fishing.md § 6).
+class AutoFishState {
+  AutoFishState(this.nextAt);
+
+  /// Session time of the next bite roll.
+  double nextAt;
+
+  /// Fish caught since it was turned on.
+  int caught = 0;
+}
+
 /// Estado de pesca del anfitrión (no viaja en el snapshot).
 class FishingHostState {
   final pending = <String, FishPending>{};
+
+  /// Players auto-fishing (fishing.md § 6).
+  final auto = <String, AutoFishState>{};
   final lastCast = <String, double>{};
 
   /// XP de personaje ganada pescando en esta estadía en el pueblo.
@@ -29,12 +43,14 @@ class FishingHostState {
   void newStay([Iterable<String>? ids]) {
     if (ids == null) {
       pending.clear();
+      auto.clear();
       charXp.clear();
       announced.clear();
       return;
     }
     for (final id in ids) {
       pending.remove(id);
+      auto.remove(id);
       charXp.remove(id);
       announced.remove(id);
     }
@@ -57,6 +73,13 @@ extension _FishingOp on _Op {
 
       case FishLineAction(:final line):
         return _fishLine(p, line);
+      case FishAutoAction(:final on, :final reason):
+        if (!on) {
+          if (!_f.auto.containsKey(p.id)) return false;
+          stopAutoFish(p, reason);
+          return true;
+        }
+        return _autoFishOn(p);
       case SellFishAction(:final species, :final materials):
         if (!_inTown(p)) return false;
         final r = FishingRules.sell(p.profile,
@@ -93,12 +116,52 @@ extension _FishingOp on _Op {
 
   bool _fishBite(SessionPlayer p, double power) {
     if (!_inTown(p) || !FishingRules.plausible(p.profile)) return false;
+    // Auto-fishing (§ 6) does its own bites.
+    if (_f.auto.containsKey(p.id)) return false;
     // Cualquier orilla del lago (v0.22.2), no solo los muelles.
     if (!FishingCast.nearWater(e.mapFor(s), p.x, p.y)) return false;
     final last = _f.lastCast[p.id];
     if (last != null && s.time - last < _ft.d('minCastSec')) return false;
     _f.lastCast[p.id] = s.time;
-    final bonus = FishingRules.rodBonus(p.profile);
+    final w = _waterSpot(p, power);
+    final bonus = w.bonus, dock = w.dock, spot = w.spot;
+    // Botín del agua (§ 8): a veces no es un pez.
+    final kind =
+        FishingRules.rollLoot(_rand, p.profile,
+            luck: bonus.rare + dock + (spot ? _ft.d('spotLoot') : 0.0));
+    final FishCatch fish;
+    switch (kind) {
+      case WaterLootKind.fish:
+        fish = FishingRules.roll(_rand, w.table,
+            rareBonus: w.rare, pity: p.profile.life.pity);
+      case WaterLootKind.basura:
+        final junk = w.junk;
+        final id = junk[(_rand() * junk.length).floor() % junk.length];
+        final d = kFish[id]!;
+        fish =
+            FishCatch(id, d.minCm + (_rand() * (d.maxCm - d.minCm)).round());
+      default:
+        fish = const FishCatch(kWaterBundle, 0);
+    }
+    _f.pending[p.id] = FishPending(fish, s.time, kind);
+    events.add(FishBiteEvent(p.id, fish.species, fish.sizeCm));
+    if (_f.announced.add(p.id)) say('${p.name} se puso a pescar.');
+    return true;
+  }
+
+  /// The water [p] fishes in: its table, junk and rarity bonus.
+  /// [passive] scales the rod / tree bonuses (auto-fishing, § 6).
+  ({
+    List<String> table,
+    List<String> junk,
+    double rare,
+    double dock,
+    bool spot,
+    ({double bite, double zone, double rare}) bonus,
+  }) _waterSpot(SessionPlayer p, double power, {double passive = 1}) {
+    final rb = FishingRules.rodBonus(p.profile);
+    final bonus =
+        (bite: rb.bite * passive, zone: rb.zone * passive, rare: rb.rare * passive);
     final map = e.mapFor(s);
     // Exterior de bioma (overworld_biomes.md § 3.1): su lago y su tabla.
     final biome = biomeLayout(s.place);
@@ -125,33 +188,91 @@ extension _FishingOp on _Op {
         s.town.sky,
         _rand);
     final junk = wild ? biome.junk : kWaterJunk;
-    // Botín del agua (§ 8): a veces no es un pez.
-    final kind =
-        FishingRules.rollLoot(_rand, p.profile,
-            luck: bonus.rare + dock + (spot ? _ft.d('spotLoot') : 0.0));
-    final FishCatch fish;
-    switch (kind) {
-      case WaterLootKind.fish:
-        fish = FishingRules.roll(_rand, table,
-            rareBonus: rare, pity: p.profile.life.pity);
-      case WaterLootKind.basura:
-        final id = junk[(_rand() * junk.length).floor() % junk.length];
-        final d = kFish[id]!;
-        fish =
-            FishCatch(id, d.minCm + (_rand() * (d.maxCm - d.minCm)).round());
-      default:
-        fish = const FishCatch(kWaterBundle, 0);
+    return (
+      table: table,
+      junk: junk,
+      rare: rare,
+      dock: dock,
+      spot: spot,
+      bonus: bonus,
+    );
+  }
+
+  // ---------------- auto-fishing (fishing.md § 6) ----------------
+
+  TuningDef get _at => tuning(TuningId.town);
+
+  /// Seconds until the next auto bite: the manual wait with the bonuses
+  /// at `autoPassiveMult`, × `autoWaitMult`.
+  double _autoWait(SessionPlayer p) {
+    final bite =
+        FishingRules.rodBonus(p.profile).bite * _at.d('autoPassiveMult');
+    return FishingRules.biteDelay(_rand(), bite) *
+        math.max(0.1, _at.d('autoWaitMult'));
+  }
+
+  /// `fAuto {on}`: with the rod out at the water, the host fishes for [p].
+  bool _autoFishOn(SessionPlayer p) {
+    final line = p.fishLine;
+    if (line == null ||
+        _f.auto.containsKey(p.id) ||
+        !_inTown(p) ||
+        !FishingRules.plausible(p.profile) ||
+        !FishingCast.nearWater(e.mapFor(s), p.x, p.y)) {
+      return false;
     }
-    _f.pending[p.id] = FishPending(fish, s.time, kind);
-    events.add(FishBiteEvent(p.id, fish.species, fish.sizeCm));
-    if (_f.announced.add(p.id)) say('${p.name} se puso a pescar.');
+    _f.pending.remove(p.id);
+    p.fishLine = line.withAuto(true);
+    _f.auto[p.id] = AutoFishState(s.time + _autoWait(p));
     return true;
+  }
+
+  /// Stops [p]'s auto-fishing (if on) and tells everyone why.
+  void stopAutoFish(SessionPlayer p, AutoFishStop why) {
+    final st = _f.auto.remove(p.id);
+    if (st == null) return;
+    if (p.fishLine case final l?) p.fishLine = l.withAuto(false);
+    events.add(FishAutoStoppedEvent(p.id, why, st.caught));
+  }
+
+  /// Every host tick: stop whoever can't keep fishing, roll the bites
+  /// that are due. Storm (`stormBite`) still applies.
+  void autoFishTick() {
+    if (_f.auto.isEmpty) return;
+    for (final id in [..._f.auto.keys]) {
+      final p = s.players[id];
+      final st = _f.auto[id]!;
+      if (p == null) {
+        _f.auto.remove(id);
+        continue;
+      }
+      if (!_inTown(p)) {
+        stopAutoFish(p,
+            s.mode == SessionMode.battle ? AutoFishStop.battle : AutoFishStop.left);
+        continue;
+      }
+      if (p.fishLine == null) {
+        stopAutoFish(p, AutoFishStop.moved);
+        continue;
+      }
+      if (s.time < st.nextAt) continue;
+      st.nextAt = s.time + _autoWait(p);
+      if (_rand() >= SkyRules.biteChance(s.town.sky)) continue;
+      final w = _waterSpot(p, 0, passive: _at.d('autoPassiveMult'));
+      final fish = FishingRules.roll(_rand, w.table,
+          rareBonus: w.rare,
+          noLegend: true,
+          epicMult: _at.d('autoEpicMult'));
+      st.caught++;
+      _grantFish(p, fish, auto: true, log: true);
+    }
   }
 
   /// `fLn`: lo que los demás ven de la pesca (caña, línea, boya). Solo
   /// en el pueblo, cerca del agua y con la boya en un tile del lago.
   bool _fishLine(SessionPlayer p, FishLine? line) {
     if (line == null) {
+      stopAutoFish(p, AutoFishStop.moved);
       p.fishLine = null;
       return true;
     }
@@ -162,7 +283,7 @@ extension _FishingOp on _Op {
         !FishingCast.plausibleBobber(map, p.x, p.y, line.bx, line.by)) {
       return false;
     }
-    p.fishLine = line;
+    p.fishLine = line.withAuto(_f.auto.containsKey(p.id));
     return true;
   }
 
@@ -246,7 +367,13 @@ extension _FishingOp on _Op {
       {bool auto = false, bool log = false}) {
     final lvl0 = FishingRules.level(p.profile);
     final first = log && !p.profile.life.discovered(c.species);
-    var prof = FishingRules.addCatch(p.profile, c, auto: auto);
+    // Auto-fishing (§ 6): XP × `autoXpMult`, tree at `autoPassiveMult`,
+    // pity untouched.
+    final xm = auto ? _at.d('autoXpMult') : 1.0;
+    var prof = FishingRules.addCatch(p.profile, c,
+        keepPity: auto,
+        xpMult: xm,
+        treeMult: auto ? _at.d('autoPassiveMult') : 1.0);
     if (log) {
       prof = prof.copyWith(life: prof.life.logCatch(c.species, c.sizeCm));
     }
@@ -262,7 +389,7 @@ extension _FishingOp on _Op {
     }
     // XP de personaje con tope por estadía (town_loop.md § 11c).
     final used = _f.charXp[p.id] ?? 0;
-    final cxp = math.min(FishingRules.charXp(c, auto: auto),
+    final cxp = math.min((FishingRules.charXp(c) * xm).round(),
         math.max(0, _ft.i('charXpCap') - used));
     if (cxp > 0) {
       _f.charXp[p.id] = used + cxp;
@@ -273,7 +400,7 @@ extension _FishingOp on _Op {
     _profileChange(p, prof, gain: true);
     events.add(FishCaughtEvent(p.id, c.species, c.sizeCm, auto: auto));
     say('${p.name} pescó ${c.def.name} (${c.sizeCm} cm, ${c.rarity.label})'
-        '${auto ? ' con la red' : ''}.');
+        '${auto ? ' (auto-pesca)' : ''}.');
     if (first) {
       say('Especie nueva en el bestiario de pesca de ${p.name}: '
           '${c.def.name}.');

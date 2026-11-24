@@ -25,6 +25,7 @@ import 'abyss_rules.dart';
 import 'display_names.dart';
 import 'dual_rules.dart';
 import 'encounter_rules.dart';
+import 'enemy_combo_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
 import 'skill_requirements.dart';
@@ -36,6 +37,7 @@ import 'ult_rules.dart';
 
 part 'battle_engine_abyss.dart';
 part 'battle_engine_summons.dart';
+part 'battle_engine_enemy_combo.dart';
 
 /// Fuente de azar: devuelve un número en [0, 1), igual que `Math.random`.
 /// Los tests inyectan una secuencia fija para que todo sea reproducible.
@@ -3124,7 +3126,10 @@ class _Turn {
     }
 
     int capped(Combatant c, double raw) {
-      final cap = def.capFor(elite: c.elite, boss: c.boss);
+      // Enemy Convergences: a player has its own, survivable cap.
+      final cap = c.isPlayer
+          ? EnemyComboTuning.playerCap
+          : def.capFor(elite: c.elite, boss: c.boss);
       final d = cap > 0 ? math.min(raw, c.maxHp * cap) : raw;
       return d <= 0 ? 0 : math.max(1, jsRound(d));
     }
@@ -4572,7 +4577,13 @@ class _Turn {
     // Invocaciones del grupo: el Gólem provoca (summoner.md § 3).
     if (_summonIntercept(e)) return;
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
-    final pick0 = taunter ?? alive[(_rand() * alive.length).floor()];
+    final inf = _inflictsOf(e);
+    // Elemento del golpe (v0.7): reacciones sobre los jugadores.
+    final el = enemyAttackElement(engine.catalog.enemies[e.enemyType], inf);
+    // Enemy Convergences: prime / detonate the primed player.
+    final pick0 = taunter ??
+        _comboPick(e, alive, el, inf) ??
+        alive[(_rand() * alive.length).floor()];
     if (taunter != null) taunter.taunt--;
     final protector = alive.where((p) => p.protecting).firstOrNull;
     Combatant victim(Combatant q) =>
@@ -4581,9 +4592,6 @@ class _Turn {
     final protText = protector != null && pick0 != protector
         ? _l('protected', {'a': protector.name, 'b': pick0.name})
         : LogLine.empty;
-    final inf = _inflictsOf(e);
-    // Elemento del golpe (v0.7): reacciones sobre los jugadores.
-    final el = enemyAttackElement(engine.catalog.enemies[e.enemyType], inf);
     // Devorador en fase 2: Colapso Temporal cada `every` acciones.
     final areaEvery =
         mech != null && mech.kind == BossMechanicKind.phases && e.phase >= 2

@@ -158,7 +158,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 66: enemy Silence and player break (combat.md § "Silencio",
 /// combo_balance.md § 5.4): `sil` on combatants; players carry `brk`,
 /// `brkN`, `vul`, `brkS`.
-const kProtocolVersion = 66;
+/// 67: auto-fishing is back (fishing.md § 6): `fAuto {on?, r?}` action,
+/// `fAutoOff {id, r, n}` event and the auto flag (4th field) in `fl`.
+const kProtocolVersion = 67;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

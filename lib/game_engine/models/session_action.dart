@@ -628,6 +628,14 @@ class FishLineAction extends SessionAction {
   const FishLineAction(this.line);
 }
 
+/// `fAuto`: toggle auto-fishing with the rod out (fishing.md § 6).
+/// [reason]: why the client stops it (only when [on] is false).
+class FishAutoAction extends SessionAction {
+  final bool on;
+  final AutoFishStop reason;
+  const FishAutoAction(this.on, [this.reason = AutoFishStop.key]);
+}
+
 /// `wisp`: prender / apagar la Llama errante (lighting.md § 3.1.1).
 class WispAction extends SessionAction {
   final bool on;
