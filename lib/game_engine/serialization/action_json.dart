@@ -41,6 +41,7 @@ abstract final class ActionJson {
             'ep': a.epoch,
           },
         ProposeMissionAction() => {'t': 'propose', 'id': a.missionId},
+        GatherAction() => {'t': 'gather', 'op': a.op.name},
         VoteMissionAction() => {'t': 'vote', 'ok': a.yes},
         ReadyAction() => {'t': 'ready', 'ok': a.ready},
         CancelPrepAction() => {'t': 'cancelPrep'},
@@ -251,6 +252,8 @@ abstract final class ActionJson {
             moving: j.flag('mv'));
       case 'propose':
         return ProposeMissionAction(j.str('id'));
+      case 'gather':
+        return GatherAction(j.enumByName('op', GatherOp.values));
       case 'vote':
         return VoteMissionAction(j.boolean('ok'));
       case 'ready':

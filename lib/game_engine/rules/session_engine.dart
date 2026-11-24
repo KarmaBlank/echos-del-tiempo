@@ -792,6 +792,11 @@ class _Op {
 
   void say(String text) => events.add(SystemMessageEvent(text));
 
+  /// " ¡Voten!" only where the vote is still used (not in the Mundo with
+  /// free movement: there the world opens a gathering, § 2.1).
+  String get _voteCall =>
+      e.freeMovement && e.gameMode == GameModeKind.mundo ? '' : ' ¡Voten!';
+
   /// Perfiles antes del paso, para [settleOficios].
   Map<String, PlayerProfile> snapshot() =>
       {for (final p in players) p.id: p.profile};
@@ -1111,8 +1116,12 @@ class _Op {
           return false;
         }
         s.vote = MissionVote(m.id, p.name, {p.id});
-        say('${p.name} propone: ${m.name}. ¡Voten!');
+        say('${p.name} propone: ${m.name}.$_voteCall');
         return true;
+
+      // Only the world routes gatherings (free_movement.md § 2.1).
+      case GatherAction():
+        return false;
 
       case VoteMissionAction():
         final v = s.vote;
@@ -1618,7 +1627,7 @@ class _Op {
       ..abyss = n
       ..abyssOwner = p.id
       ..vote = MissionVote(AbyssRules.missionId, p.name, {p.id});
-    say('${p.name} abre ${d.name} (${e.abyssRules.costText(d)}). ¡Voten!');
+    say('${p.name} abre ${d.name} (${e.abyssRules.costText(d)}).$_voteCall');
     return true;
   }
 
@@ -1697,7 +1706,7 @@ class _Op {
       ..trial = n
       ..vote = MissionVote(TrialRules.missionId, p.name, {p.id});
     final boss = catalog.zone(t.bossZone)?.bossName ?? '?';
-    say('${p.name} propone la ${t.fullName} (jefe: $boss). ¡Voten!');
+    say('${p.name} propone la ${t.fullName} (jefe: $boss).$_voteCall');
     return true;
   }
 
@@ -1784,8 +1793,8 @@ class _Op {
       ..eco = eco
       ..ecoOwner = p.id
       ..vote = MissionVote(EcoRules.missionId, p.name, {p.id});
-    say('${p.name} abre ${ecos.fullName(eco)} (jefe: ${ecos.bossName(eco)}). '
-        '¡Voten!');
+    say('${p.name} abre ${ecos.fullName(eco)} (jefe: ${ecos.bossName(eco)}).'
+        '$_voteCall');
     return true;
   }
 

@@ -58,6 +58,12 @@ Grupos de enemigos posibles por misión: ver catálogo (copiados 1:1).
 > la de sus amigos si juegan la misma misión) y el host resuelve la
 > votación y el LISTO al instante. Lo de abajo sigue valiendo dentro de
 > cada instancia.
+>
+> v0.42.0 (protocolo 63): con otros humanos en el mundo, PROPONER abre
+> una **convocatoria** (free_movement.md § 2.1.1): quien propone ve IR
+> (habilitado siempre) y CANCELAR; los demás ven UNIRSE (en el HUD y en
+> el mostrador, `UNIRSE (nombre)`). IR mete juntos a todos los que se
+> sumaron. Solo, PROPONER entra directo.
 
 - `ProposeMissionAction(id)`: en lobby, sin votación abierta y con una
   misión válida. Abre la votación con el voto a favor de quien propone.

@@ -29,6 +29,7 @@ import '../../../endgame/domain/endgame_text.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../../../missions/presentation/gather_panel.dart';
 import '../../../missions/presentation/vote_panel.dart';
 import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
@@ -475,6 +476,13 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
+            if (_gatherBox(s) case final gather?)
+              Positioned(
+                top: _gap + 48,
+                left: 0,
+                right: 0,
+                child: Center(child: gather),
+              ),
             if (_voteBox(s) case final vote?)
               Positioned(
                 top: _gap + 48,
@@ -782,6 +790,16 @@ class WorldHud extends StatelessWidget {
     if (l == null) return null;
     return context.t('ui.world.hud.pick_up',
         {'item': MapGame.lootName(controller, l.ground.drop)});
+  }
+
+  /// Open gathering (free_movement.md § 2.1), only outside a dungeon.
+  Widget? _gatherBox(GameSession s) {
+    final g = s.gather;
+    if (g == null || s.mode != SessionMode.lobby || s.vote != null) {
+      return null;
+    }
+    return GatherPanel(
+        gather: g, localId: view.localId, onOp: controller.gather);
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
