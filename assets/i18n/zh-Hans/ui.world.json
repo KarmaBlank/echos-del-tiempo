@@ -373,7 +373,7 @@
     "status": "draft"
   },
   "ui.world.way.unknown_tip": {
-    "text": "按 E 触碰以激活，之后即可传送到这里。",
+    "text": "从旁边经过即可发现它，之后就能传送到这里。",
     "status": "draft"
   },
   "ui.world.way.site_entrance": {
@@ -623,5 +623,32 @@
   "ui.world.veg.save": "保存预设",
   "ui.world.veg.save_tip": "保存植被预设。",
   "ui.world.hud.join_busy": "{name} 正在战斗或即将结束：现在无法加入。",
-  "ui.world.hud.join_off": "无法从这里加入。"
+  "ui.world.hud.join_off": "无法从这里加入。",
+  "ui.world.way.site_section": {
+    "text": "小路空地 {n}",
+    "status": "draft"
+  },
+  "ui.world.way.site_shrine": {
+    "text": "圣坛 {n}",
+    "status": "draft"
+  },
+  "ui.world.way.site_cavern": {
+    "text": "洞穴 {n}",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_chest": {
+    "text": "[E] 打开宝箱",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_shrine": {
+    "text": "[E] 祈求祝福",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_done": {
+    "text": "今天已经用过了：明天会恢复",
+    "status": "draft"
+  },
+  "ui.world.raft.prompt_board": "[E] 登上木筏",
+  "ui.world.raft.prompt_leave": "[E] 上岸",
+  "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼"
 }

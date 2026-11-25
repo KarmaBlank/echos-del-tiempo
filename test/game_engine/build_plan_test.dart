@@ -73,7 +73,7 @@ const _fullPlan = BuildPlan(
   attributes: {Attribute.fue: 40, Attribute.vit: 20},
   treeNodes: ['gue_r1', 'sangre_k'],
   ascensionId: 'berserker',
-  ascensionNodes: ['berserker_a1'],
+  ascensionNodes: ['berserker_m11'],
   weaponTypes: ['hacha'],
   weaponBases: ['hacha_berserker'],
   mods: [ModGoal('feroz', 3)],
@@ -205,10 +205,10 @@ void main() {
 
     test('ascensión y sus nodos', () {
       const plan =
-          BuildPlan(ascensionId: 'berserker', ascensionNodes: ['berserker_a1']);
+          BuildPlan(ascensionId: 'berserker', ascensionNodes: ['berserker_m11']);
       var r = _rules.evaluate(plan, _guerrero(level: 30));
       expect(r.byKey('asc')!.state, GoalState.todo);
-      expect(r.byKey('ascN:berserker_a1')!.state, GoalState.todo);
+      expect(r.byKey('ascN:berserker_m11')!.state, GoalState.todo);
       r = _rules.evaluate(
           plan,
           _guerrero(
@@ -222,14 +222,14 @@ void main() {
               ascension:
                   const AscensionProgress(trials: {1}, id: 'berserker')));
       expect(r.byKey('asc')!.state, GoalState.done);
-      expect(r.byKey('ascN:berserker_a1')!.state, GoalState.partial);
+      expect(r.byKey('ascN:berserker_m11')!.state, GoalState.partial);
       r = _rules.evaluate(
           plan,
           _guerrero(
               level: 30,
               ascension: const AscensionProgress(
-                  trials: {1}, id: 'berserker', nodes: ['berserker_a1'])));
-      expect(r.byKey('ascN:berserker_a1')!.state, GoalState.done);
+                  trials: {1}, id: 'berserker', nodes: ['berserker_m11'])));
+      expect(r.byKey('ascN:berserker_m11')!.state, GoalState.done);
       // La otra ascensión de la clase: bloqueada.
       r = _rules.evaluate(
           plan,

@@ -196,7 +196,13 @@ import '../../game_engine/serialization/session_json.dart';
 /// in `gat`, gathering kind `eco`.
 /// 84: life trees v2 (life_trees_v2.md): new node ids, claimed rewards
 /// `life.lc` in the profile.
-const kProtocolVersion = 84;
+/// 85: ascension tree v2 (ascension.md § 3): build `ms` (Echoes Mastery)
+/// and the tree version `v` in `asc`.
+/// 86: biome exploration v2 (biome_exploration.md): 150 × 112 regions with
+/// wilds, `town.lv`, the `wx` action and deep exploration events.
+/// 87: lake rafts (fishing.md § 15): the `raft` action and `rf` in the
+/// player snapshot.
+const kProtocolVersion = 87;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

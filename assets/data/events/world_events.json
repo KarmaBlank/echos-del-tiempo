@@ -567,6 +567,181 @@
           "target": "ruinas"
         }
       ]
+    },
+    {
+      "id": "explore_elite",
+      "category": "overworldNpc",
+      "weight": 4,
+      "duration": 1,
+      "title": {
+        "es-AR": "Élite errante",
+        "en": "Roaming elite",
+        "zh-Hans": "游荡的精英"
+      },
+      "notice": {
+        "es-AR": "Algo fuerte ronda lo profundo de un bioma.",
+        "en": "Something strong roams deep in a biome.",
+        "zh-Hans": "有强大的东西在某个生态区深处游荡。"
+      },
+      "body": {
+        "es-AR": "Lejos del camino, solo por hoy.",
+        "en": "Far from the path, only for today.",
+        "zh-Hans": "远离道路，仅限今天。"
+      },
+      "params": {
+        "deep": 1
+      },
+      "sprite": "npc_ev_elite",
+      "greeting": {
+        "es-AR": "Un gruñido entre los árboles. Algo te estaba esperando.",
+        "en": "A growl among the trees. Something was waiting for you.",
+        "zh-Hans": "树林间传来一声低吼。有什么在等着你。"
+      },
+      "actions": [
+        {
+          "kind": "duel",
+          "label": {
+            "es-AR": "Enfrentarlo",
+            "en": "Face it",
+            "zh-Hans": "迎战"
+          },
+          "line": {
+            "es-AR": "Se te tira encima.",
+            "en": "It lunges at you.",
+            "zh-Hans": "它朝你扑来。"
+          },
+          "target": "@elite",
+          "params": {
+            "hpMult": 1.3,
+            "atkMult": 1.15,
+            "levelBonus": 1,
+            "rewardMult": 1.6
+          }
+        }
+      ]
+    },
+    {
+      "id": "explore_merchant",
+      "category": "overworldNpc",
+      "weight": 3,
+      "duration": 1,
+      "title": {
+        "es-AR": "Mercader con carreta",
+        "en": "Travelling merchant",
+        "zh-Hans": "推车商人"
+      },
+      "notice": {
+        "es-AR": "Un mercader con su carreta recorre lo profundo de un bioma.",
+        "en": "A merchant with a cart travels deep in a biome.",
+        "zh-Hans": "一位推车商人在某个生态区深处游走。"
+      },
+      "body": {
+        "es-AR": "Precios más bajos, solo hoy.",
+        "en": "Lower prices, only today.",
+        "zh-Hans": "价格更低，仅限今天。"
+      },
+      "params": {
+        "deep": 1,
+        "discount": 0.12
+      },
+      "sprite": "npc_ev_mercader",
+      "greeting": {
+        "es-AR": "¡Pará, pará! Mi carreta tiene de todo, si buscás bien.",
+        "en": "Wait, wait! My cart has everything, if you look closely.",
+        "zh-Hans": "等等！我的货车什么都有，仔细找找。"
+      },
+      "topics": [
+        {
+          "id": "cart",
+          "label": {
+            "es-AR": "¿Qué hacés tan lejos?",
+            "en": "Why so far out?",
+            "zh-Hans": "怎么跑这么远？"
+          },
+          "line": {
+            "es-AR": "Los caminos cortos ya los conoce todo el mundo.",
+            "en": "Everyone already knows the short roads.",
+            "zh-Hans": "近路大家都知道了。"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "kind": "trade",
+          "label": {
+            "es-AR": "Comerciar",
+            "en": "Trade",
+            "zh-Hans": "交易"
+          },
+          "line": {
+            "es-AR": "Mirá lo que traje.",
+            "en": "Have a look at what I brought.",
+            "zh-Hans": "看看我带来了什么。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "explore_traveler",
+      "category": "overworldNpc",
+      "weight": 3,
+      "duration": 1,
+      "title": {
+        "es-AR": "Viajero perdido",
+        "en": "Lost traveller",
+        "zh-Hans": "迷路的旅人"
+      },
+      "notice": {
+        "es-AR": "Un viajero se perdió en lo profundo de un bioma.",
+        "en": "A traveller got lost deep in a biome.",
+        "zh-Hans": "一位旅人在某个生态区深处迷了路。"
+      },
+      "body": {
+        "es-AR": "Ayudalo a volver al sendero.",
+        "en": "Help them back to the trail.",
+        "zh-Hans": "帮他回到小路上。"
+      },
+      "params": {
+        "deep": 1
+      },
+      "sprite": "npc_ev_viajero",
+      "greeting": {
+        "es-AR": "Me perdí buscando el atajo. ¿Me das una mano?",
+        "en": "I got lost looking for the shortcut. Can you help?",
+        "zh-Hans": "我找近路时迷路了。能帮我一下吗？"
+      },
+      "actions": [
+        {
+          "kind": "gift",
+          "label": {
+            "es-AR": "Te acompaño al sendero",
+            "en": "I will walk you to the trail",
+            "zh-Hans": "我带你回小路"
+          },
+          "line": {
+            "es-AR": "Gracias. Tomá, por las molestias.",
+            "en": "Thanks. Take this, for the trouble.",
+            "zh-Hans": "谢谢。拿着，算是谢礼。"
+          },
+          "params": {
+            "gold": 60
+          }
+        },
+        {
+          "kind": "rumor",
+          "label": {
+            "es-AR": "¿Algún rumor?",
+            "en": "Any rumors?",
+            "zh-Hans": "有什么传闻吗？"
+          },
+          "line": {
+            "es-AR": "Antes de perderme vi una grieta. Te marco dónde.",
+            "en": "Before I got lost I saw a rift. I will mark it.",
+            "zh-Hans": "迷路前我看到一道裂隙。我帮你标出来。"
+          },
+          "target": "rift"
+        }
+      ]
     }
   ]
 }

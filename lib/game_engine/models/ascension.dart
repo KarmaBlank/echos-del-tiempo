@@ -1,10 +1,20 @@
 /// Ascensión (subclase) y su mini-árbol. Ver docs/specs/ascension.md.
 library;
 
+import '../data/tuning_catalog.dart';
+
 /// Tipo de trampa de la Prueba del Tiempo (ascension.md § 1.1).
 enum TrapKind { spikes, pulse }
 
-/// Un nodo del mini-árbol de una ascensión (§ 3).
+/// Kind of a node of the ascension tree v2 (ascension.md § 3.0).
+enum AscNodeKind { root, minor, notable, major, capstone }
+
+/// Condition of a Trades-branch node (ascension.md § 3.5): the node only
+/// gives its stats while it holds. [town] counts how many of the other
+/// four hold.
+enum AscCondition { none, meal, forged, trade, mastery, town }
+
+/// A node of an ascension tree (§ 3).
 class AscensionNode {
   const AscensionNode({
     required this.id,
@@ -15,33 +25,72 @@ class AscensionNode {
     required this.links,
     required this.text,
     this.mechanicId,
-    this.stats = const {},
-    this.major = false,
+    this.statMults = const {},
+    this.fixedStats = const {},
+    this.kind = AscNodeKind.minor,
+    this.condition = AscCondition.none,
   });
 
   final String id;
+
+  /// Source name (es-AR). Empty for minor / major nodes: their name is
+  /// built from the stat or branch (`ui.ascension.minor.<stat>`).
   final String name;
 
-  /// Puntos que cuesta (la raíz, 0: la da elegir la ascensión).
+  /// Points it costs (the root, 0: choosing the ascension gives it).
   final int cost;
 
-  /// Celda del lienzo (raíz en (0, 0)).
+  /// Canvas cell: `x` = branch (0–4), `y` = tier (0–10).
   final int x, y;
   final List<String> links;
 
-  /// Texto para la ficha.
+  /// Source text (es-AR) for mechanic nodes; empty for stat nodes (their
+  /// text is built from [stats], so it always shows the tuned value).
   final String text;
 
-  /// Mecánica (`kAscensionMechanics`), si el nodo es una mecánica.
+  /// Mechanic (`kAscensionMechanics`), if the node is a mechanic.
   final String? mechanicId;
 
-  /// Stats como los del árbol de pasivas (`burn`, `frz`, `poi`...).
-  final Map<String, num> stats;
+  /// Tree stats (`hp`, `atk`, `crit`...) as multiples of the tuned
+  /// `minor<Stat>` value (Settings → Ascension).
+  final Map<String, double> statMults;
 
-  /// Nodo mayor (costo 2 de una rama).
-  final bool major;
+  /// Stats given as-is (Overload: `burn` / `frz` / `poi` stacks); the
+  /// value multiplies the `overloadStacks` setting.
+  final Map<String, num> fixedStats;
+
+  final AscNodeKind kind;
+  final AscCondition condition;
+
+  /// Branch index (0–4) and tier (0–10).
+  int get branch => x;
+  int get tier => y;
+
+  /// Notable, major or capstone (bigger node in the canvas).
+  bool get major =>
+      kind == AscNodeKind.notable ||
+      kind == AscNodeKind.major ||
+      kind == AscNodeKind.capstone;
+
+  bool get capstone => kind == AscNodeKind.capstone;
 
   bool get root => cost == 0;
+
+  /// The node's tree stats with the current settings (unconditional:
+  /// conditions are checked by `StatsCalculator`).
+  Map<String, double> get stats {
+    final t = kTuning[TuningId.ascension];
+    double base(String k) {
+      final key = 'minor${k[0].toUpperCase()}${k.substring(1)}';
+      return t?.values[key]?.toDouble() ?? 0;
+    }
+
+    final over = t?.values['overloadStacks']?.toDouble() ?? 1;
+    return {
+      for (final e in statMults.entries) e.key: base(e.key) * e.value,
+      for (final e in fixedStats.entries) e.key: e.value * over,
+    };
+  }
 }
 
 /// Una ascensión de una clase (§ 2).
@@ -111,8 +160,13 @@ class AscensionProgress {
 
   static const empty = AscensionProgress();
 
-  /// Puntos por Prueba (§ 1.2).
-  static const pointsPerTrial = 2;
+  /// Points per Trial (§ 1.2, Settings → Ascension).
+  static int get pointsPerTrial =>
+      kTuning[TuningId.ascension]?.i('pointsPerTrial') ?? 7;
+
+  /// Version of the saved tree (§ 3.1b): progress without it is the v0.5
+  /// 8-node tree and gets its points back.
+  static const treeVersion = 2;
 
   int get earned => trials.length * pointsPerTrial;
 
@@ -130,6 +184,7 @@ class AscensionProgress {
       );
 
   Map<String, Object?> toJson() => {
+        if (nodes.isNotEmpty) 'v': treeVersion,
         if (trials.isNotEmpty) 'tr': (trials.toList()..sort()),
         if (id != null) 'id': id,
         if (nodes.isNotEmpty) 'n': nodes,
@@ -148,7 +203,10 @@ class AscensionProgress {
             }
           : const {},
       id: json['id'] is String ? json['id'] as String : null,
-      nodes: n is List ? [for (final e in n) if (e is String) e] : const [],
+      // Migration (§ 3.1b): the old tree refunds every point.
+      nodes: n is List && json['v'] == treeVersion
+          ? [for (final e in n) if (e is String) e]
+          : const [],
     );
   }
 

@@ -79,6 +79,15 @@ class WaystoneAction extends SessionAction {
   const WaystoneAction(this.stone, {this.to});
 }
 
+/// `wx` (biome_exploration.md § 3.3–3.4): open the wilds chest [i]
+/// (`shrine` false) or use the shrine / fountain [i] in reach. Once per
+/// player per day.
+class WildLootAction extends SessionAction {
+  final int i;
+  final bool shrine;
+  const WildLootAction(this.i, {this.shrine = false});
+}
+
 /// What a [MineAction] does (mining_smithing.md § 1, v2).
 enum MineOp {
   upgrade,
@@ -762,6 +771,13 @@ class FishAutoAction extends SessionAction {
   final bool on;
   final AutoFishStop reason;
   const FishAutoAction(this.on, [this.reason = AutoFishStop.key]);
+}
+
+/// `raft`: board the raft at the dock in reach ([on]) or get off at the
+/// nearest shore (fishing.md § 15). The host picks the spot.
+class RaftAction extends SessionAction {
+  final bool on;
+  const RaftAction(this.on);
 }
 
 /// `wisp`: prender / apagar la Llama errante (lighting.md § 3.1.1).

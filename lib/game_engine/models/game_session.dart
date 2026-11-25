@@ -79,6 +79,7 @@ class SessionPlayer {
     Map<String, StashAck>? stashAcks,
     this.fishLine,
     this.wisp = false,
+    this.raftEpoch = 0,
     this.stepX = 0,
     this.stepY = 0,
   })  : trail = trail ?? const [],
@@ -102,6 +103,14 @@ class SessionPlayer {
   /// Llama errante prendida (`wi`, lighting.md § 3.1.1): lo manda el
   /// propio jugador (`wisp`) y viaja en el snapshot para que la vean todos.
   bool wisp;
+
+  /// On a raft (`rf`, fishing.md § 15): the position [epoch] the host put
+  /// the player on the water with; `0` = on foot. Any other teleport
+  /// bumps the epoch, so the raft is left behind on its own.
+  int raftEpoch;
+
+  /// Steering a raft right now.
+  bool get rafting => raftEpoch != 0 && raftEpoch == epoch;
 
   /// Anota [ack] como [opId] (descarta las más viejas).
   void addStashAck(String opId, StashAck ack) {
@@ -194,6 +203,7 @@ class SessionPlayer {
         stashAcks: {...stashAcks},
         fishLine: fishLine,
         wisp: wisp,
+        raftEpoch: raftEpoch,
         stepX: stepX,
         stepY: stepY,
       );

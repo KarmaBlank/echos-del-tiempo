@@ -78,7 +78,7 @@
   "lib/game_engine/data/achievements_catalog.dart": 39,
   "lib/game_engine/data/affixes_catalog.dart": 28,
   "lib/game_engine/data/ascension_catalog.dart": 33,
-  "lib/game_engine/data/ascension_mechanics.dart": 126,
+  "lib/game_engine/data/ascension_mechanics.dart": 164,
   "lib/game_engine/data/branch_ults_catalog.dart": 144,
   "lib/game_engine/data/classes_catalog.dart": 8,
   "lib/game_engine/data/eco_catalog.dart": 61,

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
+import '../data/tuning_catalog.dart';
+import '../models/ascension.dart' show AscCondition;
 import '../data/weapon_passives.dart';
 import '../models/attributes.dart';
 import '../models/class_def.dart';
@@ -121,7 +123,17 @@ class StatsCalculator {
         final node = asc.node(id);
         if (node == null) continue;
         if (node.mechanicId case final m?) ascMechanics.add(m);
-        node.stats.forEach((k, v) => tree.add(k, v.toDouble()));
+        // Trades branch (§ 3.5): only while its condition holds.
+        final times = ascConditionTimes(node.condition, build);
+        if (times == 0) continue;
+        if (node.condition == AscCondition.town) {
+          final v = tuning(TuningId.ascension).d('townPerCondition') * times;
+          for (final k in const ['hp', 'atk', 'mag']) {
+            tree.add(k, v);
+          }
+          continue;
+        }
+        node.stats.forEach((k, v) => tree.add(k, v));
       }
     }
     // Poder de aventurero de los oficios (roles.md § 5).
@@ -237,4 +249,26 @@ class StatsCalculator {
       breakdown: breakdown,
     );
   }
+}
+
+/// How many times the Trades condition [c] holds for [b] (ascension.md
+/// § 3.5): 1 / 0, or for [AscCondition.town] how many of the four hold.
+int ascConditionTimes(AscCondition c, PlayerBuild b) {
+  final t = tuning(TuningId.ascension);
+  bool holds(AscCondition k) => switch (k) {
+        AscCondition.none => true,
+        AscCondition.meal => b.meal != null,
+        AscCondition.forged => b.forge.total >=
+            t.i('forgedLevel'),
+        AscCondition.trade => b.lifeHp > 0 || b.lifeAtk > 0,
+        AscCondition.mastery => b.mastery >= t.i('masteryLevel'),
+        AscCondition.town => false,
+      };
+  if (c != AscCondition.town) return holds(c) ? 1 : 0;
+  return [
+    AscCondition.meal,
+    AscCondition.forged,
+    AscCondition.trade,
+    AscCondition.mastery,
+  ].where(holds).length;
 }

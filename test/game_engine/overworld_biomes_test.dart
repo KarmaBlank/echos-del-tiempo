@@ -85,8 +85,11 @@ void main() {
       final dx = (g.x + 0.5) * 16 - sp.x, dy = (g.y + 0.5) * 16 - sp.y;
       return dx * dx + dy * dy;
     }
+    // A plant of the biome (not a seed bush or a seasonal sprout).
+    bool plant(int i) =>
+        bosqueLayout.base.forageKinds.contains(bosqueLayout.forage[i].kind);
     for (var i = 1; i < bosqueLayout.forage.length; i++) {
-      if (d2(i) > d2(fi)) fi = i;
+      if (plant(i) && d2(i) > d2(fi)) fi = i;
     }
     final f = bosqueLayout.forage[fi];
     expect(e.apply(s, 'p0', ForageAction(fi)), isNull, reason: 'lejos');

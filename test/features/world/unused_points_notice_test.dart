@@ -37,13 +37,13 @@ void main() {
       final u = UnusedPoints.of(p, progression);
       final attr = p.points;
       expect(attr, greaterThan(0));
-      // Progresión v2: 1 por nivel + 2 por la Prueba − 1 tomado.
-      expect(u, UnusedPoints(attributes: attr, tree: 6, ascension: 2));
-      expect(u.total, attr + 8);
+      // Progresión v2: 1 por nivel − 1 tomado; 7 por la Prueba (árbol v2).
+      expect(u, UnusedPoints(attributes: attr, tree: 6, ascension: 7));
+      expect(u.total, attr + 13);
       expect(u.parts, [
         '$attr puntos de atributos',
         '6 puntos de árbol',
-        '2 puntos de ascensión',
+        '7 puntos de ascensión',
       ]);
       expect(
           UnusedPoints.of(newProfile('Leo', 'maga'), progression).any, isFalse);

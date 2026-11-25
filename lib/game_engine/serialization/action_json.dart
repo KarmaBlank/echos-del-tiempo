@@ -200,6 +200,7 @@ abstract final class ActionJson {
           },
         // Protocolo 60 (v0.37.0): Llama errante.
         WispAction() => {'t': 'wisp', if (a.on) 'on': true},
+        RaftAction() => {'t': 'raft', if (a.on) 'on': true},
         SellFishAction() => {
             't': 'fSell',
             if (a.species != null) 'sp': a.species,
@@ -256,6 +257,12 @@ abstract final class ActionJson {
             't': 'way',
             'i': a.stone,
             if (a.to != null) 'to': a.to,
+          },
+        // Biome exploration v2 (biome_exploration.md § 9).
+        WildLootAction() => {
+            't': 'wx',
+            'i': a.i,
+            if (a.shrine) 's': 1,
           },
         // Protocol 69: mining and smithing (mining_smithing.md § 6).
         MineAction() => {
@@ -510,6 +517,8 @@ abstract final class ActionJson {
 
       case 'wisp':
         return WispAction(j['on'] == true);
+      case 'raft':
+        return RaftAction(j['on'] == true);
       case 'fSell':
         return SellFishAction(
             species: j.strOrNull('sp'), materials: j['mat'] == true);
@@ -548,6 +557,9 @@ abstract final class ActionJson {
         return ForageAction(j.integer('i'));
       case 'way':
         return WaystoneAction(j.integer('i'), to: j.intOrNull('to'));
+      case 'wx':
+        return WildLootAction(j.integer('i'),
+            shrine: (j.intOrNull('s') ?? 0) != 0);
       case 'mine':
         final op = MineOp.values.asNameMap()[j.str('o')] ??
             (throw FormatException('JSON inválido: mine', j['o']));

@@ -133,7 +133,7 @@ Combatant _p(BattleStep s, [String id = 'p1']) => s.state.byId(id)!;
 const _atk = AttackCommand(targetId: 'e0');
 
 void main() {
-  test('catálogo: 8 ascensiones, 2 por clase, 8 nodos con la forma del spec',
+  test('catálogo: 8 ascensiones, 2 por clase, 51 nodos',
       () {
     expect(kAscensions.keys.toSet(), {
       'berserker', 'senorGuerra', 'cronomante', 'elementalista', //
@@ -143,18 +143,16 @@ void main() {
       expect(ascensionsOf(c), hasLength(2), reason: c);
     }
     for (final a in kAscensions.values) {
-      expect(a.nodes, hasLength(8), reason: a.id);
-      expect(a.nodes.fold(0, (s, n) => s + n.cost), 10, reason: a.id);
+      // Tree v2 shape: ascension_tree_v2_test.dart.
+      expect(a.nodes, hasLength(51), reason: a.id);
       expect(a.node(a.rootId)!.cost, 0);
       // El Guardián tiene 3: el kit clásico del Paladín (ascension.md § 4).
       expect(a.skillIds, hasLength(a.id == 'guardian' ? 3 : 2), reason: a.id);
       expect(kAscensionUltimates[a.id]!.id, a.ultId);
       expect(a.spriteId, '${a.classId}_${a.id}');
-      // Todos los nodos tienen mecánica salvo Sobrecarga (stats).
+      // Mechanic nodes keep their texts.
       for (final n in a.nodes) {
-        expect(n.mechanicId != null || n.stats.isNotEmpty, isTrue,
-            reason: n.id);
-        expect(n.text, isNotEmpty, reason: n.id);
+        if (n.mechanicId != null) expect(n.text, isNotEmpty, reason: n.id);
       }
     }
   });

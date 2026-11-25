@@ -131,8 +131,9 @@ abstract final class LightRules {
   static bool wispActive(
           {required bool toggled,
           required bool outdoor,
-          required bool night}) =>
-      outdoor ? night : toggled;
+          required bool night,
+          bool cave = false}) =>
+      outdoor && !cave ? night : toggled || (cave && night);
 
   /// Multiplicador del radio en que los enemigos detectan a un jugador:
   /// con la Llama errante prendida a mano en una mazmorra oscura se lo ve

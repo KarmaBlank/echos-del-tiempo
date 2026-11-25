@@ -7,6 +7,7 @@ import '../data/smithing_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/town_layout.dart';
 import '../data/world_events_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../data/zones_catalog.dart';
 import '../models/battle_state.dart';
 import '../models/localized_text.dart';
@@ -115,6 +116,8 @@ abstract final class WorldEventRules {
   static bool _eligible(WorldEventDef d, int day, WorldEventsState s,
       WorldEventContext ctx) {
     if (!d.enabled || d.weight <= 0 || d.minDay > day) return false;
+    // Deep exploration actors have their own daily roll (exploreRoll).
+    if (isDeep(d)) return false;
     if (d.minRenown > ctx.renown) return false;
     if (d.resident != null && !ctx.residents.contains(d.resident)) return false;
     if (s.active.any((a) => a.def == d.id)) return false;
@@ -179,6 +182,82 @@ abstract final class WorldEventRules {
     return opts[(rng() * opts.length).floor().clamp(0, opts.length - 1)];
   }
 
+  // ---------------- exploration content (biome_exploration.md § 6) ----
+
+  /// Stands deep in the wilds and rolls daily per biome ([exploreRoll]).
+  static bool isDeep(WorldEventDef d) =>
+      d.param('deep') > 0 && d.category == WorldEventCategory.overworldNpc;
+
+  static int _hash(String s) {
+    var x = 0x811c9dc5;
+    for (final c in s.codeUnits) {
+      x = ((x ^ c) * 0x01000193) & 0x7fffffff;
+    }
+    return x;
+  }
+
+  /// The deep actors that start on [day]: per open biome, from
+  /// `(seed, biome, day)`, at most `exploreMax` each; a def stands in one
+  /// biome per day (its uid is `def@day`). Does not touch the state.
+  static List<ActiveWorldEvent> exploreRoll(
+      int seed, int day, WorldEventsConfig cfg,
+      {WorldEventsState state = const WorldEventsState(),
+      WorldEventContext ctx = const WorldEventContext()}) {
+    final t = tuning(TuningId.regions);
+    final used = {
+      for (final a in state.active)
+        if (a.start == day) a.def
+    };
+    final out = <ActiveWorldEvent>[];
+    final biomes = [...ctx.biomes]..sort();
+    for (final biome in biomes) {
+      final rng = mulberry32(_mix(seed ^ _hash(biome), day));
+      if (rng() >= t.d('exploreChance')) continue;
+      final pool = [
+        for (final d in cfg.events)
+          if (isDeep(d) &&
+              d.enabled &&
+              d.weight > 0 &&
+              d.minDay <= day &&
+              d.minRenown <= ctx.renown &&
+              (d.biomes.isEmpty || d.biomes.contains(biome)) &&
+              !used.contains(d.id) &&
+              (ctx.extraCondition?.call(d) ?? true))
+            d
+      ];
+      final n = 1 + (rng() * math.max(1, t.i('exploreMax'))).floor();
+      for (var k = 0; k < n && pool.isNotEmpty; k++) {
+        final total = pool.fold<int>(0, (a, d) => a + d.weight);
+        var r = rng() * total;
+        var pick = pool.last;
+        for (final d in pool) {
+          r -= d.weight;
+          if (r < 0) {
+            pick = d;
+            break;
+          }
+        }
+        pool.remove(pick);
+        used.add(pick.id);
+        out.add(ActiveWorldEvent(pick.id,
+            biome: biome, start: day, end: day + math.max(1, pick.duration)));
+      }
+    }
+    return out;
+  }
+
+  /// The biome elite a `@elite` duel fights at [biome]: the elite of the
+  /// mission of one of its zones, picked by [salt].
+  static String? biomeElite(String biome, int salt) {
+    final zones = biomeDef(biome)?.zones ?? const <int>[];
+    if (zones.isEmpty) return null;
+    final z = zones[salt.abs() % zones.length];
+    for (final m in kZoneMissions) {
+      if (m.zone == z && m.elite.isNotEmpty) return m.elite;
+    }
+    return null;
+  }
+
   /// Drops the events that ended by [day].
   static WorldEventsState expire(WorldEventsState s, int day) {
     final keep = [for (final a in s.active) if (day < a.end) a];
@@ -191,11 +270,16 @@ abstract final class WorldEventRules {
       WorldEventsState s0, int day, WorldEventsConfig cfg,
       {WorldEventContext ctx = const WorldEventContext()}) {
     var s = expire(s0, day);
-    if (!due(s, day, cfg)) return (s, const []);
-    final started = roll(s.seed, day, cfg, state: s, ctx: ctx);
+    // The wilds get their deep actors every day (biome_exploration.md § 6).
+    final deep = s.active.any((a) => a.start == day)
+        ? const <ActiveWorldEvent>[]
+        : exploreRoll(s.seed, day, cfg, state: s, ctx: ctx);
+    if (deep.isNotEmpty) s = s.copyWith(active: [...s.active, ...deep]);
+    if (!due(s, day, cfg)) return (s, deep);
+    final started = [...deep, ...roll(s.seed, day, cfg, state: s, ctx: ctx)];
     s = s.copyWith(
       last: day,
-      active: [...s.active, ...started],
+      active: [...s.active, ...started.skip(deep.length)],
       seen: {
         ...s.seen,
         for (final a in started)
@@ -287,6 +371,13 @@ abstract final class WorldEventRules {
     }
     final lay = biomeLayout(a.biome);
     if (lay == null) return null;
+    // Deep actors stand in the wilds (biome_exploration.md § 6).
+    final d = c.def(a.def);
+    if (d != null && isDeep(d) && lay.exploreSpots.isNotEmpty) {
+      final (x, y) =
+          lay.exploreSpots[_hash('${a.uid}|${a.biome}') % lay.exploreSpots.length];
+      return ((x + 0.5) * 16, (y + 0.5) * 16);
+    }
     // Free ground by the main path (biome_regions.md § 2.4).
     final free = lay.eventSpots;
     if (free.isEmpty) return null;
@@ -388,13 +479,16 @@ abstract final class WorldEventRules {
         .where((x) => x.kind == EventActionKind.duel && x.target.isNotEmpty)
         .firstOrNull;
     final zones = biomeDef(biome)?.zones ?? const <int>[];
-    if (a == null || zones.isEmpty || !kEnemies.containsKey(a.target)) {
+    final target = a?.target == EventNpcAction.elite
+        ? biomeElite(biome, _hash(d.id))
+        : a?.target;
+    if (a == null || zones.isEmpty || !kEnemies.containsKey(target)) {
       return null;
     }
     final z = kZones.where((k) => k.index == zones.last).firstOrNull;
     if (z == null) return null;
     return EchoRiftBoss(
-        bossId: a.target,
+        bossId: target!,
         zone: z.index,
         missionId: z.missionId ?? z.id,
         hpMult: a.param('hpMult'),

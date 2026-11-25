@@ -258,6 +258,8 @@ class SessionJson {
         if (p.fishLine case final l?) 'fl': l.toJson(),
         // Protocolo 60: Llama errante (lighting.md § 3.1.1).
         if (p.wisp) 'wi': true,
+        // Protocolo 83: balsa de los lagos grandes (fishing.md § 15).
+        if (p.rafting) 'rf': p.raftEpoch,
         // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
         if (p.stashAcks.isNotEmpty)
           'sk': [
@@ -304,6 +306,7 @@ class SessionJson {
         stashAcks: _stashAcks(j['sk']),
         fishLine: FishLine.fromJson(j['fl']),
         wisp: j['wi'] == true,
+        raftEpoch: j.intOrNull('rf') ?? 0,
       );
 
   // ------------------------------------------------------------------
@@ -953,6 +956,8 @@ class SessionJson {
         if (b.ultLevel > 1) 'ulv': b.ultLevel,
         // Comida activa (farming.md § 17): HUD y resistencia.
         if (b.meal != null) 'meal': b.meal!.toJson(),
+        // Echoes Mastery (ascension.md § 3.5): Trades branch.
+        if (b.mastery > 0) 'ms': b.mastery,
       };
 
   PlayerBuild buildFromJson(Json j) {
@@ -988,6 +993,7 @@ class SessionJson {
       ultSel: j.strOrNull('us'),
       ultLevel: j.intOrNull('ulv') ?? 1,
       meal: MealBuff.fromJson(j['meal']),
+      mastery: j.intOrNull('ms') ?? 0,
     );
   }
 }

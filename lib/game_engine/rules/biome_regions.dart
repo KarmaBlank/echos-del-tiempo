@@ -5,9 +5,13 @@
 import 'dart:math' as math;
 
 import '../data/biomes_catalog.dart';
-import '../data/mine_catalog.dart' show mineEntrances;
+import '../data/mine_catalog.dart' show MineTile, mineEntrances;
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
+import '../models/world_save.dart' show TownState;
+import 'raft_rules.dart';
+
+part 'biome_wilds.dart';
 
 /// A lake of a region (§ 3).
 class BiomeLake {
@@ -18,7 +22,22 @@ class BiomeLake {
     required this.approach,
     required this.name,
     this.cave,
+    this.giant = false,
   });
+
+  /// A giant lake of the wilds (biome_exploration.md § 2): always gets a
+  /// raft dock (fishing.md § 15).
+  final bool giant;
+
+  /// This lake marked as giant.
+  BiomeLake asGiant() => BiomeLake(
+      variant: variant,
+      ellipse: ellipse,
+      docks: docks,
+      approach: approach,
+      name: name,
+      cave: cave,
+      giant: true);
 
   final LakeVariant variant;
 
@@ -37,7 +56,7 @@ class BiomeLake {
 }
 
 /// Where a waystone stands (§ 4).
-enum WaystoneSite { entrance, lake, mine }
+enum WaystoneSite { entrance, lake, mine, section, shrine, cavern }
 
 /// A waystone of a region: its tile, where travellers arrive and what it
 /// belongs to ([ref] = lake or mine index).
@@ -67,13 +86,47 @@ class BiomeLayout {
     required this.skylights,
     required this.fisherWalk,
     required this.echoNook,
+    this.sections = const [],
+    this.caverns = const [],
+    this.beams = const [],
+    this.shrines = const [],
+    this.chestSpots = const [],
+    this.exploreSpots = const [],
     required List<String> baseRows,
     required IndoorMask indoor,
   })  : _rows = baseRows,
         _indoor = indoor;
 
-  static const width = 60;
-  static const height = 34;
+  /// The whole canvas (biome_exploration.md § 1): the front (the old
+  /// 60 × 34 plan) sits bottom-center, the wilds all around.
+  static const width = 150;
+  static const height = 112;
+
+  /// The front plan and where it sits on the canvas.
+  static const frontW = 60, frontH = 34;
+  static const frontX = (width - frontW) ~/ 2, frontY = height - frontH;
+
+  /// Generator version (biome_exploration.md § 7): worlds saved with
+  /// another one drop their layout-indexed state on load.
+  static const version = 2;
+
+  /// The sections of the wilds (§ 2): kind and center tile.
+  final List<WildSection> sections;
+
+  /// Small caverns of the wilds (center x, y, rx, ry).
+  final List<(double, double, double, double)> caverns;
+
+  /// Skylights that also get a falling beam (§ 4.2).
+  final List<(int, int)> beams;
+
+  /// Shrines and special fountains (tile, `Tile.shrine` / `Tile.fountain`).
+  final List<(int, int)> shrines;
+
+  /// Chests in caverns and hidden nooks (tile `MineTile.chest`).
+  final List<(int, int)> chestSpots;
+
+  /// Free ground deep in the wilds for exploration actors (§ 6).
+  final List<(int, int)> exploreSpots;
 
   final BiomeBase base;
   final int seed;
@@ -151,6 +204,12 @@ class BiomeLayout {
         for (final (zone, x, y) in ecoPortals) ('ECOS · ZONA $zone', x, y - 1),
       ];
 
+  /// The generated tile at (x, y) (without forage marks).
+  String baseTile(int x, int y) => _rows[y][x];
+
+  /// Raft docks of the big lakes (fishing.md § 15), deterministic.
+  late final List<RaftDock> raftDocks = RaftRules.placeDocks(this);
+
   bool isLake(int x, int y) =>
       x >= 0 &&
       y >= 0 &&
@@ -216,6 +275,19 @@ abstract final class BiomeRegions {
     if (seed == _seed) return;
     _seed = seed;
     _cache.clear();
+  }
+
+  /// A world saved with another layout version (biome_exploration.md
+  /// § 7): the regions regenerate on their own (the layout is never
+  /// saved), so only the state indexed by the old layout goes — activated
+  /// waystones and picked forage. Everything else stays. Same instance
+  /// when already current.
+  static TownState migrate(TownState t) {
+    if (t.layoutVersion == BiomeLayout.version) return t;
+    return t.copyWith(
+        waystones: const {},
+        wild: const {},
+        layoutVersion: BiomeLayout.version);
   }
 
   static BiomeLayout? of(String? id) {
@@ -292,22 +364,24 @@ abstract final class BiomeRegionGen {
   }
 
   static BiomeLayout generate(BiomeBase b, int seed) =>
-      _Gen(b, seed).build();
+      _Wilds(b, seed, _Gen(b, seed).buildFront()).build();
 }
 
 class _Gen {
-  _Gen(this.b, this.seed)
-      : r = _Rng(BiomeRegionGen.hashSeed(seed, b.id)),
-        noise = _Rng(BiomeRegionGen.hashSeed(seed ^ 0x5bd1e995, b.id));
+  _Gen(this.b, this.seed,
+      {this.w = BiomeLayout.frontW, this.h = BiomeLayout.frontH, int salt = 0})
+      : r = _Rng(BiomeRegionGen.hashSeed(seed ^ salt, b.id)),
+        noise = _Rng(BiomeRegionGen.hashSeed(seed ^ 0x5bd1e995 ^ salt, b.id)),
+        indoor = IndoorMask(w, h);
 
   final BiomeBase b;
   final int seed;
   final _Rng r, noise;
-  static const w = BiomeLayout.width, h = BiomeLayout.height;
+  final int w, h;
 
   late final List<List<String>> g;
   final reserved = <(int, int)>{};
-  final indoor = IndoorMask(w, h);
+  final IndoorMask indoor;
   final sidePaths = <List<(int, int)>>[];
   final lakeRoutes = <List<(int, int)>>[];
 
@@ -341,7 +415,7 @@ class _Gen {
     }
   }
 
-  BiomeLayout build() {
+  _Front buildFront() {
     g = [
       for (var y = 0; y < h; y++)
         [
@@ -354,7 +428,7 @@ class _Gen {
     _cost = [for (var i = 0; i < w * h; i++) 1 + noise.d() * 1.2];
 
     // ---- Main path (§ 2.1): south exit → plaza, gently winding.
-    const sx = w ~/ 2 - 1;
+    final sx = w ~/ 2 - 1;
     var x = sx;
     final main = <(int, int)>[];
     for (var y = h - 1; y >= BiomeRegionGen.plazaY; y--) {
@@ -423,7 +497,9 @@ class _Gen {
 
     // ---- Mines: cave mouths off the north corners (§ 2.3).
     final mines = <(int, int)>[];
-    for (final left in [true, false]) {
+    // Only one by the portals (biome_exploration.md § 3.1); the others
+    // are deep in the wilds.
+    for (final left in [r.d() < 0.5]) {
       final mx = left ? 4 + r.i(5) : w - 5 - r.i(5);
       const my = 3;
       for (var dx = -1; dx <= 1; dx++) {
@@ -604,26 +680,25 @@ class _Gen {
       }
     }
 
-    _fillPockets(main.first);
     final first = lakeRoutes.isEmpty ? main : lakeRoutes.first;
     final walk = first.length > 6 ? first.sublist(first.length - 6) : first;
 
-    return BiomeLayout._(
-      base: b,
-      seed: seed,
-      lakes: List.unmodifiable(lakes),
-      forage: List.unmodifiable(forage),
-      entrances: List.unmodifiable(entrances),
-      mineSites: List.unmodifiable(mines),
+    return _Front(
+      lakes: lakes,
+      forage: forage,
+      entrances: entrances,
+      mines: mines,
       npc: npc,
-      waystones: List.unmodifiable(waystones),
-      mainPath: List.unmodifiable(main),
-      eventSpots: List.unmodifiable(events),
-      skylights: List.unmodifiable(skylights),
-      fisherWalk: List.unmodifiable(walk),
-      echoNook: nook,
-      baseRows: [for (final row in g) row.join()],
+      waystones: waystones,
+      main: main,
+      events: events,
+      skylights: skylights,
+      walk: walk,
+      nook: nook,
+      g: g,
       indoor: indoor,
+      reserved: reserved,
+      mainTiles: mainTiles,
     );
   }
 
@@ -713,15 +788,18 @@ class _Gen {
 
   /// Lake [k] of [variant] inside site rect (x0, y0, x1, y1) (§ 3).
   BiomeLake? _lake((int, int, int, int) site, LakeVariant variant, int k,
-      List<(int, int)> main) {
+      List<(int, int)> main,
+      {(double, double)? radii, bool carveRoute = true}) {
     final (x0, y0, x1, y1) = site;
     final cave = variant == LakeVariant.cave;
     final pad = cave ? 3.0 : 1.5;
     final maxRx = (x1 - x0) / 2 - pad - 1;
     final maxRy = (y1 - y0) / 2 - pad - 0.5;
     if (maxRx < 2.5 || maxRy < 2) return null;
-    final rx = math.min(maxRx, r.range(t.d('lakeRxMin'), t.d('lakeRxMax')));
-    final ry = math.min(maxRy, r.range(t.d('lakeRyMin'), t.d('lakeRyMax')));
+    final rx = math.min(
+        maxRx, radii?.$1 ?? r.range(t.d('lakeRxMin'), t.d('lakeRxMax')));
+    final ry = math.min(
+        maxRy, radii?.$2 ?? r.range(t.d('lakeRyMin'), t.d('lakeRyMax')));
     final cx = (x0 + x1) / 2 + r.range(-1, 1);
     final cy = (y0 + y1) / 2 + r.range(-0.5, 0.5);
     final ph1 = r.d() * 6.28, ph2 = r.d() * 6.28;
@@ -784,6 +862,8 @@ class _Gen {
       }
     }
     if (water.length < 6) return null;
+    // Later caverns never carve into this lake or its docks.
+    reserved.addAll(water);
 
     // Dock: the water tile on the edge facing the main path, on the
     // center row; the approach is the land tile beyond it.
@@ -849,9 +929,14 @@ class _Gen {
       }
     }
 
-    final route = _carve(_nearestMain(main, approach.$1, approach.$2), approach);
-    if (route == null) return null;
-    lakeRoutes.add(route);
+    if (carveRoute) {
+      final route =
+          _carve(_nearestMain(main, approach.$1, approach.$2), approach);
+      if (route == null) return null;
+      lakeRoutes.add(route);
+    } else if (!_passable(approach.$1, approach.$2)) {
+      put(approach.$1, approach.$2, Tile.grass);
+    }
     for (final d in docks.skip(1)) {
       _carve(approach, (d.$1, d.$2 + 1));
     }
@@ -903,9 +988,12 @@ class _Gen {
 
   /// Carves a path from [a] to [b] (A* over grass with a little noise so
   /// it wanders) and records it as a side path. Returns the tiles.
-  List<(int, int)>? _carve((int, int) a, (int, int) b, {int width = 1}) {
+  /// With [dig], the route may cut through cave rock (it becomes cave
+  /// floor under the roof).
+  List<(int, int)>? _carve((int, int) a, (int, int) b,
+      {int width = 1, bool dig = false}) {
     if (!_passable(b.$1, b.$2)) put(b.$1, b.$2, Tile.grass);
-    const n = w * h;
+    final n = w * h;
     final dist = List.filled(n, double.infinity);
     final prev = List.filled(n, -1);
     final heap = _Heap();
@@ -921,9 +1009,12 @@ class _Gen {
       for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
         final vx = ux + dx, vy = uy + dy;
         final v = vy * w + vx;
-        if (v != goal && !_passable(vx, vy)) continue;
         if (vx < 0 || vy < 0 || vx >= w || vy >= h) continue;
-        final c = g[vy][vx] == Tile.path ? 0.35 : _cost[v];
+        final rock = dig &&
+            inside(vx, vy) &&
+            (g[vy][vx] == Tile.rock || g[vy][vx] == Tile.tree);
+        if (v != goal && !_passable(vx, vy) && !rock) continue;
+        final c = rock ? 4.0 : (g[vy][vx] == Tile.path ? 0.35 : _cost[v]);
         final nd = du + c;
         if (nd < dist[v]) {
           dist[v] = nd;
@@ -940,6 +1031,10 @@ class _Gen {
     }
     final route = out.reversed.toList();
     for (final (x, y) in route) {
+      if (dig && g[y][x] == Tile.rock) {
+        g[y][x] = Tile.floor;
+        indoor.set(x, y);
+      }
       path(x, y);
       if (width > 1) path(x + 1, y);
     }

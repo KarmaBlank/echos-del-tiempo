@@ -1,5 +1,6 @@
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/rules/raft_rules.dart';
 import '../../../game_engine/rules/world_rules.dart';
 
 /// El jugador local tal como lo mueve este dispositivo (`me` del
@@ -30,16 +31,22 @@ class LocalPlayer {
 
   /// `updateMe`: un paso con la entrada [ix], [iy] (-1..1). Si [canMove]
   /// es falso (panel abierto, caído, fuera de lobby/campo) solo frena.
+  /// [raft]: steering a raft (fishing.md § 15): only water, raft speed.
   void step(GameMap map, double ix, double iy, double dt,
-      {required bool canMove, required bool gateOpen, double speedMult = 1}) {
+      {required bool canMove,
+      required bool gateOpen,
+      double speedMult = 1,
+      bool raft = false}) {
     if (!canMove) {
       moving = false;
       return;
     }
     moving = ix != 0 || iy != 0;
     if (!moving) return;
-    final p = WorldRules.stepPlayer(map, x, y, ix, iy, dt,
-        gateOpen: gateOpen, speedMult: speedMult);
+    final p = raft
+        ? RaftRules.step(map, x, y, ix, iy, dt)
+        : WorldRules.stepPlayer(map, x, y, ix, iy, dt,
+            gateOpen: gateOpen, speedMult: speedMult);
     x = p.x;
     y = p.y;
     if (ix != 0) dir = ix > 0 ? 1 : -1;

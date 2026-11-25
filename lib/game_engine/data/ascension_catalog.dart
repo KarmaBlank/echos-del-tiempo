@@ -62,50 +62,209 @@ final Map<String, SkillDef> kAscensionUltimatesById = {
   for (final u in kAscensionUltimates.values) u.id: u,
 };
 
-/// Los 8 nodos con la forma de § 3 (raíz, dos ramas de 3 y la final).
-List<AscensionNode> _tree(String a) {
-  AscensionNode n(String key, int cost, int x, int y, List<String> links,
-      {bool major = false, Map<String, num> stats = const {}}) {
-    final id = '${a}_$key';
-    final m = kAscensionMechanics[id];
-    return AscensionNode(
-      id: id,
-      name: m?.name ?? _statNames[id] ?? id,
-      cost: cost,
-      x: x,
-      y: y,
-      links: [for (final l in links) '${a}_$l'],
-      text: m?.description ?? _statTexts[id] ?? '',
-      mechanicId: m?.id,
-      stats: stats,
-      major: major,
-    );
-  }
+//// A branch of an ascension tree (ascension.md § 3.2): its name, the stat
+/// of its minor nodes, the second stat of its major node and the ids
+/// (without the `<asc>_` prefix) of its notables (tiers 3, 6) and
+/// capstone (tier 10). The Trades branch has no [notables].
+class AscensionBranch {
+  const AscensionBranch(this.name, this.stat, this.second, this.notables);
 
-  final sobrecarga = a == 'elementalista'
-      ? const {'burn': 1, 'frz': 1, 'poi': 1}
-      : const <String, num>{};
-  return [
-    n('r', 0, 0, 0, ['a1', 'b1']),
-    n('a1', 1, -1, 1, ['r', 'a2']),
-    n('a2', 1, -1, 2, ['a1', 'a3'], stats: sobrecarga),
-    n('a3', 2, -1, 3, ['a2', 'k'], major: true),
-    n('b1', 1, 1, 1, ['r', 'b2']),
-    n('b2', 1, 1, 2, ['b1', 'b3']),
-    n('b3', 2, 1, 3, ['b2', 'k'], major: true),
-    n('k', 2, 0, 4, ['a3', 'b3'], major: true),
-  ];
+  final String name;
+  final String stat;
+  final String second;
+  final List<String> notables;
 }
 
-/// Nodos de stats (sin mecánica).
-const _statNames = {'elementalista_a2': 'Sobrecarga'};
-const _statTexts = {
-  'elementalista_a2':
-      '+1 stack a toda Quemadura, Congelación y Veneno que aplicás '
-          '(Explosiones tóxicas más grandes).',
+/// The 3 own branches of each ascension (§ 3.2 / 3.3).
+const Map<String, List<AscensionBranch>> kAscensionBranches = {
+  'berserker': [
+    AscensionBranch('Furia', 'atk', 'crit', ['a1', 'a2', 'a3']),
+    AscensionBranch('Sangre', 'hp', 'def', ['b1', 'b2', 'b3']),
+    AscensionBranch('Rugido', 'ult', 'spd', ['c1', 'c2', 'k']),
+  ],
+  'senorGuerra': [
+    AscensionBranch('Mando', 'ult', 'atk', ['a1', 'a2', 'a3']),
+    AscensionBranch('Bandera', 'def', 'hp', ['b1', 'b2', 'b3']),
+    AscensionBranch('Tambor', 'atk', 'spd', ['c1', 'c2', 'k']),
+  ],
+  'cronomante': [
+    AscensionBranch('Retraso', 'mag', 'spd', ['a1', 'a2', 'a3']),
+    AscensionBranch('Sincronía', 'spd', 'hp', ['b1', 'b2', 'b3']),
+    AscensionBranch('Reloj', 'ult', 'mag', ['c1', 'c2', 'k']),
+  ],
+  'elementalista': [
+    AscensionBranch('Reacción', 'mag', 'ult', ['a1', 'a2', 'a3']),
+    AscensionBranch('Chispa', 'crit', 'mag', ['b1', 'b2', 'b3']),
+    AscensionBranch('Tormenta', 'ult', 'spd', ['c1', 'c2', 'k']),
+  ],
+  'francotirador': [
+    AscensionBranch('Marca', 'crit', 'atk', ['a1', 'a2', 'a3']),
+    AscensionBranch('Recarga', 'atk', 'ult', ['b1', 'b2', 'b3']),
+    AscensionBranch('Gatillo', 'spd', 'crit', ['c1', 'c2', 'k']),
+  ],
+  'trampero': [
+    AscensionBranch('Trampa', 'atk', 'hp', ['a1', 'a2', 'a3']),
+    AscensionBranch('Área', 'crit', 'atk', ['b1', 'b2', 'b3']),
+    AscensionBranch('Cazador', 'ult', 'spd', ['c1', 'c2', 'k']),
+  ],
+  'templario': [
+    AscensionBranch('Condena', 'mag', 'crit', ['a1', 'a2', 'a3']),
+    AscensionBranch('Aura', 'hp', 'def', ['b1', 'b2', 'b3']),
+    AscensionBranch('Fervor', 'ult', 'mag', ['c1', 'c2', 'k']),
+  ],
+  'guardian': [
+    AscensionBranch('Escudo', 'def', 'hp', ['a1', 'a2', 'a3']),
+    AscensionBranch('Mártir', 'hp', 'heal', ['b1', 'b2', 'b3']),
+    AscensionBranch('Juramento', 'heal', 'def', ['c1', 'c2', 'k']),
+  ],
 };
 
-/// Las 8 ascensiones por id (contrato fijo con el arte).
+/// Shared branches 4 (Echoes) and 5 (Trades), § 3.4 / 3.5.
+const kEchoBranch = AscensionBranch('Ecos', 'spd', 'ult', ['e1', 'e2', 'e3']);
+const kTradeBranch = AscensionBranch('Oficios', 'hp', 'atk', []);
+
+/// The 5 branches of [ascensionId], in canvas order.
+List<AscensionBranch> branchesOf(String ascensionId) => [
+      ...?kAscensionBranches[ascensionId],
+      kEchoBranch,
+      kTradeBranch,
+    ];
+
+/// Tiers (§ 3.0) and the tree size.
+abstract final class AscTree {
+  static const branches = 5;
+  static const tiers = 10;
+  static const notableTiers = {3: 0, 6: 1};
+  static const majorTier = 9;
+  static const capstoneTier = 10;
+
+  static AscNodeKind kindAt(int tier) => tier == capstoneTier
+      ? AscNodeKind.capstone
+      : tier == majorTier
+          ? AscNodeKind.major
+          : notableTiers.containsKey(tier)
+              ? AscNodeKind.notable
+              : AscNodeKind.minor;
+
+  static int costOf(AscNodeKind k) => switch (k) {
+        AscNodeKind.root => 0,
+        AscNodeKind.minor => 1,
+        AscNodeKind.notable || AscNodeKind.major => 2,
+        AscNodeKind.capstone => 3,
+      };
+}
+
+/// The Trades branch (§ 3.5): (name, condition, stat multiples) by tier.
+const List<(String, AscCondition, Map<String, double>)> _trades = [
+  ('Pan del Camino', AscCondition.meal, {'hp': 2}),
+  ('Filo Templado', AscCondition.forged, {'atk': 1, 'mag': 1}),
+  ('Mesa Compartida', AscCondition.meal, {'atk': 2, 'mag': 2, 'ult': 1}),
+  ('Manos de Oficio', AscCondition.trade, {'hp': 2}),
+  ('Temple de Fragua', AscCondition.forged, {'def': 2}),
+  ('Memoria del Eco', AscCondition.mastery, {'atk': 2, 'mag': 2, 'crit': 2}),
+  ('Caldo de Viaje', AscCondition.meal, {'ult': 2}),
+  ('Oficio Paciente', AscCondition.trade, {'heal': 2, 'hp': 1}),
+  ('Acero con Nombre', AscCondition.forged, {'atk': 3, 'mag': 3}),
+  ('Corazón del Pueblo', AscCondition.town, {}),
+];
+
+/// Source texts of the Trades nodes (the UI lists the stats after them).
+const Map<AscCondition, String> _tradeTexts = {
+  AscCondition.meal: 'Si comiste antes de la misión, la mesa del pueblo te '
+      'sostiene.',
+  AscCondition.forged: 'Si tu arma tiene mejoras de forja, el acero recuerda '
+      'la fragua.',
+  AscCondition.trade: 'Si tenés poder de algún oficio, tus manos saben '
+      'trabajar.',
+  AscCondition.mastery: 'Si tu Maestría de los Ecos es alta, lo vivido '
+      'vuelve a vos.',
+  AscCondition.town: 'Por cada cosa del pueblo que llevás, más vida, ATQ y '
+      'MAG (comida, forja, oficio y Maestría de los Ecos).',
+};
+
+/// The 51 nodes of an ascension tree (§ 3.0): root + 5 branches × 10.
+List<AscensionNode> _tree(String a) {
+  final out = <AscensionNode>[];
+  final rm = kAscensionMechanics['${a}_r'];
+  final branches = branchesOf(a);
+  out.add(AscensionNode(
+    id: '${a}_r',
+    name: rm?.name ?? '',
+    cost: 0,
+    x: 2,
+    y: 0,
+    links: [
+      for (var b = 0; b < branches.length; b++) _nodeId(a, b, 1, branches[b]),
+    ],
+    text: rm?.description ?? '',
+    mechanicId: rm?.id,
+    kind: AscNodeKind.root,
+  ));
+  for (var b = 0; b < branches.length; b++) {
+    final br = branches[b];
+    for (var t = 1; t <= AscTree.tiers; t++) {
+      final kind = AscTree.kindAt(t);
+      final id = _nodeId(a, b, t, br);
+      final links = [
+        t == 1 ? '${a}_r' : _nodeId(a, b, t - 1, br),
+        if (t < AscTree.tiers) _nodeId(a, b, t + 1, br),
+      ];
+      if (br.notables.isEmpty) {
+        final (name, cond, mults) = _trades[t - 1];
+        out.add(AscensionNode(
+          id: id,
+          name: name,
+          cost: AscTree.costOf(kind),
+          x: b,
+          y: t,
+          links: links,
+          text: _tradeTexts[cond]!,
+          statMults: mults,
+          kind: kind,
+          condition: cond,
+        ));
+        continue;
+      }
+      final m = kAscensionMechanics[id];
+      final overload = id == 'elementalista_a2';
+      out.add(AscensionNode(
+        id: id,
+        name: m?.name ?? (overload ? 'Sobrecarga' : ''),
+        cost: AscTree.costOf(kind),
+        x: b,
+        y: t,
+        links: links,
+        text: m?.description ?? (overload ? _overloadText : ''),
+        mechanicId: m?.id,
+        statMults: switch (kind) {
+          AscNodeKind.minor => {br.stat: 1},
+          AscNodeKind.major => {br.stat: 2, br.second: 1},
+          _ => const {},
+        },
+        fixedStats: overload
+            ? const {'burn': 1, 'frz': 1, 'poi': 1}
+            : const <String, num>{},
+        kind: kind,
+      ));
+    }
+  }
+  return out;
+}
+
+/// Id of the node at tier [t] of branch [b] (§ 3.0).
+String _nodeId(String a, int b, int t, AscensionBranch br) {
+  if (br.notables.isEmpty) return '${a}_of$t';
+  return switch (AscTree.kindAt(t)) {
+    AscNodeKind.notable => '${a}_${br.notables[AscTree.notableTiers[t]!]}',
+    AscNodeKind.capstone => '${a}_${br.notables[2]}',
+    _ => '${a}_m${b + 1}$t',
+  };
+}
+
+const _overloadText = '+1 stack a toda Quemadura, Congelación y Veneno que '
+    'aplicás (Explosiones tóxicas más grandes).';
+
+// Las 8 ascensiones por id (contrato fijo con el arte).
 final Map<String, AscensionDef> kAscensions = {
   for (final a in [
     AscensionDef(id: 'berserker', classId: 'guerrero', name: 'Berserker', theme: 'vida baja = más daño, robo de vida', motto: 'Cuanto más sangra, más pega.', color: 0xFFFF4757, skillIds: const ['sangria', 'torbellino'], ultId: 'ult_berserker', nodes: _tree('berserker')),

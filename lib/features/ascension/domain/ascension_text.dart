@@ -1,7 +1,9 @@
 import '../../../core/i18n/catalog_names.dart';
 import '../../../core/i18n/game_text.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
+import '../../../game_engine/catalog_text_keys.dart';
 import '../../../game_engine/data/trials_catalog.dart';
+import '../../../game_engine/data/tuning_catalog.dart';
 import '../../../game_engine/models/ascension.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/ascension_rules.dart';
@@ -83,3 +85,62 @@ String? trialProposeBlocked(PlayerProfile p, int n) {
   }
   return null;
 }
+
+// ---- Tree v2 (ascension.md § 3) ----
+
+/// Name of branch [i] (0–4) of [a].
+String ascBranchName(AscensionDef a, int i) {
+  final b = branchesOf(a.id);
+  if (i < 0 || i >= b.length) return '';
+  return GameText.name(CatalogKeys.ascBranch(a.id, i), b[i].name);
+}
+
+/// Display name of [n]: its own for mechanic / Trades nodes, the stat for
+/// minors (`Vigor`), `Juramento · <rama>` for the major node.
+String ascNodeName(AscensionDef a, AscensionNode n) {
+  if (n.name.isNotEmpty) return n.tr;
+  if (n.kind == AscNodeKind.major) {
+    return GameText.t(
+        'ui.ascension.major_name', {'branch': ascBranchName(a, n.branch)});
+  }
+  final stat = n.statMults.keys.firstOrNull ?? 'hp';
+  return GameText.t('ui.ascension.minor.$stat');
+}
+
+/// `+2% ATQ · +1 DEF` from tree stats (values of Settings → Ascension).
+String ascStatsText(Map<String, double> stats) => [
+      for (final e in stats.entries)
+        if (_flatStats.contains(e.key))
+          GameText.t('ui.ascension.stat.${e.key}',
+              {'v': _num(e.value)})
+        else if (_pctStats.contains(e.key))
+          GameText.t('ui.ascension.stat.${e.key}',
+              {'v': _num(e.value * 100)})
+    ].join(' · ');
+
+const _flatStats = {'def', 'spd', 'burn', 'frz', 'poi'};
+const _pctStats = {'hp', 'atk', 'mag', 'crit', 'ult', 'heal'};
+
+String _num(double v) {
+  final r = (v * 10).round() / 10;
+  return r == r.roundToDouble() ? '${r.round()}' : '$r';
+}
+
+/// Full (DETALLADO) text of [n]: the mechanic, the Trades sentence plus
+/// its stats, or only the stats. Always starts with a sentence that reads
+/// on its own (the RESUMIDO keeps only the first one).
+String ascNodeText(AscensionNode n) {
+  final stats = n.condition == AscCondition.town
+      ? GameText.t('ui.ascension.town_bonus', {
+          'v': _num(
+              tuning(TuningId.ascension).d('townPerCondition') * 100)
+        })
+      : ascStatsText(n.stats);
+  if (n.text.isEmpty) return stats.isEmpty ? '' : '$stats.';
+  if (n.mechanicId != null || stats.isEmpty) return n.textTr;
+  return '${n.textTr} ($stats)';
+}
+
+/// Short label of the kind of [n] (`Notable · 2 puntos`).
+String ascNodeKindText(AscensionNode n) =>
+    GameText.t('ui.ascension.kind.${n.kind.name}', {'cost': n.cost});

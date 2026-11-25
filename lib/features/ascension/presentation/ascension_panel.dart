@@ -111,6 +111,7 @@ class _AscensionPanelState extends ConsumerState<AscensionPanel> {
                           def: a,
                           progress: p.ascension,
                           sprites: widget.sprites,
+                          build: c.engine.progression.buildOf(p),
                           editBlocked: view.session.mode == SessionMode.battle
                               ? ref.t('ui.ascension.not_in_battle')
                               : null,
