@@ -53,6 +53,14 @@ const Map<String, TuningDef> kTuningDefaults = {
     'weightLegendario': 1,
     // Capturas sin legendario que garantizan uno (0 = sin pity).
     'pityAfter': 200,
+    // Fishing ambience (biome_regions.md § 7.2.3): music level while
+    // fishing outside the town, seconds to duck / return, volume of the
+    // ambience sounds and the gap between them (s).
+    'ambMusicLevel': 0.08,
+    'ambDuckSec': 1.5,
+    'ambVolume': 0.35,
+    'ambGapMinSec': 8,
+    'ambGapMaxSec': 20,
     // Lance largo: + chance de rareza con la carga al máximo.
     'distanceBonus': 0.3,
     // × de XP de Pesca por rareza.
@@ -612,6 +620,20 @@ const Map<String, TuningDef> kTuningDefaults = {
     'forageRecheckSec': 6,
     // Waystones (§ 4): reach (px) to activate / use one.
     'waystoneReach': 26,
+    // Roofed caves (§ 7.2.1): roof lip at the mouth (px), light pools
+    // under the openings (alpha, half-size px, pixel step), dust motes
+    // per pool and their drift speed (cycles/s).
+    'caveRoofLip': 5,
+    'cavePoolAlpha': 0.14,
+    'cavePoolSize': 13,
+    'cavePoolPixel': 3,
+    'caveMotes': 3,
+    'caveMoteSpeed': 0.05,
+    // Wind sway of grass, bushes and canopies (§ 7.2.2): px, speed
+    // (rad/s) and the share of vegetation tiles that sway.
+    'swayAmp': 1,
+    'swaySpeed': 1.6,
+    'swayDensity': 0.3,
   }),
   TuningId.mission: TuningDef('Misiones', {
     'maxFloors': 3,

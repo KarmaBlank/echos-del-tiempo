@@ -234,6 +234,19 @@ enum LakeVariant {
 }
 
 /// Ambient critters of a region (biome_regions.md § 6).
+/// What plays (softly) while the local player is fishing
+/// (biome_regions.md § 7.2.3).
+enum FishingAmbience {
+  /// Breeze gusts (open sky).
+  breeze,
+
+  /// Water drips (under a roof: caves, cave lakes, mines).
+  drip,
+
+  /// Nothing but the faint music.
+  none,
+}
+
 enum CritterKind { butterfly, sparkMote, frostMote, ember, echoWisp }
 
 /// How a biome region is generated (biome_regions.md § 2): lake variants
@@ -246,7 +259,11 @@ class BiomeRegionStyle {
       this.tunnel = 0.3,
       this.critter = CritterKind.butterfly,
       this.caveOpenings = true,
+      this.fishingAmbience = FishingAmbience.breeze,
       this.lakeNames = const {}});
+
+  /// The quiet ambience while fishing here (§ 7.2.3).
+  final FishingAmbience fishingAmbience;
 
   /// Cave lakes of this biome have openings above (light shafts); `false`
   /// keeps them dark (biome_regions.md § 7).
@@ -417,6 +434,7 @@ const kBiomeBases = <String, BiomeBase>{
           grove: 0.1,
           tunnel: 0.6,
           critter: CritterKind.frostMote,
+          fishingAmbience: FishingAmbience.drip,
           lakeNames: _cn)),
   kGrieta: BiomeBase(kGrieta,
       theme: 'grieta_ext',
@@ -436,6 +454,7 @@ const kBiomeBases = <String, BiomeBase>{
           tunnel: 0.5,
           critter: CritterKind.ember,
           caveOpenings: false,
+          fishingAmbience: FishingAmbience.none,
           lakeNames: _cn)),
   kAbismo: BiomeBase(kAbismo,
       theme: 'abismo_ext',
@@ -454,6 +473,7 @@ const kBiomeBases = <String, BiomeBase>{
           grove: 0.3,
           tunnel: 0.3,
           critter: CritterKind.echoWisp,
+          fishingAmbience: FishingAmbience.none,
           lakeNames: _cn)),
 };
 

@@ -56,6 +56,7 @@ import 'ground_layer.dart';
 import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
+import 'vegetation_sway_layer.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
@@ -156,6 +157,9 @@ class MapGame extends Game {
   final ActorPainter actors;
   final tiles = TilePainter();
   late final tileLayer = TileLayerCache(tiles);
+
+  /// Wind sway of the vegetation (biome_regions.md § 7.2.2).
+  final sway = VegetationSwayLayer();
   final voidBg = VoidPainter();
 
   /// Pesca en el mapa (fishing.md § 4).
@@ -908,6 +912,10 @@ class MapGame extends Game {
         gateOpen: s.gateOpen,
         density: particleDensity,
         pulse: pulse);
+    // Wind in the vegetation (biome_regions.md § 7.2.2).
+    if (map.lobby && !controller.editingTown) {
+      sway.draw(c, map, x0, y0, x1, y1, t / 1000, motion: !reduceMotion);
+    }
     // Season and weather marks on the ground (weather_seasons.md § 6.3).
     if (map.lobby && s.town.sky.started && !controller.editingTown) {
       ground.draw(
@@ -1398,6 +1406,8 @@ class MapGame extends Game {
         regionLight.drawCaveShade(
             c, region, outdoor ? 0.6 * (1 - dayDark) : 0.35);
       }
+      // Roof edge at the cave mouths (biome_regions.md § 7.2.1).
+      if (region != null) regionLight.drawRoofEdges(c, region, map.tileAt);
     }
 
     // El cielo encima de todo el mapa (no en la edición del pueblo).
@@ -1494,9 +1504,16 @@ class MapGame extends Game {
     // Light shafts from openings above (biome_regions.md § 7): indoor
     // places flagged with openings; caves without them stay dark.
     if (!controller.editingTown && LightShaftRules.hasOpenings(map)) {
-      regionLight.drawShafts(c, map, worldView, secs,
-          strength: darkMap ? 1.0 : (1 - dayDark * 0.7).clamp(0.3, 1.0),
-          motion: !reduceMotion);
+      final strength =
+          darkMap ? 1.0 : (1 - dayDark * 0.7).clamp(0.3, 1.0).toDouble();
+      // Biome regions: soft light pools, no beam (§ 7.2.1).
+      if (map.lobby && biomeLayout(map.place) != null) {
+        regionLight.drawPools(c, map, worldView, secs,
+            strength: strength, motion: !reduceMotion);
+      } else {
+        regionLight.drawShafts(c, map, worldView, secs,
+            strength: strength, motion: !reduceMotion);
+      }
     }
 
     if (map.lobby && map.place == null) {

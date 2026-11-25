@@ -171,6 +171,42 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
   de día).
 - Bajo techo en una región de día: sombra de cueva (imagen cacheada).
 
+### 7.2.1 Grutas techadas (exteriores)
+- Toda la gruta de un lago de cueva (y las cuevas cortas) es una **zona
+  techada**: la roca que la rodea (roca a ≤ 2 tiles de un tile techado,
+  `RegionAmbienceRules.caveWall`) se dibuja como **pared de cueva**
+  (bloques de roca con grietas), no como picos de montaña; el piso
+  techado es piedra oscura.
+- En la boca (lados de un tile techado que dan a suelo abierto,
+  `RegionAmbienceRules.roofEdges`) se dibuja el **borde del techo**: un
+  alero de roca con dientes, encima de los personajes.
+- Se mantiene el filtro oscuro "bajo techo" (sombra de cueva).
+- En los exteriores, las aberturas **no** dibujan un haz/cono: dejan
+  **charcos de luz** tenues y pixelados en el piso (rects cuantizados que
+  respiran muy despacio) y unas pocas **motas de polvo** que derivan. Las
+  mazmorras y minas conservan el haz.
+- Números (`kTuning[TuningId.regions]`): `caveRoofLip` (px del alero),
+  `cavePoolAlpha`, `cavePoolSize` (px), `cavePoolPixel` (paso del
+  pixelado), `caveMotes` (motas por charco), `caveMoteSpeed`.
+
+### 7.2.2 Viento en la vegetación
+- Pasto, arbustos y copas de árboles se mecen apenas: un subconjunto de
+  tiles visibles (`swayDensity`, por hash) dibuja un mechón / brillo de
+  copa desplazado `RegionAmbienceRules.sway` px (fase por tile, ráfaga
+  que viaja en x). Números: `swayAmp`, `swaySpeed`, `swayDensity`.
+- Con movimiento reducido no se mece.
+
+### 7.2.3 Ambiente al pescar
+- Mientras el jugador local pesca fuera del pueblo, la música del bioma
+  baja casi a silencio (`ambMusicLevel`, en `ambDuckSec`) y vuelve al
+  terminar. En el pueblo sigue la pieza de pesca.
+- Suenan cada tanto (`ambGapMinSec`–`ambGapMaxSec`, volumen `ambVolume`)
+  sonidos muy suaves según el lugar (`BiomeRegionStyle.fishingAmbience`):
+  brisa (`amb.breeze`) al aire libre, goteo (`amb.drip`) bajo techo y en
+  cavernas / minas, nada en la grieta y el abismo. Todos los números en
+  `kTuning[TuningId.fishing]`; los sonidos son del sintetizador y se
+  pueden reemplazar por archivo en `assets/sfx/sfx_manifest.yaml`.
+
 ### 7.3 Rendimiento
 - Solo lo visible: haces filtrados por la ventana, nubes descartadas si
   no tocan la vista, bichos por celdas de la vista.

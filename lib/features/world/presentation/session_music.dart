@@ -10,6 +10,7 @@ import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/map_generator.dart';
 import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
+import '../../../game_engine/rules/region_ambience_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
@@ -273,6 +274,14 @@ class SessionMusic {
     }
     music.bedHeld =
         ended || s.mode == SessionMode.levelUp || s.mode == SessionMode.result;
+    // Fishing outside the town: the biome music almost silent
+    // (biome_regions.md § 7.2.3); the town keeps its fishing piece.
+    final quiet = s.mode == SessionMode.lobby &&
+        t != Music.fishing &&
+        (fishing?.call() ?? false);
+    music.holdAmbience(
+        quiet ? RegionAmbienceRules.fishingMusicLevel : 1,
+        seconds: RegionAmbienceRules.fishingDuckSec);
   }
 
   void _jingles(SessionView view) {

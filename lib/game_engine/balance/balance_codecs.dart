@@ -1627,6 +1627,11 @@ final fishingCodec =
     _tuningCodec(BalanceKind.fishing, _autoFields('fishing', _fishLabels));
 
 const _fishLabels = {
+  'ambMusicLevel': 'Ambiente al pescar: nivel de la música',
+  'ambDuckSec': 'Ambiente al pescar: segundos para bajar la música',
+  'ambVolume': 'Ambiente al pescar: volumen de los sonidos',
+  'ambGapMinSec': 'Ambiente al pescar: espera mínima (s)',
+  'ambGapMaxSec': 'Ambiente al pescar: espera máxima (s)',
   'baitAffinity': 'Cebo: × peso de los peces que atrae',
   'baitWaterChance': 'Cebo: chance de cebo en el botín de materiales',
   'baitLombrizBite': 'Cebo (lombriz común): picada más rápida',
@@ -1722,6 +1727,15 @@ const _regionsLabels = {
   'forageHideRadius': 'Rebrote: distancia de vista (px)',
   'forageRecheckSec': 'Rebrote: segundos entre chequeos',
   'waystoneReach': 'Piedra de paso: distancia (px)',
+  'caveRoofLip': 'Gruta: alero del techo (px)',
+  'cavePoolAlpha': 'Gruta: opacidad de los charcos de luz',
+  'cavePoolSize': 'Gruta: tamaño de los charcos de luz (px)',
+  'cavePoolPixel': 'Gruta: pixelado de los charcos de luz (px)',
+  'caveMotes': 'Gruta: motas de polvo por charco',
+  'caveMoteSpeed': 'Gruta: velocidad de las motas',
+  'swayAmp': 'Viento: vaivén de la vegetación (px)',
+  'swaySpeed': 'Viento: velocidad del vaivén',
+  'swayDensity': 'Viento: fracción de vegetación que se mece',
 };
 
 final lifeTreeCodec = _tuningCodec(

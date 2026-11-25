@@ -1493,6 +1493,15 @@ Map<String, SfxDef> buildProcSfx() {
       _t(2200, 0.12, w: _sin, v: 0.25),
     ]),
     Sfx.wind: proc(_wind(1.3, 0.6)),
+    // Fishing ambience: long, low-passed noise swell; a single soft drip.
+    Sfx.ambBreeze: proc([
+      _n(1200, 1.7, to: 1800, lp: 700, a: 0.7, v: 0.18, seed: 23),
+      _n(900, 1.5, to: 1400, lp: 500, a: 0.6, v: 0.12, seed: 29),
+    ]),
+    Sfx.ambDrip: proc([
+      _t(1500, 0.12, w: _sin, to: 700, v: 0.18),
+      _t(2200, 0.08, w: _sin, to: 1200, v: 0.08, at: 0.14),
+    ]),
     // Eco Arcano: cada firma de habilidad con eco.
     for (final e in kSkillVoices.entries)
       Sfx.echo(e.key): SfxDef(_echo(e.value), peak: SfxLevel.status),

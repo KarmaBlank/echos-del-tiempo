@@ -5,7 +5,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
+import '../../../../game_engine/rules/biome_regions.dart';
 import '../../../../game_engine/rules/light_shaft_rules.dart';
+import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'map_themes.dart';
 
 /// Cloud shadows, cave shade and light shafts (docs/specs/biome_regions.md
@@ -61,6 +63,20 @@ class RegionLightLayer {
 
   ui.Picture? _shade;
   Object? _shadeKey;
+  ui.Picture? _roof;
+  Object? _roofKey;
+
+  /// Light pools: one paint per alpha step (no allocation per frame).
+  final List<Paint> _pool = [
+    for (var i = 0; i <= _steps * 4; i++)
+      Paint()
+        ..color = RegionPalette.shaftPatch
+            .withValues(alpha: i / (_steps * 4))
+        ..isAntiAlias = false
+  ];
+
+  /// Times the roof-edge picture was built (perf test).
+  int roofBuilds = 0;
 
   /// Times the cave-shade picture was built (perf test).
   int shadeBuilds = 0;
@@ -130,6 +146,118 @@ class RegionLightLayer {
     c.restore();
   }
 
+  /// Roof edge / overhang at the mouths of the roofed caves of [lay]
+  /// (biome_regions.md § 7.2.1); drawn above the actors. Cached picture.
+  void drawRoofEdges(Canvas c, BiomeLayout lay, String Function(int, int) at) {
+    final lip = RegionAmbienceRules.roofLip;
+    if (lip <= 0) return;
+    if (_roof == null || !identical(_roofKey, lay)) {
+      _roof?.dispose();
+      final rec = ui.PictureRecorder();
+      final pc = Canvas(rec);
+      final body = Paint()
+        ..color = RegionPalette.roofLip
+        ..isAntiAlias = false;
+      final edge = Paint()
+        ..color = RegionPalette.roofLipEdge
+        ..isAntiAlias = false;
+      for (var y = 0; y < BiomeLayout.height; y++) {
+        for (var x = 0; x < BiomeLayout.width; x++) {
+          for (final side in RegionAmbienceRules.roofEdges(lay, at, x, y)) {
+            final px = x * ts, py = y * ts;
+            final h = LightShaftRules.hash(x, y);
+            switch (side) {
+              case RoofSide.north || RoofSide.south:
+                final top = side == RoofSide.north;
+                final y0 = top ? py : py + ts - lip;
+                pc.drawRect(Rect.fromLTWH(px, y0, ts, lip), body);
+                pc.drawRect(
+                    Rect.fromLTWH(px, top ? y0 : y0 + lip - 1, ts, 1), edge);
+                // Hanging teeth of rock.
+                for (var k = 0; k < 3; k++) {
+                  final tx = px + 1 + k * 5 + (h >> k) % 2;
+                  final th = 1.0 + ((h >> (k + 2)) % 3);
+                  pc.drawRect(
+                      Rect.fromLTWH(tx, top ? y0 + lip : y0 - th, 2, th), body);
+                }
+              case RoofSide.west || RoofSide.east:
+                final left = side == RoofSide.west;
+                final x0 = left ? px : px + ts - lip;
+                pc.drawRect(Rect.fromLTWH(x0, py, lip, ts), body);
+                pc.drawRect(
+                    Rect.fromLTWH(left ? x0 : x0 + lip - 1, py, 1, ts), edge);
+                for (var k = 0; k < 3; k++) {
+                  final ty = py + 1 + k * 5 + (h >> k) % 2;
+                  final tw = 1.0 + ((h >> (k + 2)) % 3);
+                  pc.drawRect(
+                      Rect.fromLTWH(left ? x0 + lip : x0 - tw, ty, tw, 2),
+                      body);
+                }
+            }
+          }
+        }
+      }
+      _roof = rec.endRecording();
+      _roofKey = lay;
+      roofBuilds++;
+    }
+    c.drawPicture(_roof!);
+  }
+
+  /// Soft, dim, pixelated light pools under the openings of a biome
+  /// region's roofed caves, with a few drifting dust motes (§ 7.2.1).
+  /// No beam: the light only touches the floor.
+  void drawPools(Canvas c, GameMap map, Rect view, double t,
+      {double strength = 1, bool motion = true}) {
+    lastShafts = 0;
+    if (strength <= 0) return;
+    final x0 = (view.left / ts).floor() - 2, y0 = (view.top / ts).floor() - 2;
+    final x1 = (view.right / ts).ceil() + 2,
+        y1 = (view.bottom / ts).ceil() + 2;
+    LightShaftRules.visible(map, x0, y0, x1, y1, _visible);
+    if (_visible.isEmpty) return;
+    final size = RegionAmbienceRules.poolSize;
+    final step = RegionAmbienceRules.poolPixel;
+    final n = RegionAmbienceRules.moteCount;
+    final top = _pool.length - 1;
+    for (final (tx, ty) in _visible) {
+      final px = ((tx + 0.5) * ts).floorToDouble(),
+          py = ((ty + 0.5) * ts).floorToDouble();
+      final h = LightShaftRules.hash(tx, ty);
+      final a = RegionAmbienceRules.poolAlpha(h, t, motion: motion) *
+          strength;
+      // Three stacked, pixel-snapped ellipse rings: brighter to the core.
+      for (var ring = 0; ring < 3; ring++) {
+        final f = 1.0 - ring * 0.3;
+        final paint = _pool[(a * (0.45 + ring * 0.3) * top)
+            .round()
+            .clamp(0, top)];
+        final rw = (size * f / step).round() * step;
+        final rh = (size * 0.5 * f / step).round() * step;
+        if (rw <= 0 || rh <= 0) continue;
+        // Pixelated ellipse: rows of rects of shrinking width.
+        for (var yy = -rh; yy < rh; yy += step) {
+          final k = 1 - ((yy + step / 2) / rh) * ((yy + step / 2) / rh);
+          if (k <= 0) continue;
+          final w = (rw * math.sqrt(k) / step).round() * step;
+          if (w <= 0) continue;
+          c.drawRect(Rect.fromLTWH(px - w, py + yy, w * 2, step), paint);
+        }
+      }
+      if (motion) {
+        for (var k = 0; k < n; k++) {
+          final (mx, my, ma) = RegionAmbienceRules.mote(h, k, t);
+          final p = _pool[(ma * a * 2.2 * top).round().clamp(0, top)];
+          c.drawRect(
+              Rect.fromLTWH((px + mx).roundToDouble(),
+                  (py + my).roundToDouble(), 1, 1),
+              p);
+        }
+      }
+      lastShafts++;
+    }
+  }
+
   /// Light shafts of [map] inside [view] (px). [strength] 0..1 (daylight
   /// through the openings); [t] in seconds; [motion] animates the motes.
   void drawShafts(Canvas c, GameMap map, Rect view, double t,
@@ -176,5 +304,7 @@ class RegionLightLayer {
   void dispose() {
     _shade?.dispose();
     _shade = null;
+    _roof?.dispose();
+    _roof = null;
   }
 }

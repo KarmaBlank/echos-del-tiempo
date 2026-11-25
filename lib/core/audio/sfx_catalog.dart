@@ -275,6 +275,13 @@ abstract final class Sfx {
   static const anvil = 'proc.anvil';
   static const wind = 'proc.wind';
 
+  // ---- ambience while fishing (biome_regions.md § 7.2.3) ----
+  /// A very soft breeze gust.
+  static const ambBreeze = 'amb.breeze';
+
+  /// A water drip under a roof.
+  static const ambDrip = 'amb.drip';
+
   // ---- ascensión (docs/specs/ascension.md § 1.1 y § 5) ----
   /// Cinemática: la luz que converge en el personaje.
   static const ascBuild = 'asc.build';

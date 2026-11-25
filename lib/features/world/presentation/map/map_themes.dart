@@ -523,6 +523,21 @@ abstract final class RegionPalette {
   static const shaftBeam = Color(0xFFFFF4D8);
   static const shaftPatch = Color(0xFFFFF8E8);
 
+  /// Roofed caves of a region (biome_regions.md § 7.2.1): wall blocks
+  /// (base, shadow, lit edge, crack), floor stone and the roof lip.
+  static const caveWall = Color(0xFF4A4A52);
+  static const caveWallDark = Color(0xFF2C2C34);
+  static const caveWallLight = Color(0xFF6A6A74);
+  static const caveCrack = Color(0xFF1C1C22);
+  static const caveFloor = Color(0xFF3A3834);
+  static const caveFloor2 = Color(0xFF302E2B);
+  static const roofLip = Color(0xFF26262C);
+  static const roofLipEdge = Color(0xFF45454E);
+
+  /// Wind sway: a grass tuft and a canopy highlight.
+  static const swayTuft = Color(0xFF7FCB5A);
+  static const swayLeaf = Color(0x3398E070);
+
   /// Darkness under a cave roof in a daylit region.
   static const caveShade = Color(0xFF05070C);
 

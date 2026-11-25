@@ -89,6 +89,7 @@ class TilePainter {
     bool voidBackdrop = false,
     double density = 1,
     double pulse = 0,
+    bool cave = false,
   }) {
     // El mapa del mundo: el pueblo con el estilo del lobby, el resto al
     // aire libre (worldgen.md § 7.6).
@@ -126,6 +127,17 @@ class TilePainter {
             py + jsShiftMod(h, 10, 12).abs() + 2, 2, 1);
       }
       _floorDetail(c, th, themeId, px, py, tx, ty, h, t);
+    }
+
+    // Roofed cave of a biome region (biome_regions.md § 7.2.1): rock
+    // walls and dark stone floor instead of peaks and grass.
+    if (cave && (ch == Tile.rock || ch == Tile.floor)) {
+      if (ch == Tile.rock) {
+        _caveWall(c, px, py, h);
+      } else {
+        _caveFloor(c, px, py, h);
+      }
+      return;
     }
 
     switch (ch) {
@@ -886,6 +898,36 @@ class TilePainter {
     _circle(c, th.tree, px + 8, py + 7, 8);
     _circle(c, th.tree2, px + 6, py + 5, 4);
     if (h % 4 == 0) _rect(c, const Color(0x33000000), px + 10, py + 9, 3, 2);
+  }
+
+  /// Cave wall block: stacked stone with a lit top edge and cracks.
+  void _caveWall(Canvas c, double px, double py, int h) {
+    _rect(c, RegionPalette.caveWall, px, py, ts, ts);
+    // Two courses of blocks, offset by the hash.
+    final off = (h % 3) * 3.0;
+    _rect(c, RegionPalette.caveWallDark, px, py + 7, ts, 1);
+    _rect(c, RegionPalette.caveWallDark, px + 4 + off, py, 1, 7);
+    _rect(c, RegionPalette.caveWallDark, px + (10 - off).abs(), py + 8, 1, 8);
+    _rect(c, RegionPalette.caveWallLight, px, py, ts, 1);
+    _rect(c, RegionPalette.caveWallLight, px, py + 8, ts, 1);
+    if (h % 4 == 0) {
+      _rect(c, RegionPalette.caveCrack, px + 2 + h % 9, py + 3, 1, 3);
+      _rect(c, RegionPalette.caveCrack, px + 3 + h % 9, py + 5, 2, 1);
+    }
+    _rect(c, RegionPalette.caveWallDark, px, py + ts - 1, ts, 1);
+  }
+
+  /// Cave floor: dark stone with a few pebbles.
+  void _caveFloor(Canvas c, double px, double py, int h) {
+    _rect(c, RegionPalette.caveFloor, px, py, ts, ts);
+    if (h % 3 == 0) {
+      _rect(c, RegionPalette.caveFloor2, px + jsShiftMod(h, 3, 12).abs(),
+          py + jsShiftMod(h, 7, 12).abs(), 3, 2);
+    }
+    if (h % 5 == 1) {
+      _rect(c, RegionPalette.caveWallLight, px + jsShiftMod(h, 9, 13).abs(),
+          py + jsShiftMod(h, 13, 13).abs(), 1, 1);
+    }
   }
 
   /// Roca / montaña gris con nieve arriba.
