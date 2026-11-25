@@ -6,6 +6,11 @@ part of 'session_engine.dart';
 
 /// Estado de la huerta del anfitrión (no viaja en el snapshot).
 class FarmingHostState {
+  /// Background clock RNG (sky, lightning, world events): separate from
+  /// the session RNG so the world clock ticking during missions and runs
+  /// does not reshuffle combat rolls.
+  final math.Random bgRand = math.Random(0x5EC0);
+
   final lastWork = <String, double>{};
 
   /// XP de personaje ganada cultivando en esta estadía en el pueblo.
@@ -118,7 +123,7 @@ extension _FarmingOp on _Op {
   /// El reloj del mundo y los rayos de la tormenta (day_night_weather.md
   /// § 1 y § 3.3). Solo el anfitrión: el cielo viaja en el pueblo.
   void _skyTick(double dt) {
-    final sky = SkyRules.advance(s.town.sky, dt, _rand);
+    final sky = SkyRules.advance(s.town.sky, dt, _fa.bgRand.nextDouble);
     s.town = s.town.copyWith(sky: sky);
     // Habitantes (overworld_biomes.md § 10.4 y 10.5): pedidos, ánimo y
     // órdenes al cambiar el día del mundo.
@@ -145,10 +150,12 @@ extension _FarmingOp on _Op {
     final every = math.max(1.0, SkyRules.t.d('boltEverySec'));
     while (_fa.boltAcc >= every) {
       _fa.boltAcc -= every;
-      if (_rand() >= SkyRules.t.d('boltChance')) continue;
+      if (_fa.bgRand.nextDouble() >= SkyRules.t.d('boltChance')) continue;
       final keys = s.town.plots.keys.toList()..sort();
       if (keys.isEmpty) continue;
-      final k = keys[(_rand() * keys.length).floor().clamp(0, keys.length - 1)];
+      final k = keys[(_fa.bgRand.nextDouble() * keys.length)
+          .floor()
+          .clamp(0, keys.length - 1)];
       final xy = parsePlotKey(k);
       if (xy == null) continue;
       final hit = s.town.plots[k]!;
@@ -166,7 +173,8 @@ extension _FarmingOp on _Op {
   void _worldEventsDay(int day) {
     var ev = s.town.events;
     if (ev.seed == 0) {
-      ev = ev.copyWith(seed: 1 + (_rand() * 0x7FFFFFFE).floor());
+      ev =
+          ev.copyWith(seed: 1 + (_fa.bgRand.nextDouble() * 0x7FFFFFFE).floor());
     }
     // The notice line is added by every peer in its own language when
     // the event shows up in the town (SessionController).
@@ -335,7 +343,8 @@ extension _FarmingOp on _Op {
         final pl = plots[key];
         if (pl == null || !FarmingRules.ripe(pl)) return false;
         // Winter crops: only harvested in winter (farming.md § 15).
-        if (!FarmingRules.harvestable(pl, WeatherRules.season(s.town.sky.day))) {
+        if (!FarmingRules.harvestable(
+            pl, WeatherRules.season(s.town.sky.day))) {
           say('${kCrops[pl.seed]?.name ?? 'Ese cultivo'} solo se cosecha en '
               'invierno.');
           return false;
