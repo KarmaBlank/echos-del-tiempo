@@ -125,7 +125,12 @@ class _EcoZonePortalPanelState extends ConsumerState<EcoZonePortalPanel> {
                       reason: view.actingCompanion
                           ? ref.t('ui.endgame.zone_portal.leader_opens')
                           : ecoZoneOpenBlocked(s, p, e, zone, tier,
-                              near: c.nearEcoPortal == zone, zoneName: name),
+                              near: c.nearEcoPortal == zone,
+                              zoneName: name,
+                              tutorialMissing: [
+                                for (final m in c.tutorialRules.missing(s))
+                                  m.name
+                              ]),
                       onPressed: () {
                     if (e != null && c.proposeEco(e.uid)) c.closePanel();
                   }),
