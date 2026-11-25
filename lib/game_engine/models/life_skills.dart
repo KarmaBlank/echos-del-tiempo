@@ -39,6 +39,7 @@ class LifeSkills {
     Set<String> raftDecos = const {},
     Set<String> raftOn = const {},
     Map<String, OreFind> fishFinds = const {},
+    this.refunded = false,
   })  : stall = stall ?? PlayerStall.empty,
         raftDecos = Set.unmodifiable(raftDecos.where(kRaftDecos.containsKey)),
         raftOn = Set.unmodifiable(raftOn.where(
@@ -127,6 +128,10 @@ class LifeSkills {
 
   /// Nodos tomados del árbol de Herrería.
   final List<String> smithTree;
+
+  /// The tree v2 migration gave points back (life_trees_v2.md § 6): the
+  /// OFICIOS tab says so until a node is taken. JSON `rf`.
+  final bool refunded;
 
   /// Life tree nodes whose one-time rewards were already delivered
   /// (life_trees_v2.md § 4). JSON `lc`.
@@ -225,8 +230,10 @@ class LifeSkills {
     Set<String>? raftDecos,
     Set<String>? raftOn,
     Map<String, OreFind>? fishFinds,
+    bool? refunded,
   }) =>
       LifeSkills(
+          refunded: refunded ?? this.refunded,
           raftDecos: raftDecos ?? this.raftDecos,
           raftOn: raftOn ?? this.raftOn,
           fishFinds: fishFinds ?? this.fishFinds,
@@ -280,11 +287,43 @@ class LifeSkills {
         if (raftOn.isNotEmpty) 'ro': [...raftOn]..sort(),
         if (fishFinds.isNotEmpty)
           'ff': {for (final e in fishFinds.entries) e.key: e.value.toJson()},
+        if (refunded) 'rf': true,
+        'tv': kLifeTreeVersion,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
   /// todo personaje recibe la caña de rama.
   static LifeSkills fromJson(Object? raw) {
+    final l = _parse(raw);
+    if (raw is! Map) return l;
+    final tv = raw['tv'];
+    if (tv is num && tv >= kLifeTreeVersion) return l;
+    return migrateTrees(l);
+  }
+
+  /// Tree v2 (life_trees_v2.md § 6): drops the nodes of tier 4 and up
+  /// (their sub-paths changed mechanics) and flags the refund when that
+  /// took any point back. One-time rewards already claimed stay claimed.
+  static LifeSkills migrateTrees(LifeSkills l) {
+    List<String> keep(LifeSkillKind k, List<String> ids) => [
+          for (final id in ids)
+            if (lifeTreeNode(k, id) case final n? when !lifeNodeRefunded(n)) id
+        ];
+    final ft = keep(LifeSkillKind.pesca, l.fishTree);
+    final st = keep(LifeSkillKind.herreria, l.smithTree);
+    final pt = keep(LifeSkillKind.cultivo, l.farm.tree);
+    final lost = ft.length != l.fishTree.length ||
+        st.length != l.smithTree.length ||
+        pt.length != l.farm.tree.length;
+    if (!lost) return l;
+    return l.copyWith(
+        fishTree: ft,
+        smithTree: st,
+        farm: l.farm.copyWith(tree: pt),
+        refunded: true);
+  }
+
+  static LifeSkills _parse(Object? raw) {
     if (raw is! Map) return initial;
     int n(Object? v) => v is num && v.isFinite ? v.truncate() : 0;
     final rods = raw['rods'];
@@ -355,6 +394,7 @@ class LifeSkills {
       raftOn: raw['ro'] is List
           ? {for (final x in raw['ro'] as List) if (x is String) x}
           : const {},
+      refunded: raw['rf'] == true,
       fishFinds: raw['ff'] is Map
           ? {
               for (final e in (raw['ff'] as Map).entries)
@@ -368,6 +408,7 @@ class LifeSkills {
   bool operator ==(Object other) =>
       other is LifeSkills &&
       other.fishXp == fishXp &&
+      other.refunded == refunded &&
       other.rod == rod &&
       other.pity == pity &&
       other.dry == dry &&

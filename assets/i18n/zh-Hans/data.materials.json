@@ -11,10 +11,34 @@
   "data.materials.crop.arbol_paradoja.seed": "",
   "data.materials.crop.baya_engranaje.name": "",
   "data.materials.crop.baya_engranaje.seed": "",
+  "data.materials.crop.baya_invierno.name": {
+    "text": "冬莓",
+    "status": "draft"
+  },
+  "data.materials.crop.baya_invierno.seed": {
+    "text": "冬莓种子",
+    "status": "draft"
+  },
+  "data.materials.crop.brote_primavera.name": {
+    "text": "春芽",
+    "status": "draft"
+  },
+  "data.materials.crop.brote_primavera.seed": {
+    "text": "春芽种子",
+    "status": "draft"
+  },
   "data.materials.crop.calabaza_runica.name": "",
   "data.materials.crop.calabaza_runica.seed": "",
   "data.materials.crop.calabaza_sendero.name": "",
   "data.materials.crop.calabaza_sendero.seed": "",
+  "data.materials.crop.castana_otono.name": {
+    "text": "秋栗",
+    "status": "draft"
+  },
+  "data.materials.crop.castana_otono.seed": {
+    "text": "秋栗种子",
+    "status": "draft"
+  },
   "data.materials.crop.cebolla_cobre.lore": "",
   "data.materials.crop.cebolla_cobre.name": "",
   "data.materials.crop.cebolla_cobre.seed": "",
@@ -30,11 +54,31 @@
   "data.materials.crop.flor_ceniza.seed": "",
   "data.materials.crop.flor_cristal.name": "",
   "data.materials.crop.flor_cristal.seed": "",
+  "data.materials.crop.flor_eco.lore": {
+    "text": "在时间重复之处绽放，只持续一声回响的时间。",
+    "status": "draft"
+  },
+  "data.materials.crop.flor_eco.name": {
+    "text": "回响之花",
+    "status": "draft"
+  },
+  "data.materials.crop.flor_eco.seed": {
+    "text": "回响之花种子",
+    "status": "draft"
+  },
   "data.materials.crop.flor_manana.name": "",
   "data.materials.crop.flor_manana.seed": "",
   "data.materials.crop.flor_runica.lore": "",
   "data.materials.crop.flor_runica.name": "",
   "data.materials.crop.flor_runica.seed": "",
+  "data.materials.crop.fresa_estival.name": {
+    "text": "夏日草莓",
+    "status": "draft"
+  },
+  "data.materials.crop.fresa_estival.seed": {
+    "text": "夏日草莓种子",
+    "status": "draft"
+  },
   "data.materials.crop.fruta_forja.lore": "",
   "data.materials.crop.fruta_forja.name": "",
   "data.materials.crop.fruta_forja.seed": "",
@@ -106,7 +150,10 @@
   "data.materials.crop.trigo_manana.name": "",
   "data.materials.crop.trigo_manana.seed": "",
   "data.materials.fert.abono.name": "",
+  "data.materials.fert.abono_brasa.name": "余烬肥料",
   "data.materials.fert.abono_eco.name": "",
+  "data.materials.fert.abono_escarcha.name": "霜冻肥料",
+  "data.materials.fert.abono_miel.name": "蜂蜜肥料",
   "data.materials.fert.abono_runico.name": "",
   "data.materials.fish.anguila_niebla.lore": "起雾时，它缠绕在沉没的齿轮上。",
   "data.materials.fish.anguila_niebla.name": "雾鳗",
@@ -118,6 +165,10 @@
   "data.materials.fish.bagre_raiz.name": "",
   "data.materials.fish.bagre_ruinas.lore": "",
   "data.materials.fish.bagre_ruinas.name": "",
+  "data.materials.fish.ballena_eco.lore": "它吟唱着未来早已定下的事；无人能听见第二次。",
+  "data.materials.fish.ballena_eco.name": "终响之鲸",
+  "data.materials.fish.barbo_campana.lore": "它鸣响如钟，曾召唤一座已不复存在的城。",
+  "data.materials.fish.barbo_campana.name": "沉钟鲃",
   "data.materials.fish.barbo_reloj.lore": "",
   "data.materials.fish.barbo_reloj.name": "",
   "data.materials.fish.botas_viejas.name": "",
@@ -128,9 +179,13 @@
   "data.materials.fish.carpa_musgo.name": "",
   "data.materials.fish.carpa_nevada.lore": "湖水变冷时，它会游到岸边。",
   "data.materials.fish.carpa_nevada.name": "雪鲤",
+  "data.materials.fish.carpa_olvido.lore": "它的鳞片收藏着森林早已遗忘的名字。",
+  "data.materials.fish.carpa_olvido.name": "遗忘之鲤",
   "data.materials.fish.dorado_estival.name": "夏日金鱼",
   "data.materials.fish.dorado_igneo.lore": "",
   "data.materials.fish.dorado_igneo.name": "",
+  "data.materials.fish.dorado_rescoldo.lore": "它亮如一座无人再点燃的炉中的最后一粒余烬。",
+  "data.materials.fish.dorado_rescoldo.name": "余烬金鱼",
   "data.materials.fish.engranaje_oxidado.name": "",
   "data.materials.fish.escoria.name": "",
   "data.materials.fish.estalactita_rota.name": "",
@@ -138,6 +193,8 @@
   "data.materials.fish.esturion_era.name": "",
   "data.materials.fish.esturion_eras.lore": "",
   "data.materials.fish.esturion_eras.name": "",
+  "data.materials.fish.esturion_escarcha.lore": "一个尚未到来的冬天冻住了它，它却依然游着。",
+  "data.materials.fish.esturion_escarcha.name": "永霜鲟",
   "data.materials.fish.guante_helado.name": "",
   "data.materials.fish.hojarasca_mojada.name": "",
   "data.materials.fish.hueso_chamuscado.name": "",
@@ -146,8 +203,12 @@
   "data.materials.fish.leviatan_quieto.name": "",
   "data.materials.fish.lucio_frio.lore": "",
   "data.materials.fish.lucio_frio.name": "",
+  "data.materials.fish.lucio_hondo.lore": "它游在林光不再抵达之处，等待一个早已离开的人。",
+  "data.materials.fish.lucio_hondo.name": "深渊梭鱼",
   "data.materials.fish.lucio_runico.lore": "",
   "data.materials.fish.lucio_runico.name": "",
+  "data.materials.fish.lucio_silencio.lore": "在冰湖深处，连它自己鳍的回声都听不见。",
+  "data.materials.fish.lucio_silencio.name": "寂静梭鱼",
   "data.materials.fish.manecilla_perdida.name": "",
   "data.materials.fish.medusa_manana.name": "",
   "data.materials.fish.mojarra_claro.name": "",
@@ -155,6 +216,8 @@
   "data.materials.fish.mojarra_sombra.name": "",
   "data.materials.fish.perca_hojas.name": "落叶鲈",
   "data.materials.fish.perca_rayada.name": "",
+  "data.materials.fish.pez_archivo.lore": "身上刻着被水封存的图书馆的最后一页。",
+  "data.materials.fish.pez_archivo.name": "溺档之鱼",
   "data.materials.fish.pez_bruma.lore": "什么都看不见时，反而最容易看见它。",
   "data.materials.fish.pez_bruma.name": "雾鱼",
   "data.materials.fish.pez_ceniza.name": "",
@@ -164,6 +227,8 @@
   "data.materials.fish.pez_engranaje.lore": "",
   "data.materials.fish.pez_engranaje.name": "",
   "data.materials.fish.pez_escarcha.name": "",
+  "data.materials.fish.pez_forja_muda.lore": "它诞生于一座熄灭的熔炉之热，那时的过去更加辉煌。",
+  "data.materials.fish.pez_forja_muda.name": "寂炉之鱼",
   "data.materials.fish.pez_invierno.lore": "",
   "data.materials.fish.pez_invierno.name": "",
   "data.materials.fish.pez_paradoja.lore": "",
@@ -176,6 +241,8 @@
   "data.materials.fish.pez_ultimo_fuego.name": "",
   "data.materials.fish.placa_rota.name": "",
   "data.materials.fish.rama_empapada.name": "",
+  "data.materials.fish.raya_adios.lore": "它只从每只木筏旁经过一次，像一场早已发生的告别。",
+  "data.materials.fish.raya_adios.name": "诀别鳐",
   "data.materials.fish.raya_relampago.lore": "背上带着一道尚未落下的闪电之光。",
   "data.materials.fish.raya_relampago.name": "闪电鳐",
   "data.materials.fish.raya_reloj.name": "",
@@ -193,72 +260,116 @@
   "data.materials.life.fibra.name": "",
   "data.materials.life.tabla.desc": "",
   "data.materials.life.tabla.name": "",
+  "data.materials.meal.caldo_invierno.lore": "喝下的人感觉不到霜冻。",
+  "data.materials.meal.caldo_invierno.name": "冬日高汤",
+  "data.materials.meal.ensalada_runica.lore": "花瓣上的符文在手中隐隐可感。",
+  "data.materials.meal.ensalada_runica.name": "符文沙拉",
+  "data.materials.meal.guiso_calabaza.lore": "浓稠得让水都滑开。",
+  "data.materials.meal.guiso_calabaza.name": "南瓜炖菜",
+  "data.materials.meal.melon_glaseado.lore": "每一瓣都与下一瓣严丝合缝。",
+  "data.materials.meal.melon_glaseado.name": "糖霜齿轮瓜",
+  "data.materials.meal.mojarra_nabo.lore": "钓鱼与耕种同在一盘。",
+  "data.materials.meal.mojarra_nabo.name": "芜菁配银鱼",
+  "data.materials.meal.pan_dorado.lore": "结实的外皮，结实的臂膀。",
+  "data.materials.meal.pan_dorado.name": "金麦面包",
+  "data.materials.meal.sopa_cebolla.lore": "洋葱里的铜能引走火花。",
+  "data.materials.meal.sopa_cebolla.name": "铜洋葱汤",
+  "data.materials.meal.sopa_nabo.lore": "镇上最古老、也最暖心的食谱。",
+  "data.materials.meal.sopa_nabo.name": "芜菁汤",
+  "data.materials.meal.tarta_frutilla.lore": "果上的露水留住了清晨的凉意。",
+  "data.materials.meal.tarta_frutilla.name": "草莓挞",
+  "data.materials.meal.trucha_cebolla.lore": "两种铜色相得益彰。",
+  "data.materials.meal.trucha_cebolla.name": "洋葱鳟鱼",
   "data.materials.rod.cana_eco.name": "",
   "data.materials.rod.cana_rama.name": "",
   "data.materials.rod.cana_roble.name": "",
   "data.materials.rod.cana_runica.name": "",
-  "data.materials.tool.azada_eco.name": "",
-  "data.materials.tool.azada_hierro.name": "",
-  "data.materials.tool.azada_rama.name": "",
-  "data.materials.tool.azada_runica.name": "",
-  "data.materials.tool.regadera_cobre.name": "",
-  "data.materials.tool.regadera_eco.name": "",
-  "data.materials.tool.regadera_lata.name": "",
-  "data.materials.tool.regadera_runica.name": "",
-  "data.materials.smith.ore_copper.name": {
-    "text": "铜矿石",
+  "data.materials.smith.drill_echo.name": {
+    "text": "回声银钻头",
     "status": "draft"
   },
-  "data.materials.smith.ingot_copper.name": {
-    "text": "铜锭",
-    "status": "draft"
-  },
-  "data.materials.smith.rare_amber.name": {
-    "text": "根琥珀",
-    "status": "draft"
-  },
-  "data.materials.smith.ore_bronze.name": {
-    "text": "符文青铜矿石",
+  "data.materials.smith.guardian_core.name": {
+    "text": "守护者核心",
     "status": "draft"
   },
   "data.materials.smith.ingot_bronze.name": {
     "text": "符文青铜锭",
     "status": "draft"
   },
-  "data.materials.smith.rare_cog.name": {
-    "text": "古代齿轮",
+  "data.materials.smith.ingot_copper.name": {
+    "text": "铜锭",
     "status": "draft"
   },
-  "data.materials.smith.ore_frost.name": {
-    "text": "寒铁矿石",
-    "status": "draft"
-  },
-  "data.materials.smith.ingot_frost.name": {
-    "text": "寒铁锭",
-    "status": "draft"
-  },
-  "data.materials.smith.rare_rime.name": {
-    "text": "霜晶",
-    "status": "draft"
-  },
-  "data.materials.smith.ore_ember.name": {
-    "text": "炎钢矿石",
+  "data.materials.smith.ingot_echo.name": {
+    "text": "回响银锭",
     "status": "draft"
   },
   "data.materials.smith.ingot_ember.name": {
     "text": "炎钢锭",
     "status": "draft"
   },
-  "data.materials.smith.rare_magma.name": {
-    "text": "熔岩之心",
+  "data.materials.smith.ingot_frost.name": {
+    "text": "寒铁锭",
+    "status": "draft"
+  },
+  "data.materials.smith.mine_bomb.name": {
+    "text": "矿洞炸弹",
+    "status": "draft"
+  },
+  "data.materials.smith.mine_torch.name": {
+    "text": "矿洞火把",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_bronze.name": {
+    "text": "符文青铜矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_copper.name": {
+    "text": "铜矿石",
     "status": "draft"
   },
   "data.materials.smith.ore_echo.name": {
     "text": "回响银矿石",
     "status": "draft"
   },
-  "data.materials.smith.ingot_echo.name": {
-    "text": "回响银锭",
+  "data.materials.smith.ore_ember.name": {
+    "text": "炎钢矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.ore_frost.name": {
+    "text": "寒铁矿石",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_copper.name": {
+    "text": "铜镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_ember.name": {
+    "text": "炽钢镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_frost.name": {
+    "text": "寒铁镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pico.name": {
+    "text": "铁镐",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_amber.name": {
+    "text": "根琥珀",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_cog.name": {
+    "text": "古代齿轮",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_magma.name": {
+    "text": "熔岩之心",
+    "status": "draft"
+  },
+  "data.materials.smith.rare_rime.name": {
+    "text": "霜晶",
     "status": "draft"
   },
   "data.materials.smith.rare_sand.name": {
@@ -269,124 +380,16 @@
     "text": "古代图纸",
     "status": "draft"
   },
-  "data.materials.smith.guardian_core.name": {
-    "text": "守护者核心",
-    "status": "draft"
-  },
-  "data.materials.meal.sopa_nabo.name": "芜菁汤",
-  "data.materials.meal.sopa_nabo.lore": "镇上最古老、也最暖心的食谱。",
-  "data.materials.meal.pan_dorado.name": "金麦面包",
-  "data.materials.meal.pan_dorado.lore": "结实的外皮，结实的臂膀。",
-  "data.materials.meal.guiso_calabaza.name": "南瓜炖菜",
-  "data.materials.meal.guiso_calabaza.lore": "浓稠得让水都滑开。",
-  "data.materials.meal.tarta_frutilla.name": "草莓挞",
-  "data.materials.meal.tarta_frutilla.lore": "果上的露水留住了清晨的凉意。",
-  "data.materials.meal.sopa_cebolla.name": "铜洋葱汤",
-  "data.materials.meal.sopa_cebolla.lore": "洋葱里的铜能引走火花。",
-  "data.materials.meal.caldo_invierno.name": "冬日高汤",
-  "data.materials.meal.caldo_invierno.lore": "喝下的人感觉不到霜冻。",
-  "data.materials.meal.melon_glaseado.name": "糖霜齿轮瓜",
-  "data.materials.meal.melon_glaseado.lore": "每一瓣都与下一瓣严丝合缝。",
-  "data.materials.meal.ensalada_runica.name": "符文沙拉",
-  "data.materials.meal.ensalada_runica.lore": "花瓣上的符文在手中隐隐可感。",
-  "data.materials.meal.mojarra_nabo.name": "芜菁配银鱼",
-  "data.materials.meal.mojarra_nabo.lore": "钓鱼与耕种同在一盘。",
-  "data.materials.meal.trucha_cebolla.name": "洋葱鳟鱼",
-  "data.materials.meal.trucha_cebolla.lore": "两种铜色相得益彰。",
-  "data.materials.crop.brote_primavera.name": {
-    "text": "春芽",
-    "status": "draft"
-  },
-  "data.materials.crop.brote_primavera.seed": {
-    "text": "春芽种子",
-    "status": "draft"
-  },
-  "data.materials.crop.fresa_estival.name": {
-    "text": "夏日草莓",
-    "status": "draft"
-  },
-  "data.materials.crop.fresa_estival.seed": {
-    "text": "夏日草莓种子",
-    "status": "draft"
-  },
-  "data.materials.crop.castana_otono.name": {
-    "text": "秋栗",
-    "status": "draft"
-  },
-  "data.materials.crop.castana_otono.seed": {
-    "text": "秋栗种子",
-    "status": "draft"
-  },
-  "data.materials.crop.baya_invierno.name": {
-    "text": "冬莓",
-    "status": "draft"
-  },
-  "data.materials.crop.baya_invierno.seed": {
-    "text": "冬莓种子",
-    "status": "draft"
-  },
-  "data.materials.crop.flor_eco.name": {
-    "text": "回响之花",
-    "status": "draft"
-  },
-  "data.materials.crop.flor_eco.seed": {
-    "text": "回响之花种子",
-    "status": "draft"
-  },
-  "data.materials.crop.flor_eco.lore": {
-    "text": "在时间重复之处绽放，只持续一声回响的时间。",
-    "status": "draft"
-  },
-  "data.materials.smith.pico.name": {
-    "text": "铁镐",
-    "status": "draft"
-  },
-  "data.materials.smith.pick_copper.name": {
-    "text": "铜镐",
-    "status": "draft"
-  },
-  "data.materials.smith.pick_frost.name": {
-    "text": "寒铁镐",
-    "status": "draft"
-  },
-  "data.materials.smith.pick_ember.name": {
-    "text": "炽钢镐",
-    "status": "draft"
-  },
-  "data.materials.smith.drill_echo.name": {
-    "text": "回声银钻头",
-    "status": "draft"
-  },
-  "data.materials.smith.mine_torch.name": {
-    "text": "矿洞火把",
-    "status": "draft"
-  },
-  "data.materials.smith.mine_bomb.name": {
-    "text": "矿洞炸弹",
-    "status": "draft"
-  },
   "data.materials.smith.vein_oil.name": {
     "text": "矿脉油",
     "status": "draft"
   },
-  "data.materials.fish.lucio_hondo.name": "深渊梭鱼",
-  "data.materials.fish.lucio_hondo.lore": "它游在林光不再抵达之处，等待一个早已离开的人。",
-  "data.materials.fish.carpa_olvido.name": "遗忘之鲤",
-  "data.materials.fish.carpa_olvido.lore": "它的鳞片收藏着森林早已遗忘的名字。",
-  "data.materials.fish.barbo_campana.name": "沉钟鲃",
-  "data.materials.fish.barbo_campana.lore": "它鸣响如钟，曾召唤一座已不复存在的城。",
-  "data.materials.fish.pez_archivo.name": "溺档之鱼",
-  "data.materials.fish.pez_archivo.lore": "身上刻着被水封存的图书馆的最后一页。",
-  "data.materials.fish.lucio_silencio.name": "寂静梭鱼",
-  "data.materials.fish.lucio_silencio.lore": "在冰湖深处，连它自己鳍的回声都听不见。",
-  "data.materials.fish.esturion_escarcha.name": "永霜鲟",
-  "data.materials.fish.esturion_escarcha.lore": "一个尚未到来的冬天冻住了它，它却依然游着。",
-  "data.materials.fish.dorado_rescoldo.name": "余烬金鱼",
-  "data.materials.fish.dorado_rescoldo.lore": "它亮如一座无人再点燃的炉中的最后一粒余烬。",
-  "data.materials.fish.pez_forja_muda.name": "寂炉之鱼",
-  "data.materials.fish.pez_forja_muda.lore": "它诞生于一座熄灭的熔炉之热，那时的过去更加辉煌。",
-  "data.materials.fish.raya_adios.name": "诀别鳐",
-  "data.materials.fish.raya_adios.lore": "它只从每只木筏旁经过一次，像一场早已发生的告别。",
-  "data.materials.fish.ballena_eco.name": "终响之鲸",
-  "data.materials.fish.ballena_eco.lore": "它吟唱着未来早已定下的事；无人能听见第二次。"
+  "data.materials.tool.azada_eco.name": "",
+  "data.materials.tool.azada_hierro.name": "",
+  "data.materials.tool.azada_rama.name": "",
+  "data.materials.tool.azada_runica.name": "",
+  "data.materials.tool.regadera_cobre.name": "",
+  "data.materials.tool.regadera_eco.name": "",
+  "data.materials.tool.regadera_lata.name": "",
+  "data.materials.tool.regadera_runica.name": ""
 }

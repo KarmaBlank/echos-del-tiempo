@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/app/design/design.dart';
+import 'package:echos_del_tiempo/app/theme/retro_text.dart';
+import 'package:echos_del_tiempo/features/passive_tree/presentation/skill_tree_canvas.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/life_skills_view.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/farming_rules.dart';
@@ -58,7 +60,7 @@ Future<void> _save(WidgetTester tester, String name) async {
 }
 
 void main() {
-  testWidgets('tree renders 51 nodes with states and takes a node',
+  testWidgets('tree renders every node with states and takes a node',
       (tester) async {
     final c = await pumpPanel(tester,
         profile: _crafter(12),
@@ -67,10 +69,13 @@ void main() {
             onTake: c.takeLifeNode,
             onReset: c.resetLifeTree));
     await tester.pump();
-    for (final b in kLifeBranches) {
-      expect(find.byKey(ValueKey('life-branch-$b')), findsOneWidget);
+    // Drawn by the shared skill-tree organism: one hit box per node.
+    expect(find.byType(SkillTreeCanvas), findsOneWidget);
+    expect(find.byKey(const ValueKey('life-node-labels')), findsOneWidget);
+    for (final n in kLifeTrees[LifeSkillKind.pesca]!) {
+      expect(find.byKey(ValueKey('life-node-${n.id}')), findsOneWidget);
     }
-    expect(find.byKey(const ValueKey('life-node-fish_r-taken')), findsOneWidget);
+    expect(find.byKey(const ValueKey('life-node-fish_r-start')), findsOneWidget);
     expect(find.byKey(const ValueKey('life-node-fish_a1-available')),
         findsOneWidget);
     expect(find.byKey(const ValueKey('life-node-fish_a2-locked')),
@@ -94,6 +99,38 @@ void main() {
     for (final r in tester.renderObjectList<RenderParagraph>(find.byType(RichText))) {
       expect(r.didExceedMaxLines, isFalse);
     }
+  });
+
+  testWidgets('selecting a node shows its detail; profession switch',
+      (tester) async {
+    await pumpPanel(tester,
+        profile: _crafter(1),
+        build: (v, c) => LifeSkillsView(
+            profile: v.me!.profile,
+            onTake: c.takeLifeNode,
+            onReset: c.resetLifeTree));
+    await tester.pump();
+    final cap = kLifeTrees[LifeSkillKind.pesca]!.last;
+    await tester.tap(find.byKey(ValueKey('life-node-${cap.id}')));
+    await tester.pump();
+    final title = lifeNodeName(cap).toUpperCase();
+    expect(
+        find.byWidgetPredicate((w) =>
+            w is Text && (w.data == title || w.data == retroText(title))),
+        findsOneWidget);
+    // Level 1: the capstone is behind its level gate, TAKE is disabled.
+    expect(find.byKey(ValueKey('life-node-${cap.id}-locked')), findsOneWidget);
+    final take = tester.widget<DsButton>(find.byKey(const ValueKey('life-take')));
+    expect(take.onPressed, isNull);
+    await tester.tap(find.byKey(const ValueKey('life-row-herreria')));
+    await tester.pump();
+    final root = kLifeTrees[LifeSkillKind.herreria]!.first;
+    expect(find.byKey(ValueKey('life-node-${root.id}-start')), findsOneWidget);
+    // Zoom buttons keep every node on the canvas.
+    await tester.tap(find.byKey(const ValueKey('life-node-zoom-in')));
+    await tester.tap(find.byKey(const ValueKey('life-node-fit')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('preview per profession', (tester) async {
@@ -128,6 +165,35 @@ void main() {
       await tester.pump();
       expect(find.text(lifeNodeName(cap).toUpperCase()), findsOneWidget);
       await _save(tester, 'life_tree_${k.name}');
+      if (k == LifeSkillKind.pesca) await _save(tester, 'life_tree_view');
     }
+  });
+
+  testWidgets('tree v2 refund notice and bigger branch / gate labels',
+      (tester) async {
+    final b = _crafter(12);
+    final p = b.copyWith(life: b.life.copyWith(refunded: true));
+    await pumpPanel(tester,
+        profile: p,
+        build: (v, c) => LifeSkillsView(
+            profile: v.me!.profile,
+            onTake: c.takeLifeNode,
+            onReset: c.resetLifeTree));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('life-refunded')), findsOneWidget);
+    final canvas =
+        tester.widget<SkillTreeCanvas>(find.byType(SkillTreeCanvas));
+    expect(canvas.labelScale, greaterThan(1));
+  });
+
+  testWidgets('no refund notice on a fresh tree', (tester) async {
+    await pumpPanel(tester,
+        profile: _crafter(12),
+        build: (v, c) => LifeSkillsView(
+            profile: v.me!.profile,
+            onTake: c.takeLifeNode,
+            onReset: c.resetLifeTree));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('life-refunded')), findsNothing);
   });
 }

@@ -145,11 +145,13 @@ class MineAction extends SessionAction {
 }
 
 /// Smithing operation (mining_smithing.md § 3–5).
-enum SmithOp { smelt, forge, brann }
+enum SmithOp { smelt, forge, brann, fishForge }
 
 /// `smith` (protocol 69): [SmithOp.smelt] smelts [n] ingots from the ore
 /// [material]; [SmithOp.forge] / [SmithOp.brann] forge [base] with the
 /// ingot [material] at rarity index [rarity] (by yourself or by Brann).
+/// [SmithOp.fishForge] (protocol 92, profession_gear.md § 4.2): Brann
+/// forges the legendary fish [material] into a weapon.
 class SmithAction extends SessionAction {
   final SmithOp op;
   final String material;

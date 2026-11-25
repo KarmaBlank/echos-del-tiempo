@@ -10,6 +10,9 @@ import 'package:echos_del_tiempo/game_engine/data/bait_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/life_tree_catalog.dart'
+    show LifeSkillKind;
+import 'package:echos_del_tiempo/game_engine/data/profession_gear_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart'
     show kLifeMaterialIds;
 
@@ -355,6 +358,17 @@ void main() {
       'vida_semilla_${c.id}': _seed(_rarity(c.rarity)),
       'vida_cosecha_${c.id}': _crop(c.id, _rarity(c.rarity)),
     },
+    for (final w in kWeaponSeeds.keys)
+      'vida_semilla_$w': _weaponSeed(w.endsWith('_old')),
+    for (var s = 0; s < 4; s++) 'vida_vivo_$s': _livingStage(s),
+    for (final g in kProfessionGear.values)
+      'vida_${g.sprite}': _gearIcon(
+          g.type,
+          switch (g.source.profession) {
+            LifeSkillKind.cultivo => _leaf,
+            LifeSkillKind.pesca => 0x4aa3ff,
+            LifeSkillKind.herreria => 0xffb347,
+          }),
     for (final m in kMeals.values) 'vida_comida_${m.id}': _meal(m),
     for (final b in kBaits.values) 'vida_cebo_${b.id}': _bait(b),
     for (final id in kLifeMaterialIds) 'vida_mat_$id': _material(id),
@@ -401,4 +415,75 @@ void main() {
   }
   manifest.writeAsStringSync(next);
   stdout.writeln('${icons.length} íconos');
+}
+
+/// Weapon seed (profession_gear.md § 3.1): a seed with a sprouting blade;
+/// the ancient one is gold-ringed.
+RgbaImage _weaponSeed(bool ancient) {
+  final p = _Pen();
+  p.rect(5, 8, 6, 6, ancient ? 0xb08a3a : 0x6a8a3a);
+  p.rect(6, 7, 4, 1, ancient ? 0xb08a3a : 0x6a8a3a);
+  p.line(8, 7, 8, 2, _metal);
+  p.px(7, 3, _leaf);
+  p.px(9, 4, _leaf);
+  if (ancient) p.rect(5, 11, 6, 1, 0xffd060);
+  p.outline();
+  return p.img;
+}
+
+/// Growth stage [s] (0..3) of a living weapon plot (§ 3.2): sprout,
+/// sapling, young tree with a blade bud, ripe weapon branch.
+RgbaImage _livingStage(int s) {
+  final p = _Pen();
+  p.rect(2, 13, 12, 2, _soil);
+  final h = 3 + s * 3;
+  p.line(8, 13, 8, 13 - h, _woodDark);
+  if (s >= 1) {
+    p.px(7, 12 - h ~/ 2, _leaf);
+    p.px(9, 11 - h ~/ 2, _leaf);
+  }
+  if (s >= 2) {
+    p.rect(5, 13 - h, 7, 2, _leaf);
+  }
+  if (s >= 3) {
+    p.line(10, 12, 13, 3, _metal);
+    p.px(13, 2, 0xffffff);
+  }
+  p.outline();
+  return p.img;
+}
+
+/// Profession weapon [type] tinted [c] (vida_gear_<id>).
+RgbaImage _gearIcon(String type, int c) {
+  final p = _Pen();
+  switch (type) {
+    case 'arco':
+      p.line(4, 2, 4, 13, c);
+      p.line(4, 2, 10, 7, _woodDark);
+      p.line(10, 7, 4, 13, _woodDark);
+    case 'báculo' || 'varita':
+      p.line(4, 14, 11, 4, _wood);
+      p.rect(10, 2, 3, 3, c);
+    case 'tomo':
+      p.rect(3, 3, 10, 10, c);
+      p.rect(4, 4, 1, 8, 0xe8e0c8);
+    case 'dagas':
+      p.line(3, 13, 7, 4, c);
+      p.line(9, 13, 13, 4, c);
+    case 'hacha':
+      p.line(4, 14, 10, 3, _wood);
+      p.rect(9, 2, 4, 5, c);
+    case 'martillo+escudo':
+      p.line(3, 14, 8, 6, _wood);
+      p.rect(6, 3, 5, 4, c);
+      p.rect(11, 8, 4, 6, _metal);
+    case 'ballesta' || 'rifle':
+      p.rect(2, 7, 12, 2, c);
+      p.rect(4, 9, 2, 4, _wood);
+    default:
+      p.line(3, 13, 12, 3, c);
+      p.line(3, 10, 6, 13, _woodDark);
+  }
+  p.outline();
+  return p.img;
 }

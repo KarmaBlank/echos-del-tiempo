@@ -1221,7 +1221,11 @@ class PassiveTreePainter extends CustomPainter {
     this.planned = const {},
     this.zoom = 1,
     this.devicePixelRatio = 1,
+    this.ring = true,
   });
+
+  /// Shared centre ring of the class tree (off for other trees).
+  final bool ring;
 
   /// Zoom del visor y px físicos por px lógico: con zoom alejado
   /// ([farZoom]) la capa fija se dibuja como UNA imagen ya rasterizada a
@@ -1327,15 +1331,7 @@ class PassiveTreePainter extends CustomPainter {
   void _paintBase(Canvas canvas) {
     const center = Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     // Anillo central compartido.
-    final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
-        math.pow(catalog.nodes['p_gue']?.y ?? 2, 2));
-    canvas.drawCircle(
-        center,
-        ringR * PassiveTreeView.scale,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 8
-          ..color = ProtoColors.panelBorder.withValues(alpha: 0.35));
+    if (ring) _paintRing(canvas, center);
 
     final idle = Paint()
       ..strokeWidth = 2
@@ -1361,6 +1357,18 @@ class PassiveTreePainter extends CustomPainter {
     for (final n in catalog.nodes.values) {
       _drawNode(canvas, n);
     }
+  }
+
+  void _paintRing(Canvas canvas, Offset center) {
+    final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
+        math.pow(catalog.nodes['p_gue']?.y ?? 2, 2));
+    canvas.drawCircle(
+        center,
+        ringR * PassiveTreeView.scale,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..color = ProtoColors.panelBorder.withValues(alpha: 0.35));
   }
 
   /// Arista como polilínea por su recorrido (`edgeRoutes`): sigue los
@@ -1587,7 +1595,12 @@ class TreeLabelsPainter extends CustomPainter {
     required this.textScaler,
     this.highlightPath,
     this.devicePixelRatio = 1,
+    this.labelScale = 1,
   });
+
+  /// Size of the labels over [RetroType.smallStyle] (the life trees draw
+  /// their branch names and "Nv N" gates bigger, life_trees_v2.md § 3).
+  final double labelScale;
 
   final PassiveTreeCatalog catalog;
   final Matrix4 transform;
@@ -1598,7 +1611,7 @@ class TreeLabelsPainter extends CustomPainter {
   /// Zoom mínimo con nombres.
   static const minZoom = 0.55;
 
-  static final _cache = <(String, bool, TextScaler), TextPainter>{};
+  static final _cache = <(String, bool, TextScaler, double), TextPainter>{};
 
   double get zoom => transform.storage[0];
 
@@ -1615,11 +1628,12 @@ class TreeLabelsPainter extends CustomPainter {
     for (final path in paths) {
       final lit = path.id == highlightPath;
       final tp = _cache.putIfAbsent(
-          (path.name, lit, textScaler),
+          (path.name, lit, textScaler, labelScale),
           () => TextPainter(
                 text: TextSpan(
                   text: retroText(path.name.toUpperCase()),
                   style: RetroType.smallStyle.copyWith(
+                    fontSize: (RetroType.smallStyle.fontSize ?? 10) * labelScale,
                     color: lit
                         ? ProtoColors.gold
                         : path.kind == 'clase'
@@ -1651,7 +1665,8 @@ class TreeLabelsPainter extends CustomPainter {
       old.transform != transform ||
       old.highlightPath != highlightPath ||
       old.textScaler != textScaler ||
-      old.devicePixelRatio != devicePixelRatio;
+      old.devicePixelRatio != devicePixelRatio ||
+      old.labelScale != labelScale;
 }
 
 /// Números de paso del orden sugerido (build_planner.md § 9.2), en px de

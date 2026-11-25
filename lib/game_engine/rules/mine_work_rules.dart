@@ -80,10 +80,13 @@ abstract final class MineWorkRules {
   /// [st] with the veins [who] discovers standing at tile ([px], [py]):
   /// veins within `discoverLit` tiles (their glow is plain to see) and
   /// veins showing on a tunnel face (next to walkable ground) within
-  /// `discoverView` tiles.
+  /// `discoverView` tiles. [detect]: the Pico sub-path B radius (tiles)
+  /// inside which hidden veins are sensed through the rock.
   static MineLevelState discover(
-      MineLevel lvl, MineLevelState st, String who, double px, double py) {
-    final lit = t.d('discoverLit'), view = t.d('discoverView');
+      MineLevel lvl, MineLevelState st, String who, double px, double py,
+      {double detect = 0}) {
+    final lit = math.max(t.d('discoverLit'), detect),
+        view = math.max(t.d('discoverView'), detect);
     final r = view.ceil();
     final cx = px.floor(), cy = py.floor();
     final had = st.knownBy(who);
@@ -111,6 +114,35 @@ abstract final class MineWorkRules {
     }
     if (add == null) return st;
     return st.copyWith(known: {...st.known, who: {...had, ...add}});
+  }
+
+  /// Hidden veins within [radius] tiles of ([px], [py]): vein tiles with
+  /// no walkable neighbour (still inside the rock). The Pico sub-path B
+  /// perk (`detect`, life_trees_v2.md § 5) makes them sparkle; the gem
+  /// ring of a sealed grotto counts, so hidden grottoes sparkle too.
+  static List<(int, int)> hiddenVeins(
+      MineLevel lvl, MineLevelState st, double px, double py, double radius) {
+    if (radius <= 0) return const [];
+    final r = radius.ceil(), cx = px.floor(), cy = py.floor();
+    final out = <(int, int)>[];
+    for (var y = math.max(0, cy - r); y <= math.min(lvl.height - 1, cy + r); y++) {
+      for (var x = math.max(0, cx - r); x <= math.min(lvl.width - 1, cx + r); x++) {
+        if (!MineTile.veins.contains(MiningRules.tileAt(lvl, st, x, y))) {
+          continue;
+        }
+        final dx = x + 0.5 - px, dy = y + 0.5 - py;
+        if (dx * dx + dy * dy > radius * radius) continue;
+        var open = false;
+        for (final (ax, ay) in _n4) {
+          if (Tile.isWalkable(MiningRules.tileAt(lvl, st, x + ax, y + ay))) {
+            open = true;
+            break;
+          }
+        }
+        if (!open) out.add((x, y));
+      }
+    }
+    return out;
   }
 
   /// The veins [who] has on the minimap now: discovered and still veins.

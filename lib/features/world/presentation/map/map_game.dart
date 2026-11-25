@@ -11,6 +11,7 @@ import '../../../../game_engine/models/custom_npc.dart';
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
+import '../../../../game_engine/rules/profession_gear_rules.dart';
 import 'light_layer.dart';
 import 'mine_layer.dart';
 import '../../../../game_engine/rules/town_plan.dart';
@@ -186,7 +187,7 @@ class MapGame extends Game {
   final fishing = MapFishingLayer();
 
   /// Huerta del pueblo (farming.md § 2.3).
-  final farm = MapFarmLayer();
+  late final farm = MapFarmLayer()..icon = ((id) => sprites.lifeIcon(id, ''));
 
   /// Cozy life art (cozy_life.md): fireflies, raft and farm decorations.
   late final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
@@ -1410,9 +1411,8 @@ class MapGame extends Game {
         // Fishing from the raft the rider sits on a crate; the awning
         // posts stand behind them, the cloth above (cozy_life.md § 1).
         final sit = raft && line != null;
-        final dir = mine ? controller.local.dir : p.dir;
         if (raft) cozy.drawRaftPosts(c, px, py + 3, _bob(t), p.profile.life);
-        if (sit) cozy.drawRaftSeat(c, px, py, dir);
+        if (sit) cozy.drawRaftSeat(c, px, py);
         hero(px, py, seated: sit);
         if (raft) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
@@ -1645,6 +1645,20 @@ class MapGame extends Game {
               },
             null => null,
           });
+      // Hidden veins sparkle for the Pico B perk (life_trees_v2.md § 5).
+      if (p != null) {
+        final radius = GearRules.detectRadius(p.profile);
+        if (radius > 0) {
+          mine.drawDetectSparkles(
+              c,
+              mine.detectTiles(lvl, s.town.mine(map.place!), p.x / 16,
+                  p.y / 16, radius),
+              t);
+        }
+      }
+      // Area pickaxe indicator (life_trees_v2.md § 2.1, Veta A).
+      final area = controller.mineAreaTiles;
+      if (area.isNotEmpty) drawTileTarget(c, area, true);
     } else if (map.lobby && map.place == null) {
       final (ox, oy) = map.townOrigin;
       for (final l in TownPlan.landmarksOf(s.town)) {

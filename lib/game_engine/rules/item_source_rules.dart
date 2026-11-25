@@ -5,6 +5,7 @@
 import '../data/bait_catalog.dart';
 import '../data/biomes_catalog.dart';
 import '../data/cooking_catalog.dart';
+import '../data/cozy_catalog.dart' show kCompostRecipes;
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/mine_catalog.dart' show mineTool;
@@ -56,6 +57,10 @@ enum ItemSourceKind {
 
   /// Prepared at the bait bench.
   baitCraft,
+
+  /// Made at the compost bin from a compost recipe (cozy_life.md,
+  /// profession_gear.md § 3.3).
+  compost,
 }
 
 class ItemSource {
@@ -103,8 +108,12 @@ abstract final class ItemSourceRules {
     if (kFarmTools.containsKey(id) || kRods.containsKey(id)) {
       return const [ItemSource(ItemSourceKind.toolShop)];
     }
-    if (kFertilizers.containsKey(id)) {
-      return const [ItemSource(ItemSourceKind.farmShop)];
+    if (kFertilizers[id] case final f?) {
+      return [
+        if (f.price > 0) const ItemSource(ItemSourceKind.farmShop),
+        if (kCompostRecipes.values.any((r) => r.fert == id))
+          const ItemSource(ItemSourceKind.compost),
+      ];
     }
     if (kCrops[id] case final c?) {
       final seasonal = kSeasonalForage.indexOf(id);

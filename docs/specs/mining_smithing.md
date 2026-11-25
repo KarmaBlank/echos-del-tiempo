@@ -420,3 +420,13 @@ forjado queda debajo del personaje, la rareza respeta el nivel y un
 - Frases de las piedras con inscripción: **BORRADOR**.
 - Materiales de temporada: el gancho existe (§ 0) pero ningún material
   tiene `seasons` todavía.
+
+## 9. Equipo de Herrería y sub-caminos (v0.50, protocolo 92)
+Armas solo de forja (`forgeGearChance` desde Herrería `forgeGearLevel`)
+y forja de pez de Brann: profession_gear.md § 4.2 y § 5. Sub-caminos:
+Forja (`forge` / `forgeAffix`), Veta (`veinArea`: un golpe en una veta
+rompe hasta N vetas vecinas, con el indicador de área en el mapa /
+`rareOre`), Fundición (`smeltDouble` / `salvage`), Pico (`mineSpeed`:
+swing más corto / `detect`: descubre vetas ocultas en un radio) y
+Encargos (`orderPay` / `orderChest`). Los cofres de la mina pueden traer
+semillas de arma (`seedMineChestChance`).

@@ -262,6 +262,9 @@ items:
   vida_abono: { idle: items/vida_abono.png, size: [16, 16] }
   vida_abono_runico: { idle: items/vida_abono_runico.png, size: [16, 16] }
   vida_abono_eco: { idle: items/vida_abono_eco.png, size: [16, 16] }
+  vida_abono_brasa: { idle: items/vida_abono_brasa.png, size: [16, 16] }
+  vida_abono_miel: { idle: items/vida_abono_miel.png, size: [16, 16] }
+  vida_abono_escarcha: { idle: items/vida_abono_escarcha.png, size: [16, 16] }
   vida_mojarra_claro: { idle: items/vida_mojarra_claro.png, size: [16, 16] }
   vida_perca_rayada: { idle: items/vida_perca_rayada.png, size: [16, 16] }
   vida_carpa_musgo: { idle: items/vida_carpa_musgo.png, size: [16, 16] }
@@ -426,6 +429,30 @@ items:
   vida_cosecha_baya_invierno: { idle: items/vida_cosecha_baya_invierno.png, size: [16, 16] }
   vida_semilla_flor_eco: { idle: items/vida_semilla_flor_eco.png, size: [16, 16] }
   vida_cosecha_flor_eco: { idle: items/vida_cosecha_flor_eco.png, size: [16, 16] }
+  vida_semilla_ws_baston: { idle: items/vida_semilla_ws_baston.png, size: [16, 16] }
+  vida_semilla_ws_arco: { idle: items/vida_semilla_ws_arco.png, size: [16, 16] }
+  vida_semilla_ws_varita: { idle: items/vida_semilla_ws_varita.png, size: [16, 16] }
+  vida_semilla_ws_lanza: { idle: items/vida_semilla_ws_lanza.png, size: [16, 16] }
+  vida_semilla_ws_baston_old: { idle: items/vida_semilla_ws_baston_old.png, size: [16, 16] }
+  vida_semilla_ws_arco_old: { idle: items/vida_semilla_ws_arco_old.png, size: [16, 16] }
+  vida_semilla_ws_varita_old: { idle: items/vida_semilla_ws_varita_old.png, size: [16, 16] }
+  vida_semilla_ws_lanza_old: { idle: items/vida_semilla_ws_lanza_old.png, size: [16, 16] }
+  vida_vivo_0: { idle: items/vida_vivo_0.png, size: [16, 16] }
+  vida_vivo_1: { idle: items/vida_vivo_1.png, size: [16, 16] }
+  vida_vivo_2: { idle: items/vida_vivo_2.png, size: [16, 16] }
+  vida_vivo_3: { idle: items/vida_vivo_3.png, size: [16, 16] }
+  vida_gear_vivo_baston: { idle: items/vida_gear_vivo_baston.png, size: [16, 16] }
+  vida_gear_vivo_arco: { idle: items/vida_gear_vivo_arco.png, size: [16, 16] }
+  vida_gear_vivo_varita: { idle: items/vida_gear_vivo_varita.png, size: [16, 16] }
+  vida_gear_vivo_lanza: { idle: items/vida_gear_vivo_lanza.png, size: [16, 16] }
+  vida_gear_hundido_sable: { idle: items/vida_gear_hundido_sable.png, size: [16, 16] }
+  vida_gear_hundido_tomo: { idle: items/vida_gear_hundido_tomo.png, size: [16, 16] }
+  vida_gear_hundido_ballesta: { idle: items/vida_gear_hundido_ballesta.png, size: [16, 16] }
+  vida_gear_hundido_dagas: { idle: items/vida_gear_hundido_dagas.png, size: [16, 16] }
+  vida_gear_forja_martillo: { idle: items/vida_gear_forja_martillo.png, size: [16, 16] }
+  vida_gear_forja_hacha: { idle: items/vida_gear_forja_hacha.png, size: [16, 16] }
+  vida_gear_forja_rifle: { idle: items/vida_gear_forja_rifle.png, size: [16, 16] }
+  vida_gear_forja_dagas: { idle: items/vida_gear_forja_dagas.png, size: [16, 16] }
   vida_comida_sopa_nabo: { idle: items/vida_comida_sopa_nabo.png, size: [16, 16] }
   vida_comida_pan_dorado: { idle: items/vida_comida_pan_dorado.png, size: [16, 16] }
   vida_comida_guiso_calabaza: { idle: items/vida_comida_guiso_calabaza.png, size: [16, 16] }
@@ -461,7 +488,7 @@ items:
   vida_raft_lantern: { idle: items/vida_raft_lantern.png, size: [16, 16] }
   vida_raft_roof: { idle: items/vida_raft_roof.png, size: [32, 6] }
   vida_raft_posts: { idle: items/vida_raft_posts.png, size: [32, 17] }
-  vida_raft_seat: { idle: items/vida_raft_seat.png, size: [10, 6] }
+  vida_raft_seat: { idle: items/vida_raft_seat.png, size: [16, 6] }
   vida_decor_fence: { idle: items/vida_decor_fence.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }

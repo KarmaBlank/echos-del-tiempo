@@ -36,6 +36,10 @@ class FishingHostState {
   /// XP de personaje ganada pescando en esta estadía en el pueblo.
   final charXp = <String, int>{};
 
+  /// Raft net progress per player (Red sub-path B, profession_gear.md
+  /// § 4.3): one catch each time it reaches 1.
+  final net = <String, double>{};
+
   /// Quién ya avisó en el chat que se puso a pescar (por estadía).
   final announced = <String>{};
 
@@ -132,10 +136,17 @@ extension _FishingOp on _Op {
     final FishCatch fish;
     switch (kind) {
       case WaterLootKind.fish:
+        // Arpón sub-path B (profession_gear.md § 4.3): from the raft over
+        // deep water a big fish can be harpooned — rarer and top size.
+        final hc = p.rafting
+            ? GearRules.harpoonChance(p.profile, fishDepth(e.mapFor(s), p))
+            : 0.0;
+        final harpoon = hc > 0 && _rand() < hc;
         fish = FishingRules.roll(_rand, w.table,
-            rareBonus: w.rare,
+            rareBonus: w.rare + (harpoon ? 2.0 : 0.0),
             pity: p.profile.life.pity,
-            sizeBonus: w.size);
+            sizeBonus: harpoon ? 1.0 : w.size);
+        if (harpoon) say('${p.name} arponeó una pieza grande desde la balsa.');
       case WaterLootKind.basura:
         final junk = w.junk;
         final id = junk[(_rand() * junk.length).floor() % junk.length];
@@ -208,7 +219,9 @@ extension _FishingOp on _Op {
     return (
       table: BaitRules.weighted(table, bait),
       size: math.min(1.0,
-          (bait == null ? 0.0 : BaitRules.size(bait)) + RaftRules.depthSize(depth)),
+          (bait == null ? 0.0 : BaitRules.size(bait)) + RaftRules.depthSize(depth) +
+              // Hondura sub-path B: bigger fish.
+              GearRules.bigBonus(p.profile)),
       junk: junk,
       rare: rare,
       dock: dock,
@@ -237,7 +250,9 @@ extension _FishingOp on _Op {
         FishingRules.rodBonus(p.profile).bite * _at.d('autoPassiveMult') +
             (bait == null ? 0.0 : BaitRules.bite(bait));
     return FishingRules.biteDelay(_rand(), bite) *
-        math.max(0.1, _at.d('autoWaitMult'));
+        math.max(0.1, _at.d('autoWaitMult')) *
+        // Calma sub-path A (life_trees_v2.md § 2.1): calmer, faster bites.
+        GearRules.calmMult(p.profile);
   }
 
   /// `fAuto {on}`: with the rod out at the water, the host fishes for [p].
@@ -295,6 +310,32 @@ extension _FishingOp on _Op {
           sizeBonus: w.size);
       st.caught++;
       _grantFish(p, fish, auto: true, log: true);
+    }
+  }
+
+  /// Red sub-path B (profession_gear.md § 4.3): a player sailing a raft
+  /// with the net fishes on their own — `net` catches every
+  /// `netEverySec` (never legendary, auto quality).
+  void raftNetTick(double dt) {
+    for (final p in players) {
+      if (!p.rafting || p.isCompanion || !_inTown(p)) {
+        _f.net.remove(p.id);
+        continue;
+      }
+      final rate = GearRules.netRate(p.profile);
+      if (rate <= 0) continue;
+      final acc = (_f.net[p.id] ?? 0) +
+          dt / math.max(1.0, GearRules.t.d('netEverySec')) * rate;
+      if (acc < 1) {
+        _f.net[p.id] = acc;
+        continue;
+      }
+      _f.net[p.id] = acc - 1;
+      final w = _waterSpot(p, 0, passive: _at.d('autoPassiveMult'));
+      final fish = FishingRules.roll(_rand, w.table,
+          rareBonus: w.rare, auto: true, sizeBonus: w.size);
+      _grantFish(p, fish, auto: true, log: true);
+      say('La red de la balsa de ${p.name} sacó algo.');
     }
   }
 
@@ -364,9 +405,26 @@ extension _FishingOp on _Op {
         drops.addAll(_chestDrops(p, def, lvl));
         label = 'un cofre hundido (+$cr de oro)';
         rarity = tier == ChestTier.plata ? Rarity.epico : Rarity.raro;
+        // profession_gear.md § 4.1: sometimes a sunken echo weapon inside.
+        if (_rand() < GearRules.sunkenChestChance(p.profile)) {
+          final w = GearRules.sunken(rules.loot, _rand, p.profile,
+              LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap()));
+          drops.add(LootDrop.item(w));
+          if (w.rarity.index > rarity.index) rarity = w.rarity;
+        }
       case WaterLootKind.arma:
         final il =
             LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap());
+        // profession_gear.md § 4.1: a sunken echo weapon (fishing only).
+        if (_rand() <
+            GearRules.sunkenChance(p.profile, fishDepth(e.mapFor(s), p))) {
+          final item = GearRules.sunken(rules.loot, _rand, p.profile, il);
+          final d = LootDrop.item(item);
+          drops.add(d);
+          label = _dropText(d);
+          rarity = item.rarity;
+          break;
+        }
         final pool = [
           for (final id in kFishingLegendaries)
             if (kUniques[id] case final u?
@@ -444,6 +502,14 @@ extension _FishingOp on _Op {
     events.add(FishCaughtEvent(p.id, c.species, c.sizeCm, auto: auto));
     say('${p.name} pescó ${c.def.name} (${c.sizeCm} cm, ${c.rarity.label})'
         '${auto ? ' (auto-pesca)' : ''}.');
+    // Calma sub-path B (profession_gear.md § 4.3): sometimes two at once.
+    final twin = GearRules.twinChance(p.profile);
+    if (log && twin > 0 && _rand() < twin) {
+      _profileChange(p,
+          p.profile.copyWith(life: p.profile.life.addFish(c.species)),
+          gain: true);
+      say('${p.name} sacó dos de una: otro ${c.def.name}.');
+    }
     if (first) {
       say('Especie nueva en el bestiario de pesca de ${p.name}: '
           '${c.def.name}.');

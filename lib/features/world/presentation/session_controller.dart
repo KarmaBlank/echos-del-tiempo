@@ -102,6 +102,7 @@ import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
 import '../../../game_engine/rules/farming_rules.dart';
 import '../../../game_engine/rules/life_time_rules.dart';
+import '../../../game_engine/rules/profession_gear_rules.dart';
 import '../../../game_engine/rules/life_tree_rules.dart';
 import '../../../game_engine/models/fish_line.dart';
 import '../../../core/audio/sfx_catalog.dart';
@@ -1199,9 +1200,11 @@ class SessionController extends StateNotifier<SessionView?> {
         gateOpen: s.gateOpen,
         raft: me.rafting && me.epoch == local.epoch,
         // Viento del Eco (worldgen.md § 11.3).
-        speedMult: s.mode == SessionMode.field
-            ? ExplorationRules.speedMult(s.mission, s.time)
-            : 1);
+        speedMult: me.rafting
+            ? GearRules.raftMult(me.profile)
+            : s.mode == SessionMode.field
+                ? ExplorationRules.speedMult(s.mission, s.time)
+                : 1);
   }
 
   /// El campo de chat tiene el foco: no hay movimiento ni atajos.
@@ -1714,6 +1717,34 @@ class SessionController extends StateNotifier<SessionView?> {
     return MiningRules.tileAt(lvl, mineState, x, y);
   }
 
+  /// Veins the area pickaxe (Veta sub-path A, life_trees_v2.md § 2.1)
+  /// also breaks with a blow on the vein in front: the same pick the host
+  /// makes (session_engine_mining), drawn as the area indicator.
+  List<(int, int)> get mineAreaTiles {
+    final lvl = mineLevel;
+    final p = _s?.players[localId]?.profile;
+    if (lvl == null || p == null || !inMine) return const [];
+    final (x, y) = mineTarget;
+    if (!MineTile.veins.contains(MiningRules.tileAt(lvl, mineState, x, y))) {
+      return const [];
+    }
+    var left = GearRules.veinArea(p);
+    final tool = MiningRules.tool(p);
+    final out = <(int, int)>[];
+    for (final (vx, vy) in squareTiles(x, y, 1)) {
+      if (left <= 0) break;
+      if (vx == x && vy == y) continue;
+      final c = MiningRules.tileAt(lvl, mineState, vx, vy);
+      if (!MineTile.veins.contains(c) ||
+          MiningRules.cannotBreak(c, lvl.level, tool) != null) {
+        continue;
+      }
+      out.add((vx, vy));
+      left--;
+    }
+    return out;
+  }
+
   /// Hits dealt by the local player per tile (prediction for the crack
   /// stages; the host keeps the real count).
   final mineCracks = <int, int>{};
@@ -1735,7 +1766,9 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Ms between hits of the held pick (the swing animation's period).
   double get mineSwingPeriodMs {
     final p = _s?.players[localId]?.profile;
-    return p == null ? 300 : MiningRules.tool(p).swing * 1000;
+    return p == null
+        ? 300
+        : MiningRules.tool(p).swing * GearRules.swingMult(p) * 1000;
   }
 
   /// The tile last hit, its hits dealt (prediction), its total hits and
@@ -1787,7 +1820,8 @@ class SessionController extends StateNotifier<SessionView?> {
     final now = mineClock.elapsedMilliseconds.toDouble();
     // The rhythm runs on the room clock (the host checks the same one).
     final st = _s!.time;
-    if (st - _lastSwingT < tool.swing) return false;
+    // Pico sub-path A: faster swings (GearRules.swingMult).
+    if (st - _lastSwingT < tool.swing * GearRules.swingMult(p)) return false;
     final (x, y) = mineTarget;
     final c = MiningRules.tileAt(lvl, mineState, x, y);
     if (MiningRules.cannotBreak(c, lvl.level, tool) case final why?) {
@@ -2432,7 +2466,7 @@ class SessionController extends StateNotifier<SessionView?> {
           ? strings.t('ui.world.ctl.farm.till_first')
           : pl.planted
               ? strings.t('ui.world.ctl.farm.already_planted')
-              : p.life.farm.activeSeed == null
+              : FarmingRules.activeSeed(p) == null
                   ? strings.t('ui.world.tools.no_seeds_tip')
                   : null,
       FarmHand.can => pl == null
@@ -2487,7 +2521,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s!.players[localId]!.profile;
     final ok = _apply(FarmTileAction(op, t.$1, t.$2,
         seed: op == FarmOp.plant
-            ? p.life.farm.activeSeed
+            ? FarmingRules.activeSeed(p)
             : op == FarmOp.fert
                 ? farmFert
                 : null));
@@ -2605,7 +2639,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[localId]?.profile;
     if (t == null || p == null) return null;
     final pl = plotAt(t.$1, t.$2);
-    final seed = p.life.farm.activeSeed;
+    final seed = FarmingRules.activeSeed(p);
     final fert = pl != null &&
             pl.planted &&
             pl.fert == null &&

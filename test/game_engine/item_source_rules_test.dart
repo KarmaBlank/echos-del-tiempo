@@ -38,7 +38,7 @@ void main() {
       expect(kinds, contains(ItemSourceKind.toolShop), reason: id);
       expect(kinds, isNot(contains(ItemSourceKind.farmShop)), reason: id);
     }
-    expect(ItemSourceRules.of(kFertilizers.keys.first).single.kind,
+    expect(ItemSourceRules.of(kFertilizers.keys.first).first.kind,
         ItemSourceKind.farmShop);
   });
 
