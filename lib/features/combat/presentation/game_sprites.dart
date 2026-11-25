@@ -60,7 +60,12 @@ class GameSprites {
       for (final e in catalog.entries)
         if (e.section == 'items' && e.key.startsWith('vida_'))
           catalog.image(e).then((img) {
-            if (img != null) life[e.key.substring(5)] = img;
+            if (img == null) return;
+            life[e.key.substring(5)] = img;
+            // Profession weapons draw their own icon (profession_gear.md).
+            if (e.key.startsWith('vida_gear_')) {
+              ItemIconImages.putGear(e.key.substring(5), img);
+            }
           }),
     ]);
     // Variantes procedurales de NPC (npc_variants.md): generadas una vez

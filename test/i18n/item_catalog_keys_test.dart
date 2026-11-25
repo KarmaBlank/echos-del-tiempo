@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart' show kMe
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/profession_gear_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/smithing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/uniques_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapon_passives.dart';
@@ -35,6 +36,16 @@ Map<String, Map<String, String>> catalogSource() {
     },
     for (final r in Rarity.values) ItemKeys.rarity(r): r.label,
     for (final p in kWeaponPassives.values) ItemKeys.passiveName(p.id): p.name,
+    // Profession weapons (profession_gear.md § 6).
+    for (final g in kProfessionGear.values) ...{
+      'data.items.gear.${g.id}.name': g.name,
+      'data.items.gear.${g.id}.legend': g.legend,
+    },
+    for (final e in kWeaponSeedNames.entries)
+      'data.items.gear.seed.${e.key}': e.value,
+    for (final e in kGearTypeNames.entries)
+      'data.items.gear.type.${gearTypeKey(e.key)}': e.value,
+    'data.items.gear.fish.name': '{type} de {fish}',
   };
   final crafting = <String, String>{
     for (final a in kAffixes.values) ItemKeys.affixName(a.id): a.name,

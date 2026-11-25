@@ -684,3 +684,14 @@ diseño.
   - resistencia → **escudo inicial**: escudo de `mealShield` (12 %) de
     la vida máx. al empezar la batalla, `mealShieldTurns` (3) turnos.
 - El tooltip de la comida y el chip COMIDA listan el extra.
+
+## 20. Armas de madera viva y sub-caminos (v0.50, protocolo 92)
+Semillas de arma, cuidado con abonos que deciden afijos, calidad →
+rareza y replantar: profession_gear.md § 3. Nuevos abonos (sin precio,
+solo por receta): `abono_brasa`, `abono_miel`, `abono_escarcha`
+(recetas `ember_compost`, `honey_compost`, `frost_compost`). Sub-caminos
+de Tierra (riego 3×3 / crecer), Semilla (más semillas / mutaciones),
+Abono (más bolsas / abono en área), Madera viva (calidad / afijo) y
+Cocina (`mealPower` / comidas más largas): life_trees_v2.md § 2.1. Una
+comida guarda su potencia (`MealBuff.b`) y el ATK / MAG de pescado
+(`MealBuff.a`) al comerla.

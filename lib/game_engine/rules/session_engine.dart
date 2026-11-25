@@ -1,3 +1,4 @@
+import 'profession_gear_rules.dart';
 import 'oficio_storage_rules.dart';
 import 'cooking_rules.dart';
 import 'weather_rules.dart';
@@ -3001,6 +3002,7 @@ class _Op {
     if (world) farmTick(dt);
     if (s.mode == SessionMode.lobby) mineTick(dt, world);
     autoFishTick();
+    if (s.mode == SessionMode.lobby) raftNetTick(dt);
     _loreExplore();
     final m = s.mission;
     if (m != null &&

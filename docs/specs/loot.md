@@ -1739,3 +1739,9 @@ Raro siempre el suyo. Se tira antes que los mods (consume una tirada
 desde Raro) y un Épico con elemento rueda 1 mod menos. Es una pasiva
 fija: no se quita ni se cambia. `sanitize` migra los legendarios viejos
 y descarta el elemento en Común/Mágico.
+
+## 24. Equipo de oficios (v0.50)
+Armas únicas de cada oficio, con marca de uid `gear-<id>-` que el
+inventario conserva: profession_gear.md. Son armas normales (base por
+tipo y nivel, afijos y pasiva legendaria por las reglas de siempre) con
+una firma fija (`UniqueMod`) y nombre propio.

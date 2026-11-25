@@ -66,6 +66,14 @@ const kCompostRecipes = <String, CompostRecipe>{
       'herb_compost', {'hierba_rocio@0': 2, 'moras_bosque@0': 1}, 'abono', 3),
   'mushroom_compost': CompostRecipe('mushroom_compost',
       {'hongo_ambar@0': 2, 'hierba_rocio@0': 2}, 'abono_runico', 1),
+  // Living weapon composts (profession_gear.md § 3.3): the Abono branch of
+  // the Cultivo tree hands these out; searching trees finds them too.
+  'ember_compost': CompostRecipe(
+      'ember_compost', {'chile_volcan@0': 2, 'moras_bosque@0': 1}, 'abono_brasa', 2),
+  'honey_compost': CompostRecipe('honey_compost',
+      {'frutilla_rocio@0': 2, 'moras_bosque@0': 1}, 'abono_miel', 2),
+  'frost_compost': CompostRecipe(
+      'frost_compost', {'rabano_nieve@0': 2, 'hierba_rocio@0': 1}, 'abono_escarcha', 2),
 };
 
 /// What a tree search can turn up (cozy_life.md § 3).

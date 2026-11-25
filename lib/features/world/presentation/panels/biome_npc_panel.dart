@@ -26,6 +26,7 @@ import '../../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
 import '../../../../game_engine/rules/mining_rules.dart' show SmithCraftRules;
 import '../../../inventory/presentation/item_widgets.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/profession_gear_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/npc_talk_rules.dart';
@@ -1113,10 +1114,57 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         ]),
         SizedBox(height: DsSpace.sm),
         Expanded(
-          child: _grid(
-              [for (final w in bases) cell(w)], _s.t('ui.town.npc.com.empty')),
+          child: _grid([
+            // Fish forge (profession_gear.md § 4.2): a legendary fish in
+            // the bag becomes a unique weapon.
+            for (final f in kFish.values)
+              if (f.rarity == FishRarity.legendario && p.life.count(f.id) > 0)
+                _fishForgeCell(c, p, f),
+            for (final w in bases) cell(w),
+          ], _s.t('ui.town.npc.com.empty')),
         ),
       ],
+    );
+  }
+
+  LifeItemCellData _fishForgeCell(
+      SessionController c, PlayerProfile p, FishDef f) {
+    final why = GearRules.fishForgeBlock(p, f.id);
+    final whyText = switch (why) {
+      null => null,
+      FishForgeBlock.gold => _s.t('ui.inventory.smith.why.noGold'),
+      _ => _s.t('ui.inventory.smith.why.level'),
+    };
+    final gold = GearRules.t.i('fishForgeGold');
+    final name = f.text;
+    return LifeItemCellData(
+      id: 'brann-fish-${f.id}',
+      icon: LifeIcon(f.id, LifeIconKind.pescado, size: 32),
+      border: RarityColors.of(Rarity.legendario),
+      search: name,
+      caption: 'x${p.life.count(f.id)}',
+      detail: LifeItemDetail(
+        name: name,
+        nameColor: RarityColors.of(Rarity.legendario),
+        tags: [
+          (_s.t('ui.town.forge.fish_forge').toUpperCase(),
+              RarityColors.of(Rarity.legendario)),
+        ],
+        lines: [
+          _s.t('ui.town.forge.fish_forge_hint', {'gold': gold}),
+          if (whyText != null) whyText,
+        ],
+        actions: [
+          DsButton(_s.t('ui.town.forge.fish_forge'),
+              key: ValueKey('brann-fish-go-${f.id}'),
+              size: DsButtonSize.compact,
+              kind: DsButtonKind.primary,
+              tooltip: whyText,
+              onPressed: whyText == null
+                  ? () => c.smith(SmithAction(SmithOp.fishForge, f.id))
+                  : null),
+        ],
+      ),
     );
   }
 

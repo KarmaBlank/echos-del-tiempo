@@ -31,9 +31,28 @@ void main() {
   }
 
   /// Takes the chain from the root up to [n] (inclusive).
+  /// Shortest route root → [n] (root excluded, [n] included).
+  List<String> route(LifeSkillKind k, LifeTreeNode n) {
+    final root = kLifeTrees[k]!.first.id;
+    final from = <String, String>{root: ''};
+    final todo = [root];
+    while (todo.isNotEmpty) {
+      final id = todo.removeAt(0);
+      for (final l in lifeTreeNode(k, id)!.links) {
+        if (from.containsKey(l)) continue;
+        from[l] = id;
+        todo.add(l);
+      }
+    }
+    final out = <String>[];
+    for (var id = n.id; id != root; id = from[id]!) {
+      out.insert(0, id);
+    }
+    return out;
+  }
+
   PlayerProfile chain(PlayerProfile p, LifeSkillKind k, LifeTreeNode n) {
-    for (var t = 1; t <= n.tier; t++) {
-      final id = n.id.replaceFirst(RegExp(r'\d+$'), '$t');
+    for (final id in route(k, n)) {
       final next = LifeTreeRules.take(p, k, id);
       expect(next, isNotNull,
           reason: '$id: ${LifeTreeRules.cannotTake(p, k, id)}');
@@ -44,16 +63,46 @@ void main() {
 
   group('shape', () {
     for (final k in LifeSkillKind.values) {
-      test('${k.name}: root + 5 branches × 10 tiers, one capstone group', () {
+      test('${k.name}: root + 5 forking branches × 10 tiers, one capstone group', () {
         final nodes = kLifeTrees[k]!;
-        expect(nodes.length, 1 + kLifeBranches.length * kLifeTiers);
+        const forks = kLifeForkTo - kLifeForkFrom + 1;
+        expect(nodes.length, 1 + kLifeBranches.length * (kLifeTiers + forks));
         expect(nodes.where((n) => n.root).length, 1);
         for (final b in kLifeBranches) {
           final br = nodes.where((n) => n.branch == b).toList();
-          expect([for (final n in br) n.tier],
-              [for (var t = 1; t <= kLifeTiers; t++) t]);
-          expect(br.last.capstone, isTrue);
-          expect(br.last.exclusive, 'cap');
+          // Every tier present; the fork tiers offer two sibling nodes.
+          for (var t = 1; t <= kLifeTiers; t++) {
+            final at = br.where((n) => n.tier == t).length;
+            expect(at, t >= kLifeForkFrom && t <= kLifeForkTo ? 2 : 1,
+                reason: '$b$t');
+          }
+          final caps = br.where((n) => n.capstone).toList();
+          expect(caps.length, 1);
+          expect(caps.single.exclusive, 'cap');
+          // Both sub-paths rejoin at a major node before the capstone.
+          final join = br.singleWhere((n) => n.tier == kLifeForkTo + 1);
+          expect(join.major, isTrue);
+          expect(join.links.where((l) => lifeTreeNode(k, l)!.tier == kLifeForkTo)
+              .length, 2);
+        }
+        // Links are symmetric and everything is reachable from the root.
+        for (final n in nodes) {
+          for (final l in n.links) {
+            expect(lifeTreeNode(k, l)!.links, contains(n.id),
+                reason: '${n.id} ↔ $l');
+          }
+        }
+        final seen = <String>{nodes.first.id};
+        final todo = [nodes.first.id];
+        while (todo.isNotEmpty) {
+          for (final l in lifeTreeNode(k, todo.removeLast())!.links) {
+            if (seen.add(l)) todo.add(l);
+          }
+        }
+        expect(seen.length, nodes.length);
+        // Fork nodes carry a real effect.
+        for (final n in nodes.where(isLifeFork)) {
+          expect(n.effects, isNotEmpty, reason: n.id);
         }
         final keys = tuning(TuningId.lifeTree).values;
         for (final n in nodes) {
@@ -68,6 +117,25 @@ void main() {
         }
       });
     }
+  });
+
+  group('forks', () {
+    test('either sub-path leads to the capstone; old saves stay valid', () {
+      var p = at(30);
+      const k = LifeSkillKind.pesca;
+      for (final id in ['fish_a1', 'fish_a2', 'fish_a3', 'fish_a4s',
+          'fish_a5s', 'fish_a6s', 'fish_a7s', 'fish_a8', 'fish_a9',
+          'fish_a10']) {
+        expect(LifeTreeRules.cannotTake(p, k, id), isNull, reason: id);
+        p = LifeTreeRules.take(p, k, id)!;
+      }
+      // The main path is still a full route (v0.49 saves keep their nodes).
+      var q = at(30);
+      for (var t = 1; t <= kLifeTiers; t++) {
+        q = LifeTreeRules.take(q, k, 'fish_b$t')!;
+      }
+      expect(LifeTreeRules.taken(q, k).length, kLifeTiers);
+    });
   });
 
   group('rules', () {
@@ -136,10 +204,10 @@ void main() {
         test('${n.id} adds its effects', () {
           final before = at(30);
           final after = chain(before, k, n);
-          final prev = n.tier == 1
+          final r = route(k, n);
+          final prev = r.length == 1
               ? before
-              : chain(before, k,
-                  lifeTreeNode(k, n.id.replaceFirst(RegExp(r'\d+$'), '${n.tier - 1}'))!);
+              : chain(before, k, lifeTreeNode(k, r[r.length - 2])!);
           for (final e in n.effects.entries) {
             expect(
                 LifeTreeRules.fx(after, k, e.key) -
@@ -161,9 +229,9 @@ void main() {
       expect(SmithRules.forgeDiscount(p), greaterThan(f0));
       p = LifeTreeRules.take(p, LifeSkillKind.cultivo, 'farm_d1')!;
       expect(LifeTreeRules.power(p, LifeFx.hp), greaterThan(0));
-      // meal: farm_e4 = +1 mission on every meal eaten.
+      // meal: farm_e4s (Cocina sub-path B) = +1 mission on every meal.
       p = chain(p, LifeSkillKind.cultivo,
-          lifeTreeNode(LifeSkillKind.cultivo, 'farm_e4')!);
+          lifeTreeNode(LifeSkillKind.cultivo, 'farm_e4s')!);
       final key = mealKey('sopa_nabo', CropQuality.normal);
       final eaten = CookingRules.eat(p, key)!;
       expect(eaten.life.farm.meal!.left,
@@ -209,6 +277,9 @@ void main() {
                     after.life.farm.mealCount(key) -
                         before.life.farm.mealCount(key),
                     amt);
+              case 'recipe':
+                expect(after.life.farm.recipes, contains(id));
+                expect(before.life.farm.recipes, isNot(contains(id)));
               case 'weapon':
                 expect(after.items.length - before.items.length, amt);
                 final w = after.items.last;

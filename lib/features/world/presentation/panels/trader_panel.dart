@@ -469,7 +469,7 @@ class _TraderPanelState extends State<TraderPanel> {
                 ],
               ),
             )),
-      for (final d in kFertilizers.values)
+      for (final d in kFertilizers.values.where((f) => f.price > 0))
         _Row(
             'abonos',
             LifeItemCellData(

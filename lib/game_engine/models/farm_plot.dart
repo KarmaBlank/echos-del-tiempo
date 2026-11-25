@@ -1,3 +1,5 @@
+import 'item.dart' show ItemInstance;
+
 /// Una parcela arada de la huerta del pueblo (farming.md § 2). Inmutable;
 /// vive en `TownState.plots` con clave `"x,y"` (tile).
 ///
@@ -7,6 +9,8 @@
 /// cosecha.
 class FarmPlot {
   const FarmPlot({
+    this.composts = const {},
+    this.held,
     this.seed,
     this.grow = 0,
     this.wet = 0,
@@ -54,6 +58,14 @@ class FarmPlot {
   /// Nombres de quién plantó, regó por última vez y abonó.
   final String? planter, waterer, fertBy;
 
+  /// Composts given to a living weapon seed (profession_gear.md § 3.3):
+  /// fertilizer id → bags. JSON `cp`.
+  final Map<String, int> composts;
+  int get compostCount => composts.values.fold(0, (a, b) => a + b);
+
+  /// The living weapon regrowing in this plot (replant, § 3.5). JSON `it`.
+  final ItemInstance? held;
+
   bool get planted => seed != null;
   bool get watered => wet > 0;
 
@@ -67,9 +79,12 @@ class FarmPlot {
     int? waterings,
     String? waterer,
     String? fertBy,
+    Map<String, int>? composts,
   }) =>
       FarmPlot(
           seed: seed,
+          composts: composts ?? this.composts,
+          held: held,
           grow: grow ?? this.grow,
           wet: wet ?? this.wet,
           wetGrow: wetGrow ?? this.wetGrow,
@@ -99,6 +114,8 @@ class FarmPlot {
         if (planter != null) 'pb': planter,
         if (waterer != null) 'wb': waterer,
         if (fertBy != null) 'fb': fertBy,
+        if (composts.isNotEmpty) 'cp': composts,
+        if (held != null) 'it': held!.toJson(),
       };
 
   static FarmPlot fromJson(Object? raw) {
@@ -119,7 +136,15 @@ class FarmPlot {
         waterings: d(raw['wn']).round(),
         planter: s(raw['pb']),
         waterer: s(raw['wb']),
-        fertBy: s(raw['fb']));
+        fertBy: s(raw['fb']),
+        composts: raw['cp'] is Map
+            ? {
+                for (final e in (raw['cp'] as Map).entries)
+                  if (e.value is num && (e.value as num) > 0)
+                    '${e.key}': (e.value as num).toInt(),
+              }
+            : const {},
+        held: ItemInstance.fromJson(raw['it']));
   }
 
   @override
@@ -137,7 +162,10 @@ class FarmPlot {
       other.waterings == waterings &&
       other.planter == planter &&
       other.waterer == waterer &&
-      other.fertBy == fertBy;
+      other.fertBy == fertBy &&
+      other.compostCount == compostCount &&
+      composts.entries.every((e) => other.composts[e.key] == e.value) &&
+      other.held?.uid == held?.uid;
 
   @override
   int get hashCode =>

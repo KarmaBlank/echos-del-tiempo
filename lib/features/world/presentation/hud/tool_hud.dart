@@ -6,6 +6,8 @@ import '../../../../game_engine/data/bait_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/data/mine_catalog.dart';
+import '../../../../game_engine/rules/profession_gear_rules.dart';
+import '../../../inventory/domain/item_names.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../panels/life_icon.dart';
@@ -226,30 +228,59 @@ class ToolHud extends StatelessWidget {
   /// Barra de tres casilleros (Azada | Semilla | Regadera), de ancho fijo
   /// para que ningún rótulo se corte. Clic en uno lo deja en la mano (no
   /// hace la labor); el elegido va con borde dorado.
+  /// Sprite id of a plantable (crop seed, weapon seed or a living weapon
+  /// to replant, profession_gear.md § 3.5).
+  String? _seedIcon(String? id) {
+    if (id == null) return null;
+    if (kCrops[id] case final c?) return 'semilla_${c.id}';
+    if (kWeaponSeeds.containsKey(id)) return 'semilla_$id';
+    if (id.startsWith(kRegrowItem)) {
+      final it = profile.itemByUid(id.substring(kRegrowItem.length));
+      final g = it == null ? null : GearRules.defOf(it);
+      return g?.sprite;
+    }
+    return null;
+  }
+
+  String _seedName(String id) {
+    if (kCrops[id] case final c?) return c.seedName;
+    if (kWeaponSeeds.containsKey(id)) {
+      return CatalogText.of(
+          'data.items.gear.seed.$id', kWeaponSeedNames[id] ?? id);
+    }
+    final it = profile.itemByUid(id.substring(kRegrowItem.length));
+    return it == null ? id : localItemName(controller.engine.progression.items, it);
+  }
+
+  int _seedCount(String id) => kCrops.containsKey(id)
+      ? profile.life.farm.seedCount(id)
+      : kWeaponSeeds.containsKey(id)
+          ? profile.life.farm.wseedCount(id)
+          : 1;
+
   Widget _farm(BuildContext context) {
     final f = profile.life.farm;
     final hoe = kFarmTools[f.hoe];
     final can = kFarmTools[f.can];
     final hand = controller.farmHand;
-    final active = f.activeSeed;
+    final active = FarmingRules.activeSeed(profile);
     final prev = FarmingRules.prevSeed(profile);
     final next = FarmingRules.nextSeed(profile);
     final many = prev != null && prev != active;
-    final d = kCrops[active];
     final fert = kFertilizers[controller.farmFert];
 
     // Carrusel: la semilla en uso grande al centro, las vecinas chicas.
     Widget chip(String? id, double size, String key, VoidCallback? onTap) {
-      final c = kCrops[id];
+      final icon = _seedIcon(id);
       final box = SizedBox(
         key: ValueKey(key),
         width: size,
         height: size,
-        child: c == null
+        child: icon == null
             ? const DsSpriteIcon(null, size: 0)
-            : LifeIcon('semilla_${c.id}', LifeIconKind.semilla, size: size),
+            : LifeIcon(icon, LifeIconKind.semilla, size: size),
       );
-      if (onTap == null || c == null) return box;
+      if (onTap == null || icon == null) return box;
       return GestureDetector(onTap: onTap, child: box);
     }
 
@@ -298,12 +329,12 @@ class ToolHud extends StatelessWidget {
             FarmHand.seed,
             seedW,
             'hud-tool-seed',
-            d == null
+            active == null
                 ? [context.t('ui.world.tools.no_seeds')]
-                : [d.seedName, '×${f.seedCount(d.id)}'],
-            d == null
+                : [_seedName(active), '×${_seedCount(active)}'],
+            active == null
                 ? context.t('ui.world.tools.no_seeds_tip')
-                : context.t('ui.world.tools.seed_tip', {'name': d.seedName}),
+                : context.t('ui.world.tools.seed_tip', {'name': _seedName(active)}),
             Row(
               key: const ValueKey('hud-seed-carousel'),
               mainAxisAlignment: MainAxisAlignment.center,

@@ -2,7 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/features/world/presentation/panels/biome_npc_panel.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/rules/fishing_rules.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
@@ -41,10 +44,10 @@ PlayerProfile _profile() => progression.normalize(PlayerProfile(
     ));
 
 Future<void> _open(WidgetTester tester, String choice,
-    {bool housed = true}) async {
+    {bool housed = true, PlayerProfile? profile}) async {
   final brann = kBiomeNpcs.firstWhere((n) => n.id == 'brann');
   final c = await pumpPanel(tester,
-      profile: _profile(),
+      profile: profile ?? _profile(),
       build: (v, c) => RepaintBoundary(
           key: _shot, child: BiomeNpcPanel(view: v, controller: c)));
   if (housed) {
@@ -86,5 +89,26 @@ void main() {
     await _open(tester, 'comprar');
     expect(find.byKey(const ValueKey('npc-seed-ingot_copper')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('fish forge: a legendary fish becomes a unique weapon',
+      (tester) async {
+    final legend =
+        kFish.values.firstWhere((f) => f.rarity == FishRarity.legendario);
+    var xp = 0;
+    for (var l = 1; l < 15; l++) {
+      xp += FishingRules.xpNeed(l);
+    }
+    final p = _profile();
+    await _open(tester, 'forja',
+        profile: p.copyWith(
+            life: p.life.copyWith(fishXp: xp).addFish(legend.id)));
+    expect(find.byKey(ValueKey('brann-fish-${legend.id}')), findsOneWidget);
+    expect(find.byKey(ValueKey('brann-fish-go-${legend.id}')), findsOneWidget);
+    final go = tester.widget<DsButton>(
+        find.byKey(ValueKey('brann-fish-go-${legend.id}')));
+    expect(go.onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+    await _save(tester, 'brann_fish_forge');
   });
 }

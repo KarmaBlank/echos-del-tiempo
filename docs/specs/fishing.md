@@ -501,3 +501,13 @@ manejar, bordes, bajar, profundidad → especies),
 `test/netcode/lake_raft_sync_test.dart` (loopback: dos balsas a la vez),
 `test/features/world/lake_raft_prompt_test.dart` (indicación y E). Con
 `RAFT_PREVIEW=1` escribe `docs/preview/lake_raft.png`.
+
+## 16. Equipo de Pesca (v0.50, protocolo 92)
+Armas hundidas del eco en el botín del agua y la forja de pez de Brann:
+ver profession_gear.md § 4. Sub-caminos del árbol (Calma, Hondura, Red,
+Arpón, Mesa): `calm` acorta la espera tranquila / automática, `twin`
+pesca doble, `chest` más cofres hundidos, `big` peces más grandes,
+`sell`, `net` red de balsa (pesca cada `netEverySec` al navegar, × red),
+`raft` balsa más rápida, `harpoon` arponea un pez grande desde la balsa
+en aguas de hondura ≥ `harpoonDepth`, `fishMeal` / `fishBuff` comidas de
+pescado (life_trees_v2.md § 2.1).

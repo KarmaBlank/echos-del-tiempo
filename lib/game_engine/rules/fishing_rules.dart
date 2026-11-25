@@ -168,7 +168,9 @@ abstract final class FishingRules {
     final w = {
       WaterLootKind.basura: t.d('lootBasura'),
       WaterLootKind.materiales: t.d('lootMateriales') * good,
-      WaterLootKind.cofre: t.d('lootCofre') * good,
+      // Hondura sub-path A (life_trees_v2.md § 2.1): more sunken chests.
+      WaterLootKind.cofre:
+          t.d('lootCofre') * good * (1 + LifeTreeRules.fish(p, LifeFx.chest)),
       WaterLootKind.arma: t.d('lootArma') * good,
     };
     final total = w.values.fold(0.0, (a, b) => a + b);

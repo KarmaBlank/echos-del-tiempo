@@ -147,7 +147,10 @@ extension _MiningOp on _Op {
     if (!_reaches(p, x, y)) return false;
     final tool = MiningRules.tool(p.profile);
     final last = _mh.lastSwing[p.id] ?? -99;
-    if (s.time - last < tool.swing * 0.6) return false;
+    // Pico sub-path A (life_trees_v2.md § 2.1): faster swings.
+    if (s.time - last < tool.swing * 0.6 * GearRules.swingMult(p.profile)) {
+      return false;
+    }
     final code = MiningRules.tileAt(lvl, st, x, y);
     if (MiningRules.cannotBreak(code, lvl.level, tool) != null) return false;
     _mh.lastSwing[p.id] = s.time;
@@ -159,6 +162,21 @@ extension _MiningOp on _Op {
     }
     _mh.cracks.remove(key);
     _breakTile(p, place, lvl, x, y, tool.yieldBonus);
+    // Veta sub-path A: the blow also breaks veins around it.
+    if (MineTile.veins.contains(code)) {
+      var left = GearRules.veinArea(p.profile);
+      for (final (vx, vy) in squareTiles(x, y, 1)) {
+        if (left <= 0) break;
+        if (vx == x && vy == y) continue;
+        final c = MiningRules.tileAt(lvl, s.town.mine(place), vx, vy);
+        if (!MineTile.veins.contains(c) ||
+            MiningRules.cannotBreak(c, lvl.level, tool) != null) {
+          continue;
+        }
+        _breakTile(p, place, lvl, vx, vy, tool.yieldBonus);
+        left--;
+      }
+    }
     return true;
   }
 
@@ -173,7 +191,8 @@ extension _MiningOp on _Op {
         code: code,
         toolBonus: toolBonus,
         boosted: _boosted(p),
-        day: s.town.sky.day);
+        day: s.town.sky.day,
+        rareBonus: LifeTreeRules.smith(p.profile, LifeFx.rareOre));
     if (code == MineTile.wallTorch) got = {kMineTorch: 1};
     // Sometimes a bait comes out of a vein (fishing.md § 14.4).
     if (MineTile.veins.contains(code)) {
@@ -207,6 +226,17 @@ extension _MiningOp on _Op {
         _profileChange(p, p.profile.copyWith(credits: p.profile.credits + cr));
         final drops = _chestDrops(p, def, lvlP);
         events.add(MineDugEvent(p.id, x, y, code, '+$cr'));
+        // profession_gear.md § 3.1: cave chests may hold a weapon seed.
+        if (_rand() < GearRules.t.d('seedMineChestChance')) {
+          final ws = GearRules.rollSeed(_rand, ancientBonus: relic ? 0.25 : 0);
+          final f = p.profile.life.farm;
+          _profileChange(
+              p,
+              p.profile.copyWith(
+                  life: p.profile.life.copyWith(farm: f.addWseed(ws))),
+              gain: true);
+          say('${p.name} encontró ${kWeaponSeedNames[ws]} en el cofre.');
+        }
         say(relic
             ? '${p.name} abrió un cofre reliquia magitec (+$cr de oro).'
             : '${p.name} abrió un cofre de la mina (+$cr de oro).');
@@ -339,7 +369,8 @@ extension _MiningOp on _Op {
         for (final p in players) {
           if (p.isCompanion) continue;
           st = MineWorkRules.discover(
-              lvl, st, p.profile.name, p.x / 16, p.y / 16);
+              lvl, st, p.profile.name, p.x / 16, p.y / 16,
+              detect: GearRules.detectRadius(p.profile));
         }
         if (!identical(st, st0)) s.town = s.town.withMine(place, st);
       }
@@ -412,7 +443,27 @@ extension _MiningOp on _Op {
         _profileChange(p, next);
         say('${p.name} fundió ${a.n} '
             '${kSmithMaterials[ingotOf(a.material)]?.name ?? a.material}.');
+        // Fundición sub-path A (life_trees_v2.md § 2.1): double ingots.
+        final dbl = GearRules.smeltDouble(p.profile);
+        if (dbl > 0 && _rand() < dbl) {
+          if (ingotOf(a.material) case final ing?) {
+            _profileChange(p, MiningRules.give(p.profile, {ing: a.n}));
+            say('La fundición de ${p.name} rindió el doble.');
+          }
+        }
         smithXp(p, SmithCraftRules.smeltXp(a.material, a.n));
+        return true;
+      case SmithOp.fishForge:
+        // profession_gear.md § 4.2: Brann forges a legendary fish.
+        final r =
+            GearRules.fishForge(rules.loot, _rand, p.profile, a.material);
+        if (r == null) return false;
+        _profileChange(p, r.$1);
+        say('Brann forjó para ${p.name} un arma de '
+            '${kFish[a.material]?.name ?? a.material}.');
+        smithXp(p, SmithRules.t.i('smithXpCommission'));
+        _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
+            stashOverflow: true);
         return true;
       case SmithOp.forge || SmithOp.brann:
         if (a.rarity < 0 || a.rarity >= Rarity.values.length) return false;
@@ -439,8 +490,19 @@ extension _MiningOp on _Op {
             SmithCraftRules.pay(p.profile, a.material, r, brann: brann);
         if (paid == null) return false;
         _profileChange(p, paid);
-        final item =
+        var item =
             SmithCraftRules.make(rules.loot, _rand, base!, r, c.itemLevel);
+        if (!brann && item.rarity != Rarity.legendario) {
+          // profession_gear.md § 5: sometimes a forge-only weapon comes
+          // out instead, same rarity and level (marked as forged).
+          if (GearRules.forgeGear(_rand, p.profile) case final g?) {
+            final gi = GearRules.makeDef(
+                rules.loot, _rand, g, item.rarity, item.itemLevel);
+            item = gi.copyWith(uid: '$kForgedUidPrefix${gi.uid}');
+          }
+          // Forja sub-path B: one more affix, or one rarity up.
+          item = GearRules.forgeAffix(rules.loot, _rand, p.profile, item);
+        }
         say('${brann ? 'Brann' : p.name} forjó para ${p.name}: '
             '${item.rarity.label.toLowerCase()} de nivel ${item.itemLevel}.');
         smithXp(

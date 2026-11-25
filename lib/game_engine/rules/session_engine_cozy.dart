@@ -20,7 +20,8 @@ extension _CozyOp on _Op {
       case CozyOp.compost:
         final id = a.id;
         if (id == null) return false;
-        final farm = CozyRules.compost(p.profile.life.farm, id);
+        final farm = CozyRules.compost(p.profile.life.farm, id,
+            bonus: LifeTreeRules.farm(p.profile, LifeFx.compost));
         if (farm == null) return false;
         _profileChange(
             p, p.profile.copyWith(life: p.profile.life.copyWith(farm: farm)));
@@ -48,6 +49,12 @@ extension _CozyOp on _Op {
     final lvl0 = FarmingRules.level(p.profile);
     var life = p.profile.life;
     var farm = life.farm;
+    // profession_gear.md § 3.1: a rare weapon seed in the branches.
+    if (_rand() < GearRules.t.d('seedSearchChance')) {
+      final ws = GearRules.rollSeed(_rand);
+      farm = farm.addWseed(ws);
+      say('${p.name} encontró ${kWeaponSeedNames[ws]} en un árbol.');
+    }
     switch (CozyRules.searchRoll(_rand())) {
       case SearchFind.nothing:
         say('${p.name} buscó en un árbol: nada esta vez.');
