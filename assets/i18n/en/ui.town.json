@@ -471,8 +471,6 @@
   "ui.town.events.quest": "{npc} quest: {objective}",
   "ui.town.events.quest_reward": "Reward: {gold} gold · +{rep} friendship",
   "ui.town.events.discount": "Prices −{n}%",
-  "ui.town.events.badge": "EVENT",
-  "ui.town.events.badge_n": "EVENTS ×{n}",
   "ui.town.events.cat.visitor": "VISITOR",
   "ui.town.events.cat.overworldNpc": "WANDERER",
   "ui.town.events.cat.echoPortal": "ECHO RIFT",

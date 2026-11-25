@@ -471,8 +471,6 @@
   "ui.town.events.quest": "Misión de {npc}: {objective}",
   "ui.town.events.quest_reward": "Premio: {gold} oro · +{rep} relación",
   "ui.town.events.discount": "Precios −{n}%",
-  "ui.town.events.badge": "EVENTO",
-  "ui.town.events.badge_n": "EVENTOS ×{n}",
   "ui.town.events.cat.visitor": "VISITANTE",
   "ui.town.events.cat.overworldNpc": "VIAJERO",
   "ui.town.events.cat.echoPortal": "GRIETA DE ECO",

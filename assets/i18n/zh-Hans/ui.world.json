@@ -39,10 +39,8 @@
   "ui.world.map.legend.group_goals": "目标",
   "ui.world.map.legend.group_optional": "可选",
   "ui.world.map.legend.group_party": "队伍",
-  "ui.world.map.travel_to_stone": "",
   "ui.world.map.title": "",
   "ui.world.map.center": "",
-  "ui.world.map.travel_button": "",
   "ui.world.map.close": "",
   "ui.world.map.choose_hint": "",
   "ui.world.map.controls": "",
@@ -364,24 +362,8 @@
     "text": "传送石",
     "status": "draft"
   },
-  "ui.world.way.help": {
-    "text": "在地图上选择已激活的传送石，然后按传送。",
-    "status": "draft"
-  },
-  "ui.world.way.go": {
-    "text": "传送",
-    "status": "draft"
-  },
-  "ui.world.way.here": {
-    "text": "此处",
-    "status": "draft"
-  },
   "ui.world.way.unknown": {
     "text": "尚未发现",
-    "status": "draft"
-  },
-  "ui.world.way.unknown_tip": {
-    "text": "从旁边经过即可发现它，之后就能传送到这里。",
     "status": "draft"
   },
   "ui.world.way.site_entrance": {
