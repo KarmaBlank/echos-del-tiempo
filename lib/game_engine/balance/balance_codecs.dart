@@ -1403,7 +1403,6 @@ const _farmLabels = {
   'dryRate': 'Crecimiento sin regar (×)',
   'waterSec': 'Segundos que dura un riego',
   'waterRateMin': 'Ritmo de riego con nivel 1 (×)',
-  'missionGrowSec': 'Segundos que suma cada misión ganada',
   'workXp': 'XP por arar, plantar o regar',
   'wQNormal': 'Peso calidad normal',
   'wQRaro': 'Peso calidad rara',

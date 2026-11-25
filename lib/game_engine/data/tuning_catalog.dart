@@ -202,7 +202,6 @@ const Map<String, TuningDef> kTuningDefaults = {
     'dryRate': 0.5,
     'waterSec': 240,
     'waterRateMin': 0.6,
-    'missionGrowSec': 600,
     'workXp': 3,
     // Calidad (farming.md § 3): pesos base de normal / rara / épica /
     // legendaria; el puntaje S de los aportes multiplica la rara × (1+S),

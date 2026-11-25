@@ -161,16 +161,11 @@ abstract final class FarmingRules {
         wet: math.max(0, p.wet - dt));
   }
 
-  /// Misión ganada: cada cultivo suma `missionGrowSec` (regado si lo
-  /// estaba al salir).
-  static FarmPlot missionGrow(FarmPlot p, {Season? season}) {
-    if (p.seed == null || ripe(p)) return p;
-    final g = t.d('missionGrowSec') *
-        fertSpeed(p.fert) *
-        (season == null ? 1 : LifeTimeRules.seasonGrow(p.seed!, season));
-    return p.copyWith(
-        grow: p.grow + g, wetGrow: p.wet > 0 ? p.wetGrow + g : p.wetGrow);
-  }
+  /// A planted, unripe crop that does not grow at all with growth
+  /// multiplier [mult] (`LifeTimeRules.cropGrowth`; 0 = out of season,
+  /// farming.md § 15). The plot tooltip explains it.
+  static bool growthPaused(FarmPlot p, double mult) =>
+      p.planted && !ripe(p) && mult <= 0;
 
   // ---------------- aportes (farming.md § 2.4) ----------------
 
