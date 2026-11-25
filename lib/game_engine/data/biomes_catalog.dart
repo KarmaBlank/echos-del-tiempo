@@ -2,9 +2,10 @@
 // Datos puros: los lee `MapGenerator.biome` y `BiomeRules`; la UI solo
 // los muestra.
 
-import '../models/game_map.dart';
 import '../models/town_build.dart';
 import 'town_layout.dart';
+
+export '../rules/biome_regions.dart';
 
 /// Un lugar del mapa de viaje: el pueblo o el exterior de un bioma.
 class BiomeDef {
@@ -74,7 +75,10 @@ BiomeDef? biomeDef(String? id) {
 
 /// Tipo de recolectable (cada uno da su producto silvestre).
 class ForageDef {
-  const ForageDef(this.item, this.name);
+  const ForageDef(this.item, this.name, {this.cls = ForageClass.plant});
+
+  /// What kind of spot it is (biome_regions.md § 5).
+  final ForageClass cls;
 
   /// Id del producto (un `CropDef` silvestre: va a la bolsa de cosechas
   /// y se vende al comerciante).
@@ -100,6 +104,38 @@ const kForageKinds = <ForageDef>[
   ForageDef('polvo_eco', 'Polvo de eco'),
   ForageDef('flor_manana', 'Flores del mañana'),
   ForageDef('fruto_paradoja', 'Frutos paradoja'),
+  // Biome regions (biome_regions.md § 5): shared by every biome.
+  ForageDef('', 'Mata de semillas', cls: ForageClass.seedBush),
+  ForageDef('', 'Brotes de estación', cls: ForageClass.seasonal),
+  ForageDef('flor_eco', 'Flor del eco', cls: ForageClass.echoBloom),
+];
+
+/// What a forage spot gives (biome_regions.md § 5).
+enum ForageClass {
+  /// The biome's wild product (and sometimes a seed).
+  plant,
+
+  /// Wild seed bush: always a seed, rare ones weigh more.
+  seedBush,
+
+  /// The product of the current season ([kSeasonalForage]).
+  seasonal,
+
+  /// Rare echo bloom, only in optional nooks; regrows slowly.
+  echoBloom,
+}
+
+/// [kForageKinds] index of each shared kind.
+const kForageSeedBush = 15;
+const kForageSeasonal = 16;
+const kForageEchoBloom = 17;
+
+/// Seasonal forage product by season index (`Season.index`).
+const kSeasonalForage = [
+  'brote_primavera',
+  'fresa_estival',
+  'castana_otono',
+  'baya_invierno',
 ];
 
 /// Un punto de recolección del exterior: tile y tipo ([kForageKinds]).
@@ -168,131 +204,118 @@ class BiomeNpcDef {
 
   /// Retrato del cuadro de diálogo (`items.vida_npc_<id>_retrato`).
   String get portrait => 'npc_${id}_retrato';
+
+  /// The same resident with its camp at [t] (the region generator places
+  /// the camp; biome_regions.md § 4).
+  BiomeNpcDef at((int, int) t) => BiomeNpcDef(id, name, role,
+      biome: biome,
+      tile: t,
+      seeds: seeds,
+      benefit: benefit,
+      nightOutings: nightOutings);
+
+  @override
+  bool operator ==(Object other) => other is BiomeNpcDef && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Un exterior de bioma: 34 × 22, borde sólido, camino al sur (vuelta al
-/// pueblo), un lago con muelles, matas, obstáculos, dos entradas de
-/// mazmorra al norte y un habitante.
-class BiomeLayout {
-  const BiomeLayout(this.id,
+/// Lake variants of a biome region (biome_regions.md § 3).
+enum LakeVariant {
+  /// Open shore all around.
+  open,
+
+  /// Fishable from one side only; glowing plants close the rest.
+  glowShore,
+
+  /// Inside a cavern: rock walls, light falling from openings above.
+  cave,
+}
+
+/// Ambient critters of a region (biome_regions.md § 6).
+/// What plays (softly) while the local player is fishing
+/// (biome_regions.md § 7.2.3).
+enum FishingAmbience {
+  /// Breeze gusts (open sky).
+  breeze,
+
+  /// Water drips (under a roof: caves, cave lakes, mines).
+  drip,
+
+  /// Nothing but the faint music.
+  none,
+}
+
+enum CritterKind { butterfly, sparkMote, frostMote, ember, echoWisp }
+
+/// How a biome region is generated (biome_regions.md § 2): lake variants
+/// (weights), side-path flavour and ambient life. Pure data; the numbers
+/// that tune sizes and counts live in `kTuning[TuningId.regions]`.
+class BiomeRegionStyle {
+  const BiomeRegionStyle(
+      {required this.lakes,
+      this.grove = 0.5,
+      this.tunnel = 0.3,
+      this.critter = CritterKind.butterfly,
+      this.caveOpenings = true,
+      this.fishingAmbience = FishingAmbience.breeze,
+      this.lakeNames = const {}});
+
+  /// The quiet ambience while fishing here (§ 7.2.3).
+  final FishingAmbience fishingAmbience;
+
+  /// Cave lakes of this biome have openings above (light shafts); `false`
+  /// keeps them dark (biome_regions.md § 7).
+  final bool caveOpenings;
+
+  /// Variant -> weight.
+  final Map<LakeVariant, double> lakes;
+
+  /// Chance that a side path crosses a small grove / a short cave.
+  final double grove;
+  final double tunnel;
+  final CritterKind critter;
+
+  /// Map label of the extra lakes by variant (the first lake uses the
+  /// biome's own name).
+  final Map<LakeVariant, String> lakeNames;
+}
+
+/// The fixed data of a biome exterior: theme, lake name and tables,
+/// forage kinds, zones and resident. The geometry is generated per world
+/// seed by `BiomeRegionGen` (biome_regions.md); `biomeLayout(id)` gives
+/// the generated `BiomeLayout`.
+class BiomeBase {
+  const BiomeBase(this.id,
       {required this.theme,
-      required this.lake,
       required this.lakeName,
-      required this.docks,
-      required this.forage,
-      required this.obstacles,
-      required this.entrances,
+      required this.forageKinds,
+      required this.zones,
       required this.fish,
       required this.junk,
       required this.seeds,
       required this.npc,
-      this.mines = const [(4, 3), (20, 3)]});
-
-  static const width = 34;
-  static const height = 22;
+      required this.style});
 
   final String id;
   final String theme;
-
-  /// Lago: elipse (centro x, centro y, radio x, radio y) en tiles.
-  final (double, double, double, double) lake;
   final String lakeName;
-  final List<(int, int)> docks;
-  final List<ForageSpot> forage;
-  final List<(int, int)> obstacles;
 
-  /// Entradas de mazmorra (zona, tile).
-  final List<(int, int, int)> entrances;
+  /// The three base forage kinds ([kForageKinds] indices).
+  final List<int> forageKinds;
+
+  /// Dungeon zones whose entrances are in this exterior.
+  final List<int> zones;
 
   /// Peces del lago (fishing.md § 2.1) y basura del agua (§ 8).
   final List<String> fish;
   final List<String> junk;
 
-  /// Semillas exclusivas (farming.md § 2): id → peso.
+  /// Semillas exclusivas (farming.md § 2): id -> peso.
   final Map<String, double> seeds;
   final BiomeNpcDef npc;
-
-  /// Mine entrances (mining_smithing.md § 1.1): tiles on the entrance row.
-  final List<(int, int)> mines;
-
-  /// Llegada desde el pueblo: el camino del sur.
-  WorldPoint get spawn => const WorldPoint(17.0 * 16, 19.5 * 16);
-
-  /// Portales de Ecos (ecos_zone.md § 2): uno por zona de este exterior,
-  /// a la derecha de su entrada. (zona, x del tile del medio, y); el
-  /// portal ocupa 3 tiles (`x − 1 .. x + 1`), como el del pueblo, y el del
-  /// medio cumple `x % 3 == 1` para que el anillo se dibuje ahí.
-  List<(int, int, int)> get ecoPortals => [
-        for (final (zone, x, y) in entrances)
-          (zone, _ringX(x + 3), y),
-      ];
-
-  static int _ringX(int x) {
-    while (x % 3 != 1) {
-      x++;
-    }
-    return x;
-  }
-
-  /// Carteles sobre el mapa (texto, tile).
-  List<(String, int, int)> get labels => [
-        ('CAMINO AL PUEBLO', 17, 20),
-        (lakeName, lake.$1.round(), (lake.$2 - lake.$4 - 1).round()),
-        for (final (zone, x, y) in ecoPortals)
-          ('ECOS · ZONA $zone', x, y - 1),
-      ];
-
-  bool isLake(int x, int y) {
-    final dx = (x - lake.$1) / lake.$3, dy = (y - lake.$2) / lake.$4;
-    return dx * dx + dy * dy <= 1;
-  }
-
-  /// Las filas del mapa con las matas de [picked] ya recolectadas.
-  List<String> rows(Set<int> picked) {
-    final g = [
-      for (var y = 0; y < height; y++) List.filled(width, Tile.grass),
-    ];
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        final border = y < 3 || x < 2 || x >= width - 2 || y == height - 1;
-        if (border) g[y][x] = Tile.tree;
-        if (isLake(x, y)) g[y][x] = Tile.water;
-      }
-    }
-    for (var y = 4; y < height; y++) {
-      g[y][16] = Tile.path;
-      g[y][17] = Tile.path;
-    }
-    final xs = [for (final e in entrances) e.$2]..sort();
-    for (var x = xs.first; x <= xs.last; x++) {
-      g[5][x] = Tile.path;
-    }
-    for (final (zone, x, y) in entrances) {
-      g[y][x] = Tile.entrance(zone);
-      g[y + 1][x] = Tile.path;
-    }
-    for (final (_, x, y) in ecoPortals) {
-      for (var dx = -1; dx <= 1; dx++) {
-        g[y][x + dx] = Tile.portal;
-        g[y + 1][x + dx] = Tile.path;
-      }
-    }
-    for (final (x, y) in mines) {
-      g[y][x] = Tile.mineEntrance;
-      g[y + 1][x] = Tile.path;
-    }
-    for (final (x, y) in docks) {
-      g[y][x] = Tile.fishing;
-    }
-    for (final (x, y) in obstacles) {
-      g[y][x] = Tile.tree;
-    }
-    for (var i = 0; i < forage.length; i++) {
-      final f = forage[i];
-      g[f.y][f.x] = picked.contains(i) ? Tile.forageUsed : Tile.forage;
-    }
-    return [for (final r in g) r.join()];
-  }
+  final BiomeRegionStyle style;
 }
 
 const _ilda = BiomeNpcDef('ilda', 'Ilda', NpcRole.herbolaria,
@@ -345,138 +368,114 @@ const _oren = BiomeNpcDef('oren', 'Oren', NpcRole.vidente,
       NightOuting('oren_fountain', spot: TownSpot.fountain),
     ]);
 
-/// Los exteriores por id (el pueblo no está).
-const kBiomeLayouts = <String, BiomeLayout>{
-  kBosque: BiomeLayout(kBosque,
+const _cn = {
+  LakeVariant.open: 'LAGO ABIERTO',
+  LakeVariant.glowShore: 'ORILLA LUMINOSA',
+  LakeVariant.cave: 'LAGO DE LA GRUTA',
+};
+
+/// The biome exteriors by id (no town). Geometry: `biomeLayout(id)`.
+const kBiomeBases = <String, BiomeBase>{
+  kBosque: BiomeBase(kBosque,
       theme: 'bosque_ext',
-      lake: (25, 14, 4.6, 3.4),
       lakeName: 'LAGO DEL BOSQUE',
-      docks: [(21, 14), (25, 17)],
-      forage: [
-        (x: 5, y: 8, kind: 0),
-        (x: 11, y: 9, kind: 1),
-        (x: 4, y: 14, kind: 2),
-        (x: 9, y: 17, kind: 0),
-        (x: 13, y: 13, kind: 1),
-        (x: 29, y: 8, kind: 2),
-        (x: 20, y: 8, kind: 0),
-        (x: 6, y: 19, kind: 1),
-      ],
-      obstacles: [
-        (3, 6), (12, 6), (27, 6), (30, 10), (5, 11), (10, 12), (14, 18),
-        (29, 19), (19, 19), (3, 17), (22, 7), (7, 15),
-      ],
-      entrances: [(1, 8, 3), (2, 25, 3)],
+      forageKinds: [0, 1, 2],
+      zones: [1, 2],
       fish: kForestFish,
       junk: kForestJunk,
       seeds: kForestSeeds,
-      npc: _ilda),
-  kRuinas: BiomeLayout(kRuinas,
+      npc: _ilda,
+      style: BiomeRegionStyle(
+          lakes: {
+            LakeVariant.open: 0.5,
+            LakeVariant.glowShore: 0.3,
+            LakeVariant.cave: 0.2
+          },
+          grove: 0.7,
+          tunnel: 0.2,
+          critter: CritterKind.butterfly,
+          lakeNames: _cn)),
+  kRuinas: BiomeBase(kRuinas,
       theme: 'ruinas_ext',
-      lake: (8, 13, 4.2, 3.2),
       lakeName: 'ESTANQUE DE ENGRANAJES',
-      docks: [(12, 13), (8, 16)],
-      forage: [
-        (x: 22, y: 8, kind: 3), (x: 28, y: 9, kind: 4), (x: 29, y: 14, kind: 5),
-        (x: 24, y: 17, kind: 3), (x: 20, y: 12, kind: 4), (x: 4, y: 8, kind: 5),
-        (x: 13, y: 8, kind: 3), (x: 27, y: 19, kind: 4), (x: 5, y: 19, kind: 5),
-      ],
-      obstacles: [
-        (3, 6), (14, 6), (21, 6), (30, 6), (25, 11), (30, 17), (19, 18),
-        (13, 18), (3, 17), (23, 14),
-      ],
-      entrances: [(3, 9, 3), (5, 25, 3)],
+      forageKinds: [3, 4, 5],
+      zones: [3, 5],
       fish: [
         'carpa_cobre', 'anguila_runa', 'pez_pinon', 'barbo_reloj',
         'esturion_eras',
       ],
       junk: ['engranaje_oxidado', 'placa_rota'],
       seeds: {'lirio_mecanico': 0.7, 'calabaza_runica': 0.25, 'olivo_eras': 0.05},
-      npc: _velda),
-  kCavernas: BiomeLayout(kCavernas,
+      npc: _velda,
+      style: BiomeRegionStyle(
+          lakes: {
+            LakeVariant.open: 0.5,
+            LakeVariant.glowShore: 0.2,
+            LakeVariant.cave: 0.3
+          },
+          grove: 0.3,
+          tunnel: 0.4,
+          critter: CritterKind.sparkMote,
+          lakeNames: _cn)),
+  kCavernas: BiomeBase(kCavernas,
       theme: 'cavernas_ext',
-      lake: (25, 13, 4.4, 3.6),
       lakeName: 'LAGO HELADO',
-      docks: [(21, 13), (25, 17)],
-      forage: [
-        (x: 5, y: 8, kind: 6), (x: 11, y: 9, kind: 7), (x: 4, y: 14, kind: 8),
-        (x: 9, y: 18, kind: 6), (x: 13, y: 12, kind: 7), (x: 29, y: 18, kind: 8),
-        (x: 20, y: 8, kind: 6), (x: 6, y: 19, kind: 7), (x: 30, y: 8, kind: 8),
-      ],
-      obstacles: [
-        (3, 6), (12, 6), (27, 6), (5, 11), (10, 12), (14, 18), (19, 19),
-        (3, 17), (22, 7), (31, 12),
-      ],
-      entrances: [(4, 8, 3), (6, 25, 3)],
+      forageKinds: [6, 7, 8],
+      zones: [4, 6],
       fish: [
         'pez_escarcha', 'lenguado_cristal', 'trucha_hielo', 'lucio_frio',
         'pez_invierno',
       ],
       junk: ['estalactita_rota', 'guante_helado'],
       seeds: {'nabo_escarcha': 0.7, 'flor_cristal': 0.25, 'lirio_eco': 0.05},
-      npc: _kael),
-  kGrieta: BiomeLayout(kGrieta,
+      npc: _kael,
+      style: BiomeRegionStyle(
+          lakes: {LakeVariant.cave: 0.6, LakeVariant.glowShore: 0.4},
+          grove: 0.1,
+          tunnel: 0.6,
+          critter: CritterKind.frostMote,
+          fishingAmbience: FishingAmbience.drip,
+          lakeNames: _cn)),
+  kGrieta: BiomeBase(kGrieta,
       theme: 'grieta_ext',
-      lake: (8, 13, 4.4, 3.4),
       lakeName: 'LAGO DE BRASAS',
-      docks: [(12, 13), (8, 17)],
-      forage: [
-        (x: 22, y: 8, kind: 9), (x: 28, y: 9, kind: 10), (x: 29, y: 14, kind: 11),
-        (x: 24, y: 17, kind: 9), (x: 20, y: 12, kind: 10), (x: 4, y: 8, kind: 11),
-        (x: 13, y: 8, kind: 9), (x: 27, y: 19, kind: 10), (x: 5, y: 19, kind: 11),
-      ],
-      obstacles: [
-        (3, 6), (14, 6), (21, 6), (30, 6), (25, 11), (30, 17), (19, 18),
-        (13, 18), (3, 17), (23, 14),
-      ],
-      entrances: [(7, 9, 3), (8, 25, 3)],
+      forageKinds: [9, 10, 11],
+      zones: [7, 8],
       fish: [
         'pez_ceniza', 'bagre_brasa', 'salamandra_lago', 'dorado_igneo',
         'pez_ultimo_fuego',
       ],
       junk: ['escoria', 'hueso_chamuscado'],
       seeds: {'chile_volcan': 0.7, 'flor_brasa': 0.25, 'fruta_forja': 0.05},
-      npc: _brann),
-  kAbismo: BiomeLayout(kAbismo,
+      npc: _brann,
+      style: BiomeRegionStyle(
+          lakes: {LakeVariant.open: 0.6, LakeVariant.cave: 0.4},
+          grove: 0.2,
+          tunnel: 0.5,
+          critter: CritterKind.ember,
+          caveOpenings: false,
+          fishingAmbience: FishingAmbience.none,
+          lakeNames: _cn)),
+  kAbismo: BiomeBase(kAbismo,
       theme: 'abismo_ext',
-      lake: (25, 13, 5.0, 3.8),
       lakeName: 'MAR DE ECOS',
-      docks: [(20, 13), (25, 17)],
-      forage: [
-        (x: 5, y: 8, kind: 12), (x: 11, y: 9, kind: 13), (x: 4, y: 14, kind: 14),
-        (x: 9, y: 18, kind: 12), (x: 13, y: 12, kind: 13), (x: 29, y: 18, kind: 14),
-        (x: 20, y: 8, kind: 12), (x: 6, y: 19, kind: 13), (x: 30, y: 8, kind: 14),
-      ],
-      obstacles: [
-        (3, 6), (12, 6), (27, 6), (5, 11), (10, 12), (14, 18), (19, 19),
-        (3, 17), (22, 7), (31, 12),
-      ],
-      entrances: [(9, 8, 3), (10, 25, 3)],
+      forageKinds: [12, 13, 14],
+      zones: [9, 10],
       fish: [
         'pez_eco', 'medusa_manana', 'raya_reloj', 'pez_paradoja',
         'leviatan_quieto',
       ],
       junk: ['arena_reloj', 'manecilla_perdida'],
       seeds: {'trigo_eco': 0.7, 'rosa_futuro': 0.25, 'arbol_paradoja': 0.05},
-      npc: _oren),
+      npc: _oren,
+      style: BiomeRegionStyle(
+          lakes: {LakeVariant.glowShore: 0.6, LakeVariant.open: 0.4},
+          grove: 0.3,
+          tunnel: 0.3,
+          critter: CritterKind.echoWisp,
+          fishingAmbience: FishingAmbience.none,
+          lakeNames: _cn)),
 };
-
-/// El exterior de [id] (`null` = pueblo o desconocido).
-BiomeLayout? biomeLayout(String? id) => kBiomeLayouts[id];
-
-/// Los habitantes de todos los biomas.
-List<BiomeNpcDef> get kBiomeNpcs =>
-    [for (final l in kBiomeLayouts.values) l.npc];
-
-BiomeNpcDef? biomeNpc(String id) {
-  for (final n in kBiomeNpcs) {
-    if (n.id == id) return n;
-  }
-  return null;
-}
-
-/// El exterior del Bosque (v0.26.0).
-BiomeLayout get bosqueLayout => kBiomeLayouts[kBosque]!;
 
 /// Peces, basura y semillas del Bosque (v0.26.0).
 const kForestFish = [
@@ -489,5 +488,4 @@ const kForestSeeds = <String, double>{
   'seta_reloj': 0.05,
 };
 
-/// Nombre del habitante [id] (o el id si no existe).
-String biomeNpcName(String id) => biomeNpc(id)?.name ?? id;
+

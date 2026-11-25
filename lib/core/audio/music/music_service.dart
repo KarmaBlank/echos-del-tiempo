@@ -132,6 +132,10 @@ class MusicService {
   double _ultDuck = 1, _ultTarget = 1, _ultRate = 1;
   double _ultLeft = 0;
 
+  /// Held ambience duck (fishing outside the town, biome_regions.md
+  /// § 7.2.3): the loop stays at [ambienceLevel] while set.
+  double _ambDuck = 1, _ambTarget = 1, _ambRate = 1;
+
   final _jingles = <String>[];
   String? _jingle;
   double _jingleLeft = 0;
@@ -162,6 +166,20 @@ class MusicService {
     _retargetBed();
   }
 
+  /// Holds the loop at [level] (0..1) until called again with 1, moving
+  /// there in [seconds]. Fishing ambience (biome_regions.md § 7.2.3).
+  void holdAmbience(double level, {double seconds = 1.5}) {
+    final l = level.clamp(0.0, 1.0);
+    if (l == _ambTarget) return;
+    _ambTarget = l;
+    _ambRate = (_ambDuck - l).abs() / (seconds <= 0 ? 0.01 : seconds);
+    if (_ambRate <= 0) _ambRate = 1;
+    _kick();
+  }
+
+  /// Current ambience duck factor (tests).
+  double get ambienceLevel => _ambDuck;
+
   /// Factor actual del duck de jingle / retención (tests).
   double get bedLevel => _jingleDuck;
 
@@ -183,7 +201,7 @@ class MusicService {
   double deckVolume(int i) {
     final d = _decks[i];
     if (d.id == null) return 0;
-    return d.gain * _ultDuck * _jingleDuck * _master;
+    return d.gain * _ultDuck * _jingleDuck * _ambDuck * _master;
   }
 
   /// La pieza del deck [i] de bucle.
@@ -341,6 +359,7 @@ class MusicService {
       }
     }
     _jingleDuck = _approach(_jingleDuck, _jingleTarget, _jingleRate * dt);
+    _ambDuck = _approach(_ambDuck, _ambTarget, _ambRate * dt);
     _apply();
     if (!animating) _stopTimer();
   }
@@ -351,7 +370,8 @@ class MusicService {
       _ultLeft > 0 ||
       _ultDuck != _ultTarget ||
       _jingle != null ||
-      _jingleDuck != _jingleTarget;
+      _jingleDuck != _jingleTarget ||
+      _ambDuck != _ambTarget;
 
   /// Manda a cada deck el volumen efectivo si cambió.
   void _apply() {

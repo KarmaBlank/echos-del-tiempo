@@ -44,6 +44,13 @@ Bosque, peces y semillas), `lib/game_engine/rules/biome_rules.dart`
 - Al volver de cualquier mazmorra (`toLobby`) el grupo aparece en el
   **pueblo** (ahí está el comerciante): `place = null`.
 
+> **v0.46.0 (protocolo 73):** los exteriores de bioma ya no son mapas
+> fijos: cada bioma es una región explorable generada por semilla del
+> mundo (camino principal corto, senderos a lagos, minas, campamentos,
+> piedras de paso, recolección estacional). La disposición de las
+> secciones 3.x queda como referencia histórica; el comportamiento
+> vigente está en `biome_regions.md`.
+
 ## 3. Exterior del Bosque
 
 Todos los exteriores son un `BiomeLayout` de `kBiomeLayouts` (34 × 22,

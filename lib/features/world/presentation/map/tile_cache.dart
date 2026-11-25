@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/painting.dart';
 
 import '../../../../game_engine/models/game_map.dart';
+import '../../../../game_engine/rules/biome_regions.dart';
+import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'tile_painter.dart';
 
 /// Capa de tiles del mapa con caché (docs/specs/exploration.md §
@@ -192,6 +194,15 @@ class TileLayerCache {
     final y0 = (area.top / _ts).floor().clamp(0, map.height);
     final y1 = ((area.bottom + mt) / _ts).ceil().clamp(0, map.height);
     String? at(int x, int y) => map.contains(x, y) ? map.tileAt(x, y) : null;
+    // Roofed caves of a biome region (biome_regions.md § 7.2.1).
+    final lay = map.lobby ? biomeLayout(map.place) : null;
+    bool cave(String ch, int x, int y) {
+      if (lay == null) return false;
+      if (ch == Tile.floor) return lay.isIndoor(x, y);
+      return ch == Tile.rock &&
+          RegionAmbienceRules.caveWall(lay, map.tileAt, x, y);
+    }
+
     for (var y = y0; y < y1; y++) {
       for (var x = x0; x < x1; x++) {
         if (only != null && _isAnimated(map, x, y) != only) continue;
@@ -204,7 +215,8 @@ class TileLayerCache {
             at: at,
             voidBackdrop: _backdrop,
             density: density,
-            pulse: pulse);
+            pulse: pulse,
+            cave: cave(ch, x, y));
       }
     }
   }

@@ -33,7 +33,10 @@ void main() {
     final sp = m.spawn;
     expect(WorldRules.collides(m, sp.x, sp.y), isFalse);
     // Parado en el camino del borde sur: mapa de viaje, no lugares del pueblo.
-    expect(WorldRules.townSpot(17 * 16.0, 21 * 16.0 + 4, map: m),
+    expect(
+        WorldRules.townSpot((bosqueLayout.mainPath.first.$1 + 1) * 16.0,
+            (BiomeLayout.height - 1) * 16.0 + 4,
+            map: m),
         TownSpot.travel);
     expect(WorldRules.townSpot(4 * 16.0, 4 * 16.0, map: m), isNot(TownSpot.portal));
   });
@@ -69,20 +72,40 @@ void main() {
       () {
     final e = sessionEngine(zones: true);
     var s = act(e, room(), 'p0', const TravelAction(kBosque));
-    final f = bosqueLayout.forage[0];
-    expect(e.apply(s, 'p0', const ForageAction(0)), isNull, reason: 'lejos');
+    // The first sky tick picks the world seed the regions come from.
+    for (var i = 0; i < 200 && s.town.sky.seed == 0; i++) {
+      s = wait(e, s, 0.5);
+    }
+    e.mapFor(s); // binds the world seed of the regions
+    // The forage farthest from the spawn, so walking back hides it.
+    final sp = bosqueLayout.spawn;
+    var fi = 0;
+    double d2(int i) {
+      final g = bosqueLayout.forage[i];
+      final dx = (g.x + 0.5) * 16 - sp.x, dy = (g.y + 0.5) * 16 - sp.y;
+      return dx * dx + dy * dy;
+    }
+    for (var i = 1; i < bosqueLayout.forage.length; i++) {
+      if (d2(i) > d2(fi)) fi = i;
+    }
+    final f = bosqueLayout.forage[fi];
+    expect(e.apply(s, 'p0', ForageAction(fi)), isNull, reason: 'lejos');
     s = moveTo(e, s, 'p0', (f.x + 0.5) * 16, (f.y + 1.5) * 16);
     final xp0 = s.players['p0']!.profile.life.farm.xp;
-    s = act(e, s, 'p0', const ForageAction(0));
+    s = act(e, s, 'p0', ForageAction(fi));
     final farm = s.players['p0']!.profile.life.farm;
     expect(farm.cropCount(cropKey(kForageKinds[f.kind].item,
         CropQuality.normal)), 1);
     expect(farm.xp, greaterThan(xp0));
     expect(e.mapFor(s).tileAt(f.x, f.y), Tile.forageUsed);
-    expect(e.apply(s, 'p0', const ForageAction(0)), isNull);
-    s = wait(e, s, BiomeRules.t.d('forageRespawnSec') + 1);
+    expect(e.apply(s, 'p0', ForageAction(fi)), isNull);
+    // It regrows out of view (biome_regions.md § 5.1): walk away first.
+    s = moveTo(e, s, 'p0', bosqueLayout.spawn.x, bosqueLayout.spawn.y);
+    s = moveTo(e, s, 'p1', bosqueLayout.spawn.x, bosqueLayout.spawn.y);
+    s = wait(e, s, BiomeRules.respawnOf(f.kind) + 1);
     expect(e.mapFor(s).tileAt(f.x, f.y), Tile.forage);
-    s = act(e, s, 'p0', const ForageAction(0));
+    s = moveTo(e, s, 'p0', (f.x + 0.5) * 16, (f.y + 1.5) * 16);
+    s = act(e, s, 'p0', ForageAction(fi));
   });
 
   test('las semillas del Bosque salen de recolectar y se plantan', () {

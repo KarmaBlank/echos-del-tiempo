@@ -345,5 +345,69 @@
   "ui.world.npcv.time_tip": "何时出现（世界时钟）。",
   "ui.world.npcv.invitable_on": "可邀请到村庄",
   "ui.world.npcv.invitable_off": "不会搬迁",
-  "ui.world.npcv.invitable_tip": "通过邀请话题搬到村庄。"
+  "ui.world.npcv.invitable_tip": "通过邀请话题搬到村庄。",
+  "ui.world.way.prompt_activate": {
+    "text": "[E] 激活传送石",
+    "status": "draft"
+  },
+  "ui.world.way.prompt_use": {
+    "text": "[E] 传送石：快速旅行",
+    "status": "draft"
+  },
+  "ui.world.way.title": {
+    "text": "传送石",
+    "status": "draft"
+  },
+  "ui.world.way.help": {
+    "text": "在本区域已激活的传送石之间旅行。",
+    "status": "draft"
+  },
+  "ui.world.way.go": {
+    "text": "前往",
+    "status": "draft"
+  },
+  "ui.world.way.here": {
+    "text": "此处",
+    "status": "draft"
+  },
+  "ui.world.way.unknown": {
+    "text": "尚未发现",
+    "status": "draft"
+  },
+  "ui.world.way.unknown_tip": {
+    "text": "按 E 触碰以激活，之后即可传送到这里。",
+    "status": "draft"
+  },
+  "ui.world.way.site_entrance": {
+    "text": "区域入口",
+    "status": "draft"
+  },
+  "ui.world.way.site_lake": {
+    "text": "湖泊：{name}",
+    "status": "draft"
+  },
+  "ui.world.way.site_mine": {
+    "text": "矿洞口 {n}",
+    "status": "draft"
+  },
+  "ui.world.way.close": {
+    "text": "关闭",
+    "status": "draft"
+  },
+  "ui.world.forage.prompt": {
+    "text": "[E] 采集{name}",
+    "status": "draft"
+  },
+  "ui.world.forage.regrow": {
+    "text": "{name}：{n} 秒后重新长出",
+    "status": "draft"
+  },
+  "ui.world.forage.seed_bush": {
+    "text": "种子灌木",
+    "status": "draft"
+  },
+  "ui.world.forage.echo_bloom": {
+    "text": "回响之花",
+    "status": "draft"
+  }
 }

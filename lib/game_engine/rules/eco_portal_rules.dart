@@ -30,11 +30,21 @@ abstract final class EcoPortalRules {
   /// Distancia (px) al borde del portal para usarlo con E.
   static const range = 14.0;
 
-  static final Map<int, EcoPortalSpot> _spots = {
-    for (final l in kBiomeLayouts.values)
-      for (final (zone, x, y) in l.ecoPortals)
-        zone: EcoPortalSpot(zone, l.id, x, y),
-  };
+  /// The portals of the generated regions (biome_regions.md), rebuilt
+  /// when the world seed changes.
+  static Map<int, EcoPortalSpot> get _spots {
+    final hit = _cache;
+    if (hit != null && _cacheSeed == BiomeRegions.seed) return hit;
+    _cacheSeed = BiomeRegions.seed;
+    return _cache = {
+      for (final l in kBiomeLayouts.values)
+        for (final (zone, x, y) in l.ecoPortals)
+          zone: EcoPortalSpot(zone, l.id, x, y),
+    };
+  }
+
+  static Map<int, EcoPortalSpot>? _cache;
+  static int _cacheSeed = 0;
 
   /// Todos los portales, por zona (1..10).
   static List<EcoPortalSpot> get all =>

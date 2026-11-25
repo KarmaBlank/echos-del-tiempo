@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/light_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/npc_camp_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/rules/npc_camp_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,18 +62,18 @@ void main() {
   });
 
   test('camp props do not sit on obstacles or the resident tile', () {
+    // Generated regions (biome_regions.md § 2.4): the camp clearing is
+    // open ground.
     for (final lay in kBiomeLayouts.values) {
-      final blocked = {
-        ...lay.obstacles,
-        ...lay.docks,
-        for (final f in lay.forage) (f.x, f.y),
-        for (final e in lay.entrances) (e.$2, e.$3),
-        lay.npc.tile,
-      };
-      expect(blocked.contains(NpcCampRules.fireTile(lay.npc)), isFalse,
-          reason: lay.id);
-      expect(blocked.contains(NpcCampRules.propTile(lay.npc)), isFalse,
-          reason: lay.id);
+      final rows = lay.rows(const {});
+      for (final (x, y) in [
+        NpcCampRules.fireTile(lay.npc)!,
+        NpcCampRules.propTile(lay.npc)!,
+      ]) {
+        expect(Tile.isWalkable(rows[y][x]), isTrue,
+            reason: '${lay.id} ($x, $y) = ${rows[y][x]}');
+      }
+      expect(NpcCampRules.fireTile(lay.npc), isNot(lay.npc.tile));
     }
   });
 

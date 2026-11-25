@@ -256,8 +256,8 @@ abstract final class ResidentRules {
 
   /// Producto silvestre del bioma de [n] que pide para subir su casa.
   static String lootOf(BiomeNpcDef n) {
-    final lay = biomeLayout(n.biome)!;
-    return kForageKinds[lay.forage.first.kind].item;
+    final b = kBiomeBases[n.biome]!;
+    return kForageKinds[b.forageKinds.first].item;
   }
 
   /// Costo de subir la casa de [n] al nivel [next]: oro × nivel, tablas
@@ -502,8 +502,7 @@ abstract final class ResidentRules {
     final lay = biomeLayout(n.biome);
     if (lay == null) return const [];
     return [
-      for (final f in {for (final s in lay.forage) s.kind})
-        kForageKinds[f].item,
+      for (final f in lay.base.forageKinds) kForageKinds[f].item,
       ...lay.seeds.keys,
       ...lay.fish,
     ];
@@ -722,7 +721,7 @@ abstract final class ResidentRules {
         if (fish)
           ...l.fish
         else ...[
-          for (final f in l.forage) kForageKinds[f.kind].item,
+          for (final f in l.base.forageKinds) kForageKinds[f].item,
           ...l.seeds.keys,
         ],
     };

@@ -89,6 +89,7 @@ class TilePainter {
     bool voidBackdrop = false,
     double density = 1,
     double pulse = 0,
+    bool cave = false,
   }) {
     // El mapa del mundo: el pueblo con el estilo del lobby, el resto al
     // aire libre (worldgen.md § 7.6).
@@ -126,6 +127,17 @@ class TilePainter {
             py + jsShiftMod(h, 10, 12).abs() + 2, 2, 1);
       }
       _floorDetail(c, th, themeId, px, py, tx, ty, h, t);
+    }
+
+    // Roofed cave of a biome region (biome_regions.md § 7.2.1): rock
+    // walls and dark stone floor instead of peaks and grass.
+    if (cave && (ch == Tile.rock || ch == Tile.floor)) {
+      if (ch == Tile.rock) {
+        _caveWall(c, px, py, h);
+      } else {
+        _caveFloor(c, px, py, h);
+      }
+      return;
     }
 
     switch (ch) {
@@ -397,8 +409,17 @@ class TilePainter {
         floor();
         _shrine(c, px, py, t, used: ch == Tile.shrineUsed);
       case Tile.waystone || Tile.waystoneOn:
-        floor();
+        // Region waystones stand on grass (biome_regions.md § 4).
+        if (themeId.endsWith('_ext')) {
+          _grass(c, th, px, py, h);
+        } else {
+          floor();
+        }
         _waystone(c, px, py, t, on: ch == Tile.waystoneOn);
+      // Glowing shore plants (biome_regions.md § 3).
+      case Tile.glowPlant:
+        _grass(c, th, px, py, h);
+        _glowPlant(c, px, py, h);
       case Tile.wind:
         floor();
         _windShrine(c, px, py, t);
@@ -492,6 +513,7 @@ class TilePainter {
             Tile.shop ||
             Tile.forage ||
             Tile.forageUsed ||
+            Tile.glowPlant ||
             Tile.mineEntrance:
         return false;
       case Tile.ore || Tile.oreUsed:
@@ -604,6 +626,7 @@ class TilePainter {
         Tile.tombstone,
         Tile.forage,
         Tile.forageUsed,
+        Tile.glowPlant,
         Tile.mineEntrance,
         Tile.ore,
         Tile.oreUsed,
@@ -681,6 +704,17 @@ class TilePainter {
   }
 
   /// Piedra de paso: menhir con una runa (dorada encendida).
+  /// Activated region waystone (biome_regions.md § 4): its rune lit for
+  /// the local player, drawn over the static tile.
+  void waystoneGlow(Canvas c, double px, double py, double t) {
+    final k = 0.6 + 0.4 * math.sin(t / 300);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 7, py - 3, 2,
+        8);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 6, py, 4, 1);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: 0.18 * k), px + 2,
+        py - 9, 12, 24);
+  }
+
   void _waystone(Canvas c, double px, double py, double t, {required bool on}) {
     _rect(c, const Color(0x55000000), px + 3, py + 13, ts - 6, 2);
     _rect(c, const Color(0xFF4E5568), px + 4, py - 6, 8, 20);
@@ -790,6 +824,19 @@ class TilePainter {
     }
   }
 
+  /// Glowing shore plant: a few stems with luminous bulbs (static: the
+  /// glow at night comes from the light layer).
+  void _glowPlant(Canvas c, double px, double py, int h) {
+    for (var k = 0; k < 3; k++) {
+      final x = px + 3 + ((h >> (k * 3)) % 10);
+      final top = py + 3 + ((h >> (k * 2 + 5)) % 6);
+      _rect(c, RegionPalette.glowStem, x, top + 2, 1, py + 15 - top - 2);
+      _rect(c, RegionPalette.glowLeaf, x - 1, top + 5, 1, 2);
+      _rect(c, RegionPalette.glowHalo, x - 1, top - 1, 3, 3);
+      _rect(c, RegionPalette.glowBulb, x, top, 1, 2);
+    }
+  }
+
   /// Mine entrance: a dark arch in a rock face with timber props.
   void _mineMouth(Canvas c, double px, double py) {
     _rect(c, MinePalette.rock, px, py, ts, ts);
@@ -851,6 +898,36 @@ class TilePainter {
     _circle(c, th.tree, px + 8, py + 7, 8);
     _circle(c, th.tree2, px + 6, py + 5, 4);
     if (h % 4 == 0) _rect(c, const Color(0x33000000), px + 10, py + 9, 3, 2);
+  }
+
+  /// Cave wall block: stacked stone with a lit top edge and cracks.
+  void _caveWall(Canvas c, double px, double py, int h) {
+    _rect(c, RegionPalette.caveWall, px, py, ts, ts);
+    // Two courses of blocks, offset by the hash.
+    final off = (h % 3) * 3.0;
+    _rect(c, RegionPalette.caveWallDark, px, py + 7, ts, 1);
+    _rect(c, RegionPalette.caveWallDark, px + 4 + off, py, 1, 7);
+    _rect(c, RegionPalette.caveWallDark, px + (10 - off).abs(), py + 8, 1, 8);
+    _rect(c, RegionPalette.caveWallLight, px, py, ts, 1);
+    _rect(c, RegionPalette.caveWallLight, px, py + 8, ts, 1);
+    if (h % 4 == 0) {
+      _rect(c, RegionPalette.caveCrack, px + 2 + h % 9, py + 3, 1, 3);
+      _rect(c, RegionPalette.caveCrack, px + 3 + h % 9, py + 5, 2, 1);
+    }
+    _rect(c, RegionPalette.caveWallDark, px, py + ts - 1, ts, 1);
+  }
+
+  /// Cave floor: dark stone with a few pebbles.
+  void _caveFloor(Canvas c, double px, double py, int h) {
+    _rect(c, RegionPalette.caveFloor, px, py, ts, ts);
+    if (h % 3 == 0) {
+      _rect(c, RegionPalette.caveFloor2, px + jsShiftMod(h, 3, 12).abs(),
+          py + jsShiftMod(h, 7, 12).abs(), 3, 2);
+    }
+    if (h % 5 == 1) {
+      _rect(c, RegionPalette.caveWallLight, px + jsShiftMod(h, 9, 13).abs(),
+          py + jsShiftMod(h, 13, 13).abs(), 1, 1);
+    }
   }
 
   /// Roca / montaña gris con nieve arriba.

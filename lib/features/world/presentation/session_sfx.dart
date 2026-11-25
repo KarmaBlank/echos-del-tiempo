@@ -26,6 +26,7 @@ import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
 import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
+import 'fishing_ambience.dart';
 import 'hud/loot_feed.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
@@ -47,7 +48,13 @@ final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   final sub = controller.events.listen(sfx.onEvent);
   controller.fishSfx = (id) => sfx.service.play(id);
   final removeView = controller.addListener(sfx.onView);
+  // Quiet ambience while fishing (biome_regions.md § 7.2.3).
+  final ambience = FishingAmbiencePlayer(sfx.service,
+      fishing: () => controller.mapFishing != null);
+  final removeAmbience = controller.addListener(ambience.onView);
   ref.onDispose(() {
+    removeAmbience();
+    ambience.stop();
     unawaited(sub.cancel());
     removeView();
   });

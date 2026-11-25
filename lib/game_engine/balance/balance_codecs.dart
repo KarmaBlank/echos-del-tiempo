@@ -101,7 +101,10 @@ enum BalanceKind {
   lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios'),
 
   /// Minas, vetas, fundir y forjar armas (mining_smithing.md).
-  smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería');
+  smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería'),
+
+  /// Generated biome regions and region foraging (biome_regions.md).
+  regions('regions', 'Regiones de bioma', 'Ajustes de regiones de bioma');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1625,6 +1628,11 @@ final fishingCodec =
     _tuningCodec(BalanceKind.fishing, _autoFields('fishing', _fishLabels));
 
 const _fishLabels = {
+  'ambMusicLevel': 'Ambiente al pescar: nivel de la música',
+  'ambDuckSec': 'Ambiente al pescar: segundos para bajar la música',
+  'ambVolume': 'Ambiente al pescar: volumen de los sonidos',
+  'ambGapMinSec': 'Ambiente al pescar: espera mínima (s)',
+  'ambGapMaxSec': 'Ambiente al pescar: espera máxima (s)',
   'baitAffinity': 'Cebo: × peso de los peces que atrae',
   'baitWaterChance': 'Cebo: chance de cebo en el botín de materiales',
   'baitLombrizBite': 'Cebo (lombriz común): picada más rápida',
@@ -1699,6 +1707,38 @@ const _smithingLabels = {
   'stackCap': 'Tope por material',
 };
 
+final regionsCodec = _tuningCodec(
+    BalanceKind.regions, _autoFields('regions', _regionsLabels));
+
+const _regionsLabels = {
+  'secondLakeChance': 'Región: chance de un segundo lago',
+  'lakeRxMin': 'Lago: radio horizontal mínimo',
+  'lakeRxMax': 'Lago: radio horizontal máximo',
+  'lakeRyMin': 'Lago: radio vertical mínimo',
+  'lakeRyMax': 'Lago: radio vertical máximo',
+  'treeDensity': 'Región: árboles cada 100 tiles libres',
+  'plantSpots': 'Recolección: matas del bioma',
+  'seedBushes': 'Recolección: matas de semillas',
+  'seasonalSpots': 'Recolección: brotes de estación',
+  'mainPathMax': 'Camino principal: pasos máximos',
+  'seedBushRareMul': 'Mata de semillas: × peso de las raras',
+  'echoBloomRespawnSec': 'Flor del eco: segundos de rebrote',
+  'seasonalXpMul': 'Brotes de estación: × XP',
+  'echoBloomXpMul': 'Flor del eco: × XP',
+  'forageHideRadius': 'Rebrote: distancia de vista (px)',
+  'forageRecheckSec': 'Rebrote: segundos entre chequeos',
+  'waystoneReach': 'Piedra de paso: distancia (px)',
+  'caveRoofLip': 'Gruta: alero del techo (px)',
+  'cavePoolAlpha': 'Gruta: opacidad de los charcos de luz',
+  'cavePoolSize': 'Gruta: tamaño de los charcos de luz (px)',
+  'cavePoolPixel': 'Gruta: pixelado de los charcos de luz (px)',
+  'caveMotes': 'Gruta: motas de polvo por charco',
+  'caveMoteSpeed': 'Gruta: velocidad de las motas',
+  'swayAmp': 'Viento: vaivén de la vegetación (px)',
+  'swaySpeed': 'Viento: velocidad del vaivén',
+  'swayDensity': 'Viento: fracción de vegetación que se mece',
+};
+
 final lifeTreeCodec = _tuningCodec(
     BalanceKind.lifeTree, _autoFields('lifeTree', _lifeTreeLabels()));
 
@@ -1737,6 +1777,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
       BalanceKind.smithing => smithingCodec,
+      BalanceKind.regions => regionsCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1756,4 +1797,5 @@ const kTuningKinds = [
   BalanceKind.fishing,
   BalanceKind.lifeTree,
   BalanceKind.smithing,
+  BalanceKind.regions,
 ];

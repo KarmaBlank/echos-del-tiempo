@@ -26,10 +26,16 @@ void main() {
       }
       for (final f in lay.forage) {
         expect(m.tileAt(f.x, f.y), Tile.forage, reason: '${lay.id} $f');
-        expect(kCrops[kForageKinds[f.kind].item], isNotNull);
+        final k = kForageKinds[f.kind];
+        if (k.cls == ForageClass.plant || k.cls == ForageClass.echoBloom) {
+          expect(kCrops[k.item], isNotNull);
+        }
+      }
+      for (final s in kSeasonalForage) {
+        expect(kCrops[s], isNotNull, reason: s);
       }
       final (nx, ny) = lay.npc.tile;
-      expect(m.tileAt(nx, ny), Tile.grass, reason: lay.id);
+      expect(Tile.isWalkable(m.tileAt(nx, ny)), isTrue, reason: lay.id);
     }
   });
 

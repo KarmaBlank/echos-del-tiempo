@@ -9,7 +9,6 @@ import '../data/town_layout.dart';
 import '../data/world_events_catalog.dart';
 import '../data/zones_catalog.dart';
 import '../models/battle_state.dart';
-import '../models/game_map.dart';
 import '../models/localized_text.dart';
 import '../models/mission_def.dart';
 import '../models/player_profile.dart';
@@ -265,10 +264,6 @@ abstract final class WorldEventRules {
   /// Event NPCs and rift portals have a place to stand.
   static bool hasActor(WorldEventCategory c) => c != WorldEventCategory.lore;
 
-  static const _biomeSlots = [
-    (14, 10), (19, 10), (14, 13), (19, 13), (13, 16), (20, 16), (14, 7),
-    (19, 7),
-  ];
   static const _townSlots = [(-2, 3), (3, 3), (-2, -1), (3, -1)];
 
   /// Where the actor of [a] stands (px), or `null` (§ 3): town events
@@ -292,11 +287,8 @@ abstract final class WorldEventRules {
     }
     final lay = biomeLayout(a.biome);
     if (lay == null) return null;
-    final rows = lay.rows(const {});
-    final free = [
-      for (final (x, y) in _biomeSlots)
-        if (rows[y][x] == Tile.grass) (x, y)
-    ];
+    // Free ground by the main path (biome_regions.md § 2.4).
+    final free = lay.eventSpots;
     if (free.isEmpty) return null;
     final (x, y) = free[i % free.length];
     return ((x + 0.5) * 16, (y + 0.5) * 16);

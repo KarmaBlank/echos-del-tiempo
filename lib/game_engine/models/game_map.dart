@@ -163,6 +163,10 @@ abstract final class Tile {
   static const ore = 'r';
   static const oreUsed = 'j';
 
+  /// Glowing shore plants of a one-sided lake (biome_regions.md § 3):
+  /// solid, they glow at night.
+  static const glowPlant = 'v';
+
   /// Tiles de los puntos de interés de v0.6 (todos sólidos).
   static const poiTiles = {
     cracked, secretFloor, shrine, shrineUsed, waystone, waystoneOn, wind,
@@ -177,7 +181,7 @@ abstract final class Tile {
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit, lantern, lanternLit, forage, forageUsed, house,
-    workshop, shop, mineEntrance, ore, oreUsed,
+    workshop, shop, mineEntrance, ore, oreUsed, glowPlant,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).
