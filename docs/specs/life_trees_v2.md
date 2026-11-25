@@ -38,21 +38,36 @@ escalón 10 de cada rama es un **remate** notable.
 
 ## 3. Lienzo (UI)
 Pestaña OFICIOS de PERSONAJE: tarjetas de oficio | árbol | detalle.
-- El árbol es una grilla de 5 columnas (ramas, con su nombre arriba) ×
-  11 filas (raíz abajo, remate arriba: se "sube" el oficio), con una
-  regla de nivel por fila a la izquierda ("Nv 1", "Nv 4", …).
-- Nodos cuadrados pixel (sin esquinas redondeadas): tomado = dorado
-  (`DsColors.reward`), disponible = borde verde (`success`), bloqueado =
-  gris apagado, elegido = borde `focus`. Remates más grandes con marco
-  doble; los nodos que entregan algo llevan un punto en la esquina
-  (gris una vez reclamado).
-- Conexiones dibujadas entre escalones; doradas si ambos extremos están
-  tomados.
-- Tooltip de ancho fijo (`DsTooltip`) con el nombre, las líneas de
-  efecto y lo que entrega. Detalle a la derecha: nombre, rama, escalón,
-  costo, nivel pedido, efectos, entregas ("ya recibido" si se reclamó),
-  estado, TOMAR y REINICIAR (GRATIS). Botones deshabilitados en gris.
-- Nada se trunca: el lienzo hace scroll vertical si no entra.
+- El árbol se dibuja con el mismo organismo que el ÁRBOL de PERSONAJE
+  (`SkillTreeCanvas`, `features/passive_tree/presentation/`): los mismos
+  pintores (`PassiveTreePainter` para enlaces y nodos,
+  `TreeLabelsPainter` para los nombres en px de pantalla), arrastre,
+  rueda y botones de zoom (−, +, VER TODO). Al abrir y al cambiar de
+  oficio encuadra el árbol entero.
+- Forma radial (`lifeTreeCatalog`): la raíz en el centro (nodo de
+  inicio, dorado) y las 5 ramas como rayos a 72° (la rama c hacia
+  arriba); el escalón t va a radio `2.8 + 1.1 · (t − 1)` unidades.
+  Remates = hexágono (keystone), nodos mayores = notable (borde dorado),
+  el resto = nodo chico.
+- Compuertas de nivel visibles: un anillo por escalón alrededor del
+  centro (más marcado si el oficio ya llegó a ese nivel) y su etiqueta
+  ("Nv 1", "Nv 4", …) entre las ramas c y d. El nombre de cada rama va
+  al final de su rayo.
+- Estados iguales al árbol principal: tomado = verde (remate tomado =
+  rojo keystone), disponible = celeste, bloqueado = gris azulado; enlace
+  verde si ambos extremos están tomados. Al pasar el mouse (o con el
+  nodo elegido) se resalta en dorado su rama y el nodo.
+- Los nombres de los nodos NO van junto al nodo (no entran sin
+  pisarse): van en el tooltip de ancho fijo (`DsTooltip`: nombre,
+  efectos, entregas, estado) y en el detalle de la derecha: nombre,
+  rama, escalón, costo, nivel pedido, efectos, entregas ("ya recibido"
+  si se reclamó), estado, puntos, TOMAR y REINICIAR (GRATIS). Botones
+  deshabilitados en gris.
+- Nada se trunca. Vista previa: `LIFE_TREE_PREVIEW=1 flutter test
+  test/features/world/life_tree_view_test.dart` →
+  `docs/preview/life_tree_view.png` y `life_tree_<oficio>.png`.
+- Los árboles de ascensión (`ascension.md`) ya usan nodos sin etiqueta
+  con tooltip; no cambian.
 
 ## 4. Entregas (una sola vez)
 Al tomar un nodo con `grants`, el host entrega cada cosa y anota el nodo

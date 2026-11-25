@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../../core/i18n/game_text.dart';
 import '../../../../core/text/plain_text.dart';
 import '../../../../core/text/text_detail.dart';
@@ -15,6 +17,9 @@ import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/life_tree_rules.dart';
 import '../world_strings.dart';
+import '../../../../game_engine/models/passive_tree.dart';
+import '../../../passive_tree/domain/passive_text.dart' show TreeNodeState;
+import '../../../passive_tree/presentation/skill_tree_canvas.dart';
 
 /// Localized name of a life tree node.
 String lifeNodeName(LifeTreeNode n) =>
@@ -80,7 +85,7 @@ String lifeNodeText(BuildContext context, LifeTreeNode n) =>
         .join('\n');
 
 /// Pestaña OFICIOS de PERSONAJE (life_trees_v2.md § 3): profession cards,
-/// the tree (5 branches × 10 tiers, the root at the bottom) and the
+/// the radial tree (5 branches x 10 tiers around the root) and the
 /// detail of the chosen node.
 class LifeSkillsView extends StatefulWidget {
   const LifeSkillsView(
@@ -101,8 +106,6 @@ class LifeSkillsView extends StatefulWidget {
   State<LifeSkillsView> createState() => _LifeSkillsViewState();
 }
 
-/// Visual state of a node.
-enum LifeNodeState { taken, available, locked }
 
 class _LifeSkillsViewState extends State<LifeSkillsView> {
   LifeSkillKind _kind = LifeSkillKind.pesca;
@@ -110,9 +113,6 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
 
   PlayerProfile get p => widget.profile;
 
-  static const _ruler = 44.0;
-  static const _rowH = 76.0;
-  static const _headH = 28.0;
 
   @override
   Widget build(BuildContext context) {
@@ -140,13 +140,6 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       ],
     );
   }
-
-  LifeNodeState _state(LifeSkillKind k, LifeTreeNode n) =>
-      LifeTreeRules.has(p, k, n.id)
-          ? LifeNodeState.taken
-          : LifeTreeRules.block(p, k, n.id) == null
-              ? LifeNodeState.available
-              : LifeNodeState.locked;
 
   Widget _skillRow(LifeSkillKind k) {
     final lvl = LifeTreeRules.level(p, k);
@@ -209,15 +202,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final nodes = kLifeTrees[k]!;
     final n = lifeTreeNode(k, _sel ?? '') ?? nodes.first;
     final has = LifeTreeRules.has(p, k, n.id);
-    final blk = LifeTreeRules.block(p, k, n.id);
-    final why = widget.editBlocked ??
-        (blk == null
-            ? null
-            : context.t(blk.key, {
-                'have': blk.have,
-                'need': blk.need,
-                'node': blk.node == null ? '' : lifeNodeName(blk.node!),
-              }));
+    final why = widget.editBlocked ?? _why(k, n);
     final fx = lifeNodeEffects(context, n);
     final gr = lifeNodeGrants(context, n);
     final claimed = LifeTreeRules.claimed(p, n.id);
@@ -262,10 +247,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
         if (n.capstone)
           Text(context.t('ui.town.trades.capstone'), style: DsText.detail()),
         SizedBox(height: DsSpace.sm),
-        Text(
-            has
-                ? context.t('ui.town.trades.taken')
-                : why ?? context.t('ui.town.trades.available'),
+        Text(has ? _stateText(k, n) : why ?? _stateText(k, n),
             key: const ValueKey('life-node-state'),
             style: DsText.detail()),
         SizedBox(height: DsSpace.sm),
@@ -296,182 +278,146 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     );
   }
 
-  /// Tree canvas: a header with the branch names, a level ruler on the
-  /// left and one row per tier (capstones on top, the root at the bottom).
+  /// The tree, drawn by the shared skill-tree organism (life_trees_v2.md
+  /// § 3): the root in the centre, the five branches as spokes and one
+  /// level-gate ring per tier. Names live in the hover card and the
+  /// detail pane, never next to the nodes.
   Widget _tree() {
     final k = _kind;
-    final nodes = kLifeTrees[k]!;
-    return LayoutBuilder(builder: (context, box) {
-      final colW = ((box.maxWidth - _ruler) / kLifeBranches.length)
-          .clamp(56.0, 400.0)
-          .toDouble();
-      final w = _ruler + colW * kLifeBranches.length;
-      const h = _headH + _rowH * (kLifeTiers + 1);
-      Offset at(LifeTreeNode n) => Offset(_ruler + (n.x + 2.5) * colW,
-          _headH + (kLifeTiers - n.tier + 0.5) * _rowH - 12);
-      return SingleChildScrollView(
-        key: const ValueKey('life-tree-scroll'),
-        child: SizedBox(
-          width: w,
-          height: h,
-          child: Stack(clipBehavior: Clip.none, children: [
-            Positioned.fill(
-                child: CustomPaint(
-                    painter: _Links(k, p, nodes, at, _ruler, _headH, _rowH))),
-            for (var i = 0; i < kLifeBranches.length; i++)
-              Positioned(
-                left: _ruler + i * colW,
-                top: 0,
-                width: colW,
-                child: Text(lifeBranchName(k, kLifeBranches[i]).toUpperCase(),
-                    key: ValueKey('life-branch-${kLifeBranches[i]}'),
-                    textAlign: TextAlign.center,
-                    style: DsText.detail(DsColors.textSubtitle)),
-              ),
-            for (var t = 1; t <= kLifeTiers; t++)
-              Positioned(
-                left: 0,
-                top: _headH + (kLifeTiers - t) * _rowH + _rowH / 2 - 20,
-                width: _ruler,
-                child: Text(
-                    context.t('ui.town.trades.tier',
-                        {'n': LifeTreeRules.tierLevel(t)}),
-                    style: DsText.detail(
-                        LifeTreeRules.level(p, k) >= LifeTreeRules.tierLevel(t)
-                            ? DsColors.textSecondary
-                            : DsColors.textDisabled)),
-              ),
-            for (final n in nodes) _node(k, n, at(n), colW),
-          ]),
-        ),
-      );
-    });
-  }
-
-  Widget _node(LifeSkillKind k, LifeTreeNode n, Offset c, double colW) {
-    final big = n.capstone || n.root;
-    final size = big ? 36.0 : n.major ? 30.0 : 26.0;
-    final st = _state(k, n);
-    final sel = (_sel ?? kLifeTrees[k]!.first.id) == n.id;
-    final hasGrant = n.grants.isNotEmpty;
-    final claimed = LifeTreeRules.claimed(p, n.id);
-    final fill = switch (st) {
-      LifeNodeState.taken => DsColors.reward,
-      LifeNodeState.available => DsColors.surfaceRaised,
-      LifeNodeState.locked => DsColors.surfaceSunken,
-    };
-    final edge = sel
-        ? DsColors.mp
-        : switch (st) {
-            LifeNodeState.taken => DsColors.reward,
-            LifeNodeState.available => DsColors.success,
-            LifeNodeState.locked => DsColors.border,
-          };
-    final text = lifeNodeText(context, n);
-    return Positioned(
-      left: c.dx - colW / 2,
-      top: c.dy - size / 2,
-      width: colW,
-      child: DsTooltip(
-        card: DsTooltipCard(title: lifeNodeName(n), detail: text, children: [
-          Text(TextDetail.isSummary ? plainShort(text) : text,
-              style: DsText.detail())
-        ]),
-        child: GestureDetector(
-          key: ValueKey('life-node-${n.id}'),
-          onTap: () => setState(() => _sel = n.id),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              key: ValueKey('life-node-${n.id}-${st.name}'),
-              width: size,
-              height: size,
-              padding: EdgeInsets.all(big ? 3 : 0),
-              decoration: BoxDecoration(
-                color: fill,
-                border: Border.all(color: edge, width: sel || big ? 3 : 2),
-              ),
-              child: Stack(children: [
-                if (big)
-                  Positioned.fill(
-                    child: DecoratedBox(
-                        decoration: BoxDecoration(
-                            border: Border.all(color: edge, width: 1))),
-                  ),
-                Center(
-                  child: Text(
-                      st == LifeNodeState.taken || n.root ? '' : '${n.cost}',
-                      style: DsText.detail(st == LifeNodeState.available
-                          ? DsColors.success
-                          : DsColors.textDisabled)),
-                ),
-                if (hasGrant)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                        width: 6,
-                        height: 6,
-                        color: claimed ? DsColors.textDisabled : DsColors.mp),
-                  ),
-              ]),
-            ),
-            const SizedBox(height: 2),
-            // Opaque plate: links never show through the label.
-            Container(
-              key: ValueKey('life-label-${n.id}'),
-              color: DsColors.background,
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text(lifeNodeName(n),
-                  textAlign: TextAlign.center,
-                  softWrap: true,
-                  style: DsText.detail(st == LifeNodeState.locked
-                      ? DsColors.textDisabled
-                      : DsColors.textPrimary)),
-            ),
-          ]),
-        ),
-      ),
+    final cat = _catalog(context, k);
+    final lvl = LifeTreeRules.level(p, k);
+    return SkillTreeCanvas(
+      key: ValueKey('life-tree-${k.name}'),
+      keyPrefix: 'life-node',
+      catalog: cat,
+      startId: kLifeTrees[k]!.first.id,
+      selected: _sel ?? kLifeTrees[k]!.first.id,
+      states: {
+        for (final n in kLifeTrees[k]!) n.id: _state(k, n),
+      },
+      rings: [
+        for (var t = 1; t <= kLifeTiers; t++)
+          SkillTreeRing(lifeTierRadius(t),
+              open: lvl >= LifeTreeRules.tierLevel(t)),
+      ],
+      onSelect: (id) => setState(() => _sel = id),
+      tooltip: (id) {
+        final n = lifeTreeNode(k, id)!;
+        final text = lifeNodeText(context, n);
+        return DsTooltipCard(
+            title: lifeNodeName(n),
+            titleColor: n.capstone ? DsColors.reward : null,
+            detail: text,
+            children: [
+              if (text.isNotEmpty)
+                Text(TextDetail.isSummary ? plainShort(text) : text,
+                    style: DsText.detail()),
+              Text(_stateText(k, n), style: DsText.detail()),
+            ]);
+      },
     );
   }
-}
 
-class _Links extends CustomPainter {
-  _Links(this.k, this.p, this.nodes, this.at, this.ruler, this.head, this.rowH);
-  final LifeSkillKind k;
-  final PlayerProfile p;
-  final List<LifeTreeNode> nodes;
-  final Offset Function(LifeTreeNode) at;
-  final double ruler, head, rowH;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Faint tier rows behind the tree.
-    final band = Paint()..color = DsColors.surfaceSunken.withValues(alpha: 0.35);
-    for (var t = 0; t <= kLifeTiers; t += 2) {
-      canvas.drawRect(
-          Rect.fromLTWH(ruler, head + (kLifeTiers - t) * rowH,
-              size.width - ruler, rowH),
-          band);
-    }
-    final paint = Paint()..strokeWidth = 3;
-    for (final n in nodes) {
-      for (final l in n.links) {
-        final o = lifeTreeNode(k, l);
-        // Draw each edge once, from the lower tier up.
-        if (o == null || o.tier >= n.tier) continue;
-        final both =
-            LifeTreeRules.has(p, k, n.id) && LifeTreeRules.has(p, k, o.id);
-        paint.color = both ? DsColors.reward : DsColors.border;
-        final a = at(o), b = at(n);
-        // Pixel style: orthogonal elbow (up, across, up).
-        final mid = (a.dy + b.dy) / 2;
-        canvas.drawLine(a, Offset(a.dx, mid), paint);
-        canvas.drawLine(Offset(a.dx, mid), Offset(b.dx, mid), paint);
-        canvas.drawLine(Offset(b.dx, mid), b, paint);
-      }
-    }
+  /// Why [n] can't be taken now (`null` = it can).
+  String? _why(LifeSkillKind k, LifeTreeNode n) {
+    final blk = LifeTreeRules.block(p, k, n.id);
+    return blk == null
+        ? null
+        : context.t(blk.key, {
+            'have': blk.have,
+            'need': blk.need,
+            'node': blk.node == null ? '' : lifeNodeName(blk.node!),
+          });
   }
 
-  @override
-  bool shouldRepaint(_Links old) => old.p != p || old.k != k;
+  String _stateText(LifeSkillKind k, LifeTreeNode n) =>
+      LifeTreeRules.has(p, k, n.id)
+          ? context.t('ui.town.trades.taken')
+          : _why(k, n) ?? context.t('ui.town.trades.available');
+
+  /// One catalog per profession and language (the painters cache by
+  /// identity).
+  static final _catalogs = <(LifeSkillKind, String), PassiveTreeCatalog>{};
+
+  PassiveTreeCatalog _catalog(BuildContext context, LifeSkillKind k) {
+    final branches = [for (final b in kLifeBranches) lifeBranchName(k, b)];
+    final tiers = [
+      for (var t = 1; t <= kLifeTiers; t++)
+        context.t('ui.town.trades.tier', {'n': LifeTreeRules.tierLevel(t)})
+    ];
+    return _catalogs.putIfAbsent((k, [...branches, ...tiers].join('|')),
+        () => lifeTreeCatalog(k, branches, tiers));
+  }
+
+  TreeNodeState _state(LifeSkillKind k, LifeTreeNode n) => n.root
+      ? TreeNodeState.start
+      : LifeTreeRules.has(p, k, n.id)
+          ? TreeNodeState.taken
+          : LifeTreeRules.block(p, k, n.id) == null
+              ? TreeNodeState.available
+              : TreeNodeState.locked;
+}
+
+/// Radius (tree units) of tier [t] in the radial layout.
+double lifeTierRadius(int t) => 2.8 + (t - 1) * 1.1;
+
+/// Angle of branch [i] (a..e): the middle one points up, 72° apart.
+double _branchAngle(int i) => -math.pi / 2 + (i - 2) * 2 * math.pi / 5;
+
+/// Profession tree [k] as a skill-tree catalog (life_trees_v2.md § 3):
+/// root → start node, capstones → keystones, major nodes → notables;
+/// [branches] and [tiers] are the localized labels drawn on the canvas.
+PassiveTreeCatalog lifeTreeCatalog(
+    LifeSkillKind k, List<String> branches, List<String> tiers) {
+  final nodes = <String, PassiveNode>{};
+  for (final n in kLifeTrees[k]!) {
+    final i = n.x + 2;
+    final r = n.root ? 0.0 : lifeTierRadius(n.tier);
+    final a = _branchAngle(i);
+    nodes[n.id] = PassiveNode(
+      id: n.id,
+      x: r * math.cos(a),
+      y: r * math.sin(a),
+      name: n.name,
+      effects: const {},
+      kind: n.root
+          ? 'st'
+          : n.capstone
+              ? 'k'
+              : n.major
+                  ? 'n'
+                  : 's',
+      links: n.links,
+      pathId: n.branch == null ? null : 'life_${k.name}_${n.branch}',
+    );
+  }
+  final outer = lifeTierRadius(kLifeTiers) + 1.6;
+  // Tier labels between branches c and d, where no node sits.
+  final gap = (_branchAngle(2) + _branchAngle(3)) / 2;
+  return PassiveTreeCatalog(
+    nodes: nodes,
+    startNodeByClass: const {},
+    exclusions: const {},
+    paths: {
+      for (var i = 0; i < kLifeBranches.length; i++)
+        'life_${k.name}_${kLifeBranches[i]}': PassivePath(
+          id: 'life_${k.name}_${kLifeBranches[i]}',
+          name: branches[i],
+          theme: '',
+          classId: k.name,
+          kind: 'grupo',
+          labelX: outer * math.cos(_branchAngle(i)),
+          labelY: outer * math.sin(_branchAngle(i)),
+        ),
+      for (var t = 1; t <= kLifeTiers; t++)
+        'life_tier_$t': PassivePath(
+          id: 'life_tier_$t',
+          name: tiers[t - 1],
+          theme: '',
+          classId: k.name,
+          labelX: lifeTierRadius(t) * math.cos(gap),
+          labelY: lifeTierRadius(t) * math.sin(gap),
+        ),
+    },
+  );
 }
