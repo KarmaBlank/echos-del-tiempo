@@ -2295,6 +2295,33 @@ class SessionController extends StateNotifier<SessionView?> {
     });
   }
 
+  /// A mouse press on [tile] (no tool in hand): hold-to-gather the bush
+  /// in reach on / next to it or the tree faced there, or harvest a ripe
+  /// plot (cozy_life.md § 3). Releasing ends it ([gatherHoldEnd]).
+  /// Returns whether the press was used.
+  bool gatherPress((int, int) tile) {
+    final s = _s;
+    if (s == null || _panel != null || s.mode != SessionMode.lobby) {
+      return false;
+    }
+    final lay = biomeLayout(s.place);
+    if (lay != null) {
+      if (nearForage case final i?) {
+        final f = lay.forage[i];
+        if ((f.x - tile.$1).abs() <= 1 && (f.y - tile.$2).abs() <= 1) {
+          gatherHoldStart(forage: i);
+          return true;
+        }
+      }
+      if (facingTree case final t? when t == tile) {
+        gatherHoldStart(tree: t);
+        return true;
+      }
+    }
+    if (farmTile == tile && farmOp == FarmOp.harvest) return farmWork();
+    return false;
+  }
+
   void gatherHoldEnd() {
     _gatherTimer?.cancel();
     _gatherTimer = null;

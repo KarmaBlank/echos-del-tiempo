@@ -328,7 +328,7 @@
   "ui.world.way.site_lake": "Lago: {name}",
   "ui.world.way.site_mine": "Boca de mina {n}",
   "ui.world.way.close": "CERRAR",
-  "ui.world.forage.prompt": "[Mantené E] Recolectar {name}",
+  "ui.world.forage.prompt": "[Mantené E/Clic] Recolectar {name}",
   "ui.world.forage.regrow": "{name}: vuelve a crecer en {n} s",
   "ui.world.forage.seed_bush": "Mata de semillas",
   "ui.world.forage.echo_bloom": "Flor del eco",
@@ -416,6 +416,6 @@
   "ui.world.raft.prompt_board": "[E] Subir a la balsa",
   "ui.world.raft.prompt_leave": "[E] Bajar a la orilla",
   "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa",
-  "ui.world.cozy.search_prompt": "[Mantené E] Buscar en el árbol",
+  "ui.world.cozy.search_prompt": "[Mantené E/Clic] Buscar en el árbol",
   "ui.world.cozy.searched": "Ya buscaste en este árbol hoy"
 }
