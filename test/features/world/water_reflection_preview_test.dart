@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/actor_painter.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/region_light_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/water_reflection_layer.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
@@ -94,6 +95,10 @@ void main() {
         for (final a in [...actors]..sort((a, b) => a.y.compareTo(b.y))) {
           a.draw(c);
         }
+        // The same clouds shade the land and are reflected on the water.
+        RegionLightLayer().drawClouds(c, view, t, cover * (1 - dark),
+            map.width * 16.0, map.height * 16.0,
+            onWater: layer.reflectsSky);
         if (veil != null) {
           c.drawRect(view, Paint()
             ..color = veil
@@ -121,7 +126,7 @@ void main() {
 
     await shot('day_lake', shore, dark: 0);
     await shot('sunset', shore,
-        dark: 0.5, veil: const Color(0xFFE8B090), cover: 0.4);
+        dark: 0.5, veil: const Color(0xFFF2D2C0), cover: 0.4);
     await shot('night_lights', shore,
         dark: 1, veil: const Color(0xFF3A4478), cover: 0.2);
     await shot('raft_wake', lake, dark: 0, raft: true, t: 3.3);

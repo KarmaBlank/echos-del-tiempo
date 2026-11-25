@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/core/settings/graphics.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/region_light_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/rules/reflection_rules.dart';
@@ -132,5 +133,83 @@ void main() {
       layer.frameTime(8);
     }
     expect(layer.autoLow, isFalse);
+  });
+  test('one cloud field: shadow on land, reflection on water, same cells',
+      () {
+    final map = reflectionLake();
+    final layer = reflectionLayer(TilePainter());
+    final shadows = RegionLightLayer();
+    const field = Size(768, 480);
+    final top = waterTop(map, map.width ~/ 2)!;
+    final view = Rect.fromLTWH(200, top - 120, 360, 240);
+    // A moment when a cloud straddles the shore in the view.
+    var found = false;
+    for (var t = 0.0; t < 600 && !found; t += 7) {
+      final all = <(double, double, int)>{};
+      RegionLightLayer.cloudCells(view, t, 1, field.width, field.height,
+          (x, y, s) => all.add((x, y, s)));
+      frame((c) {
+        layer.draw(c, map, view,
+            t: t,
+            darkness: 0,
+            cover: 1,
+            field: field,
+            actors: const [],
+            roofed: (_, __) => false);
+        shadows.drawClouds(c, view, t, 1, field.width, field.height,
+            onWater: layer.reflectsSky);
+      });
+      Set<(double, double, int)> cells(List<List<double>> b) => {
+            for (var s = 0; s < b.length; s++)
+              for (var i = 0; i < b[s].length; i += 2)
+                (b[s][i], b[s][i + 1], s + 1),
+          };
+      final land = cells(shadows.debugShadowCells);
+      final water = cells(layer.debugCloudCells);
+      if (land.isEmpty || water.isEmpty) continue;
+      found = true;
+      expect(land.intersection(water), isEmpty);
+      // Together they are exactly the cloud: nothing lost at the shore.
+      expect(land.union(water), all);
+      for (final (x, y, _) in water) {
+        expect(layer.reflectsSky(x, y), isTrue);
+      }
+      for (final (x, y, _) in land) {
+        expect(layer.reflectsSky(x, y), isFalse);
+      }
+    }
+    expect(found, isTrue, reason: 'a cloud crossed the shore');
+  });
+
+  testWidgets('no tint seam while panning across a window border',
+      (tester) async {
+    final map = reflectionLake(w: 64, h: 40, rx: 26, ry: 14);
+    final layer = reflectionLayer(TilePainter());
+    const w = 160, h = 64;
+    // Deep water, far from the shore; window borders every 8 tiles.
+    final cy = (map.height / 2 + 4) * 16.0;
+    final rows = <List<int>>[];
+    for (final x0 in [380.0, 384.0, 388.0, 512.0]) {
+      final view = Rect.fromLTWH(x0, cy, w.toDouble(), h.toDouble());
+      final img = record(w, h, (c) {
+        c.translate(-view.left, -view.top);
+        layer.draw(c, map, view,
+            t: 0,
+            darkness: 0,
+            cover: 0,
+            field: const Size(1024, 640),
+            actors: const [],
+            roofed: (_, __) => false);
+      });
+      final data = await tester.runAsync(
+          () => img.toByteData(format: ui.ImageByteFormat.rawRgba));
+      final px = data!.buffer.asUint32List();
+      rows.add([for (var x = 0; x < w; x++) px[(h ~/ 2) * w + x]]);
+      img.dispose();
+    }
+    expect(layer.windowBuilds, greaterThan(1), reason: 'crossed a border');
+    // Without clouds or actors, open water is one flat colour everywhere.
+    final all = {for (final r in rows) ...r};
+    expect(all, hasLength(1));
   });
 }

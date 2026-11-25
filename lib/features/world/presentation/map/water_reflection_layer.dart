@@ -7,10 +7,9 @@ import 'package:flutter/painting.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/tuning_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
-import '../../../../game_engine/rules/light_shaft_rules.dart';
 import '../../../../game_engine/rules/reflection_rules.dart';
 import 'map_themes.dart';
-import 'sky_layer.dart';
+import 'region_light_layer.dart';
 import 'tile_cache.dart';
 
 /// One actor to reflect: foot (px), moving, and how to draw it on any
@@ -23,7 +22,7 @@ typedef ReflectedActor = ({
   void Function(Canvas c) draw,
 });
 
-/// One light that may leave a streak on the water: center (px), colour.
+/// One light that may leave a glow on the water: center (px), colour.
 typedef ReflectedLight = ({double x, double y, Color color});
 
 /// Pixel-art water reflections (docs/specs/water_reflections.md).
@@ -99,6 +98,9 @@ class WaterReflectionLayer {
     return v;
   }
 
+  /// Cloud cells reflected last frame, per step (tests).
+  final debugCloudCells = List.generate(3, (_) => <double>[]);
+
   /// Quality in use this frame.
   bool get high => level == ReflectionLevel.high && !autoLow;
 
@@ -114,6 +116,13 @@ class WaterReflectionLayer {
     _shore?.dispose();
     _shore = null;
     _key = null;
+  }
+
+  /// Whether the water at (x, y) px reflects the sky (open or murky water
+  /// in the current window).
+  bool reflectsSky(double x, double y) {
+    final k = kindAt((x / ts).floor(), (y / ts).floor());
+    return k == WaterKind.clear || k == WaterKind.murky;
   }
 
   /// Water kind at tile (x, y) inside the window (none outside).
@@ -188,6 +197,10 @@ class WaterReflectionLayer {
     final c = Canvas(rec)..translate(-_wx0 * ts, -_wy0 * ts);
     final water = mapTheme(map.theme).water;
     final lampSet = {for (final l in lamps) l};
+    final r = kTuning[TuningId.regions]!;
+    final lip = r.d('reflBankLip');
+    final bank = Paint()
+      ..color = Color.fromRGBO(0, 0, 0, r.d('reflBankAlpha').clamp(0.0, 1.0));
     var drew = false;
     for (var y = _wy0; y < _wy0 + _wh; y++) {
       for (var x = _wx0; x < _wx0 + _ww; x++) {
@@ -203,15 +216,31 @@ class WaterReflectionLayer {
           ..clipRect(Rect.fromLTWH(x * ts, line, ts, rows * ts))
           ..translate(0, 2 * line)
           ..scale(1, -1);
-        for (var r = 1; r <= rows; r++) {
+        // The plain bank: only a short, faded lip right at the water line.
+        if (_plain.contains(map.tileAt(x, y - 1))) {
+          c
+            ..save()
+            ..clipRect(Rect.fromLTWH(x * ts, line - lip, ts, lip))
+            ..saveLayer(Rect.fromLTWH(x * ts, line - lip, ts, lip), bank);
+          tiles.drawTileAt(c, map, x, y - 1);
+          c
+            ..restore()
+            ..restore();
+        }
+        for (var row = 1; row <= rows; row++) {
           for (var dx = -1; dx <= 1; dx++) {
-            final sx = x + dx, sy = y - r;
+            final sx = x + dx, sy = y - row;
             if (!map.contains(sx, sy)) continue;
             final ch = map.tileAt(sx, sy);
-            if (ch == Tile.water || ch == Tile.fishing || ch == Tile.lava) {
+            if (ch == Tile.water ||
+                ch == Tile.fishing ||
+                ch == Tile.lava ||
+                _plain.contains(ch)) {
               continue;
             }
+            tiles.tiles.noGround = true;
             tiles.drawTileAt(c, map, sx, sy);
+            tiles.tiles.noGround = false;
             if (lampSet.contains((sx, sy))) {
               tiles.tiles.faro(c, sx * ts, sy * ts, 0, lit: false);
             }
@@ -231,6 +260,16 @@ class WaterReflectionLayer {
     pic.dispose();
     return img;
   }
+
+  /// Ground without a prop: reflected only as a short faded lip.
+  static const _plain = {
+    Tile.grass,
+    Tile.floor,
+    Tile.path,
+    Tile.soil,
+    Tile.bridge,
+    Tile.forageUsed,
+  };
 
   /// Fades what is already drawn under [line] in the discrete steps of
   /// `ReflectionRules.fadeStep`, toward [water] (srcATop: only where
@@ -310,8 +349,9 @@ class WaterReflectionLayer {
     for (final a in actors) {
       if (a.x < view.left - 24 || a.x > view.right + 24) continue;
       if (a.y < view.top - 48 || a.y > view.bottom + 8) continue;
-      final l = ReflectionRules.anchor(a.x, a.y, kindAt);
-      if (l == null) continue;
+      final l0 = ReflectionRules.anchor(a.x, a.y, kindAt);
+      if (l0 == null) continue;
+      final l = a.onWater ? l0 + ReflectionRules.floatDrop() : l0;
       final k = kindAt((a.x / ts).floor(), (l / ts).floor());
       if (k == WaterKind.cave || k == WaterKind.none) continue;
       cands.add((x: a.x, y: a.y, moving: a.moving));
@@ -445,35 +485,24 @@ class WaterReflectionLayer {
     for (final b in _pts) {
       b.clear();
     }
-    final n = LightShaftRules.cloudCount(cover);
-    const cell = 8.0;
-    for (var i = 0; i < n; i++) {
-      var (x, y, rx, ry) = LightShaftRules.cloud(i, t, field.width, field.height);
-      // Mirrored: they drift against their shadows.
-      x = field.width - x;
-      y = field.height - y;
-      if (x + rx < view.left || x - rx > view.right) continue;
-      if (y + ry < view.top || y - ry > view.bottom) continue;
-      final ox = (x / cell).round() * cell, oy = (y / cell).round() * cell;
-      final cw = (rx / cell).ceil(), ch = (ry / cell).ceil();
-      for (var cy = -ch; cy <= ch; cy++) {
-        final wy = oy + cy * cell;
-        if (wy + cell < view.top || wy > view.bottom) continue;
-        for (var cx = -cw; cx <= cw; cx++) {
-          final wx = ox + cx * cell;
-          if (wx + cell < view.left || wx > view.right) continue;
-          final dx = cx * cell / rx, dy = cy * cell / ry;
-          final d = math.sqrt(dx * dx + dy * dy);
-          final nz = MapSkyLayer.noise(cx / 5.0, cy / 5.0, 91 + i) - 0.5;
-          final v = (1.0 - d + nz * 0.45) / 0.22;
-          if (v <= 0) continue;
-          final step = (v.clamp(0.0, 1.0) * 3).ceil();
-          if (step <= 0) continue;
-          _pts[step - 1]
-            ..add(wx + cell / 2)
-            ..add(wy + cell / 2);
-        }
-      }
+    // The same clouds that shade the land (RegionLightLayer.cloudCells),
+    // where they pass over water: a light patch instead of a shadow.
+    for (final b in debugCloudCells) {
+      b.clear();
+    }
+    const cell = RegionLightLayer.cloudCell;
+    RegionLightLayer.cloudCells(view, t, cover, field.width, field.height,
+        (x, y, step) {
+      final k = kindAt((x / ts).floor(), (y / ts).floor());
+      if (k != WaterKind.clear && k != WaterKind.murky) return;
+      debugCloudCells[step - 1]
+        ..add(x)
+        ..add(y);
+    });
+    for (var s = 0; s < 3; s++) {
+      _pts[s]
+        ..clear()
+        ..addAll(debugCloudCells[s]);
     }
     _px
       ..strokeWidth = cell
@@ -525,7 +554,8 @@ class WaterReflectionLayer {
     c.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), _px);
   }
 
-  /// Night light streaks and star glints (§ 1.4), after the light layer.
+  /// Night light glows, star glints and the warm dusk surface (§ 1.3-1.4),
+  /// after the light layer.
   void drawLights(
     Canvas c,
     Rect view, {
@@ -535,8 +565,20 @@ class WaterReflectionLayer {
   }) {
     if (level == ReflectionLevel.off || _runs.isEmpty || _key == null) return;
     final r = kTuning[TuningId.regions]!;
-    final len = r.i('reflStreakLen');
-    final alpha = r.d('reflStreakAlpha');
+    final len = r.i('reflGlowLen');
+    final alpha = r.d('reflGlowAlpha');
+    // Warm sunset / sunrise on the water surface (§ 1.3).
+    final warm = ReflectionRules.duskTint(darkness);
+    if (warm > 0) {
+      _fill.color = const Color(0xFFFF9C84).withValues(alpha: warm);
+      for (var i = 0; i < _runs.length; i += 4) {
+        if (_runs[i + 3] == WaterKind.cave.index) continue;
+        final rect = Rect.fromLTRB(_runs[i + 1] * ts, _runs[i] * ts,
+            _runs[i + 2] * ts, (_runs[i] + 1) * ts);
+        if (!rect.overlaps(view)) continue;
+        c.drawRect(rect.intersect(view), _fill);
+      }
+    }
     for (final l in lights) {
       if (l.x < view.left - 8 || l.x > view.right + 8) continue;
       if (l.y < view.top - 48 || l.y > view.bottom) continue;
@@ -551,16 +593,23 @@ class WaterReflectionLayer {
       }
       final seed = (l.x * 7 + l.y * 13).floor();
       final cx = l.x.floorToDouble();
-      for (var i = 0; i < len; i++) {
-        final y = line.floorToDouble() + i;
-        if (y > view.bottom) break;
-        if (kindAt((cx / ts).floor(), (y / ts).floor()) == WaterKind.none) {
-          break;
-        }
-        final w = ReflectionRules.streakWidth(i, seed, t);
-        if (w == 0) continue;
+      // The mirrored point of the light, a few px under the water line.
+      final y0 = line.floorToDouble() + (line - l.y).clamp(1.0, 6.0).floor();
+      bool wet(double y) =>
+          kindAt((cx / ts).floor(), (y / ts).floor()) != WaterKind.none;
+      if (wet(y0)) {
+        // A 2 px core.
+        _pts[0]
+          ..add(cx + 0.5)
+          ..add(y0 + 0.5)
+          ..add(cx - 0.5)
+          ..add(y0 + 0.5);
+      }
+      for (final (dy, w, step) in ReflectionRules.glowDashes(seed, t)) {
+        if (dy >= len) break;
+        final y = y0 + dy;
+        if (y > view.bottom || !wet(y)) break;
         final dx = ReflectionRules.wave(y, t);
-        final step = i < len / 3 ? 2 : (i < 2 * len / 3 ? 1 : 0);
         for (var j = 0; j < w; j++) {
           _pts[step]
             ..add(cx - (w ~/ 2) + j + dx + 0.5)
@@ -569,7 +618,7 @@ class WaterReflectionLayer {
       }
       for (var s = 0; s < 3; s++) {
         if (_pts[s].isEmpty) continue;
-        _px.color = l.color.withValues(alpha: alpha * k * (s + 1) / 3);
+        _px.color = l.color.withValues(alpha: alpha * k * (3 - s) / 3);
         c.drawRawPoints(
             ui.PointMode.points, Float32List.fromList(_pts[s]), _px);
       }

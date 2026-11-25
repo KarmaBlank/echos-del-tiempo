@@ -1659,8 +1659,13 @@ class MapGame extends Game {
       if (outdoor && WeatherRules.hasSky(map.place)) {
         final cover = LightShaftRules.cloudCover(
             SkyRules.nowIn(s.town.sky, s.place).name, dayDark);
+        // Over water the same cloud shows as its reflection instead
+        // (water_reflections.md § 1.3).
         regionLight.drawClouds(c, worldView, secs, cover, map.width * ts,
-            map.height * ts);
+            map.height * ts,
+            onWater: reflections.level == ReflectionLevel.off
+                ? null
+                : (x, y) => reflections.reflectsSky(x, y));
       }
       if (region != null) {
         regionLight

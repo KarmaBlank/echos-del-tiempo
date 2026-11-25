@@ -760,10 +760,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     // tint toward the water colour, shore rows and actor reach (tiles),
     // actor caps per quality, wave (px, rad/s, rows per cycle), wake,
     // fade steps (px from the water line), sky veil and clouds, night
-    // light streaks and stars, auto-low frame time (ms).
-    'reflAlpha': 0.62,
-    'reflMurkyAlpha': 0.36,
-    'reflTint': 0.22,
+    // light glows (length px, opacity) and stars, auto-low frame time
+    // (ms), bank opacity and lip (px), drop of the water line under an
+    // actor afloat (px), warm dusk tint of the water surface.
+    'reflAlpha': 0.74,
+    'reflMurkyAlpha': 0.46,
+    'reflTint': 0.16,
     'reflRows': 2,
     'reflActorReach': 2,
     'reflActorsHigh': 16,
@@ -777,8 +779,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'reflFade2': 20,
     'reflSkyAlpha': 0.3,
     'reflCloudAlpha': 0.5,
-    'reflStreakLen': 36,
-    'reflStreakAlpha': 0.7,
+    'reflGlowLen': 14,
+    'reflGlowAlpha': 0.6,
+    'reflBankAlpha': 0.45,
+    'reflBankLip': 5,
+    'reflFloatDrop': 10,
+    'reflDuskTint': 0.16,
     'reflStars': 7,
     'reflAutoLowMs': 25,
     // Layout: extra lakes (0..1 on top of the first), lake radii (tiles),

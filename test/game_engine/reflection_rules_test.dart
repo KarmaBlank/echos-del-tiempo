@@ -81,16 +81,22 @@ void main() {
     expect(nr + ng + nb, lessThan(150));
   });
 
-  test('light streak: dashes, wider near the light, ends at its length', () {
-    final len = r.i('reflStreakLen');
-    var gaps = 0;
-    for (var i = 0; i < len; i++) {
-      final w = ReflectionRules.streakWidth(i, 7, 1.3);
-      expect(w, inInclusiveRange(0, 3));
-      if (w == 0) gaps++;
+  test('light glow: 2-4 short dashes, at most one tile, hard steps', () {
+    final len = r.i('reflGlowLen');
+    expect(len, lessThanOrEqualTo(16));
+    for (var t = 0.0; t < 4; t += 0.13) {
+      final d = ReflectionRules.glowDashes(7, t);
+      expect(d.length, inInclusiveRange(2, 4));
+      for (final (dy, w, step) in d) {
+        expect(dy, lessThan(len));
+        expect(w, inInclusiveRange(1, 8));
+        expect(step, inInclusiveRange(0, 2));
+      }
     }
-    expect(gaps, greaterThan(0));
-    expect(ReflectionRules.streakWidth(len, 7, 1.3), 0);
+    expect(ReflectionRules.floatDrop(), greaterThan(0));
+    expect(ReflectionRules.duskTint(0), 0);
+    expect(ReflectionRules.duskTint(1), 0);
+    expect(ReflectionRules.duskTint(0.5), greaterThan(0));
     expect(ReflectionRules.stars(0, 1, high: true), isEmpty);
     expect(ReflectionRules.stars(50, 1, high: false), isEmpty);
     for (final s in ReflectionRules.stars(50, 1, high: true)) {

@@ -20,7 +20,8 @@ discretos.
 1. **Actores** (jugadores, enemigos, PNJ, balsa) a ≤ `reflActorReach`
    tiles por encima del agua de su columna: sprite volteado en vertical
    con los pies en la línea del agua (el borde superior del primer tile
-   de agua de esa columna). Sobre el agua (balsa) la línea es el pie. Se
+   de agua de esa columna). Sobre el agua (balsa) la línea es el pie + `reflFloatDrop` px, así el
+   reflejo de la balsa y su jinete se lee debajo. Se
    reflejan como mucho `reflActorsHigh` (ALTA) o `reflActorsLow` (BAJA),
    los más cercanos al centro de la vista.
 2. **Orilla**: los tiles de tierra de las `reflRows` filas sobre el agua
@@ -29,14 +30,22 @@ discretos.
    de su columna. Cada columna se recorta a sí misma (con sus vecinas
    dibujadas para que las copas que sobresalen también aparezcan).
 3. **Cielo**: un velo del color del cielo y las nubes como manchas más
-   claras de celdas de 8 px (las mismas formas de las sombras de nubes,
-   `LightShaftRules.cloud`, espejadas: se mueven al revés). Color según
-   la hora: día celeste, atardecer/amanecer naranja, noche azul oscuro.
+   claras: son LAS MISMAS nubes que dan sombra en tierra
+   (`RegionLightLayer.cloudCells`, una sola generación): misma forma,
+   posición, deriva y velocidad. Sobre tierra la celda es sombra; sobre
+   agua que refleja el cielo, la misma celda es un reflejo claro (y no
+   hay sombra): la nube pasa de sombra a reflejo justo en la orilla.
+   Color según
+   la hora: día celeste, atardecer/amanecer rosa anaranjado, noche azul
+   oscuro. Al atardecer la superficie del agua además se tiñe de rosa
+   cálido (`reflDuskTint`, encima de la luz, sin multiplicar).
 4. **Noche**: cada luz (faroles, braseros, hogueras, la luz que lleva el
    jugador / el fuego errante) a ≤ `reflActorReach` tiles del agua deja
-   una estela vertical temblorosa de `reflStreakLen` px (cortada en
-   trazos, ancho 1-3 px) y, sobre agua abierta, destellos de estrellas
-   (`reflStars` por pantalla) y un brillo de luna.
+   un brillo compacto justo bajo su punto espejado (además del farol
+   volteado de la orilla): un núcleo de 2 px y 2-4 trazos horizontales
+   cortos, rotos por la onda, en 3 pasos duros de opacidad
+   (`reflGlowAlpha`), de `reflGlowLen` px como mucho (≤ 1 tile). Sobre
+   agua abierta, destellos de estrellas (`reflStars`) y un brillo de luna.
 5. **Onda**: el reflejo se corta en tiras horizontales de 1 px (ALTA) o
    2 px (BAJA); cada tira se corre de costado un número entero de píxeles
    según una onda lenta (`reflWaveAmp`, `reflWaveSpeed`, `reflWaveRows`).
@@ -78,9 +87,9 @@ discretos.
   `ColorFilter` de esa pintura (sin otra pasada). El recorte al agua
   sale gratis (las tiras solo cubren agua); no hay `saveLayer` ni
   `clipPath` por sprite.
-- **Estelas de luz y destellos** se dibujan después del mapa de luz (si
+- **Brillos de luz, destellos y el tinte del atardecer** se dibujan después del mapa de luz (si
   no, la noche las apaga), como rects sueltos con el mismo
-  desplazamiento de onda (un `drawRawPoints` por color).
+  desplazamiento de onda (un `drawRawPoints` por paso).
 - **Tope de actores** (`reflActorsHigh` / `reflActorsLow`).
 - **Calidad automática**: con ALTA, si la media de los últimos 60
   cuadros pasa de `reflAutoLowMs` ms, se dibuja como BAJA hasta que baje.
@@ -90,7 +99,7 @@ discretos.
 
 Después de los tiles, el viento y las marcas del suelo, el loot y las
 sombras de peces; antes de los actores (los reflejos quedan debajo de
-todo lo que está parado). Las estelas de luz van después de la capa de
+todo lo que está parado). Los brillos de luz van después de la capa de
 luz y antes del cielo (lluvia, niebla).
 
 ## 5. Rendimiento medido
@@ -116,7 +125,9 @@ BAJA: tiras de 2 px, `reflActorsLow` actores, sin estrellas.
 - `test/game_engine/reflection_rules_test.dart`: onda entera y acotada,
   pasos de alfa, tipo de agua, ancla de actores, tope, estela.
 - `test/features/world/water_reflection_layer_test.dart`: la máscara se
-  arma una vez por ventana, sin agua no graba nada, NO no dibuja.
+  arma una vez por ventana, sin agua no graba nada, NO no dibuja; una
+  nube sobre la orilla es sombra en tierra y reflejo en el agua con las
+  mismas celdas; sin costuras de tinte al cruzar el borde de una ventana.
 - `test/perf/reflection_perf_test.dart`: presupuesto de cuadro.
 - `test/features/world/water_reflection_preview_test.dart` con
   `REFLECT_PREVIEW=1`: `docs/preview/reflections/*.png` (día con

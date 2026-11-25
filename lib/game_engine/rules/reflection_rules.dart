@@ -80,7 +80,7 @@ abstract final class ReflectionRules {
   }
 
   /// Blend toward the water colour of each fade step.
-  static const fadeBlend = [0.0, 0.35, 0.65];
+  static const fadeBlend = [0.0, 0.28, 0.55];
 
   /// Water line (px) under the foot (x, y) px: the top of the first water
   /// tile at or below the foot within `reflActorReach` tiles; the foot
@@ -124,20 +124,36 @@ abstract final class ReflectionRules {
         (a * (1 - night) * (1 - dusk) + b * dusk + c * night * (1 - dusk))
             .round()
             .clamp(0, 255);
-    return (mix(150, 255, 18), mix(205, 140, 26), mix(240, 70, 60));
+    return (mix(150, 255, 18), mix(205, 150, 26), mix(240, 140, 60));
   }
 
-  /// Trembling of the light streak at row [i] (0 = at the water line) of
-  /// a light [seed] at time [t] (s): width 0 (gap), 1, 2 or 3 px. Wider
-  /// near the light, broken into dashes further away.
-  static int streakWidth(int i, int seed, double t) {
-    final n = _hash(i ~/ 2, seed + (t * 6).floor());
-    final len = _r.d('reflStreakLen');
-    final k = 1 - i / math.max(1.0, len);
-    if (k <= 0) return 0;
-    if (n % 5 == 0) return 0;
-    return 1 + ((k * 2.6) + (n % 3) * 0.4).floor().clamp(0, 2);
+  /// The compact glow a light leaves on the water (§ 1.4): 2-4 short
+  /// horizontal dashes under its mirrored point, as (row offset px,
+  /// width px, fade step 0 bright .. 2 faint). At most `reflGlowLen` px
+  /// long; dashes blink with [t] (s), stable per light [seed].
+  static List<(int, int, int)> glowDashes(int seed, double t) {
+    final len = math.max(2, _r.i('reflGlowLen'));
+    final out = <(int, int, int)>[];
+    final tick = (t * 5).floor();
+    for (var i = 0; i < 4; i++) {
+      final dy = 1 + i * 3 + (_hash(i, seed) % 2);
+      if (dy >= len) break;
+      final n = _hash(i * 7 + tick, seed);
+      if (i > 1 && n % 3 == 0) continue; // broken by the ripple
+      final w = math.max(1, 6 - i * 2 + (n % 2) * 2 - (n >> 3) % 2);
+      out.add((dy, w, i == 0 ? 0 : (i < 3 ? 1 : 2)));
+    }
+    return out;
   }
+
+  /// Water line drop (px) under an actor afloat: its reflection reads
+  /// below the raft, not hidden under it.
+  static double floatDrop() => _r.d('reflFloatDrop');
+
+  /// Warm pink/orange added on the water surface at sunset / sunrise
+  /// (0 outside): alpha for a [darkness].
+  static double duskTint(double darkness) =>
+      _r.d('reflDuskTint') * (1 - (2 * darkness - 1).abs()).clamp(0.0, 1.0);
 
   /// Star glints visible on [visibleTiles] water tiles at time [t]:
   /// stable positions (indices into the tiles) that twinkle.
