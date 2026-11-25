@@ -3339,12 +3339,14 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.biomeNpc);
       } else if (nearFisher != null) {
         openPanel(WorldPanel.biomeFisher);
+      } else if (nearMineEntrance case final i?) {
+        // Before the waystone: the mine's own stone stands one tile off
+        // the mouth, inside its reach (mining_smithing.md § 1.1).
+        travelMine(i);
       } else if (nearWaystone case final i?) {
         useWaystone(i);
       } else if (nearForage != null) {
         forage();
-      } else if (nearMineEntrance case final i?) {
-        travelMine(i);
       } else if (nearMineExit) {
         travelMine(null);
       } else if (nearShaft) {
@@ -5012,6 +5014,10 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearFisher case final f?) {
       return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': f.name}));
     }
+    // Same order as `interact`: the mine mouth wins over its waystone.
+    if (nearMineEntrance != null) {
+      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_enter'));
+    }
     if (nearWaystone case final i?) {
       return (
         WorldPrompt.poi,
@@ -5021,9 +5027,6 @@ class SessionController extends StateNotifier<SessionView?> {
       );
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
-    if (nearMineEntrance != null) {
-      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_enter'));
-    }
     if (nearMineExit) {
       return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit'));
     }
