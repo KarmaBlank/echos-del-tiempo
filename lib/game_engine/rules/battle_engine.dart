@@ -251,6 +251,15 @@ class BattleEngine {
   static int get playerBrokenTurns => math.max(1, _limits.i('pBrokenTurns'));
   static double get playerBrokenMult => _limits.d('pBrokenMult');
 
+  /// Break-bar fill (fraction of the threshold) an enemy stun converts
+  /// into on a player (combat.md § "Control sobre jugadores").
+  static double get playerStunBreak => _limits.d('pStunBreak');
+
+  /// [p] is under a control that costs it a phase: silenced, stunned or
+  /// broken-pending. Enemies can't add silence or stun on top of it.
+  static bool playerControlled(Combatant p) =>
+      p.silenced > 0 || p.stacks(StatusKind.stun) > 0 || p.breakSkip;
+
   /// Current threshold of a player's break bar: base × min(2, 1 + 0.25 ×
   /// breaks), like the enemies'.
   static double playerBreakMax(Combatant p) =>
@@ -446,8 +455,7 @@ class BattleEngine {
     if (encounter != null) _applyInitiative(state, encounter, triggeredBy);
     // After the initiative: opening wards read the opening order.
     applyOpeningWards(state);
-    applyOpeningSilence(state,
-        ambush: encounter == EncounterKind.ambush);
+    applyOpeningSilence(state, ambush: encounter == EncounterKind.ambush);
     return BattleStep(state, const []);
   }
 
@@ -512,7 +520,12 @@ class BattleEngine {
     Combatant? pick;
     var best = -1.0;
     for (final p in state.party) {
-      if (!p.alive || p.isSummon || p.silenced != 0) continue;
+      if (!p.alive ||
+          p.isSummon ||
+          p.silenced != 0 ||
+          BattleEngine.playerControlled(p)) {
+        continue;
+      }
       final v = skillPower(p);
       if (v > best) {
         best = v;
@@ -1703,6 +1716,19 @@ class _Turn {
     if (st.chance != null &&
         _rand() >=
             st.chance! + (st.kind == StatusKind.stun ? _duoStun(source) : 0)) {
+      return false;
+    }
+    // Control on players (combat.md § "Control sobre jugadores"): the
+    // break bar is the only way a player gets stunned. A stun from an
+    // enemy (or no player source) becomes break-bar fill instead, and
+    // nothing if the player is already silenced / stunned / broken.
+    if (st.kind == StatusKind.stun &&
+        a.isPlayer &&
+        (source == null || !source.isPlayer)) {
+      if (!a.isSummon && !BattleEngine.playerControlled(a)) {
+        _fillPlayerBreak(
+            a, BattleEngine.playerBreakMax(a) * BattleEngine.playerStunBreak);
+      }
       return false;
     }
     // Recién descongelado: resiste la Congelación (§ 7).
@@ -3534,8 +3560,24 @@ class _Turn {
         p.breakSkip) {
       return;
     }
-    var amount = BattleEngine.playerBreakHit +
-        (p.maxHp <= 0 ? 0 : dmg / p.maxHp * 100) * BattleEngine.playerBreakHp;
+    _fillPlayerBreak(
+        p,
+        BattleEngine.playerBreakHit +
+            (p.maxHp <= 0 ? 0 : dmg / p.maxHp * 100) *
+                BattleEngine.playerBreakHp);
+  }
+
+  /// Adds [amount] to [p]'s break bar (half while defending); full:
+  /// broken. A break landing on a silenced player clears the Silence (it
+  /// goes to its cooldown), so the two never cost back-to-back phases.
+  void _fillPlayerBreak(Combatant p, double amount) {
+    if (!BattleEngine.playerBreakOn ||
+        !p.isPlayer ||
+        p.isSummon ||
+        p.vulnerable > 0 ||
+        p.breakSkip) {
+      return;
+    }
     if (p.defending) amount *= 0.5;
     if (amount <= 0) return;
     final max = BattleEngine.playerBreakMax(p);
@@ -3549,6 +3591,10 @@ class _Turn {
       ..breakSkip = true
       ..vulnerable = BattleEngine.playerBrokenTurns;
     events.add(BreakEvent(p.id, BreakPhase.broken, max, max));
+    if (p.silenced > 0) {
+      p.silenced = -BattleEngine.silenceCooldown;
+      _notes.add(_l('silence_ends', {'a': p.name}));
+    }
     _notes.add(_l('player_break', {
       'a': p.name,
       'p': jsRound((BattleEngine.playerBrokenMult - 1) * 100),
@@ -3766,6 +3812,13 @@ class _Turn {
   LogLine _statusText(StatusApplication? st, {int bonus = 0}) => st == null
       ? LogLine.empty
       : _l('status_plus', {'n': st.stacks + bonus, 's': _st(st.kind)});
+
+  /// [_statusText] of an enemy status on players: a stun only fills the
+  /// break bar (combat.md § "Control sobre jugadores").
+  LogLine _enemyStatusText(StatusApplication? st, {int bonus = 0}) =>
+      st?.kind == StatusKind.stun
+          ? _l('stun_to_break')
+          : _statusText(st, bonus: bonus);
 
   /// Texto del estado principal de una acción del grupo según lo que
   /// PASÓ: intentado en [tried] objetivos vivos, entró en [landed]. Nunca
@@ -4759,7 +4812,7 @@ class _Turn {
             _l('x_def', {'n': jsRound(h.defensePercent * 100)}),
         ], ' ');
     LogLine infText(Combatant p) => p.alive && inf != null
-        ? _statusText(inf,
+        ? _enemyStatusText(inf,
             bonus: inf.kind == StatusKind.regen ? 0 : p.statusWeakness)
         : LogLine.empty;
     final tauntText = taunter != null ? _l('taunted') : LogLine.empty;
@@ -5003,7 +5056,7 @@ class _Turn {
         ], ' '),
         'p': LogLine.join(parts, ', '),
       }),
-      if (status != null) _statusText(status),
+      if (status != null) _enemyStatusText(status),
       if (ult.delayAll > 0) _l('delays_all'),
       if (ult.wipeBuffs) _l('wipes_buffs'),
       extra,
@@ -5295,7 +5348,7 @@ class _Turn {
                 if (marked.defending) _l('x_defend'),
               ], ' '),
             }),
-      if (got) _statusText(inf),
+      if (got) _enemyStatusText(inf),
     ]);
   }
 
@@ -5337,8 +5390,8 @@ class _Turn {
         ..fissured = false;
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
-    _notes.add(_l('transform',
-        {'a': e.name, 'p': _pct(m.power - 1), 'n': m.every}));
+    _notes.add(
+        _l('transform', {'a': e.name, 'p': _pct(m.power - 1), 'n': m.every}));
   }
 
   void _shiftStance(Combatant e, BossMechanicDef m) {
@@ -5373,8 +5426,8 @@ class _Turn {
       total = math.max(total, _r2(-v));
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.frost, value: total));
-    _notes.add(_l('frost',
-        {'m': m.name, 'p': _pct(m.value), 't': _pct(total)}));
+    _notes
+        .add(_l('frost', {'m': m.name, 'p': _pct(m.value), 't': _pct(total)}));
   }
 
   static double _r2(double v) => (v * 100).round() / 100;
@@ -6182,8 +6235,7 @@ class _Turn {
           // Primer Golpe: +daño si el objetivo tiene la vida llena.
           if (tk.openerBonus > 0 && e.hp >= e.maxHp) {
             b *= 1 + tk.openerBonus;
-            _notes.add(
-                _l('opener', {'s': _sk(tk), 'p': _pct(tk.openerBonus)}));
+            _notes.add(_l('opener', {'s': _sk(tk), 'p': _pct(tk.openerBonus)}));
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
@@ -6266,7 +6318,8 @@ class _Turn {
         if (burnBlocked) {
           log = log.plus(_l('burn_blocked', {
             's': _st(StatusKind.burn),
-            'k': LogLine.named(CatalogKeys.mechName('almaHielo'), 'Alma de Hielo'),
+            'k': LogLine.named(
+                CatalogKeys.mechName('almaHielo'), 'Alma de Hielo'),
           }));
         } else if (st != null) {
           log += _statusOutcome(st, bonus, tried, landed);
@@ -6375,8 +6428,8 @@ class _Turn {
     t.statuses[StatusKind.poison] = 0;
     t.nextTurn = state.clock + _iv(t);
     events.add(RevivedEvent(t.id));
-    state.logLine = _l('aether_revive',
-        {'a': p.name, 'b': t.name, 'h': t.hp, 'm': t.maxHp});
+    state.logLine = _l(
+        'aether_revive', {'a': p.name, 'b': t.name, 'h': t.hp, 'm': t.maxHp});
     return true;
   }
 

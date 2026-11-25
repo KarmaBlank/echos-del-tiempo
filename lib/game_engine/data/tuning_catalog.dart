@@ -1003,6 +1003,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     'pBreakDecay': 0.1,
     'pBrokenTurns': 2,
     'pBrokenMult': 1.25,
+    // Enemy stun on a player becomes this fraction of its break threshold
+    // (combat.md § "Control sobre jugadores").
+    'pStunBreak': 0.35,
     // Enemy Convergences (combo_balance.md § "Convergencias enemigas"):
     // on (1); cap of a Convergence against a player (fraction of its max
     // HP, also caps the splash); group AI: chance a primer / detonator

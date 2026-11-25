@@ -937,6 +937,36 @@ algunos enemigos pueden callarlas.
   ninguna, la mitad de su mejor stat). Lanzarlo usa su acción (no pega).
 - Viaja en el estado (`sil`); protocolo Mundo 66.
 
+### Control sobre jugadores
+
+Pedido del dueño (v0.48.4): un jugador silenciado y después aturdido
+perdía ~3 fases seguidas. Regla (solo enemigos contra jugadores; los
+aturdimientos de los jugadores sobre enemigos no cambian):
+
+- **La barra de quiebre es la única forma de aturdir a un jugador**
+  (combo_balance.md § 5.4). Todo Aturdido que un enemigo (o una fuente
+  que no es un jugador) le aplicaría a un jugador se **convierte** en
+  llenado de la barra: `pStunBreak` (0.35) × umbral actual (la mitad si
+  defiende). Si eso la llena, se quiebra con las reglas normales. Vive en
+  `_addStatus` (el único camino de estados), así cubre a todas las
+  fuentes:
+  - `caballeroCaido` y `ojoAbismo` (`EnemyDef.inflicts`, 25% / 30%):
+    con la tirada, llenan la barra en vez de aturdir.
+  - `eult_juicio` (Caballero Hueco), `eult_e_golem` (Puño de Piedra) y
+    `eult_e_ojoAbismo` (Mirada Eléctrica, 30%): llenan la barra.
+  - Reacción Electrocución y cualquier estado de Jefes del Abismo o
+    invocaciones enemigas sobre un jugador: igual.
+- **Sin encadenar**: si el jugador ya está silenciado (`silenced` > 0),
+  aturdido o con el quiebre pendiente (`breakSkip`)
+  (`BattleEngine.playerControlled`), el aturdimiento enemigo convertido
+  se descarta (ni llena la barra) y ningún silenciador lo elige
+  (`silenceTarget`).
+- **Quiebre sobre Silencio**: si la barra se llena (por golpes) mientras
+  el jugador está silenciado, el Silencio termina en ese momento y pasa a
+  su enfriamiento (`silenced` = −`silenceCooldown`): el quiebre le
+  cuesta la fase en lugar del Silencio, nunca las dos seguidas.
+- El enfriamiento por objetivo del Silencio sigue igual.
+
 ### Velocidad
 
 - Rendimiento decreciente: la velocidad efectiva que pasa de

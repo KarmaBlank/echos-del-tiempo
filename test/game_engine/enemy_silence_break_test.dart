@@ -6,6 +6,7 @@ import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
+import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
@@ -232,6 +233,72 @@ void main() {
           turnRule: TurnRule.porBando);
       _plain().applyOpeningSilence(s);
       expect(s.enemies.first.once, isEmpty);
+    });
+  });
+
+  group('control on players (combat.md § "Control sobre jugadores")', () {
+    BattleEngine always() =>
+        BattleEngine(stats: _stats, random: () => 0.0, breakEnabled: false);
+
+    BattleState stunner(Combatant p) => BattleState(
+        party: [p],
+        enemies: [
+          Combatant(
+            id: 'e0',
+            name: 'e0',
+            isPlayer: false,
+            hp: 1000,
+            maxHp: 1000,
+            speed: 5,
+            attack: 10,
+            critChance: 0,
+            enemyType: 'slime',
+            nextTurn: 50,
+            inflicts: const StatusApplication(StatusKind.stun, 1),
+          )
+        ],
+        currentId: 'e0');
+
+    test('an enemy stun becomes break-bar fill, never a stun', () {
+      _tune({'pBreakHit': 0, 'pBreakHp': 0, 'pBreakMax': 100, 'silenceTurns': 0});
+      final s = always().enemyTurn(stunner(_hero('p1', hp: 1000)))!.state;
+      final p = s.party.first;
+      expect(p.stacks(StatusKind.stun), 0);
+      expect(p.breakGauge, closeTo(100 * BattleEngine.playerStunBreak, 0.1));
+    });
+
+    test('silenced player: the enemy stun is dropped (no chaining)', () {
+      _tune({'pBreakHit': 0, 'pBreakHp': 0, 'silenceTurns': 0});
+      final s = always()
+          .enemyTurn(stunner(_hero('p1', hp: 1000)..silenced = 2))!
+          .state;
+      final p = s.party.first;
+      expect(p.stacks(StatusKind.stun), 0);
+      expect(p.breakGauge, 0);
+      expect(p.silenced, 2);
+    });
+
+    test('stunned or broken players are not silence targets', () {
+      final e = _plain();
+      final a = _hero('a', magic: 90)..statuses[StatusKind.stun] = 1;
+      final b = _hero('b', magic: 80)..breakSkip = true;
+      final c = _hero('c', magic: 10);
+      final s = BattleState(
+          party: [a, b, c], enemies: [_foe('e0', 'hechicera')]);
+      expect(e.silenceTarget(s)?.id, 'c');
+    });
+
+    test('a break landing on a silenced player clears the silence', () {
+      _tune({'pBreakMax': 10, 'pBreakHit': 10, 'pBreakHp': 0});
+      final s = _plain()
+          .enemyTurn(BattleState(
+              party: [_hero('p1', hp: 1000)..silenced = 2],
+              enemies: [_foe('e0', 'slime')],
+              currentId: 'e0'))!
+          .state;
+      final p = s.party.first;
+      expect(p.breakSkip, isTrue, reason: 'break stun still works');
+      expect(p.silenced, -BattleEngine.silenceCooldown);
     });
   });
 }

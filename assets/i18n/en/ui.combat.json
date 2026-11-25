@@ -11,6 +11,7 @@
   "ui.combat.enemy.hit_cap": "Can't be one-shot: each hit takes at most {pct}% of its life.",
   "ui.combat.enemy.ult_power_all": "ATK × {x} to the whole party",
   "ui.combat.enemy.ult_power_one": "ATK × {x} to the target",
+  "ui.combat.enemy.ult_break_fill": "{pct}Fills the break bar (players are not stunned)",
   "ui.combat.enemy.ult_delay_all": "Delays the whole party",
   "ui.combat.enemy.ult_wipe_buffs": "Wipes the party's buffs",
   "ui.combat.enemy.ult_sure_crit": "Guaranteed critical",

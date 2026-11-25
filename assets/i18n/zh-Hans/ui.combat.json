@@ -11,6 +11,7 @@
   "ui.combat.enemy.hit_cap": "",
   "ui.combat.enemy.ult_power_all": "",
   "ui.combat.enemy.ult_power_one": "",
+  "ui.combat.enemy.ult_break_fill": "{pct}填充破防槽（不会眩晕玩家）",
   "ui.combat.enemy.ult_delay_all": "",
   "ui.combat.enemy.ult_wipe_buffs": "",
   "ui.combat.enemy.ult_sure_crit": "",
