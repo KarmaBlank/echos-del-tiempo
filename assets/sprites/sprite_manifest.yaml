@@ -481,12 +481,14 @@ items:
   vida_npc_pescador: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_pescador_trabajo: { idle: items/vida_npc_pescador_trabajo.png, size: [16, 16] }
   vida_cofre_oficio: { idle: items/vida_cofre_oficio.png, size: [16, 16] }
-  vida_balsa: { idle: items/vida_balsa.png, size: [16, 16] }
+  vida_balsa: { idle: items/vida_balsa.png, size: [32, 16] }
   vida_muelle_balsa: { idle: items/vida_muelle_balsa.png, size: [16, 16] }
   # Cozy life (cozy_life.md § 1-2): raft and farm decorations, 8-bit
   # placeholder art (16 x 16).
   vida_raft_lantern: { idle: items/vida_raft_lantern.png, size: [16, 16] }
-  vida_raft_roof: { idle: items/vida_raft_roof.png, size: [16, 16] }
+  vida_raft_roof: { idle: items/vida_raft_roof.png, size: [32, 6] }
+  vida_raft_posts: { idle: items/vida_raft_posts.png, size: [32, 17] }
+  vida_raft_seat: { idle: items/vida_raft_seat.png, size: [10, 6] }
   vida_decor_fence: { idle: items/vida_decor_fence.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }

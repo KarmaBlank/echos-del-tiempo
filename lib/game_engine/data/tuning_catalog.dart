@@ -828,6 +828,37 @@ const Map<String, TuningDef> kTuningDefaults = {
     'townPerCondition': 0.03,
   }),
   TuningId.regions: TuningDef('Regiones de bioma', {
+    // Water reflections (water_reflections.md): strength per water kind,
+    // tint toward the water colour, shore rows and actor reach (tiles),
+    // actor caps per quality, wave (px, rad/s, rows per cycle), wake,
+    // fade steps (px from the water line), sky veil and clouds, night
+    // light glows (length px, opacity) and stars, auto-low frame time
+    // (ms), bank opacity and lip (px), drop of the water line under an
+    // actor afloat (px), warm dusk tint of the water surface.
+    'reflAlpha': 0.74,
+    'reflMurkyAlpha': 0.46,
+    'reflTint': 0.16,
+    'reflRows': 2,
+    'reflActorReach': 2,
+    'reflActorsHigh': 16,
+    'reflActorsLow': 6,
+    'reflWaveAmp': 1,
+    'reflWaveSpeed': 1.4,
+    'reflWaveRows': 7,
+    'reflWakeRadius': 22,
+    'reflWakeAmp': 2,
+    'reflFade1': 10,
+    'reflFade2': 20,
+    'reflSkyAlpha': 0.3,
+    'reflCloudAlpha': 0.5,
+    'reflGlowLen': 14,
+    'reflGlowAlpha': 0.6,
+    'reflBankAlpha': 0.45,
+    'reflBankLip': 5,
+    'reflFloatDrop': 10,
+    'reflDuskTint': 0.16,
+    'reflStars': 7,
+    'reflAutoLowMs': 25,
     // Layout: extra lakes (0..1 on top of the first), lake radii (tiles),
     // trees per 100 free tiles, plant spots per side path.
     'secondLakeChance': 0.6,

@@ -47,10 +47,18 @@ String? ecoLockText(PlayerProfile p, int zone, int tier, {String? zoneName}) {
 /// (o `null`; ecos_zone.md § 4). [near]: el jugador sigue frente al portal.
 String? ecoZoneOpenBlocked(GameSession s, PlayerProfile p, EcoItem? e,
     int zone, int tier,
-    {required bool near, String? zoneName}) {
+    {required bool near,
+    String? zoneName,
+    List<String> tutorialMissing = const []}) {
   final lock = ecoLockText(p, zone, tier, zoneName: zoneName);
   if (lock != null) return lock;
   if (e == null) return _t('ui.endgame.blocked.need_eco', {'tier': tier});
+  // The engine refuses every proposal while someone lacks the TUTORIAL
+  // (combat_tutorial.md § 2): [tutorialMissing] = `TutorialRules.missing`.
+  if (tutorialMissing.isNotEmpty) {
+    return _t('ui.endgame.blocked.tutorial',
+        {'names': tutorialMissing.join(', ')});
+  }
   if (s.mode != SessionMode.lobby) {
     return _t('ui.endgame.blocked.outside_mission');
   }
@@ -116,13 +124,23 @@ String ecoCraftLabel(EcoItem e, EcoCraftOp op) {
           {'what': what, 'material': c.$1.endgameTr, 'n': c.$2});
 }
 
-/// Fila de mejora del Portal: `<b>+1 tier</b> 1 Anc.` (el costo en
-/// `dim`).
-String ecoCraftRowMarkup(EcoItem e, EcoCraftOp op) {
-  final c = EcoRules.cost(e, op);
-  final what = _t('ui.endgame.craft.row.${op.name}');
-  return '<b>$what</b>'
-      '${c == null ? '' : ' <span style="color:#7d8bc4">${c.$2} ${_t('ui.endgame.material_abbr.${c.$1.name}')}</span>'}';
+/// Status of [e] in the town ECOS tab (ecos_atlas.md § 4.1): `(ready,
+/// text)`. Ready = its tier is open at its zone's portal
+/// (`EcoPortalRules.isUnlocked`, via [ecoLockText]); otherwise the lock
+/// reason.
+(bool, String) ecoStatusText(PlayerProfile p, EcoItem e,
+    {String? zoneName, String? biomeName}) {
+  final lock = ecoLockText(p, e.zone, e.tier, zoneName: zoneName);
+  if (lock != null) {
+    return (false, _t('ui.endgame.ecos.status.locked', {'reason': lock}));
+  }
+  return (
+    true,
+    _t('ui.endgame.ecos.status.ready', {
+      'biome': biomeName ?? zoneName ?? '${e.zone}',
+      'zone': e.zone,
+    })
+  );
 }
 
 // ---------------------------------------------------------------------

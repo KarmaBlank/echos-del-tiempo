@@ -82,22 +82,18 @@ class RegionLightLayer {
 
   int _q(double v) => (v.clamp(0.0, 1.0) * _steps).round();
 
-  /// Soft cloud shadows drifting over an outdoor map by day.
-  /// [cover] from `LightShaftRules.cloudCover`; [t] in seconds.
-  void drawClouds(Canvas c, Rect view, double t, double cover,
-      double fieldW, double fieldH) {
+  /// The one cloud field of an outdoor map (biome_regions.md § 7.1),
+  /// shared by the shadows on land and the reflections on water
+  /// (water_reflections.md § 1.3): every 8 px cell of a cloud inside
+  /// [view], as its center (px) and alpha step 1..[cloudLevels].
+  static void cloudCells(Rect view, double t, double cover, double fieldW,
+      double fieldH, void Function(double x, double y, int step) emit) {
     final n = LightShaftRules.cloudCount(cover);
     if (n == 0) return;
-    final k = _q(cover);
-    if (k == 0) return;
     // Pixelated, irregular shadows (v0.48.4, owner): each cloud is a
     // grid of 8 px cells whose edge is broken by value noise that moves
-    // with the cloud, faded in [_cloudLevels] alpha steps toward the rim.
-    // Cells are batched as square points, one draw per step.
-    const cell = 8.0;
-    for (final b in _cloudPts) {
-      b.clear();
-    }
+    // with the cloud, faded in [cloudLevels] alpha steps toward the rim.
+    const cell = cloudCell;
     for (var i = 0; i < n; i++) {
       final (x, y, rx, ry) = LightShaftRules.cloud(i, t, fieldW, fieldH);
       final ex = rx * 1.25, ey = ry * 1.25;
@@ -123,14 +119,38 @@ class RegionLightLayer {
           final nz = MapSkyLayer.noise(cx / 5.0, cy / 5.0, 57 + i) - 0.5;
           final v = (1.0 - d + nz * 0.45) / 0.22;
           if (v <= 0) continue;
-          final step = (v.clamp(0.0, 1.0) * _cloudLevels).ceil();
+          final step = (v.clamp(0.0, 1.0) * cloudLevels).ceil();
           if (step <= 0) continue;
-          _cloudPts[step - 1]
-            ..add(wx + cell / 2)
-            ..add(wy + cell / 2);
+          emit(wx + cell / 2, wy + cell / 2, step);
         }
       }
     }
+  }
+
+  /// Side of a cloud cell (px).
+  static const cloudCell = 8.0;
+
+  /// Alpha steps of a cloud toward its rim.
+  static const cloudLevels = _cloudLevels;
+
+  /// Soft cloud shadows drifting over an outdoor map by day.
+  /// [cover] from `LightShaftRules.cloudCover`; [t] in seconds. Cells
+  /// over water ([onWater]) are skipped: the water reflects them instead.
+  void drawClouds(Canvas c, Rect view, double t, double cover,
+      double fieldW, double fieldH,
+      {bool Function(double x, double y)? onWater}) {
+    final k = _q(cover);
+    if (k == 0) return;
+    for (final b in _cloudPts) {
+      b.clear();
+    }
+    cloudCells(view, t, cover, fieldW, fieldH, (x, y, step) {
+      if (onWater != null && onWater(x, y)) return;
+      _cloudPts[step - 1]
+        ..add(x)
+        ..add(y);
+    });
+    const cell = cloudCell;
     for (var s = 0; s < _cloudLevels; s++) {
       final pts = _cloudPts[s];
       if (pts.isEmpty) continue;
@@ -141,6 +161,9 @@ class RegionLightLayer {
       c.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), _cloudPx);
     }
   }
+
+  /// Shadow cells drawn last frame, per step (tests).
+  List<List<double>> get debugShadowCells => _cloudPts;
 
   static const _cloudLevels = 3;
   final _cloudPts = List.generate(_cloudLevels, (_) => <double>[]);

@@ -4,6 +4,7 @@ import '../../../app/design/design.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../inventory/presentation/item_widgets.dart';
+import 'eco_grid.dart';
 
 /// Una casilla de la fusión: el Eco elegido (o `null`) y su nombre.
 typedef EcoFuseSlot = ({EcoItem? eco, String label});
@@ -58,29 +59,8 @@ class EcoFusionView extends StatelessWidget {
 
   static const detailWidth = 300.0;
 
-  Widget _cell(EcoItem e) => GestureDetector(
-        key: ValueKey('eco-fuse-cell-${e.uid}'),
-        onTap: () => onToggle(e.uid),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: ItemCell(
-              rules: rules,
-              content: CellContent.eco(e),
-              selected: selected.contains(e.uid),
-              size: DsItemCell.size),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
-    final grid = ecos.isEmpty && empty != null
-        ? Text(empty!,
-            key: const ValueKey('eco-fuse-empty'), style: DsText.detail())
-        : Wrap(
-            spacing: DsSpace.xs,
-            runSpacing: DsSpace.xs,
-            children: [for (final e in ecos) _cell(e)],
-          );
     final detail = DsDetailPane(
       key: const ValueKey('eco-fuse-detail'),
       body: Column(
@@ -147,24 +127,22 @@ class EcoFusionView extends StatelessWidget {
         ],
       ),
     );
-    return LayoutBuilder(builder: (context, box) {
-      if (box.maxWidth >= 560) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: SingleChildScrollView(child: grid)),
-            SizedBox(width: DsSpace.sm),
-            SizedBox(
-                width: detailWidth, height: box.maxHeight, child: detail),
-          ],
-        );
-      }
-      return SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [detail, SizedBox(height: DsSpace.sm), grid],
-        ),
-      );
-    });
+    return EcoGridLayout(
+      detailWidth: detailWidth,
+      empty: empty == null
+          ? null
+          : Text(empty!,
+              key: const ValueKey('eco-fuse-empty'), style: DsText.detail()),
+      cells: [
+        for (final e in ecos)
+          EcoGridCell(
+              key: ValueKey('eco-fuse-cell-${e.uid}'),
+              rules: rules,
+              eco: e,
+              selected: selected.contains(e.uid),
+              onTap: () => onToggle(e.uid)),
+      ],
+      detail: detail,
+    );
   }
 }

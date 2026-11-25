@@ -157,6 +157,24 @@ inventario.
 | `rarity` | Prisma Roto ×1 / ×2 / ×4 (a Mágico / Raro / Épico; v0.15, antes ×3) | sube la rareza (hasta Épico) y agrega mods hasta el mínimo nuevo |
 | `tier` | 1 Ancla Temporal | tier +1 (hasta 16) |
 
+**UI** (Portal → ECOS → subpestaña MEJORAR): grilla de Ecos con
+las mismas casillas que FUSIONAR (ícono, tier abajo a la derecha, marco
+de rareza; `EcoGridCell` / `EcoGridLayout`) y el detalle del elegido a la
+derecha (`EcoUpgradeView`):
+
+- **Estado** arriba, con IR AL PORTAL al lado: verde `Listo para abrir en
+  <bioma> · portal de la zona <n>` si su tier está abierto en el portal de
+  su zona (`EcoPortalRules.isUnlocked`), o gris `Bloqueado: <motivo>` con
+  el mismo motivo que el portal (`ecoLockText`: vencer al jefe de la zona,
+  completar un Eco T(n-1)). IR AL PORTAL va gris con el motivo de viaje
+  (`ecoTravelBlocked`). Debajo, el recordatorio: los Ecos se abren en el
+  portal de su zona, en el exterior del bioma; acá solo se mejoran.
+- La ficha del Eco (tier, zona, jefe, mods, botín).
+- **MEJORAS**: una fila por op con el material como casilla de ítem
+  (`DsCostGrid`: tenés/usa en verde o rojo, tooltip de ancho fijo) y
+  APLICAR, gris con el motivo (`ecoCraftBlocked`) si no se puede.
+
+
 ### 4.2 Fusión de Ecos (v0.49, protocolo 78)
 
 `EcoFuseAction(uids)` (wire `{'t': 'ecoFuse', 'us': [...]}`): el jugador

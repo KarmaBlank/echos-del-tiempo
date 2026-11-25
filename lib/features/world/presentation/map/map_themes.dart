@@ -477,6 +477,10 @@ abstract final class FishingPalette {
 abstract final class CozyPalette {
   static const firefly = Color(0xFFE8F58A);
   static const fireflyGlow = Color(0x44E8F58A);
+  /// Tint of the unpainted raft deck and awning (sprites are neutral).
+  static const wood = Color(0xFFC08A55);
+  static const cloth = Color(0xFFF2E6C2);
+  static const seatShadow = Color(0x55000000);
   static const paints = [
     Color(0xFFE0857A),
     Color(0xFF8AB4E8),

@@ -240,6 +240,7 @@ class GameSettings {
     this.scale = ScaleMode.fit,
     this.crt = CrtLevel.strong,
     this.particles = ParticleLevel.high,
+    this.reflections = ReflectionLevel.high,
     this.fpsLimit = FpsLimit.fps60,
     this.textSize = TextSize.normal,
     this.readingFont = ReadingFont.vt323,
@@ -294,6 +295,9 @@ class GameSettings {
 
   /// Cantidad de partículas.
   final ParticleLevel particles;
+
+  /// Water reflections (water_reflections.md § 6).
+  final ReflectionLevel reflections;
 
   /// Tope de cuadros por segundo.
   final FpsLimit fpsLimit;
@@ -416,6 +420,7 @@ class GameSettings {
     ScaleMode? scale,
     CrtLevel? crt,
     ParticleLevel? particles,
+    ReflectionLevel? reflections,
     FpsLimit? fpsLimit,
     TextSize? textSize,
     ReadingFont? readingFont,
@@ -454,6 +459,7 @@ class GameSettings {
         scale: scale ?? this.scale,
         crt: crt ?? this.crt,
         particles: particles ?? this.particles,
+        reflections: reflections ?? this.reflections,
         fpsLimit: fpsLimit ?? this.fpsLimit,
         textSize: textSize ?? this.textSize,
         readingFont: readingFont ?? this.readingFont,
@@ -499,6 +505,7 @@ class GameSettings {
         'scale': scale.name,
         'crt': crt.name,
         'particles': particles.name,
+        'reflections': reflections.name,
         'fpsLimit': fpsLimit.json,
         'textSize': textSize.name,
         'readingFont': readingFont.name,
@@ -547,6 +554,8 @@ class GameSettings {
       scale: ScaleMode.fromName(json['scale'], d.scale),
       crt: CrtLevel.fromName(json['crt'], d.crt),
       particles: ParticleLevel.fromName(json['particles'], d.particles),
+      reflections:
+          ReflectionLevel.fromName(json['reflections'], d.reflections),
       fpsLimit: FpsLimit.fromJson(json['fpsLimit'], d.fpsLimit),
       textSize: TextSize.fromName(json['textSize'], d.textSize),
       readingFont: ReadingFont.fromName(json['readingFont'], d.readingFont),
@@ -602,6 +611,7 @@ class GameSettings {
       other.scale == scale &&
       other.crt == crt &&
       other.particles == particles &&
+      other.reflections == reflections &&
       other.fpsLimit == fpsLimit &&
       other.textSize == textSize &&
       other.readingFont == readingFont &&
@@ -647,7 +657,7 @@ class GameSettings {
       colorVision,
       reduceMotion,
       turnTimer,
-      Object.hash(combatMode, seenPatchNotes),
+      Object.hash(combatMode, seenPatchNotes, reflections),
       perfOverlay,
       perfCorner,
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
