@@ -104,7 +104,11 @@ enum BalanceKind {
   smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería'),
 
   /// Generated biome regions and region foraging (biome_regions.md).
-  regions('regions', 'Regiones de bioma', 'Ajustes de regiones de bioma');
+  regions('regions', 'Regiones de bioma', 'Ajustes de regiones de bioma'),
+
+  /// Points, branch stats and Trades conditions of the ascension tree
+  /// (ascension.md § 3).
+  ascension('ascension', 'Ascensión: árbol', 'Ajustes del árbol de ascensión');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1858,6 +1862,26 @@ const _smithingLabels = {
   'stackCap': 'Tope por material',
 };
 
+final ascensionCodec = _tuningCodec(
+    BalanceKind.ascension, _autoFields('ascension', _ascensionLabels));
+
+const _ascensionLabels = {
+  'pointsPerTrial': 'Puntos por Prueba del Tiempo',
+  'maxCapstones': 'Cúspides que se pueden tomar',
+  'minorHp': 'Nodo menor: vida máx. (fracción)',
+  'minorAtk': 'Nodo menor: ATQ (fracción)',
+  'minorMag': 'Nodo menor: MAG (fracción)',
+  'minorDef': 'Nodo menor: DEF (plano)',
+  'minorCrit': 'Nodo menor: crítico (fracción)',
+  'minorSpd': 'Nodo menor: VEL (plano)',
+  'minorUlt': 'Nodo menor: carga de ULT (fracción)',
+  'minorHeal': 'Nodo menor: curación (fracción)',
+  'overloadStacks': 'Sobrecarga: stacks extra de cada estado',
+  'forgedLevel': 'Oficios: mejoras de forja para "forja"',
+  'masteryLevel': 'Oficios: Maestría para "Ecos"',
+  'townPerCondition': 'Corazón del Pueblo: bonus por condición',
+};
+
 final regionsCodec = _tuningCodec(
     BalanceKind.regions, _autoFields('regions', _regionsLabels));
 
@@ -1941,6 +1965,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.lifeTree => lifeTreeCodec,
       BalanceKind.smithing => smithingCodec,
       BalanceKind.regions => regionsCodec,
+      BalanceKind.ascension => ascensionCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1961,4 +1986,5 @@ const kTuningKinds = [
   BalanceKind.lifeTree,
   BalanceKind.smithing,
   BalanceKind.regions,
+  BalanceKind.ascension,
 ];

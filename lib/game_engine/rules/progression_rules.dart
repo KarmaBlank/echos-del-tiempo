@@ -188,6 +188,7 @@ class ProgressionRules {
       lifeHp: LifeTreeRules.power(p, LifeFx.hp),
       lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
       meal: p.life.farm.meal,
+      mastery: p.mastery,
     );
   }
 
@@ -214,6 +215,7 @@ class ProgressionRules {
       lifeHp: LifeTreeRules.power(p, LifeFx.hp),
       lifeAtk: LifeTreeRules.power(p, LifeFx.atk),
       meal: p.life.farm.meal,
+      mastery: p.mastery,
     ));
   }
 

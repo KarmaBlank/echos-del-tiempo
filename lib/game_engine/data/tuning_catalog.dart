@@ -39,6 +39,7 @@ abstract final class TuningId {
   static const dungeon = 'dungeon';
   static const smithing = 'smithing';
   static const regions = 'regions';
+  static const ascension = 'ascension';
 }
 
 /// Los valores del código.
@@ -713,6 +714,24 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // biome_regions.md (v0.45.0): generated biome regions, side paths,
   // lakes, waystones and region foraging.
+  // ascension.md § 3 (v0.49): points, branch stats and Trades conditions
+  // of the ascension tree v2.
+  TuningId.ascension: TuningDef('Ascensión', {
+    'pointsPerTrial': 7,
+    'maxCapstones': 1,
+    'minorHp': 0.02,
+    'minorAtk': 0.02,
+    'minorMag': 0.02,
+    'minorDef': 1,
+    'minorCrit': 0.01,
+    'minorSpd': 0.1,
+    'minorUlt': 0.03,
+    'minorHeal': 0.03,
+    'overloadStacks': 1,
+    'forgedLevel': 3,
+    'masteryLevel': 5,
+    'townPerCondition': 0.03,
+  }),
   TuningId.regions: TuningDef('Regiones de bioma', {
     // Layout: extra lakes (0..1 on top of the first), lake radii (tiles),
     // trees per 100 free tiles, plant spots per side path.

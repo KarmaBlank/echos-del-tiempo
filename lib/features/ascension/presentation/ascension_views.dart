@@ -1,9 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/catalog_names.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/panel_widgets.dart';
+import '../../../core/text/plain_text.dart';
+import '../../../core/text/text_detail.dart';
+import '../../../game_engine/models/player_state.dart';
+import '../../../game_engine/rules/stats_calculator.dart' show ascConditionTimes;
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -175,13 +181,16 @@ class AscensionChoiceView extends ConsumerWidget {
   }
 }
 
-/// El mini-árbol de 8 nodos (§ 3) con la ficha del nodo elegido.
+//// The ascension tree v2 (ascension.md § 3.6): 5 branches × 10 tiers on
+/// a pixel canvas, hover tooltip and the selected node's detail on the
+/// right.
 class AscensionTreeView extends ConsumerStatefulWidget {
   const AscensionTreeView({
     super.key,
     required this.def,
     required this.progress,
     this.sprites,
+    this.build,
     this.editBlocked,
     this.onTake,
     this.onReset,
@@ -191,6 +200,10 @@ class AscensionTreeView extends ConsumerStatefulWidget {
   final AscensionDef def;
   final AscensionProgress progress;
   final GameSprites? sprites;
+
+  /// The hero's build, to tell whether the Trades conditions hold now
+  /// (`null` = unknown: every condition counts as met).
+  final PlayerBuild? build;
   final String? editBlocked;
   final ValueChanged<String>? onTake;
   final VoidCallback? onReset;
@@ -198,12 +211,18 @@ class AscensionTreeView extends ConsumerStatefulWidget {
   /// Sacar la ascensión (volver a elegir); `null` = no se puede ahora.
   final VoidCallback? onChange;
 
-  /// Columnas (−1..1) y filas (0..4) del lienzo.
-  static const cols = 3, rows = 5;
+  /// Columns (branches) and rows (tiers 0–10) of the canvas.
+  static const cols = AscTree.branches, rows = AscTree.tiers + 1;
+
+  /// Smallest cell (px) before the canvas scrolls.
+  static const minCell = 40.0;
 
   @override
   ConsumerState<AscensionTreeView> createState() => _AscensionTreeViewState();
 }
+
+/// Visual state of a node (§ 3.6).
+enum AscNodeState { taken, inactive, available, locked }
 
 class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
   static const _rules = AscensionRules();
@@ -222,14 +241,44 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
     if (!n.links.any((l) => _rules.has(p, l))) {
       return ref.t('ui.ascension.node.not_linked');
     }
+    if (n.capstone &&
+        _rules.capstones(p) >= AscensionRules.maxCapstones) {
+      return ref.t('ui.ascension.node.capstone_cap');
+    }
     return null;
   }
 
-  String _state(AscensionNode n) => _rules.has(p, n.id)
-      ? ref.t(n.root
+  bool _active(AscensionNode n) {
+    final b = widget.build;
+    if (b == null || n.condition == AscCondition.none) return true;
+    return ascConditionTimes(n.condition, b) > 0;
+  }
+
+  AscNodeState _stateOf(AscensionNode n) {
+    if (_rules.has(p, n.id)) {
+      return _active(n) ? AscNodeState.taken : AscNodeState.inactive;
+    }
+    return _why(n) == null ? AscNodeState.available : AscNodeState.locked;
+  }
+
+  String _stateText(AscensionNode n) {
+    if (_rules.has(p, n.id)) {
+      if (!_active(n)) {
+        return ref.t('ui.ascension.node.inactive',
+            {'why': ref.t('ui.ascension.cond.${n.condition.name}')});
+      }
+      return ref.t(n.root
           ? 'ui.ascension.node.awakened'
-          : 'ui.ascension.node.taken')
-      : _why(n) ?? ref.t('ui.ascension.node.available');
+          : 'ui.ascension.node.taken');
+    }
+    return _why(n) ?? ref.t('ui.ascension.node.available');
+  }
+
+  /// The node text for the active TEXTOS mode (RESUMIDO: first sentence).
+  String _text(AscensionNode n) {
+    final full = ascNodeText(n);
+    return TextDetail.isSummary ? plainShort(full) : full;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,167 +292,201 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
       children: [
         Expanded(
           child: LayoutBuilder(builder: (context, box) {
-            // Una columna de margen para los nombres.
-            final cell = (box.maxWidth / (AscensionTreeView.cols + 1))
-                .clamp(0.0, box.maxHeight / AscensionTreeView.rows)
-                .toDouble();
-            final w = cell * AscensionTreeView.cols,
-                h = cell * AscensionTreeView.rows;
-            Offset at(AscensionNode n) =>
-                Offset((n.x + 1.5) * cell, (n.y + 0.5) * cell);
-            return Center(
-              child: SizedBox(
-                width: w,
-                height: h,
-                child: Stack(
-                  // Los nombres de las ramas se salen del ancho de 3 celdas.
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: CustomPaint(
-                          painter: _TreeLinks(a, p, at, col)),
-                    ),
-                    for (final n in a.nodes) _node(n, at(n), cell, col),
-                    for (final n in a.nodes) _label(n, at(n), cell),
-                  ],
+            // One extra column on the left for the tier numbers.
+            final cell = math.max(
+                AscensionTreeView.minCell,
+                math.min(box.maxWidth / (AscensionTreeView.cols + 0.6),
+                    (box.maxHeight - 28) / AscensionTreeView.rows));
+            final gutter = cell * 0.6;
+            final w = gutter + cell * AscensionTreeView.cols;
+            final h = cell * AscensionTreeView.rows;
+            Offset at(AscensionNode n) => Offset(
+                gutter + (n.x + 0.5) * cell, (n.y + 0.5) * cell);
+            return SingleChildScrollView(
+              child: Center(
+                child: SizedBox(
+                  width: w,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 28,
+                        child: Row(children: [
+                          SizedBox(width: gutter),
+                          for (var i = 0; i < AscensionTreeView.cols; i++)
+                            SizedBox(
+                              key: ValueKey('asc-branch-$i'),
+                              width: cell,
+                              child: Text(ascBranchName(a, i).toUpperCase(),
+                                  textAlign: TextAlign.center,
+                                  softWrap: true,
+                                  textScaler: RetroType.fixedScaler(context),
+                                  style: DsText.detail(i < 3
+                                      ? col
+                                      : DsColors.textSecondary)),
+                            ),
+                        ]),
+                      ),
+                      SizedBox(
+                        width: w,
+                        height: h,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: CustomPaint(
+                                  painter: AscTreeLinks(a, p, at, col)),
+                            ),
+                            for (var t = 1; t <= AscTree.tiers; t++)
+                              Positioned(
+                                left: 0,
+                                top: (t + 0.5) * cell - 8,
+                                width: gutter,
+                                child: Text('$t',
+                                    textAlign: TextAlign.center,
+                                    textScaler:
+                                        RetroType.fixedScaler(context),
+                                    style: DsText.detail()),
+                              ),
+                            for (final n in a.nodes)
+                              _node(n, at(n), cell, col),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
           }),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: DsSpace.md),
         SizedBox(
           // Crece con el texto (sin pasar de 45 % de la pantalla).
           width: RetroType.width(context, 340)
               .clamp(340.0, MediaQuery.sizeOf(context).width * 0.45),
-          child: PanelDetail(
-            footer: [
-              PanelButton(ref.t('ui.ascension.reset'),
-                  key: const ValueKey('asc-reset'),
-                  onPressed: widget.editBlocked != null || p.nodes.isEmpty
-                      ? null
-                      : widget.onReset),
-              PanelButton(ref.t('ui.ascension.change'),
-                  key: const ValueKey('asc-change'),
-                  onPressed: widget.onChange),
-              if (!taken)
-                PanelButton(ref.t('ui.ascension.take'),
-                    key: const ValueKey('asc-take'),
-                    accent: ProtoColors.green,
-                    reason: why,
-                    onPressed: () => widget.onTake?.call(node.id)),
-            ],
-            children: [
-              // Primero el nodo elegido (lo que se decide).
-              ProtoText(
-                  key: const ValueKey('asc-node-detail'),
-                  '<b>${protoEsc(node.tr)}</b>'
-                  '${node.major ? ' ${protoColor(ProtoColors.pink, ref.t('ui.ascension.node.major'))}' : ''} '
-                  '${node.root ? protoColor(ProtoColors.gold, ref.t('ui.ascension.node.root')) : protoColor(ProtoColors.dim, ref.t('ui.ascension.node.cost', {'cost': node.cost}))}<br>'
-                  '${protoEsc(node.textTr)}<br>'
-                  '${protoColor(ProtoColors.dim, protoEsc(_state(node)))}'),
-              const SizedBox(height: 6),
-              ProtoText(
-                  key: const ValueKey('asc-points'),
-                  ref.t('ui.ascension.points', {
-                    'free': _rules.free(p),
-                    'earned': p.earned,
-                    'max': 3 * AscensionProgress.pointsPerTrial,
-                  })),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  AscendedHero(
-                      sprites: widget.sprites,
-                      classId: a.classId,
-                      ascensionId: a.id,
-                      scale: 2),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ProtoText(
-                        '<b style="color:${ascensionHex(a)}">'
-                        '${protoEsc(a.tr.toUpperCase())}</b><br>'
-                        '${protoColor(ProtoColors.dim, '${protoEsc(cls)} · ${protoEsc(a.themeTr)}')}'),
-                  ),
-                ],
-              ),
-              if (node.root) ...[
-                const SizedBox(height: 6),
-                for (final id in a.skillIds)
-                  if (kSkills[id] case final s?)
-                    ProtoText(describeSkillMarkup(s, null)),
-                if (kAscensionUltimatesById[a.ultId] case final u?)
-                  ProtoText(describeSkillMarkup(u, null,
-                      ultimate: true, nameColor: '#e84393')),
+          child: DsDetailPane(
+            actions: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: DsSpace.sm,
+              runSpacing: DsSpace.xs,
+              children: [
+                PanelButton(ref.t('ui.ascension.reset'),
+                    key: const ValueKey('asc-reset'),
+                    onPressed: widget.editBlocked != null || p.nodes.isEmpty
+                        ? null
+                        : widget.onReset),
+                PanelButton(ref.t('ui.ascension.change'),
+                    key: const ValueKey('asc-change'),
+                    onPressed: widget.onChange),
+                if (!taken)
+                  PanelButton(ref.t('ui.ascension.take'),
+                      key: const ValueKey('asc-take'),
+                      accent: ProtoColors.green,
+                      reason: why,
+                      onPressed: () => widget.onTake?.call(node.id)),
               ],
-            ],
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Primero el nodo elegido (lo que se decide).
+                ProtoText(
+                    key: const ValueKey('asc-node-detail'),
+                    '<b>${protoEsc(ascNodeName(a, node))}</b><br>'
+                    '${protoColor(node.capstone ? ProtoColors.gold : ProtoColors.dim, protoEsc(node.root ? ref.t('ui.ascension.node.root') : '${ascNodeKindText(node)} · ${ref.t('ui.ascension.tier', {'n': node.tier})} · ${ascBranchName(a, node.branch)}'))}<br>'
+                    '${protoEsc(_text(node))}<br>'
+                    '${protoColor(ProtoColors.dim, protoEsc(_stateText(node)))}'),
+                SizedBox(height: DsSpace.sm),
+                ProtoText(
+                    key: const ValueKey('asc-points'),
+                    ref.t('ui.ascension.points', {
+                      'free': _rules.free(p),
+                      'earned': p.earned,
+                      'max': TrialNumbers.count *
+                          AscensionProgress.pointsPerTrial,
+                    })),
+                SizedBox(height: DsSpace.sm),
+                Row(
+                  children: [
+                    AscendedHero(
+                        sprites: widget.sprites,
+                        classId: a.classId,
+                        ascensionId: a.id,
+                        scale: 2),
+                    SizedBox(width: DsSpace.sm),
+                    Expanded(
+                      child: ProtoText(
+                          '<b style="color:${ascensionHex(a)}">'
+                          '${protoEsc(a.tr.toUpperCase())}</b><br>'
+                          '${protoColor(ProtoColors.dim, '${protoEsc(cls)} · ${protoEsc(a.themeTr)}')}'),
+                    ),
+                  ],
+                ),
+                if (node.root) ...[
+                  SizedBox(height: DsSpace.sm),
+                  for (final id in a.skillIds)
+                    if (kSkills[id] case final s?)
+                      ProtoText(describeSkillMarkup(s, null)),
+                  if (kAscensionUltimatesById[a.ultId] case final u?)
+                    ProtoText(describeSkillMarkup(u, null,
+                        ultimate: true, nameColor: '#e84393')),
+                ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  /// Nombre del nodo debajo (los nodos tomados en blanco).
-  Widget _label(AscensionNode n, Offset c, double cell) {
-    final size = (n.root ? 0.62 : n.major ? 0.56 : 0.46) * cell;
-    final taken = _rules.has(p, n.id);
-    return Positioned(
-      left: c.dx - cell * 0.9,
-      top: c.dy + size / 2 + 3,
-      width: cell * 1.8,
-      child: IgnorePointer(
-        child: Text(retroText(n.tr),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            // Etiqueta del mini-árbol (lugar fijo): nítida, sin agrandarse.
-            textScaler: RetroType.fixedScaler(context),
-            style: TextStyle(
-                fontFamily: RetroType.bodyFamily,
-                letterSpacing: RetroType.letterSpacing,
- fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small,
-                height: 1.3,
-                color: taken ? ProtoColors.white : ProtoColors.dim)),
-      ),
-    );
-  }
+  double _size(AscensionNode n, double cell) => switch (n.kind) {
+        AscNodeKind.root || AscNodeKind.capstone => 0.62,
+        AscNodeKind.major => 0.54,
+        AscNodeKind.notable => 0.5,
+        AscNodeKind.minor => 0.36,
+      } *
+      cell;
 
   Widget _node(AscensionNode n, Offset c, double cell, Color col) {
-    final size = (n.root ? 0.62 : n.major ? 0.56 : 0.46) * cell;
-    final taken = _rules.has(p, n.id);
-    final open = !taken && _why(n) == null;
+    final size = _size(n, cell);
+    final st = _stateOf(n);
     final selected = (_sel ?? a.rootId) == n.id;
+    final name = ascNodeName(a, n);
+    final full = ascNodeText(n);
     return Positioned(
       left: c.dx - size / 2,
       top: c.dy - size / 2,
       width: size,
       height: size,
-      child: RetroTooltip(
-        message: '<b>${protoEsc(n.tr)}</b><br>${protoEsc(n.textTr)}<br>'
-            '${protoColor(ProtoColors.dim, protoEsc(_state(n)))}',
+      child: DsTooltip(
+        card: DsTooltipCard(
+          title: name,
+          titleColor: n.capstone ? DsColors.reward : col,
+          detail: full,
+          tags: [
+            DsTag(
+                n.root
+                    ? ref.t('ui.ascension.node.root')
+                    : ascNodeKindText(n),
+                color: n.capstone ? DsColors.reward : DsColors.border),
+          ],
+          children: [
+            Text(_text(n), style: DsText.body()),
+            SizedBox(height: DsSpace.xs),
+            Text(_stateText(n), style: DsText.detail()),
+          ],
+        ),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: GestureDetector(
             key: ValueKey('asc-node-${n.id}'),
             onTap: () => setState(() => _sel = n.id),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: n.major ? BoxShape.rectangle : BoxShape.circle,
-                color: taken ? col : ProtoColors.input,
-                border: Border.all(
-                  color: selected
-                      ? ProtoColors.white
-                      : open
-                          ? col
-                          : col.withValues(alpha: 0.4),
-                  width: selected || open ? 3 : RetroTheme.thinBorderWidth,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                taken || n.root ? '' : '${n.cost}',
-                style: TextStyle(fontFamily: RetroType.titleFamily, fontSize: RetroType.label, color: col),
-              ),
+            child: AscNodeGlyph(
+              kind: n.kind,
+              state: st,
+              color: col,
+              selected: selected,
+              label: st == AscNodeState.available ? '${n.cost}' : '',
             ),
           ),
         ),
@@ -412,8 +495,77 @@ class _AscensionTreeViewState extends ConsumerState<AscensionTreeView> {
   }
 }
 
-class _TreeLinks extends CustomPainter {
-  _TreeLinks(this.a, this.p, this.at, this.color);
+/// A pixel node of the ascension tree (purely visual, § 3.6): its shape
+/// says the kind, its fill and border the state.
+class AscNodeGlyph extends StatelessWidget {
+  const AscNodeGlyph({
+    super.key,
+    required this.kind,
+    required this.state,
+    required this.color,
+    this.selected = false,
+    this.label = '',
+  });
+
+  final AscNodeKind kind;
+  final AscNodeState state;
+  final Color color;
+  final bool selected;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final fill = switch (state) {
+      AscNodeState.taken => color,
+      AscNodeState.inactive => color.withValues(alpha: 0.4),
+      _ => DsColors.surfaceSunken,
+    };
+    final border = selected
+        ? ProtoColors.white
+        : switch (state) {
+            AscNodeState.locked => DsColors.border,
+            _ => kind == AscNodeKind.capstone ? DsColors.reward : color,
+          };
+    final width = selected || state == AscNodeState.available ? 3.0 : 2.0;
+    Widget box = Container(
+      decoration: BoxDecoration(
+        color: fill,
+        border: Border.all(color: border, width: width),
+      ),
+      padding: kind == AscNodeKind.capstone ? const EdgeInsets.all(3) : null,
+      child: kind == AscNodeKind.capstone
+          ? Container(
+              decoration: BoxDecoration(
+                  border: Border.all(
+                      color: state == AscNodeState.locked
+                          ? DsColors.border
+                          : DsColors.reward,
+                      width: 2)))
+          : null,
+    );
+    if (kind == AscNodeKind.notable) {
+      // Diamond: the square turned 45° (it fits inside the cell).
+      box = Transform.rotate(
+          angle: math.pi / 4, child: FractionallySizedBox(
+              widthFactor: 0.72, heightFactor: 0.72, child: box));
+    }
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned.fill(child: box),
+        if (label.isNotEmpty)
+          Text(label,
+              textScaler: RetroType.fixedScaler(context),
+              style: DsText.subtitle(color)),
+      ],
+    );
+  }
+}
+
+/// Links of the tree (§ 3.6): 2 px, the ascension color when both ends
+/// are taken, grey otherwise.
+class AscTreeLinks extends CustomPainter {
+  AscTreeLinks(this.a, this.p, this.at, this.color);
 
   final AscensionDef a;
   final AscensionProgress p;
@@ -423,23 +575,36 @@ class _TreeLinks extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const rules = AscensionRules();
-    final paint = Paint()..strokeWidth = 3;
+    final paint = Paint()
+      ..strokeWidth = 2
+      ..isAntiAlias = false;
     for (final n in a.nodes) {
       for (final l in n.links) {
         final o = a.node(l);
-        if (o == null || o.id.compareTo(n.id) < 0) continue;
+        if (o == null || o.tier < n.tier) continue;
+        if (o.tier == n.tier && o.id.compareTo(n.id) < 0) continue;
         final both = rules.has(p, n.id) && rules.has(p, o.id);
-        paint.color = both ? color : ProtoColors.panelBorder;
-        canvas.drawLine(at(n), at(o), paint);
+        paint.color = both ? color : DsColors.border;
+        final s = at(n), e = at(o);
+        if (s.dx == e.dx) {
+          canvas.drawLine(s, e, paint);
+        } else {
+          // Pixel elbow: down from the root, across, then down.
+          final mid = Offset(s.dx, (s.dy + e.dy) / 2);
+          canvas
+            ..drawLine(s, mid, paint)
+            ..drawLine(mid, Offset(e.dx, mid.dy), paint)
+            ..drawLine(Offset(e.dx, mid.dy), e, paint);
+        }
       }
     }
   }
 
   @override
-  bool shouldRepaint(_TreeLinks old) => old.p != p || old.a != a;
+  bool shouldRepaint(AscTreeLinks old) => old.p != p || old.a != a;
 }
 
-/// Texto de los títulos del panel (`retroText`).
+// Texto de los títulos del panel (`retroText`).
 String ascensionPanelTitle(Strings t, AscensionDef? a) => retroText(a == null
     ? t.t('ui.ascension.title')
     : t.t('ui.ascension.title_with', {'name': a.tr}));

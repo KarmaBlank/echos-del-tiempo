@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/rules/build_template_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _tree = PassiveTreeRules(kPassiveTree);
@@ -67,11 +68,13 @@ void main() {
       for (final s in tl.steps.where((s) => s.milestone != null)) {
         expect(s.level, greaterThanOrEqualTo(s.milestone!));
       }
-      // La ascensión entra en los 6 puntos de las Pruebas.
+      // The ascension fits the points of the three Trials (tree v2).
       final asc = kAscensions[t.ascensionId]!;
       final cost =
           t.ascensionOrder.fold<int>(0, (a, n) => a + asc.node(n)!.cost);
-      expect(cost, lessThanOrEqualTo(6));
+      expect(cost, lessThanOrEqualTo(3 * AscensionProgress.pointsPerTrial));
+      expect(t.ascensionOrder.where((n) => asc.node(n)!.capstone).length,
+          lessThanOrEqualTo(1));
       // Sin metas bloqueadas para un personaje nuevo de su clase.
       final fresh =
           _progression.normalize(PlayerProfile(name: 'X', classId: t.classId));

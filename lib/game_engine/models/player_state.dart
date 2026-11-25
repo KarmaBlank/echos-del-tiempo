@@ -48,6 +48,10 @@ class PlayerBuild {
   /// element resistance while it lasts.
   final MealBuff? meal;
 
+  /// Echoes Mastery level (ecos_atlas.md § 6): the Trades branch of the
+  /// ascension tree reads it (ascension.md § 3.5). JSON `ms`.
+  final int mastery;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -63,6 +67,7 @@ class PlayerBuild {
     this.lifeHp = 0,
     this.lifeAtk = 0,
     this.meal,
+    this.mastery = 0,
   });
 
   /// Id de la ascensión elegida (`null` = clase base).
@@ -86,6 +91,7 @@ class PlayerBuild {
         lifeHp: lifeHp,
         lifeAtk: lifeAtk,
         meal: meal,
+        mastery: mastery,
       );
 }
 

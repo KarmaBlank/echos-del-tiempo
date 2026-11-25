@@ -111,9 +111,9 @@ void main() {
       expect(trials.earnsPoints(hero('A'), 1), isTrue);
     });
 
-    test('2 puntos por Prueba, 6 en total; árbol de 10', () {
-      expect(const AscensionProgress(trials: {1}).earned, 2);
-      expect(const AscensionProgress(trials: {1, 2, 3}).earned, 6);
+    test('7 puntos por Prueba, 21 en total (árbol v2)', () {
+      expect(const AscensionProgress(trials: {1}).earned, 7);
+      expect(const AscensionProgress(trials: {1, 2, 3}).earned, 21);
       expect(kTrials.map((t) => t.level), [30, 40, 50]);
       expect(kTrials.map((t) => t.monsterLevel), [32, 42, 52]);
     });
@@ -199,7 +199,7 @@ void main() {
       expect(s.players['p2']!.profile.ascension.trials, {1});
       expect(
           log.whereType<SystemMessageEvent>().map((x) => x.text),
-          contains('Ana superó la Prueba del Tiempo I · El Umbral: +2 puntos '
+          contains('Ana superó la Prueba del Tiempo I · El Umbral: +7 puntos '
               'de ascensión.'));
 
       // Elegir en el resultado: cinemática para todos.
@@ -284,21 +284,25 @@ void main() {
       s = act(e, s, 'p0', const ChooseAscensionAction('senorGuerra'));
       final p = s.players['p0']!.profile;
       expect(p.ascension.id, 'senorGuerra');
-      expect(asc.free(p.ascension), 4);
+      expect(asc.free(p.ascension), 14);
       expect(e.apply(s, 'p0', const ChooseAscensionAction('berserker')), isNull,
           reason: 'ya ascendió');
       // Sin conexión no.
       expect(e.apply(s, 'p0', const TakeAscensionNodeAction('senorGuerra_a2')),
           isNull);
-      for (final n in ['senorGuerra_a1', 'senorGuerra_a2', 'senorGuerra_a3']) {
+      for (final n in [
+        'senorGuerra_m11', 'senorGuerra_m12', 'senorGuerra_a1', //
+        'senorGuerra_m14', 'senorGuerra_m15', 'senorGuerra_a2',
+        'senorGuerra_m17', 'senorGuerra_m18', 'senorGuerra_m19',
+      ]) {
         s = act(e, s, 'p0', TakeAscensionNodeAction(n));
       }
-      expect(asc.free(s.players['p0']!.profile.ascension), 0);
-      expect(e.apply(s, 'p0', const TakeAscensionNodeAction('senorGuerra_b1')),
+      expect(asc.free(s.players['p0']!.profile.ascension), 2);
+      expect(e.apply(s, 'p0', const TakeAscensionNodeAction('senorGuerra_a3')),
           isNull, reason: 'sin puntos');
       // El kit y las mecánicas llegan a los stats.
       final d = e.progression.derivedStats(s.players['p0']!.profile);
-      expect(d.mechanics, containsAll(['senorGuerra_r', 'senorGuerra_a3']));
+      expect(d.mechanics, containsAll(['senorGuerra_r', 'senorGuerra_a2']));
       // Reiniciar nodos: gratis; la ascensión queda.
       s = act(e, s, 'p0', const ResetAscensionAction());
       expect(s.players['p0']!.profile.ascension.nodes, isEmpty);
@@ -338,9 +342,14 @@ void main() {
   group('perfil y red', () {
     test('perfil: asc ida y vuelta; normalize descarta lo inválido', () {
       final p = hero('Ana',
-          level: 50, trials: {1, 2, 3}, asc: 'berserker', nodes: ['berserker_a1']);
+          level: 50, trials: {1, 2, 3}, asc: 'berserker', nodes: ['berserker_m11']);
       final j = jsonDecode(jsonEncode(p.toJson())) as Map<String, Object?>;
-      expect(j['asc'], {'tr': [1, 2, 3], 'id': 'berserker', 'n': ['berserker_a1']});
+      expect(j['asc'], {
+        'v': 2,
+        'tr': [1, 2, 3],
+        'id': 'berserker',
+        'n': ['berserker_m11']
+      });
       final back = PlayerProfile.fromJson(j);
       expect(back.ascension, p.ascension);
 
@@ -353,10 +362,15 @@ void main() {
       expect(bad.ascension.id, isNull);
       final orphan = zoneProgression.normalize(PlayerProfile.fromJson({
         ...j,
-        'asc': {'tr': [1], 'id': 'berserker', 'n': ['berserker_a2', 'berserker_a1']},
+        'asc': {
+          'v': 2,
+          'tr': [1],
+          'id': 'berserker',
+          'n': ['berserker_m12', 'berserker_m11']
+        },
       }));
-      expect(orphan.ascension.nodes, ['berserker_a1'],
-          reason: 'a2 antes que a1 no estaba conectado');
+      expect(orphan.ascension.nodes, ['berserker_m11'],
+          reason: 'm12 antes que m11 no estaba conectado');
     });
 
     test('migración: un perfil v0.4 (sin asc) carga sin ascensión', () {
