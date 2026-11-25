@@ -59,6 +59,7 @@ import 'panels/quest_log_panel.dart';
 import 'panels/travel_panel.dart';
 import 'panels/waystone_panel.dart';
 import 'panels/helper_panel.dart';
+import 'panels/miner_panel.dart';
 import 'panels/offering_panel.dart';
 import 'panels/town_edit_overlay.dart';
 import 'panels/town_strip_cards.dart';
@@ -1128,6 +1129,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return QuestLogPanel(view: view, controller: controller);
       case WorldPanel.helper:
         return HelperPanel(view: view, controller: controller);
+      case WorldPanel.miners:
+        return MinerPanel(view: view, controller: controller);
       case WorldPanel.offering:
         return OfferingPanel(view: view, controller: controller);
       case WorldPanel.stash:

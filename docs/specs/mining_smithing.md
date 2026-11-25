@@ -170,9 +170,19 @@ nadie esté en la mina; se ven trabajando.
 - **Pico del minero** (`MinerState.tier`, 0–4, JSON `pt`): solo rompe la
   roca o la veta cuyo nivel pedido (`MiningRules.reqTierOf`: el del
   nivel de la mina, +1 para vetas profundas y de gema) sea ≤ su pico; lo
-  demás lo rodea o lo saltea. U en la estación mejora el pico más bajo:
+  demás lo rodea o lo saltea. Mejorar un pico cuesta
   `minerUpGold` × nivel de oro y `minerUpIngots` × nivel lingotes del
-  pico de ese nivel. Al máximo pica todo.
+  pico de ese nivel (`MineOp.upgrade` con el índice del minero; lo valida
+  el anfitrión). Al máximo pica todo.
+- **Panel MINEROS** (`WorldPanel.miners`): E sobre la estación armada, o
+  G al lado de un minero (como cualquier ayudante), lo abre. Grilla de
+  los mineros del nivel (ícono del pico, `N<nivel>`) con el detalle a la
+  derecha: pico actual y nivel, si rompe la roca/vetas de este nivel y
+  las vetas profundas/gemas (con el nivel que piden), rinde `minerYield`
+  en % contra un jugador, el siguiente pico y su costo (chip de costo:
+  oro y lingotes, en rojo lo que falta) y MEJORAR (gris si no alcanza;
+  MÁXIMO al tope). U en la estación queda como atajo: mejora el pico más
+  bajo con la misma operación.
 - **Rinde menos que un jugador**: cada veta da `minerYield` (< 1) de lo
   normal, sin bonus de herramienta, aceite de veta, pasivas ni nodos de
   oficio.

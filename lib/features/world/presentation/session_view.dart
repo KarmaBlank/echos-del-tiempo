@@ -16,6 +16,9 @@ import '../../../game_engine/rules/atlas_rules.dart';
 /// `ascension`: la Estatua del Tiempo (PRUEBAS y ASCENSIÓN,
 /// docs/specs/ascension.md).
 enum WorldPanel {
+  /// Miners of a mine level: picks and upgrades (mining_smithing.md § 1.7).
+  miners,
+
   missionBoard,
 
   /// Region waystones: fast travel inside a biome (biome_regions.md § 4).

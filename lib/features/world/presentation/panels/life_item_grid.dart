@@ -96,9 +96,13 @@ class LifeItemGrid extends StatefulWidget {
     required this.empty,
     this.emptyKey,
     this.extra,
+    this.initial,
   });
 
   final List<LifeItemGroup> groups;
+
+  /// Cell selected first (`null`: the first one).
+  final String? initial;
 
   /// Text shown when there are no cells.
   final String empty;
@@ -122,7 +126,7 @@ class LifeItemGrid extends StatefulWidget {
 }
 
 class _LifeItemGridState extends State<LifeItemGrid> {
-  String? _sel;
+  late String? _sel = widget.initial;
 
   /// Title of the group filter (`null`: all).
   String? _group;
