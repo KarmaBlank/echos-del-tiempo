@@ -1390,3 +1390,11 @@ maga del tramo 1 A (Chispa Instante): solo vs comunes 2.0 acciones con
 - Sin combos, el grupo mixto queda igual que antes salvo el tramo 1 A
   (Chispa y Flecha Venenosa Instante: el grupo actúa más seguido).
 
+
+### Etiqueta PUEDE QUEBRAR (v0.46.5)
+
+Las habilidades con `breaks` muestran la etiqueta PUEDE QUEBRAR junto a
+INSTANTE en la fila de HABILIDADES. Con el objetivo sin Fisurar va gris y
+el tooltip dice "Para quebrar, el objetivo tiene que estar Fisurado"; con
+el objetivo Fisurado se enciende y la fila se resalta en dorado, como
+cualquier condición cumplida (`conditionReady`).

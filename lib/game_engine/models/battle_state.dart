@@ -316,6 +316,7 @@ class Combatant {
 
   /// Players: own turns left silenced (no skill / duo that costs MP,
   /// nor ULT if `silenceUlt`). Ticks at the start of its own turn.
+  /// Negative: own turns left immune to a new Silence (`silenceCooldown`).
   int silenced;
 
   /// Damage each character dealt to this enemy in the current phase

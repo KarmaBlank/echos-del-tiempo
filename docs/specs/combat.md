@@ -909,9 +909,14 @@ algunos enemigos pueden callarlas.
   habilidades sin costo de MP (solo Pulso) siguen. La regla vive en
   `SkillRequirements.silencedFor` (host, UI e IA de compañeros) y en
   `ultReady` / `ultSilenced`.
-- **Duración**: `silenceTurns` (2) turnos propios. Se guarda +1 y baja al
+- **Duración**: `silenceTurns` (1) turno propio (dueño, v0.46.5: le quita la fase, no más). Se guarda +1 y baja al
   empezar cada turno propio (como el escudo del tanque), así el turno en
   que lo silencian no cuenta.
+- **Enfriamiento por objetivo** (pedido del dueño, v0.46.5): al terminar
+  el Silencio, ese jugador queda inmune `silenceCooldown` (1) turno
+  propios (se guarda como `silenced` negativo). Ningún silenciador lo
+  elige mientras tanto, así varios silenciadores no lo callan cada turno;
+  si todos están inmunes, el silenciador ataca normal.
 - **UI**: chip "Silencio" con tooltip (qué bloquea y turnos que quedan);
   en el menú las habilidades con MP, los dúos y la ULT salen en gris con
   el motivo "Silenciado". Log al lanzarlo y al terminar.
