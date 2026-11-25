@@ -530,6 +530,127 @@ abstract final class ForagePalette {
 }
 
 /// Colors of the generated biome regions (biome_regions.md § 6–7).
+/// Colours of a biome's cavern (biome_regions.md § 7.2.1): rock (deep,
+/// base, mid, lit), cracks, floor (two tones), wet shore, the cold water
+/// glow and the bioluminescent specks.
+class CavePalette {
+  const CavePalette({
+    required this.rockDeep,
+    required this.rock,
+    required this.rockMid,
+    required this.rockLit,
+    required this.crack,
+    required this.floor,
+    required this.floor2,
+    required this.wet,
+    required this.wetGlint,
+    required this.waterGlow,
+    required this.speck,
+    required this.mist,
+  });
+
+  final Color rockDeep, rock, rockMid, rockLit, crack;
+  final Color floor, floor2, wet, wetGlint;
+  final Color waterGlow, speck, mist;
+
+  /// The palette of a region theme (`bosque_ext`, ...); grey stone for
+  /// any other.
+  static CavePalette of(String theme) => _byTheme[theme] ?? _stone;
+
+  static const _stone = CavePalette(
+    rockDeep: Color(0xFF15161B),
+    rock: Color(0xFF2A2C33),
+    rockMid: Color(0xFF3A3D45),
+    rockLit: Color(0xFF555963),
+    crack: Color(0xFF0C0D10),
+    floor: Color(0xFF24252A),
+    floor2: Color(0xFF1C1D21),
+    wet: Color(0xFF16191F),
+    wetGlint: Color(0xFF5C6E80),
+    waterGlow: Color(0xFF7FC8FF),
+    speck: Color(0xFF8CFFE0),
+    mist: Color(0xFFB8C8D8),
+  );
+
+  static const _byTheme = {
+    // Forest: mossy dark stone, teal specks.
+    'bosque_ext': CavePalette(
+      rockDeep: Color(0xFF121712),
+      rock: Color(0xFF262D26),
+      rockMid: Color(0xFF354033),
+      rockLit: Color(0xFF4E5C48),
+      crack: Color(0xFF0A0D0A),
+      floor: Color(0xFF20251F),
+      floor2: Color(0xFF191D18),
+      wet: Color(0xFF131815),
+      wetGlint: Color(0xFF5E7A6A),
+      waterGlow: Color(0xFF7FE0D0),
+      speck: Color(0xFF9CFFB0),
+      mist: Color(0xFFB8D0C0),
+    ),
+    // Ruins: dusty sandstone gone grey in the dark, amber specks.
+    'ruinas_ext': CavePalette(
+      rockDeep: Color(0xFF1A1612),
+      rock: Color(0xFF332C24),
+      rockMid: Color(0xFF453B30),
+      rockLit: Color(0xFF63574A),
+      crack: Color(0xFF0E0B08),
+      floor: Color(0xFF2A241E),
+      floor2: Color(0xFF221D18),
+      wet: Color(0xFF181614),
+      wetGlint: Color(0xFF7A6E5E),
+      waterGlow: Color(0xFF9CC8E8),
+      speck: Color(0xFFFFD58A),
+      mist: Color(0xFFD0C8B8),
+    ),
+    // Caverns: frozen blue-grey, pale cyan specks.
+    'cavernas_ext': CavePalette(
+      rockDeep: Color(0xFF10141C),
+      rock: Color(0xFF242C3A),
+      rockMid: Color(0xFF34405A),
+      rockLit: Color(0xFF5A6C88),
+      crack: Color(0xFF080A10),
+      floor: Color(0xFF1E2430),
+      floor2: Color(0xFF181D27),
+      wet: Color(0xFF121722),
+      wetGlint: Color(0xFF8AA8D0),
+      waterGlow: Color(0xFFA8E0FF),
+      speck: Color(0xFFC8F0FF),
+      mist: Color(0xFFD0E0F0),
+    ),
+    // Rift (volcano): basalt, ember cracks, orange specks.
+    'grieta_ext': CavePalette(
+      rockDeep: Color(0xFF120C0C),
+      rock: Color(0xFF261A18),
+      rockMid: Color(0xFF382622),
+      rockLit: Color(0xFF543830),
+      crack: Color(0xFF7A2A10),
+      floor: Color(0xFF1E1614),
+      floor2: Color(0xFF171110),
+      wet: Color(0xFF140E0D),
+      wetGlint: Color(0xFF8A5040),
+      waterGlow: Color(0xFFFF9A5A),
+      speck: Color(0xFFFFB060),
+      mist: Color(0xFF8A7068),
+    ),
+    // Abyss: violet-black, violet specks.
+    'abismo_ext': CavePalette(
+      rockDeep: Color(0xFF110D18),
+      rock: Color(0xFF221A30),
+      rockMid: Color(0xFF322642),
+      rockLit: Color(0xFF4E3E66),
+      crack: Color(0xFF07050C),
+      floor: Color(0xFF1C1626),
+      floor2: Color(0xFF16111F),
+      wet: Color(0xFF110D18),
+      wetGlint: Color(0xFF7A62A0),
+      waterGlow: Color(0xFFB48CFF),
+      speck: Color(0xFFD8A8FF),
+      mist: Color(0xFFB8A8D0),
+    ),
+  };
+}
+
 abstract final class RegionPalette {
   /// Glowing shore plants: stem, leaf, bulb and its glow.
   static const glowStem = Color(0xFF2A5A4A);

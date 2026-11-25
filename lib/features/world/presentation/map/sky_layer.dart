@@ -228,7 +228,7 @@ class MapSkyLayer {
       final y0 = (view.top / cell).floor(), y1 = (view.bottom / cell).ceil();
       for (var cy = y0; cy < y1; cy++) {
         for (var cx = x0; cx < x1; cx++) {
-          final n = _noise((cx + dx / cell) / scale,
+          final n = noise((cx + dx / cell) / scale,
               (cy + dy / cell) / scale, 31 + layer);
           final k = ((n - 0.45) / 0.55).clamp(0.0, 1.0);
           if (k <= 0) continue;
@@ -244,7 +244,8 @@ class MapSkyLayer {
   }
 
   // Smooth value noise in 0–1 from the integer lattice hash.
-  static double _noise(double x, double y, int seed) {
+  /// Smooth value noise in 0–1 (shared with the cavern mist).
+  static double noise(double x, double y, int seed) {
     final xi = x.floor(), yi = y.floor();
     final fx = x - xi, fy = y - yi;
     double v(int a, int b) => _hash(a * 7919 + b * 104729, seed) % 1000 / 1000;

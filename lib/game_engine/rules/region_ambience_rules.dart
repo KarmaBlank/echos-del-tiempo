@@ -22,7 +22,7 @@ abstract final class RegionAmbienceRules {
   /// a mountain peak.
   static bool caveWall(BiomeLayout lay, String Function(int, int) tileAt,
       int x, int y,
-      {int reach = 2}) {
+      {int reach = 3}) {
     if (tileAt(x, y) != Tile.rock) return false;
     for (var dy = -reach; dy <= reach; dy++) {
       for (var dx = -reach; dx <= reach; dx++) {
@@ -144,5 +144,94 @@ abstract final class RegionAmbienceRules {
     final lo = _f.d('ambGapMinSec').clamp(1.0, 600.0);
     final hi = math.max(lo, _f.d('ambGapMaxSec'));
     return lo + (hi - lo) * rand.clamp(0.0, 1.0);
+  }
+
+  // ---- Caverns (§ 3.1, § 7.2.1) ----
+
+  static final _depth = Expando<List<int>>('cave depth');
+
+  /// Steps (tiles, 4-neighbour) from roofed tile (x, y) to the nearest
+  /// tile outside the roof: 1 = against the wall. 0 outside. Cached per
+  /// layout. Drives the vignette toward the walls.
+  static int caveDepth(BiomeLayout lay, int x, int y) {
+    if (x < 0 || y < 0 || x >= BiomeLayout.width || y >= BiomeLayout.height) {
+      return 0;
+    }
+    final d = _depth[lay] ??= _buildDepth(lay);
+    return d[y * BiomeLayout.width + x];
+  }
+
+  static List<int> _buildDepth(BiomeLayout lay) {
+    const w = BiomeLayout.width, h = BiomeLayout.height;
+    final d = List.filled(w * h, 0);
+    final q = <int>[];
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (!lay.isIndoor(x, y)) continue;
+        final edge = !lay.isIndoor(x - 1, y) ||
+            !lay.isIndoor(x + 1, y) ||
+            !lay.isIndoor(x, y - 1) ||
+            !lay.isIndoor(x, y + 1);
+        if (edge) {
+          d[y * w + x] = 1;
+          q.add(y * w + x);
+        }
+      }
+    }
+    for (var i = 0; i < q.length; i++) {
+      final p = q[i], x = p % w, y = p ~/ w;
+      for (final (nx, ny) in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]) {
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        final n = ny * w + nx;
+        if (d[n] != 0 || !lay.isIndoor(nx, ny)) continue;
+        d[n] = d[p] + 1;
+        q.add(n);
+      }
+    }
+    return d;
+  }
+
+  /// Darkness (0..1) of roofed tile (x, y): the base plus the vignette,
+  /// strongest against the walls and fading over `caveVignetteTiles`.
+  static double caveDarkness(BiomeLayout lay, int x, int y) {
+    final depth = caveDepth(lay, x, y);
+    if (depth == 0) return 0;
+    final base = _r.d('caveDark').clamp(0.0, 1.0);
+    final vig = _r.d('caveVignette').clamp(0.0, 1.0);
+    final span = math.max(1.0, _r.d('caveVignetteTiles'));
+    final k = 1 - ((depth - 1) / span).clamp(0.0, 1.0);
+    return (base + (1 - base) * vig * k).clamp(0.0, 1.0);
+  }
+
+  /// A bioluminescent speck / tiny mushroom on cave floor tile (x, y)?
+  /// (by hash, `caveSpecks` = share of floor tiles).
+  static bool speckAt(int x, int y) {
+    final share = _r.d('caveSpecks').clamp(0.0, 1.0);
+    final h = ((x * 83492791) ^ (y * 2971215073)) & 0x3ff;
+    return h < share * 1024;
+  }
+
+  /// Drift of the cavern mist (px/s).
+  static double get mistSpeed => _r.d('caveMistSpeed');
+
+  /// Alpha of the cold glow on cave water.
+  static double get waterGlow => _r.d('caveWaterGlow').clamp(0.0, 1.0);
+
+  /// Noise layers of the cavern mist (0 = no mist).
+  static int get mistBands => _r.i('caveMistBands').clamp(0, 3);
+
+  /// Drip ripple on a lake: every `caveDripSec` seconds a ring opens on
+  /// a water tile (by hash of the period). Returns the tile and the age
+  /// (0..1) of the current ring, or `null` between rings.
+  static ((int, int), double)? ripple(
+      List<(int, int)> water, int salt, double t) {
+    if (water.isEmpty) return null;
+    final every = math.max(0.5, _r.d('caveDripSec'));
+    const life = 1.2;
+    final n = (t / every).floor();
+    final age = (t - n * every) / life;
+    if (age > 1) return null;
+    final h = ((n * 2654435761) ^ (salt * 40503)) & 0x7fffffff;
+    return (water[h % water.length], age);
   }
 }
