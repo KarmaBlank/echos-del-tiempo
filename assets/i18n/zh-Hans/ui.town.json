@@ -576,5 +576,21 @@
   "ui.town.bag.give_full": "{name} 没有空间放这个",
   "ui.town.bag.give_none": "城镇里没有队友",
   "ui.town.bag.filter.materials": "材料",
-  "ui.town.bag.filter.ores": "矿石"
+  "ui.town.bag.filter.ores": "矿石",
+  "ui.town.source.farm_shop": "在农用品店购买",
+  "ui.town.source.crop": "种植（种子来自{place}）· {seasons}",
+  "ui.town.source.forage": "在{place}采集（野生植物）",
+  "ui.town.source.forage_any": "在任意生物群系的隐秘角落采集",
+  "ui.town.source.forage_season": "在任意生物群系采集 · {seasons}",
+  "ui.town.source.fishing": "在{place}的湖中钓取 · {seasons}",
+  "ui.town.source.mine": "在{place}的矿洞开采",
+  "ui.town.source.dungeon_vein": "来自地下城的矿脉",
+  "ui.town.source.boss_drop": "区域首领掉落",
+  "ui.town.source.smelting": "在锻造炉用{item}熔炼",
+  "ui.town.source.smithing": "在锻造炉制作",
+  "ui.town.source.workshop": "在手艺工坊制作",
+  "ui.town.source.cooking": "在厨房烹饪",
+  "ui.town.source.bait_craft": "在鱼饵台制作",
+  "ui.town.source.have_need": "拥有 {have} / 需要 {need}",
+  "ui.town.source.requires": "需要"
 }

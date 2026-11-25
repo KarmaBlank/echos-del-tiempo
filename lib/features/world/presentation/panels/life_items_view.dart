@@ -331,6 +331,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 count: life.count(d.id),
                 caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
+                  itemId: d.id,
                   name: d.text,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
@@ -448,6 +449,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 equipped: f.activeSeed == d.id,
                 caption: context.t('ui.town.npc.minutes', {'n': (d.growSec / 60).round()}),
                 detail: LifeItemDetail(
+                  itemId: 'semilla_${d.id}',
                   name: d.seedText,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
@@ -510,6 +512,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   search: '${d.text} ${d.name}',
                   count: life.craft(id),
                   detail: LifeItemDetail(
+                    itemId: id,
                     name: d.text,
                     nameColor: DsColors.textTitle,
                     tags: [
@@ -559,6 +562,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 count: e.value,
                 caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
+                  itemId: d.id,
                   name: d.text,
                   nameColor: cropQualityColor(q),
                   tags: [

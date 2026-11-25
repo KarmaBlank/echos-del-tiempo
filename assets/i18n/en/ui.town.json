@@ -564,5 +564,21 @@
   "ui.town.bag.give_full": "{name} has no room for that",
   "ui.town.bag.give_none": "No teammates in town",
   "ui.town.bag.filter.materials": "MATERIALS",
-  "ui.town.bag.filter.ores": "ORES"
+  "ui.town.bag.filter.ores": "ORES",
+  "ui.town.source.farm_shop": "Bought at the FARM SHOP",
+  "ui.town.source.crop": "Grown (seed from {place}) · {seasons}",
+  "ui.town.source.forage": "Gathered in {place} (wild plants)",
+  "ui.town.source.forage_any": "Gathered in hidden nooks of any biome",
+  "ui.town.source.forage_season": "Gathered in any biome · {seasons}",
+  "ui.town.source.fishing": "Fished at the {place} lake · {seasons}",
+  "ui.town.source.mine": "Mined in the {place} mine",
+  "ui.town.source.dungeon_vein": "Comes from dungeon ore veins",
+  "ui.town.source.boss_drop": "Dropped by zone bosses",
+  "ui.town.source.smelting": "Smelted at the FORGE from {item}",
+  "ui.town.source.smithing": "Made at the FORGE",
+  "ui.town.source.workshop": "Made at the CRAFTS WORKSHOP",
+  "ui.town.source.cooking": "Cooked at the KITCHEN",
+  "ui.town.source.bait_craft": "Prepared at the BAIT bench",
+  "ui.town.source.have_need": "You have {have} of {need}",
+  "ui.town.source.requires": "REQUIRES"
 }
