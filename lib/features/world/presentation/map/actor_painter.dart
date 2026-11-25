@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';import 'map_labels.dart';
 
@@ -28,7 +29,28 @@ class ActorPainter {
   final _sprite = SpriteCatalog.pixelPaint();
 
   /// Px the body drops when seated.
-  static const _sit = 5.0;
+  static const seatDrop = 3.0;
+
+  /// Seated pose (fishing on the raft), derived from the hero sprite so
+  /// every class and ascension sits without extra art: head and torso
+  /// (rows 0..11) drop [seatDrop] px, the legs become a bent strip (thighs
+  /// forward, shins down) painted with the sprite's own pants, boot and
+  /// outline pixels. Faces +x (the caller mirrors for dir < 0).
+  void _seated(Canvas c, ui.Image img) {
+    void fill(int sx, int sy, Rect dst) => c.drawImageRect(
+        img, Rect.fromLTWH(sx.toDouble(), sy.toDouble(), 1, 1), dst, _sprite);
+    const outline = (3, 12), pants = (4, 12), boot = (3, 15);
+    // Outlines first, then the fills over them.
+    fill(outline.$1, outline.$2, const Rect.fromLTWH(-4, -4, 10, 4));
+    fill(outline.$1, outline.$2, const Rect.fromLTWH(1, -2, 5, 3));
+    fill(outline.$1, outline.$2, const Rect.fromLTWH(1, 0, 7, 3));
+    fill(pants.$1, pants.$2, const Rect.fromLTWH(-3, -3, 8, 2));
+    fill(pants.$1, pants.$2, const Rect.fromLTWH(2, -1, 3, 2));
+    fill(boot.$1, boot.$2, const Rect.fromLTWH(2, 1, 5, 1));
+    final w = img.width.toDouble();
+    c.drawImageRect(img, Rect.fromLTWH(0, 0, w, 12),
+        Rect.fromLTWH(-7, -17 + seatDrop, w, 12), _sprite);
+  }
   final _texts = <(String, int, double), TextPainter>{};
 
   static const _shadow = Color(0x66000000);
@@ -120,20 +142,14 @@ class ActorPainter {
     }
     if (dir < 0) c.scale(-1, 1);
     final bob = moving ? (t / 140).floor() % 2 : 0;
-    _oval(c, _shadow, 0, 1, 6, 2);
+    // Seated, the seat under them casts the contact shadow.
+    if (!seated) _oval(c, _shadow, 0, 1, 6, 2);
     // Aura de la ascensión (docs/specs/ascension.md § 5).
     if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
     if (img != null && seated && !dead) {
-      // Seated (fishing on the raft): the legs fold, so the body drops
-      // [_sit] px over the feet. Derived from the hero sprite, so every
-      // class and ascension sits without extra art.
-      final w = img.width.toDouble(), h = img.height.toDouble();
-      c.drawImageRect(img, Rect.fromLTWH(0, 0, w, h - _sit - 2),
-          Rect.fromLTWH(-7, -17 + _sit, w, h - _sit - 2), _sprite);
-      c.drawImageRect(img, Rect.fromLTWH(0, h - 2, w, 2),
-          Rect.fromLTWH(-7, -17 + h - 2, w, 2), _sprite);
-      c.translate(0, _sit);
+      _seated(c, img);
+      c.translate(0, seatDrop);
     } else if (img != null) {
       c.drawImage(img, const Offset(-7, -17), _sprite);
     }

@@ -65,25 +65,45 @@ class CozyLayer {
     }
   }
 
-  /// The awning of the raft centred on (x, y): a low flat cloth on two
-  /// short posts standing on the deck, the lantern hanging from the
-  /// right post. Drawn after a seated rider (they sit under it) and
-  /// before a standing one (they stand in front of it).
+  /// The two short posts of the awning, standing on the deck's back
+  /// edge. Drawn before the rider (they are behind them).
+  void drawRaftPosts(
+      Canvas c, double x, double y, double bob, LifeSkills? life) {
+    if (life == null || !CozyRules.hasRoof(life)) return;
+    if (icon('raft_posts') case final im?) {
+      _img(c, im, Rect.fromLTWH(x - ts, y - 23 + bob, ts * 2, 17),
+          SpriteCatalog.pixelPaint());
+    }
+  }
+
+  /// The awning of the raft centred on (x, y): a flat cloth canopy just
+  /// above a standing rider's head, on [drawRaftPosts], with the lantern
+  /// hanging from the right post. Drawn after the rider.
   void drawRaftRoof(
       Canvas c, double x, double y, double bob, LifeSkills? life) {
     if (life == null || !CozyRules.hasRoof(life)) return;
-    final p = SpriteCatalog.pixelPaint();
-    if (icon('raft_posts') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - ts, y - 16 + bob, ts * 2, 18), p);
-    }
     if (icon('raft_roof') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - ts, y - 20 + bob, ts * 2, 6),
+      _img(c, im, Rect.fromLTWH(x - ts, y - 28 + bob, ts * 2, 6),
           _tint(_paint(life) ?? CozyPalette.cloth));
     }
     if (CozyRules.hasLantern(life)) {
       if (icon('raft_lantern') case final im?) {
-        _img(c, im, Rect.fromLTWH(x + 9, y - 15 + bob, ts / 2, ts / 2), p);
+        _img(c, im, Rect.fromLTWH(x + 9, y - 22 + bob, ts / 2, ts / 2),
+            SpriteCatalog.pixelPaint());
       }
+    }
+  }
+
+  /// The crate a rider seated at (px, py) (the hero's anchor) sits on,
+  /// with its small contact shadow; [dir] < 0 mirrors it. Drawn before
+  /// the hero.
+  void drawRaftSeat(Canvas c, double px, double py, int dir) {
+    final x = px.roundToDouble(), y = py.roundToDouble();
+    final left = dir < 0 ? x - 4 : x - 6;
+    c.drawOval(Rect.fromLTWH(left, y + 4, 10, 2),
+        Paint()..color = CozyPalette.seatShadow);
+    if (icon('raft_seat') case final im?) {
+      _img(c, im, Rect.fromLTWH(left, y - 1, 10, 6), SpriteCatalog.pixelPaint());
     }
   }
 

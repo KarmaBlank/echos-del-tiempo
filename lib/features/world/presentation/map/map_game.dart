@@ -1351,14 +1351,14 @@ class MapGame extends Game {
       add(py, () {
         // On a raft (fishing.md § 15): the logs under the hero.
         if (raft) _drawRaft(c, px, py + 3, t, life: p.profile.life);
-        // Fishing from the raft the rider sits under the awning; sailing
-        // they stand in front of it (cozy_life.md § 1).
+        // Fishing from the raft the rider sits on a crate; the awning
+        // posts stand behind them, the cloth above (cozy_life.md § 1).
         final sit = raft && line != null;
-        if (raft && !sit) {
-          cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
-        }
+        final dir = mine ? controller.local.dir : p.dir;
+        if (raft) cozy.drawRaftPosts(c, px, py + 3, _bob(t), p.profile.life);
+        if (sit) cozy.drawRaftSeat(c, px, py, dir);
         hero(px, py, seated: sit);
-        if (sit) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
+        if (raft) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
           final face = mine ? controller.local.fx : p.dir;
@@ -1391,7 +1391,7 @@ class MapGame extends Game {
           if (b != null) _lastBobber[p.id] = b;
           fishing.drawAngler(c,
               px: px,
-              py: py,
+              py: sit ? py + ActorPainter.seatDrop : py,
               dir: mine ? controller.local.dir : p.dir,
               line: line,
               t: t,
@@ -1852,6 +1852,7 @@ class MapGame extends Game {
       // paint) so it looks the same docked as when ridden.
       final x = (d.wx + 0.5) * ts, y = (d.wy + 0.5) * ts;
       _drawRaft(c, x, y, t, life: life);
+      cozy.drawRaftPosts(c, x, y, _bob(t), life);
       cozy.drawRaftRoof(c, x, y, _bob(t), life);
     }
   }
