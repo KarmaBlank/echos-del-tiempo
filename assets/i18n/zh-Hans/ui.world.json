@@ -401,7 +401,7 @@
     "status": "draft"
   },
   "ui.world.forage.prompt": {
-    "text": "[按住 E] 采集 {name}",
+    "text": "[按住 E/点击] 采集 {name}",
     "status": "draft"
   },
   "ui.world.forage.regrow": {
@@ -660,7 +660,7 @@
   "ui.world.raft.prompt_leave": "[E] 上岸",
   "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼",
   "ui.world.cozy.search_prompt": {
-    "text": "[按住 E] 搜索树木",
+    "text": "[按住 E/点击] 搜索树木",
     "status": "draft"
   },
   "ui.world.cozy.searched": {

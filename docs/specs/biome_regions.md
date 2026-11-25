@@ -106,6 +106,9 @@ Elipse con borde irregular (dos armónicos), radios entre
 
 ## 4. Piedras de paso
 
+> v0.49.9: `BiomeLayout.version` 4 regenera los exteriores de todo mundo
+> guardado; las piedras activadas se pierden (ver biome_exploration.md § 7).
+
 - Una en la **entrada** (junto al camino principal, cerca de la llegada),
   una por **lago** (junto a su `approach`) y una por **boca de mina**.
   Tile `W` de siempre; activada se le prende la runa (solo para quien la

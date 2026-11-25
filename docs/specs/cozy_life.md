@@ -50,7 +50,11 @@ escritorio, tienda, jefes e invocaciones.
 
 - Las matas del exterior ya no se toman con un toque: **mantener E** (o el
   click) llena una barrita como la de la mina; al completarse se manda
-  `ForageAction`. Soltar antes cancela.
+  `ForageAction`. Soltar antes cancela. Con el mouse (v0.49.9, sin
+  herramienta en la mano): mantener el clic sobre la mata (o un tile al
+  lado) o sobre el árbol de enfrente hace lo mismo que mantener E
+  (`gatherPress`, soltar = `gatherHoldEnd`); un clic sobre una parcela
+  madura cosecha, como E. Los avisos dicen `[Mantené E/Clic]`.
 - Duración: `gatherHoldSec × (1 − gatherSpeedPerLevel × (nivel de Cultivo
   − 1))`, nunca menos que `gatherHoldMinSec`.
 - **Buscar en árboles:** mantener E frente a un árbol común del exterior

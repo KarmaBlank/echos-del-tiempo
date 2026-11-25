@@ -93,7 +93,7 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 | FONDO DEL TEXTO EN EL MAPA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NINGUNO** / SOMBREADO / CAJA OPACA | detrás de nombres, carteles, avisos y loot del mapa. `mapLabelBackdrop` (§ 9.6) |
 | REGISTRO DE BATALLA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NORMAL** / EXTENDIDO | EXTENDIDO: las 3 últimas líneas del log arriba de la escena, 10 s cada una. `battleLog` (§ 9.7) |
 | ESCALADO | PIXEL PERFECT / **AJUSTAR** | cómo se agranda el mundo pixelado (§ 3.1) |
-| FILTRO CRT | APAGADO / SUAVE / NORMAL / **FUERTE** (por defecto desde v0.8.2) | post-proceso retro sobre toda la pantalla (§ 3.2) |
+| FILTRO CRT | APAGADO / **SUAVE** (por defecto desde v0.49.9) / NORMAL / FUERTE | post-proceso retro sobre toda la pantalla (§ 3.2) |
 | PARTÍCULAS | BAJA / MEDIA / **ALTA** | cantidad de partículas: ×0.3 / ×0.6 / ×1 (§ 3.3) |
 | LÍMITE DE FPS | 30 / **60** / SIN LÍMITE | tope de cuadros por segundo de toda la app (§ 3.4) |
 | FPS Y PING (v0.5.1) | SÍ / **NO** | indicador chico en una esquina con los cuadros por segundo y, en una sala, el ping (§ 3.9) |
@@ -158,14 +158,14 @@ elige.
 Post-proceso sobre **toda** la pantalla (título, mapa, batalla, HUD y
 menús: `MaterialApp.builder` envuelve el `Navigator` en `CrtFilter`),
 como los filtros retro de los emuladores. Prendido por defecto en
-FUERTE desde v0.8.2 (antes NORMAL; ver "Por defecto FUERTE" abajo). Shader de fragmento propio (`shaders/crt.frag` y
+SUAVE desde v0.49.9 (FUERTE de v0.8.2 a v0.49.8, antes NORMAL; ver "Por defecto SUAVE" abajo). Shader de fragmento propio (`shaders/crt.frag` y
 `shaders/crt_overlay.frag`, en `flutter: shaders:` del pubspec), sin
 paquetes nuevos.
 
 | Nivel | Scanlines | Máscara RGB | Brillo (bloom) | Viñeta | Curvatura | Bisel |
 |---|---|---|---|---|---|---|
 | APAGADO | — | — | — | — | — | — |
-| SUAVE | 0.14 | 0.05 | 0.15 | 0.15 | 0 | 0 |
+| SUAVE | 0.08 (era 0.14) | 0.03 (era 0.05) | 0.10 (era 0.15) | 0.06 (era 0.15) | 0 | 0 |
 | NORMAL | 0.24 | 0.09 | 0.25 | 0.25 | 0 | 0 |
 | FUERTE | 0.38 | 0.16 | 0.40 | 0.40 | 0 (era 0.05) | 0.035 |
 
@@ -213,6 +213,14 @@ paquetes nuevos.
   en capas costaba dos pasadas de shader y bordes raros entre HUD y
   mapa. Captura de referencia: un tooltip con CRT FUERTE + ALTO
   CONTRASTE a 1280×720 (release notes v0.8.2).
+- **Por defecto SUAVE (v0.49.9)**: el dueño pidió que el filtro venga
+  SUAVE. SUAVE se afinó para ser de verdad sutil: scanlines y máscara
+  tenues (0.08 / 0.03), bloom 0.10, viñeta 0.06 (casi no oscurece), sin
+  curvatura ni bisel. Migración única: `game.json` guarda `version`
+  (formato 3 desde v0.49.9); si la versión guardada es < 3, `crt` pasa a
+  `soft` sea cual sea el nivel guardado (pedido del dueño: es un cambio
+  visual y todos lo ven una vez). Al guardar se escribe la versión 3,
+  así que un FUERTE elegido después a mano se respeta siempre.
 - Costo: ver § 3.5.
 
 ### 3.3 PARTÍCULAS (`ParticleLevel`)

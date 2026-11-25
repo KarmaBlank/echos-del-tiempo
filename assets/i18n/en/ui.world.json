@@ -328,7 +328,7 @@
   "ui.world.way.site_lake": "Lake: {name}",
   "ui.world.way.site_mine": "Mine mouth {n}",
   "ui.world.way.close": "CLOSE",
-  "ui.world.forage.prompt": "[Hold E] Gather {name}",
+  "ui.world.forage.prompt": "[Hold E/Click] Gather {name}",
   "ui.world.forage.regrow": "{name}: grows back in {n} s",
   "ui.world.forage.seed_bush": "Seed bush",
   "ui.world.forage.echo_bloom": "Echo bloom",
@@ -416,6 +416,6 @@
   "ui.world.raft.prompt_board": "[E] Board the raft",
   "ui.world.raft.prompt_leave": "[E] Step onto the shore",
   "ui.world.raft.prompt_fish": "[E] Fish from the raft",
-  "ui.world.cozy.search_prompt": "[Hold E] Search the tree",
+  "ui.world.cozy.search_prompt": "[Hold E/Click] Search the tree",
   "ui.world.cozy.searched": "You already searched this tree today"
 }

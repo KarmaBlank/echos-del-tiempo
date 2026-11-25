@@ -164,10 +164,10 @@ void main() {
       (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-1');
-    // Por defecto: AJUSTAR, CRT FUERTE (v0.8.2), ALTA, 60.
+    // Por defecto: AJUSTAR, CRT SUAVE (v0.49.9), ALTA, 60.
     for (final k in [
       'display-scale-AJUSTAR',
-      'display-crt-FUERTE',
+      'display-crt-SUAVE',
       'display-particles-ALTA',
       'display-fps-60',
     ]) {

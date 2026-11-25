@@ -216,7 +216,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
 /// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
 /// (`life.tv`, `life.rf` refund notice).
-const kProtocolVersion = 92;
+/// 93: reserved (profession gear v2, in progress on another branch).
+/// 94: biome layout v4 (biome_exploration.md § 7): every world's exteriors
+/// regenerate; wilds / tree-search keys carry `v4`, so a 92 peer would
+/// read today's marks under `v3` and see used spots as fresh.
+const kProtocolVersion = 94;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

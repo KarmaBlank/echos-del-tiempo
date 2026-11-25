@@ -341,7 +341,25 @@ class SessionEngine {
       s.town = s.town.copyWith(sky: SkyRules.start(_random));
     }
     BiomeRegions.bind(s.town.sky.seed);
+    final before = s.town;
     s.town = BiomeRegions.migrate(s.town);
+    // A regenerated layout (biome_exploration.md § 7): anyone standing in
+    // a biome exterior goes to its arrival point, never inside a new wall.
+    if (!identical(before, s.town) &&
+        s.place != null &&
+        !MiningRules.isMine(s.place) &&
+        s.mission == null) {
+      final sp = mapFor(s).spawn;
+      var i = 0;
+      for (final p in s.players.values) {
+        final pos = _Op._around(sp, i++);
+        p
+          ..x = pos.x
+          ..y = pos.y
+          ..fishLine = null
+          ..epoch += 1;
+      }
+    }
     if (lake != null && lake.isNotEmpty) {
       s.town = s.town.copyWith(lake: List.unmodifiable(lake));
     }

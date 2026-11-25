@@ -503,8 +503,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   } else if (controller.customNpcAt(tile.$1, tile.$2)
                       case final n?) {
                     controller.openCustomNpc(n.def.id);
+                  } else if (controller.activeTool == null) {
+                    // Hold the click on a bush / tree to gather, or click
+                    // a ripe plot to harvest (cozy_life.md § 3).
+                    controller.gatherPress(tile);
                   }
                 },
+                onPointerUp: (_) => controller.gatherHoldEnd(),
+                onPointerCancel: (_) => controller.gatherHoldEnd(),
                 child: MouseRegion(
                   opaque: false,
                   hitTestBehavior: HitTestBehavior.translucent,
