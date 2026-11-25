@@ -555,7 +555,8 @@ class WorldHud extends StatelessWidget {
                               width: boxW,
                               onJoin: controller.canJoinPlayer(a)
                                   ? () => controller.joinPlayer(a)
-                                  : null),
+                                  : null,
+                              blocked: controller.joinPlayerBlock(a)),
                         // Cada caja se arma solo si cambió lo que muestra.
                         for (final p in players)
                           Memo(
@@ -811,8 +812,16 @@ class WorldHud extends StatelessWidget {
     if (g == null || s.mode != SessionMode.lobby || s.vote != null) {
       return null;
     }
+    if (g.byId != view.localId &&
+        !g.has(view.localId) &&
+        controller.ignoredGather == g.id) {
+      return null;
+    }
     return GatherPanel(
-        gather: g, localId: view.localId, onOp: controller.gather);
+        gather: g,
+        localId: view.localId,
+        onOp: controller.gather,
+        onIgnore: controller.ignoreGather);
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
@@ -1683,11 +1692,18 @@ class _LevelUpBanner extends StatelessWidget {
 /// atenuada, con su nombre, dónde está e IR CON (gris si no se puede).
 class _AwayBox extends StatelessWidget {
   const _AwayBox(
-      {super.key, required this.player, required this.width, this.onJoin});
+      {super.key,
+      required this.player,
+      required this.width,
+      this.onJoin,
+      this.blocked});
 
   final AwayPlayer player;
   final double width;
   final VoidCallback? onJoin;
+
+  /// Why UNIRSE is off (grey button + tooltip), or `null`.
+  final String? blocked;
 
   @override
   Widget build(BuildContext context) => Opacity(
@@ -1713,6 +1729,7 @@ class _AwayBox extends StatelessWidget {
               DsButton(context.t('ui.world.hud.join', {'name': player.name}),
                   key: ValueKey('hud-join-${player.id}'),
                   size: DsButtonSize.compact,
+                  tooltip: onJoin == null ? blocked : null,
                   onPressed: onJoin),
             ],
           ),

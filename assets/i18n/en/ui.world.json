@@ -10,7 +10,7 @@
   "ui.world.hud.minimap_in": "Zoom the minimap in",
   "ui.world.hud.map": "MAP [M]",
   "ui.world.players_here.title": "Players here",
-  "ui.world.hud.join": "GO TO {name}",
+  "ui.world.hud.join": "JOIN",
   "ui.world.hud.leave_dungeon": "LEAVE THE DUNGEON",
   "ui.world.hud.away": "Elsewhere: {names}",
   "ui.world.hud.pick_up": "[E] Pick up {item}",
@@ -354,5 +354,7 @@
   "ui.world.tools.torch": "Torch",
   "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]",
   "ui.world.mine.need_tier": "You need a better pick (tier {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})",
+  "ui.world.hud.join_busy": "{name} is in combat or finishing: you cannot join now.",
+  "ui.world.hud.join_off": "You cannot join from here."
 }

@@ -108,5 +108,9 @@
   "ui.missions.hud.stairs_open": "Escalera abierta: bajá [E]",
   "ui.missions.hud.stairs_closed": "Escalera: despejá el piso",
   "ui.missions.hud.go_boss": "¡Ve por el JEFE!",
-  "ui.missions.hud.boss_locked": "Jefe: completa los objetivos"
+  "ui.missions.hud.boss_locked": "Jefe: completa los objetivos",
+  "ui.missions.gather.waiting": "Esperando a que alguien se una…",
+  "ui.missions.gather.countdown": "Entran en {s} s",
+  "ui.missions.gather.enter_now": "ENTRAR YA",
+  "ui.missions.gather.ignore": "IGNORAR"
 }

@@ -190,7 +190,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `qmv` reorders, `qr` in the battle snapshot.
 /// 80: Echo fusion (ecos_atlas.md § 4.2): the `ecoFuse` action.
 /// 81: profession-material gifts (share_materials.md): `giveLife` action.
-const kProtocolVersion = 81;
+/// 82: dungeon-entry gatherings (free_movement.md § 2.1.1): `lf` countdown
+/// in `gat`, gathering kind `eco`.
+const kProtocolVersion = 82;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

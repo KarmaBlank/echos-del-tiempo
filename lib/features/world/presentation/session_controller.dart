@@ -3765,6 +3765,27 @@ class SessionController extends StateNotifier<SessionView?> {
   /// CANCELAR.
   bool gather(GatherOp op) => _apply(GatherAction(op));
 
+  /// The gathering IGNORAR hid on this device ([Gathering.id]); local only.
+  String? ignoredGather;
+
+  /// IGNORAR someone else's gathering: hides its card here (it can still
+  /// be joined from the board or, once they enter, from their card).
+  void ignoreGather() {
+    final g = _s?.gather;
+    if (g == null || g.byId == localId) return;
+    ignoredGather = g.id;
+    _emit();
+  }
+
+  /// Why UNIRSE on [a]'s card is off, or `null` when it works
+  /// (free_movement.md § 2.5).
+  String? joinPlayerBlock(AwayPlayer a) {
+    if (canJoinPlayer(a)) return null;
+    return a.busy
+        ? strings.t('ui.world.hud.join_busy', {'name': a.name})
+        : strings.t('ui.world.hud.join_off');
+  }
+
   /// Bajar (`>`) o subir (`<`) de piso con todo el grupo.
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 

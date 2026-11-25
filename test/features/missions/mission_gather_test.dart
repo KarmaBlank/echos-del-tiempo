@@ -94,4 +94,55 @@ void main() {
     expect(me.session!.mode, SessionMode.field);
     expect(me.session!.gather, isNull);
   });
+
+  test('countdown reaches the client; at 0 both enter; late join by card',
+      () async {
+    final caro =
+        progression.normalize(PlayerProfile(name: 'Caro', classId: 'maga'));
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub);
+    await hn.connect(SessionConfig(profile: ana));
+    final host = make(hn, ana);
+    await host.start();
+    final clients = <SessionController>[];
+    for (final p in [beto, caro]) {
+      final cn = LoopbackNetSession(hub);
+      await cn.connect(SessionConfig(profile: p, roomCode: hn.roomCode));
+      final c = make(cn, p);
+      await c.start();
+      clients.add(c);
+    }
+    final [client, caroC] = clients;
+    final all = [host, ...clients];
+    await tick(all);
+    await tick(all);
+
+    expect(host.proposeMission('m1'), isTrue);
+    await tick(all);
+    expect(client.session!.gather!.leftSeconds, greaterThan(15));
+    expect(client.gather(GatherOp.join), isTrue);
+    await tick(all);
+    // IGNORAR is local: the gathering stays for everyone else.
+    caroC.ignoreGather();
+    expect(caroC.ignoredGather, caroC.session!.gather!.id);
+    // Nobody presses ENTRAR YA: the host clock runs it out.
+    for (var i = 0; i < 25; i++) {
+      host.advance(1);
+      await pumpEventQueue();
+    }
+    await tick(all);
+    await tick(all);
+    expect(host.session!.mode, SessionMode.field);
+    expect(client.session!.mode, SessionMode.field);
+    expect(caroC.session!.mode, SessionMode.lobby, reason: 'did not join');
+    // UNIRSE on the host's card joins the running mission.
+    final card =
+        caroC.session!.away.firstWhere((a) => a.id == host.localId);
+    expect(caroC.joinPlayerBlock(card), isNull);
+    expect(caroC.joinPlayer(card), isTrue);
+    await tick(all);
+    await tick(all);
+    expect(caroC.session!.mode, SessionMode.field);
+    expect(host.session!.players.keys, contains(caroC.localId));
+  });
 }

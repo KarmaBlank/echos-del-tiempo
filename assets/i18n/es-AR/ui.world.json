@@ -10,7 +10,7 @@
   "ui.world.hud.minimap_in": "Acercar el minimapa",
   "ui.world.hud.map": "MAPA [M]",
   "ui.world.players_here.title": "Jugadores acá",
-  "ui.world.hud.join": "IR CON {name}",
+  "ui.world.hud.join": "UNIRSE",
   "ui.world.hud.leave_dungeon": "SALIR DE LA MAZMORRA",
   "ui.world.hud.away": "En otro lugar: {names}",
   "ui.world.hud.pick_up": "[E] Recoger {item}",
@@ -354,5 +354,7 @@
   "ui.world.tools.torch": "Antorcha",
   "ui.world.tools.torch_tip": "Antorcha: ilumina la mina y queda puesta · [2]",
   "ui.world.mine.need_tier": "Necesitás un pico mejor (nivel {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})",
+  "ui.world.hud.join_busy": "{name} está en combate o terminando: no se puede unir ahora.",
+  "ui.world.hud.join_off": "No se puede unir desde acá."
 }

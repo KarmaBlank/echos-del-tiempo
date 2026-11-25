@@ -200,5 +200,39 @@ void main() {
       final back = codec.fromJson(codec.toJson(w.town)).gather!;
       expect(back.signature, w.town.gather!.signature);
     });
+
+    test('the gathering counts down and enters on its own with the joined', () {
+      final (we, w) = world();
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      final g = w.town.gather!;
+      expect(g.left, WorldEngine.gatherSeconds);
+      expect(g.leftSeconds, 20, reason: 'tuning default');
+      we.apply(w, 'p1', const GatherAction(GatherOp.join));
+      // Half way: still waiting, the countdown reached every instance.
+      for (var i = 0; i < 10; i++) {
+        we.tick(w, 1);
+      }
+      expect(w.roomOf('p0'), kTownRoom);
+      expect(w.town.gather!.leftSeconds, 10);
+      for (var i = 0; i < 11; i++) {
+        we.tick(w, 1);
+      }
+      final d = w.roomOf('p0')!;
+      expect(SessionWorld.isDungeon(d), isTrue);
+      expect(w.roomOf('p1'), d);
+      expect(w.roomOf('p2'), kTownRoom, reason: 'did not join');
+      expect(w.town.gather, isNull);
+    });
+
+    test('late join: UNIRSE on the card goes into the running mission', () {
+      final (we, w) = world();
+      we.apply(w, 'p0', const ProposeMissionAction('m1'));
+      we.apply(w, 'p0', const GatherAction(GatherOp.go));
+      final d = w.roomOf('p0')!;
+      final card = w.town.away.firstWhere((a) => a.id == 'p0');
+      expect(card.busy, isFalse);
+      expect(we.apply(w, 'p2', const JoinPlayerAction('p0')), isNotNull);
+      expect(w.roomOf('p2'), d);
+    });
   });
 }

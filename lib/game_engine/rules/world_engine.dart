@@ -1,4 +1,5 @@
 import '../data/biomes_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../models/game_mode.dart';
 import '../models/game_session.dart';
 import '../models/player_profile.dart';
@@ -40,6 +41,10 @@ class WorldEngine {
   WorldEngine(this.engine);
 
   final SessionEngine engine;
+
+  /// Seconds a gathering waits before entering on its own (tunable).
+  static double get gatherSeconds =>
+      tuning(TuningId.mission).d('gatherSeconds').clamp(3, 600).toDouble();
 
   /// La Travesía es una sola sala: sin instancias.
   bool get split =>
@@ -144,6 +149,7 @@ class WorldEngine {
       if (s == null) continue;
       op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split));
     }
+    if (split) op.tickGather(dt);
     return op.finish();
   }
 
@@ -518,6 +524,7 @@ class _W {
         ProposeAbyssAction(:final boss) => (GatherKind.abyss, '$boss'),
         ProposeRiftAction(:final uid) => (GatherKind.rift, uid),
         ProposeTourneyAction(:final id) => (GatherKind.tourney, id),
+        ProposeEcoAction(:final uid) => (GatherKind.eco, uid),
         _ => null,
       };
 
@@ -533,6 +540,7 @@ class _W {
           },
         GatherKind.rift => ProposeRiftAction(g.target),
         GatherKind.tourney => ProposeTourneyAction(g.target),
+        GatherKind.eco => ProposeEcoAction(g.target),
       };
 
   Iterable<String> get _humanIds =>
@@ -570,9 +578,33 @@ class _W {
     final label =
         (id == null ? null : engine.missionOf(st, id)?.name) ?? target;
     w.gather = Gathering(
-        byId: p.id, byName: p.name, kind: kind, target: target, label: label);
+        byId: p.id,
+        byName: p.name,
+        kind: kind,
+        target: target,
+        label: label,
+        left: WorldEngine.gatherSeconds);
     _tellAll('${p.name} convoca a $label — UNIRSE para ir juntos.');
     return true;
+  }
+
+  /// Counts the open gathering down; at 0 the proposer (and whoever
+  /// joined) enters as with ENTRAR YA. If that fails (the proposer walked
+  /// off the portal, left the lobby...) the gathering closes.
+  void tickGather(double dt) {
+    final g = w.gather;
+    if (g == null || g.left <= 0) return;
+    final left = g.left - dt;
+    if (left > 0) {
+      w.gather = g.withLeft(left);
+      return;
+    }
+    final key = w.roomOf(g.byId);
+    final p = key == null ? null : w.rooms[key]!.players[g.byId];
+    if (key == null || p == null || !_go(key, p, g)) {
+      w.gather = null;
+      _tellAll('La convocatoria de ${g.byName} se cerró.');
+    }
   }
 
   /// UNIRSE / SALIR / IR / CANCELAR on the open gathering.
