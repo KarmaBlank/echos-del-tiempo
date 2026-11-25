@@ -143,6 +143,19 @@ class TilePainter {
       }
       return;
     }
+    // A chest of the wilds (biome_exploration.md § 3.3): on the cave
+    // floor or the grass, the mine chest on top.
+    if (ch == MineTile.chest && !themeId.startsWith('mina_')) {
+      if (cave) {
+        _caveFloor(c, CavePalette.of(themeId), px, py, tx, ty, h, at);
+      } else {
+        floor();
+      }
+      _rect(c, MinePalette.chestWood, px + 2, py + 6, 12, 8);
+      _rect(c, MinePalette.chestBand, px + 2, py + 9, 12, 1);
+      _rect(c, MinePalette.chestBand, px + 7, py + 8, 2, 3);
+      return;
+    }
     // Mines v2 (mining_smithing.md § 1.2): natural rock, auto-tiled edges.
     if (themeId.startsWith('mina_') &&
         mineTiles.contains(ch) &&

@@ -314,7 +314,7 @@
   "ui.world.way.go": "IR",
   "ui.world.way.here": "ACÁ",
   "ui.world.way.unknown": "Sin descubrir",
-  "ui.world.way.unknown_tip": "Activala tocándola con E para poder viajar acá.",
+  "ui.world.way.unknown_tip": "Pasá al lado para descubrirla y poder viajar acá.",
   "ui.world.way.site_entrance": "Entrada de la región",
   "ui.world.way.site_lake": "Lago: {name}",
   "ui.world.way.site_mine": "Boca de mina {n}",
@@ -354,5 +354,11 @@
   "ui.world.tools.torch": "Antorcha",
   "ui.world.tools.torch_tip": "Antorcha: ilumina la mina y queda puesta · [2]",
   "ui.world.mine.need_tier": "Necesitás un pico mejor (nivel {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})",
+  "ui.world.way.site_section": "Claro del sendero {n}",
+  "ui.world.way.site_shrine": "Santuario {n}",
+  "ui.world.way.site_cavern": "Gruta {n}",
+  "ui.world.wild.prompt_chest": "[E] Abrir el cofre",
+  "ui.world.wild.prompt_shrine": "[E] Pedir la bendición",
+  "ui.world.wild.prompt_done": "Ya lo usaste hoy: vuelve mañana"
 }

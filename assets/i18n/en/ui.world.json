@@ -314,7 +314,7 @@
   "ui.world.way.go": "GO",
   "ui.world.way.here": "HERE",
   "ui.world.way.unknown": "Not found yet",
-  "ui.world.way.unknown_tip": "Touch it with E to activate it and travel here.",
+  "ui.world.way.unknown_tip": "Walk past it to discover it and travel here.",
   "ui.world.way.site_entrance": "Region entrance",
   "ui.world.way.site_lake": "Lake: {name}",
   "ui.world.way.site_mine": "Mine mouth {n}",
@@ -354,5 +354,11 @@
   "ui.world.tools.torch": "Torch",
   "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]",
   "ui.world.mine.need_tier": "You need a better pick (tier {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})",
+  "ui.world.way.site_section": "Trail clearing {n}",
+  "ui.world.way.site_shrine": "Shrine {n}",
+  "ui.world.way.site_cavern": "Cavern {n}",
+  "ui.world.wild.prompt_chest": "[E] Open the chest",
+  "ui.world.wild.prompt_shrine": "[E] Ask for the blessing",
+  "ui.world.wild.prompt_done": "Already used today: it returns tomorrow"
 }

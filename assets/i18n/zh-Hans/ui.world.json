@@ -372,7 +372,7 @@
     "status": "draft"
   },
   "ui.world.way.unknown_tip": {
-    "text": "按 E 触碰以激活，之后即可传送到这里。",
+    "text": "从旁边经过即可发现它，之后就能传送到这里。",
     "status": "draft"
   },
   "ui.world.way.site_entrance": {
@@ -533,6 +533,30 @@
   },
   "ui.world.mine.prompt_miner_up": {
     "text": "[U] 将矿工的镐升级到等级 {tier}（{gold} 金币，{n} × {ingot}）",
+    "status": "draft"
+  },
+  "ui.world.way.site_section": {
+    "text": "小路空地 {n}",
+    "status": "draft"
+  },
+  "ui.world.way.site_shrine": {
+    "text": "圣坛 {n}",
+    "status": "draft"
+  },
+  "ui.world.way.site_cavern": {
+    "text": "洞穴 {n}",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_chest": {
+    "text": "[E] 打开宝箱",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_shrine": {
+    "text": "[E] 祈求祝福",
+    "status": "draft"
+  },
+  "ui.world.wild.prompt_done": {
+    "text": "今天已经用过了：明天会恢复",
     "status": "draft"
   }
 }

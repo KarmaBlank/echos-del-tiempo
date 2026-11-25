@@ -257,6 +257,12 @@ abstract final class ActionJson {
             'i': a.stone,
             if (a.to != null) 'to': a.to,
           },
+        // Biome exploration v2 (biome_exploration.md § 9).
+        WildLootAction() => {
+            't': 'wx',
+            'i': a.i,
+            if (a.shrine) 's': 1,
+          },
         // Protocol 69: mining and smithing (mining_smithing.md § 6).
         MineAction() => {
             't': 'mine',
@@ -548,6 +554,9 @@ abstract final class ActionJson {
         return ForageAction(j.integer('i'));
       case 'way':
         return WaystoneAction(j.integer('i'), to: j.intOrNull('to'));
+      case 'wx':
+        return WildLootAction(j.integer('i'),
+            shrine: (j.intOrNull('s') ?? 0) != 0);
       case 'mine':
         final op = MineOp.values.asNameMap()[j.str('o')] ??
             (throw FormatException('JSON inválido: mine', j['o']));

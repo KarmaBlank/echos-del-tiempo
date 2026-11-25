@@ -30,6 +30,7 @@ import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/waystone_rules.dart';
+import '../../../game_engine/rules/wild_loot_rules.dart';
 import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
@@ -2067,6 +2068,33 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(WaystoneAction(from, to: to));
   }
 
+  /// The wilds chest / shrine in reach (biome_exploration.md § 3.3–3.4):
+  /// (index, is a shrine), or `null`.
+  (int, bool)? get nearWildLoot {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    for (final (list, shrine) in [(lay.chestSpots, false), (lay.shrines, true)]) {
+      for (var i = 0; i < list.length; i++) {
+        final (x, y) = list[i];
+        final dx = (x + 0.5) * 16 - local.x, dy = (y + 0.5) * 16 - local.y;
+        if (dx * dx + dy * dy <= 26 * 26) return (i, shrine);
+      }
+    }
+    return null;
+  }
+
+  /// E on a wilds chest / shrine.
+  bool useWildLoot(int i, {bool shrine = false}) {
+    final lay = biomeLayout(_s?.place);
+    if (lay != null &&
+        WildLootRules.taken(town, _me, lay.id, i, shrine: shrine)) {
+      addLocalNotice(strings.t('ui.world.wild.prompt_done'));
+      return false;
+    }
+    return _apply(WildLootAction(i, shrine: shrine));
+  }
+
   bool forage() {
     final i = nearForage;
     return i != null && _apply(ForageAction(i));
@@ -3423,6 +3451,8 @@ class SessionController extends StateNotifier<SessionView?> {
         travelMine(i);
       } else if (nearWaystone case final i?) {
         useWaystone(i);
+      } else if (nearWildLoot case (final i, final shrine)?) {
+        useWildLoot(i, shrine: shrine);
       } else if (nearForage != null) {
         forage();
       } else if (nearMineExit) {
@@ -5118,6 +5148,19 @@ class SessionController extends StateNotifier<SessionView?> {
         strings.t(waystoneActive(i)
             ? 'ui.world.way.prompt_use'
             : 'ui.world.way.prompt_activate')
+      );
+    }
+    if (nearWildLoot case (final i, final shrine)?) {
+      final lay = biomeLayout(_s?.place);
+      final done = lay != null &&
+          WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
+      return (
+        WorldPrompt.poi,
+        strings.t(done
+            ? 'ui.world.wild.prompt_done'
+            : shrine
+                ? 'ui.world.wild.prompt_shrine'
+                : 'ui.world.wild.prompt_chest')
       );
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));

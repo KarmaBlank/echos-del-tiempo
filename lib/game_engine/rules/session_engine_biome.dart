@@ -15,6 +15,8 @@ extension _BiomeOp on _Op {
         return _forage(p, spot);
       case WaystoneAction(:final stone, :final to):
         return _waystone(p, stone, to);
+      case WildLootAction(:final i, :final shrine):
+        return _wildLoot(p, i, shrine);
       default:
         return false;
     }
@@ -152,8 +154,64 @@ extension _BiomeOp on _Op {
     return true;
   }
 
+  /// A wilds chest or shrine (biome_exploration.md § 3.3–3.4): once per
+  /// player per day, in reach.
+  bool _wildLoot(SessionPlayer p, int i, bool shrine) {
+    if (s.mode != SessionMode.lobby || p.isCompanion) return false;
+    final lay = biomeLayout(s.place);
+    if (lay == null) return false;
+    final spots = shrine ? lay.shrines : lay.chestSpots;
+    if (i < 0 || i >= spots.length) return false;
+    final (tx, ty) = spots[i];
+    if (WorldRules.distance(p.x, p.y, (tx + 0.5) * 16, (ty + 0.5) * 16) >
+        forageReach) {
+      return false;
+    }
+    final day = s.town.sky.day;
+    final key = WildLootRules.lootKey(p.profile.name, lay.id, i, day,
+        shrine: shrine);
+    if (s.town.daily.containsKey(key)) return false;
+    s.town = s.town.copyWith(daily: {...s.town.daily, key: 1});
+    final ores = kBiomeOres[lay.id];
+    if (shrine) {
+      // A blessing: gold and the biome's rare material.
+      final gold = WildLootRules.t.i('shrineGold');
+      var prof = p.profile.copyWith(credits: p.profile.credits + gold);
+      if (ores != null) prof = MiningRules.give(prof, {ores.rare: 1});
+      _profileChange(p, prof, gain: true);
+      say('${p.name} recibió la bendición del santuario (+$gold de oro).');
+      return true;
+    }
+    final def = kChestTiers[ChestTier.madera]!;
+    final lvlP = math.max(1, p.profile.level);
+    final cr = ((15 + (_rand() * 26).floor()) * def.creditMult).round();
+    var prof = p.profile.copyWith(credits: p.profile.credits + cr);
+    if (ores != null) prof = MiningRules.give(prof, {ores.ore: 2});
+    _profileChange(p, prof);
+    say('${p.name} abrió un cofre escondido (+$cr de oro).');
+    _deliver(p, _chestDrops(p, def, lvlP), LootSource.mission, p.x, p.y,
+        stashOverflow: true);
+    return true;
+  }
+
+  /// Waystones are discovered on touch (biome_exploration.md § 5).
+  void waystoneTouchTick() {
+    final lay = biomeLayout(s.place);
+    if (lay == null) return;
+    for (final q in players) {
+      if (q.isCompanion) continue;
+      final i = WaystoneRules.near(lay, q.x, q.y);
+      if (i == null) continue;
+      final next = WaystoneRules.activate(s.town, q.profile.name, lay, i);
+      if (identical(next, s.town)) continue;
+      s.town = next;
+      say('${q.name} descubrió una piedra de paso.');
+    }
+  }
+
   /// Regrowth out of view (biome_regions.md § 5.2), every lobby tick.
   void forageHoldTick() {
+    waystoneTouchTick();
     final lay = biomeLayout(s.place);
     if (lay == null || s.town.wild.isEmpty) return;
     s.town = BiomeRules.holdInView(s.town, lay.id, lay.forage,

@@ -293,6 +293,10 @@ class EventNpcAction {
   /// Rumor target meaning "wherever the echo rift is now".
   static const rift = 'rift';
 
+  /// Duel target: the elite of one of the biome's zones
+  /// (biome_exploration.md § 6).
+  static const elite = '@elite';
+
   static const _neutralOne = {'hpMult', 'atkMult', 'rewardMult', 'qty'};
 
   double param(String key) =>
@@ -500,7 +504,9 @@ List<String> validateNpc(WorldEventDef e,
           out.add('$w: el duelo es solo para viajeros del campo.');
         }
         if (a.target.isEmpty ||
-            (enemies != null && !enemies.contains(a.target))) {
+            (enemies != null &&
+                a.target != EventNpcAction.elite &&
+                !enemies.contains(a.target))) {
           out.add('$w: enemigo desconocido ${a.target}.');
         }
         for (final k in const ['hpMult', 'atkMult', 'rewardMult']) {
@@ -508,7 +514,8 @@ List<String> validateNpc(WorldEventDef e,
         }
         if (a.param('levelBonus') < 0) out.add('$w: nivel + negativo.');
       case EventActionKind.trade:
-        if (!e.category.inTown) {
+        // Deep merchants of the wilds trade too (biome_exploration.md § 6).
+        if (!e.category.inTown && e.param('deep') <= 0) {
           out.add('$w: comerciar es solo para visitantes y caravanas.');
         }
     }

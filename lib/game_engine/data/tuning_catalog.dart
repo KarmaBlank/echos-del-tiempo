@@ -744,6 +744,33 @@ const Map<String, TuningDef> kTuningDefaults = {
     // The main path (spawn -> farthest portal) must stay under this many
     // steps (biome_regions.md § 2.1).
     'mainPathMax': 38,
+    // The wilds (biome_exploration.md § 2–6): section cell (tiles),
+    // trail noise, tree density per 100 by section kind, giant lake
+    // chance and radii, caverns with a lake / with beams, hidden nooks,
+    // forage per section, chests, extra trail loops and the mine count.
+    'wildCell': 20,
+    'wildTrailNoise': 2.5,
+    'wildForestDensity': 55,
+    'wildMeadowDensity': 6,
+    'wildDensity': 22,
+    'giantLakeChance': 0.5,
+    'giantLakeRxMin': 8,
+    'giantLakeRxMax': 12,
+    'giantLakeRyMin': 5,
+    'giantLakeRyMax': 7,
+    'cavernLakeChance': 0.5,
+    'cavernShaftChance': 0.4,
+    'hiddenNookChance': 0.45,
+    'wildForagePerSection': 2,
+    'wildChestChance': 0.6,
+    'wildExtraLoops': 4,
+    'minesMin': 2,
+    'minesMax': 3,
+    // Exploration content per biome and day (§ 6): chance of a roll and
+    // the most deep actors at once; shrine gold.
+    'exploreChance': 0.85,
+    'exploreMax': 2,
+    'shrineGold': 40,
     // Forage (§ 5): seed bush rare-seed weight multiplier, echo bloom
     // regrow (s), seasonal XP multiplier, echo bloom XP multiplier.
     'seedBushRareMul': 4,

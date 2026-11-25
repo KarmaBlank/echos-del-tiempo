@@ -54,6 +54,7 @@ import 'dungeon_rules.dart';
 import 'eco_portal_rules.dart';
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
+import 'wild_loot_rules.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
@@ -332,6 +333,7 @@ class SessionEngine {
       s.town = s.town.copyWith(sky: SkyRules.start(_random));
     }
     BiomeRegions.bind(s.town.sky.seed);
+    s.town = BiomeRegions.migrate(s.town);
     if (lake != null && lake.isNotEmpty) {
       s.town = s.town.copyWith(lake: List.unmodifiable(lake));
     }
@@ -1457,7 +1459,10 @@ class _Op {
         return false;
       case OfferBossAction():
         return _offerBoss(p);
-      case TravelAction() || ForageAction() || WaystoneAction():
+      case TravelAction() ||
+            ForageAction() ||
+            WaystoneAction() ||
+            WildLootAction():
         return biomeAction(p, a);
       case MineAction() || SmithAction():
         return miningAction(p, a);

@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
+import '../../../../game_engine/data/mine_catalog.dart' show MineTile;
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/rules/biome_regions.dart';
 import '../../../../game_engine/rules/region_ambience_rules.dart';
@@ -198,7 +199,7 @@ class TileLayerCache {
     final lay = map.lobby ? biomeLayout(map.place) : null;
     bool cave(String ch, int x, int y) {
       if (lay == null) return false;
-      if (ch == Tile.floor) return lay.isIndoor(x, y);
+      if (ch == Tile.floor || ch == MineTile.chest) return lay.isIndoor(x, y);
       return ch == Tile.rock &&
           RegionAmbienceRules.caveWall(lay, map.tileAt, x, y);
     }
