@@ -442,7 +442,14 @@ extension _FarmingOp on _Op {
     final h = FarmingRules.harvest(_rand, p.profile, pl,
         bias: CozyRules.scarecrowBias(s.town, tx, ty))!;
     final lvl0 = FarmingRules.level(p.profile);
+    // XP and pity now; the crop and its seeds pop out of the plot as
+    // ground loot with a short magnet (farming.md § 3, loot.md § 4c).
+    final bags = p.profile.life.farm;
     var prof = FarmingRules.addHarvest(p.profile, h);
+    prof = prof.copyWith(
+        life: prof.life.copyWith(
+            farm: prof.life.farm
+                .copyWith(crops: bags.crops, seeds: bags.seeds)));
     final used = _fa.charXp[p.id] ?? 0;
     final cxp = math.min(
         FarmingRules.charXp(h.crop), math.max(0, _fat.i('charXpCap') - used));
@@ -455,6 +462,10 @@ extension _FarmingOp on _Op {
     _profileChange(p, prof, gain: true);
     events.add(
         CropHarvestedEvent(p.id, h.crop.id, h.quality.index, h.count, tx, ty));
+    _spill(p, [
+      GoodsRules.crop(cropKey(h.crop.id, h.quality), h.count),
+      if (h.seeds > 0) GoodsRules.seed(h.crop.id, h.seeds),
+    ], (tx + 0.5) * 16, (ty + 0.5) * 16);
     say('${p.name} cosechó ${h.count > 1 ? '${h.count} × ' : ''}'
         '${h.crop.name} (${h.quality.label}).');
     if (h.loot != FarmLootKind.none) _grantFarmLoot(p, h.loot, tx, ty);

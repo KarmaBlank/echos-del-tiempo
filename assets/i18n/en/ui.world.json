@@ -410,12 +410,14 @@
   "ui.world.way.site_section": "Trail clearing {n}",
   "ui.world.way.site_shrine": "Shrine {n}",
   "ui.world.way.site_cavern": "Cavern {n}",
-  "ui.world.wild.prompt_chest": "[E] Open the chest",
-  "ui.world.wild.prompt_shrine": "[E] Ask for the blessing",
-  "ui.world.wild.prompt_done": "Already used today: it returns tomorrow",
+  "ui.world.wild.prompt_chest": "[E/Click] Open the chest",
+  "ui.world.wild.prompt_shrine": "[E/Click] Receive blessing (gold + rare material)",
+  "ui.world.wild.prompt_done": "Already used today · renews tomorrow",
   "ui.world.raft.prompt_board": "[E] Board the raft",
   "ui.world.raft.prompt_leave": "[E] Step onto the shore",
   "ui.world.raft.prompt_fish": "[E] Fish from the raft",
   "ui.world.cozy.search_prompt": "[Hold E/Click] Search the tree",
-  "ui.world.cozy.searched": "You already searched this tree today"
+  "ui.world.cozy.searched": "You already searched this tree today",
+  "ui.world.prompt.spent": "Already used",
+  "ui.world.loot.gold": "{n} gold"
 }

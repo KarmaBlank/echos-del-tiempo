@@ -222,7 +222,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// read today's marks under `v3` and see used spots as fresh.
 /// 95: dungeon map discovery (biome_exploration.md § 11.8): `mission.md`
 /// (packed cell bits of the mission map) and `mission.mdr` (revision).
-/// 96: overworld ground loot (chests / shrines / harvests spill loot).
+/// 96: overworld ground loot (loot.md § 4c): `LootDrop` goods (`gd` +
+/// `n`: gold, ore, crops, seeds…) on the floor of biomes, mines and the
+/// town; wilds chests, shrines, mine and sunken chests and harvests
+/// spill them instead of granting silently.
 const kProtocolVersion = 96;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en

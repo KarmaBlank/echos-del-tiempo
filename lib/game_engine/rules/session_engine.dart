@@ -60,6 +60,7 @@ import 'exploration_rules.dart';
 import 'wild_loot_rules.dart';
 import 'cozy_rules.dart';
 import '../data/cozy_catalog.dart';
+import 'goods_rules.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
@@ -491,6 +492,10 @@ class SessionEngine {
   static const contactRange = 14.0;
   static const bossContactRange = 26.0;
   static const pickupRange = 14.0;
+
+  /// Auto-pickup reach of crops and seeds (loot.md § 4c): harvesting
+  /// pops them out and they fly to their owner.
+  static const magnetRange = 40.0;
 
   /// Probabilidad (por jugador) de que el jefe suelte además su legendario
   /// propio (`EnemyDef.legendaryId`; worldgen.md § 8.1).
@@ -2369,6 +2374,7 @@ class _Op {
     if (eco != null) {
       return '${ecos.fullName(eco)} (${eco.rarity.label})';
     }
+    if (d.isGoods) return GoodsRules.name(d);
     final it = d.item;
     if (it == null) return '${d.count} ${d.stack!.label}';
     return '${rules.items.displayName(it)} (${it.rarity.label})';
@@ -2654,6 +2660,11 @@ class _Op {
       s.ground.remove(g);
       final to = g.recoverTo == null ? null : s.players[g.recoverTo];
       if (to == null) continue;
+      // Goods have no stash slot: they go straight to their bags.
+      if (g.drop.isGoods) {
+        _giveGoods(to, g.drop);
+        continue;
+      }
       if (g.ownerId != null &&
           !e.lootVerdict(to.profile, g.drop, wants: to.buildWants).visible) {
         (hidden[to.id] ??= []).add(g.drop);
@@ -2671,6 +2682,36 @@ class _Op {
               'cosas que quedaron'} en el piso ${drops.length == 1 ? 'va' : 'van'} '
           'al alijo');
     }
+  }
+
+  /// Goods left on the floor when the map closes (loot.md § 4c).
+  void _giveGoods(SessionPlayer p, LootDrop d) {
+    final next = GoodsRules.give(p.profile, d);
+    if (next != null) _profileChange(p, next);
+  }
+
+  /// Spills [drops] of [p] on the floor around ([x], [y]) like a dungeon
+  /// chest (loot.md § 4c): instanced, picked up walking over or with E,
+  /// each pickup with its notice. Weapons and stacks go through
+  /// [_deliver] (filter, caps); goods land as they are. A companion (or
+  /// an engine without ground loot) gets them straight away.
+  void _spill(SessionPlayer p, List<LootDrop> drops, double x, double y,
+      {LootSource src = LootSource.chest}) {
+    final rest = <LootDrop>[];
+    for (final d in drops) {
+      if (!d.isGoods) {
+        rest.add(d);
+        continue;
+      }
+      if (!e.groundLoot || p.isCompanion) {
+        _giveGoods(p, d);
+        events.add(LootDropEvent(p.id, d, src));
+        continue;
+      }
+      final g = _toGround(d, x, y, owner: p.id);
+      events.add(LootDropEvent(p.id, d, src, groundId: g.id));
+    }
+    _deliver(p, rest, src, x, y);
   }
 
   /// Botín valioso que nunca cae al piso con el inventario lleno: Épico
@@ -2861,9 +2902,13 @@ class _Op {
       final owner = g.ownerId == null ? null : s.players[g.ownerId];
       // Lo de un compañero lo levanta también su líder al pasar.
       final lead = owner?.leaderId == null ? null : s.players[owner!.leaderId];
+      // Crops and seeds have a short magnet (loot.md § 4c).
+      final reach = GoodsRules.magnet(g.drop)
+          ? SessionEngine.magnetRange
+          : SessionEngine.pickupRange;
       if (owner == null ||
           !owner.alive ||
-          (_dist(owner.x, owner.y, g.x, g.y) >= SessionEngine.pickupRange &&
+          (_dist(owner.x, owner.y, g.x, g.y) >= reach &&
               (lead == null ||
                   _dist(lead.x, lead.y, g.x, g.y) >=
                       SessionEngine.pickupRange)) ||
@@ -3047,6 +3092,7 @@ class _Op {
         final v = s.vote;
         _followLeaders();
         forageHoldTick();
+        _autoPickup();
         if (v != null &&
             humans.isNotEmpty &&
             humans.every((p) => v.yes.contains(p.id))) {
@@ -4919,6 +4965,11 @@ class _Op {
     }
     final n = s.ground.length;
     for (final g in s.ground) {
+      if (g.drop.isGoods) {
+        final to = g.recoverTo == null ? null : s.players[g.recoverTo];
+        if (to != null) _giveGoods(to, g.drop);
+        continue;
+      }
       s.lostLoot.add(GroundLoot(id: g.id, drop: g.drop, x: 0, y: 0));
     }
     s.ground.clear();

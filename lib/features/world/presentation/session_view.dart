@@ -157,7 +157,11 @@ enum WorldPrompt {
 
   /// Frente a un punto de interés del piso (worldgen.md § 11.3). El texto
   /// real va en [SessionView.promptText].
-  poi('[E] Usar');
+  poi('[E] Usar'),
+
+  /// Something already used (a wilds chest or shrine today): grey, no
+  /// key; the text goes in [SessionView.promptText].
+  spent('Ya lo usaste');
 
   const WorldPrompt(this.label);
 

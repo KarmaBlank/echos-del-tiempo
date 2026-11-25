@@ -55,6 +55,13 @@ Con una herramienta que no sirve, E / clic no hacen nada (el aviso dice
 por qué). La cosecha funciona con cualquier herramienta elegida: así no
 hay que cambiar de mano para levantar lo maduro.
 
+**Cosecha al piso (protocolo 96, loot.md § 4c).** El cultivo y sus
+semillas **saltan de la parcela** como botín en el piso del que cosechó
+(la XP y el pity se cuentan al cosechar) y el imán corto (`magnetRange`)
+los lleva solos a su bolsa con el aviso `+` de la izquierda. Lo mismo
+con lo recolectado de las matas de los biomas y lo que cae al buscar en
+un árbol. La cosecha automática de los ayudantes no cambia.
+
 F abona la parcela de enfrente con el mejor abono que tengas. E o el
 clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 

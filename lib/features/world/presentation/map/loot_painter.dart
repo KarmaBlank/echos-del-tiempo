@@ -11,7 +11,9 @@ import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
+import '../../../../game_engine/rules/goods_rules.dart';
 import '../../../../game_engine/rules/loot_filter_rules.dart';
+import '../../../inventory/domain/item_names.dart';
 import '../../../../game_engine/rules/session_engine.dart';
 
 /// Loot en el piso del mapa (docs/specs/loot.md § 4 y § 19.6,
@@ -43,6 +45,7 @@ String lootDropName(String Function(ItemInstance) itemName, LootDrop d,
   if (it != null) return itemName(it);
   final eco = d.eco;
   if (eco != null) return ecoName?.call(eco) ?? 'Eco T${eco.tier}';
+  if (d.isGoods) return localGoodsName(d);
   final k = d.stack!;
   return d.count > 1 ? '${d.count} ${k.label}' : k.label;
 }
@@ -221,6 +224,8 @@ class LootPainter {
       _weaponIcon(c, weaponTypeOf(it.baseId));
     } else if (d.eco != null) {
       _ecoIcon(c, t);
+    } else if (d.goods case final g?) {
+      _goodsIcon(c, GoodsRules.split(g).$1);
     } else {
       _stackIcon(c, d.stack!);
     }
@@ -316,6 +321,28 @@ class LootPainter {
     _rect(c, ring, -3, -6, 1, 5);
     _rect(c, ring, 2, -6, 1, 5);
     _rect(c, core, -1, -5 + k, 2, 2);
+  }
+
+  /// Overworld goods (loot.md § 4c): a coin pile, an ore lump, a sprout
+  /// or a small sack.
+  void _goodsIcon(Canvas c, String kind) {
+    switch (kind) {
+      case GoodsRules.gold:
+        _rect(c, const Color(0xFFB8860B), -3, -3, 6, 3);
+        _rect(c, const Color(0xFFFFD166), -2, -5, 4, 3);
+        _rect(c, const Color(0xFFFFF3B0), -1, -5, 1, 1);
+      case 'ore':
+        _rect(c, const Color(0xFF636E72), -3, -5, 6, 5);
+        _rect(c, const Color(0xFFB2BEC3), -2, -4, 2, 2);
+        _rect(c, const Color(0xFFE17055), 1, -3, 1, 1);
+      case 'crop' || 'seed' || 'wseed':
+        _rect(c, const Color(0xFF6AB04C), 0, -7, 1, 4);
+        _rect(c, const Color(0xFFBADC58), -2, -6, 2, 1);
+        _rect(c, const Color(0xFFE58E26), -2, -3, 4, 3);
+      default:
+        _rect(c, const Color(0xFF8D6E63), -3, -5, 6, 5);
+        _rect(c, const Color(0xFFD7CCC8), -1, -6, 2, 1);
+    }
   }
 
   void _stackIcon(Canvas c, StackKind k) {

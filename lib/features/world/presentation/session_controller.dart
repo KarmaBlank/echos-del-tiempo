@@ -2193,6 +2193,19 @@ class SessionController extends StateNotifier<SessionView?> {
     return WildLootRules.nearest(lay, town, _me, local.x, local.y);
   }
 
+  /// Click on tile ([tx], [ty]): uses the wilds chest / shrine there if
+  /// it is the one in reach (same as E).
+  bool clickWildLoot(int tx, int ty) {
+    final near = nearWildLoot;
+    final lay = biomeLayout(_s?.place);
+    if (near == null || lay == null) return false;
+    final (i, shrine) = near;
+    final spot = (shrine ? lay.shrines : lay.chestSpots)[i];
+    if (spot != (tx, ty)) return false;
+    useWildLoot(i, shrine: shrine);
+    return true;
+  }
+
   /// E on a wilds chest / shrine.
   bool useWildLoot(int i, {bool shrine = false}) {
     final lay = biomeLayout(_s?.place);
@@ -4743,6 +4756,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final it = d.item;
     if (it != null) return localItemName(engine.progression.items, it);
     if (d.eco != null) return 'Eco';
+    if (d.isGoods) return localGoodsName(d);
     return '${d.count} ${d.stack!.label}';
   }
 
@@ -5495,8 +5509,9 @@ class SessionController extends StateNotifier<SessionView?> {
       final lay = biomeLayout(_s?.place);
       final done = lay != null &&
           WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
+      // Used today: a grey line, no key (biome_exploration.md § 3.4).
       return (
-        WorldPrompt.poi,
+        done ? WorldPrompt.spent : WorldPrompt.poi,
         strings.t(done
             ? 'ui.world.wild.prompt_done'
             : shrine

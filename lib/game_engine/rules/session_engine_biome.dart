@@ -38,6 +38,8 @@ extension _BiomeOp on _Op {
     final next = place == kPueblo ? null : place;
     if (next == s.place && portal == null) return false;
     final moved = next != s.place;
+    // What nobody picked up goes back to its owner (loot.md § 4c).
+    if (moved) _recoverGround();
     final arrive = MiningRules.arrival(s.place, place, worldId: s.worldId);
     s.place = next;
     e.fishing.pending.clear();
@@ -103,10 +105,6 @@ extension _BiomeOp on _Op {
     if (crop == null && seedCrop == null) return false;
     final lvl0 = FarmingRules.level(p.profile);
     var farm = p.profile.life.farm;
-    if (crop != null) {
-      farm = farm.addCrop(cropKey(crop.id, CropQuality.normal));
-    }
-    if (r.seed != null) farm = farm.addSeed(r.seed!);
     // Recolectar cuenta como Cultivo (overworld_biomes.md § 3.2).
     final rar = (crop ?? seedCrop)!.rarity.index + 1;
     farm = farm.copyWith(
@@ -118,6 +116,11 @@ extension _BiomeOp on _Op {
         gain: true);
     events.add(
         CropHarvestedEvent(p.id, (crop ?? seedCrop)!.id, 0, 1, f.x, f.y));
+    // The pick pops out of the bush; the magnet brings it (loot.md § 4c).
+    _spill(p, [
+      if (crop != null) GoodsRules.crop(cropKey(crop.id, CropQuality.normal), 1),
+      if (r.seed != null) GoodsRules.seed(r.seed!, 1),
+    ], cx, cy);
     final seed = seedCrop == null ? '' : seedCrop.seedName;
     say(crop == null
         ? '${p.name} recolectó $seed.'
@@ -173,24 +176,28 @@ extension _BiomeOp on _Op {
     if (s.town.daily.containsKey(key)) return false;
     s.town = s.town.copyWith(daily: {...s.town.daily, key: 1});
     final ores = kBiomeOres[lay.id];
+    // Everything spills on the ground like a dungeon chest (§ 3.3–3.4):
+    // a shrine drops in front of it (one tile below), a chest on itself.
+    final cx = (tx + 0.5) * 16, cy = (ty + 0.5) * 16;
     if (shrine) {
       // A blessing: gold and the biome's rare material.
       final gold = WildLootRules.t.i('shrineGold');
-      var prof = p.profile.copyWith(credits: p.profile.credits + gold);
-      if (ores != null) prof = MiningRules.give(prof, {ores.rare: 1});
-      _profileChange(p, prof, gain: true);
-      say('${p.name} recibió la bendición del santuario (+$gold de oro).');
+      say('${p.name} recibió la bendición del santuario.');
+      _spill(p, [
+        GoodsRules.goldDrop(gold),
+        if (ores != null) GoodsRules.ore(ores.rare, 1),
+      ], cx, cy + 16);
       return true;
     }
     final def = kChestTiers[ChestTier.madera]!;
     final lvlP = math.max(1, p.profile.level);
     final cr = ((15 + (_rand() * 26).floor()) * def.creditMult).round();
-    var prof = p.profile.copyWith(credits: p.profile.credits + cr);
-    if (ores != null) prof = MiningRules.give(prof, {ores.ore: 2});
-    _profileChange(p, prof);
-    say('${p.name} abrió un cofre escondido (+$cr de oro).');
-    _deliver(p, _chestDrops(p, def, lvlP), LootSource.mission, p.x, p.y,
-        stashOverflow: true);
+    say('${p.name} abrió un cofre escondido.');
+    _spill(p, [
+      GoodsRules.goldDrop(cr),
+      if (ores != null) GoodsRules.ore(ores.ore, 2),
+      ..._chestDrops(p, def, lvlP),
+    ], cx, cy);
     return true;
   }
 
