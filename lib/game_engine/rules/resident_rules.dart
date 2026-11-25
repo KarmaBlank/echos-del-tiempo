@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import '../data/biomes_catalog.dart';
+import '../data/cooking_catalog.dart'
+    show kMeals, MealDef, mealKey, parseMealKey;
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/smithing_catalog.dart';
@@ -695,6 +697,11 @@ abstract final class ResidentRules {
       return r.copyWith(
           order: ingot, orderN: count, orderQ: 0, orderDay: day);
     }
+    // Meal order (farming.md § 19.1): a cooked recipe, paid above its
+    // raw ingredients.
+    if (mealOrder(r.npc, day, farmLv) case (final meal, final count, final q)?) {
+      return r.copyWith(order: meal, orderN: count, orderQ: q, orderDay: day);
+    }
     final fish = h % 2 == 0;
     var items = orderPool(n, fish: fish, lv: fish ? fishLv : farmLv);
     if (items.isEmpty) items = giftables(n);
@@ -811,7 +818,9 @@ abstract final class ResidentRules {
   static int unitValue(String item) => kSmithMaterials.containsKey(item)
       ? (SmithCraftRules.sellPrice(item) * MiningRules.t.d('smithOrderPay'))
           .round()
-      : kFish[item]?.price ?? kCrops[item]?.price ?? 10;
+      : kMeals.containsKey(item)
+          ? (mealRawValue(kMeals[item]!) * t.d('mealOrderPay')).round()
+          : kFish[item]?.price ?? kCrops[item]?.price ?? 10;
 
   /// The smithing order of [npc] on [day] with the room's best Smithing
   /// level [smithLv]: (ingot, count), or `null` (deterministic by day;
@@ -833,6 +842,45 @@ abstract final class ResidentRules {
     return (ingots[(h ~/ 1000) % ingots.length], lo + (h ~/ 7) % (hi - lo + 1));
   }
 
+  /// The meal order of [npc] on [day] with the room's best Cultivo level
+  /// [farmLv]: (recipe, count, min quality), or `null` (deterministic by
+  /// day; farming.md § 19.1).
+  static (String, int, int)? mealOrder(String npc, int day, int farmLv) {
+    if (farmLv < t.i('mealOrderLevel')) return null;
+    final h = (day * 6007 + npc.codeUnits.fold<int>(0, (a, c) => a * 17 + c))
+        .abs();
+    if ((h % 1000) / 1000 >= t.d('mealOrderChance')) return null;
+    final maxR = (farmLv ~/ math.max(1, t.i('orderRarityLevels')))
+        .clamp(0, FishRarity.values.length - 1);
+    final meals = [
+      for (final m in kMeals.values)
+        if (m.rarity.index <= maxR) m.id
+    ];
+    if (meals.isEmpty) return null;
+    final lo = math.max(1, t.i('mealOrderMin'));
+    final hi = math.max(lo, t.i('mealOrderMax'));
+    final q = farmLv >= t.i('orderQualityLevel') && (h ~/ 7) % 3 == 0
+        ? CropQuality.raro.index
+        : 0;
+    return (
+      meals[(h ~/ 1000) % meals.length],
+      lo + (h ~/ 11) % (hi - lo + 1),
+      q
+    );
+  }
+
+  /// Raw value of one [m]: the sell price of its crops and fish.
+  static int mealRawValue(MealDef m) {
+    var v = 0;
+    for (final e in m.crops.entries) {
+      v += (kCrops[e.key]?.price ?? 10) * e.value;
+    }
+    for (final e in m.fish.entries) {
+      v += (kFish[e.key]?.price ?? 10) * e.value;
+    }
+    return v;
+  }
+
   /// Tamaño mínimo (cm) de un pescado pedido con [q] (1..3), o 0: un
   /// cuarto, la mitad o tres cuartos del rango de la especie.
   static int orderCm(String item, int q) {
@@ -847,6 +895,14 @@ abstract final class ResidentRules {
   /// tenga de esa especie.
   static int orderHave(PlayerProfile p, String item, int q) {
     if (kSmithMaterials.containsKey(item)) return p.life.ore(item);
+    if (kMeals.containsKey(item)) {
+      var n = 0;
+      for (final e in p.life.farm.meals.entries) {
+        final m = parseMealKey(e.key);
+        if (m != null && m.$1.id == item && m.$2.index >= q) n += e.value;
+      }
+      return n;
+    }
     if (kFish.containsKey(item)) {
       final cm = orderCm(item, q);
       if (cm > 0 && (p.life.log[item] ?? 0) < cm) return 0;
@@ -887,6 +943,20 @@ abstract final class ResidentRules {
     PlayerProfile? prof;
     if (kSmithMaterials.containsKey(o)) {
       prof = MiningRules.give(p, {o: -r.orderN});
+    } else if (kMeals.containsKey(o)) {
+      final meals = {...p.life.farm.meals};
+      var left = r.orderN;
+      for (final q in CropQuality.values) {
+        if (q.index < r.orderQ || left <= 0) continue;
+        final k = mealKey(o, q);
+        final use = math.min(meals[k] ?? 0, left);
+        if (use <= 0) continue;
+        left -= use;
+        meals[k] = meals[k]! - use;
+        if (meals[k]! <= 0) meals.remove(k);
+      }
+      prof = p.copyWith(
+          life: p.life.copyWith(farm: p.life.farm.copyWith(meals: meals)));
     } else if (kFish.containsKey(o)) {
       prof = takeFish(p, o, r.orderN);
     } else {

@@ -27,46 +27,129 @@ abstract final class CookingRules {
   static double buffOf(MealBuff b) =>
       b.def == null ? 0 : buffValue(b.def!, b.quality);
 
-  /// Missions a meal lasts: `mealMissions`, +1 with fish (1–3 by default).
-  static int missionsFor(MealDef m) =>
-      math.max(1, t.i('mealMissions') + (m.hasFish ? 1 : 0));
+  /// Missions a meal lasts: `mealMissions`, +1 with fish, + the tier
+  /// bonus `mealMissions<Q>` (farming.md § 19.3).
+  static int missionsFor(MealDef m, [CropQuality q = CropQuality.normal]) =>
+      math.max(
+          1,
+          t.i('mealMissions') +
+              (m.hasFish ? 1 : 0) +
+              (q == CropQuality.normal ? 0 : t.i('mealMissions${q.key}')));
 
-  static CookBlock? cookBlock(PlayerProfile p, String id, CropQuality q) {
+  /// The legendary extra of [b], or `null` (only the legendary tier).
+  static MealExtra? extraOf(MealBuff? b) {
+    final d = b?.def;
+    if (d == null || b!.quality != CropQuality.legendario) return null;
+    return d.extra;
+  }
+
+  /// Size of the legendary extra [e] (fraction): regen of max HP per
+  /// turn, break bonus or opening shield of max HP.
+  static double extraValue(MealExtra e) => math.max(
+      0,
+      switch (e) {
+        MealExtra.regen => t.d('mealRegen'),
+        MealExtra.breakPower => t.d('mealBreak'),
+        MealExtra.shield => t.d('mealShield'),
+      });
+
+  static double regen(MealBuff? b) =>
+      extraOf(b) == MealExtra.regen ? extraValue(MealExtra.regen) : 0;
+  static double breakBonus(MealBuff? b) => extraOf(b) == MealExtra.breakPower
+      ? extraValue(MealExtra.breakPower)
+      : 0;
+  static double shield(MealBuff? b) =>
+      extraOf(b) == MealExtra.shield ? extraValue(MealExtra.shield) : 0;
+  static int get shieldTurns => math.max(1, t.i('mealShieldTurns'));
+
+  /// Ingredient multiplier of a feast (farming.md § 19.2).
+  static double get feastMult => math.max(1, t.d('mealFeastMult'));
+
+  /// Units of an ingredient needed for [n] with multiplier [mult].
+  static int need(int n, double mult) => (n * mult - 1e-9).ceil();
+
+  static CookBlock? cookBlock(PlayerProfile p, String id, CropQuality q,
+      {double mult = 1}) {
     final m = kMeals[id];
     if (m == null) return CookBlock.unknown;
     final f = p.life.farm;
     for (final e in m.crops.entries) {
-      if (f.cropCount(cropKey(e.key, q)) < e.value) return CookBlock.crops;
+      if (f.cropCount(cropKey(e.key, q)) < need(e.value, mult)) {
+        return CookBlock.crops;
+      }
     }
     for (final e in m.fish.entries) {
-      if (p.life.count(e.key) < e.value) return CookBlock.fish;
+      if (p.life.count(e.key) < need(e.value, mult)) return CookBlock.fish;
     }
     return null;
   }
 
-  /// Cooks one [id] with crops of quality [q] at the town pot.
-  static PlayerProfile? cook(PlayerProfile p, String id, CropQuality q) {
-    if (cookBlock(p, id, q) != null) return null;
+  static CookBlock? feastBlock(PlayerProfile p, String id, CropQuality q) =>
+      cookBlock(p, id, q, mult: feastMult);
+
+  /// Spends the ingredients of [id] × [mult] and logs the collection.
+  static PlayerProfile? _spend(
+      PlayerProfile p, String id, CropQuality q, double mult) {
+    if (cookBlock(p, id, q, mult: mult) != null) return null;
     final m = kMeals[id]!;
     final f = p.life.farm;
     final crops = {...f.crops};
     for (final e in m.crops.entries) {
       final k = cropKey(e.key, q);
-      crops[k] = (crops[k] ?? 0) - e.value;
+      crops[k] = (crops[k] ?? 0) - need(e.value, mult);
+      if (crops[k]! <= 0) crops.remove(k);
     }
     var life = p.life;
     for (final e in m.fish.entries) {
-      life = life.copyWith(bag: {...life.bag, e.key: life.count(e.key) - e.value});
+      life = life.copyWith(
+          bag: {...life.bag, e.key: life.count(e.key) - need(e.value, mult)});
     }
-    final key = mealKey(id, q);
     final best = f.mealLog[id];
     final farm = f.copyWith(
         crops: crops,
-        meals: {...f.meals, key: f.mealCount(key) + 1},
         mealLog: best != null && best >= q.index
             ? null
             : {...f.mealLog, id: q.index});
     return p.copyWith(life: life.copyWith(farm: farm));
+  }
+
+  /// Cooks one [id] with crops of quality [q] at the town pot.
+  static PlayerProfile? cook(PlayerProfile p, String id, CropQuality q) {
+    final r = _spend(p, id, q, 1);
+    if (r == null) return null;
+    final f = r.life.farm;
+    final key = mealKey(id, q);
+    return r.copyWith(
+        life: r.life.copyWith(
+            farm: f.copyWith(meals: {...f.meals, key: f.mealCount(key) + 1})));
+  }
+
+  /// A feast (farming.md § 19.2): spends the ingredients × `mealFeastMult`
+  /// and returns the cook's profile plus the meal every party member in
+  /// town gets (the engine hands it out with [serve]).
+  static (PlayerProfile, MealBuff)? feast(
+      PlayerProfile p, String id, CropQuality q) {
+    final r = _spend(p, id, q, feastMult);
+    if (r == null) return null;
+    final m = kMeals[id]!;
+    return (r, MealBuff(id, q, missionsFor(m, q)));
+  }
+
+  /// [p] with [b] as their active meal (replaces the old one).
+  static PlayerProfile serve(PlayerProfile p, MealBuff b) => p.copyWith(
+      life: p.life.copyWith(farm: p.life.farm.copyWith(meal: b)));
+
+  /// [from] gives the meal [key] of their bag to [to] (farming.md § 19.2):
+  /// [to] eats it right away (replaces their active meal).
+  static (PlayerProfile, PlayerProfile)? give(
+      PlayerProfile from, PlayerProfile to, String key) {
+    final pm = parseMealKey(key);
+    final f = from.life.farm;
+    if (pm == null || f.mealCount(key) < 1) return null;
+    final giver = from.copyWith(
+        life: from.life.copyWith(
+            farm: f.copyWith(meals: {...f.meals, key: f.mealCount(key) - 1})));
+    return (giver, serve(to, MealBuff(pm.$1.id, pm.$2, missionsFor(pm.$1, pm.$2))));
   }
 
   /// Eats the meal [key]: replaces any active meal.
@@ -76,7 +159,7 @@ abstract final class CookingRules {
     if (pm == null || f.mealCount(key) < 1) return null;
     final farm = f.copyWith(
         meals: {...f.meals, key: f.mealCount(key) - 1},
-        meal: MealBuff(pm.$1.id, pm.$2, missionsFor(pm.$1)));
+        meal: MealBuff(pm.$1.id, pm.$2, missionsFor(pm.$1, pm.$2)));
     return p.copyWith(life: p.life.copyWith(farm: farm));
   }
 

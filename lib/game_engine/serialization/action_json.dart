@@ -219,6 +219,7 @@ abstract final class ActionJson {
             if (a.id != null) 'id': a.id,
             if (a.n != 1) 'n': a.n,
             if (a.materials) 'mat': true,
+            if (a.to != null) 'to': a.to,
           },
         TownAction() => {
             't': 'town',
@@ -511,7 +512,8 @@ abstract final class ActionJson {
         return FarmShopAction(j.enumByName('o', FarmShopOp.values),
             id: j.strOrNull('id'),
             n: j.intOrNull('n') ?? 1,
-            materials: j['mat'] == true);
+            materials: j['mat'] == true,
+            to: j.strOrNull('to'));
       case 'town':
         return TownAction(j.enumByName('o', TownOp.values),
             id: j.strOrNull('id'),

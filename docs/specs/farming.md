@@ -617,3 +617,61 @@ automática): Pesca en zona 1 ronda 55–65 XP/min (≈ 6 capturas/min de
 cosecha 9 XP) y ciclos de ~3.5–4 min (125 s de crecimiento de estación
 más el recorrido) da ≈ 45 XP/min, más con calidad y cultivos raros.
 Ajustable con `workXp`, `xp<Rareza>` y el XP base de cada cultivo.
+
+## 19. Comidas que valen la pena (v0.49.0, protocolo 78)
+
+Pesca y forja ganan armas con su trabajo; la cocina gana pedidos bien
+pagos, valor co-op y comidas excepcionales con cultivos raros.
+
+### 19.1 Pedidos de comidas
+
+- Los vecinos (órdenes § 10.5 de roles/town) pueden pedir **comidas
+  cocinadas**: `order` = id de receta (`kMeals`), `orderN` = cantidad
+  (`mealOrderMin`..`mealOrderMax`), `orderQ` = escalón mínimo (desde
+  `orderQualityLevel` de Cultivo, a veces FINA).
+- Aparecen desde `mealOrderLevel` de Cultivo, con probabilidad
+  `mealOrderChance` por día (determinista por día y vecino), entre las
+  recetas cuyos cultivos tienen rareza ≤ nivel / `orderRarityLevels`.
+  Las de forja tienen prioridad; luego las de comida; luego cultivos y
+  peces.
+- Valor de una unidad = valor crudo (precio de los cultivos + pescado de
+  la receta) × `mealOrderPay` (1.8, Balance → Pueblo). Como el resto de
+  las órdenes: XP, oro, relación y punto de árbol salen de ese valor
+  (`orderReward`), así que una comida paga siempre más que entregar sus
+  ingredientes crudos.
+- Entrega (`TownOp.order`, host): gasta comidas de la bolsa `farm.ml`
+  con escalón ≥ `orderQ`, de la peor a la mejor. Se ve en la casilla de
+  orden del vecino y en el diario (mismo ícono y nombre que la comida).
+
+### 19.2 Comidas compartidas (co-op)
+
+- **DAR A…** (`FarmShopOp.giveMeal`, `id` = clave de la bolsa, `to` =
+  id del compañero): en COMIDAS, un botón por compañero en el pueblo.
+  El compañero queda con esa comida activa (reemplaza la suya: una sola
+  comida activa por jugador) y el que la da pierde una de la bolsa.
+- **FESTÍN** (`FarmShopOp.feast`, `id` = receta, `n` = calidad): en
+  RECETAS. Cocina una olla grande con los ingredientes ×
+  `mealFeastMult` (2, redondeo hacia arriba) y todos los jugadores del
+  pueblo (no ayudantes) quedan con esa comida activa. Anota la colección.
+- Host-authoritative: los dos tienen que estar en el pueblo
+  (`_inTown`); el receptor tiene que existir y no ser uno mismo. La
+  comida llega al build de batalla (`PlayerBuild.meal`) del receptor.
+
+### 19.3 Escalones de comida
+
+La calidad del cultivo usado define el escalón: normal → COMÚN, rara →
+FINA, épica → EXCELENTE, legendaria → LEGENDARIA. Se muestra en el
+nombre ("Sopa de nabo (Fina)") con el color de rareza del sistema de
+diseño.
+
+- Buff: el de § 17 (ya crece con la calidad).
+- Misiones extra por escalón: `mealMissions<Q>` (Raro 0, Épico 1,
+  Legendario 1).
+- **Extra legendario** (solo escalón LEGENDARIA), según el tipo de
+  receta (`MealDef.extra`), con números en Balance → Cultivo:
+  - vida → **regeneración**: `mealRegen` (3 %) de la vida máx. al
+    empezar cada turno (se suma a `regenPerTurn`).
+  - ataque → **quiebre**: + `mealBreak` (25 %) de puntos de quiebre.
+  - resistencia → **escudo inicial**: escudo de `mealShield` (12 %) de
+    la vida máx. al empezar la batalla, `mealShieldTurns` (3) turnos.
+- El tooltip de la comida y el chip COMIDA listan el extra.
