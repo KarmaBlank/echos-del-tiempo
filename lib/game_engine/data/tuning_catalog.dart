@@ -956,6 +956,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     // the arrival and the story goals.
     'mapRevealRadius': 9,
     'mapStartRadius': 5,
+    // Dungeon map discovery (§ 11.8): same, inside mission floors.
+    'dungeonMapRevealRadius': 7,
+    'dungeonMapStartRadius': 4,
     // Caverns (§ 3.1): × of the lake radii, thickness of the rock rim
     // (tiles) and the most openings above (0 = none).
     'caveScaleX': 2.0,

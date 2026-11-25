@@ -1101,6 +1101,24 @@ OverworldOverlay? overworldOverlayFor(
   );
 }
 
+/// The dungeon map layer (biome_exploration.md § 11.8) on a mission
+/// floor; `null` in town, biomes and the world map.
+DungeonOverlay? dungeonOverlayFor(SessionView view) {
+  final s = view.session;
+  final m = s.mission;
+  if (m == null || s.mode == SessionMode.lobby) return null;
+  final map = view.map;
+  return DungeonOverlay(
+    mask: DiscoveryMask(
+      known: DungeonDiscoveryRules.known(m, map),
+      cols: DungeonDiscoveryRules.cols(map),
+      rows: DungeonDiscoveryRules.rows(map),
+      cacheKey: (m.missionId, m.seed, m.discoveryRev, identityHashCode(map)),
+    ),
+    goals: DungeonDiscoveryRules.goals(map, m.floor),
+  );
+}
+
 /// The minimap zoom the player picked in biome exteriors this session
 /// (`null` = the framed default, [biomeMinimapCell]).
 final biomeMinimapZoomProvider = StateProvider<int?>((ref) => null);
@@ -1185,6 +1203,7 @@ Minimap hudMinimap(SessionView view, SessionController controller,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
     overworld: overworldOverlayFor(view, controller),
+    dungeon: dungeonOverlayFor(view),
     exit: switch (MapGame.dungeonExitAt(view,
         freeMovement: controller.engine.freeMovement, run: controller.isRun)) {
       (final x, final y) => Offset(x, y),
@@ -1255,6 +1274,11 @@ Widget fullMapPanel(SessionView view, SessionController controller,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
     overworld: overworld,
+    dungeon: overworld == null ? dungeonOverlayFor(view) : null,
+    exit: MapGame.dungeonExitAt(view,
+            freeMovement: controller.engine.freeMovement,
+            run: controller.isRun) !=
+        null,
     waystones: _seenWaystones(view, controller),
     destinations: controller.travelDestinations,
     originId: controller.travelOrigin?.id,
