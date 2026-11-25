@@ -4,7 +4,7 @@ description: >
   Feature-First, netcode agnóstico (P2P hoy, servidor dedicado / rollback
   a futuro vía la interfaz en lib/netcode/contracts).
 publish_to: "none"
-version: 0.48.1+172
+version: 0.48.2+173
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
