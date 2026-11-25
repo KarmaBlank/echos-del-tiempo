@@ -156,7 +156,8 @@ espera (señuelos) → picada → clavado → barra → sacado / escapado.
 
 Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 1)`, `bonus = base × (bonusFloor + (1 − bonusFloor) × ratio^bonusCurve)`
-(0.4, 1.5). Se compran en el agropecuario y se equipan ahí.
+(0.4, 1.5). Se compran en el TALLER DE OFICIOS › HERRAMIENTAS (v0.48.5;
+antes en el agropecuario) y se equipan ahí o en OFICIOS.
 
 ### 5.2 Venta
 - Por especie (VENDER) o VENDER TODO (no incluye legendarios).
@@ -185,8 +186,12 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 - Primer nivel: COMPRAR o VENDER. Segundo: PESCA o CULTIVO. Tercero:
   categorías (chips arriba de la grilla que filtran; con TODO salen
   todas en la misma grilla, en orden de categoría).
-  - COMPRAR · PESCA: Cañas (Carnada cuando exista).
-  - COMPRAR · CULTIVO: Semillas, Abonos, Azadas, Regaderas.
+  - COMPRAR · PESCA: Cebos (desde v0.48.5 las cañas se compran en el
+    TALLER DE OFICIOS › HERRAMIENTAS, town_loop.md § 2.1).
+  - COMPRAR · CULTIVO: Semillas, Abonos (azadas y regaderas: TALLER).
+  - COMPRAR · MINERÍA: solo insumos (los picos: TALLER).
+  - Regla: el agropecuario vende solo consumibles e insumos, nunca
+    herramientas.
   - VENDER · PESCA: Peces, Basura, Legendarios (VENDER o CANJEAR).
   - VENDER · CULTIVO: Cultivos, Legendarios.
 - Buscador siempre visible en los dos modos, sin importar cuántos ítems

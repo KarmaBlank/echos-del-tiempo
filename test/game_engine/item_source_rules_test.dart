@@ -32,6 +32,16 @@ void main() {
     expect(ItemSourceRules.of('tabla').single.kind, ItemSourceKind.workshop);
   });
 
+  test('tools come from the crafts workshop, never the farm shop', () {
+    for (final id in [...kFarmTools.keys, ...kRods.keys, 'pick_copper']) {
+      final kinds = ItemSourceRules.of(id).map((s) => s.kind);
+      expect(kinds, contains(ItemSourceKind.toolShop), reason: id);
+      expect(kinds, isNot(contains(ItemSourceKind.farmShop)), reason: id);
+    }
+    expect(ItemSourceRules.of(kFertilizers.keys.first).single.kind,
+        ItemSourceKind.farmShop);
+  });
+
   test('every catalog item has at least one source', () {
     final ids = [
       for (final c in kCrops.keys) ...[c, 'semilla_$c'],

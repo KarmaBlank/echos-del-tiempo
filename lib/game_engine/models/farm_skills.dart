@@ -1,5 +1,6 @@
 import '../data/cooking_catalog.dart';
 import '../data/farming_catalog.dart';
+import '../data/life_tree_catalog.dart';
 import 'meal_buff.dart';
 
 export 'meal_buff.dart';
@@ -218,7 +219,11 @@ class FarmSkills {
       ferts: m(raw['ferts']),
       pity: n(raw['pity']),
       dry: n(raw['dry']),
-      tree: l(raw['tree']),
+      // life_trees_v2.md § 6: v1 ids are dropped (full refund).
+      tree: [
+        for (final x in l(raw['tree']))
+          if (isLifeTreeNode(LifeSkillKind.cultivo, x)) x
+      ],
       meals: m(raw['ml']),
       mealLog: m(raw['mlg']),
       meal: MealBuff.fromJson(raw['mb']),

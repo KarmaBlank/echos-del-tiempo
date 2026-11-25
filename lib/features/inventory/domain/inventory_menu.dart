@@ -3,7 +3,8 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../core/i18n/strings.dart';
 import 'item_text.dart';
-import 'item_names.dart';
+import 'item_names.dart';
+import 'eco_text.dart';
 
 /// Buscador y menú de acciones del inventario (v0.9.7, docs/specs/panels.md
 /// § "Inventario" y loot.md § 17.4). Dart puro: la pestaña solo dibuja.
@@ -142,7 +143,7 @@ bool inventoryMatches(ProgressionRules rules, String query,
   final text = item != null
       ? itemSearchText(rules, item)
       : eco != null
-          ? foldSearch('${rules.ecos.fullName(eco)} eco ${eco.rarity.text}')
+          ? foldSearch('${ecoFullText(rules.ecos, eco)} eco ${eco.rarity.text}')
           : foldSearch(label ?? '');
   return words.every(text.contains);
 }

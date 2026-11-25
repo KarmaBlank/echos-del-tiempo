@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../core/procedural/vegetation_atlas.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/biomes_catalog.dart' show kBiomeLayouts;
 import '../../../../game_engine/data/mine_catalog.dart';
@@ -23,6 +24,10 @@ class TilePainter {
   static const ts = 16.0;
 
   final _paint = Paint()..isAntiAlias = false;
+
+  /// Procedural trees and bushes (procedural_vegetation.md § 4); `null`
+  /// keeps the fallback drawing (round canopy, two-disc bush).
+  VegetationAtlas? vegetation;
 
   /// Which part of a glow tile ([glowSplit]) [draw] paints: everything,
   /// only the clock-free base (chunk cache) or only the glow on top.
@@ -177,12 +182,14 @@ class TilePainter {
         }
         floor();
         switch (themeId) {
+          case 'pradera' when _vegTree(c, themeId, px, py, h):
+            break;
           case 'pradera':
             _rect(c, const Color(0xFF4A2F1A), px + 6, py + 10, 4, 6);
             _circle(c, th.wall, px + 8, py + 7, 8);
             _circle(c, th.wall2, px + 6, py + 5, 4);
           case 'mundo':
-            _tree(c, th, px, py, h);
+            _tree(c, th, px, py, h, themeId);
           case 'bosque':
             _forestWall(c, th, px, py, h);
           case 'cavernas':
@@ -354,7 +361,7 @@ class TilePainter {
         if (h % 5 == 1) _rect(c, FarmPalette.soilDark, px + 9, py + 11, 2, 1);
       case Tile.tree:
         _grass(c, th, px, py, h);
-        _tree(c, th, px, py, h);
+        _tree(c, th, px, py, h, themeId);
       case Tile.rock:
         _grass(c, th, px, py, h);
         _rock(c, th, px, py, h);
@@ -450,7 +457,7 @@ class TilePainter {
       // Recolectable de un exterior (overworld_biomes.md § 3.2).
       case Tile.forage || Tile.forageUsed:
         _grass(c, th, px, py, h);
-        _forageBush(c, px, py, tx, ty, used: ch == Tile.forageUsed);
+        _forageBush(c, px, py, tx, ty, themeId, used: ch == Tile.forageUsed);
       default:
         final zone = Tile.entranceZone(ch);
         if (zone != null) {
@@ -820,16 +827,22 @@ class TilePainter {
 
   /// Cartel del lago (pesca).
   /// Mata recolectable: con frutos del color de su tipo, o pelada.
-  void _forageBush(Canvas c, double px, double py, int tx, int ty,
+  void _forageBush(
+      Canvas c, double px, double py, int tx, int ty, String themeId,
       {required bool used}) {
     final kind = [for (final l in kBiomeLayouts.values) ...l.forage]
         .where((f) => f.x == tx && f.y == ty)
         .map((f) => f.kind)
         .firstOrNull ?? 0;
-    _circle(c, used ? ForagePalette.picked : ForagePalette.bush, px + 8,
-        py + 9, 7);
-    _circle(c, used ? ForagePalette.picked : ForagePalette.bushLight, px + 6,
-        py + 7, 3);
+    final veg = used ? null : vegetation?.bush(themeId, tileHash(tx, ty));
+    if (veg != null) {
+      _image(c, veg, px, py);
+    } else {
+      _circle(c, used ? ForagePalette.picked : ForagePalette.bush, px + 8,
+          py + 9, 7);
+      _circle(c, used ? ForagePalette.picked : ForagePalette.bushLight,
+          px + 6, py + 7, 3);
+    }
     if (used) return;
     final col = ForagePalette.fruit[kind % ForagePalette.fruit.length];
     for (final (fx, fy) in const [(4, 9), (9, 5), (11, 11), (7, 12)]) {
@@ -906,11 +919,30 @@ class TilePainter {
   }
 
   /// Árbol redondo (como el `#` de pradera) con los colores del tema.
-  void _tree(Canvas c, MapTheme th, double px, double py, int h) {
+  void _tree(
+      Canvas c, MapTheme th, double px, double py, int h, String themeId) {
+    if (_vegTree(c, themeId, px, py, h)) return;
     _rect(c, th.trunk, px + 6, py + 10, 4, 6);
     _circle(c, th.tree, px + 8, py + 7, 8);
     _circle(c, th.tree2, px + 6, py + 5, 4);
     if (h % 4 == 0) _rect(c, const Color(0x33000000), px + 10, py + 9, 3, 2);
+  }
+
+  /// Procedural tree of [themeId]'s biome, if the atlas has one.
+  bool _vegTree(Canvas c, String themeId, double px, double py, int h) {
+    final v = vegetation?.tree(themeId, h);
+    if (v == null) return false;
+    _image(c, v.$1, px, py);
+    return true;
+  }
+
+  /// A cached vegetation image, bottom-centred on the tile, 1:1.
+  void _image(Canvas c, Image im, double px, double py) {
+    c.drawImage(
+        im,
+        Offset(px + ((ts - im.width) / 2).floorToDouble(),
+            py + ts - im.height),
+        _paint);
   }
 
   /// Pixel blob (an octagon of two rects) of radius [r] at (cx, cy).

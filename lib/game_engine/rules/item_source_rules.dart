@@ -7,6 +7,7 @@ import '../data/biomes_catalog.dart';
 import '../data/cooking_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/mine_catalog.dart' show mineTool;
 import '../data/smithing_catalog.dart';
 import '../models/player_profile.dart';
 import 'life_craft_rules.dart' show kLifeMaterials;
@@ -14,8 +15,12 @@ import 'resident_rules.dart' show ResidentRules;
 
 /// How an item is obtained.
 enum ItemSourceKind {
-  /// Sold at the farm shop (seeds, hoes, cans, fertilizers).
+  /// Sold at the farm shop (seeds, fertilizers, baits, mine supplies).
   farmShop,
+
+  /// Sold at the crafts workshop's TOOLS tab (rods, hoes, cans, picks;
+  /// town_loop.md § 2.1, v0.48.5).
+  toolShop,
 
   /// Grown from its seed ([ItemSource.biome] = where the seed is from,
   /// [ItemSource.seasons] = when it grows).
@@ -95,7 +100,10 @@ abstract final class ItemSourceRules {
           ItemSource(ItemSourceKind.forage, biome: c.biome),
       ];
     }
-    if (kFarmTools.containsKey(id) || kFertilizers.containsKey(id)) {
+    if (kFarmTools.containsKey(id) || kRods.containsKey(id)) {
+      return const [ItemSource(ItemSourceKind.toolShop)];
+    }
+    if (kFertilizers.containsKey(id)) {
       return const [ItemSource(ItemSourceKind.farmShop)];
     }
     if (kCrops[id] case final c?) {
@@ -127,6 +135,10 @@ abstract final class ItemSourceRules {
           ],
         SmithMatKind.ingot => [
             ItemSource(ItemSourceKind.smelting, biome: m.biome, from: oreOf(id))
+          ],
+        SmithMatKind.tool when (mineTool(id)?.tier ?? 0) > 0 => const [
+            ItemSource(ItemSourceKind.toolShop),
+            ItemSource(ItemSourceKind.smithing),
           ],
         SmithMatKind.tool ||
         SmithMatKind.supply =>

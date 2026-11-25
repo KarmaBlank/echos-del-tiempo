@@ -84,20 +84,36 @@ sumaron). Una sola por mundo, igual en todas las instancias (`gat` en el
 snapshot). Chat a todos: `X convoca a <misión> — UNIRSE para ir juntos.`
 (la línea avisa con el chat plegado).
 
-- Quien propone ve una tarjeta en el HUD con los que se sumaron, **IR**
-  (habilitado al instante, sin espera mínima) y **CANCELAR**.
-- Los demás ven la tarjeta con **UNIRSE** / **SALIR** (desde el pueblo o un
-  exterior; desde una mazmorra no), y en el mostrador la misión dice
-  `UNIRSE (nombre)`. Proponer lo mismo que está convocado = UNIRSE.
+- Quien propone ve una tarjeta en el HUD: `Esperando a que alguien se
+  una…` (o la lista de los que se sumaron), la cuenta regresiva, **ENTRAR
+  YA** (habilitado al instante, sin espera mínima) y **CANCELAR**.
+- Los demás ven la tarjeta con **UNIRSE** / **IGNORAR** (o **SALIR** si ya
+  se sumaron; desde el pueblo o un exterior, desde una mazmorra no). La
+  tarjeta no se cierra sola: solo cuando la convocatoria termina o con
+  IGNORAR (local, solo oculta esa convocatoria en ese dispositivo). En el
+  mostrador la misión dice `UNIRSE (nombre)`. Proponer lo mismo que está
+  convocado = UNIRSE.
+- **Cuenta regresiva (v0.48.5, protocolo 82):** la convocatoria espera
+  `mission.gatherSeconds` (tuning, 20 s por defecto). El reloj lo corre el
+  anfitrión en `WorldEngine.tick`; viaja en `gat.lf` (segundos enteros).
+  Al llegar a 0 pasa lo mismo que con ENTRAR YA; si ya no se puede entrar
+  (quien propone se alejó del portal, salió del lobby...) la convocatoria
+  se cierra con aviso a todos.
+- Los portales de Ecos (`ProposeEcoAction`, tipo `eco`) también convocan
+  (antes entraban directo: el resto veía el aviso un instante y quien
+  proponía ya estaba adentro).
 - `GatherAction(join | leave | go | cancel)`. IR: quien propone entra
   como en § 2.1 y, en el mismo paso, todos los sumados que siguen en el
   pueblo o un exterior (en lobby) pasan a esa misma instancia. La
   convocatoria se cierra.
 - Si nadie se suma, IR entra igual. Los que no se sumaron pueden entrar
-  después cuando quieran (se suman a la instancia, § 1).
+  después cuando quieran (se suman a la instancia, § 1) o con **UNIRSE**
+  en la tarjeta de ese jugador abajo a la derecha (`JoinPlayerAction`,
+  § 2.5). Si la instancia no lo admite ahora (en batalla, con resultado,
+  Travesía / TUTORIAL) el botón queda gris con el motivo en el tooltip.
 - Sin convocatoria (entra directo): jugando solo (un humano), si ya hay
   amigos jugando eso (se suma a su instancia), si hay otra convocatoria
-  abierta de otra cosa, y para Ecos y el TUTORIAL.
+  abierta de otra cosa, y para el TUTORIAL.
 - Se cierra sola si quien propone se va de la sala o entra a una
   mazmorra; los sumados que se van salen de la lista.
 - Fuera del Mundo con movimiento libre (Travesía) se sigue votando
@@ -182,7 +198,7 @@ se cierra. El `pueblo` nunca.
   gris solo si el bioma está cerrado para uno o si está en mazmorra.
 - Cajas del grupo (v0.41.3): siempre están todos. Los que están en otro
   lugar salen con una caja atenuada con su nombre, dónde está y
-  `IR CON <nombre>` (§ 2.5; gris si no se puede).
+  `UNIRSE` (§ 2.5; gris con el motivo en el tooltip si no se puede).
 
 ### 4.1 Dónde están los demás (v0.41.3)
 

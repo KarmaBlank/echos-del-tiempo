@@ -122,6 +122,16 @@ abstract class NpcVariantsOverrideSource {
   Future<void> putNpcVariants(String yaml);
 }
 
+/// Local override of the vegetation presets
+/// (`overrides/vegetation_presets.yaml`, procedural_vegetation.md § 6).
+abstract class VegetationOverrideSource {
+  /// Text of the override's `vegetation_presets.yaml`, or `null`.
+  Future<String?> readVegetation();
+
+  /// Saves the override's `vegetation_presets.yaml`.
+  Future<void> putVegetation(String yaml);
+}
+
 /// Overrides que el Editor puede escribir (game_editor.md § 3.1 y § 4).
 /// También guarda los overrides de animaciones (paso 2, § 4.2): misma
 /// carpeta, mismo paquete de arte.

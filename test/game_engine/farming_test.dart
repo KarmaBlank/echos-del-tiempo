@@ -159,12 +159,14 @@ void main() {
           life: base.life.copyWith(fishXp: _fishXpFor(4)));
       expect(LifeTreeRules.earned(p, LifeSkillKind.pesca), 3);
       final zone0 = FishingRules.rodBonus(p).zone;
-      p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'p_a1')!;
+      p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'fish_a1')!;
       expect(FishingRules.rodBonus(p).zone, greaterThan(zone0));
-      p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'p_a2')!;
-      expect(LifeTreeRules.cannotTake(p, LifeSkillKind.pesca, 'p_a3'),
+      p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'fish_b1')!;
+      // Tier 2 asks for level 4 (tierLevelStep 3): ok; tier 3 needs 7.
+      p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'fish_a2')!;
+      expect(LifeTreeRules.cannotTake(p, LifeSkillKind.pesca, 'fish_a3'),
           isNotNull);
-      expect(LifeTreeRules.free(p, LifeSkillKind.pesca), 1);
+      expect(LifeTreeRules.free(p, LifeSkillKind.pesca), 0);
       p = LifeTreeRules.reset(p, LifeSkillKind.pesca)!;
       expect(LifeTreeRules.free(p, LifeSkillKind.pesca), 3);
       expect(LifeSkills.fromJson(p.life.toJson()).fishTree, isEmpty);
@@ -174,13 +176,13 @@ void main() {
       var p = _farmer('Ana', 4);
       final plot = _ripe(p, p);
       final leg0 = FarmingRules.odds(p, plot)[CropQuality.legendario]!;
-      p = LifeTreeRules.take(p, LifeSkillKind.cultivo, 'c_b1')!;
+      p = LifeTreeRules.take(p, LifeSkillKind.cultivo, 'farm_b1')!;
       expect(FarmingRules.odds(p, plot)[CropQuality.legendario]!,
           greaterThan(leg0));
-      expect(LifeTreeRules.take(p, LifeSkillKind.cultivo, 'c_k1'), isNull);
+      expect(LifeTreeRules.take(p, LifeSkillKind.cultivo, 'farm_b3'), isNull);
       final back = LifeSkills.fromJson(p.life.toJson());
-      expect(back.farm.tree, ['c_b1']);
-      expect(kLifeTrees[LifeSkillKind.cultivo]!.length, inInclusiveRange(10, 16));
+      expect(back.farm.tree, ['farm_b1']);
+      expect(kLifeTrees[LifeSkillKind.cultivo]!.length, 51);
     });
   });
 }

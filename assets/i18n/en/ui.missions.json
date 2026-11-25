@@ -108,5 +108,9 @@
   "ui.missions.hud.stairs_open": "Stairs open: go down [E]",
   "ui.missions.hud.stairs_closed": "Stairs: clear the floor",
   "ui.missions.hud.go_boss": "Go for the BOSS!",
-  "ui.missions.hud.boss_locked": "Boss: complete the objectives"
+  "ui.missions.hud.boss_locked": "Boss: complete the objectives",
+  "ui.missions.gather.waiting": "Waiting for someone to join…",
+  "ui.missions.gather.countdown": "Entering in {s} s",
+  "ui.missions.gather.enter_now": "ENTER NOW",
+  "ui.missions.gather.ignore": "IGNORE"
 }

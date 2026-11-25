@@ -15,7 +15,11 @@ import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
 import 'editor/npc_variants_controller.dart';
 import 'editor/npc_variants_page.dart';
-import '../../combat/domain/sprite_entry.dart' show NpcVariantsOverrideSource;
+import 'editor/vegetation_controller.dart';
+import 'editor/vegetation_page.dart';
+import '../../../game_engine/procedural/vegetation.dart' show VegetationDoc;
+import '../../combat/domain/sprite_entry.dart'
+    show NpcVariantsOverrideSource, VegetationOverrideSource;
 import 'editor/events_editor_controller.dart';
 import 'editor/events_page.dart';
 import 'editor/renown_editor_controller.dart';
@@ -183,6 +187,22 @@ class _AdminShellState extends State<AdminShell> {
         repoPath: s.repoPath,
         store: o is NpcVariantsOverrideSource
             ? o as NpcVariantsOverrideSource
+            : null);
+  }
+
+  /// Visuales -> VEGETACION (procedural_vegetation.md section 6), on demand.
+  VegetationController? _vegetation;
+
+  VegetationController? get vegetation {
+    final s = widget.sprites;
+    if (s == null) return null;
+    final o = s.overrides;
+    return _vegetation ??= VegetationController(
+        doc: VegetationDoc.parse(s.catalog.vegetation.encode()),
+        repoPath: s.repoPath,
+        hasOverride: s.catalog.hasOverride,
+        store: o is VegetationOverrideSource
+            ? o as VegetationOverrideSource
             : null);
   }
 
@@ -386,10 +406,15 @@ class _AdminShellState extends State<AdminShell> {
               const DsTab('SPRITES'),
               const DsTab('ANIMACIONES'),
               DsTab(GameText.t('ui.world.npcv.tab')),
+              DsTab(GameText.t('ui.world.veg.tab')),
             ],
           ),
           Expanded(
-            child: visualTab == 2
+            child: visualTab == 3
+                ? vegetation == null
+                    ? const SizedBox.shrink()
+                    : VegetationPage(c: vegetation!)
+                : visualTab == 2
                 ? variants == null
                     ? const SizedBox.shrink()
                     : NpcVariantsPage(c: variants!, onUseInNpc: _useInNpc)

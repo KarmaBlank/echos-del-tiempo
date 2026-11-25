@@ -19,7 +19,8 @@ import '../../../game_engine/rules/weapon_weight.dart';
 import 'battle_impact.dart';
 import 'skill_tip.dart';
 import 'weapon_text.dart';
-import 'item_names.dart';
+import 'item_names.dart';
+import 'eco_text.dart';
 
 /// Textos de objetos del loot v2 (ficha / tooltip, requisitos, mods) en
 /// el markup del prototipo (`ProtoMarkup`). Ver docs/specs/panels.md §
@@ -566,7 +567,7 @@ const kEcoHex = '#5ae6d2';
 /// Nombre de un Eco en el color de su rareza, con su tier.
 String ecoNameMarkup(ProgressionRules rules, EcoItem e) =>
     '<b style="color:${rarityHex(e.rarity)}">'
-    '${_esc(rules.ecos.displayName(e))}</b> ${_c(kEcoHex, 'T${e.tier}')}';
+    '${_esc(ecoNameText(rules.ecos, e))}</b> ${_c(kEcoHex, 'T${e.tier}')}';
 
 /// Ficha de un Eco: tier y nivel, zona, jefe, pisos, mods y lo que suman
 /// al botín. [atlas] = efectos del Atlas de la sala (Potencia cambia el

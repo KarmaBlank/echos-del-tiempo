@@ -192,7 +192,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// 81: profession-material gifts (share_materials.md): `giveLife` action.
 /// 82: resident milestones (roles.md § 9): `town` op `claimMilestone`
 /// and the `rcl` claimed mask in the profile.
-const kProtocolVersion = 82;
+/// 83: dungeon-entry gatherings (free_movement.md § 2.1.1): `lf` countdown
+/// in `gat`, gathering kind `eco`.
+/// 84: life trees v2 (life_trees_v2.md): new node ids, claimed rewards
+/// `life.lc` in the profile.
+const kProtocolVersion = 84;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

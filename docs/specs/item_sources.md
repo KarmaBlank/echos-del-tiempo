@@ -15,7 +15,8 @@ have several sources; empty list = unknown (the UI says nothing).
 
 | Item | Source |
 |---|---|
-| `semilla_<crop>` with `seedPrice > 0`, hoes, cans, fertilizers | `farmShop` |
+| `semilla_<crop>` with `seedPrice > 0`, fertilizers | `farmShop` |
+| Hoes, cans, rods, bought picks (v0.48.5: sold at the crafts workshop) | `toolShop` |
 | `semilla_<crop>` without price (not wild) | `forage` in the crop biome |
 | Planted crop | `crop` (biome of the seed, growing seasons) |
 | Wild product (`biome: silvestre` or listed in a biome's `forageKinds`) | `forage` in every biome whose forage spots give it |

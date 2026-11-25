@@ -241,7 +241,9 @@ Tooltip: "Mejora las chances: normal / rara / épica / legendaria".
 (precio y XP).
 
 ## 4. Herramientas (como las cañas)
-Espacio de herramienta aparte de las armas; se compran en el agropecuario
+Espacio de herramienta aparte de las armas; se compran en el TALLER DE
+OFICIOS › HERRAMIENTAS (v0.48.5; el agropecuario ya no vende herramientas,
+solo semillas y abonos — town_loop.md § 2.1)
 y rinden según `efectividad = piso + (1 − piso) × (nivel/requerido)^curva`
 (town_loop.md § 11c).
 

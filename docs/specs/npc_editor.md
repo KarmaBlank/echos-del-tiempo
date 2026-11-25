@@ -17,6 +17,8 @@ los habitantes se escribe a mano acá; nada de la charla se genera.
   - `ambient`: frases sueltas. Los que se mudan: la frase del día (una por
     día del mundo, en orden; antes `BiomeNpcDef.lines`). Los pescadores
     nativos: las frases de la orilla.
+  - `home_ambient` (`homeAmbient`): frases sueltas una vez que vive en el
+    pueblo; si hay, reemplazan a `ambient` ahí. Pestaña EN EL PUEBLO.
   - `night` (los que se mudan): el motivo de cada salida nocturna por id
     de `NightOuting` (antes `ui.town.npc.night.*`). El lugar sigue en
     código.
@@ -86,7 +88,7 @@ amistad:
 ## 3. DIÁLOGO
 
 - Sub-pestañas (nada de secciones apiladas): SALUDOS, TEMAS (árbol con
-  líneas que unen tema y sub-tema), FRASE DEL DÍA / ORILLA, y AL INVITARLO
+  líneas que unen tema y sub-tema), FRASE DEL DÍA / ORILLA, EN EL PUEBLO, y AL INVITARLO
   (arraigados) o NOCHE e INVITAR Y CASA (los que se mudan).
 - Cada texto muestra un campo por idioma; los vacíos se marcan en rojo.
 - Cada tema muestra sus condiciones: charlas, pedidos, amistad, renombre y

@@ -1,6 +1,6 @@
 # Spec: Árboles de talentos de los oficios (OFICIOS)
 
-Estado: implementado en v0.23.0. Relacionadas: `fishing.md`,
+Estado: implementado en v0.23.0; **reemplazado por `life_trees_v2.md`** (árboles, efectos y entregas). Relacionadas: `fishing.md`,
 `farming.md`, `ascension.md` (el patrón del árbol chico y su reinicio).
 Código: `data/life_tree_catalog.dart`, `rules/life_tree_rules.dart`,
 `panels/life_skills_view.dart`. Números: Editor → Balance → Oficios:

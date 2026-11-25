@@ -1,5 +1,6 @@
 import '../data/bait_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/life_tree_catalog.dart';
 import '../data/smithing_catalog.dart' show kSmithMaterials;
 import 'farm_skills.dart';
 
@@ -30,7 +31,9 @@ class LifeSkills {
     Map<String, OreFind> oreLog = const {},
     Map<String, int> baits = const {},
     String? bait,
-  })  : oreLog = Map.unmodifiable({
+    Set<String> claimed = const {},
+  })  : claimed = Set.unmodifiable(claimed),
+        oreLog = Map.unmodifiable({
           for (final e in oreLog.entries)
             if (kSmithMaterials.containsKey(e.key)) e.key: e.value,
         }),
@@ -107,6 +110,10 @@ class LifeSkills {
   /// Nodos tomados del árbol de Herrería.
   final List<String> smithTree;
 
+  /// Life tree nodes whose one-time rewards were already delivered
+  /// (life_trees_v2.md § 4). JSON `lc`.
+  final Set<String> claimed;
+
   /// Bestiario de pesca (fishing.md § 10): especie → récord en cm.
   /// Una especie está descubierta si tiene entrada.
   final Map<String, int> log;
@@ -175,8 +182,10 @@ class LifeSkills {
     Map<String, OreFind>? oreLog,
     Map<String, int>? baits,
     String? bait,
+    Set<String>? claimed,
   }) =>
       LifeSkills(
+          claimed: claimed ?? this.claimed,
           fishXp: fishXp ?? this.fishXp,
           rods: rods ?? this.rods,
           rod: rod ?? this.rod,
@@ -219,6 +228,7 @@ class LifeSkills {
           'ol': {for (final e in oreLog.entries) e.key: e.value.toJson()},
         if (baits.isNotEmpty) 'bt': baits,
         if (bait != null) 'bs': bait,
+        if (claimed.isNotEmpty) 'lc': [...claimed]..sort(),
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -238,8 +248,12 @@ class LifeSkills {
       pity: n(raw['pity']),
       dry: n(raw['dry']),
       farm: FarmSkills.fromJson(raw['farm']),
+      // life_trees_v2.md § 6: v1 ids are dropped (full refund).
       fishTree: raw['ft'] is List
-          ? [for (final x in raw['ft'] as List) if (x is String) x]
+          ? [
+              for (final x in raw['ft'] as List)
+                if (x is String && isLifeTreeNode(LifeSkillKind.pesca, x)) x
+            ]
           : const [],
       crafts: raw['cf'] is Map
           ? {
@@ -249,7 +263,11 @@ class LifeSkills {
           : const {},
       smithXp: n(raw['sx']),
       smithTree: raw['st'] is List
-          ? [for (final x in raw['st'] as List) if (x is String) x]
+          ? [
+              for (final x in raw['st'] as List)
+                if (x is String && isLifeTreeNode(LifeSkillKind.herreria, x))
+                  x
+            ]
           : const [],
       log: raw['lg'] is Map
           ? {
@@ -276,6 +294,9 @@ class LifeSkills {
             }
           : const {},
       bait: raw['bs'] is String ? raw['bs'] as String : null,
+      claimed: raw['lc'] is List
+          ? {for (final x in raw['lc'] as List) if (x is String) x}
+          : const {},
     );
   }
 
@@ -293,6 +314,8 @@ class LifeSkills {
       bag.entries.every((e) => other.bag[e.key] == e.value) &&
       other.smithXp == smithXp &&
       other.smithTree.join(',') == smithTree.join(',') &&
+      other.claimed.length == claimed.length &&
+      other.claimed.containsAll(claimed) &&
       other.log.length == log.length &&
       log.entries.every((e) => other.log[e.key] == e.value) &&
       other.crafts.length == crafts.length &&
