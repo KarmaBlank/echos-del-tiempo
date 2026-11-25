@@ -1271,6 +1271,7 @@ final combatLimitsCodec = _tuningCodec(BalanceKind.combatLimits, const [
   BalanceField('tankGuard', 'Defensa del tanque (× daño recibido)', _frac, max: 1, step: 0.05),
   BalanceField('silenceTurns', 'Silencio: turnos propios del jugador silenciado', _int, max: 9),
   BalanceField('silenceEvery', 'Silencio: el silenciador lo repite cada N acciones (0 = solo al abrir)', _int, max: 20),
+  BalanceField('silenceCooldown', 'Silencio: turnos propios sin poder ser silenciado de nuevo al terminar', _int, max: 9),
   BalanceField('silenceUlt', 'Silencio también bloquea la ULT (1 = sí)', _int, max: 1),
   BalanceField('pBreakOn', 'Quiebre de jugadores activo (1 = sí)', _int, max: 1),
   BalanceField('pBreakMax', 'Quiebre de jugador: umbral de la barra', _dec, min: 1, max: 1000, step: 5),

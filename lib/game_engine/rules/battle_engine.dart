@@ -236,6 +236,10 @@ class BattleEngine {
   /// fight) and whether the ULT is blocked too.
   static int get silenceTurns => math.max(0, _limits.i('silenceTurns'));
   static int get silenceEvery => math.max(0, _limits.i('silenceEvery'));
+
+  /// Own turns a player can't be silenced again after Silence ends, so
+  /// several silencers can't chain it every turn (combat.md § "Silencio").
+  static int get silenceCooldown => math.max(0, _limits.i('silenceCooldown'));
   static bool get silenceBlocksUlt => _limits.i('silenceUlt') > 0;
 
   /// Player break bar (combo_balance.md § 5.4).
@@ -507,7 +511,7 @@ class BattleEngine {
     Combatant? pick;
     var best = -1.0;
     for (final p in state.party) {
-      if (!p.alive || p.isSummon || p.silenced > 0) continue;
+      if (!p.alive || p.isSummon || p.silenced != 0) continue;
       final v = skillPower(p);
       if (v > best) {
         best = v;
@@ -3501,9 +3505,17 @@ class _Turn {
 
   /// Start of a player's turn: Silence loses a turn.
   void _tickSilence(Combatant p) {
-    if (p.silenced <= 0) return;
+    // Negative = immune turns left after a Silence (silenceCooldown).
+    if (p.silenced < 0) {
+      p.silenced++;
+      return;
+    }
+    if (p.silenced == 0) return;
     p.silenced--;
-    if (p.silenced == 0) _notes.add(_l('silence_ends', {'a': p.name}));
+    if (p.silenced == 0) {
+      _notes.add(_l('silence_ends', {'a': p.name}));
+      p.silenced = -BattleEngine.silenceCooldown;
+    }
   }
 
   // ---------------- player break (combo_balance.md § 5.4) -------------

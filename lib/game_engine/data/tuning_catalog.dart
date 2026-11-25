@@ -822,9 +822,10 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Enemy Silence (combat.md § "Silencio"): own turns of the silenced
     // player, how often a silencer recasts it (0 = only when it opens
     // the fight) and whether it also blocks the ULT (1 = yes).
-    'silenceTurns': 2,
+    'silenceTurns': 1,
     'silenceEvery': 4,
     'silenceUlt': 1,
+    'silenceCooldown': 1,
     // Player break bar (combo_balance.md § 5.4): on (1), threshold,
     // points per enemy hit and per 1% of max HP lost, decay at the start
     // of its turn, own turns broken and × damage taken while broken.
