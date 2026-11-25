@@ -1614,7 +1614,12 @@ class SessionController extends StateNotifier<SessionView?> {
       .values[(mineHand.index + d) % MineHand.values.length]);
 
   /// The tile in front of the local player (the one a swing hits).
+  /// Tile picked with the mouse (a click next to the player), kept while
+  /// the button is held; `null` = the tile in front.
+  (int, int)? _mineAim;
+
   (int, int) get mineTarget {
+    if (_mineAim case final a?) return a;
     var fx = local.fx, fy = local.fy;
     if (fx == 0 && fy == 0) fy = 1;
     final horiz = fx.abs() >= fy.abs();
@@ -1645,6 +1650,8 @@ class SessionController extends StateNotifier<SessionView?> {
   void Function(int tx, int ty)? onMineSwing;
 
   Timer? _mineHold;
+  double _lastSwingT = -1e9;
+  double _lastBlockNotice = -1e9;
 
   /// Why a swing at the target fails (i18n key), or `null`.
   String? get mineBlock {
@@ -1668,11 +1675,22 @@ class SessionController extends StateNotifier<SessionView?> {
     if (lvl == null || p == null || !inMine) return false;
     final tool = MiningRules.tool(p);
     final now = mineClock.elapsedMilliseconds.toDouble();
-    if (now - lastSwingMs < tool.swing * 1000) return false;
+    // The rhythm runs on the room clock (the host checks the same one).
+    final st = _s!.time;
+    if (st - _lastSwingT < tool.swing) return false;
     final (x, y) = mineTarget;
     final c = MiningRules.tileAt(lvl, mineState, x, y);
-    if (MiningRules.cannotBreak(c, lvl.level, tool) != null) {
+    if (MiningRules.cannotBreak(c, lvl.level, tool) case final why?) {
       if (c == MineTile.bedrock || MineTile.breakable.contains(c)) {
+        // The pick bounces off; say why (at most every 2 s).
+        if (st - _lastBlockNotice > 2) {
+          _lastBlockNotice = st;
+          addLocalNotice(why == 'tier'
+              ? strings.t('ui.world.mine.need_tier',
+                  {'n': MiningRules.reqTierOf(c, lvl.level)})
+              : strings.t('ui.world.mine.why.bedrock'));
+        }
+        _lastSwingT = st;
         lastSwingMs = now;
         lastSwingTile = (x, y);
         onMineSwing?.call(x, y);
@@ -1681,6 +1699,7 @@ class SessionController extends StateNotifier<SessionView?> {
       return false;
     }
     lastSwingMs = now;
+    _lastSwingT = st;
     lastSwingTile = (x, y);
     final i = lvl.idx(x, y);
     mineCracks.removeWhere((k, _) =>
@@ -1707,13 +1726,22 @@ class SessionController extends StateNotifier<SessionView?> {
   void mineHoldEnd() {
     _mineHold?.cancel();
     _mineHold = null;
+    _mineAim = null;
   }
 
   /// E in a mine: the find in front (chest, mushrooms, lore stone,
   /// station spot) or the held tool.
-  bool mineUse() {
+  bool mineUse({(int, int)? at}) {
     final lvl = mineLevel;
     if (lvl == null || !inMine) return false;
+    // A click on a tile next to the player aims there (§ 1.12).
+    _mineAim = null;
+    if (at case (final ax, final ay)) {
+      final px = (local.x / 16).floor(), py = (local.y / 16).floor();
+      if ((ax - px).abs() <= 1 && (ay - py).abs() <= 1 && (ax, ay) != (px, py)) {
+        _mineAim = at;
+      }
+    }
     final (x, y) = mineTarget;
     final c = MiningRules.tileAt(lvl, mineState, x, y);
     switch (c) {
@@ -1752,6 +1780,24 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Hire / dismiss a miner on this level (needs its station).
   bool hireMiner() => _apply(const MineAction(MineOp.hire));
+
+  /// The miner with the weakest pick that can still improve, or `null`.
+  int? get _minerToUpgrade {
+    final m = mineState.miners;
+    int? best;
+    for (var i = 0; i < m.length; i++) {
+      if (m[i].tier >= kMineTools.last.tier) continue;
+      if (best == null || m[i].tier < m[best].tier) best = i;
+    }
+    return best;
+  }
+
+  /// U at the station: raise the pick of the miner with the weakest one.
+  bool upgradeMiner() {
+    final k = _minerToUpgrade;
+    if (k == null) return false;
+    return _apply(MineAction(MineOp.upgrade, n: k));
+  }
   bool fireMiner() => _apply(const MineAction(MineOp.fire));
 
   /// In the mine, next to its built station.
@@ -1778,11 +1824,22 @@ class SessionController extends StateNotifier<SessionView?> {
     if (c == MineTile.mushroom) return strings.t('ui.world.mine.prompt_mushroom');
     if (c == MineTile.lore) return strings.t('ui.world.mine.prompt_lore');
     if (nearMineStation) {
-      return strings.t('ui.world.mine.prompt_miners', {
+      final base = strings.t('ui.world.mine.prompt_miners', {
         'n': mineState.miners.length,
         'max': MiningRules.t.i('minerMax'),
         'gold': MiningRules.t.i('minerCost'),
       });
+      final k = _minerToUpgrade;
+      final up = k == null
+          ? null
+          : MineWorkRules.upgradeCost(mineState.miners[k].tier + 1);
+      if (up == null) return base;
+      return '$base · ${strings.t('ui.world.mine.prompt_miner_up', {
+            'tier': mineState.miners[k!].tier + 1,
+            'gold': up.gold,
+            'n': up.n,
+            'ingot': strings.t('data.materials.smith.${up.ingot}.name'),
+          })}';
     }
     if (mineBlock case final k?) return strings.t(k);
     return switch (mineHand) {
@@ -3243,6 +3300,10 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_panel == null && inMine) {
       if (key == LogicalKeyboardKey.keyG && nearMineStation) {
         HardwareKeyboard.instance.isShiftPressed ? fireMiner() : hireMiner();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.keyU && nearMineStation) {
+        upgradeMiner();
         return true;
       }
       if (key == LogicalKeyboardKey.keyR) {

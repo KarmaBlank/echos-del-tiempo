@@ -24,6 +24,7 @@ class MiningHostState {
   final boost = <String, double>{};
   final bombs = <PendingBomb>[];
   double stepAcc = 0;
+  double seenAcc = 0;
 }
 
 extension _MiningOp on _Op {
@@ -112,6 +113,24 @@ extension _MiningOp on _Op {
         s.town = s.town.withMine(
             place, st.copyWith(miners: [...st.miners, MinerState(mx, my)]));
         say('${p.name} contrató un minero para ${MiningRules.placeName(place)}.');
+        return true;
+      case MineOp.upgrade:
+        // Raise the pick of the miner [a.n] by one tier (§ 1.7).
+        final k = a.n;
+        if (k < 0 || k >= st.miners.length) return false;
+        final m = st.miners[k];
+        final c = MineWorkRules.upgradeCost(m.tier + 1);
+        if (c == null) return false;
+        if (p.profile.credits < c.gold || p.profile.life.ore(c.ingot) < c.n) {
+          return false;
+        }
+        _profileChange(
+            p,
+            MiningRules.give(p.profile, {c.ingot: -c.n})
+                .copyWith(credits: p.profile.credits - c.gold));
+        final miners = [...st.miners]..[k] = m.copyWith(tier: m.tier + 1);
+        s.town = s.town.withMine(place, st.copyWith(miners: miners));
+        say('${p.name} mejoró el pico de un minero (nivel ${m.tier + 1}).');
         return true;
       case MineOp.fire:
         if (st.miners.isEmpty) return false;
@@ -301,6 +320,20 @@ extension _MiningOp on _Op {
       final next = MineWorkRules.regrowTick(lvl, st, s.time,
           [for (final p in players) (p.x / 16, p.y / 16)], _rand);
       if (!identical(next, st)) s.town = s.town.withMine(place, next);
+    }
+    // Veins each player discovers (minimap, § 1.11), twice a second.
+    _mh.seenAcc += dt;
+    if (_mh.seenAcc >= 0.5) {
+      _mh.seenAcc = 0;
+      if (_level case (final place, final lvl, final st0)) {
+        var st = st0;
+        for (final p in players) {
+          if (p.isCompanion) continue;
+          st = MineWorkRules.discover(
+              lvl, st, p.profile.name, p.x / 16, p.y / 16);
+        }
+        if (!identical(st, st0)) s.town = s.town.withMine(place, st);
+      }
     }
     if (!world || s.town.mines.isEmpty) return;
     _mh.stepAcc += dt;

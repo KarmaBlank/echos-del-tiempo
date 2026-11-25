@@ -137,6 +137,10 @@ abstract final class MiningRules {
         caveDensity: t.d('caveDensity'),
         formations: t.i('formations'),
         streamChance: t.d('streamChance'),
+        lakeChance: t.d('lakeChance'),
+        chambers: t.i('chambers'),
+        chamberMin: t.i('chamberMin'),
+        chamberMax: t.i('chamberMax'),
         grottoChance: t.d('grottoChance'),
         secretChance: t.d('secretChance'),
         relicChance: t.d('relicChance'),
@@ -160,7 +164,7 @@ abstract final class MiningRules {
     final seed = seedFor(worldId, m.$1, m.$2, m.$3);
     final p = params(m.$1, m.$3);
     final key = '${place!}|$seed|${p.width}x${p.height}|${p.clusters}|'
-        '${p.weights.values.join(',')}|${p.caveDensity}|${p.chestRate}';
+        '${p.weights.values.join(',')}|${p.caveDensity}|${p.chestRate}|${p.chambers}|${p.chamberMin}|${p.chamberMax}|${p.lakeChance}|${p.streamChance}';
     final hit = _cache[key];
     if (hit != null) return hit;
     if (_cache.length > 24) _cache.clear();
@@ -240,6 +244,14 @@ abstract final class MiningRules {
   static int reqTier(int level) =>
       t.values.containsKey('reqTierLv$level') ? t.i('reqTierLv$level') : level;
 
+  /// Pick tier needed for [code] at [level]: the level's, one more for
+  /// deep and gem veins (at most the top tier).
+  static int reqTierOf(String code, int level) {
+    final base = reqTier(level);
+    final extra = code == MineTile.deep || code == MineTile.gem ? 1 : 0;
+    return math.min(kMineTools.last.tier, base + extra);
+  }
+
   /// Hits to break [code] at [level] (`0` = unbreakable).
   static int hits(String code, int level) {
     if (!MineTile.breakable.contains(code)) return 0;
@@ -265,7 +277,7 @@ abstract final class MiningRules {
   static String? cannotBreak(String code, int level, MineToolDef tool) {
     if (code == MineTile.bedrock) return 'bedrock';
     if (hits(code, level) <= 0) return 'solid';
-    if (code != MineTile.wallTorch && tool.tier < reqTier(level)) {
+    if (code != MineTile.wallTorch && tool.tier < reqTierOf(code, level)) {
       return 'tier';
     }
     return null;

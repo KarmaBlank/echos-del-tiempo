@@ -55,24 +55,31 @@ baja.
 `mineW` × `mineH` tiles (72 × 48), determinista (mulberry32; semilla
 FNV de `<mundo>|<bioma>|<i>|<nivel>`; **ya no cambia por semana**).
 
-- Roca maciza que se cava tile por tile; bolsones naturales por autómata
-  celular (`caveDensity`), entrada en una cámara arriba al medio con la
-  salida, el lugar de la estación de vagonetas (`Z`) y el punto de
-  aparición.
-- Borde de **roca madre** de 2 tiles (`X`, irrompible) y formaciones
+- **Primero cavar**: todo es roca maciza salvo la cámara de entrada
+  (arriba al medio, con la salida, el lugar de la estación `Z` y la
+  aparición), el lugar del pozo y unas pocas **cámaras chicas selladas**
+  (`chambers`, radio `chamberMin..chamberMax`) a las que se llega
+  cavando: cuarto con cofre (`chestRate`), hongos (`mushroomChance`),
+  piedra con inscripción (`loreChance`), charco (`lakeChance`) o gruta de
+  cristal (`grottoChance`). No hay pasillos ni redes de cuevas abiertas
+  (`caveDensity` = 0; si se sube, aparecen bolsones abiertos).
+- Roca madre de 2 tiles en el borde (`X`, irrompible) y formaciones
   irrompibles sueltas (`formations`).
-- Arroyos (`streamChance`, agua), grutas de cristal (`grottoChance`,
-  `c`, brillan), pozo natural al nivel siguiente en un bolsón lejano
-  (si queda encerrado, hay que cavar hasta él; el último nivel no tiene).
+- Arroyos chicos de decorado (`streamChance`): agua sellada en la roca,
+  sin orillas abiertas, nunca un camino.
+- Pozo al nivel siguiente siempre sellado en la roca, lejos de la entrada
+  (el último nivel no tiene).
+- Vetas en las paredes, visibles: brillan apenas a través de la roca
+  (luz `veta`, escala `veinGlow` × `veinGlowRich/Deep/Gem`; más las
+  raras, siempre tenue), así el jugador elige hacia dónde cavar.
 - Vetas en la roca, en racimos (`veinClusters` + 3 por nivel, tamaño
   `veinSizeMin..Max`): común `r`, rica `d`, profunda `e`, gema `a`; los
   pesos (`wCommon`, `wRich…`, `wDeep…`, `wGem…`, más por nivel) hacen
   que lo hondo sea más rico.
 - **Hallazgos ocultos**: gruta secreta sellada (`secretChance`) con gemas
-  y, con `relicChance`, un **cofre reliquia magitec** (`U`); cofres
-  comunes (`$`, `chestRate`); hongos (`y`, `mushroomChance`, dan fibra);
-  **piedra con inscripción** (`&`, `loreChance`; frases
-  `ui.world.mine.lore.<n>`, **BORRADOR**).
+  y, con `relicChance`, un **cofre reliquia magitec** (`U`); en las
+  cámaras, cofres (`$`), hongos (`y`, dan fibra) y la **piedra con
+  inscripción** (`&`; frases `ui.world.mine.lore.<n>`, **BORRADOR**).
 - PNJ ocasional como en v1. **Sin enemigos**: la mina es un mapa lobby.
 - Arte: tiles auto-ajustados (borde según vecinos) en
   `mine_tiles.dart`, colores de `MinePalette`; íconos de menas,
@@ -144,6 +151,16 @@ barata (caminar 1, cavar según golpes): si no hay camino, **cava túnel**
 tiles, y lo picado va a la vagoneta. Corre en la sala del mundo, aunque
 nadie esté en la mina; se ven trabajando.
 
+- **Pico del minero** (`MinerState.tier`, 0–4, JSON `pt`): solo rompe la
+  roca o la veta cuyo nivel pedido (`MiningRules.reqTierOf`: el del
+  nivel de la mina, +1 para vetas profundas y de gema) sea ≤ su pico; lo
+  demás lo rodea o lo saltea. U en la estación mejora el pico más bajo:
+  `minerUpGold` × nivel de oro y `minerUpIngots` × nivel lingotes del
+  pico de ese nivel. Al máximo pica todo.
+- **Rinde menos que un jugador**: cada veta da `minerYield` (< 1) de lo
+  normal, sin bonus de herramienta, aceite de veta, pasivas ni nodos de
+  oficio.
+
 ### 1.8 Vagonetas
 
 Vagoneta llena (`cartCap`) sale por riel al pueblo (`cartTravelSec`),
@@ -161,7 +178,29 @@ sacudida de bomba, ganchos de sonido (`Sfx`). Todo cliente (`MineLayer`).
 
 `TownState.mines` (`mn` en el bloque del pueblo, también sincronizado a
 los clientes): por nivel, tiles cavados, antorchas, hallazgos abiertos,
-vetas que volvieron y sus relojes, estación, mineros y vagoneta.
+vetas que volvieron y sus relojes, estación, mineros, vagoneta y vetas
+descubiertas por jugador.
+
+### 1.11 Vetas descubiertas en el minimapa
+
+El anfitrión, dos veces por segundo, marca como descubiertas para cada
+jugador (por nombre de perfil, `MineLevelState.known`, JSON `k`) las
+vetas a ≤ `discoverLit` tiles (su brillo se ve) y las que asoman en la
+cara de un túnel (vecinas de suelo caminable) a ≤ `discoverView` tiles.
+El minimapa de ese jugador las pinta del color de la veta mientras sigan
+siendo veta; en la base del minimapa la roca, las vetas y los hallazgos
+sellados se ven como roca. Una veta que vuelve (§ 1.5) aparece en otro
+tile: hay que redescubrirla.
+
+### 1.12 Controles
+
+Con PICO o TALADRO, E pica el tile al frente y el clic izquierdo el tile
+clicado si está al lado del jugador (si no, el de al frente);
+mantener E o el clic sigue picando al ritmo del pico (el taladro, sin
+pausa); clics o toques repetidos también pican (el ritmo lo limita el
+pico, y el anfitrión lo valida). Si el pico no alcanza, rebota y avisa
+«Necesitás un pico mejor (nivel N)» (`ui.world.mine.need_tier`, como
+mucho cada 2 s).
 
 ## 2. Materiales de herrería
 

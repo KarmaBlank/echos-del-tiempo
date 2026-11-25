@@ -840,6 +840,9 @@ abstract final class LightPalette {
   /// Ambiente de una mazmorra oscura (casi negro).
   static const darkDungeon = Color(0xFF0A0A12);
 
+  /// Mines: dark, but rock shapes stay readable (mining_smithing.md § 1.6).
+  static const darkMine = Color(0xFF2A2630);
+
   /// Silueta de un enemigo en la penumbra.
   static const silhouette = Color(0xFF000000);
 }

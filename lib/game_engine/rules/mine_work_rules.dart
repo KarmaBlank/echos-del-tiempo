@@ -33,7 +33,7 @@ abstract final class MineWorkRules {
   }
 
   /// Tiles a torch keeps lit (radius of the torch light, rounded up).
-  static const kTorchReach = 5;
+  static const kTorchReach = 7;
 
   /// [st] with the due veins grown back into intact rock near where they
   /// were, never in sight of [viewers] (tile coordinates). A vein with no
@@ -75,6 +75,53 @@ abstract final class MineWorkRules {
     return st.copyWith(grown: grown, regrow: regrow);
   }
 
+  // ---------------- discovered veins (§ 1.11) ----------------
+
+  /// [st] with the veins [who] discovers standing at tile ([px], [py]):
+  /// veins within `discoverLit` tiles (their glow is plain to see) and
+  /// veins showing on a tunnel face (next to walkable ground) within
+  /// `discoverView` tiles.
+  static MineLevelState discover(
+      MineLevel lvl, MineLevelState st, String who, double px, double py) {
+    final lit = t.d('discoverLit'), view = t.d('discoverView');
+    final r = view.ceil();
+    final cx = px.floor(), cy = py.floor();
+    final had = st.knownBy(who);
+    Set<int>? add;
+    for (var y = math.max(0, cy - r); y <= math.min(lvl.height - 1, cy + r); y++) {
+      for (var x = math.max(0, cx - r); x <= math.min(lvl.width - 1, cx + r); x++) {
+        final i = lvl.idx(x, y);
+        if (had.contains(i)) continue;
+        if (!MineTile.veins.contains(MiningRules.tileAt(lvl, st, x, y))) {
+          continue;
+        }
+        final d2 = (x + 0.5 - px) * (x + 0.5 - px) + (y + 0.5 - py) * (y + 0.5 - py);
+        if (d2 > view * view) continue;
+        var seen = d2 <= lit * lit;
+        if (!seen) {
+          for (final (dx, dy) in _n4) {
+            if (Tile.isWalkable(MiningRules.tileAt(lvl, st, x + dx, y + dy))) {
+              seen = true;
+              break;
+            }
+          }
+        }
+        if (seen) (add ??= {}).add(i);
+      }
+    }
+    if (add == null) return st;
+    return st.copyWith(known: {...st.known, who: {...had, ...add}});
+  }
+
+  /// The veins [who] has on the minimap now: discovered and still veins.
+  static List<(int, int, String)> knownVeins(
+      MineLevel lvl, MineLevelState st, String who) => [
+        for (final i in st.knownBy(who))
+          if (lvl.xy(i) case (final x, final y)
+              when MineTile.veins.contains(MiningRules.tileAt(lvl, st, x, y)))
+            (x, y, MiningRules.tileAt(lvl, st, x, y))
+      ];
+
   // ---------------- miners (§ 1.7) ----------------
 
   /// Where a new miner starts: next to the station.
@@ -85,18 +132,53 @@ abstract final class MineWorkRules {
 
   /// Cost of entering a tile for a miner (`null` = never): walking 1,
   /// breaking rock or a vein 4 + hits.
-  static int? _cost(MineLevel lvl, MineLevelState st, int x, int y) {
+  static int? _cost(
+      MineLevel lvl, MineLevelState st, int x, int y, int tier) {
     final c = MiningRules.tileAt(lvl, st, x, y);
     if (Tile.isWalkable(c)) return 1;
     if (!MineTile.breakable.contains(c)) return null;
+    // Rock or a vein its pick cannot break: it routes around (§ 1.7).
+    if (c != MineTile.wallTorch && MiningRules.reqTierOf(c, lvl.level) > tier) {
+      return null;
+    }
     return 4 + MiningRules.hits(c, lvl.level);
+  }
+
+  /// Gold and ingots to raise a miner's pick to [tier] (`null` = no
+  /// such tier).
+  static ({int gold, String ingot, int n})? upgradeCost(int tier) {
+    final tool = mineTool(kMineTools
+        .firstWhere((d) => d.tier == tier, orElse: () => kMineTools.first)
+        .id);
+    if (tier < 1 || tier > kMineTools.last.tier || tool?.ingot == null) {
+      return null;
+    }
+    return (
+      gold: t.i('minerUpGold') * tier,
+      ingot: tool!.ingot!,
+      n: t.i('minerUpIngots') * tier,
+    );
+  }
+
+  /// What a miner gets from [code]: the vein's yield scaled down by
+  /// `minerYield` (always less than a player; no tool bonus, no oil).
+  static Map<String, int> minerYield(
+      RandomSource rand, String biome, String code) {
+    final got = MiningRules.veinYield(rand, biome, code: code);
+    final k = t.d('minerYield');
+    final out = <String, int>{};
+    for (final e in got.entries) {
+      final n = (e.value * k + rand() * 0.5).floor();
+      if (n > 0) out[e.key] = n;
+    }
+    return out;
   }
 
   /// The first step of the cheapest route from ([x], [y]) to the nearest
   /// vein (Dijkstra over walking and digging; a vein entered is mined).
   /// `null` when no vein is left.
   static (int, int)? nextStep(
-      MineLevel lvl, MineLevelState st, int x, int y) {
+      MineLevel lvl, MineLevelState st, int x, int y, {int tier = 0}) {
     final w = lvl.width, h = lvl.height;
     final dist = List<int>.filled(w * h, 1 << 30);
     final from = List<int>.filled(w * h, -1);
@@ -122,7 +204,7 @@ abstract final class MineWorkRules {
       for (final (dx, dy) in _n4) {
         final nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        final c = _cost(lvl, st, nx, ny);
+        final c = _cost(lvl, st, nx, ny, tier);
         if (c == null) continue;
         final j = lvl.idx(nx, ny), nd = d + c;
         if (nd < dist[j]) {
@@ -147,7 +229,7 @@ abstract final class MineWorkRules {
     final miners = <MinerState>[];
     for (final m0 in st.miners) {
       var m = m0;
-      final step = nextStep(lvl, cur, m.x, m.y);
+      final step = nextStep(lvl, cur, m.x, m.y, tier: m.tier);
       if (step == null) {
         miners.add(m);
         continue;
@@ -163,7 +245,7 @@ abstract final class MineWorkRules {
         } else {
           cur = MiningRules.dig(lvl, cur, sx, sy, now);
           if (MineTile.veins.contains(code) || code == MineTile.crystal) {
-            final got = MiningRules.veinYield(rand, lvl.biome, code: code);
+            final got = minerYield(rand, lvl.biome, code);
             final load = {...cur.cart.load};
             for (final e in got.entries) {
               load[e.key] = (load[e.key] ?? 0) + e.value;

@@ -559,7 +559,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     return;
                   }
                   if (controller.activeTool == ActiveTool.mine) {
-                    controller.mineUse();
+                    controller.mineUse(at: tile);
                   } else if (controller.activeTool == ActiveTool.rod) {
                     controller.startFishing();
                   } else {

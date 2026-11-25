@@ -16,6 +16,7 @@ import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/memo.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -100,7 +101,9 @@ class WorldHud extends StatelessWidget {
     final s = view.session;
     final field = s.mode == SessionMode.field;
     final world = s.mode == SessionMode.lobby && view.map.entrances.isNotEmpty;
+    // Mines show it too: the discovered veins (mining_smithing.md § 1.11).
     final showMinimap = world ||
+        (view.map.lobby && MiningRules.isMine(view.map.place)) ||
         ((field || s.mode == SessionMode.levelUp) &&
             !view.map.lobby &&
             s.mission != null);

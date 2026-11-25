@@ -9,7 +9,9 @@ import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
+import 'package:echos_del_tiempo/game_engine/data/light_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/light_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/life_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mine_generator.dart';
@@ -104,6 +106,24 @@ void main() {
           open.contains((ex, ey)) || open.contains((ex, ey + 1)), isTrue);
       expect(a.rows.join().split('').where(MineTile.veins.contains),
           isNotEmpty);
+    });
+
+    test('dig-first: sin caminos hechos, cámaras chicas selladas', () {
+      for (final b in kBiomeOres.keys) {
+        for (var lv = 0; lv < MiningRules.levels; lv++) {
+          final a = level0(b, 0, lv);
+          // On foot only the entry chamber (7 × 4) and its stairs.
+          expect(walk(a, const MineLevelState()).length, lessThanOrEqualTo(30),
+              reason: '$b $lv');
+          // Veins sit in the walls (the player picks where to tunnel).
+          expect(a.rows.join().split('').where(MineTile.veins.contains).length,
+              greaterThan(10));
+          // Little open ground in all: chambers are small.
+          final open = a.rows.join().split('').where((c) => c == '.').length;
+          expect(open, lessThan(a.width * a.height ~/ 12), reason: '$b $lv');
+          if (lv < MiningRules.levels - 1) expect(a.shaft, isNotNull);
+        }
+      }
     });
 
     test('más hondo: más golpes, mejor pico y vetas más ricas', () {
@@ -304,6 +324,56 @@ void main() {
     });
   });
 
+  group('minas v2: vetas que brillan y se descubren', () {
+    test('las vetas brillan apenas, más las raras', () {
+      final lvl = level0(kAbismo, 0, MiningRules.levels - 1);
+      final map = MiningRules.mapOf(lvl, const MineLevelState());
+      final lights = LightRules.tileEmitters(map, 0, 0, map.width, map.height);
+      final glow = {
+        for (final l in lights)
+          if (l.def == kLightDefs[LightId.veta])
+            map.rows[l.y.floor()][l.x.floor()]: l.scale
+      };
+      expect(glow[Tile.ore], isNotNull);
+      for (final c in [MineTile.rich, MineTile.deep, MineTile.gem]) {
+        if (glow[c] case final k?) expect(k, greaterThan(glow[Tile.ore]!));
+      }
+      expect(kLightDefs[LightId.veta]!.intensity, lessThan(0.6),
+          reason: 'still dim');
+    });
+
+    test('vetas descubiertas: por jugador, guardadas, y la que vuelve se '
+        'redescubre', () {
+      final lvl = level0();
+      final at = lvl.rows.join().indexOf(Tile.ore);
+      final (vx, vy) = lvl.xy(at);
+      var st = const MineLevelState();
+      // Far away and behind rock: not known.
+      st = MineWorkRules.discover(lvl, st, 'Ana',
+          (vx + 30) % lvl.width + 0.5, 3.5);
+      expect(st.knownBy('Ana'), isNot(contains(at)));
+      // Close by: its glow is seen.
+      st = MineWorkRules.discover(lvl, st, 'Ana', vx + 0.5, vy + 2.5);
+      expect(st.knownBy('Ana'), contains(at));
+      expect(st.knownBy('Beto'), isEmpty, reason: 'per player');
+      expect(MineWorkRules.knownVeins(lvl, st, 'Ana').map((v) => (v.$1, v.$2)),
+          contains((vx, vy)));
+      expect(MineLevelState.fromJson(st.toJson()).knownBy('Ana'),
+          st.knownBy('Ana'));
+      // Mined: off the minimap; it grows back elsewhere unknown.
+      st = MiningRules.dig(lvl, st, vx, vy, 0);
+      expect(MineWorkRules.knownVeins(lvl, st, 'Ana').map((v) => (v.$1, v.$2)),
+          isNot(contains((vx, vy))));
+      st = MineWorkRules.regrowTick(
+          lvl, st, t().d('regrowSec') + 1, const [], () => 0.3);
+      final g = st.grown.keys.single;
+      expect(st.knownBy('Ana'), isNot(contains(g)));
+      final (gx, gy) = lvl.xy(g);
+      st = MineWorkRules.discover(lvl, st, 'Ana', gx + 0.5, gy + 1.5);
+      expect(st.knownBy('Ana'), contains(g));
+    });
+  });
+
   group('minas v2: mineros y vagonetas', () {
     test('un minero cava hacia una veta encerrada y llena la vagoneta', () {
       final lvl = level0();
@@ -330,6 +400,52 @@ void main() {
       // JSON round trip of miners and cart.
       final back = MineLevelState.fromJson(st.toJson());
       expect(back.toJson(), st.toJson());
+    });
+
+    test('pico del minero: nivel, mejora y rinde menos que un jugador', () {
+      // Deepest level: a tier-0 miner cannot break anything there.
+      final deep = level0(kBosque, 0, MiningRules.levels - 1);
+      final (mx, my) = MineWorkRules.minerSpawn(deep);
+      expect(MineWorkRules.nextStep(deep, const MineLevelState(), mx, my),
+          isNull);
+      expect(
+          MineWorkRules.nextStep(
+              deep, const MineLevelState(), mx, my, tier: kMineTools.last.tier),
+          isNotNull);
+      // Deep and gem veins need one tier more.
+      expect(MiningRules.reqTierOf(MineTile.deep, 0),
+          MiningRules.reqTierOf(Tile.wall, 0) + 1);
+      // Upgrade at the station: gold + ingots of that tier.
+      final (e, s0) = inMine(kBosque, 0,
+          profile: smith(1, ores: {'ingot_copper': 20}));
+      var s = s0;
+      final place = MiningRules.placeOf(kBosque, 0);
+      s.town = s.town.withMine(place,
+          const MineLevelState(station: true, miners: [MinerState(5, 5)]));
+      final c = MineWorkRules.upgradeCost(1)!;
+      expect(c.ingot, 'ingot_copper');
+      final gold = s.players['p0']!.profile.credits;
+      s = act(e, s, 'p0', const MineAction(MineOp.upgrade, n: 0));
+      expect(s.town.mine(place).miners.single.tier, 1);
+      expect(s.players['p0']!.profile.credits, gold - c.gold);
+      expect(s.players['p0']!.profile.life.ore('ingot_copper'), 20 - c.n);
+      expect(MinerState.fromJson(s.town.mine(place).miners.single.toJson())!
+          .tier, 1);
+      expect(MineWorkRules.upgradeCost(kMineTools.last.tier + 1), isNull);
+      // Yield: always less than a player on average.
+      var i = 0;
+      double r() => ((i++ * 7919) % 1000) / 1000;
+      var player = 0, miner = 0;
+      for (var k = 0; k < 400; k++) {
+        player += MiningRules.veinYield(r, kBosque, code: MineTile.rich)
+            .values
+            .fold(0, (a, b) => a + b);
+        miner += MineWorkRules.minerYield(r, kBosque, MineTile.rich)
+            .values
+            .fold(0, (a, b) => a + b);
+      }
+      expect(miner, lessThan(player));
+      expect(miner, greaterThan(0));
     });
 
     test('la vagoneta llega al pueblo, se descarga y vuelve', () {

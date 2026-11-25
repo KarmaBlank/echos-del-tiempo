@@ -1398,7 +1398,7 @@ class MapGame extends Game {
               Weather.despejado => 0.0,
             };
       final ambient = darkMap
-          ? MapLightLayer.dungeonAmbient
+          ? (inMine ? MapLightLayer.mineAmbient : MapLightLayer.dungeonAmbient)
           : MapLightLayer.outdoorAmbient(dk,
               overcast: overcast, bolt: sky.boltLight(t) * flashFactor);
       final lit = darkMap || dk > 0.05;

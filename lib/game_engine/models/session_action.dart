@@ -73,6 +73,7 @@ class ForageAction extends SessionAction {
 
 /// What a [MineAction] does (mining_smithing.md § 1, v2).
 enum MineOp {
+  upgrade,
   /// One swing at the tile ([x], [y]) of the level.
   dig,
 

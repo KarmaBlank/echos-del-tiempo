@@ -54,19 +54,32 @@ class MineCart {
 /// it is breaking, tiles dug since its last torch and its helper stats.
 class MinerState {
   const MinerState(this.x, this.y,
-      {this.work = 0, this.sinceTorch = 0, this.stat = const HelperStat()});
+      {this.work = 0,
+      this.sinceTorch = 0,
+      this.stat = const HelperStat(),
+      this.tier = 0});
 
   final int x, y;
+
+  /// Pick tier of this miner (0–4, § 1.7): it only breaks what a pick of
+  /// that tier breaks.
+  final int tier;
   final int work;
   final int sinceTorch;
   final HelperStat stat;
 
   MinerState copyWith(
-          {int? x, int? y, int? work, int? sinceTorch, HelperStat? stat}) =>
+          {int? x,
+          int? y,
+          int? work,
+          int? sinceTorch,
+          HelperStat? stat,
+          int? tier}) =>
       MinerState(x ?? this.x, y ?? this.y,
           work: work ?? this.work,
           sinceTorch: sinceTorch ?? this.sinceTorch,
-          stat: stat ?? this.stat);
+          stat: stat ?? this.stat,
+          tier: tier ?? this.tier);
 
   Map<String, Object?> toJson() => {
         'x': x,
@@ -74,6 +87,7 @@ class MinerState {
         if (work != 0) 'w': work,
         if (sinceTorch != 0) 's': sinceTorch,
         if (stat.xp != 0 || stat.ups.isNotEmpty) 'st': stat.toJson(),
+        if (tier != 0) 'pt': tier,
       };
 
   static MinerState? fromJson(Object? raw) {
@@ -81,7 +95,8 @@ class MinerState {
     return MinerState((raw['x'] as num).toInt(), (raw['y'] as num).toInt(),
         work: raw['w'] is num ? (raw['w'] as num).toInt() : 0,
         sinceTorch: raw['s'] is num ? (raw['s'] as num).toInt() : 0,
-        stat: HelperStat.fromJson(raw['st']));
+        stat: HelperStat.fromJson(raw['st']),
+        tier: raw['pt'] is num ? (raw['pt'] as num).toInt().clamp(0, 4) : 0);
   }
 }
 
@@ -98,6 +113,7 @@ class MineLevelState {
     this.station = false,
     this.miners = const [],
     this.cart = const MineCart(),
+    this.known = const {},
   });
 
   /// Rock and veins broken (now floor). Tunnels never close.
@@ -121,6 +137,14 @@ class MineLevelState {
   final List<MinerState> miners;
   final MineCart cart;
 
+  /// Veins each player discovered (§ 1.11), by profile name: tile
+  /// indexes shown on that player's minimap while still a vein. A vein
+  /// that grows back elsewhere must be found again.
+  final Map<String, Set<int>> known;
+
+  /// Veins [who] discovered.
+  Set<int> knownBy(String who) => known[who] ?? const {};
+
   bool get isEmpty =>
       dug.isEmpty &&
       torches.isEmpty &&
@@ -128,7 +152,8 @@ class MineLevelState {
       grown.isEmpty &&
       regrow.isEmpty &&
       !station &&
-      miners.isEmpty;
+      miners.isEmpty &&
+      known.isEmpty;
 
   MineLevelState copyWith({
     Set<int>? dug,
@@ -139,6 +164,7 @@ class MineLevelState {
     bool? station,
     List<MinerState>? miners,
     MineCart? cart,
+    Map<String, Set<int>>? known,
   }) =>
       MineLevelState(
         dug: dug ?? this.dug,
@@ -149,6 +175,7 @@ class MineLevelState {
         station: station ?? this.station,
         miners: miners ?? this.miners,
         cart: cart ?? this.cart,
+        known: known ?? this.known,
       );
 
   static List<int> _sorted(Set<int> s) => s.toList()..sort();
@@ -168,6 +195,11 @@ class MineLevelState {
         if (miners.isNotEmpty) 'mi': [for (final m in miners) m.toJson()],
         if (cart.phase != CartPhase.mine || cart.load.isNotEmpty || cart.t != 0)
           'c': cart.toJson(),
+        if (known.isNotEmpty)
+          'k': {
+            for (final k in (known.keys.toList()..sort()))
+              if (known[k]!.isNotEmpty) k: _sorted(known[k]!)
+          },
       };
 
   static Set<int> _set(Object? v) => v is List
@@ -179,7 +211,7 @@ class MineLevelState {
 
   static MineLevelState fromJson(Object? raw) {
     if (raw is! Map) return const MineLevelState();
-    final g = raw['g'], rg = raw['rg'], mi = raw['mi'];
+    final g = raw['g'], rg = raw['rg'], mi = raw['mi'], kn = raw['k'];
     return MineLevelState(
       dug: _set(raw['d']),
       torches: _set(raw['l']),
@@ -206,6 +238,12 @@ class MineLevelState {
             ]
           : const [],
       cart: MineCart.fromJson(raw['c']),
+      known: kn is Map
+          ? {
+              for (final e in kn.entries)
+                if (e.key is String) e.key as String: _set(e.value),
+            }
+          : const {},
     );
   }
 }

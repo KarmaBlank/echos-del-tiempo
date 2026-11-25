@@ -259,5 +259,7 @@
   "ui.world.tools.pick": "Pick",
   "ui.world.tools.pick_tip": "{name} (tier {tier}) · [1] · [R] or wheel: next",
   "ui.world.tools.torch": "Torch",
-  "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]"
+  "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]",
+  "ui.world.mine.need_tier": "You need a better pick (tier {n})",
+  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})"
 }

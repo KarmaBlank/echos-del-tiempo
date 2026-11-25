@@ -259,5 +259,7 @@
   "ui.world.tools.pick": "Pico",
   "ui.world.tools.pick_tip": "{name} (nivel {tier}) · [1] · [R] o rueda: otra",
   "ui.world.tools.torch": "Antorcha",
-  "ui.world.tools.torch_tip": "Antorcha: ilumina la mina y queda puesta · [2]"
+  "ui.world.tools.torch_tip": "Antorcha: ilumina la mina y queda puesta · [2]",
+  "ui.world.mine.need_tier": "Necesitás un pico mejor (nivel {n})",
+  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})"
 }

@@ -57,6 +57,13 @@ abstract final class LightId {
   static const campfire = 'campfire';
   // Mines v2: the small light a miner carries.
   static const minero = 'minero';
+
+  /// Faint glow of an ore vein in a mine wall (mining_smithing.md § 1.2):
+  /// the player sees where to tunnel.
+  static const veta = 'veta';
+
+  /// A torch placed in a mine: brighter than a dungeon wall torch.
+  static const antorchaMina = 'antorcha_mina';
 }
 
 /// Catálogo de luces con sus números (lighting.md § 3). Se ajusta acá,
@@ -93,7 +100,10 @@ const Map<String, LightDef> kLightDefs = {
   LightId.guia:
       LightDef(radius: 6, intensity: 0.9, tint: 'calida', flicker: 0.05),
   LightId.minero:
-      LightDef(radius: 3.5, intensity: 0.85, tint: 'calida', flicker: 0.04),
+      LightDef(radius: 4.5, intensity: 0.9, tint: 'calida', flicker: 0.04),
+  LightId.antorchaMina:
+      LightDef(radius: 6.5, intensity: 1, tint: 'brasa', flicker: 0.12),
+  LightId.veta: LightDef(radius: 1.7, intensity: 0.55, tint: 'botin'),
   LightId.campfire:
       LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
 };
@@ -144,8 +154,8 @@ const Map<String, String> kTileLights = {
   Tile.ore: LightId.flora,
   // Mines v2 (mining_smithing.md § 1.6): placed torches, crystals,
   // mushroom patches and the magitech relic.
-  MineTile.torch: LightId.antorcha,
-  MineTile.wallTorch: LightId.antorcha,
+  MineTile.torch: LightId.antorchaMina,
+  MineTile.wallTorch: LightId.antorchaMina,
   MineTile.crystal: LightId.cristal,
   MineTile.mushroom: LightId.hongo,
   MineTile.relic: LightId.magitec,

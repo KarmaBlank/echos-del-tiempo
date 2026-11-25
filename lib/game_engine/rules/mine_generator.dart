@@ -11,15 +11,19 @@ class MineGenParams {
   const MineGenParams({
     this.width = 72,
     this.height = 48,
-    this.caveDensity = 0.36,
+    this.caveDensity = 0,
     this.formations = 6,
-    this.streamChance = 0.4,
+    this.streamChance = 0.5,
+    this.lakeChance = 0.3,
+    this.chambers = 6,
+    this.chamberMin = 1,
+    this.chamberMax = 2,
     this.grottoChance = 0.35,
     this.secretChance = 0.6,
     this.relicChance = 0.35,
     this.mushroomChance = 0.6,
     this.loreChance = 0.5,
-    this.chestRate = 0.18,
+    this.chestRate = 0.3,
     this.clusters = 12,
     this.sizeMin = 3,
     this.sizeMax = 7,
@@ -31,7 +35,10 @@ class MineGenParams {
   final int width, height;
   final double caveDensity;
   final int formations;
-  final double streamChance, grottoChance, secretChance, relicChance;
+  final double streamChance, lakeChance, grottoChance, secretChance, relicChance;
+
+  /// Small sealed discovery chambers and their radius range (tiles).
+  final int chambers, chamberMin, chamberMax;
   final double mushroomChance, loreChance, chestRate;
   final int clusters, sizeMin, sizeMax;
 
@@ -84,9 +91,10 @@ class MineLevel {
   (int, int) xy(int i) => (i % width, i ~/ width);
 }
 
-/// Mine levels: cellular-automata pockets in solid rock, a stream or a
-/// crystal grotto now and then, unbreakable formations, vein clusters
-/// and sealed discoveries. Same PRNG as the dungeons (`mulberry32`).
+/// Mine levels, dig-first: solid rock except the entry chamber, the
+/// shaft spot and small sealed discovery chambers (optional open pockets
+/// only with `caveDensity` > 0), unbreakable formations and ore veins in
+/// the walls. Same PRNG as the dungeons (`mulberry32`).
 abstract final class MineGenerator {
   static const _n8 = [
     (-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)
@@ -159,20 +167,94 @@ abstract final class MineGenerator {
       }
     }
 
-    // 4. An underground stream now and then (short: it never splits the
-    // level in two).
-    if (r() < p.streamChance) {
-      var sx = 4 + rnd(w - 30), sy = h ~/ 3 + rnd(h ~/ 3);
-      final len = 14 + rnd(10);
-      for (var k = 0; k < len && sx < w - 3; k++) {
-        if (!nearStart(sx, sy, 7) && inner(sx, sy)) {
-          g[sy][sx] = Tile.water;
-          for (final dy in const [-1, 1]) {
-            final yy = sy + dy;
-            if (inner(sx, yy) && g[yy][sx] == Tile.wall) {
-              g[yy][sx] = Tile.floor;
+
+    // 6. The shaft down: in a far pocket (found by exploring) or sealed
+    // in the rock (dug to).
+    (int, int)? shaft;
+    if (!p.last) {
+      // Dig-first (mining_smithing.md § 1.2): always sealed in the rock.
+      for (var tries = 0; tries < 200 && shaft == null; tries++) {
+        final sx = 4 + rnd(w - 8), sy = h ~/ 2 + rnd(h ~/ 2 - 4);
+        if (dist((sx, sy), spawn) <= (w + h) ~/ 3) continue;
+        if (g[sy][sx] == MineTile.bedrock) continue;
+        shaft = (sx, sy);
+        for (var y = sy - 1; y <= sy + 1; y++) {
+          for (var x = sx - 1; x <= sx + 1; x++) {
+            if (inner(x, y)) g[y][x] = Tile.floor;
+          }
+        }
+      }
+      if (shaft != null) g[shaft.$2][shaft.$1] = Tile.stairsDown;
+    }
+
+    // 7. Small sealed discovery chambers, reached only by digging: a
+    // chest room, a mushroom or lake pocket, a lore stone or a crystal
+    // grotto (mining_smithing.md § 1.2).
+    (int, int)? sealedAt(int rad) {
+      for (var tries = 0; tries < 120; tries++) {
+        final sx = 4 + rnd(w - 8), sy = 6 + rnd(h - 10);
+        if (nearStart(sx, sy, 10)) continue;
+        var ok = true;
+        for (var y = sy - rad - 2; y <= sy + rad + 2 && ok; y++) {
+          for (var x = sx - rad - 2; x <= sx + rad + 2 && ok; x++) {
+            if (!inner(x, y) || g[y][x] != Tile.wall) ok = false;
+          }
+        }
+        if (ok) return (sx, sy);
+      }
+      return null;
+    }
+
+    final lo = math.max(1, p.chamberMin);
+    final hi = math.max(lo, p.chamberMax);
+    for (var k = 0; k < p.chambers; k++) {
+      final rad = lo + rnd(hi - lo + 1);
+      final at = sealedAt(rad);
+      if (at == null) continue;
+      final (sx, sy) = at;
+      final cells = <(int, int)>[];
+      for (var y = sy - rad; y <= sy + rad; y++) {
+        for (var x = sx - rad; x <= sx + rad; x++) {
+          if ((x - sx) * (x - sx) + (y - sy) * (y - sy) > rad * rad + rad) {
+            continue;
+          }
+          g[y][x] = Tile.floor;
+          cells.add((x, y));
+        }
+      }
+      (int, int) any() => cells[rnd(cells.length)];
+      if (r() < p.chestRate) {
+        g[sy][sx] = MineTile.chest;
+      } else if (r() < p.mushroomChance) {
+        for (var n = 0; n < 3; n++) {
+          final (x, y) = any();
+          g[y][x] = MineTile.mushroom;
+        }
+      } else if (r() < p.loreChance) {
+        g[sy][sx] = MineTile.lore;
+      } else if (r() < p.lakeChance) {
+        g[sy][sx] = Tile.water;
+        if (rad > 1) g[sy][sx + 1] = Tile.water;
+      } else if (r() < p.grottoChance) {
+        for (var y = sy - rad - 1; y <= sy + rad + 1; y++) {
+          for (var x = sx - rad - 1; x <= sx + rad + 1; x++) {
+            if (inner(x, y) && g[y][x] == Tile.wall && r() < 0.5) {
+              g[y][x] = MineTile.crystal;
             }
           }
+        }
+      }
+    }
+
+    // Small underground streams (scenery): a short run of water sealed in
+    // the rock, no open banks, so it never becomes a path.
+    for (var k = 0; k < 2; k++) {
+      if (r() >= p.streamChance) continue;
+      var sx = 4 + rnd(w - 16), sy = 8 + rnd(h - 14);
+      final len = 5 + rnd(6);
+      for (var n = 0; n < len; n++) {
+        if (inner(sx, sy) && !nearStart(sx, sy, 8) && g[sy][sx] == Tile.wall) {
+          g[sy][sx] = Tile.water;
         }
         final turn = r();
         if (turn < 0.2 && sy > 4) {
@@ -185,57 +267,7 @@ abstract final class MineGenerator {
       }
     }
 
-    // 5. A crystal grotto now and then.
-    if (r() < p.grottoChance) {
-      final gx = 6 + rnd(w - 12), gy = 10 + rnd(h - 16);
-      if (!nearStart(gx, gy, 10)) {
-        for (var y = gy - 4; y <= gy + 4; y++) {
-          for (var x = gx - 4; x <= gx + 4; x++) {
-            if (!inner(x, y) || g[y][x] == MineTile.bedrock) continue;
-            final d = math.sqrt(math.pow(x - gx, 2) + math.pow(y - gy, 2));
-            if (d <= 2.6) {
-              g[y][x] = Tile.floor;
-            } else if (d <= 3.8 && r() < 0.45) {
-              g[y][x] = MineTile.crystal;
-            }
-          }
-        }
-      }
-    }
-
-    // Natural pockets (after the stream and the grotto).
-    final pockets = _components(g, w, h);
-
-    // 6. The shaft down: in a far pocket (found by exploring) or sealed
-    // in the rock (dug to).
-    (int, int)? shaft;
-    if (!p.last) {
-      final far = [
-        for (final c in pockets)
-          for (final t in c)
-            if (dist(t, spawn) > (w + h) ~/ 3 &&
-                _free4(g, t.$1, t.$2))
-              t
-      ];
-      if (far.isNotEmpty && r() < 0.6) {
-        shaft = far[rnd(far.length)];
-      } else {
-        for (var tries = 0; tries < 200 && shaft == null; tries++) {
-          final sx = 4 + rnd(w - 8), sy = h ~/ 2 + rnd(h ~/ 2 - 4);
-          if (dist((sx, sy), spawn) <= (w + h) ~/ 3) continue;
-          if (g[sy][sx] == MineTile.bedrock) continue;
-          shaft = (sx, sy);
-          for (var y = sy - 1; y <= sy + 1; y++) {
-            for (var x = sx - 1; x <= sx + 1; x++) {
-              if (inner(x, y)) g[y][x] = Tile.floor;
-            }
-          }
-        }
-      }
-      if (shaft != null) g[shaft.$2][shaft.$1] = Tile.stairsDown;
-    }
-
-    // 7. Vein clusters inside the rock, weighted by kind.
+    // 8. Vein clusters inside the rock, weighted by kind.
     final total = p.weights.values.fold(0.0, (a, b) => a + b);
     String pickVein() {
       if (total <= 0) return Tile.ore;
@@ -306,35 +338,6 @@ abstract final class MineGenerator {
       }
     }
 
-    // 9. Finds in the natural pockets: chests, mushrooms, a lore stone.
-    final open = [
-      for (final c in pockets)
-        if (c.length >= 6 && !c.any((t) => nearStart(t.$1, t.$2, 6))) c
-    ];
-    (int, int)? spotIn(List<(int, int)> c) {
-      for (var tries = 0; tries < 12; tries++) {
-        final t = c[rnd(c.length)];
-        if (g[t.$2][t.$1] == Tile.floor && t != shaft) return t;
-      }
-      return null;
-    }
-
-    for (final c in open) {
-      if (r() < p.chestRate) {
-        if (spotIn(c) case (final x, final y)) g[y][x] = MineTile.chest;
-      }
-    }
-    if (open.isNotEmpty && r() < p.mushroomChance) {
-      final c = open[rnd(open.length)];
-      for (var k = 0; k < 3; k++) {
-        if (spotIn(c) case (final x, final y)) g[y][x] = MineTile.mushroom;
-      }
-    }
-    if (open.isNotEmpty && r() < p.loreChance) {
-      final c = open[rnd(open.length)];
-      if (spotIn(c) case (final x, final y)) g[y][x] = MineTile.lore;
-    }
-
     // 10. Bedrock border (2 tiles), the way up and the station spot.
     for (var y = 0; y < h; y++) {
       for (var x = 0; x < w; x++) {
@@ -369,41 +372,6 @@ abstract final class MineGenerator {
       }
     }
     return n;
-  }
-
-  static bool _free4(List<List<String>> g, int x, int y) {
-    for (final (dx, dy) in _n4) {
-      if (g[y + dy][x + dx] != Tile.floor) return false;
-    }
-    return true;
-  }
-
-  /// Floor components (4-connected), in scan order.
-  static List<List<(int, int)>> _components(
-      List<List<String>> g, int w, int h) {
-    final seen = List.generate(h, (_) => List.filled(w, false));
-    final out = <List<(int, int)>>[];
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        if (seen[y][x] || g[y][x] != Tile.floor) continue;
-        final comp = <(int, int)>[];
-        final q = [(x, y)];
-        seen[y][x] = true;
-        while (q.isNotEmpty) {
-          final (px, py) = q.removeLast();
-          comp.add((px, py));
-          for (final (dx, dy) in _n4) {
-            final nx = px + dx, ny = py + dy;
-            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-            if (seen[ny][nx] || g[ny][nx] != Tile.floor) continue;
-            seen[ny][nx] = true;
-            q.add((nx, ny));
-          }
-        }
-        out.add(comp);
-      }
-    }
-    return out;
   }
 
   /// Rare ore veins of a dungeon floor (mining_smithing.md § 1.4): with
