@@ -26,7 +26,7 @@ class RegionLightLayer {
     for (var i = 0; i <= _steps; i++)
       Paint()
         ..color = RegionPalette.cloudShadow
-            .withValues(alpha: 0.055 * i / _steps)
+            .withValues(alpha: 0.18 * i / _steps)
   ];
   final List<Paint> _beam = [
     for (var i = 0; i <= _steps; i++)
