@@ -171,7 +171,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// mine places `mine:<biome>:<i>`.
 /// 72: weather and seasons (weather_seasons.md): sky seed `sd`, baits,
 /// crop log `cl`, bait actions.
-const kProtocolVersion = 72;
+/// 73: generated biome regions (biome_regions.md): the exterior layout
+/// comes from the world seed, `town.ws` (activated waystones), the
+/// `way` action and region forage kinds.
+const kProtocolVersion = 73;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

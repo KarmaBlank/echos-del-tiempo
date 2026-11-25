@@ -344,7 +344,8 @@ abstract final class MapGenerator {
   /// El exterior de un bioma (overworld_biomes.md § 3) con las matas de
   /// [picked] (índices de `lay.forage`) ya recolectadas.
   static GameMap biome(BiomeLayout lay, [Set<int> picked = const {}]) {
-    final key = '${lay.id}|${(picked.toList()..sort()).join(',')}';
+    final key =
+        '${lay.id}|${lay.seed}|${(picked.toList()..sort()).join(',')}';
     final hit = _bosques[key];
     if (hit != null) return hit;
     if (_bosques.length > 32) _bosques.clear();

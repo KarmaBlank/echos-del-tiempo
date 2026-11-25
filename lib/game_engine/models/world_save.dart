@@ -48,6 +48,7 @@ class TownState {
       this.builds = kDefaultBuilds,
       this.marks = const {},
       this.wild = const {},
+      this.waystones = const {},
       this.lights = const [],
       this.sky = const SkyState(),
       this.residents = const {},
@@ -126,6 +127,10 @@ class TownState {
   /// `<bioma>:<índice>` → segundo de la sala en que vuelve a crecer.
   /// Al cargar el mundo se recorta al tiempo de rebrote (`setWorld`).
   final Map<String, int> wild;
+
+  /// Activated region waystones (biome_regions.md § 4):
+  /// `<player>|<biome>:<index>`, per player. JSON `ws`.
+  final Set<String> waystones;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -224,6 +229,7 @@ class TownState {
     List<(int, int)>? lights,
     SkyState? sky,
     Map<String, int>? wild,
+    Set<String>? waystones,
     Map<String, ResidentState>? residents,
     Map<String, int>? daily,
     Map<String, NpcBond>? bonds,
@@ -241,6 +247,7 @@ class TownState {
         lights: lights ?? this.lights,
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
+        waystones: waystones ?? this.waystones,
         residents: residents ?? this.residents,
         daily: daily ?? this.daily,
         bonds: bonds ?? this.bonds,
@@ -262,6 +269,7 @@ class TownState {
           },
         'builds': [for (final b in builds) b.toJson()],
         if (wild.isNotEmpty) 'wild': wild,
+        if (waystones.isNotEmpty) 'ws': (waystones.toList()..sort()),
         if (marks.isNotEmpty)
           'marks': {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
@@ -357,6 +365,9 @@ class TownState {
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
       wild: _ints(raw['wild']),
+      waystones: raw['ws'] is List
+          ? {for (final v in raw['ws'] as List) if (v is String) v}
+          : const {},
       marks: _marks(raw['marks']),
       lights: raw['lt'] is List
           ? {

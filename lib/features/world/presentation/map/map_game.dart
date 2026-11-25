@@ -19,6 +19,10 @@ import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
 import '../../../../game_engine/data/biomes_catalog.dart'
     show BiomeNpcDef, biomeLayout, kPueblo;
+import '../../../../game_engine/rules/light_shaft_rules.dart';
+import '../../../../game_engine/rules/waystone_rules.dart';
+import 'ambient_life_layer.dart';
+import 'region_light_layer.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart' show kTownStrip;
@@ -167,6 +171,12 @@ class MapGame extends Game {
 
   /// Mapa de luz (lighting.md § 4).
   final light = MapLightLayer();
+
+  /// Cloud shadows, cave shade and light shafts (biome_regions.md § 7).
+  final regionLight = RegionLightLayer();
+
+  /// Ambient critters of a biome region (biome_regions.md § 6).
+  final life = AmbientLifeLayer();
 
   /// Ajuste OSCURIDAD (1 = normal, 0.45 = suave, 0 = apagada).
   double darknessKeep = 1;
@@ -895,6 +905,20 @@ class MapGame extends Game {
               season: WeatherRules.season(s.town.sky.day),
               weather: SkyRules.nowIn(s.town.sky, map.place)));
     }
+    // Region waystones the local player activated (biome_regions.md § 4).
+    if (map.lobby && !controller.editingTown) {
+      if (biomeLayout(map.place) case final lay?) {
+        final who = s.players[view.localId]?.profile.name;
+        for (var i = 0; i < lay.waystones.length && who != null; i++) {
+          final w = lay.waystones[i];
+          if (w.x < x0 - 1 || w.x > x1 + 1 || w.y < y0 - 1 || w.y > y1 + 2) {
+            continue;
+          }
+          if (!WaystoneRules.isActive(s.town, who, lay, i)) continue;
+          tiles.waystoneGlow(c, w.x * ts, w.y * ts, t);
+        }
+      }
+    }
     _prefetchMap = map;
     _prefetchView = worldView;
     // Arcos de las entradas de zona (sobresalen de su tile).
@@ -1325,6 +1349,28 @@ class MapGame extends Game {
     lifeLevels.draw(c, t, controller.localId, (id) => _lastDrawn[id],
         (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
+    // Regions (biome_regions.md § 6–7): critters, cloud shadows and the
+    // shade under cave roofs. Only the view; see RegionLightLayer.
+    final region = map.lobby ? biomeLayout(map.place) : null;
+    final secs = reduceMotion ? 0.0 : t / 1000;
+    final dayDark = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
+    if (!controller.editingTown) {
+      if (region != null) {
+        life.draw(c, worldView, secs, region.base.style.critter,
+            density: particleDensity, night: dayDark > 0.5);
+      }
+      if (outdoor && WeatherRules.hasSky(map.place)) {
+        final cover = LightShaftRules.cloudCover(
+            SkyRules.nowIn(s.town.sky, s.place).name, dayDark);
+        regionLight.drawClouds(c, worldView, secs, cover, map.width * ts,
+            map.height * ts);
+      }
+      if (region != null) {
+        regionLight.drawCaveShade(
+            c, region, outdoor ? 0.6 * (1 - dayDark) : 0.35);
+      }
+    }
+
     // El cielo encima de todo el mapa (no en la edición del pueblo).
     if ((outdoor || darkMap) && !controller.editingTown) {
       // Luz por tile multiplicada sobre el mapa (lighting.md § 4).
@@ -1382,6 +1428,11 @@ class MapGame extends Game {
                       if (NpcCampRules.light(campNpc, a, b, cx, cy)
                           case final l?)
                         l,
+                    // Daylight through ceiling openings (§ 7).
+                    for (final (sx, sy) in LightShaftRules.shafts(map))
+                      if (sx >= a && sx < cx && sy >= b && sy < cy)
+                        LightSource(
+                            sx + 0.5, sy + 0.5, kLightDefs[LightId.shaft]!),
                   ]
                 : const [],
             moving: lit ? movingLights : const [],
@@ -1409,6 +1460,14 @@ class MapGame extends Game {
             weather: SkyRules.nowIn(s.town.sky, s.place),
             precipitation: climateOf(s.place).showsPrecipitation);
       }
+    }
+
+    // Light shafts from openings above (biome_regions.md § 7): indoor
+    // places flagged with openings; caves without them stay dark.
+    if (!controller.editingTown && LightShaftRules.hasOpenings(map)) {
+      regionLight.drawShafts(c, map, worldView, secs,
+          strength: darkMap ? 1.0 : (1 - dayDark * 0.7).clamp(0.3, 1.0),
+          motion: !reduceMotion);
     }
 
     if (map.lobby && map.place == null) {

@@ -54,7 +54,29 @@ abstract final class LightId {
   static const guia = 'guia';
   // Biome resident camps (overworld_biomes.md § 9.2).
   static const campfire = 'campfire';
+  // Light shafts from ceiling openings (biome_regions.md § 7).
+  static const shaft = 'shaft';
 }
+
+/// Ceiling openings of an indoor place (biome_regions.md § 7): light
+/// shafts fall on open floor tiles chosen by hash, one in [every]. A theme
+/// that is not in [kLightShaftThemes] has no openings and stays dark.
+class ShaftDef {
+  const ShaftDef({required this.every});
+  final int every;
+}
+
+/// Indoor themes with openings above (dungeon floors, mine levels and
+/// sheltered biome exteriors). Edit here to open or close a ceiling.
+const kLightShaftThemes = <String, ShaftDef>{
+  'cavernas_ext': ShaftDef(every: 23),
+  'cavernas': ShaftDef(every: 41),
+  'ruinas': ShaftDef(every: 37),
+  'fortaleza': ShaftDef(every: 47),
+  'mina_bosque': ShaftDef(every: 29),
+  'mina_ruinas': ShaftDef(every: 31),
+  'mina_grieta': ShaftDef(every: 43),
+};
 
 /// Catálogo de luces con sus números (lighting.md § 3). Se ajusta acá,
 /// nunca en los pintores.
@@ -75,6 +97,10 @@ const Map<String, LightDef> kLightDefs = {
       LightDef(radius: 4.5, intensity: 0.85, tint: 'brasa', flicker: 0.14),
   LightId.luciernaga: LightDef(radius: 3, intensity: 0.6, tint: 'luciernaga'),
   LightId.flora: LightDef(radius: 2.2, intensity: 0.35, tint: 'flora'),
+  // Daylight through an opening (biome_regions.md § 7): lights dark
+  // places by day too.
+  LightId.shaft: LightDef(
+      radius: 3.2, intensity: 0.7, tint: 'shaft', nightOnly: false),
   LightId.pesca: LightDef(radius: 2, intensity: 0.3, tint: 'agua'),
   LightId.botin: LightDef(radius: 2.5, intensity: 0.5, tint: 'botin'),
   LightId.jugadorPueblo: LightDef(radius: 4.5, intensity: 0.6, tint: 'calida'),
@@ -140,6 +166,7 @@ const Map<String, String> kTileLights = {
   Tile.armory: LightId.forja,
   Tile.fishing: LightId.pesca,
   Tile.forage: LightId.flora,
+  Tile.glowPlant: LightId.flora,
   Tile.ore: LightId.flora,
 };
 

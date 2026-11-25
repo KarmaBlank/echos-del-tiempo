@@ -71,6 +71,14 @@ class ForageAction extends SessionAction {
   const ForageAction(this.spot);
 }
 
+/// `way` (protocol 73, biome_regions.md § 4): activate the region
+/// waystone [stone] in reach, or travel from it to the active stone [to].
+class WaystoneAction extends SessionAction {
+  final int stone;
+  final int? to;
+  const WaystoneAction(this.stone, {this.to});
+}
+
 /// `mine` (protocol 69, mining_smithing.md § 1.3): mine vein [vein] of
 /// the mine the player is in.
 class MineAction extends SessionAction {

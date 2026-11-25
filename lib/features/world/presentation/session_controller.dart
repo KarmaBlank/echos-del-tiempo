@@ -29,6 +29,8 @@ import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
+import '../../../game_engine/rules/waystone_rules.dart';
+import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_generator.dart' show MineLayout;
 import '../../../game_engine/rules/mining_rules.dart';
 import '../../../game_engine/data/smithing_catalog.dart' show kMineNpcLines;
@@ -1630,11 +1632,57 @@ class SessionController extends StateNotifier<SessionView?> {
 
   String forageHint(int i) {
     final lay = biomeLayout(_s?.place) ?? bosqueLayout;
-    final k = kForageKinds[lay.forage[i].kind];
+    final name = forageName(lay.forage[i].kind);
     final left = BiomeRules.regrowIn(town, lay.id, i, _s?.time ?? 0).ceil();
     return left > 0
-        ? '${k.name}: vuelven a crecer en ${left}s'
-        : '[E] Recolectar ${k.name.toLowerCase()}';
+        ? strings.t('ui.world.forage.regrow', {'name': name, 'n': left})
+        : strings.t('ui.world.forage.prompt', {'name': name});
+  }
+
+  /// Name of what a forage spot of [kind] gives (biome_regions.md § 5).
+  String forageName(int kind) {
+    final k = kForageKinds[kind.clamp(0, kForageKinds.length - 1)];
+    String crop(String id) => strings.t('data.materials.crop.$id.name');
+    return switch (k.cls) {
+      ForageClass.plant => crop(k.item),
+      ForageClass.echoBloom => strings.t('ui.world.forage.echo_bloom'),
+      ForageClass.seedBush => strings.t('ui.world.forage.seed_bush'),
+      ForageClass.seasonal => crop(
+          kSeasonalForage[WeatherRules.season(town.sky.day).index]),
+    };
+  }
+
+  // ---------------- region waystones (biome_regions.md § 4) ----------
+
+  /// The region waystone in reach of the local player (index), or `null`.
+  int? get nearWaystone {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    return WaystoneRules.near(lay, local.x, local.y);
+  }
+
+  String get _me => _s?.players[localId]?.profile.name ?? '';
+
+  /// Waystone [i] of this region is active for the local player.
+  bool waystoneActive(int i) {
+    final lay = biomeLayout(_s?.place);
+    return lay != null && WaystoneRules.isActive(town, _me, lay, i);
+  }
+
+  /// E on a waystone: activates it (host validates) and opens the menu.
+  void useWaystone(int i) {
+    if (!waystoneActive(i)) _apply(WaystoneAction(i));
+    openPanel(WorldPanel.waystone);
+  }
+
+  /// Fast travel from the waystone in reach to [to].
+  bool travelWaystone(int to) {
+    final from = nearWaystone;
+    if (from == null) return false;
+    closePanel();
+    stopFishing();
+    return _apply(WaystoneAction(from, to: to));
   }
 
   bool forage() {
@@ -2938,6 +2986,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.biomeNpc);
       } else if (nearFisher != null) {
         openPanel(WorldPanel.biomeFisher);
+      } else if (nearWaystone case final i?) {
+        useWaystone(i);
       } else if (nearForage != null) {
         forage();
       } else if (nearMineEntrance case final i?) {
@@ -4568,6 +4618,14 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (nearFisher case final f?) {
       return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': f.name}));
+    }
+    if (nearWaystone case final i?) {
+      return (
+        WorldPrompt.poi,
+        strings.t(waystoneActive(i)
+            ? 'ui.world.way.prompt_use'
+            : 'ui.world.way.prompt_activate')
+      );
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
     if (nearMineEntrance != null) {

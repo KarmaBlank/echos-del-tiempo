@@ -1,10 +1,10 @@
-// Números sueltos de reglas (economía, mejora y carga de ULT, Ecos) que
-// el parche de balance puede tocar (docs/specs/balance_admin.md § 1.1,
-// tipos de "Ajustes"). Cada grupo es una entidad del parche; el código
+// NÃºmeros sueltos de reglas (economÃ­a, mejora y carga de ULT, Ecos) que
+// el parche de balance puede tocar (docs/specs/balance_admin.md Â§ 1.1,
+// tipos de "Ajustes"). Cada grupo es una entidad del parche; el cÃ³digo
 // lee siempre [kTuning], que `BalanceRegistries.install` cambia en el
 // lugar y `restore` devuelve a estos valores.
 
-/// Un grupo de números con nombre (los valores del código o del parche).
+/// Un grupo de nÃºmeros con nombre (los valores del cÃ³digo o del parche).
 class TuningDef {
   const TuningDef(this.name, this.values);
 
@@ -35,67 +35,68 @@ abstract final class TuningId {
   static const lifeTree = 'lifeTree';
   static const dungeon = 'dungeon';
   static const smithing = 'smithing';
+  static const regions = 'regions';
 }
 
-/// Los valores del código.
+/// Los valores del cÃ³digo.
 const Map<String, TuningDef> kTuningDefaults = {
-  // fishing.md (v0.22.0): Pesca, cañas, minijuego y agropecuario.
+  // fishing.md (v0.22.0): Pesca, caÃ±as, minijuego y agropecuario.
   TuningId.fishing: TuningDef('Pesca', {
-    // Nivel: XP para pasar del nivel l = xpBase × l^xpExp; tope maxLevel.
+    // Nivel: XP para pasar del nivel l = xpBase Ã— l^xpExp; tope maxLevel.
     'maxLevel': 30,
     'xpBase': 40,
     'xpExp': 1.5,
-    // Pesos de rareza (la caña y el lance sube los no comunes).
+    // Pesos de rareza (la caÃ±a y el lance sube los no comunes).
     'weightComun': 70,
     'weightRaro': 22,
     'weightEpico': 7,
     'weightLegendario': 1,
     // Capturas sin legendario que garantizan uno (0 = sin pity).
     'pityAfter': 200,
-    // Lance largo: + chance de rareza con la carga al máximo.
+    // Lance largo: + chance de rareza con la carga al mÃ¡ximo.
     'distanceBonus': 0.3,
-    // × de XP de Pesca por rareza.
+    // Ã— de XP de Pesca por rareza.
     'xpComun': 1,
     'xpRaro': 2.5,
     'xpEpico': 6,
     'xpLegendario': 15,
-    // XP de personaje por rareza y tope por estadía en el pueblo.
+    // XP de personaje por rareza y tope por estadÃ­a en el pueblo.
     'charXpComun': 2,
     'charXpRaro': 5,
     'charXpEpico': 12,
     'charXpLegendario': 30,
     'charXpCap': 60,
-    // Herramientas (town_loop.md § 11c).
+    // Herramientas (town_loop.md Â§ 11c).
     'bonusFloor': 0.4,
     'bonusCurve': 1.5,
-    // Picada: espera en segundos, ventana para clavar y señuelos.
+    // Picada: espera en segundos, ventana para clavar y seÃ±uelos.
     'biteMinSec': 2.5,
     'biteMaxSec': 7,
     'biteWindowSec': 1.1,
     'nibblesMax': 3,
-    // Barra: zona (fracción de la barra), velocidad del pez, progreso.
+    // Barra: zona (fracciÃ³n de la barra), velocidad del pez, progreso.
     'zoneBase': 0.24,
     'barSpeed': 1,
     'progressStart': 0.25,
     'progressGain': 0.1,
     'progressDrain': 0.12,
-    // Dificultad (× velocidad y nervio del pez) por rareza.
+    // Dificultad (Ã— velocidad y nervio del pez) por rareza.
     'diffComun': 0.6,
     'diffRaro': 0.9,
     'diffEpico': 1.25,
     'diffLegendario': 1.6,
-    // Validación del host: segundos mínimos entre lances y de pelea.
+    // ValidaciÃ³n del host: segundos mÃ­nimos entre lances y de pelea.
     'minCastSec': 2,
     'minReelSec': 1.5,
     // Pesca en el mapa (v0.22.2): tiles que vuela la boya con la carga al
-    // máximo y bonus de rareza por tirar desde un muelle.
+    // mÃ¡ximo y bonus de rareza por tirar desde un muelle.
     'maxCastTiles': 5,
     'dockBonus': 0.1,
-    // Bestiario de pesca (fishing.md § 10): primera captura de cada
-    // especie, × su XP normal; XP de personaje por rareza × este factor.
+    // Bestiario de pesca (fishing.md Â§ 10): primera captura de cada
+    // especie, Ã— su XP normal; XP de personaje por rareza Ã— este factor.
     'firstCatchFishXp': 5,
     'firstCatchCharXp': 4,
-    // Cebos (fishing.md § 14, v0.44.0): × copies of the fish a bait
+    // Cebos (fishing.md Â§ 14, v0.44.0): Ã— copies of the fish a bait
     // attracts in the roll, chance of a bait in the water loot and, per
     // bait, bite speed, rarity bonus, size bonus, price and recipe gold.
     'baitAffinity': 4,
@@ -125,22 +126,22 @@ const Map<String, TuningDef> kTuningDefaults = {
     'baitEcoSize': 0.25,
     'baitEcoPrice': 400,
     'baitEcoGold': 200,
-    // Agua brillante (fishing.md § 11).
+    // Agua brillante (fishing.md Â§ 11).
     'spotRare': 0.35,
     'spotLoot': 0.25,
     'spotRadius': 2,
-    // Horarios de los peces (fishing.md § 13): chance de que un pez fuera
+    // Horarios de los peces (fishing.md Â§ 13): chance de que un pez fuera
     // de su franja entre igual en la tirada.
     'offHoursChance': 0.03,
-    // Pescador nativo del bioma (fishing.md § 12).
+    // Pescador nativo del bioma (fishing.md Â§ 12).
     'fisherRarityLevels': 6,
     'fisherXpBase': 30,
     'fisherXpStep': 6,
     'fisherCharXpPerValue': 1.5,
     'fisherGoldPerValue': 0.6,
-    // Botín del agua (fishing.md § 8): chance de que la captura no sea un
-    // pez, pesos de cada tipo, mejora por nivel de Pesca y caña, pity del
-    // cofre o arma y los legendarios exclusivos (nivel y caña mínimos).
+    // BotÃ­n del agua (fishing.md Â§ 8): chance de que la captura no sea un
+    // pez, pesos de cada tipo, mejora por nivel de Pesca y caÃ±a, pity del
+    // cofre o arma y los legendarios exclusivos (nivel y caÃ±a mÃ­nimos).
     'lootChance': 0.15,
     'lootBasura': 60,
     'lootMateriales': 28,
@@ -153,11 +154,11 @@ const Map<String, TuningDef> kTuningDefaults = {
     'lootLegendRod': 2,
     'lootMatMin': 1,
     'lootMatMax': 3,
-    // Auto-pesca: × de XP, peces por clic y espera entre usos (s).
+    // Auto-pesca: Ã— de XP, peces por clic y espera entre usos (s).
     'autoMult': 0.4,
     'autoCount': 3,
     'autoCooldownSec': 30,
-    // Agropecuario: × del valor si se cobra en materiales, oro por
+    // Agropecuario: Ã— del valor si se cobra en materiales, oro por
     // Esquirla y recompensa del canje de un legendario.
     'matRate': 1.2,
     'matValue': 25,
@@ -166,66 +167,66 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // farming.md (v0.23.0): Cultivo, herramientas, huerta y agropecuario.
   TuningId.farming: TuningDef('Cultivo', {
-    // Afinidad de los cultivos con la hora y el clima (farming.md § 14).
+    // Afinidad de los cultivos con la hora y el clima (farming.md Â§ 14).
     'affinityBonus': 0.25,
     'affinityMalus': 0.1,
     // Nivel: misma forma que Pesca.
     'maxLevel': 30,
     'xpBase': 40,
     'xpExp': 1.5,
-    // × de XP de Cultivo por rareza del cultivo.
+    // Ã— de XP de Cultivo por rareza del cultivo.
     'xpComun': 1,
     'xpRaro': 2.5,
     'xpEpico': 6,
     'xpLegendario': 15,
-    // XP de personaje por rareza y tope por estadía en el pueblo.
+    // XP de personaje por rareza y tope por estadÃ­a en el pueblo.
     'charXpComun': 2,
     'charXpRaro': 5,
     'charXpEpico': 12,
     'charXpLegendario': 30,
     'charXpCap': 60,
-    // Herramientas (town_loop.md § 11c).
+    // Herramientas (town_loop.md Â§ 11c).
     'bonusFloor': 0.4,
     'bonusCurve': 1.5,
-    // Crecimiento: × sin regar, segundos de riego, segundos que suma cada
-    // misión ganada y XP por arar/plantar/regar. Un regador de nivel bajo
-    // riega más lento: × crecimiento = waterRateMin + (1 − min) × efect.
+    // Crecimiento: Ã— sin regar, segundos de riego, segundos que suma cada
+    // misiÃ³n ganada y XP por arar/plantar/regar. Un regador de nivel bajo
+    // riega mÃ¡s lento: Ã— crecimiento = waterRateMin + (1 âˆ’ min) Ã— efect.
     'dryRate': 0.35,
     'waterSec': 240,
     'waterRateMin': 0.6,
     'missionGrowSec': 420,
     'workXp': 1,
-    // Calidad (farming.md § 3): pesos base de normal / rara / épica /
-    // legendaria; el puntaje S de los aportes multiplica la rara × (1+S),
-    // la épica × (1+S)^2 y la legendaria × (1+S)^3.
+    // Calidad (farming.md Â§ 3): pesos base de normal / rara / Ã©pica /
+    // legendaria; el puntaje S de los aportes multiplica la rara Ã— (1+S),
+    // la Ã©pica Ã— (1+S)^2 y la legendaria Ã— (1+S)^3.
     'wQNormal': 70,
     'wQRaro': 22,
     'wQEpico': 7,
     'wQLegendario': 1,
     // Aporte de cada uno al puntaje S: quien planta (potencial), los
-    // riegos (calidad media × fracción regada) y quien cosecha (pesa más).
+    // riegos (calidad media Ã— fracciÃ³n regada) y quien cosecha (pesa mÃ¡s).
     'sPlant': 0.6,
     'sWater': 0.5,
     'sHarvest': 1.4,
-    // Puntaje de una persona: base + nivel × perLevel + herramienta +
-    // árbol (el «quality» de sus nodos).
+    // Puntaje de una persona: base + nivel Ã— perLevel + herramienta +
+    // Ã¡rbol (el Â«qualityÂ» de sus nodos).
     'pBase': 0.05,
     'pPerLevel': 0.04,
-    // Abonos: sesgo al puntaje y × de crecimiento por tipo.
+    // Abonos: sesgo al puntaje y Ã— de crecimiento por tipo.
     'fertComunBias': 0.4,
     'fertComunSpeed': 1.15,
     'fertRunicoBias': 1,
     'fertRunicoSpeed': 1.3,
     'fertEcoBias': 2,
     'fertEcoSpeed': 1.5,
-    // × de precio y XP por calidad.
+    // Ã— de precio y XP por calidad.
     'qualityMultNormal': 1,
     'qualityMultRaro': 1.3,
     'qualityMultEpico': 1.8,
     'qualityMultLegendario': 3,
     // Semillas: chance de que la cosecha devuelva una (no legendarias).
     'seedDropChance': 0.4,
-    // Hallazgos de la huerta (farming.md § 5): chance, pesos, mejora por
+    // Hallazgos de la huerta (farming.md Â§ 5): chance, pesos, mejora por
     // nivel, pity del hallazgo y de la semilla legendaria.
     'lootChance': 0.07,
     'lootSemilla': 60,
@@ -236,31 +237,31 @@ const Map<String, TuningDef> kTuningDefaults = {
     'legendPityAfter': 150,
     'lootMatMin': 1,
     'lootMatMax': 2,
-    // Agropecuario: × en materiales, oro por Esquirla y canje de un
+    // Agropecuario: Ã— en materiales, oro por Esquirla y canje de un
     // legendario.
     'matRate': 1.2,
     'matValue': 25,
     'legendCristales': 3,
     'legendPrismas': 1,
-    // Validación del host: alcance (px) y segundos entre labores.
+    // ValidaciÃ³n del host: alcance (px) y segundos entre labores.
     'reachPx': 30,
     'minWorkSec': 0.15,
   }),
-  // farming.md § 6–8 (v0.23.0): ampliaciones, lago y ayudante.
+  // farming.md Â§ 6â€“8 (v0.23.0): ampliaciones, lago y ayudante.
   TuningId.town: TuningDef('Pueblo', {
-    // Ampliaciones (town_editor.md § 2: cada una suma una franja de 8 a un
-    // lado): tope total, tope por lado y costo de la n-ésima (oro = base ×
-    // mult^(n−1); Esquirlas × n; Cristales desde la 2.ª).
+    // Ampliaciones (town_editor.md Â§ 2: cada una suma una franja de 8 a un
+    // lado): tope total, tope por lado y costo de la n-Ã©sima (oro = base Ã—
+    // mult^(nâˆ’1); Esquirlas Ã— n; Cristales desde la 2.Âª).
     'maxExpansions': 6,
     'maxPerSide': 3,
     'expGoldBase': 1500,
     'expGoldMult': 2.5,
     'expEsquirlas': 6,
     'expCristales': 2,
-    // Lagos (town_editor.md § 5): capacidad mínima y por tile de agua,
+    // Lagos (town_editor.md Â§ 5): capacidad mÃ­nima y por tile de agua,
     // peso extra por pez soltado (tope por especie), rareza por cada 36
     // tiles por encima del lago base y por especie criando, chance de
-    // cría por misión ganada.
+    // crÃ­a por misiÃ³n ganada.
     'lakeMin': 2,
     'lakePerTile': 0.2,
     'stockWeight': 1,
@@ -269,10 +270,10 @@ const Map<String, TuningDef> kTuningDefaults = {
     'breedRare': 0.03,
     'breedRareCap': 0.15,
     'breedChance': 0.35,
-    // Ayudantes (farming.md § 8, v0.25.5): nivel del oficio para
+    // Ayudantes (farming.md Â§ 8, v0.25.5): nivel del oficio para
     // contratar, oro por ayudante, parcelas de cada granjero, tiles de
-    // lago por pescador, peces por vuelta, cada cuántos segundos trabajan,
-    // × de XP al que recoge el cofre y tope del cofre.
+    // lago por pescador, peces por vuelta, cada cuÃ¡ntos segundos trabajan,
+    // Ã— de XP al que recoge el cofre y tope del cofre.
     'helperLevel': 5,
     'helperCost': 800,
     'helperPlots': 8,
@@ -281,8 +282,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'helperEverySec': 45,
     'helperXpShare': 0.1,
     'chestMax': 200,
-    // Progresión de cada ayudante (farming.md § 8.5, v0.27.0): nivel
-    // tope, XP del nivel l = base × l^exp (1 por parcela atendida o pez),
+    // ProgresiÃ³n de cada ayudante (farming.md Â§ 8.5, v0.27.0): nivel
+    // tope, XP del nivel l = base Ã— l^exp (1 por parcela atendida o pez),
     // materiales de oficio al contratar, mejoras (oro y materiales por
     // rango, niveles por rango, tope de rangos) y su efecto por rango.
     'helperMaxLevel': 10,
@@ -310,16 +311,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     'tablaFibra': 3,
     'tablaEsq': 2,
     'tablaCr': 50,
-    // Día, noche y clima (day_night_weather.md, v0.27.0): segundos de día
+    // DÃ­a, noche y clima (day_night_weather.md, v0.27.0): segundos de dÃ­a
     // y de noche, del atardecer / amanecer, chances del clima, parte del
-    // día que dura, rayos (cada cuánto se tira y la chance), picada y
+    // dÃ­a que dura, rayos (cada cuÃ¡nto se tira y la chance), picada y
     // pescadores con tormenta y el oro del faro.
     'daySec': 300,
     'nightSec': 300,
     'duskSec': 40,
-    // Seasons and weather per biome (weather_seasons.md § 1–2, v0.44.0):
+    // Seasons and weather per biome (weather_seasons.md Â§ 1â€“2, v0.44.0):
     // days per season, weight of each weather per season (snow only in
-    // winter), × of each weather per biome (no key = × 1) and fog / snow
+    // winter), Ã— of each weather per biome (no key = Ã— 1) and fog / snow
     // effects on bites and fishers.
     'seasonDays': 7,
     'wSpringClear': 0.55,
@@ -369,14 +370,14 @@ const Map<String, TuningDef> kTuningDefaults = {
     'boltChance': 0.4,
     'stormBite': 0.3,
     'stormFisher': 0.35,
-    // Auto-fishing (fishing.md § 6): × bite wait, × rod / tree bonuses,
-    // × epic weight and × XP (Fishing and character).
+    // Auto-fishing (fishing.md Â§ 6): Ã— bite wait, Ã— rod / tree bonuses,
+    // Ã— epic weight and Ã— XP (Fishing and character).
     'autoWaitMult': 2.0,
     'autoPassiveMult': 0.5,
     'autoEpicMult': 0.25,
     'autoXpMult': 0.5,
     'faroCost': 300,
-    // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
+    // Exteriores de bioma y refuerzos (overworld_biomes.md Â§ 7): rebrote
     // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo
     // por recolectar, turnos de espera del refuerzo que llega a una pelea
     // (en intervalos propios) y peso de cada ausente en la dificultad.
@@ -385,13 +386,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'forageXp': 6,
     'reinforceDelay': 1,
     'absentWeight': 0.6,
-    // Habitantes de bioma (overworld_biomes.md § 10): relación, etapas,
+    // Habitantes de bioma (overworld_biomes.md Â§ 10): relaciÃ³n, etapas,
     // edificio, pedidos y beneficio permanente de cada rol (base + paso
     // por nivel).
     'resInviteRep': 3,
     // v0.42.6: mudanza (px/s al salir caminando del bioma). Salidas
-    // nocturnas (§ 10.1.1): chance por noche de cada habitante (la base
-    // para uno sin clave propia; Oren, el vidente, sale más).
+    // nocturnas (Â§ 10.1.1): chance por noche de cada habitante (la base
+    // para uno sin clave propia; Oren, el vidente, sale mÃ¡s).
     'resWalkSpeed': 40,
     'resNightOutBase': 0.12,
     'resNightOutIlda': 0.12,
@@ -407,10 +408,10 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resRequestEveryDays': 2,
     'resUnhappyDays': 4,
     'resRequestRep': 2,
-    // v0.30.0: casa (tablas y botín del bioma por nivel), cercanía de
-    // los pedidos (tiles), stock por nivel y órdenes de entrega (XP de
-    // personaje con tope diario, oro, relación y un punto de árbol cada
-    // `orderSkillEvery` órdenes).
+    // v0.30.0: casa (tablas y botÃ­n del bioma por nivel), cercanÃ­a de
+    // los pedidos (tiles), stock por nivel y Ã³rdenes de entrega (XP de
+    // personaje con tope diario, oro, relaciÃ³n y un punto de Ã¡rbol cada
+    // `orderSkillEvery` Ã³rdenes).
     'resHouseMat': 3,
     'resHouseLoot': 3,
     'resNearTiles': 6,
@@ -423,7 +424,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'orderSkillEvery': 5,
     'orderRep': 1,
     'lifeLevelCharXp': 120,
-    // roles.md § 3 y § 4: dificultad de las órdenes por oficio y encargo
+    // roles.md Â§ 3 y Â§ 4: dificultad de las Ã³rdenes por oficio y encargo
     // de forja de Brann.
     'orderRarityLevels': 12,
     'orderAnyBiomeLevel': 20,
@@ -448,9 +449,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resvidenteStep': 2,
   }),
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
-  TuningId.lifeTree: TuningDef('Oficios: árboles', {
+  TuningId.lifeTree: TuningDef('Oficios: Ã¡rboles', {
     'pointsPerLevel': 1,
-    // Poder de aventurero (roles.md § 5).
+    // Poder de aventurero (roles.md Â§ 5).
     'p_v': 0.04,
     'p_d': 0.04,
     'p_g': 0.04,
@@ -459,7 +460,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'c_d': 0.04,
     'c_g': 0.04,
     'c_g_2': 0.04,
-    // Herrería (roles.md § 6): nivel = curva de Pesca con estos números.
+    // HerrerÃ­a (roles.md Â§ 6): nivel = curva de Pesca con estos nÃºmeros.
     'smithMaxLevel': 30,
     'smithXpBase': 40,
     'smithXpExp': 1.5,
@@ -509,20 +510,20 @@ const Map<String, TuningDef> kTuningDefaults = {
     'c_f': 0.1,
     'c_f_2': 0.15,
   }),
-  // world.md § "Colisión y movimiento": px/s del jugador en el campo
-  // (v0.20.19: 78 → 98, +25 %).
-  TuningId.exploration: TuningDef('Exploración', {
+  // world.md Â§ "ColisiÃ³n y movimiento": px/s del jugador en el campo
+  // (v0.20.19: 78 â†’ 98, +25 %).
+  TuningId.exploration: TuningDef('ExploraciÃ³n', {
     'playerSpeed': 98,
-    // town_loop.md § 2 (v0.21.0): cinemática de partida del pueblo a la
-    // zona, en segundos (≤ 4, saltable).
+    // town_loop.md Â§ 2 (v0.21.0): cinemÃ¡tica de partida del pueblo a la
+    // zona, en segundos (â‰¤ 4, saltable).
     'departureSec': 3,
   }),
-  // worldgen.md § 6.8 (v0.20.22): misiones cortas. Tope de pisos por
-  // misión, × de grupos normales por piso y × del área de cada piso.
-  // persistent_dungeons.md (v0.34.0): reaparición y Ofrenda del jefe.
-  // Costo de la Ofrenda en la zona z: esquirlas = esqBase + esqPerZone × z;
-  // cristales = crisPerZone × (z − crisFrom + 1) desde la zona crisFrom;
-  // prismas = prismaPerZone × (z − prismaFrom + 1) desde prismaFrom.
+  // worldgen.md Â§ 6.8 (v0.20.22): misiones cortas. Tope de pisos por
+  // misiÃ³n, Ã— de grupos normales por piso y Ã— del Ã¡rea de cada piso.
+  // persistent_dungeons.md (v0.34.0): reapariciÃ³n y Ofrenda del jefe.
+  // Costo de la Ofrenda en la zona z: esquirlas = esqBase + esqPerZone Ã— z;
+  // cristales = crisPerZone Ã— (z âˆ’ crisFrom + 1) desde la zona crisFrom;
+  // prismas = prismaPerZone Ã— (z âˆ’ prismaFrom + 1) desde prismaFrom.
   TuningId.dungeon: TuningDef('Mazmorras', {
     'respawnDays': 5,
     'esqBase': 2,
@@ -534,7 +535,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'altarReach': 40,
   }),
   // mining_smithing.md (v0.44.0): minas, vetas, fundir y forjar armas.
-  TuningId.smithing: TuningDef('Minería y herrería', {
+  TuningId.smithing: TuningDef('MinerÃ­a y herrerÃ­a', {
     'mineNodes': 7,
     'mineRespawnSec': 600,
     'mineReach': 26,
@@ -569,23 +570,54 @@ const Map<String, TuningDef> kTuningDefaults = {
     'rareLegend': 3,
     'stackCap': 999,
   }),
+  // biome_regions.md (v0.45.0): generated biome regions, side paths,
+  // lakes, waystones and region foraging.
+  TuningId.regions: TuningDef('Regiones de bioma', {
+    // Layout: extra lakes (0..1 on top of the first), lake radii (tiles),
+    // trees per 100 free tiles, plant spots per side path.
+    'secondLakeChance': 0.6,
+    'lakeRxMin': 3,
+    'lakeRxMax': 5,
+    'lakeRyMin': 2.4,
+    'lakeRyMax': 3.6,
+    'treeDensity': 7,
+    'plantSpots': 12,
+    'seedBushes': 2,
+    'seasonalSpots': 2,
+    // The main path (spawn -> farthest portal) must stay under this many
+    // steps (biome_regions.md Â§ 2.1).
+    'mainPathMax': 38,
+    // Forage (Â§ 5): seed bush rare-seed weight multiplier, echo bloom
+    // regrow (s), seasonal XP multiplier, echo bloom XP multiplier.
+    'seedBushRareMul': 4,
+    'echoBloomRespawnSec': 1800,
+    'seasonalXpMul': 1.5,
+    'echoBloomXpMul': 4,
+    // Regrown forage only shows up out of view: a spot whose timer ran
+    // out stays bare while a player is within this many px, and is
+    // checked again after forageRecheckSec.
+    'forageHideRadius': 360,
+    'forageRecheckSec': 6,
+    // Waystones (Â§ 4): reach (px) to activate / use one.
+    'waystoneReach': 26,
+  }),
   TuningId.mission: TuningDef('Misiones', {
     'maxFloors': 3,
     'groupScale': 0.7,
     'areaScale': 0.7,
   }),
-  // ultimates_v2.md § 2.4: +6% por nivel sobre el 1.
+  // ultimates_v2.md Â§ 2.4: +6% por nivel sobre el 1.
   TuningId.ultLevel: TuningDef('Escalado de ULT por nivel', {
     'perLevel': 0.06,
   }),
-  // ultimates_v2.md § 2.4 / materials_economy.md § 6.
+  // ultimates_v2.md Â§ 2.4 / materials_economy.md Â§ 6.
   TuningId.ultUpgrade: TuningDef('Costo de mejora de ULT', {
     'credits': 1000,
     'cristal': 1,
     'prismaFrom': 3,
     'fragFrom': 3,
   }),
-  // Carga de la barra ULT (combat.md): daño recibido y hecho; enemigos.
+  // Carga de la barra ULT (combat.md): daÃ±o recibido y hecho; enemigos.
   TuningId.ultCharge: TuningDef('Carga de barra ULT', {
     'takenFactor': 110,
     'dealtBase': 5,
@@ -594,14 +626,14 @@ const Map<String, TuningDef> kTuningDefaults = {
     'enemyPerTurn': 25,
     'enemyPerHp': 100,
   }),
-  // materials_economy.md § 4.3 (v0.20.8: 20 Esquirlas / 8 Cristales).
+  // materials_economy.md Â§ 4.3 (v0.20.8: 20 Esquirlas / 8 Cristales).
   TuningId.condense: TuningDef('Recetas de Condensar', {
     'cristalCost': 20,
     'cristalCredits': 100,
     'prismaCost': 8,
     'prismaCredits': 500,
   }),
-  // materials_economy.md § 4.1-4.2 (economía v0.15).
+  // materials_economy.md Â§ 4.1-4.2 (economÃ­a v0.15).
   TuningId.materials: TuningDef('Materiales, desarme y rareza', {
     'chanceEsquirla': 0.08,
     'chanceCristal': 0.025,
@@ -630,13 +662,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'addAffixCredits': 50,
     'rerollCredits': 25,
   }),
-  // materials_economy.md § 4.4.
+  // materials_economy.md Â§ 4.4.
   TuningId.ecoTier: TuningDef('Bonus de tier de Ecos', {
     'tierQuantity': 0.03,
     'partyQuantity': 0.10,
   }),
-  // build_planner.md § 9: pesos de la guía del builder.
-  TuningId.buildGuide: TuningDef('Guía del builder', {
+  // build_planner.md Â§ 9: pesos de la guÃ­a del builder.
+  TuningId.buildGuide: TuningDef('GuÃ­a del builder', {
     'dmgWeight': 2,
     'elementWeight': 2,
     'passiveWeight': 1.5,
@@ -648,15 +680,15 @@ const Map<String, TuningDef> kTuningDefaults = {
     'powerWeight': 1.5,
     'reqPenalty': 0.6,
     'recommendTop': 3,
-    // § 9.4 Consejo de arma.
+    // Â§ 9.4 Consejo de arma.
     'forgeWeight': 4,
     'upgradeMinGain': 0.2,
     'buyMinGain': 0.2,
     'typeTie': 0.25,
     'howToNames': 3,
   }),
-  // loot.md § 17.6: precios de la tienda y Éter en cofres; combat.md §
-  // "Revivir y el árbol": sinergia de revivir con el árbol.
+  // loot.md Â§ 17.6: precios de la tienda y Ã‰ter en cofres; combat.md Â§
+  // "Revivir y el Ã¡rbol": sinergia de revivir con el Ã¡rbol.
   TuningId.consumables: TuningDef('Consumibles y revivir', {
     'potionPrice': 30,
     'etherPrice': 40,
@@ -668,10 +700,10 @@ const Map<String, TuningDef> kTuningDefaults = {
     'shieldCap': 0.25,
     'shieldTurns': 2,
   }),
-  // roguelike.md § 4 y § 8: mejoras directas de la fila Extra, progreso
-  // entre runs y curva de la Travesía. Solo lo lee la Travesía.
-  TuningId.travesia: TuningDef('Travesía', {
-    // Mejoras directas (§ 4): valor de cada una (se apilan).
+  // roguelike.md Â§ 4 y Â§ 8: mejoras directas de la fila Extra, progreso
+  // entre runs y curva de la TravesÃ­a. Solo lo lee la TravesÃ­a.
+  TuningId.travesia: TuningDef('TravesÃ­a', {
+    // Mejoras directas (Â§ 4): valor de cada una (se apilan).
     'boonSpell': 10,
     'boonAttack': 15,
     'boonHeal': 20,
@@ -683,16 +715,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     'boonSteal': 4,
     // Mejoras que entran al sorteo de la fila Extra.
     'boonsInExtra': 2,
-    // Progreso entre runs (§ 8): moneda.
+    // Progreso entre runs (Â§ 8): moneda.
     'coinPerFloor': 10,
     'coinElite': 4,
     'coinBoss': 12,
     'coinWin': 20,
     // Zonas: las primeras del sorteo y piso que hay que alcanzar
-    // (1 = el primero) para desbloquear una más.
+    // (1 = el primero) para desbloquear una mÃ¡s.
     'zonesStart': 3,
     'zoneUnlockFloor': 2,
-    // Élites: niveles extra por cada vez que ya se venció a esa élite.
+    // Ã‰lites: niveles extra por cada vez que ya se venciÃ³ a esa Ã©lite.
     'eliteRepeatLevel': 2,
     // Dificultad: + por nivel a ATQ y vida enemigos (acumulativo).
     'diffAtk': 0.08,
@@ -702,9 +734,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Puntos de la recompensa de atributo y niveles por encima de los
     // enemigos de la entrada del piso de las armas ofrecidas.
     'attrReward': 5,
-    // Habilidades (§ 12.2): tope total contando ATACAR y DEFENDER (las
+    // Habilidades (Â§ 12.2): tope total contando ATACAR y DEFENDER (las
     // del arma no cuentan), habilidades nuevas en la fila Extra y mejora
-    // en la armería (oro base × nivel siguiente, + poder por nivel, tope).
+    // en la armerÃ­a (oro base Ã— nivel siguiente, + poder por nivel, tope).
     'maxSkills': 6,
     'skillsInExtra': 1,
     'skillUpCost': 60,
@@ -717,51 +749,51 @@ const Map<String, TuningDef> kTuningDefaults = {
     'shopUlts': 2,
     'ultPrice': 260,
     'weaponLevelAhead': 2,
-    // Nivel de los enemigos: 1 + piso × levelPerFloor + capa ×
-    // levelPerLayer (+ élite / jefe).
+    // Nivel de los enemigos: 1 + piso Ã— levelPerFloor + capa Ã—
+    // levelPerLayer (+ Ã©lite / jefe).
     'levelPerFloor': 4,
     'levelPerLayer': 0.25,
-    // Vida y ATQ de los enemigos de la Travesía (× sobre la curva del
+    // Vida y ATQ de los enemigos de la TravesÃ­a (Ã— sobre la curva del
     // Mundo, antes de la dificultad).
     'enemyHp': 0.4,
     'enemyAtk': 0.3,
   }),
-  // combat.md § "Límites": efectos encadenados por acción, tope de daño
-  // por golpe de jefes y élites, "aguanta una ronda" de los comunes y
+  // combat.md Â§ "LÃ­mites": efectos encadenados por acciÃ³n, tope de daÃ±o
+  // por golpe de jefes y Ã©lites, "aguanta una ronda" de los comunes y
   // rendimientos decrecientes de la velocidad.
-  TuningId.combatLimits: TuningDef('Límites de combate', {
-    // Efectos encadenados: total por acción y profundidad de la cadena
+  TuningId.combatLimits: TuningDef('LÃ­mites de combate', {
+    // Efectos encadenados: total por acciÃ³n y profundidad de la cadena
     // (un efecto que dispara otro que dispara otro...).
     'procMax': 64,
     'procDepth': 6,
-    // Tope absoluto por golpe (fracción de la vida máxima; 0 = sin
-    // tope). Vale siempre, también con debilidad, reacción o quiebre.
+    // Tope absoluto por golpe (fracciÃ³n de la vida mÃ¡xima; 0 = sin
+    // tope). Vale siempre, tambiÃ©n con debilidad, reacciÃ³n o quiebre.
     'capBoss': 0.35,
     'capElite': 0.60,
     'capCommon': 0,
-    // Aguanta una ronda (1 = sí): el primer golpe letal a un común antes
-    // de que actúen todos los jugadores vivos lo deja en 1 de vida.
+    // Aguanta una ronda (1 = sÃ­): el primer golpe letal a un comÃºn antes
+    // de que actÃºen todos los jugadores vivos lo deja en 1 de vida.
     'holdCoop': 1,
     'holdSolo': 0,
-    // Nobody alone kills it in one phase (combat.md § "Nadie solo en una
+    // Nobody alone kills it in one phase (combat.md Â§ "Nadie solo en una
     // fase"): an enemy at or above this fraction of its max HP when a
     // character's phase began survives that character's lethal hit at 1
     // HP if another living ally can still finish it (0 = off).
     'phaseHold': 0.5,
-    // Tanks (combat.md § "Tanques"): elemental ward (× damage of that
-    // element), its duration in own turns and Defense (× damage taken).
+    // Tanks (combat.md Â§ "Tanques"): elemental ward (Ã— damage of that
+    // element), its duration in own turns and Defense (Ã— damage taken).
     'wardMult': 0.5,
     'wardTurns': 3,
     'tankGuard': 0.7,
-    // Enemy Silence (combat.md § "Silencio"): own turns of the silenced
+    // Enemy Silence (combat.md Â§ "Silencio"): own turns of the silenced
     // player, how often a silencer recasts it (0 = only when it opens
     // the fight) and whether it also blocks the ULT (1 = yes).
     'silenceTurns': 2,
     'silenceEvery': 4,
     'silenceUlt': 1,
-    // Player break bar (combo_balance.md § 5.4): on (1), threshold,
+    // Player break bar (combo_balance.md Â§ 5.4): on (1), threshold,
     // points per enemy hit and per 1% of max HP lost, decay at the start
-    // of its turn, own turns broken and × damage taken while broken.
+    // of its turn, own turns broken and Ã— damage taken while broken.
     'pBreakOn': 1,
     'pBreakMax': 100,
     'pBreakHit': 10,
@@ -769,7 +801,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'pBreakDecay': 0.1,
     'pBrokenTurns': 2,
     'pBrokenMult': 1.25,
-    // Enemy Convergences (combo_balance.md § "Convergencias enemigas"):
+    // Enemy Convergences (combo_balance.md Â§ "Convergencias enemigas"):
     // on (1); cap of a Convergence against a player (fraction of its max
     // HP, also caps the splash); group AI: chance a primer / detonator
     // focuses the primed player and stacks the detonator waits for; lone
@@ -781,26 +813,26 @@ const Map<String, TuningDef> kTuningDefaults = {
     'eComboMinStacks': 4,
     'eSoloChance': 0.25,
     'eSoloMinStacks': 6,
-    // Turnos como máximo por cada turno del aliado vivo más lento
+    // Turnos como mÃ¡ximo por cada turno del aliado vivo mÃ¡s lento
     // (0 = sin tope).
     'turnsPerSlowest': 2,
-    // Velocidad efectiva sobre el umbral: lo que sobra rinde × el factor.
+    // Velocidad efectiva sobre el umbral: lo que sobra rinde Ã— el factor.
     'speedSoftCap': 16,
     'speedSoftFactor': 0.5,
-    // Carga de ULT extra (árbol, mods, efectos e invocaciones): tope por
-    // acción y por turno de quien la recibe, en puntos de la barra (100).
+    // Carga de ULT extra (Ã¡rbol, mods, efectos e invocaciones): tope por
+    // acciÃ³n y por turno de quien la recibe, en puntos de la barra (100).
     'ultBonusAction': 50,
     'ultBonusTurn': 50,
-    // Modo de combate por defecto de la sala (turn_modes.md § 1): 0 línea
+    // Modo de combate por defecto de la sala (turn_modes.md Â§ 1): 0 lÃ­nea
     // de tiempo, 1 por rondas, 2 por fases.
     'modeCoop': 1,
     'modeSolo': 1,
-    // Por fases: pausa de planificación al abrir la fase de jugadores (s).
+    // Por fases: pausa de planificaciÃ³n al abrir la fase de jugadores (s).
     'planPause': 2,
   }),
 };
 
-/// Los valores vigentes (código o parche instalado).
+/// Los valores vigentes (cÃ³digo o parche instalado).
 final Map<String, TuningDef> kTuning = Map.of(kTuningDefaults);
 
 /// El grupo [id] vigente.

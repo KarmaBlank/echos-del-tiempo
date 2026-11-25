@@ -237,5 +237,21 @@
   "ui.world.clock.season_left": "{season} · {n, plural, one{1 day left} other{{n} days left}}",
   "ui.world.tools.bait": "Bait [F]",
   "ui.world.tools.no_bait_tip": "No bait: buy or craft some.",
-  "ui.world.tools.bait_tip_more": "{name} · click or F: next bait"
+  "ui.world.tools.bait_tip_more": "{name} · click or F: next bait",
+  "ui.world.way.prompt_activate": "[E] Activate the waystone",
+  "ui.world.way.prompt_use": "[E] Waystone: fast travel",
+  "ui.world.way.title": "WAYSTONES",
+  "ui.world.way.help": "Travel between the waystones you have activated in this region.",
+  "ui.world.way.go": "GO",
+  "ui.world.way.here": "HERE",
+  "ui.world.way.unknown": "Not found yet",
+  "ui.world.way.unknown_tip": "Touch it with E to activate it and travel here.",
+  "ui.world.way.site_entrance": "Region entrance",
+  "ui.world.way.site_lake": "Lake: {name}",
+  "ui.world.way.site_mine": "Mine mouth {n}",
+  "ui.world.way.close": "CLOSE",
+  "ui.world.forage.prompt": "[E] Gather {name}",
+  "ui.world.forage.regrow": "{name}: grows back in {n} s",
+  "ui.world.forage.seed_bush": "Seed bush",
+  "ui.world.forage.echo_bloom": "Echo bloom"
 }

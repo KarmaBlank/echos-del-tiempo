@@ -397,8 +397,17 @@ class TilePainter {
         floor();
         _shrine(c, px, py, t, used: ch == Tile.shrineUsed);
       case Tile.waystone || Tile.waystoneOn:
-        floor();
+        // Region waystones stand on grass (biome_regions.md § 4).
+        if (themeId.endsWith('_ext')) {
+          _grass(c, th, px, py, h);
+        } else {
+          floor();
+        }
         _waystone(c, px, py, t, on: ch == Tile.waystoneOn);
+      // Glowing shore plants (biome_regions.md § 3).
+      case Tile.glowPlant:
+        _grass(c, th, px, py, h);
+        _glowPlant(c, px, py, h);
       case Tile.wind:
         floor();
         _windShrine(c, px, py, t);
@@ -492,6 +501,7 @@ class TilePainter {
             Tile.shop ||
             Tile.forage ||
             Tile.forageUsed ||
+            Tile.glowPlant ||
             Tile.mineEntrance:
         return false;
       case Tile.ore || Tile.oreUsed:
@@ -604,6 +614,7 @@ class TilePainter {
         Tile.tombstone,
         Tile.forage,
         Tile.forageUsed,
+        Tile.glowPlant,
         Tile.mineEntrance,
         Tile.ore,
         Tile.oreUsed,
@@ -681,6 +692,17 @@ class TilePainter {
   }
 
   /// Piedra de paso: menhir con una runa (dorada encendida).
+  /// Activated region waystone (biome_regions.md § 4): its rune lit for
+  /// the local player, drawn over the static tile.
+  void waystoneGlow(Canvas c, double px, double py, double t) {
+    final k = 0.6 + 0.4 * math.sin(t / 300);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 7, py - 3, 2,
+        8);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 6, py, 4, 1);
+    _rect(c, RegionPalette.waystoneOn.withValues(alpha: 0.18 * k), px + 2,
+        py - 9, 12, 24);
+  }
+
   void _waystone(Canvas c, double px, double py, double t, {required bool on}) {
     _rect(c, const Color(0x55000000), px + 3, py + 13, ts - 6, 2);
     _rect(c, const Color(0xFF4E5568), px + 4, py - 6, 8, 20);
@@ -787,6 +809,19 @@ class TilePainter {
     final col = ForagePalette.fruit[kind % ForagePalette.fruit.length];
     for (final (fx, fy) in const [(4, 9), (9, 5), (11, 11), (7, 12)]) {
       _rect(c, col, px + fx, py + fy, 2, 2);
+    }
+  }
+
+  /// Glowing shore plant: a few stems with luminous bulbs (static: the
+  /// glow at night comes from the light layer).
+  void _glowPlant(Canvas c, double px, double py, int h) {
+    for (var k = 0; k < 3; k++) {
+      final x = px + 3 + ((h >> (k * 3)) % 10);
+      final top = py + 3 + ((h >> (k * 2 + 5)) % 6);
+      _rect(c, RegionPalette.glowStem, x, top + 2, 1, py + 15 - top - 2);
+      _rect(c, RegionPalette.glowLeaf, x - 1, top + 5, 1, 2);
+      _rect(c, RegionPalette.glowHalo, x - 1, top - 1, 3, 3);
+      _rect(c, RegionPalette.glowBulb, x, top, 1, 2);
     }
   }
 

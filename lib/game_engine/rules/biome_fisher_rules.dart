@@ -42,11 +42,21 @@ abstract final class BiomeFisherRules {
 
   /// Dónde camina en (px): una vuelta lenta por la orilla del lago.
   static (double, double) position(BiomeLayout lay, double time) {
-    final (cx, cy, rx, ry) = lay.lake;
-    final a = time * 0.02 + lay.id.length;
+    // biome_regions.md § 3.4: paces back and forth along the end of the
+    // path to the first lake (always walkable ground).
+    final w = lay.fisherWalk;
+    if (w.isEmpty) return (lay.spawn.x, lay.spawn.y);
+    if (w.length == 1) return ((w[0].$1 + 0.5) * 16, (w[0].$2 + 0.5) * 16);
+    final span = (w.length - 1).toDouble();
+    final u = (time * 0.15 + lay.id.length) % (span * 2);
+    final f = u <= span ? u : span * 2 - u;
+    final k = f.floor().clamp(0, w.length - 2);
+    final fr = f - k;
+    final (ax, ay) = w[k];
+    final (bx, by) = w[k + 1];
     return (
-      (cx + 0.5 + (rx + 1.3) * math.cos(a)) * 16,
-      (cy + 0.5 + (ry + 1.3) * math.sin(a)) * 16,
+      (ax + (bx - ax) * fr + 0.5) * 16,
+      (ay + (by - ay) * fr + 0.5) * 16,
     );
   }
 

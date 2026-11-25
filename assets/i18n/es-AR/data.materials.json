@@ -221,5 +221,16 @@
   "data.materials.smith.ingot_echo.name": "Lingote de plata del eco",
   "data.materials.smith.rare_sand.name": "Arena detenida",
   "data.materials.smith.schematic.name": "Plano antiguo",
-  "data.materials.smith.guardian_core.name": "Núcleo de guardián"
+  "data.materials.smith.guardian_core.name": "Núcleo de guardián",
+  "data.materials.crop.brote_primavera.name": "Brote de primavera",
+  "data.materials.crop.brote_primavera.seed": "Semilla de brote de primavera",
+  "data.materials.crop.fresa_estival.name": "Fresa estival",
+  "data.materials.crop.fresa_estival.seed": "Semilla de fresa estival",
+  "data.materials.crop.castana_otono.name": "Castaña de otoño",
+  "data.materials.crop.castana_otono.seed": "Semilla de castaña de otoño",
+  "data.materials.crop.baya_invierno.name": "Baya de invierno",
+  "data.materials.crop.baya_invierno.seed": "Semilla de baya de invierno",
+  "data.materials.crop.flor_eco.name": "Flor del eco",
+  "data.materials.crop.flor_eco.seed": "Semilla de flor del eco",
+  "data.materials.crop.flor_eco.lore": "Florece donde el tiempo se repite: dura lo que dura un eco."
 }

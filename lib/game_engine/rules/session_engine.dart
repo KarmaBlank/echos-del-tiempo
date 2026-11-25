@@ -85,6 +85,7 @@ import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
+import 'waystone_rules.dart';
 import 'world_event_rules.dart';
 import '../data/world_events_catalog.dart';
 import '../data/biomes_catalog.dart';
@@ -300,6 +301,7 @@ class SessionEngine {
       ..worldName = name;
     // El pueblo del mundo (farming.md § 10): huerta, ampliaciones y lago.
     if (town != null) s.town = BiomeRules.rebase(town, s.time);
+    BiomeRegions.bind(s.town.sky.seed);
     if (lake != null && lake.isNotEmpty) {
       s.town = s.town.copyWith(lake: List.unmodifiable(lake));
     }
@@ -475,6 +477,8 @@ class SessionEngine {
   final _stated = Expando<(String, GameMap)>('mapa con estado');
 
   GameMap _baseMapFor(GameSession s) {
+    // Biome regions come from the world seed (biome_regions.md § 1).
+    BiomeRegions.bind(s.town.sky.seed);
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
       // Exterior de bioma (overworld_biomes.md § 2): el grupo viajó.
@@ -1406,7 +1410,7 @@ class _Op {
         return false;
       case OfferBossAction():
         return _offerBoss(p);
-      case TravelAction() || ForageAction():
+      case TravelAction() || ForageAction() || WaystoneAction():
         return biomeAction(p, a);
       case MineAction() || SmithAction():
         return miningAction(p, a);
@@ -2677,6 +2681,7 @@ class _Op {
       case SessionMode.lobby:
         final v = s.vote;
         _followLeaders();
+        forageHoldTick();
         if (v != null &&
             humans.isNotEmpty &&
             humans.every((p) => v.yes.contains(p.id))) {

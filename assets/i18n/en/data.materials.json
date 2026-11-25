@@ -221,5 +221,16 @@
   "data.materials.smith.ingot_echo.name": "Echo silver ingot",
   "data.materials.smith.rare_sand.name": "Stilled sand",
   "data.materials.smith.schematic.name": "Ancient schematic",
-  "data.materials.smith.guardian_core.name": "Guardian core"
+  "data.materials.smith.guardian_core.name": "Guardian core",
+  "data.materials.crop.brote_primavera.name": "Spring sprout",
+  "data.materials.crop.brote_primavera.seed": "Spring sprout seed",
+  "data.materials.crop.fresa_estival.name": "Summer strawberry",
+  "data.materials.crop.fresa_estival.seed": "Summer strawberry seed",
+  "data.materials.crop.castana_otono.name": "Autumn chestnut",
+  "data.materials.crop.castana_otono.seed": "Autumn chestnut seed",
+  "data.materials.crop.baya_invierno.name": "Winter berry",
+  "data.materials.crop.baya_invierno.seed": "Winter berry seed",
+  "data.materials.crop.flor_eco.name": "Echo bloom",
+  "data.materials.crop.flor_eco.seed": "Echo bloom seed",
+  "data.materials.crop.flor_eco.lore": "It blooms where time repeats itself, and lasts as long as an echo."
 }
