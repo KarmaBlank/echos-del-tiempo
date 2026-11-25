@@ -645,8 +645,12 @@ class WorldHud extends StatelessWidget {
                       ),
                     // `[E] ...`: caja `#000a` y texto dorado (sello violeta).
                     // Pesca y huerta: el aviso va en el HUD de herramienta.
+                    // Ayudante con la barra de herramienta abierta: ya lo
+                    // dice la barra (no repetirlo).
                     if (view.prompt == WorldPrompt.fishing ||
-                        view.prompt == WorldPrompt.farm)
+                        view.prompt == WorldPrompt.farm ||
+                        (view.prompt == WorldPrompt.helper &&
+                            controller.toolPrompt != null))
                       const SizedBox.shrink()
                     else if ((view.promptText ??
                             switch (view.prompt) {
