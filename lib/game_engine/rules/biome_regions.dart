@@ -109,7 +109,7 @@ class BiomeLayout {
 
   /// Generator version (biome_exploration.md § 7): worlds saved with
   /// another one drop their layout-indexed state on load.
-  static const version = 3;
+  static const version = 4;
 
   /// The sections of the wilds (§ 2): kind and center tile.
   final List<WildSection> sections;
@@ -282,8 +282,9 @@ abstract final class BiomeRegions {
   /// § 7): the regions regenerate on their own (the layout is never
   /// saved), so only the state indexed by the old layout goes — activated
   /// waystones, picked forage and today's wilds chest / shrine marks
-  /// (indexed by spot, so they would land on new spots). Everything else
-  /// stays. Same instance
+  /// (indexed by spot, so they would land on new spots), and the shared map
+  /// discovery (fog). Progress (zones, bosses, Eco tiers, quests, story,
+  /// inventory, town builds, mines) is not layout-indexed and stays. Same instance
   /// when already current.
   static TownState migrate(TownState t) {
     if (t.layoutVersion == BiomeLayout.version) return t;

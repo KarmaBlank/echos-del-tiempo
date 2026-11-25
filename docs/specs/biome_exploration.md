@@ -127,14 +127,17 @@ mundo (world_events.md § 3.6), no se duplica nada:
 - Cofres y santuarios (§ 3.3–3.4) se rellenan cada día.
 
 ## 7. Versión de plano (migración)
-- `BiomeLayout.version` (hoy 3: v0.49.3 agrandó el lago gigante). `TownState.layoutVersion` (JSON `lv`,
+- `BiomeLayout.version` (hoy 4: v0.49.9 regenera todos los exteriores de todo mundo por pedido del dueño; 3: v0.49.3 agrandó el lago gigante). `TownState.layoutVersion` (JSON `lv`,
   0 si falta).
 - En `setWorld`, `BiomeRegions.migrate`: si `lv` ≠ versión se borran las
   piedras activadas (`town.ws`; la de la entrada siempre está activa) y
   las matas recolectadas (`town.wild`) y las marcas de cofres / santuarios
-  del día (claves `wx:` de `town.daily`), y se guarda `lv`. Las marcas sin
-  versión de guardados previos a v0.49.5 ya no coinciden con ninguna clave. Construcciones del pueblo, estado de
-  minas y todo lo demás no dependen del plano y quedan.
+  del día (claves `wx:` de `town.daily`, también las búsquedas en árboles), el descubrimiento del mapa
+  (niebla, `town.md`), y se guarda `lv`. Si al cargar el grupo estaba en un
+  exterior (no mina ni mazmorra), todos pasan al punto de llegada del bioma. Las marcas sin
+  versión de guardados previos a v0.49.5 ya no coinciden con ninguna clave. Construcciones del pueblo (no se regenera), estado de
+  minas, zonas, jefes, tiers y portales Eco, misiones, historia,
+  inventario y todo lo demás no dependen del plano y quedan.
 
 ## 8. Mapa y rendimiento
 - Minimapa: ya recorta una ventana alrededor del jugador y cachea la base
