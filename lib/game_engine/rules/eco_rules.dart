@@ -438,4 +438,97 @@ class EcoRules {
     return EcoCraftResult(
         InventoryRules.relayout(InventoryRules.replaceEco(paid, after)), after);
   }
+
+  // ------------------------------------------------------------------
+  // Fusión (§ 4.2)
+  // ------------------------------------------------------------------
+
+  /// Ecos del mismo tier que pide una fusión (Balance, mínimo 2).
+  static int get fuseCount =>
+      math.max(2, tuning(TuningId.ecoTier).i('fuseCount'));
+
+  /// Anclas Temporales extra que cuesta una fusión (Balance, 0 = gratis).
+  static int get fuseAnchors =>
+      math.max(0, tuning(TuningId.ecoTier).i('fuseAnchors'));
+
+  /// Qué saldría de fusionar [ecos] (sin tirar nada): tier + 1, la mayor
+  /// rareza y la zona (una sola si coinciden; si no, una al azar de estas).
+  static EcoFusePreview fusePreview(List<EcoItem> ecos) {
+    var r = Rarity.comun;
+    for (final e in ecos) {
+      if (e.rarity.index > r.index) r = e.rarity;
+    }
+    final zones = <int>[];
+    for (final e in ecos) {
+      if (!zones.contains(e.zone)) zones.add(e.zone);
+    }
+    final tier = ecos.isEmpty ? EcoItem.minTier : ecos.first.tier + 1;
+    return EcoFusePreview(
+        tier: tier.clamp(EcoItem.minTier, EcoItem.maxTier),
+        rarity: r,
+        zones: zones);
+  }
+
+  /// Por qué [p] no puede fusionar los Ecos [uids], o `null`.
+  static EcoFuseBlock? cannotFuse(PlayerProfile p, List<String> uids) {
+    if (uids.length != fuseCount) return EcoFuseBlock.count;
+    if (uids.toSet().length != uids.length) return EcoFuseBlock.duplicate;
+    final ecos = <EcoItem>[];
+    for (final u in uids) {
+      final e = p.ecoByUid(u);
+      if (e == null) return EcoFuseBlock.missing;
+      ecos.add(e);
+    }
+    if (ecos.any((e) => e.tier != ecos.first.tier)) {
+      return EcoFuseBlock.mixedTier;
+    }
+    if (ecos.first.tier >= EcoItem.maxTier) return EcoFuseBlock.maxTier;
+    if (p.material(CraftMaterial.ancla) < fuseAnchors) {
+      return EcoFuseBlock.material;
+    }
+    return null;
+  }
+
+  /// Fusiona los Ecos [uids] de [p] en uno de tier + 1 (§ 4.2). El
+  /// resultado es un Eco nuevo (uid nuevo) generado como un drop de la
+  /// rareza mayor: mods recién tirados hasta el mínimo de esa rareza.
+  EcoCraftResult fuse(PlayerProfile p, List<String> uids, RandomSource rng) {
+    final why = cannotFuse(p, uids);
+    if (why != null) return EcoCraftResult.fail(why.name);
+    final ecos = [for (final u in uids) p.ecoByUid(u)!];
+    final pre = fusePreview(ecos);
+    final zone = pre.zones.length == 1
+        ? pre.zones.single
+        : pre.zones[_pick(rng, pre.zones.length)];
+    final made =
+        generate(rng, tier: pre.tier, rarity: pre.rarity).copyWith(zone: zone);
+    var next = p;
+    for (final u in uids) {
+      next = InventoryRules.removeEco(next, u);
+    }
+    final cost = fuseAnchors;
+    if (cost > 0) {
+      next = next.copyWith(materials: {
+        ...next.materials,
+        CraftMaterial.ancla: next.material(CraftMaterial.ancla) - cost,
+      });
+    }
+    final (got, uid) = InventoryRules.addEco(next, made);
+    return EcoCraftResult(got, got.ecoByUid(uid)!);
+  }
 }
+
+/// Lo que saldría de una fusión (§ 4.2).
+class EcoFusePreview {
+  const EcoFusePreview(
+      {required this.tier, required this.rarity, required this.zones});
+
+  final int tier;
+  final Rarity rarity;
+
+  /// Una zona: se queda; varias: una al azar de estas.
+  final List<int> zones;
+}
+
+/// Por qué no se puede fusionar (la UI lo traduce).
+enum EcoFuseBlock { count, duplicate, missing, mixedTier, maxTier, material }

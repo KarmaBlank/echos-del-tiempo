@@ -512,6 +512,13 @@ class EcoCraftAction extends SessionAction {
   const EcoCraftAction(this.uid, this.op);
 }
 
+/// Fusionar Ecos propios del mismo tier en uno de tier + 1
+/// (ecos_atlas.md § 4.2).
+class EcoFuseAction extends SessionAction {
+  final List<String> uids;
+  const EcoFuseAction(this.uids);
+}
+
 /// Solo desarrollo (`FeatureFlags.devTools`): activa el portal y da un
 /// Eco Raro de [tier]. El motor la rechaza si no tiene `devTools`.
 class DevGrantEcoAction extends SessionAction {

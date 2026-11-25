@@ -853,6 +853,9 @@ const Map<String, TuningDef> kTuningDefaults = {
   TuningId.ecoTier: TuningDef('Bonus de tier de Ecos', {
     'tierQuantity': 0.03,
     'partyQuantity': 0.10,
+    // ecos_atlas.md § 4.2: Ecos del mismo tier por fusión y Anclas extra.
+    'fuseCount': 3,
+    'fuseAnchors': 0,
   }),
   // build_planner.md § 9: pesos de la guía del builder.
   TuningId.buildGuide: TuningDef('Guía del builder', {
