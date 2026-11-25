@@ -49,6 +49,10 @@ enum TownSpot {
 
   /// Ore vein inside a mine (mining_smithing.md § 1.3).
   ore,
+
+  /// Cart station next to the town exit (mining_smithing.md § 1.8):
+  /// carts from the mines arrive here; E unloads one.
+  carts,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su
@@ -109,12 +113,17 @@ abstract final class TownLayout {
     TownLandmark(TownSpot.workshop, 'TALLER DE OFICIOS', Tile.workshop, 6, 6,
         w: 3, h: 3),
     TownLandmark(TownSpot.armory, 'ARMERÍA', Tile.shop, 26, 6, w: 3, h: 3),
+    TownLandmark(TownSpot.carts, 'VAGONETAS', Tile.counter, 20, 13, w: 2, h: 2),
   ];
 
   /// Lugares que llegaron después del editor (v0.32.3): en un pueblo
   /// guardado antes van al hueco libre más cercano si el suyo está
   /// ocupado (`TownPlan.landmarksOf`).
-  static const lateSpots = [TownSpot.workshop, TownSpot.armory];
+  static const lateSpots = [
+    TownSpot.workshop,
+    TownSpot.armory,
+    TownSpot.carts,
+  ];
 
   /// Muelles del lago base sin mover (los arma `TownPlan`).
   static const fishingSpots = [(10, 15), (10, 18), (6, 14)];

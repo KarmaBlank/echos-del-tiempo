@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../data/light_catalog.dart';
+import '../data/mine_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 
 /// Una luz puesta en el mapa, en coordenadas de tile (con fracción: el
@@ -198,6 +200,17 @@ abstract final class LightRules {
   /// (lighting.md § 3). [dark]: mazmorra oscura (agrega antorchas de
   /// pared). Las casas emiten una sola vez (su tile de arriba a la
   /// izquierda).
+  static Map<String, double> _veinGlow() {
+    final t = tuning(TuningId.smithing);
+    final base = t.d('veinGlow');
+    return {
+      Tile.ore: base,
+      MineTile.rich: base * t.d('veinGlowRich'),
+      MineTile.deep: base * t.d('veinGlowDeep'),
+      MineTile.gem: base * t.d('veinGlowGem'),
+    };
+  }
+
   static List<LightSource> tileEmitters(
       GameMap map, int x0, int y0, int x1, int y1,
       {bool dark = false, bool biome = false}) {
@@ -206,10 +219,22 @@ abstract final class LightRules {
     y0 = math.max(0, y0);
     x1 = math.min(map.width, x1);
     y1 = math.min(map.height, y1);
+    // Mines (mining_smithing.md § 1.2): every vein glows faintly through
+    // the rock, rarer ores a little more (tunable in Balance).
+    final mine = map.theme.startsWith('mina_');
+    final glow = mine ? _veinGlow() : null;
     for (var y = y0; y < y1; y++) {
       final row = map.rows[y];
       for (var x = x0; x < x1; x++) {
         final c = row[x];
+        final k = glow?[c];
+        if (k != null) {
+          if (k > 0) {
+            out.add(LightSource(x + 0.5, y + 0.5, kLightDefs[LightId.veta]!,
+                scale: k, ownX0: x, ownY0: y, ownX1: x + 1, ownY1: y + 1));
+          }
+          continue;
+        }
         final id = kTileLights[c];
         if (id != null) {
           if (c == Tile.house &&

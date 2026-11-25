@@ -63,6 +63,8 @@ class MapLightLayer {
 
   static (double, double, double) get dungeonAmbient =>
       _rgb(LightPalette.darkDungeon);
+  static (double, double, double) get mineAmbient =>
+      _rgb(LightPalette.darkMine);
 
   /// Alinea [v] al bloque de [chunk] hacia abajo. Con `~/` los negativos
   /// se truncaban hacia 0: cerca del borde superior/izquierdo la malla

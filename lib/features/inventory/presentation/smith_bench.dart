@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../core/procedural/item_icons.dart' show procKeyForType;
+import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/data/smithing_catalog.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/session_action.dart';
@@ -73,7 +74,8 @@ class _SmithBenchState extends State<SmithBench> {
 
       return DsCraftItem(
         id: 'smelt-$ore',
-        icon: LifeIcon(ore, LifeIconKind.herramienta, size: 32),
+        // The ingot it makes (each one has its own art, not the anvil).
+        icon: LifeIcon(ingotOf(ore)!, LifeIconKind.herramienta, size: 32),
         border: DsColors.border,
         name: name(ingotOf(ore)!),
         tag: 'smelt',
@@ -84,7 +86,15 @@ class _SmithBenchState extends State<SmithBench> {
             'ore': name(ore),
             'gold': gold,
           }),
-          s.t('ui.inventory.smith.have', {'n': p.life.ore(ore), 'max': max}),
+          // Why it is 0 when there is ore: say what is missing.
+          if (max > 0)
+            s.t('ui.inventory.smith.have', {'n': p.life.ore(ore), 'max': max})
+          else if (p.life.ore(ore) < per)
+            s.t('ui.inventory.smith.have_short',
+                {'n': p.life.ore(ore), 'per': per})
+          else
+            s.t('ui.inventory.smith.have_gold',
+                {'n': p.life.ore(ore), 'gold': gold}),
         ],
         actions: [go(1), go(5)],
       );
@@ -101,12 +111,13 @@ class _SmithBenchState extends State<SmithBench> {
               brann: byBrann,
               brannHome: brann.invited && brann.house > 0));
       final tag = byBrann ? 'brann' : 'forge';
+      final mark = byBrann ? DsColors.mp : RarityColors.of(_rarity);
       return DsCraftItem(
         id: '$tag-$id',
         icon: PixelIcon(iconKeyForType(w.type),
             accent: RarityColors.of(_rarity), procKey: procKeyForType(w.type)),
-        border: RarityColors.of(_rarity),
-        name: w.text,
+        border: mark,
+        name: byBrann ? s.t('ui.inventory.smith.brann_name', {'name': w.text}) : w.text,
         tag: tag,
         search: '${w.text} ${w.type}',
         description: s.t('ui.inventory.smith.forge_desc',
@@ -136,7 +147,22 @@ class _SmithBenchState extends State<SmithBench> {
             }),
           if (c.recipe) s.t('ui.inventory.smith.cost_recipe'),
           s.t('ui.inventory.smith.cost_gold', {'gold': c.gold}),
-          s.t('ui.inventory.smith.cap', {'rarity': cap.text}),
+          // Who forges, the cap, the price and the wait (§ 5): the two
+          // tabs must not read the same.
+          if (byBrann) ...[
+            s.t('ui.inventory.smith.who_brann'),
+            s.t('ui.inventory.smith.cap_brann', {'rarity': cap.text}),
+            s.t('ui.inventory.smith.brann_extra', {
+              'gold': c.gold -
+                  SmithCraftRules.cost(p.level, ingot, _rarity)!.gold
+            }),
+            s.t('ui.inventory.smith.wait_brann'),
+          ] else ...[
+            s.t('ui.inventory.smith.who_self',
+                {'xp': SmithCraftRules.forgeXp(_rarity)}),
+            s.t('ui.inventory.smith.cap_self',
+                {'lv': smithLv, 'rarity': cap.text}),
+          ],
         ],
         actions: [
           DsButton(
@@ -156,6 +182,63 @@ class _SmithBenchState extends State<SmithBench> {
       );
     }
 
+    DsCraftItem tool(String id) {
+      final ores = [for (final b in kBiomeOres.values) b.ore];
+      final ore = ores.firstWhere(
+          (o) => (MiningRules.recipe(id, o)?.mats.entries ?? const [])
+              .every((e) => p.life.ore(e.key) >= e.value),
+          orElse: () => ores.first);
+      final rec = MiningRules.recipe(id, ore)!;
+      final owned = mineTool(id) != null && p.life.ore(id) > 0;
+      final short = rec.mats.entries
+          .any((e) => p.life.ore(e.key) < e.value);
+      final block = !inWorld
+          ? s.t('ui.inventory.smith.world_only')
+          : owned
+              ? s.t('ui.inventory.smith.mine_owned')
+              : short
+                  ? s.t('ui.inventory.smith.why.noOre')
+                  : p.credits < rec.gold
+                      ? s.t('ui.inventory.smith.why.noGold')
+                      : null;
+      final t = mineTool(id);
+      return DsCraftItem(
+        id: 'mine-$id',
+        icon: LifeIcon(id, LifeIconKind.herramienta, size: 32),
+        border: DsColors.border,
+        name: name(id),
+        tag: 'mine',
+        count: p.life.ore(id),
+        description: t == null
+            ? s.t('ui.inventory.smith.mine_desc.$id')
+            : s.t('ui.inventory.smith.mine_tool_desc', {
+                'tier': t.tier,
+                'power': t.power,
+                'swing': t.swing.toStringAsFixed(2),
+              }),
+        lines: [
+          for (final e in rec.mats.entries)
+            s.t('ui.inventory.smith.cost_ingots', {
+              'n': e.value,
+              'ingot': name(e.key),
+              'have': p.life.ore(e.key)
+            }),
+          if (rec.gold > 0) s.t('ui.inventory.smith.cost_gold', {'gold': rec.gold}),
+          if (rec.n > 1) s.t('ui.inventory.smith.mine_batch', {'n': rec.n}),
+        ],
+        actions: [
+          DsButton(s.t('ui.inventory.smith.go_make'),
+              key: ValueKey('smith-make-$id'),
+              size: DsButtonSize.compact,
+              kind: DsButtonKind.primary,
+              tooltip: block,
+              onPressed: block == null
+                  ? () => shop.controller.craftMine(id, ore)
+                  : null),
+        ],
+      );
+    }
+
     final bases = SmithCraftRules.bases(
         shop.rules.catalog.weapons.values, p.level, ingot);
     return DsCraftGridTemplate(
@@ -167,11 +250,15 @@ class _SmithBenchState extends State<SmithBench> {
         DsTransferFilter(s.t('ui.inventory.smith.tab.smelt'), 'smelt'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.forge'), 'forge'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.brann'), 'brann'),
+        DsTransferFilter(s.t('ui.inventory.smith.tab.mine'), 'mine'),
       ],
       items: [
         for (final b in kBiomeOres.values) smelt(b.ore),
         for (final w in bases) forge(w.id, false),
         for (final w in bases) forge(w.id, true),
+        for (final t in kMineTools)
+          if (t.ingot != null) tool(t.id),
+        for (final id in kMineSupplies) tool(id),
       ],
     );
   }

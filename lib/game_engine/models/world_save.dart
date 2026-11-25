@@ -3,6 +3,7 @@
 library;
 
 import 'dungeon_save.dart';
+import 'mine_state.dart';
 import 'farm_plot.dart';
 import 'npc_bond.dart';
 import 'resident.dart';
@@ -57,7 +58,20 @@ class TownState {
       this.bonds = const {},
       this.dungeons = const {},
       this.events = const WorldEventsState(),
-      this.renown = const RenownState()});
+      this.renown = const RenownState(),
+      this.mines = const {}});
+
+  /// Mine levels dug, lit and worked in this world (mining_smithing.md
+  /// § 1.5). Travel with the town (`mn`) and are saved.
+  final MinesState mines;
+
+  /// The state of mine level [place] (empty if nothing changed there).
+  MineLevelState mine(String place) =>
+      mines[place] ?? const MineLevelState();
+
+  /// [m] saved for [place].
+  TownState withMine(String place, MineLevelState m) =>
+      copyWith(mines: {...mines, place: m});
 
   /// World events (world_events.md § 1): travel and are saved (`wev`).
   final WorldEventsState events;
@@ -242,6 +256,7 @@ class TownState {
     Map<String, DungeonSave>? dungeons,
     WorldEventsState? events,
     RenownState? renown,
+    MinesState? mines,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -260,7 +275,8 @@ class TownState {
         bonds: bonds ?? this.bonds,
         dungeons: dungeons ?? this.dungeons,
         events: events ?? this.events,
-        renown: renown ?? this.renown);
+        renown: renown ?? this.renown,
+        mines: mines ?? this.mines);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -292,6 +308,7 @@ class TownState {
         if (daily.isNotEmpty) 'dy': daily,
         if (!events.isEmpty) 'wev': events.toJson(),
         if (!renown.isEmpty) 'rn': renown.toJson(),
+        if (minesToJson(mines) case final mn when mn.isNotEmpty) 'mn': mn,
         if (bonds.isNotEmpty)
           'nat': [
             for (final k in (bonds.keys.toList()..sort())) bonds[k]!.toJson()
@@ -387,6 +404,7 @@ class TownState {
       sky: SkyState.fromJson(raw['sky']),
       events: WorldEventsState.fromJson(raw['wev']),
       renown: RenownState.fromJson(raw['rn']),
+      mines: minesFromJson(raw['mn']),
       residents: raw['res'] is List
           ? {
               for (final v in raw['res'] as List)

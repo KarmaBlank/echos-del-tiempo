@@ -534,5 +534,9 @@
   "ui.town.events.duel_go": "¡En guardia!",
   "ui.town.events.duel_none": "Acá no hay dónde pelear.",
   "ui.town.events.rumor_badge": "RUMOR",
-  "ui.town.events.rumor_tip": "Te contaron algo de este lugar."
+  "ui.town.events.rumor_tip": "Te contaron algo de este lugar.",
+  "ui.town.trader.kind.mine_goods": "Minerales",
+  "ui.town.trader.kind.mine_supplies": "Insumos",
+  "ui.town.trader.kind.mine_tools": "Picos",
+  "ui.town.trader.tab_mining": "MINERÍA"
 }

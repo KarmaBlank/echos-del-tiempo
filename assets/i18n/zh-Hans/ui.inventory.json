@@ -655,5 +655,73 @@
   "ui.inventory.smith.col.tab.special": {
     "text": "特殊",
     "status": "draft"
+  },
+  "ui.inventory.smith.brann_extra": {
+    "text": "委托：布兰的工钱 +{gold} 金币",
+    "status": "draft"
+  },
+  "ui.inventory.smith.brann_name": {
+    "text": "{name}（委托）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cap_brann": {
+    "text": "布兰最高锻造至 {rarity}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.cap_self": {
+    "text": "你的锻造等级 {lv} 最高至 {rarity}",
+    "status": "draft"
+  },
+  "ui.inventory.smith.go_make": {
+    "text": "制作",
+    "status": "draft"
+  },
+  "ui.inventory.smith.have_gold": {
+    "text": "你有 {n} 块矿石，但金币不足（每锭 {gold}）",
+    "status": "draft"
+  },
+  "ui.inventory.smith.have_short": {
+    "text": "你有 {n} 块矿石：每锭需要 {per} 块",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_batch": {
+    "text": "每批制作 {n} 个",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_owned": {
+    "text": "已拥有",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_tool_desc": {
+    "text": "采矿工具，等级 {tier}。力量 {power}，每 {swing} 秒一击。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_desc.mine_torch": {
+    "text": "插在矿洞地面或墙上，会一直亮着。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_desc.mine_bomb": {
+    "text": "短暂引信后炸开周围的岩石。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.mine_desc.vein_oil": {
+    "text": "一段时间内，矿脉产出更多更好的矿石。",
+    "status": "draft"
+  },
+  "ui.inventory.smith.tab.mine": {
+    "text": "采矿",
+    "status": "draft"
+  },
+  "ui.inventory.smith.wait_brann": {
+    "text": "布兰立即交付，但要收取他的那份",
+    "status": "draft"
+  },
+  "ui.inventory.smith.who_brann": {
+    "text": "由镇上的铁匠布兰锻造",
+    "status": "draft"
+  },
+  "ui.inventory.smith.who_self": {
+    "text": "由你亲自锻造：锻造经验 +{xp}",
+    "status": "draft"
   }
 }

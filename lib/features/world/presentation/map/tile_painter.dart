@@ -3,8 +3,10 @@ import 'dart:ui';
 
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/biomes_catalog.dart' show kBiomeLayouts;
+import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import 'map_themes.dart';
+part 'mine_tiles.dart';
 
 /// Tile vecino (tx, ty) del mapa; `null` fuera del mapa.
 typedef TileAt = String? Function(int tx, int ty);
@@ -137,6 +139,12 @@ class TilePainter {
       } else {
         _caveFloor(c, px, py, h);
       }
+      return;
+    }
+    // Mines v2 (mining_smithing.md § 1.2): natural rock, auto-tiled edges.
+    if (themeId.startsWith('mina_') &&
+        mineTiles.contains(ch) &&
+        _mineTile(c, ch, themeId, px, py, tx, ty, h, at)) {
       return;
     }
 
@@ -488,6 +496,8 @@ class TilePainter {
         themeId.startsWith('mina_')) {
       lobby = false;
     }
+    // Mine tiles are static (the torches flicker in the light layer).
+    if (themeId.startsWith('mina_') && mineTiles.contains(ch)) return false;
     // Niebla del cementerio: sobre todo lo que no es vacío.
     if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
     final h = tileHash(tx, ty);
@@ -593,6 +603,7 @@ class TilePainter {
   /// Todos los códigos que [draw] sabe dibujar (los de entrada `0`..`9`
   /// incluidos). Ver worldgen.md § 7.6.
   static bool handles(String ch) =>
+      mineTiles.contains(ch) ||
       const {
         Tile.soil,
         Tile.floor,

@@ -413,10 +413,14 @@ class _W {
       final name = MiningRules.placeName(place);
       _move(p, key, to,
           leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
-      // Out of a mine: in front of its entrance (mining_smithing.md § 1.1).
-      if (fromMine != null && w.rooms[to]!.players.containsKey(p.id)) {
+      // Out of a mine: in front of its entrance (mining_smithing.md § 1.1);
+      // between levels, at the way up or the shaft (§ 1.4).
+      final arrive = MiningRules.arrival(s.place, place, worldId: s.worldId);
+      if ((fromMine != null || arrive != null) &&
+          w.rooms[to]!.players.containsKey(p.id)) {
         final n = w.rooms[to]!.copy();
-        final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
+        final f = arrive ??
+            MiningRules.entranceFront(fromMine!.$1, fromMine.$2);
         for (final q in n.playerList) {
           if (q.id != p.id && q.leaderId != p.id) continue;
           q

@@ -12,6 +12,9 @@ import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import 'light_layer.dart';
+import 'mine_layer.dart';
+import '../../../../game_engine/rules/town_plan.dart';
+import '../../../../game_engine/data/mine_catalog.dart' show MineTile;
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
 import '../../../../core/procedural/weapon_look.dart';
@@ -131,6 +134,7 @@ class MapGame extends Game {
       weaponTypeOf: (id) => controller.engine.catalog.weapons[id]?.type,
     );
     _events = controller.events.listen(_onEvent);
+    controller.onMineSwing = (x, y) => mine.onSwing(x, y, t);
     // Para la línea de rendimiento de ecos.log (FPS Y PING prendido).
     PerfLog.probes['mapa'] = _perfProbe;
   }
@@ -170,6 +174,8 @@ class MapGame extends Game {
 
   /// Ground marks of the seasons and the weather.
   final ground = MapGroundLayer();
+  /// Mines: cracks, debris, bombs, carts (mining_smithing.md § 1.9).
+  final mine = MineLayer();
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -488,6 +494,23 @@ class MapGame extends Game {
   }
 
   void _onEvent(SessionEvent e) {
+    switch (e) {
+      case MineDugEvent(:final playerId, :final tx, :final ty, :final code, :final label):
+        final theme = controller.view?.map.theme ?? '';
+        mine.onDug(tx, ty, code, label, playerId, theme, t);
+        if (playerId == controller.localId) {
+          controller.mineCracks.remove(controller.mineLevel?.idx(tx, ty));
+        }
+        if (MineTile.veins.contains(code)) {
+          controller.fishSfx?.call(Sfx.flash);
+        }
+      case MineBombEvent(:final tx, :final ty, :final fuse):
+        mine.onBomb(tx, ty, fuse, t);
+      case MineBlastEvent(:final tx, :final ty, :final radius):
+        mine.onBlast(tx, ty, radius, t);
+        controller.fishSfx?.call(Sfx.hit);
+      default:
+    }
     if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
     if (e case WaterLootEvent(:final playerId, :final label, :final rarity)) {
@@ -887,6 +910,9 @@ class MapGame extends Game {
     final z = zoom;
     if (z != 1) c.scale(1 / z);
     c.translate(-camX.roundToDouble(), -camY.roundToDouble());
+    // Bomb blast: a small screen shake (mining_smithing.md § 1.9).
+    final shake = mine.shake(t);
+    if (shake != Offset.zero) c.translate(shake.dx, shake.dy);
 
     // Estado de las zonas para el jugador local (entradas del mundo).
     final zones = map.entrances.isEmpty
@@ -960,15 +986,25 @@ class MapGame extends Game {
     if (map.lobby && map.place != null) {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
+      // Labels stay inside the view (a pond at the edge was clipped).
+      double inView(double x) => x.clamp(
+          worldView.left + 36, math.max(worldView.left + 36, worldView.right - 36));
       for (final (txt, x, y)
           in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
-        _placeText(
-            c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
+        _placeText(c, txt, inView((x + 0.5) * ts), y * ts - 4,
+            TownPalette.label, 6, rank++);
       }
+      final lay = biomeLayout(map.place);
       for (final (x, y)
-          in biomeLayout(map.place)?.mines ?? const <(int, int)>[]) {
-        _placeText(c, controller.strings.t('ui.world.mine.label'),
-            (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
+          in lay == null ? const <(int, int)>[] : MiningRules.entrances(lay)) {
+        // Above the mouth, and hidden while someone stands at it (it
+        // covered the player's name).
+        final mx = (x + 0.5) * ts, my = y * ts;
+        final busy = s.players.values.any((p) =>
+            (p.x - mx).abs() < 20 && p.y > my && p.y - my < 40);
+        if (busy) continue;
+        _placeText(c, controller.strings.t('ui.world.mine.label'), mx,
+            my - 8, TownPalette.label, 6, rank++);
       }
     } else if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
@@ -1103,7 +1139,7 @@ class MapGame extends Game {
             TownPalette.label, 6, 897);
       }
       // PNJ de la mina (mining_smithing.md § 1.2): quieto, con su nombre.
-      if (controller.mineLayout?.npc case (final id, final nx, final ny)?) {
+      if (controller.mineLevel?.npc case (final id, final nx, final ny)?) {
         final im = sprites.lifeIcon('npc_mina_$id', 'herramienta');
         final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
         if (im != null) {
@@ -1143,6 +1179,7 @@ class MapGame extends Game {
                 LightRules.isDark(map.theme,
                     floor: currentFloor(view)?.index ?? 0))) ||
         (map.lobby && MiningRules.isMine(map.place));
+    final inMine = map.lobby && MiningRules.isMine(map.place);
     final movingLights = <LightSource>[];
     final placed = <(double, double)>[];
     sky.placedLights = placed;
@@ -1215,8 +1252,13 @@ class MapGame extends Game {
               outdoor: outdoor,
               night: SkyRules.isNight(s.town.sky));
       if (p.hp > 0 && (darkMap || night || wisp)) {
+        // In a mine the carried light is small (§ 1.6): torches matter.
         movingLights.add(LightSource(
-            px / ts, py / ts, LightRules.carried(dark: darkMap, wisp: wisp)));
+            px / ts,
+            py / ts,
+            inMine && !wisp
+                ? kLightDefs[LightId.minero]!
+                : LightRules.carried(dark: darkMap, wisp: wisp)));
       }
       final line = s.mode != SessionMode.lobby
           ? null
@@ -1236,7 +1278,9 @@ class MapGame extends Game {
         if (line == null && toolOut) {
           final face = mine ? controller.local.fx : p.dir;
           final tool = mine ? controller.activeTool : ActiveTool.hoe;
-          if (tool == ActiveTool.rod) {
+          if (tool == ActiveTool.mine) {
+            // The pick is drawn by the mine layer (swing).
+          } else if (tool == ActiveTool.rod) {
             fishing.drawIdleRod(c, px, py, face);
           } else {
             switch (mine ? controller.farmHand : FarmHand.hoe) {
@@ -1377,6 +1421,38 @@ class MapGame extends Game {
     for (final e in ents) {
       e.$3();
     }
+    // Mines and the town cart station (mining_smithing.md § 1.7–1.9).
+    void mineText(String txt, double x, double y, Color col, double size) =>
+        actors.text(c, txt, x, y, col, size);
+    if (controller.mineLevel case final lvl? when inMine) {
+      final p = controller.session?.players[controller.localId];
+      final k = (controller.mineClock.elapsedMilliseconds -
+              controller.lastSwingMs) /
+          250;
+      mine.drawMine(c, lvl, s.town.mine(map.place!), t,
+          cracks: controller.mineCracks,
+          playerAt: (id) => _lastDrawn[id],
+          minerSprite: sprites.lifeIcon('npc_mina_miner', 'herramienta'),
+          text: mineText,
+          tr: controller.strings.t,
+          swing: k < 1 && p != null && controller.lastSwingTile != null
+              ? (controller.lastSwingTile!, k, (p.x, p.y))
+              : null);
+    } else if (map.lobby && map.place == null) {
+      final (ox, oy) = map.townOrigin;
+      for (final l in TownPlan.landmarksOf(s.town)) {
+        if (l.spot != TownSpot.carts) continue;
+        mine.drawTown(
+            c,
+            s.town.mines,
+            s.time,
+            Rect.fromLTWH((l.x + ox) * ts, (l.y + oy) * ts, l.w * ts, l.h * ts),
+            map.height * ts,
+            t,
+            text: mineText,
+            label: controller.cartLabel);
+      }
+    }
     if (map.lobby) {
       fishing.drawPops(c, t, (id) => _lastDrawn[id],
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
@@ -1425,7 +1501,7 @@ class MapGame extends Game {
               Weather.despejado => 0.0,
             };
       final ambient = darkMap
-          ? MapLightLayer.dungeonAmbient
+          ? (inMine ? MapLightLayer.mineAmbient : MapLightLayer.dungeonAmbient)
           : MapLightLayer.outdoorAmbient(dk,
               overcast: overcast, bolt: sky.boltLight(t) * flashFactor);
       final lit = darkMap || dk > 0.05;
@@ -1457,7 +1533,7 @@ class MapGame extends Game {
             fixed: (a, b, cx, cy) => lit
                 ? [
                     ...LightRules.tileEmitters(map, a, b, cx, cy,
-                        dark: darkMap, biome: map.place != null),
+                        dark: darkMap && !inMine, biome: map.place != null),
                     ...LightRules.ambientEmitters(map, a, b, cx, cy),
                     for (final (fx, fy) in townLights)
                       LightSource(fx + ox + 0.5, fy + oy + 0.3,

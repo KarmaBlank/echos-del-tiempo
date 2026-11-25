@@ -180,7 +180,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// 76: generated biome regions (biome_regions.md): the exterior layout
 /// comes from the world seed, `town.ws` (activated waystones), the
 /// `way` action and region forage kinds.
-const kProtocolVersion = 76;
+/// 77: mining v2 (mining_smithing.md § 1): dig-first levels (`mn` in the
+/// town farm block), `mine` action ops, `mDug`/`mBomb`/`mBlast` events,
+/// discovered veins and miner pick tiers.
+const kProtocolVersion = 77;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

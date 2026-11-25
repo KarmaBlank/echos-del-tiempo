@@ -79,11 +79,47 @@ class WaystoneAction extends SessionAction {
   const WaystoneAction(this.stone, {this.to});
 }
 
-/// `mine` (protocol 69, mining_smithing.md § 1.3): mine vein [vein] of
-/// the mine the player is in.
+/// What a [MineAction] does (mining_smithing.md § 1, v2).
+enum MineOp {
+  upgrade,
+  /// One swing at the tile ([x], [y]) of the level.
+  dig,
+
+  /// Light a bomb on ([x], [y]).
+  bomb,
+
+  /// Place a torch on ([x], [y]) (floor or a rock face).
+  torch,
+
+  /// Use one Aceite de veta (booster).
+  boost,
+
+  /// E on a find: chest, relic, mushrooms or the station spot (builds it).
+  use,
+
+  /// Hire / dismiss a miner on this level (needs its station).
+  hire,
+  fire,
+
+  /// In town: unload the cart of mine level [id].
+  unload,
+
+  /// In town: buy [n] of [id] (trader), craft [id] with ore [mat]
+  /// (forge), sell [n] of [id] (trader).
+  buy,
+  craft,
+  sell,
+}
+
+/// `mine` (protocol 72, mining_smithing.md § 1): every mining action.
 class MineAction extends SessionAction {
-  final int vein;
-  const MineAction(this.vein);
+  final MineOp op;
+  final int x, y;
+  final String? id;
+  final String? mat;
+  final int n;
+  const MineAction(this.op,
+      {this.x = 0, this.y = 0, this.id, this.mat, this.n = 1});
 }
 
 /// Smithing operation (mining_smithing.md § 3–5).

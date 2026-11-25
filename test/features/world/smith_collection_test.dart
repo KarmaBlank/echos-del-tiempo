@@ -3,8 +3,8 @@
 // undiscovered ones are a grey "?", discovered ones say where they were
 // found, and nothing overflows at the smallest window and largest scale.
 import 'package:echos_del_tiempo/features/world/presentation/panels/smith_collection.dart';
-import 'package:echos_del_tiempo/game_engine/data/smithing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
+import 'package:echos_del_tiempo/game_engine/rules/mining_rules.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,8 +48,8 @@ void main() {
     final badge = tester.widget<Text>(find.descendant(
         of: find.byKey(const ValueKey('smith-col-progress')),
         matching: find.byType(Text)));
-    expect(badge.data, contains('1/${kSmithMaterials.length}'));
-    for (final id in kSmithMaterials.keys) {
+    expect(badge.data, contains('1/${SmithCollection.materials.length}'));
+    for (final id in SmithCollection.materials.map((d) => d.id)) {
       expect(find.byKey(ValueKey('smith-col-unknown-$id')),
           id == 'ore_copper' ? findsNothing : findsOneWidget,
           reason: id);

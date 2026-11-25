@@ -1,3 +1,4 @@
+import 'mine_catalog.dart' show MineTile;
 import '../models/game_map.dart';
 
 /// Una clase de luz (docs/specs/lighting.md § 3). El color no vive acá:
@@ -56,6 +57,15 @@ abstract final class LightId {
   static const campfire = 'campfire';
   // Light shafts from ceiling openings (biome_regions.md § 7).
   static const shaft = 'shaft';
+  // Mines v2: the small light a miner carries.
+  static const minero = 'minero';
+
+  /// Faint glow of an ore vein in a mine wall (mining_smithing.md § 1.2):
+  /// the player sees where to tunnel.
+  static const veta = 'veta';
+
+  /// A torch placed in a mine: brighter than a dungeon wall torch.
+  static const antorchaMina = 'antorcha_mina';
 }
 
 /// Ceiling openings of an indoor place (biome_regions.md § 7): light
@@ -115,6 +125,11 @@ const Map<String, LightDef> kLightDefs = {
   LightId.enjambre: LightDef(radius: 4, intensity: 0.55, tint: 'luciernaga'),
   LightId.guia:
       LightDef(radius: 6, intensity: 0.9, tint: 'calida', flicker: 0.05),
+  LightId.minero:
+      LightDef(radius: 4.5, intensity: 0.9, tint: 'calida', flicker: 0.04),
+  LightId.antorchaMina:
+      LightDef(radius: 6.5, intensity: 1, tint: 'brasa', flicker: 0.12),
+  LightId.veta: LightDef(radius: 1.7, intensity: 0.55, tint: 'botin'),
   LightId.campfire:
       LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
 };
@@ -148,12 +163,8 @@ const Map<String, AmbientLight> kAmbientLights = {
   'abismo': AmbientLight(LightId.cristal, 18),
   'abismo_ext': AmbientLight(LightId.cristal, 22),
   'corazon': AmbientLight(LightId.magitec, 20),
-  // Minas (mining_smithing.md § 1.2): pocas luces sueltas.
-  'mina_bosque': AmbientLight(LightId.hongo, 30),
-  'mina_ruinas': AmbientLight(LightId.magitec, 34),
-  'mina_cavernas': AmbientLight(LightId.cristal, 30),
-  'mina_grieta': AmbientLight(LightId.ascua, 30),
-  'mina_abismo': AmbientLight(LightId.cristal, 30),
+  // Minas (mining_smithing.md § 1.2, v2): sin luz natural; solo antorchas,
+  // cristales y hongos (kTileLights).
 };
 
 /// Tile que emite luz → clave del catálogo.
@@ -168,6 +179,13 @@ const Map<String, String> kTileLights = {
   Tile.forage: LightId.flora,
   Tile.glowPlant: LightId.flora,
   Tile.ore: LightId.flora,
+  // Mines v2 (mining_smithing.md § 1.6): placed torches, crystals,
+  // mushroom patches and the magitech relic.
+  MineTile.torch: LightId.antorchaMina,
+  MineTile.wallTorch: LightId.antorchaMina,
+  MineTile.crystal: LightId.cristal,
+  MineTile.mushroom: LightId.hongo,
+  MineTile.relic: LightId.magitec,
 };
 
 /// Tiles que cortan la luz del todo (la luz los ilumina pero no pasa;
@@ -176,6 +194,13 @@ const Map<String, String> kTileLights = {
 /// armería, taller, tablero, puesto, fuente, estatua, portal, torre del
 /// loot). Árboles y lápidas siguen atenuando ([kAttenuatingTiles]).
 const Set<String> kOpaqueTiles = {
+  // Mine rock (mining_smithing.md § 1.2): veins and crystals are rock too.
+  MineTile.bedrock,
+  MineTile.rich,
+  MineTile.deep,
+  MineTile.gem,
+  MineTile.crystal,
+  MineTile.wallTorch,
   Tile.wall,
   Tile.rock,
   Tile.cracked,

@@ -262,6 +262,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     }
     // Pesca en el mapa: soltar E / Espacio tira el lance o baja la zona
     // (fishing.md § 4).
+    // Mines: releasing E / Space stops the held pick or drill.
+    if (event is KeyUpEvent &&
+        (event.logicalKey == LogicalKeyboardKey.keyE ||
+            event.logicalKey == LogicalKeyboardKey.space)) {
+      tc.mineHoldEnd();
+    }
     if (event is KeyUpEvent &&
         (event.logicalKey == LogicalKeyboardKey.keyE ||
             event.logicalKey == LogicalKeyboardKey.space) &&
@@ -558,13 +564,21 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                           controller.customNpcAt(tile.$1, tile.$2) != null)) {
                     return;
                   }
-                  if (controller.activeTool == ActiveTool.rod) {
+                  if (controller.activeTool == ActiveTool.mine) {
+                    controller.mineUse(at: tile);
+                  } else if (controller.activeTool == ActiveTool.rod) {
                     controller.startFishing();
                   } else {
                     controller.farmWork();
                   }
                 },
+                onPointerUp: (_) => controller.mineHoldEnd(),
                 onPointerSignal: (e) {
+                  if (e is PointerScrollEvent &&
+                      controller.activeTool == ActiveTool.mine) {
+                    controller.cycleMineHand(e.scrollDelta.dy < 0 ? -1 : 1);
+                    return;
+                  }
                   if (e is PointerScrollEvent &&
                       controller.activeTool == ActiveTool.hoe) {
                     controller.cycleFarmHand(e.scrollDelta.dy < 0 ? -1 : 1);

@@ -252,5 +252,13 @@
   "data.materials.crop.baya_invierno.seed": "Semilla de baya de invierno",
   "data.materials.crop.flor_eco.name": "Flor del eco",
   "data.materials.crop.flor_eco.seed": "Semilla de flor del eco",
-  "data.materials.crop.flor_eco.lore": "Florece donde el tiempo se repite: dura lo que dura un eco."
+  "data.materials.crop.flor_eco.lore": "Florece donde el tiempo se repite: dura lo que dura un eco.",
+  "data.materials.smith.pico.name": "Pico de hierro",
+  "data.materials.smith.pick_copper.name": "Pico de cobre",
+  "data.materials.smith.pick_frost.name": "Pico de hierro helado",
+  "data.materials.smith.pick_ember.name": "Pico de acero ígneo",
+  "data.materials.smith.drill_echo.name": "Taladro de plata del eco",
+  "data.materials.smith.mine_torch.name": "Antorcha de mina",
+  "data.materials.smith.mine_bomb.name": "Bomba de mina",
+  "data.materials.smith.vein_oil.name": "Aceite de veta"
 }

@@ -234,10 +234,6 @@
     "text": "[E] 开采矿脉",
     "status": "draft"
   },
-  "ui.world.mine.vein_regrow": {
-    "text": "矿脉已枯竭：{n} 秒后恢复",
-    "status": "draft"
-  },
   "ui.world.mine.npc.miner.name": {
     "text": "矿工",
     "status": "draft"
@@ -408,6 +404,134 @@
   },
   "ui.world.forage.echo_bloom": {
     "text": "回响之花",
+    "status": "draft"
+  },
+  "ui.world.mine.cart_away": {
+    "text": "矿车运输中",
+    "status": "draft"
+  },
+  "ui.world.mine.cart_fill": {
+    "text": "矿车 {n}/{max}",
+    "status": "draft"
+  },
+  "ui.world.mine.cart_label": {
+    "text": "矿洞 {n} · 第 {level} 层 · {biome}",
+    "status": "draft"
+  },
+  "ui.world.mine.no_cart": {
+    "text": "没有可卸货的矿车",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_bomb": {
+    "text": "[E] 放置炸弹",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_chest": {
+    "text": "[E] 打开",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_dig": {
+    "text": "[E] 挖掘（按住持续）",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_down": {
+    "text": "[E] 下到下一层",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_lore": {
+    "text": "[E] 阅读石碑",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_miners": {
+    "text": "[G] 雇佣矿工（{n}/{max}，{gold} 金币）· [Shift+G] 解雇",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_mushroom": {
+    "text": "[E] 采蘑菇",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_oil": {
+    "text": "[E] 使用矿脉油",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_station": {
+    "text": "[E] 建造矿车站（{gold} 金币，{n} 锭）",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_torch": {
+    "text": "[E] 放置火把",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_unload": {
+    "text": "[E] 卸下矿车：{name}",
+    "status": "draft"
+  },
+  "ui.world.mine.why.bedrock": {
+    "text": "基岩：无法破坏",
+    "status": "draft"
+  },
+  "ui.world.mine.why.tier": {
+    "text": "需要更好的镐",
+    "status": "draft"
+  },
+  "ui.world.mine.lore.0": {
+    "text": "“回声记得石头将会成为的形状。”",
+    "status": "draft"
+  },
+  "ui.world.mine.lore.1": {
+    "text": "“未来早已写定。我们只是朝它挖去。”",
+    "status": "draft"
+  },
+  "ui.world.mine.lore.2": {
+    "text": "“时间裂开时，光之机器在此沉睡。”",
+    "status": "draft"
+  },
+  "ui.world.mine.lore.3": {
+    "text": "“矿脉会回来，因为未来需要它。”",
+    "status": "draft"
+  },
+  "ui.world.tools.bomb": {
+    "text": "炸弹",
+    "status": "draft"
+  },
+  "ui.world.tools.bomb_tip": {
+    "text": "炸弹：炸开周围岩石 · [3]",
+    "status": "draft"
+  },
+  "ui.world.tools.drill": {
+    "text": "钻头",
+    "status": "draft"
+  },
+  "ui.world.tools.oil": {
+    "text": "矿脉油",
+    "status": "draft"
+  },
+  "ui.world.tools.oil_tip": {
+    "text": "矿脉油：一段时间内矿石更多 · [4]",
+    "status": "draft"
+  },
+  "ui.world.tools.pick": {
+    "text": "镐",
+    "status": "draft"
+  },
+  "ui.world.tools.pick_tip": {
+    "text": "{name}（等级 {tier}）· [1] · [R] 或滚轮：切换",
+    "status": "draft"
+  },
+  "ui.world.tools.torch": {
+    "text": "火把",
+    "status": "draft"
+  },
+  "ui.world.tools.torch_tip": {
+    "text": "火把：照亮矿洞并保留 · [2]",
+    "status": "draft"
+  },
+  "ui.world.mine.need_tier": {
+    "text": "需要更好的镐（等级 {n}）",
+    "status": "draft"
+  },
+  "ui.world.mine.prompt_miner_up": {
+    "text": "[U] 将矿工的镐升级到等级 {tier}（{gold} 金币，{n} × {ingot}）",
     "status": "draft"
   }
 }
