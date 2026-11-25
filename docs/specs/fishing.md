@@ -436,7 +436,7 @@ de `tool/export_life_icons.dart`). Tunables en `kTuning[TuningId.fishing]`.
 - Cada lago grande tiene **un** muelle de balsas, determinista (mismo
   layout = mismo muelle en todos los pares): el tile de tierra caminable
   de la orilla más cercano al final del camino del lago (`approach`), que
-  no sea ese tile ni esté pegado a un muelle de pesca (`f`), y cuyo tile
+  no sea ese tile ni esté pegado a un muelle de pesca (`f`) ni al alcance de una piedra de paso (su aviso taparía el de la balsa), y cuyo tile
   de agua de enfrente tenga dos tiles más de agua detrás. Empates: fila,
   después columna. No cambia tiles: el muelle es un adorno sobre tierra y
   hay una balsa amarrada en el agua de enfrente.
@@ -478,7 +478,7 @@ de `tool/export_life_icons.dart`). Tunables en `kTuning[TuningId.fishing]`.
 - **Especies de aguas abiertas** (`FishDef.minDepth`): no están en la
   lista del lago; se suman a la tabla del bioma con la boya a esa
   profundidad o más (`deepFishOf`). Los lagos comunes llegan a 3 de
-  profundidad; los gigantes a 5–6 (`giantLakeRyMin` = 6 garantiza que cada lago gigante llegue al `minDepth` 5 del legendario de su bioma), así que solo ahí aparecen. Los ayudantes y el pescador nativo no
+  profundidad; los gigantes a 5–6 (`giantLakeRyMin` = 10 garantiza que cada lago gigante llegue al `minDepth` 5 del legendario de su bioma), así que solo ahí aparecen. Los ayudantes y el pescador nativo no
   las ven (no cambian).
 
 | Bioma | Especie | Rareza | Prof. | cm | Precio | XP |

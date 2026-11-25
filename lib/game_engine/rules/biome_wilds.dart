@@ -187,31 +187,68 @@ class _Wilds extends _Gen {
       }
     }
 
-    for (final (x, y) in centers) {
-      var kind = pickKind();
-      // The giant lake needs room on every side of the canvas.
-      if (kind == WildKind.giantLake &&
-          (x - cell < 5 || x + cell > w - 5 || y - half < 6 || y + half > h - 6)) {
-        kind = WildKind.meadow;
-        giant = true;
-      }
-      if (kind == WildKind.giantLake) {
-        final s = (x - cell + 2, y - half - 2, x + cell - 2, y + half + 2);
-        final lk = _lake(s, LakeVariant.open, lakes.length, [(x, y)],
-            radii: (
-              r.range(t.d('giantLakeRxMin'), t.d('giantLakeRxMax')),
-              r.range(t.d('giantLakeRyMin'), t.d('giantLakeRyMax')),
-            ),
-            carveRoute: false);
-        if (lk != null) {
-          lakes.add(lk.asGiant());
-          anchors.add(lk.approach);
-          pois.add((lk.approach, WaystoneSite.lake, lakes.length - 1));
-          sections.add((kind: kind, x: x, y: y));
-          continue;
+    // ---- The giant lake goes first (§ 3.3): it is far bigger than a
+    // section cell, so its whole footprint is claimed before any other
+    // section, trail or cavern can land inside it or cut its shore.
+    (int, int, int, int)? lakeBox;
+    if (giant) {
+      giant = false;
+      final rx = r.range(t.d('giantLakeRxMin'), t.d('giantLakeRxMax'));
+      final ry = r.range(t.d('giantLakeRyMin'), t.d('giantLakeRyMax'));
+      // The shoreline wobbles up to ~25 % past the radii.
+      final hx = (rx * 1.25).ceil() + 3, hy = (ry * 1.25).ceil() + 3;
+      bool clear(int x0, int y0, int x1, int y1) {
+        for (var y = y0; y <= y1; y++) {
+          for (var x = x0; x <= x1; x++) {
+            if (!inside(x, y) || g[y][x] != Tile.grass) return false;
+            if (reserved.contains((x, y)) || inFront(x, y, 3)) return false;
+          }
         }
-        kind = WildKind.meadow;
+        return true;
       }
+
+      for (final (x, y) in centers) {
+        final s = (x - hx, y - hy, x + hx, y + hy);
+        if (s.$1 < 3 || s.$2 < 3 || s.$3 > w - 4 || s.$4 > h - 3) continue;
+        if (!clear(s.$1 - 2, s.$2 - 2, s.$3 + 2, s.$4 + 2)) continue;
+        final lk = _lake(s, LakeVariant.open, lakes.length, [(x, y)],
+            radii: (rx, ry), carveRoute: false);
+        if (lk == null) continue;
+        lakes.add(lk.asGiant());
+        anchors.add(lk.approach);
+        pois.add((lk.approach, WaystoneSite.lake, lakes.length - 1));
+        sections.add((kind: WildKind.giantLake, x: x, y: y));
+        lakeBox = s;
+        // A walkable shore ring: no tree or rock ever closes the bank.
+        for (var yy = s.$2 - 1; yy <= s.$4 + 1; yy++) {
+          for (var xx = s.$1 - 1; xx <= s.$3 + 1; xx++) {
+            if (!inside(xx, yy) || g[yy][xx] == Tile.water) continue;
+            var shore = false;
+            for (final (ddx, ddy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+              if (at(xx + ddx, yy + ddy) == Tile.water) shore = true;
+            }
+            if (!shore) continue;
+            final c = g[yy][xx];
+            if (c == Tile.fishing) continue;
+            if (c == Tile.tree || c == Tile.rock) put(xx, yy, Tile.grass);
+            reserved.add((xx, yy));
+          }
+        }
+        break;
+      }
+    }
+    // Sections whose own footprint would touch the lake box are dropped.
+    bool nearLake(int x, int y) {
+      final lb = lakeBox;
+      if (lb == null) return false;
+      final m = half + 2;
+      return x >= lb.$1 - m && x <= lb.$3 + m && y >= lb.$2 - m && y <= lb.$4 + m;
+    }
+
+    for (final (x, y) in centers) {
+      if (nearLake(x, y)) continue;
+      var kind = pickKind();
+      if (kind == WildKind.giantLake) kind = WildKind.meadow;
       if (kind == WildKind.cavern) {
         final s = (x - half, y - half, x + half, y + half);
         final wet = r.d() < t.d('cavernLakeChance');
