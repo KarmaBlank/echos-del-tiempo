@@ -208,6 +208,7 @@
   "ui.world.prompt.lostLoot": "[E] Lost loot",
   "ui.world.prompt.fishing": "[E or click] Fish",
   "ui.world.prompt.trader": "[E] Farm supply",
+  "ui.world.prompt.stall": "[E] My stall",
   "ui.world.prompt.sign": "[E] Read sign",
   "ui.world.prompt.helper": "[G] Helper",
   "ui.world.prompt.chest": "[E] Collect chest",

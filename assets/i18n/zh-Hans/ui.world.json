@@ -208,6 +208,7 @@
   "ui.world.prompt.lostLoot": "",
   "ui.world.prompt.fishing": "",
   "ui.world.prompt.trader": "",
+  "ui.world.prompt.stall": "[E] 我的摊位",
   "ui.world.prompt.sign": "",
   "ui.world.prompt.helper": "",
   "ui.world.prompt.chest": "",
