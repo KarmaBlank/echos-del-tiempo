@@ -133,13 +133,35 @@ RgbaImage pick(int c, {bool drill = false}) {
     p.px(13, 11, 0xffffff);
     return p.img;
   }
-  p.line(4, 13, 11, 6, _outline);
-  p.line(5, 13, 12, 6, _wood);
-  p.line(3, 4, 8, 2, _outline);
-  p.line(8, 2, 13, 6, _outline);
-  p.line(4, 4, 8, 3, c);
-  p.line(8, 3, 12, 6, c);
-  p.px(8, 3, _mix(c, 0xffffff, 0.5));
+  // Handle: diagonal from bottom-left up into the head, 2 px wide.
+  p.line(1, 14, 10, 5, _outline);
+  p.line(2, 14, 11, 5, _outline);
+  p.line(1, 13, 10, 4, _outline);
+  p.line(2, 13, 10, 5, _wood);
+  // Head: a thick arc bulging to the top-right corner, a point at each
+  // end (reads as a pick, not a hoe or a sickle).
+  const outer = [
+    (2, 2), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 2),
+    (10, 2), (11, 3), (12, 4), (13, 5), (13, 6), (14, 7), (14, 8),
+    (14, 9), (14, 10), (14, 11), (14, 12),
+  ];
+  const inner = [
+    (3, 2), (4, 2), (5, 2), (6, 2), (7, 2), (8, 2), (9, 3), (10, 3),
+    (11, 4), (12, 5), (12, 6), (13, 7), (13, 8), (13, 9), (13, 10),
+  ];
+  for (final (x, y) in [...outer, ...inner]) {
+    for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+      p.px(x + dx, y + dy, _outline);
+    }
+  }
+  for (final (x, y) in outer) {
+    p.px(x, y, _mix(c, 0xffffff, 0.3));
+  }
+  for (final (x, y) in inner) {
+    p.px(x, y, c);
+  }
+  p.px(2, 2, c);
+  p.px(14, 12, c);
   return p.img;
 }
 
