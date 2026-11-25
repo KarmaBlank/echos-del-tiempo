@@ -27,7 +27,8 @@ import '../../../game_engine/data/eco_catalog.dart' show ecoModRange;
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../inventory/domain/item_names.dart';
 import '../../../core/i18n/i18n_providers.dart';
-import '../domain/endgame_names.dart';
+import '../domain/endgame_names.dart';
+import '../../inventory/domain/eco_text.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
@@ -262,7 +263,7 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
           (
             eco: i < picked.length ? picked[i] : null,
             label: i < picked.length
-                ? '${rules.ecos.displayName(picked[i])} · T${picked[i].tier}'
+                ? '${ecoNameText(rules.ecos, picked[i])} · T${picked[i].tier}'
                 : '${ref.t('ui.endgame.fuse.slot', {
                         'i': i + 1
                       })} · ${ref.t('ui.endgame.fuse.slot_empty')}',

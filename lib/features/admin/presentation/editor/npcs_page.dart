@@ -707,6 +707,15 @@ class _DialogueState extends State<_Dialogue> {
             list: NpcEditorController.listOf(m, 'ambient'),
             id: 'npc-ambient'),
       ),
+      (
+        // homeAmbient (npc_editor.md): lines once living in town.
+        'EN EL PUEBLO',
+        'home_ambient',
+        () => _Lines(
+            c: c,
+            list: NpcEditorController.listOf(m, 'home_ambient'),
+            id: 'npc-home-ambient'),
+      ),
       if (e.custom)
         (
           GameText.t('ui.world.npcv.accept_tab'),

@@ -15,7 +15,8 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
-import 'inventory_strings.dart';
+import 'inventory_strings.dart';
+import '../domain/eco_text.dart';
 
 /// Piezas visuales de objetos (loot v2): colores de rareza, ícono pixel,
 /// casilla de inventario y etiqueta de loot con el estilo del filtro.
@@ -348,6 +349,6 @@ String dropLabelText(ProgressionRules rules, LootDrop d) {
   final it = d.item;
   if (it != null) return localItemName(rules.items, it);
   final eco = d.eco;
-  if (eco != null) return rules.ecos.fullName(eco);
+  if (eco != null) return ecoFullText(rules.ecos, eco);
   return d.count > 1 ? '${d.count} ${d.stack!.label}' : d.stack!.label;
 }

@@ -1,4 +1,5 @@
 {
+  "ui.world.quests.item_title": "{n} × {item}",
   "ui.world.hud.to_title": "",
   "ui.world.hud.stash": "",
   "ui.world.hud.journal": "",

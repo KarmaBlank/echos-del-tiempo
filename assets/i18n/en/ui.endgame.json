@@ -1,4 +1,5 @@
 {
+  "ui.endgame.eco_name": "Echo of {zone}",
   "ui.endgame.hint.choose": "Choose",
   "ui.endgame.hint.close": "Close",
   "ui.endgame.cancel": "CANCEL",

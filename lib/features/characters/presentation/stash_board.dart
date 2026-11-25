@@ -25,7 +25,8 @@ import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
 import 'character_strings.dart';
-import 'stash_layout.dart';
+import 'stash_layout.dart';
+import '../../inventory/domain/eco_text.dart';
 
 /// Lo que el tablero del alijo necesita de quien lo abre: fuera de la
 /// sesión, la cuenta directa ([StashScreen]); en partida, el
@@ -335,7 +336,7 @@ class StashBoardState extends State<StashBoard> {
 
   String _name(CellContent c) {
     if (c.item case final it?) return localItemName(_rules.items, it);
-    if (c.eco case final eco?) return _rules.ecos.fullName(eco);
+    if (c.eco case final eco?) return ecoFullText(_rules.ecos, eco);
     return c.stack!.label;
   }
 
