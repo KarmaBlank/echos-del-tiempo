@@ -95,6 +95,7 @@ List<String> itemSourceLines(BuildContext context, String id) => [
           ItemSourceKind.workshop => context.t('ui.town.source.workshop'),
           ItemSourceKind.cooking => context.t('ui.town.source.cooking'),
           ItemSourceKind.baitCraft => context.t('ui.town.source.bait_craft'),
+          ItemSourceKind.compost => context.t('ui.town.source.compost'),
         }
     ];
 

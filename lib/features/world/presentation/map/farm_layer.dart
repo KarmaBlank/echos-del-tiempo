@@ -9,6 +9,7 @@ import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/npc_camp_catalog.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
+import '../../../../game_engine/rules/profession_gear_rules.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
@@ -38,6 +39,10 @@ typedef MapText = void Function(
 /// y el "pop" de la cosecha que salta hacia quien cosechó. Arte
 /// procedural; colores en [FarmPalette].
 class MapFarmLayer {
+  /// Life icon lookup (`items.vida_<id>` of the manifest): the living
+  /// weapon plots draw `vivo_<stage>` (profession_gear.md § 3.2).
+  ui.Image? Function(String id)? icon;
+
   final _pops = <_Pop>[];
 
   /// Duración del salto de la cosecha (ms).
@@ -269,6 +274,34 @@ class MapFarmLayer {
     }
   }
 
+  /// Stage sprite (0 sprout .. 3 ripe) of a living weapon plot.
+  static int livingStage(FarmPlot p) => switch (FarmingRules.stage(p)) {
+        CropStage.arada || CropStage.semilla => 0,
+        CropStage.brote => 1,
+        CropStage.crecido => 2,
+        CropStage.maduro => 3,
+      };
+
+  void _living(Canvas c, FarmPlot p, double px, double py, double t) {
+    final s = livingStage(p);
+    final paint = Paint();
+    if (s == 3) {
+      final glow = 0.5 + 0.5 * math.sin(t / 260);
+      c.drawRect(
+          Rect.fromLTWH(px - 1, py - 4, ts + 2, ts + 3),
+          paint
+            ..color = FarmPalette.ripeGlow
+                .withValues(alpha: FarmPalette.ripeGlow.a * glow));
+    }
+    final img = icon?.call('vivo_$s');
+    if (img == null) return;
+    c.drawImageRect(
+        img,
+        Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+        Rect.fromLTWH(px, py - 2, ts, ts),
+        Paint()..filterQuality = FilterQuality.none);
+  }
+
   void _plot(Canvas c, FarmPlot p, int tx, int ty, double t) {
     final px = tx * ts, py = ty * ts;
     final paint = Paint();
@@ -281,6 +314,10 @@ class MapFarmLayer {
     }
     final seed = p.seed;
     if (seed == null) return;
+    if (GearRules.isLiving(seed)) {
+      _living(c, p, px, py, t);
+      return;
+    }
     final look = CropPalette.of(seed);
     final o = seedOffset(tx, ty, seed, p.planter);
     final x = px + o.dx, y = py + o.dy;

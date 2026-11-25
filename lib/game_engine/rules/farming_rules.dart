@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import '../data/climate_catalog.dart';
 import '../data/farming_catalog.dart';
+import '../data/profession_gear_catalog.dart'
+    show kRegrowItem, kRegrowPrefix, kWeaponSeeds;
 import '../data/tuning_catalog.dart';
 import '../models/farm_plot.dart';
 import '../models/item.dart' show CraftMaterial;
@@ -106,7 +108,13 @@ abstract final class FarmingRules {
 
   // ---------------- crecimiento ----------------
 
-  static double growSec(String crop) => kCrops[crop]?.growSec ?? 300;
+  /// Seconds to ripen; a living weapon seed uses `livingGrowSec`
+  /// (profession_gear.md § 3.2).
+  static double growSec(String crop) =>
+      kCrops[crop]?.growSec ??
+      (kWeaponSeeds.containsKey(crop) || crop.startsWith(kRegrowPrefix)
+          ? tuning(TuningId.gear).d('livingGrowSec')
+          : 300);
 
   /// 0..1 del crecimiento.
   static double ratio(FarmPlot p) =>
@@ -302,7 +310,9 @@ abstract final class FarmingRules {
   static Harvest? harvest(double Function() rand, PlayerProfile p, FarmPlot plot,
       {bool helper = false, double bias = 0}) {
     if (!ripe(plot)) return null;
-    final crop = kCrops[plot.seed]!;
+    // Living weapons are harvested by GearRules (profession_gear.md § 3).
+    final crop = kCrops[plot.seed];
+    if (crop == null) return null;
     final q = helper ? CropQuality.normal : quality(p, plot, rand(), bias: bias);
     final extra = helper
         ? 0.0
@@ -499,27 +509,50 @@ abstract final class FarmingRules {
     return p.copyWith(life: p.life.copyWith(farm: f.copyWith(can: id)));
   }
 
+  /// What [p] can plant, in carousel order: crop seeds, weapon seeds and
+  /// the living weapons of the bag to replant (`item:<uid>`,
+  /// profession_gear.md § 3.5; the equipped one stays out).
+  static List<String> plantables(PlayerProfile p) {
+    final f = p.life.farm;
+    return [
+      for (final c in kCrops.keys)
+        if (f.seedCount(c) > 0) c,
+      for (final w in kWeaponSeeds.keys)
+        if (f.wseedCount(w) > 0) w,
+      for (final i in p.items)
+        if (i.uid.startsWith('gear-vivo_') && i.uid != p.equippedUid)
+          '$kRegrowItem${i.uid}',
+    ];
+  }
+
+  /// The seed [p] plants with: the chosen one while it lasts, else the
+  /// first plantable.
+  static String? activeSeed(PlayerProfile p) {
+    final have = plantables(p);
+    final s = p.life.farm.seed;
+    if (s != null && have.contains(s)) return s;
+    return have.firstOrNull;
+  }
+
   static PlayerProfile? selectSeed(PlayerProfile p, String crop) {
     final f = p.life.farm;
-    if (f.seedCount(crop) <= 0 || f.seed == crop) return null;
+    if (!plantables(p).contains(crop) || f.seed == crop) return null;
     return p.copyWith(life: p.life.copyWith(farm: f.copyWith(seed: crop)));
   }
 
   /// La semilla siguiente de las que tiene (para la tecla Q).
   static String? nextSeed(PlayerProfile p) {
-    final f = p.life.farm;
-    final have = [for (final c in kCrops.keys) if (f.seedCount(c) > 0) c];
+    final have = plantables(p);
     if (have.isEmpty) return null;
-    final i = have.indexOf(f.activeSeed ?? '');
+    final i = have.indexOf(activeSeed(p) ?? '');
     return have[(i + 1) % have.length];
   }
 
   /// La semilla anterior a la elegida (carrusel del HUD, farming.md § 4).
   static String? prevSeed(PlayerProfile p) {
-    final f = p.life.farm;
-    final have = [for (final c in kCrops.keys) if (f.seedCount(c) > 0) c];
+    final have = plantables(p);
     if (have.isEmpty) return null;
-    final i = have.indexOf(f.activeSeed ?? '');
+    final i = have.indexOf(activeSeed(p) ?? '');
     return have[(i <= 0 ? have.length : i) - 1];
   }
 }

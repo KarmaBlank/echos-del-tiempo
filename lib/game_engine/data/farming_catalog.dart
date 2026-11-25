@@ -43,6 +43,13 @@ const kFertilizers = <String, FertDef>{
       FishRarity.epico, price: 120),
   'abono_eco':
       FertDef('abono_eco', 'Abono del Eco', 'Eco', FishRarity.legendario, price: 600),
+  // Compost-only (profession_gear.md § 3.3): never sold (price 0).
+  'abono_brasa': FertDef('abono_brasa', 'Abono de brasa', 'Brasa',
+      FishRarity.raro, price: 0),
+  'abono_miel':
+      FertDef('abono_miel', 'Abono de miel', 'Miel', FishRarity.raro, price: 0),
+  'abono_escarcha': FertDef('abono_escarcha', 'Abono de escarcha', 'Escarcha',
+      FishRarity.raro, price: 0),
 };
 
 /// Un cultivo (y su semilla, con el mismo id).

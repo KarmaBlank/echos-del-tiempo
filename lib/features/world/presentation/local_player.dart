@@ -44,7 +44,8 @@ class LocalPlayer {
     moving = ix != 0 || iy != 0;
     if (!moving) return;
     final p = raft
-        ? RaftRules.step(map, x, y, ix, iy, dt)
+        // Raft speed: [speedMult] carries the Arpón sub-path (GearRules.raftMult).
+        ? RaftRules.step(map, x, y, ix, iy, dt * speedMult)
         : WorldRules.stepPlayer(map, x, y, ix, iy, dt,
             gateOpen: gateOpen, speedMult: speedMult);
     x = p.x;

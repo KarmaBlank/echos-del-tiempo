@@ -80,10 +80,13 @@ abstract final class MineWorkRules {
   /// [st] with the veins [who] discovers standing at tile ([px], [py]):
   /// veins within `discoverLit` tiles (their glow is plain to see) and
   /// veins showing on a tunnel face (next to walkable ground) within
-  /// `discoverView` tiles.
+  /// `discoverView` tiles. [detect]: the Pico sub-path B radius (tiles)
+  /// inside which hidden veins are sensed through the rock.
   static MineLevelState discover(
-      MineLevel lvl, MineLevelState st, String who, double px, double py) {
-    final lit = t.d('discoverLit'), view = t.d('discoverView');
+      MineLevel lvl, MineLevelState st, String who, double px, double py,
+      {double detect = 0}) {
+    final lit = math.max(t.d('discoverLit'), detect),
+        view = math.max(t.d('discoverView'), detect);
     final r = view.ceil();
     final cx = px.floor(), cy = py.floor();
     final had = st.knownBy(who);

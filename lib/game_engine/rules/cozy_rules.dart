@@ -219,8 +219,8 @@ abstract final class CozyRules {
   }
 
   /// [f] after preparing [recipe] once (`null` = unknown or missing
-  /// inputs).
-  static FarmSkills? compost(FarmSkills f, String recipe) {
+  /// inputs). [bonus]: the Abono sub-path (`LifeFx.compost`) makes more bags.
+  static FarmSkills? compost(FarmSkills f, String recipe, {double bonus = 0}) {
     final c = kCompostRecipes[recipe];
     if (c == null || !f.recipes.contains(recipe)) return null;
     final crops = {...f.crops};
@@ -231,7 +231,10 @@ abstract final class CozyRules {
     }
     return f.copyWith(
         crops: crops,
-        ferts: {...f.ferts, c.fert: f.fertCount(c.fert) + c.makes});
+        ferts: {
+          ...f.ferts,
+          c.fert: f.fertCount(c.fert) + (c.makes * (1 + bonus)).round(),
+        });
   }
 
   /// Can [f] prepare [recipe] now.

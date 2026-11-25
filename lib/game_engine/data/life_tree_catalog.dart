@@ -91,8 +91,47 @@ abstract final class LifeFx {
   /// Extra missions every meal you eat lasts (summed over all trees).
   static const meal = 'meal';
 
+  // Sub-path mechanics of tiers 4–7 (life_trees_v2.md § 2.1).
+  // Pesca
+  static const calm = 'calm'; // calm / auto fishing waits less
+  static const twin = 'twin'; // chance of a double catch
+  static const chest = 'chest'; // more sunken chests and echo weapons
+  static const big = 'big'; // bigger fish (records)
+  static const net = 'net'; // raft net: catches while sailing
+  static const raft = 'raft'; // faster raft
+  static const harpoon = 'harpoon'; // harpoon a big fish from the raft
+  static const fishMeal = 'fishMeal'; // fish meals heal / buff more
+  static const fishBuff = 'fishBuff'; // fish meals add ATK / MAG
+  // Cultivo
+  static const waterArea = 'waterArea'; // watering area (1 = 3×3)
+  static const seedBack = 'seedBack'; // extra seeds on harvest
+  static const mutate = 'mutate'; // mutated rare varieties
+  static const compost = 'compost'; // more bags per compost
+  static const compostArea = 'compostArea'; // composting area (1 = 3×3)
+  static const livingRarity = 'livingRarity'; // living weapon quality
+  static const livingAffix = 'livingAffix'; // living weapon extra affixes
+  static const mealPower = 'mealPower'; // every meal buffs more
+  // Herrería
+  static const forgeAffix = 'forgeAffix'; // forged: extra affix / tier
+  static const veinArea = 'veinArea'; // pickaxe area (1 = 3 veins)
+  static const rareOre = 'rareOre'; // rarer ore
+  static const smeltDouble = 'smeltDouble'; // double ingots sometimes
+  static const salvage = 'salvage'; // salvaging returns more
+  static const mineSpeed = 'mineSpeed'; // faster pickaxe
+  static const detect = 'detect'; // reveal veins in a radius (tiles)
+  static const orderPay = 'orderPay'; // better-paid orders
+  static const orderChest = 'orderChest'; // orders bring chests
+
   /// Effects shown as raw numbers (not percentages).
-  static const raw = {quality, auto, meal};
+  static const raw = {
+    quality,
+    auto,
+    meal,
+    waterArea,
+    compostArea,
+    veinArea,
+    detect,
+  };
 }
 
 const _pesca = <LifeTreeNode>[
@@ -805,16 +844,180 @@ const kLifeTreeTuning = <String, num>{
   'smith_e10': 0.2,
   'smith_e10_2': 3000,
   'smith_e10_3': 2,
-  // Second sub-path of Veta (its main path only hands out ore).
-  'smith_b4s': 0.03,
-  'smith_b5s': 0.04,
-  'smith_b6s': 0.04,
-  'smith_b7s': 0.05,
+  // Sub-path mechanics, tiers 4–7 (life_trees_v2.md § 2.1): main path
+  // A = `<id>x`, second sub-path B = `<id>s`, companion = `<id>y`.
+  'fish_a4x': 0.06,
+  'fish_a5x': 0.06,
+  'fish_a6x': 0.08,
+  'fish_a7x': 0.1,
+  'fish_a4s': 0.04,
+  'fish_a5s': 0.04,
+  'fish_a6s': 0.05,
+  'fish_a7s': 0.07,
+  'fish_b4x': 0.1,
+  'fish_b5x': 0.1,
+  'fish_b6x': 0.15,
+  'fish_b7x': 0.2,
+  'fish_b4s': 0.06,
+  'fish_b5s': 0.06,
+  'fish_b6s': 0.08,
+  'fish_b7s': 0.1,
+  'fish_c4x': 0.04,
+  'fish_c5x': 0.04,
+  'fish_c6x': 0.05,
+  'fish_c7x': 0.07,
+  'fish_c4s': 0.25,
+  'fish_c5s': 0.25,
+  'fish_c6s': 0.25,
+  'fish_c7s': 0.25,
+  'fish_d4x': 0.06,
+  'fish_d5x': 0.06,
+  'fish_d6x': 0.08,
+  'fish_d7x': 0.1,
+  'fish_d4s': 0.04,
+  'fish_d5s': 0.04,
+  'fish_d6s': 0.06,
+  'fish_d7s': 0.06,
+  'fish_e4x': 0.08,
+  'fish_e5x': 0.08,
+  'fish_e6x': 0.1,
+  'fish_e7x': 0.14,
+  'fish_e4s': 0.02,
+  'fish_e5s': 0.02,
+  'fish_e6s': 0.03,
+  'fish_e7s': 0.03,
+  'farm_a4x': 1,
+  'farm_a5y': 0.1,
+  'farm_a6y': 0.1,
+  'farm_a7x': 1,
+  'farm_a4s': 0.04,
+  'farm_a5s': 0.04,
+  'farm_a6s': 0.05,
+  'farm_a7s': 0.07,
+  'farm_b4x': 0.08,
+  'farm_b5x': 0.08,
+  'farm_b6x': 0.1,
+  'farm_b7x': 0.14,
+  'farm_b4s': 0.02,
+  'farm_b5s': 0.02,
+  'farm_b6s': 0.03,
+  'farm_b7s': 0.03,
+  'farm_c4x': 0.15,
+  'farm_c5x': 0.15,
+  'farm_c6x': 0.2,
+  'farm_c7x': 0.25,
+  'farm_c4s': 1,
+  'farm_c5y': 0.03,
+  'farm_c6y': 0.03,
+  'farm_c7s': 1,
+  'farm_c5r': 1,
+  'farm_c6r': 1,
+  'farm_c7r': 1,
+  'farm_d4x': 0.05,
+  'farm_d5x': 0.05,
+  'farm_d6x': 0.07,
+  'farm_d7x': 0.08,
+  'farm_d4s': 0.15,
+  'farm_d5s': 0.15,
+  'farm_d6s': 0.2,
+  'farm_d7s': 0.25,
+  'farm_e4x': 0.05,
+  'farm_e5x': 0.05,
+  'farm_e6x': 0.07,
+  'farm_e7x': 0.08,
+  'farm_e4s': 1,
+  'farm_e5s': 1,
+  'farm_e6s': 1,
+  'farm_e7s': 1,
+  'smith_a4x': 0.03,
+  'smith_a5x': 0.03,
+  'smith_a6x': 0.04,
+  'smith_a7x': 0.05,
+  'smith_a4s': 0.06,
+  'smith_a5s': 0.06,
+  'smith_a6s': 0.08,
+  'smith_a7s': 0.1,
+  'smith_b4x': 1,
+  'smith_b5y': 0.05,
+  'smith_b6y': 0.05,
+  'smith_b7x': 1,
+  'smith_b4s': 0.05,
+  'smith_b5s': 0.05,
+  'smith_b6s': 0.07,
+  'smith_b7s': 0.08,
+  'smith_c4x': 0.06,
+  'smith_c5x': 0.06,
+  'smith_c6x': 0.08,
+  'smith_c7x': 0.1,
+  'smith_c4s': 0.1,
+  'smith_c5s': 0.1,
+  'smith_c6s': 0.15,
+  'smith_c7s': 0.2,
+  'smith_d4x': 0.06,
+  'smith_d5x': 0.06,
+  'smith_d6x': 0.08,
+  'smith_d7x': 0.1,
+  'smith_d4s': 4,
+  'smith_d5s': 2,
+  'smith_d6s': 2,
+  'smith_d7s': 4,
+  'smith_e4x': 0.08,
+  'smith_e5x': 0.08,
+  'smith_e6x': 0.1,
+  'smith_e7x': 0.14,
+  'smith_e4s': 0.05,
+  'smith_e5s': 0.05,
+  'smith_e6s': 0.07,
+  'smith_e7s': 0.08,
 };
 
 /// Tier where every branch forks and tier where both sub-paths meet
 /// again (life_trees_v2.md § 2).
 const kLifeForkFrom = 4, kLifeForkTo = 7;
+
+/// Version of the tree shape saved in `life.tv` (life_trees_v2.md § 6):
+/// v2 gave every sub-path of tiers 4–7 its own mechanic, so saves below
+/// it get the points of those tiers (and the ones above) back.
+const kLifeTreeVersion = 2;
+
+/// Sub-path mechanics (life_trees_v2.md § 2.1): `<prefix>_<branch>` →
+/// (main sub-path "A", second sub-path "B"). Tiers 4–7 of the main path
+/// carry A (Balance key `<id>x`), the second sub-path carries B (key
+/// `<id>s`, its own id).
+const kLifeForkFx = <String, (String, String)>{
+  'fish_a': (LifeFx.calm, LifeFx.twin),
+  'fish_b': (LifeFx.chest, LifeFx.big),
+  'fish_c': (LifeFx.sell, LifeFx.net),
+  'fish_d': (LifeFx.raft, LifeFx.harpoon),
+  'fish_e': (LifeFx.fishMeal, LifeFx.fishBuff),
+  'farm_a': (LifeFx.waterArea, LifeFx.grow),
+  'farm_b': (LifeFx.seedBack, LifeFx.mutate),
+  'farm_c': (LifeFx.compost, LifeFx.compostArea),
+  'farm_d': (LifeFx.livingRarity, LifeFx.livingAffix),
+  'farm_e': (LifeFx.mealPower, LifeFx.meal),
+  'smith_a': (LifeFx.forge, LifeFx.forgeAffix),
+  'smith_b': (LifeFx.veinArea, LifeFx.rareOre),
+  'smith_c': (LifeFx.smeltDouble, LifeFx.salvage),
+  'smith_d': (LifeFx.mineSpeed, LifeFx.detect),
+  'smith_e': (LifeFx.orderPay, LifeFx.orderChest),
+};
+
+/// Area sub-paths: their mechanic sits on tiers 4 and 7 (1 = 3×3, 2 =
+/// 5×5); tiers 5–6 carry this companion effect (key `<id>y`) instead.
+/// Key: `<prefix>_<branch>` + `A` / `B`.
+const kLifeForkCompanion = <String, String>{
+  'farm_aA': LifeFx.water,
+  'farm_cB': LifeFx.grow,
+  'smith_bA': LifeFx.xp,
+};
+
+/// One-time grants the sub-path adds to main nodes that had none (the
+/// Abono branch hands out compost recipes; amount key `<id>r`).
+const kLifeForkGrants = <String, String>{
+  'farm_c5': 'recipe:ember_compost',
+  'farm_c6': 'recipe:honey_compost',
+  'farm_c7': 'recipe:frost_compost',
+};
 
 /// The nodes of each profession: the main path of each branch plus its
 /// second sub-path ([growLifeTree]).
@@ -824,25 +1027,31 @@ final kLifeTrees = <LifeSkillKind, List<LifeTreeNode>>{
   LifeSkillKind.herreria: growLifeTree(_herreria),
 };
 
+/// Effects of tier [t] of branch [b] on the main sub-path ([main], "A")
+/// or the second one ("B") (§ 2.1).
+Map<String, String> lifeForkEffects(String pre, String b, int t, bool main) {
+  final pair = kLifeForkFx['${pre}_$b'];
+  final id = main ? '${pre}_$b$t' : '${pre}_$b${t}s';
+  if (pair == null) return {LifeFx.xp: id};
+  final fx = main ? pair.$1 : pair.$2;
+  final comp = kLifeForkCompanion['${pre}_$b${main ? 'A' : 'B'}'];
+  if (comp != null && t > kLifeForkFrom && t < kLifeForkTo) {
+    return {comp: '${pre}_$b${t}y'};
+  }
+  return {fx: main ? '${id}x' : id};
+}
+
 /// Adds the second sub-path (`<branch><tier>s`, tiers [kLifeForkFrom]..
 /// [kLifeForkTo]) to every branch of [base]: it leaves the tier-3 node,
 /// runs beside the main path and rejoins it at tier 8, which becomes a
 /// major node. Each fork node is a sibling choice of the main node of its
-/// tier, same cost, carrying the branch effect of the tier below (so the
-/// two sub-paths alternate the branch's two flavours); a branch without
-/// effects uses its own `<id>` XP key.
+/// tier, same cost. Tiers 4–7 of both sub-paths get their own mechanic
+/// ([kLifeForkFx]); the main nodes keep their name and one-time grants.
 List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
   final byId = {for (final n in base) n.id: n};
   final pre = base.first.id.split('_').first;
   String main(String b, int t) => '${pre}_$b$t';
   String fork(String b, int t) => '${pre}_$b${t}s';
-  Map<String, String> fx(String b, int t) {
-    for (var u = t - 1; u >= 1; u--) {
-      final e = byId[main(b, u)]!.effects;
-      if (e.isNotEmpty) return e;
-    }
-    return {LifeFx.xp: fork(b, t)};
-  }
 
   final extra = <String, List<String>>{};
   final out = <LifeTreeNode>[];
@@ -852,20 +1061,25 @@ List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
   }
   for (final n in base) {
     final add = extra[n.id];
-    final rejoin = n.branch != null && n.tier == kLifeForkTo + 1;
-    out.add(add == null
-        ? n
-        : LifeTreeNode(n.id, n.name,
-            x: n.x,
-            y: n.y,
-            cost: n.cost,
-            links: [...n.links, ...add],
-            effects: n.effects,
-            grants: n.grants,
-            branch: n.branch,
-            exclusive: n.exclusive,
-            major: n.major || rejoin,
-            root: n.root));
+    final b = n.branch;
+    final rejoin = b != null && n.tier == kLifeForkTo + 1;
+    final sub = b != null && n.tier >= kLifeForkFrom && n.tier <= kLifeForkTo;
+    final g = kLifeForkGrants[n.id];
+    if (add == null && !rejoin && !sub) {
+      out.add(n);
+      continue;
+    }
+    out.add(LifeTreeNode(n.id, n.name,
+        x: n.x,
+        y: n.y,
+        cost: n.cost,
+        links: [...n.links, ...?add],
+        effects: sub ? lifeForkEffects(pre, b, n.tier, true) : n.effects,
+        grants: g == null ? n.grants : {...n.grants, g: '${n.id}r'},
+        branch: b,
+        exclusive: n.exclusive,
+        major: n.major || rejoin,
+        root: n.root));
   }
   for (final b in kLifeBranches) {
     for (var t = kLifeForkFrom; t <= kLifeForkTo; t++) {
@@ -879,7 +1093,7 @@ List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
             t == kLifeForkFrom ? main(b, t - 1) : fork(b, t - 1),
             t == kLifeForkTo ? main(b, t + 1) : fork(b, t + 1),
           ],
-          effects: fx(b, t),
+          effects: lifeForkEffects(pre, b, t, false),
           branch: b));
     }
   }
@@ -888,6 +1102,11 @@ List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
 
 /// Whether [n] is on the second sub-path of its branch.
 bool isLifeFork(LifeTreeNode n) => n.id.endsWith('s') && n.branch != null;
+
+/// Nodes refunded by the tree v2 migration (§ 6): tiers 4–7 changed
+/// effects, and everything above them hangs from those tiers.
+bool lifeNodeRefunded(LifeTreeNode n) =>
+    n.branch != null && n.tier >= kLifeForkFrom;
 
 final _byId = <LifeSkillKind, Map<String, LifeTreeNode>>{
   for (final e in kLifeTrees.entries) e.key: {for (final n in e.value) n.id: n},
@@ -898,67 +1117,67 @@ LifeTreeNode? lifeTreeNode(LifeSkillKind k, String id) => _byId[k]![id];
 /// Node ids of [k] (save migration drops everything else).
 bool isLifeTreeNode(LifeSkillKind k, String id) => _byId[k]!.containsKey(id);
 
-/// Second sub-path of every branch, tiers 4–7 (life_trees_v2.md § 2):
+/// Second sub-path of every branch, tiers 4–7 (life_trees_v2.md § 2.1):
 /// id → es-AR name. Shape and effects come from [growLifeTree].
 const kLifeForkNames = <String, String>{
-  'fish_a4s': 'Remanso',
-  'fish_a5s': 'Sombra de sauce',
-  'fish_a6s': 'Niebla baja',
-  'fish_a7s': 'Orilla muda',
-  'fish_b4s': 'Pozo oscuro',
-  'fish_b5s': 'Eco del fondo',
-  'fish_b6s': 'Corriente fría',
-  'fish_b7s': 'Abismo manso',
-  'fish_c4s': 'Nudo doble',
-  'fish_c5s': 'Trueque',
-  'fish_c6s': 'Red ancha',
-  'fish_c7s': 'Muelle lleno',
-  'fish_d4s': 'Punta de asta',
-  'fish_d5s': 'Brazo de remo',
-  'fish_d6s': 'Lanza de río',
-  'fish_d7s': 'Ojo de garza',
-  'fish_e4s': 'Sal gruesa',
-  'fish_e5s': 'Fogón de playa',
-  'fish_e6s': 'Sopa de red',
-  'fish_e7s': 'Olla compartida',
+  'fish_a4s': 'Doble tirón',
+  'fish_a5s': 'Anzuelo gemelo',
+  'fish_a6s': 'Par de agallas',
+  'fish_a7s': 'Lance doble',
+  'fish_b4s': 'Fondo grande',
+  'fish_b5s': 'Lomo ancho',
+  'fish_b6s': 'Pez de récord',
+  'fish_b7s': 'Gigante del lago',
+  'fish_c4s': 'Red de balsa',
+  'fish_c5s': 'Malla tendida',
+  'fish_c6s': 'Red de arrastre',
+  'fish_c7s': 'Red del navegante',
+  'fish_d4s': 'Punta de arpón',
+  'fish_d5s': 'Ojo de cazador',
+  'fish_d6s': 'Arpón largo',
+  'fish_d7s': 'Golpe del hondo',
+  'fish_e4s': 'Sal de guerra',
+  'fish_e5s': 'Fogón de batalla',
+  'fish_e6s': 'Caldo del arponero',
+  'fish_e7s': 'Banquete de marea',
   'farm_a4s': 'Lombriz amiga',
   'farm_a5s': 'Rocío temprano',
   'farm_a6s': 'Barro fértil',
   'farm_a7s': 'Acequia',
-  'farm_b4s': 'Espiga alta',
-  'farm_b5s': 'Brote doble',
-  'farm_b6s': 'Granero',
-  'farm_b7s': 'Semilla terca',
-  'farm_c4s': 'Libro de cuentas',
-  'farm_c5s': 'Peón diestro',
-  'farm_c6s': 'Trato justo',
-  'farm_c7s': 'Capataz',
-  'farm_d4s': 'Mango de fresno',
-  'farm_d5s': 'Hoz curva',
-  'farm_d6s': 'Espalda de arado',
-  'farm_d7s': 'Filo de trigo',
+  'farm_b4s': 'Semilla rara',
+  'farm_b5s': 'Brote extraño',
+  'farm_b6s': 'Injerto del eco',
+  'farm_b7s': 'Variedad perdida',
+  'farm_c4s': 'Pala ancha',
+  'farm_c5s': 'Montón de abono',
+  'farm_c6s': 'Abonado parejo',
+  'farm_c7s': 'Tierra cebada',
+  'farm_d4s': 'Savia marcada',
+  'farm_d5s': 'Corteza tallada',
+  'farm_d6s': 'Nudo vivo',
+  'farm_d7s': 'Raíz grabada',
   'farm_e4s': 'Horno de barro',
   'farm_e5s': 'Conserva',
   'farm_e6s': 'Caldo de huerta',
-  'farm_e7s': 'Sobremesa',
-  'smith_a4s': 'Golpe seco',
-  'smith_a5s': 'Chispa fiel',
-  'smith_a6s': 'Forja doble',
-  'smith_a7s': 'Pinza firme',
-  'smith_b4s': 'Pico gastado',
-  'smith_b5s': 'Olfato de mina',
-  'smith_b6s': 'Galería',
-  'smith_b7s': 'Lámpara minera',
-  'smith_c4s': 'Remache',
-  'smith_c5s': 'Guarda cruzada',
-  'smith_c6s': 'Hoja equilibrada',
-  'smith_c7s': 'Vaina de cuero',
-  'smith_d4s': 'Tornillo sinfín',
-  'smith_d5s': 'Muelle tenso',
-  'smith_d6s': 'Biela',
-  'smith_d7s': 'Reloj de pulso',
-  'smith_e4s': 'Banco de trabajo',
-  'smith_e5s': 'Pedido urgente',
-  'smith_e6s': 'Cartel del taller',
-  'smith_e7s': 'Gremio',
+  'farm_e7s': 'Sobremesa larga',
+  'smith_a4s': 'Runa en caliente',
+  'smith_a5s': 'Doble temple',
+  'smith_a6s': 'Grabado fino',
+  'smith_a7s': 'Marca del eco',
+  'smith_b4s': 'Ojo de gema',
+  'smith_b5s': 'Veta escondida',
+  'smith_b6s': 'Mena rara',
+  'smith_b7s': 'Corazón de piedra',
+  'smith_c4s': 'Crisol viejo',
+  'smith_c5s': 'Desarme limpio',
+  'smith_c6s': 'Chatarra útil',
+  'smith_c7s': 'Hierro que vuelve',
+  'smith_d4s': 'Lámpara minera',
+  'smith_d5s': 'Oído de roca',
+  'smith_d6s': 'Brillo en la pared',
+  'smith_d7s': 'Mapa de vetas',
+  'smith_e4s': 'Cofre de regalo',
+  'smith_e5s': 'Cliente fiel',
+  'smith_e6s': 'Pedido con premio',
+  'smith_e7s': 'Gremio agradecido',
 };

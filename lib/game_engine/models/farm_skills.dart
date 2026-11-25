@@ -2,6 +2,7 @@ import '../data/cooking_catalog.dart';
 import '../data/cozy_catalog.dart' show kCompostRecipes;
 import '../data/farming_catalog.dart';
 import '../data/life_tree_catalog.dart';
+import '../data/profession_gear_catalog.dart' show kRegrowItem, kWeaponSeeds;
 import 'meal_buff.dart';
 
 export 'meal_buff.dart';
@@ -28,7 +29,12 @@ class FarmSkills {
     Map<String, int> mealLog = const {},
     this.meal,
     Set<String> recipes = const {},
-  })  : recipes = Set.unmodifiable(recipes.where(kCompostRecipes.containsKey)),
+    Map<String, int> wseeds = const {},
+  })  : wseeds = Map.unmodifiable({
+          for (final e in wseeds.entries)
+            if (e.value > 0 && kWeaponSeeds.containsKey(e.key)) e.key: e.value,
+        }),
+        recipes = Set.unmodifiable(recipes.where(kCompostRecipes.containsKey)),
         meals = Map.unmodifiable({
           for (final e in meals.entries)
             if (e.value > 0 && parseMealKey(e.key) != null) e.key: e.value,
@@ -55,7 +61,12 @@ class FarmSkills {
           for (final e in ferts.entries)
             if (e.value > 0 && kFertilizers.containsKey(e.key)) e.key: e.value,
         }),
-        seed = seed != null && kCrops.containsKey(seed) ? seed : null;
+        seed = seed != null &&
+                (kCrops.containsKey(seed) ||
+                    kWeaponSeeds.containsKey(seed) ||
+                    seed.startsWith(kRegrowItem))
+            ? seed
+            : null;
 
   /// The crop log, or (old saves without one) the crops in the bag.
   static Map<String, int> _logOf(
@@ -82,6 +93,13 @@ class FarmSkills {
   /// un puñado de nabos para arrancar.
   /// Compost recipes found searching trees (cozy_life.md § 3). JSON `rc`.
   final Set<String> recipes;
+
+  /// Weapon seeds (profession_gear.md § 3.1): id of `kWeaponSeeds` →
+  /// count. JSON `ws`.
+  final Map<String, int> wseeds;
+  int wseedCount(String id) => wseeds[id] ?? 0;
+  FarmSkills addWseed(String id, [int n = 1]) =>
+      copyWith(wseeds: {...wseeds, id: wseedCount(id) + n});
 
   static final initial = FarmSkills(seeds: const {'nabo_claro': 6});
 
@@ -159,8 +177,10 @@ class FarmSkills {
     Map<String, int>? mealLog,
     Object? meal = _keep,
     Set<String>? recipes,
+    Map<String, int>? wseeds,
   }) =>
       FarmSkills(
+          wseeds: wseeds ?? this.wseeds,
           recipes: recipes ?? this.recipes,
           xp: xp ?? this.xp,
           hoes: hoes ?? this.hoes,
@@ -204,6 +224,7 @@ class FarmSkills {
         if (mealLog.isNotEmpty) 'mlg': mealLog,
         if (meal != null) 'mb': meal!.toJson(),
         if (recipes.isNotEmpty) 'rc': [...recipes]..sort(),
+        if (wseeds.isNotEmpty) 'ws': wseeds,
       };
 
   /// Tolerante; sin `farm` (saves de antes de v0.23.0) → [initial].
@@ -237,6 +258,7 @@ class FarmSkills {
       mealLog: m(raw['mlg']),
       meal: MealBuff.fromJson(raw['mb']),
       recipes: {...l(raw['rc'])},
+      wseeds: m(raw['ws']),
     );
   }
 
@@ -263,7 +285,8 @@ class FarmSkills {
       _mapEq(other.mealLog, mealLog) &&
       other.meal == meal &&
       other.recipes.length == recipes.length &&
-      other.recipes.containsAll(recipes);
+      other.recipes.containsAll(recipes) &&
+      _mapEq(other.wseeds, wseeds);
 
   @override
   int get hashCode => Object.hash(xp, hoe, can, seeds.length, crops.length);

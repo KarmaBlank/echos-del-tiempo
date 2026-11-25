@@ -313,11 +313,35 @@ extension _FarmingOp on _Op {
           done = true;
         }
       case FarmOp.plant:
-        final seed = a.seed ?? prof.life.farm.activeSeed;
+        final seed = a.seed ?? FarmingRules.activeSeed(prof);
         final pl = plots[key];
-        if (seed == null || pl == null || prof.life.farm.seedCount(seed) < 1) {
-          return false;
+        if (seed == null || pl == null) return false;
+        // Living weapons (profession_gear.md § 3): a weapon seed, or a
+        // living weapon of the bag replanted to grow it further.
+        if (seed.startsWith(kRegrowItem)) {
+          final it = prof.itemByUid(seed.substring(kRegrowItem.length));
+          if (it == null || prof.equippedItem?.uid == it.uid) return false;
+          final next = GearRules.regrow(pl, it, prof);
+          if (next == null) return false;
+          plots[key] = next;
+          p.profile = InventoryRules.removeItem(prof, it.uid);
+          done = true;
+          break;
         }
+        if (kWeaponSeeds.containsKey(seed)) {
+          final f = prof.life.farm;
+          if (f.wseedCount(seed) < 1) return false;
+          final next = GearRules.plant(pl, seed, prof);
+          if (next == null) return false;
+          plots[key] = next;
+          p.profile = prof.copyWith(
+              life: prof.life.copyWith(
+                  farm: f.copyWith(
+                      wseeds: {...f.wseeds, seed: f.wseedCount(seed) - 1})));
+          done = true;
+          break;
+        }
+        if (prof.life.farm.seedCount(seed) < 1) return false;
         final next = FarmingRules.plant(pl, seed, prof);
         if (next == null) return false;
         plots[key] = next;
@@ -329,9 +353,14 @@ extension _FarmingOp on _Op {
                     seed: seed)));
         done = true;
       case FarmOp.water:
-        final area =
-            FarmingRules.toolBonus(prof, FarmingRules.canOf(prof)).area;
-        for (final (x, y) in FarmingRules.areaTiles(a.tx, a.ty, area)) {
+        // Tierra sub-path A (life_trees_v2.md § 2.1): 3×3 (5×5) watering.
+        final tiles = {
+          ...FarmingRules.areaTiles(a.tx, a.ty,
+              FarmingRules.toolBonus(prof, FarmingRules.canOf(prof)).area),
+          ...squareTiles(
+              a.tx, a.ty, LifeTreeRules.farm(prof, LifeFx.waterArea)),
+        };
+        for (final (x, y) in tiles) {
           final k = plotKey(x, y);
           final pl = plots[k];
           if (pl == null || FarmingRules.ripe(pl)) continue;
@@ -341,23 +370,36 @@ extension _FarmingOp on _Op {
           done = true;
         }
       case FarmOp.fert:
-        final pl = plots[key];
         final fid = a.seed ?? _bestFert(prof);
-        if (pl == null || fid == null || prof.life.farm.fertCount(fid) < 1) {
-          return false;
+        if (fid == null || prof.life.farm.fertCount(fid) < 1) return false;
+        // Abono sub-path B: one bag composts the 3×3 (5×5) around.
+        for (final (x, y) in squareTiles(
+            a.tx, a.ty, LifeTreeRules.farm(prof, LifeFx.compostArea))) {
+          final k = plotKey(x, y);
+          final pl = plots[k];
+          if (pl == null) continue;
+          final next = GearRules.isLiving(pl.seed)
+              ? GearRules.compost(pl, fid, prof)
+              : FarmingRules.fertilize(pl, fid, prof);
+          if (next == null) continue;
+          plots[k] = next;
+          done = true;
         }
-        final next = FarmingRules.fertilize(pl, fid, prof);
-        if (next == null) return false;
-        plots[key] = next;
+        if (!done) return false;
         final f = prof.life.farm;
         p.profile = prof.copyWith(
             life: prof.life.copyWith(
                 farm: f
                     .copyWith(ferts: {...f.ferts, fid: f.fertCount(fid) - 1})));
-        done = true;
       case FarmOp.harvest:
         final pl = plots[key];
         if (pl == null || !FarmingRules.ripe(pl)) return false;
+        if (GearRules.isLiving(pl.seed)) {
+          _fa.lastWork[p.id] = s.time;
+          s.town = s.town.copyWith(plots: {...plots, key: const FarmPlot()});
+          _grantLiving(p, pl, a.tx, a.ty);
+          return true;
+        }
         // Winter crops: only harvested in winter (farming.md § 15).
         if (!FarmingRules.harvestable(
             pl, WeatherRules.season(s.town.sky.day))) {
@@ -416,6 +458,60 @@ extension _FarmingOp on _Op {
     say('${p.name} cosechó ${h.count > 1 ? '${h.count} × ' : ''}'
         '${h.crop.name} (${h.quality.label}).');
     if (h.loot != FarmLootKind.none) _grantFarmLoot(p, h.loot, tx, ty);
+    // Semilla sub-paths (life_trees_v2.md § 2.1): A gives a seed back, B
+    // sometimes a mutated rare variety (or a weapon seed).
+    final back = LifeTreeRules.farm(p.profile, LifeFx.seedBack);
+    if (back > 0 &&
+        kCrops[h.crop.id]?.rarity != FishRarity.legendario &&
+        _rand() < back) {
+      _profileChange(
+          p,
+          p.profile.copyWith(
+              life: p.profile.life.copyWith(
+                  farm: p.profile.life.farm.addSeed(h.crop.id))));
+      say('${p.name} guardó una semilla de ${h.crop.name}.');
+    }
+    final mut = LifeTreeRules.farm(p.profile, LifeFx.mutate);
+    if (mut > 0 && _rand() < mut) {
+      final weapon = _rand() < GearRules.t.d('seedMutateShare');
+      final id =
+          weapon ? GearRules.rollSeed(_rand) : FarmingRules.rareSeed(_rand);
+      final f = p.profile.life.farm;
+      _profileChange(
+          p,
+          p.profile.copyWith(
+              life: p.profile.life.copyWith(
+                  farm: weapon ? f.addWseed(id) : f.addSeed(id))),
+          gain: true);
+      say('${p.name} encontró una variedad mutada: '
+          '${weapon ? kWeaponSeedNames[id] : kCrops[id]?.seedName}.');
+    }
+    final lvl1 = FarmingRules.level(p.profile);
+    if (lvl1 > lvl0) {
+      say('${p.name} subió Cultivo a nivel $lvl1.');
+      lifeLevelXp(p, lvl1);
+    }
+  }
+
+
+  /// A ripe living weapon (profession_gear.md § 3.4): the weapon to the
+  /// harvester (inventory, floor or stash), Cultivo XP and an event.
+  void _grantLiving(SessionPlayer p, FarmPlot pl, int tx, int ty) {
+    final item = GearRules.harvest(rules.loot, _rand, p.profile, pl);
+    if (item == null) return;
+    final lvl0 = FarmingRules.level(p.profile);
+    final f = p.profile.life.farm;
+    _profileChange(
+        p,
+        p.profile.copyWith(
+            life: p.profile.life.copyWith(
+                farm: f.copyWith(
+                    xp: f.xp + GearRules.t.i('livingHarvestXp')))),
+        gain: true);
+    final d = LootDrop.item(item);
+    events.add(FarmLootEvent(p.id, _dropText(d), item.rarity.index, tx, ty));
+    say('${p.name} cosechó un arma viva: ${_dropText(d)}.');
+    _deliver(p, [d], LootSource.mission, p.x, p.y, stashOverflow: true);
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
       say('${p.name} subió Cultivo a nivel $lvl1.');
@@ -784,7 +880,13 @@ extension _FarmingOp on _Op {
             pick: a.target);
         if (r == null) return false;
         final pts = r.$1.treeBonus - p.profile.treeBonus;
-        _profileChange(p, r.$1, gain: true);
+        // Encargos sub-path A (life_trees_v2.md § 2.1): better pay.
+        final paidGold = r.$1.credits - p.profile.credits;
+        final extraGold = paidGold > 0
+            ? (paidGold * (GearRules.orderPayMult(p.profile) - 1)).round()
+            : 0;
+        _profileChange(p, r.$1.copyWith(credits: r.$1.credits + extraGold),
+            gain: true);
         // Forged weapon order (mining_smithing.md § 2.2): Smithing XP too.
         if (forged) smithXp(p, ResidentRules.forgeOrderXp(oq));
         s.town = r.$2;
@@ -793,9 +895,23 @@ extension _FarmingOp on _Op {
         say('${p.name} entregó la orden de ${n.name} (+${r.$3} XP'
             '${pts > 0 ? ', +1 punto de árbol' : ''}).');
         // roles.md § 9.3: sometimes the order comes with a bonus chest.
-        if (_rand() < ResidentMilestoneRules.orderChestChance) {
+        // Encargos sub-path B adds to that chance.
+        if (_rand() <
+            ResidentMilestoneRules.orderChestChance +
+                GearRules.orderChest(p.profile)) {
           _residentChest(p, ChestTier.madera);
           say('${n.name} agregó un cofre de regalo.');
+        }
+        // profession_gear.md § 3.1: some orders pay a weapon seed too.
+        if (_rand() < GearRules.t.d('seedOrderChance')) {
+          final ws = GearRules.rollSeed(_rand);
+          _profileChange(
+              p,
+              p.profile.copyWith(
+                  life: p.profile.life
+                      .copyWith(farm: p.profile.life.farm.addWseed(ws))),
+              gain: true);
+          say('${n.name} te regaló ${kWeaponSeedNames[ws]}.');
         }
         return true;
       case TownOp.claimMilestone:

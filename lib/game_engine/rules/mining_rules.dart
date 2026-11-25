@@ -362,10 +362,12 @@ abstract final class MiningRules {
       {String code = Tile.ore,
       double toolBonus = 0,
       bool boosted = false,
-      int day = 0}) {
+      int day = 0,
+      double rareBonus = 0}) {
     final b = kBiomeOres[biome];
     if (b == null) return const {};
-    final rareMult = boosted ? 1 + t.d('boostRare') : 1.0;
+    // [rareBonus]: the Veta sub-path B (life_trees_v2.md § 2.1).
+    final rareMult = (boosted ? 1 + t.d('boostRare') : 1.0) * (1 + rareBonus);
     final extra = toolBonus + (boosted ? t.d('boostYield') : 0);
     int more() => rand() < extra ? 1 : 0;
     if (code == MineTile.crystal) {

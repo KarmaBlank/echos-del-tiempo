@@ -4,7 +4,7 @@ import '../data/cooking_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/meal_buff.dart';
 import '../models/player_profile.dart';
-import 'life_tree_rules.dart' show LifeTreeRules;
+import 'life_tree_rules.dart' show LifeTreeRules, LifeFx;
 
 export '../data/cooking_catalog.dart';
 export '../models/meal_buff.dart';
@@ -25,8 +25,24 @@ abstract final class CookingRules {
               t.d('mealBuffPerQuality') * q.index) *
           m.power);
 
+  /// The buff of [b], × (1 + its tree boost).
   static double buffOf(MealBuff b) =>
-      b.def == null ? 0 : buffValue(b.def!, b.quality);
+      b.def == null ? 0 : buffValue(b.def!, b.quality) * (1 + b.boost);
+
+  /// [b] with the eater [p]'s tree bonuses (life_trees_v2.md § 2.1):
+  /// Cocina A boosts every meal, Mesa del pescador A boosts fish meals
+  /// and its B adds ATK / MAG to fish meals; Cocina B and `meal` add
+  /// missions.
+  static MealBuff withTrees(PlayerProfile p, MealBuff b) {
+    final fish = b.def?.hasFish ?? false;
+    final boost = math.min(
+        tuning(TuningId.gear).d('mealPowerMax'),
+        LifeTreeRules.farm(p, LifeFx.mealPower) +
+            (fish ? LifeTreeRules.fish(p, LifeFx.fishMeal) : 0));
+    return MealBuff(b.meal, b.quality, b.left + LifeTreeRules.mealMissions(p),
+        boost: boost,
+        atkPlus: fish ? LifeTreeRules.fish(p, LifeFx.fishBuff) : 0);
+  }
 
   /// Missions a meal lasts: `mealMissions`, +1 with fish, + the tier
   /// bonus `mealMissions<Q>` (farming.md § 19.3).
@@ -54,8 +70,9 @@ abstract final class CookingRules {
         MealExtra.shield => t.d('mealShield'),
       });
 
-  static double regen(MealBuff? b) =>
-      extraOf(b) == MealExtra.regen ? extraValue(MealExtra.regen) : 0;
+  static double regen(MealBuff? b) => extraOf(b) == MealExtra.regen
+      ? extraValue(MealExtra.regen) * (1 + b!.boost)
+      : 0;
   static double breakBonus(MealBuff? b) => extraOf(b) == MealExtra.breakPower
       ? extraValue(MealExtra.breakPower)
       : 0;
@@ -139,9 +156,8 @@ abstract final class CookingRules {
   /// [p] with [b] as their active meal (replaces the old one).
   /// The eater's life trees add `meal` missions (life_trees_v2.md § 5).
   static PlayerProfile serve(PlayerProfile p, MealBuff b) => p.copyWith(
-      life: p.life.copyWith(
-          farm: p.life.farm.copyWith(
-              meal: b.withLeft(b.left + LifeTreeRules.mealMissions(p)))));
+      life: p.life
+          .copyWith(farm: p.life.farm.copyWith(meal: withTrees(p, b))));
 
   /// [from] gives the meal [key] of their bag to [to] (farming.md § 19.2):
   /// [to] eats it right away (replaces their active meal).
@@ -163,8 +179,8 @@ abstract final class CookingRules {
     if (pm == null || f.mealCount(key) < 1) return null;
     final farm = f.copyWith(
         meals: {...f.meals, key: f.mealCount(key) - 1},
-        meal: MealBuff(pm.$1.id, pm.$2,
-            missionsFor(pm.$1, pm.$2) + LifeTreeRules.mealMissions(p)));
+        meal: withTrees(
+            p, MealBuff(pm.$1.id, pm.$2, missionsFor(pm.$1, pm.$2))));
     return p.copyWith(life: p.life.copyWith(farm: farm));
   }
 
@@ -179,7 +195,7 @@ abstract final class CookingRules {
   static double hp(MealBuff? b) =>
       b?.def?.stat == MealStat.hp ? buffOf(b!) : 0;
   static double atk(MealBuff? b) =>
-      b?.def?.stat == MealStat.atk ? buffOf(b!) : 0;
+      (b?.def?.stat == MealStat.atk ? buffOf(b!) : 0) + (b?.atkPlus ?? 0);
 
   /// Fraction of [el] damage the meal blocks (capped at 0.9).
   static double resist(MealBuff? b, DamageTag el) {

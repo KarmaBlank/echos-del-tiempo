@@ -66,6 +66,8 @@ List<String> lifeNodeGrants(BuildContext context, LifeTreeNode n) {
     out.add(switch (parts.first) {
       'gold' => context.t('ui.town.trades.grant.gold', {'n': amount}),
       'weapon' => context.t('ui.town.trades.grant.weapon', {'n': id}),
+      'recipe' => context.t('ui.town.trades.grant.recipe',
+          {'item': context.t('ui.town.compost.$id')}),
       'meal' => context.t('ui.town.trades.grant.meal', {
           'n': amount,
           'item': _itemName('meal', id),
@@ -125,6 +127,19 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Tree v2 refund (life_trees_v2.md § 6): until a node is
+                // taken again.
+                if (p.life.refunded) ...[
+                  Container(
+                    key: const ValueKey('life-refunded'),
+                    padding: EdgeInsets.all(DsSpace.sm),
+                    decoration: BoxDecoration(
+                        border: Border.all(color: DsColors.reward)),
+                    child: Text(context.t('ui.town.trades.refunded'),
+                        style: DsText.body(DsColors.reward)),
+                  ),
+                  SizedBox(height: DsSpace.xs),
+                ],
                 for (final k in LifeSkillKind.values) ...[
                   _skillRow(k),
                   SizedBox(height: DsSpace.xs),
@@ -289,6 +304,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     return SkillTreeCanvas(
       key: ValueKey('life-tree-${k.name}'),
       keyPrefix: 'life-node',
+      labelScale: 1.6,
       catalog: cat,
       startId: kLifeTrees[k]!.first.id,
       selected: _sel ?? kLifeTrees[k]!.first.id,

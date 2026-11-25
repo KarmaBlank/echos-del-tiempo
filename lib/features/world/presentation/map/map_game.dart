@@ -83,7 +83,7 @@ import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
-import '../../../../game_engine/rules/fishing_minigame.dart';
+import '../../../../game_engine/rules/fishing_minigame.dart';
 
 import '../../../inventory/domain/eco_text.dart';
 import '../../../../game_engine/rules/town_dressing_rules.dart';
@@ -185,7 +185,7 @@ class MapGame extends Game {
   final fishing = MapFishingLayer();
 
   /// Huerta del pueblo (farming.md § 2.3).
-  final farm = MapFarmLayer();
+  late final farm = MapFarmLayer()..icon = ((id) => sprites.lifeIcon(id, ''));
 
   /// Cozy life art (cozy_life.md): fireflies, raft and farm decorations.
   late final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
@@ -1542,6 +1542,9 @@ class MapGame extends Game {
               },
             null => null,
           });
+      // Area pickaxe indicator (life_trees_v2.md § 2.1, Veta A).
+      final area = controller.mineAreaTiles;
+      if (area.isNotEmpty) drawTileTarget(c, area, true);
     } else if (map.lobby && map.place == null) {
       final (ox, oy) = map.townOrigin;
       for (final l in TownPlan.landmarksOf(s.town)) {

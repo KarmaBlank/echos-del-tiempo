@@ -168,4 +168,32 @@ void main() {
       if (k == LifeSkillKind.pesca) await _save(tester, 'life_tree_view');
     }
   });
+
+  testWidgets('tree v2 refund notice and bigger branch / gate labels',
+      (tester) async {
+    final b = _crafter(12);
+    final p = b.copyWith(life: b.life.copyWith(refunded: true));
+    await pumpPanel(tester,
+        profile: p,
+        build: (v, c) => LifeSkillsView(
+            profile: v.me!.profile,
+            onTake: c.takeLifeNode,
+            onReset: c.resetLifeTree));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('life-refunded')), findsOneWidget);
+    final canvas =
+        tester.widget<SkillTreeCanvas>(find.byType(SkillTreeCanvas));
+    expect(canvas.labelScale, greaterThan(1));
+  });
+
+  testWidgets('no refund notice on a fresh tree', (tester) async {
+    await pumpPanel(tester,
+        profile: _crafter(12),
+        build: (v, c) => LifeSkillsView(
+            profile: v.me!.profile,
+            onTake: c.takeLifeNode,
+            onReset: c.resetLifeTree));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('life-refunded')), findsNothing);
+  });
 }

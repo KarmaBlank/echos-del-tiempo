@@ -38,6 +38,7 @@ class SkillTreeCanvas extends ConsumerStatefulWidget {
     this.selected,
     this.gates = const [],
     this.keyPrefix = 'tree-node',
+    this.labelScale = 1,
   });
 
   final PassiveTreeCatalog catalog;
@@ -53,6 +54,10 @@ class SkillTreeCanvas extends ConsumerStatefulWidget {
   /// Each node gets a hit box keyed `<keyPrefix>-<id>` with a child keyed
   /// `<keyPrefix>-<id>-<state>` (tests and accessibility).
   final String keyPrefix;
+
+  /// Size of the branch and gate labels over the small type (the life
+  /// trees draw them bigger, life_trees_v2.md § 3).
+  final double labelScale;
 
   /// Margin (screen px) around the tree when it is framed.
   static const fitMargin = 24.0;
@@ -212,6 +217,7 @@ class _SkillTreeCanvasState extends ConsumerState<SkillTreeCanvas> {
                             textScaler: MediaQuery.textScalerOf(context),
                             devicePixelRatio:
                                 MediaQuery.devicePixelRatioOf(context),
+                            labelScale: widget.labelScale,
                           ),
                         ),
                       ),

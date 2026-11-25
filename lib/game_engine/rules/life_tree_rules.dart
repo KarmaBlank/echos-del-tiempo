@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/cooking_catalog.dart' show mealKey;
+import '../data/cozy_catalog.dart' show kCompostRecipes;
 import '../data/life_tree_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../data/weapons_catalog.dart' show kWeapons;
@@ -146,7 +147,10 @@ abstract final class LifeTreeRules {
   /// Takes [id] and delivers its rewards the first time (§ 4).
   static PlayerProfile? take(PlayerProfile p, LifeSkillKind k, String id) {
     if (cannotTake(p, k, id) != null) return null;
-    final next = _with(p, k, [...taken(p, k), id]);
+    var next = _with(p, k, [...taken(p, k), id]);
+    if (next.life.refunded) {
+      next = next.copyWith(life: next.life.copyWith(refunded: false));
+    }
     return claim(next, lifeTreeNode(k, id)!);
   }
 
@@ -229,6 +233,12 @@ abstract final class LifeTreeRules {
         return p.copyWith(
             life: life.copyWith(
                 baits: {...life.baits, id: (life.baits[id] ?? 0) + n}));
+      case 'recipe':
+        final f = life.farm;
+        if (!kCompostRecipes.containsKey(id) || f.recipes.contains(id)) return p;
+        return p.copyWith(
+            life: life.copyWith(
+                farm: f.copyWith(recipes: {...f.recipes, id})));
       case 'rod':
         return life.rods.contains(id)
             ? p

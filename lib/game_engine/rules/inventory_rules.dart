@@ -16,6 +16,10 @@ import 'item_rules.dart';
 /// Uid prefix of a weapon forged at the HERRERÍA (`CraftRules.forgedPrefix`).
 const kForgedUidPrefix = 'smith-';
 
+/// Marks a received weapon keeps in its `uid`: the forge mark and the
+/// profession weapon mark (`gear-<id>-`, profession_gear.md § 1).
+final kUidMarks = RegExp(r'^(?:smith-)?(?:gear-[a-z0-9_]+-)?');
+
 class InventoryRules {
   const InventoryRules({this.items = const ItemRules()});
 
@@ -332,9 +336,8 @@ class InventoryRules {
     final (fresh, seq) = nextUid(p);
     // A weapon forged at the HERRERÍA keeps its mark (mining_smithing.md
     // § 2.2: it sells above loot).
-    final uid = item.uid.startsWith(kForgedUidPrefix)
-        ? '$kForgedUidPrefix$fresh'
-        : fresh;
+    // So does a profession weapon (profession_gear.md § 1: `gear-<id>-`).
+    final uid = '${kUidMarks.firstMatch(item.uid)?.group(0) ?? ''}$fresh';
     final next = p.copyWith(
         items: [...p.items, item.copyWith(uid: uid)], itemSeq: seq);
     return (relayout(next), uid);

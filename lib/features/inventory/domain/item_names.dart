@@ -11,6 +11,7 @@ import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/life_craft_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/rules/profession_gear_rules.dart';
 
 /// Item-catalog text in the active language (docs/specs/i18n.md § 3.4).
 /// The engine keeps the es-AR literal (host notices, saves keep ids); the
@@ -71,6 +72,10 @@ extension FarmToolDefText on FarmToolDef {
 /// are rolled text stored in the save, so they stay as rolled.
 String localItemName(ItemRules items, ItemInstance i) {
   if (!CatalogText.isTranslated) return items.displayName(i);
+  if (_gearName(i) case final gear?) {
+    final t = i.forgeLevel;
+    return '$gear${t > 0 ? ' +$t' : ''}';
+  }
   final base = items.baseOf(i)?.text ?? i.baseId;
   String mods(AffixSlot side) => [
         for (final a in i.affixes)
@@ -164,4 +169,24 @@ extension WeaponPassiveDefText on WeaponPassiveDef {
 
   /// [nameAt] in the active language.
   String nameAtText(int level) => '$text ${WeaponPassiveDef.roman(level)}';
+}
+
+/// Localized name of a profession weapon (profession_gear.md § 6):
+/// `data.gear.<id>.name` / `.legend`, or `data.gear.fish.name` with the
+/// weapon type and the legendary fish it was forged from.
+String? _gearName(ItemInstance i) {
+  final def = GearRules.defOf(i);
+  if (def != null) {
+    return i.rarity == Rarity.legendario
+        ? CatalogText.of('data.items.gear.${def.id}.legend', def.legend)
+        : CatalogText.of('data.items.gear.${def.id}.name', def.name);
+  }
+  final fish = GearRules.fishOf(i);
+  if (fish == null) return null;
+  final type = fishForgeType(fish);
+  return CatalogText.of('data.items.gear.fish.name', '{type} de {fish}', {
+    'type': CatalogText.of(
+        'data.items.gear.type.${gearTypeKey(type)}', kGearTypeNames[type] ?? type),
+    'fish': CatalogText.of(ItemKeys.fishName(fish), kFish[fish]?.name ?? fish),
+  });
 }

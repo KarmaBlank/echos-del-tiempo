@@ -107,16 +107,44 @@ nodo mayor; 9 y el remate 10 siguen únicos.
 - Sub-camino principal: los nodos de siempre (`<rama><t>`).
 - Segundo sub-camino: `<rama><t>s` (p. ej. `fish_a4s`), nombres en
   `kLifeForkNames` + `data.life_trees.node.<id>.name`. Cada uno es la
-  alternativa hermana del nodo principal de su escalón (mismo costo) y
-  lleva el efecto de la rama del escalón anterior (así un sub-camino
-  alterna el otro sabor de la rama); sin entregas. Veta de Herrería, que
-  solo entrega menas, lleva en su segundo sub-camino XP del oficio
-  (`smith_b4s`..`smith_b7s`).
+  alternativa hermana del nodo principal de su escalón (mismo costo) con
+  su propia mecánica (tabla de abajo); sin entregas salvo las recetas de
+  Abono.
 - Con un sub-camino alcanza para seguir; si sobran puntos se pueden
   tomar los dos. El poder total por punto es el mismo (los puntos
   ganados no cambian: siguen alcanzando ~2 ramas).
 - Se arma en `growLifeTree` a partir de las tablas de 51 nodos: ningún
   id se borró ni cambió de escalón.
+
+Efectos propios por sub-camino (árbol v2, `kLifeTreeVersion` = 2,
+`kLifeForkFx`): los escalones 4–7 de **cada** sub-camino llevan su
+propia mecánica (claves `<id>x` para A = principal, `<id>s` para B,
+`<id>y` para el compañero de los escalones 5–6 de `kLifeForkCompanion`;
+números en `kLifeTreeTuning`). Las entregas del camino principal se
+conservan; la rama Abono suma las recetas de abono de brasa / miel /
+escarcha (`kLifeForkGrants`). El nodo del escalón 8 es mayor.
+
+| Oficio | Rama | A (principal) | B (segundo) |
+|---|---|---|---|
+| Pesca | Calma | `calm`: pesca tranquila / automática espera menos | `twin`: pesca doble |
+| Pesca | Hondura | `chest`: más cofres y armas hundidas | `big`: peces más grandes |
+| Pesca | Red | `sell`: el oficio se vende mejor | `net`: red de balsa (pesca al navegar) |
+| Pesca | Arpón | `raft`: balsa más rápida | `harpoon`: arponear un pez grande |
+| Pesca | Mesa | `fishMeal`: comidas de pescado curan / potencian más | `fishBuff`: + ATK / MAG |
+| Cultivo | Tierra | `waterArea`: riego 3×3 (+ `water`) | `grow` |
+| Cultivo | Semilla | `seedBack`: más semillas | `mutate`: variedades mutadas (semillas de arma) |
+| Cultivo | Abono | `compost`: más bolsas (+ recetas) | `compostArea`: abono en área (+ `grow`) |
+| Cultivo | Madera viva | `livingRarity`: calidad del arma viva | `livingAffix`: afijo extra |
+| Cultivo | Cocina | `mealPower`: comidas potencian más | `meal`: buffs más largos |
+| Herrería | Forja | `forge`: forjar más barato | `forgeAffix`: afijo extra / rareza más (+ `xp`) |
+| Herrería | Veta | `veinArea`: pico en área con indicador | `rareOre`: mineral más raro |
+| Herrería | Fundición | `smeltDouble`: lingote doble | `salvage`: desarmar devuelve más |
+| Herrería | Pico | `mineSpeed`: picar más rápido | `detect`: vetas ocultas a la vista (radio) |
+| Herrería | Encargos | `orderPay`: encargos pagan más | `orderChest`: cofre por encargo |
+
+Nombres de rama renombrados: Cultivo = Tierra, Semilla, Abono, Madera
+viva, Cocina; Herrería = Forja, Veta, Fundición, Pico, Encargos. En el
+lienzo los rótulos de rama y "Nv N" se dibujan 1.6× (`labelScale`).
 
 ## 6. Migración
 Los ids v1 (`p_*`, `c_*`, `h_*`) no existen en v2: al cargar el perfil se
@@ -127,6 +155,13 @@ Bifurcaciones (§ 2.1): solo se **agregan** nodos y enlaces, el camino
 principal de cada rama sigue entero, así que los saves v0.49 quedan
 válidos tal cual: no hay devolución de puntos ni cambio de protocolo
 (los ids viajan como texto).
+
+**Árbol v2 (efectos por sub-camino, protocolo 92):** como cambiaron los
+efectos de los escalones 4–7, al cargar un perfil sin `life.tv` ≥ 2 se
+quitan todos los nodos de rama de escalón ≥ 4 (`lifeNodeRefunded`) de
+los tres árboles: **se devuelven esos puntos** y `life.rf` = true
+muestra el aviso en OFICIOS (`ui.town.trades.refunded`) hasta tomar un
+nodo. Las entregas ya cobradas (`life.lc`) no se repiten.
 
 ## 7. Árboles (todos los nodos)
 Valores: fracción (0.05 = 5 %) salvo `quality`, `auto` y `meal`

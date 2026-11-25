@@ -229,9 +229,9 @@ void main() {
       expect(SmithRules.forgeDiscount(p), greaterThan(f0));
       p = LifeTreeRules.take(p, LifeSkillKind.cultivo, 'farm_d1')!;
       expect(LifeTreeRules.power(p, LifeFx.hp), greaterThan(0));
-      // meal: farm_e4 = +1 mission on every meal eaten.
+      // meal: farm_e4s (Cocina sub-path B) = +1 mission on every meal.
       p = chain(p, LifeSkillKind.cultivo,
-          lifeTreeNode(LifeSkillKind.cultivo, 'farm_e4')!);
+          lifeTreeNode(LifeSkillKind.cultivo, 'farm_e4s')!);
       final key = mealKey('sopa_nabo', CropQuality.normal);
       final eaten = CookingRules.eat(p, key)!;
       expect(eaten.life.farm.meal!.left,
@@ -277,6 +277,9 @@ void main() {
                     after.life.farm.mealCount(key) -
                         before.life.farm.mealCount(key),
                     amt);
+              case 'recipe':
+                expect(after.life.farm.recipes, contains(id));
+                expect(before.life.farm.recipes, isNot(contains(id)));
               case 'weapon':
                 expect(after.items.length - before.items.length, amt);
                 final w = after.items.last;

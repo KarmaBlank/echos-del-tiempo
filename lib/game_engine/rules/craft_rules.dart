@@ -12,6 +12,7 @@ import 'life_craft_rules.dart';
 import 'inventory_rules.dart';
 import 'item_rules.dart';
 import 'js_math.dart';
+import 'life_tree_rules.dart' show LifeTreeRules, LifeFx;
 import 'loot_rules.dart';
 
 /// Resultado (o vista previa) de una operación de forja / fusión. Las
@@ -714,11 +715,14 @@ class CraftRules {
 
   CraftResult _salvageMany(
       PlayerProfile p, List<ItemInstance> list, RandomSource? random) {
+    // Fundición sub-path B (life_trees_v2.md § 2.1): more back.
+    final mult = 1 + LifeTreeRules.smith(p, LifeFx.salvage);
     final gained = <CraftMaterial, int>{};
     final byChance = <(CraftMaterial, double, int), int>{};
     for (final it in list) {
       final y = salvageYield(it);
-      y.guaranteed.forEach((m, n) => gained[m] = (gained[m] ?? 0) + n);
+      y.guaranteed.forEach(
+          (m, n) => gained[m] = (gained[m] ?? 0) + (n * mult).round());
       for (final c in y.chances) {
         final k = (c.material, c.chance, c.count);
         byChance[k] = (byChance[k] ?? 0) + 1;

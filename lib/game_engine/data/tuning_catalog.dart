@@ -40,6 +40,7 @@ abstract final class TuningId {
   static const smithing = 'smithing';
   static const regions = 'regions';
   static const ascension = 'ascension';
+  static const gear = 'gear';
 }
 
 /// Los valores del código.
@@ -242,6 +243,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'fertRunicoSpeed': 1.3,
     'fertEcoBias': 2,
     'fertEcoSpeed': 1.5,
+    // Compost-only fertilizers (profession_gear.md § 3.3).
+    'fertBrasaBias': 0.6,
+    'fertBrasaSpeed': 1.2,
+    'fertMielBias': 0.6,
+    'fertMielSpeed': 1.2,
+    'fertEscarchaBias': 0.6,
+    'fertEscarchaSpeed': 1.2,
     // × de precio y XP por calidad.
     'qualityMultNormal': 1,
     'qualityMultRaro': 1.3,
@@ -737,6 +745,70 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // biome_regions.md (v0.45.0): generated biome regions, side paths,
   // lakes, waystones and region foraging.
+  // profession_gear.md (v0.50): profession weapons, weapon seeds, the
+  // sub-path mechanics of the life trees and the parity model.
+  TuningId.gear: TuningDef('Oficios: equipo', {
+    // § 3 Living weapons: growth, care and quality.
+    'livingGrowSec': 1500,
+    'livingCompostMax': 3,
+    'livingWaterQ': 0.6,
+    'livingCompostQ': 0.3,
+    'livingAncientQ': 0.4,
+    'livingLevelQ': 0.035,
+    'livingTreeQ': 2,
+    'livingFina': 0.8,
+    'livingExcelente': 1.3,
+    'livingLegend': 1.7,
+    'livingLegendCompost': 2,
+    'livingLegendTree': 0.15,
+    'livingRegrowLevels': 3,
+    'livingItemLevelPerFarm': 1.5,
+    'livingHarvestXp': 120,
+    // § 3.1 Where weapon seeds come from.
+    'seedSearchChance': 0.12,
+    'seedMineChestChance': 0.2,
+    'seedOrderChance': 0.25,
+    'seedMutateShare': 0.08,
+    'seedAncientChance': 0.15,
+    // § 4 Pesca: sunken echo weapons and the fish forge.
+    'sunkenShare': 0.8,
+    'sunkenChestChance': 0.95,
+    'sunkenChestFade': 0.02,
+    'sunkenDepth': 0.05,
+    'sunkenEpic': 0.95,
+    'sunkenLegend': 0.02,
+    'sunkenLegendTree': 0.0,
+    'fishForgeGold': 600,
+    'fishForgeLegend': 0.15,
+    'fishForgeLegendTree': 0.2,
+    'fishForgeLevel': 10,
+    // § 4.3 Fishing sub-paths.
+    'netEverySec': 60,
+    'harpoonDepth': 2,
+    'twinMax': 0.6,
+    'calmMax': 0.6,
+    'raftMax': 0.5,
+    // § 5 Herrería: forge-only weapons and its sub-paths.
+    'forgeGearChance': 0.25,
+    'forgeGearLevel': 5,
+    'forgeTierShare': 0.3,
+    'veinAreaMax': 4,
+    'mineSpeedMax': 0.5,
+    'detectMax': 12,
+    // § 6 Meals.
+    'mealPowerMax': 1,
+    // § 7 Parity model (activity of one hour of play, per profession).
+    'parityCatchesPerHour': 110,
+    'parityVeinsPerHour': 100,
+    'parityPlots': 9,
+    'parityTreeSearchesPerHour': 10,
+    'parityOrdersPerHour': 1,
+    'parityChestsPerHour': 2,
+    'parityAutoShare': 0.5,
+    'parityRarityRaro': 1,
+    'parityRarityEpico': 2.5,
+    'parityRarityLegendario': 8,
+  }),
   // ascension.md § 3 (v0.49): points, branch stats and Trades conditions
   // of the ascension tree v2.
   TuningId.ascension: TuningDef('Ascensión', {

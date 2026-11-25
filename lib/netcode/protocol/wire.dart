@@ -212,7 +212,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// 91: cozy life (cozy_life.md): the `cozy` action (tree search, raft
 /// decorations, compost), `town.dc` farm decorations and `life.rd` /
 /// `life.ro` / `life.ff` / `life.farm.rc` in the profile.
-const kProtocolVersion = 91;
+/// 92: profession gear (profession_gear.md): `SmithOp.fishForge`, living
+/// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
+/// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
+/// (`life.tv`, `life.rf` refund notice).
+const kProtocolVersion = 92;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
