@@ -204,6 +204,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// player snapshot.
 /// 88: player stall (player_shop.md): `stall` action (StallAction) and
 /// `life.ps` in the profile.
+/// 89: wilds loot `town.daily` keys carry the layout version
+/// (`wx:<player>:<biome>:v<n>:<c|s><i>:<day>`); an 88 peer would read
+/// the marks of a regenerated layout on the wrong spots.
 /// 90: overworld map discovery (biome_exploration.md § 11.4): `town.md`
 /// (biome → cell bits; the room snapshot carries only the current biome).
 const kProtocolVersion = 90;

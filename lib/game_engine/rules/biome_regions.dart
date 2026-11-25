@@ -10,6 +10,7 @@ import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import '../models/world_save.dart' show TownState;
 import 'raft_rules.dart';
+import 'wild_loot_rules.dart' show WildLootRules;
 
 part 'biome_wilds.dart';
 
@@ -280,7 +281,9 @@ abstract final class BiomeRegions {
   /// A world saved with another layout version (biome_exploration.md
   /// § 7): the regions regenerate on their own (the layout is never
   /// saved), so only the state indexed by the old layout goes — activated
-  /// waystones and picked forage. Everything else stays. Same instance
+  /// waystones, picked forage and today's wilds chest / shrine marks
+  /// (indexed by spot, so they would land on new spots). Everything else
+  /// stays. Same instance
   /// when already current.
   static TownState migrate(TownState t) {
     if (t.layoutVersion == BiomeLayout.version) return t;
@@ -288,6 +291,7 @@ abstract final class BiomeRegions {
         waystones: const {},
         wild: const {},
         discovery: const {},
+        daily: WildLootRules.dropLoot(t.daily),
         layoutVersion: BiomeLayout.version);
   }
 
