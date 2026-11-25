@@ -60,6 +60,7 @@ import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
 import 'vegetation_sway_layer.dart';
+import 'water_reflection_layer.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
@@ -78,7 +79,8 @@ import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
-import '../../../../game_engine/rules/fishing_minigame.dart';
+import '../../../../game_engine/rules/fishing_minigame.dart';
+
 import '../../../inventory/domain/eco_text.dart';
 import '../../../../game_engine/rules/town_dressing_rules.dart';
 import 'town_dressing_layer.dart';
@@ -194,6 +196,15 @@ class MapGame extends Game {
 
   /// Cloud shadows, cave shade and light shafts (biome_regions.md § 7).
   final regionLight = RegionLightLayer();
+
+  /// Water reflections (water_reflections.md).
+  late final reflections = WaterReflectionLayer(tileLayer);
+
+  /// Water reflection quality (settings).
+  set reflectionLevel(ReflectionLevel v) => reflections.level = v;
+
+  /// Actors to reflect this frame (filled while drawing the world).
+  final _refl = <ReflectedActor>[];
 
   /// Ambient critters of a biome region (biome_regions.md § 6).
   final life = AmbientLifeLayer();
@@ -660,6 +671,7 @@ class MapGame extends Game {
     t += dt * 1000;
     _watchLifeLevels();
     _frameDt = dt;
+    reflections.frameTime(dt * 1000);
     final (ix, iy) = _input();
     final editing = controller.editingTown;
     // Edición del pueblo: el personaje se queda quieto y WASD mueve la
@@ -913,6 +925,7 @@ class MapGame extends Game {
   /// Todas las capas del mapa en el lienzo virtual (orden del spec).
   void drawWorld(Canvas c, SessionView view) {
     labels.clear();
+    _refl.clear();
     actors.labelSink = screenLabels ? labels : null;
     final s = view.session;
     final map = view.map;
@@ -1101,11 +1114,19 @@ class MapGame extends Game {
           // un saltito al caminar.
           final dh = h;
           final hop = at.walking ? ((t / 120).floor().isEven ? 1.0 : 0.0) : 0.0;
-          c.drawImageRect(
+          void draw(Canvas cc) => cc.drawImageRect(
               im,
               Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh),
               SpriteCatalog.pixelPaint());
+          draw(c);
+          _refl.add((
+            x: cx,
+            y: bottom,
+            moving: at.walking,
+            onWater: false,
+            draw: draw,
+          ));
         }
         if (at.busy) _drawSparks(c, lay.npc, cx, bottom, t);
         _rankedText(c, lay.npc.name.toUpperCase(), cx, bottom - ts - 4,
@@ -1141,11 +1162,14 @@ class MapGame extends Game {
           final im = sprites.lifeIcon(f.sprite, 'herramienta');
           if (im != null) {
             final w = im.width.toDouble(), h = im.height.toDouble();
-            c.drawImageRect(
+            void draw(Canvas cc) => cc.drawImageRect(
                 im,
                 Rect.fromLTWH(0, 0, w, h),
                 Rect.fromLTWH(fx - w / 2, fy + 8 - h, w, h),
                 SpriteCatalog.pixelPaint());
+            draw(c);
+            _refl.add(
+                (x: fx, y: fy + 8, moving: true, onWater: false, draw: draw));
           }
           _rankedText(
               c, f.name.toUpperCase(), fx, fy - 12, TownPalette.label, 6, 898);
@@ -1160,9 +1184,13 @@ class MapGame extends Game {
         final bottom = n.y + ts / 2;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
-          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+          void draw(Canvas cc) => cc.drawImageRect(im,
+              Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(n.x - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
+          draw(c);
+          _refl.add(
+              (x: n.x, y: bottom, moving: false, onWater: false, draw: draw));
         }
         _rankedText(c, n.def.name.text.toUpperCase(), n.x, bottom - ts - 6,
             TownPalette.label, 6, 897);
@@ -1249,7 +1277,7 @@ class MapGame extends Game {
           (mine
               ? controller.activeTool != null
               : p.fishLine != null || controller.nearSoilAt(px, py));
-      void hero(double x, double y) => actors.hero(c,
+      void heroOn(Canvas cc, double x, double y) => actors.hero(cc,
           classId: p.profile.classId,
           weaponType: weapon?.type,
           look: p.profile.equippedItem == null
@@ -1264,6 +1292,7 @@ class MapGame extends Game {
           blink: grace && p.hp > 0,
           ascensionId: p.profile.ascension.id,
           showWeapon: !toolOut);
+      void hero(double x, double y) => heroOn(c, x, y);
       if (fall != null && fq != null) {
         if (fq < 0.5) {
           // Se achica y se desvanece donde cayó.
@@ -1309,6 +1338,16 @@ class MapGame extends Game {
         _wisps.remove(p.id);
       }
       final raft = s.mode == SessionMode.lobby && p.rafting;
+      _refl.add((
+        x: px,
+        y: py + 1,
+        moving: mine ? controller.local.moving : p.moving,
+        onWater: raft,
+        draw: (cc) {
+          if (raft) _drawRaft(cc, px, py + 3, t);
+          heroOn(cc, px, py);
+        },
+      ));
       add(py, () {
         // On a raft (fishing.md § 15): the logs under the hero.
         if (raft) _drawRaft(c, px, py + 3, t);
@@ -1432,6 +1471,19 @@ class MapGame extends Game {
             continue;
           }
         }
+        _refl.add((
+          x: d.x,
+          y: d.y + 2,
+          moving: true,
+          onWater: false,
+          draw: (cc) => actors.enemy(cc,
+              type: e.group.first,
+              x: d.x,
+              y: d.y,
+              dir: e.dir,
+              t: t,
+              elite: e.elite),
+        ));
         add(d.y, () {
           actors.enemy(c,
               type: e.group.first,
@@ -1452,6 +1504,33 @@ class MapGame extends Game {
           }
         });
       }
+    }
+    // Water reflections, under everything standing (water_reflections.md
+    // § 4).
+    final reflOn =
+        !controller.editingTown && reflections.level != ReflectionLevel.off;
+    if (reflOn) {
+      final rlay = map.lobby ? biomeLayout(map.place) : null;
+      final rdark = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
+      final rsky = outdoor && !darkMap;
+      final (ox, oy) = map.townOrigin;
+      final lamps = map.lobby && map.place == null
+          ? [for (final (fx, fy) in s.town.lights) (fx + ox, fy + oy)]
+          : const <(int, int)>[];
+      reflections.draw(c, map, worldView,
+          t: reduceMotion ? 0.0 : t / 1000,
+          darkness: rdark,
+          cover: rsky && WeatherRules.hasSky(map.place)
+              ? LightShaftRules.cloudCover(
+                  SkyRules.nowIn(s.town.sky, s.place).name, rdark)
+              : 0,
+          field: Size(map.width * ts, map.height * ts),
+          actors: _refl,
+          roofed: (x, y) =>
+              !outdoor || darkMap || (rlay?.isIndoor(x, y) ?? false),
+          sky: rsky,
+          lamps: lamps,
+          lampsKey: map.place == null ? s.town.lights : null);
     }
     ents.sort((a, b) {
       final c = a.$1.compareTo(b.$1);
@@ -1645,6 +1724,50 @@ class MapGame extends Game {
       }
     }
 
+    // Night light streaks and star glints on the water, after the light
+    // layer so the night does not swallow them (water_reflections.md § 1.4).
+    if (reflOn) {
+      final vx0 = (worldView.left / ts).floor() - 1;
+      final vy0 = (worldView.top / ts).floor() - 3;
+      final vx1 = (worldView.right / ts).ceil() + 1;
+      final vy1 = (worldView.bottom / ts).ceil() + 1;
+      final rl = <ReflectedLight>[];
+      void addLight(LightSource l) {
+        final d = l.def;
+        if (d.radius < 2 || d.tint == 'shaft' || d.tint == 'luciernaga') return;
+        rl.add((
+          x: l.x * ts,
+          y: l.y * ts,
+          color: LightPalette.tints[d.tint] ?? LightPalette.fallback,
+        ));
+      }
+
+      final rdark = outdoor ? SkyRules.darkness(s.town.sky) : 1.0;
+      if (rdark > 0.25 || !outdoor || darkMap) {
+        for (final l in LightRules.tileEmitters(map, vx0, vy0, vx1, vy1,
+            dark: darkMap && !inMine, biome: map.place != null)) {
+          addLight(l);
+        }
+        for (final l in movingLights) {
+          addLight(l);
+        }
+        for (final o in lights) {
+          rl.add((x: o.dx, y: o.dy, color: LightPalette.tints['calida']!));
+        }
+        final clay = map.lobby ? biomeLayout(map.place) : null;
+        if (clay != null && !s.town.resident(clay.npc.id).invited) {
+          if (NpcCampRules.light(clay.npc, vx0, vy0, vx1, vy1)
+              case final l?) {
+            addLight(l);
+          }
+        }
+      }
+      reflections.drawLights(c, worldView,
+          lights: rl,
+          t: reduceMotion ? 0.0 : t / 1000,
+          darkness: outdoor && !darkMap ? rdark : 1.0);
+    }
+
     // Light shafts from openings above (biome_regions.md § 7): indoor
     // places flagged with openings; caves without them stay dark.
     if (!controller.editingTown && LightShaftRules.hasOpenings(map)) {
@@ -1792,7 +1915,15 @@ class MapGame extends Game {
             Rect.fromLTWH(d.x * ts, d.y * ts, ts, ts),
             SpriteCatalog.pixelPaint());
       }
-      _drawRaft(c, (d.wx + 0.5) * ts, (d.wy + 0.5) * ts, t);
+      final rx = (d.wx + 0.5) * ts, ry = (d.wy + 0.5) * ts;
+      _drawRaft(c, rx, ry, t);
+      _refl.add((
+        x: rx,
+        y: ry + ts / 2,
+        moving: false,
+        onWater: false,
+        draw: (cc) => _drawRaft(cc, rx, ry, t),
+      ));
     }
   }
 
