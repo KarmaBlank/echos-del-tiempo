@@ -3687,7 +3687,13 @@ class SessionController extends StateNotifier<SessionView?> {
         // quien la protagoniza (npc_editor.md § 6.4).
         openCustomNpc(n.def.id);
       } else if (nearWorldEvent case final a?) {
-        openWorldEvent(a);
+        final d = kWorldEvents.def(a.def);
+        // A roaming foe fights on E, no talk (biome_exploration.md § 6).
+        if (d != null && !WorldEventRules.talks(d)) {
+          enterRift(a.uid);
+        } else {
+          openWorldEvent(a);
+        }
       } else if (nearNpc case final n?) {
         talkNpc = n;
         openPanel(WorldPanel.biomeNpc);
@@ -5432,7 +5438,10 @@ class SessionController extends StateNotifier<SessionView?> {
         WorldPrompt.poi,
         d?.category == WorldEventCategory.echoPortal
             ? strings.t('ui.town.events.prompt_rift')
-            : strings.t('ui.world.ctl.prompt_talk',
+            : d != null && !WorldEventRules.talks(d)
+                ? strings.t('ui.town.events.prompt_fight',
+                    {'name': d.title.text})
+                : strings.t('ui.world.ctl.prompt_talk',
                 {'name': d?.title.text ?? a.def})
       );
     }

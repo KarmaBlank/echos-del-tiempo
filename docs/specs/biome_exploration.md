@@ -120,7 +120,7 @@ mundo (world_events.md § 3.6), no se duplica nada:
   piedra al tocarla tampoco escribe en el chat.
 - Defaults (también en `assets/data/events/world_events.json`):
   **élite errante** (`explore_elite`, duelo con el élite de una zona del
-  bioma: `target: "@elite"`; se dibuja con el sprite de ese enemigo), **mercader con carreta**
+  bioma: `target: "@elite"`; se dibuja con el sprite de ese enemigo — el mismo `duel()` elige el enemigo del mapa y el del combate. No habla: con E/clic cerca arranca la pelea directo, por la misma regla que una grieta (`ProposeRiftAction`, junta al grupo como una misión), y el cartel es `[E/Clic] Enfrentar · Élite errante` solo al estar cerca. `WorldEventDef.talks` (`null` por defecto = `WorldEventRules.talks`: un enemigo errante — profundo y con duelo — no habla, el resto sí); un futuro enemigo que habla pone `"talks": true` y vuelve a abrir el diálogo), **mercader con carreta**
   (`explore_merchant`, comerciar), **viajero con encargo**
   (`explore_traveler`, regalo + rumor), **suceso** (la grieta de siempre
   puede caer en lo profundo).

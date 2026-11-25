@@ -188,6 +188,15 @@ abstract final class WorldEventRules {
   static bool isDeep(WorldEventDef d) =>
       d.param('deep') > 0 && d.category == WorldEventCategory.overworldNpc;
 
+  /// A roaming foe: a deep wanderer with a duel, drawn on the map as
+  /// the very enemy it fights ([duel]).
+  static bool isFoe(WorldEventDef d) =>
+      isDeep(d) && d.actions.any((a) => a.kind == EventActionKind.duel);
+
+  /// E on the event actor opens its dialogue (`true`) or, for a foe
+  /// that does not talk, starts its fight right away (§ 6).
+  static bool talks(WorldEventDef d) => d.talks ?? !isFoe(d);
+
   static int _hash(String s) {
     var x = 0x811c9dc5;
     for (final c in s.codeUnits) {

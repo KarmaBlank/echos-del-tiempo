@@ -488,6 +488,7 @@
   "ui.town.events.enter": "ENTER",
   "ui.town.events.close": "CLOSE",
   "ui.town.events.prompt_rift": "[E] Echo rift",
+  "ui.town.events.prompt_fight": "[E/Click] Fight · {name}",
   "ui.town.events.progress": "Progress: {have}/{need}",
   "ui.town.events.trade_banner": "{name}: purchases cost {n}% less (refunded at checkout).",
   "ui.town.season.spring": "Spring",

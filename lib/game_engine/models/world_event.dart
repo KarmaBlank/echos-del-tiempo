@@ -64,6 +64,7 @@ class WorldEventDef {
     this.season,
     this.weather,
     this.greeting = LocalizedText.empty,
+    this.talks,
     this.topics = const [],
     this.actions = const [],
   });
@@ -71,6 +72,12 @@ class WorldEventDef {
   /// Event NPCs only (visitor, wanderer, caravan; § 3.6): the first
   /// line of their dialogue box (empty = the notice).
   final LocalizedText greeting;
+
+  /// Whether pressing E opens its dialogue box (biome_exploration.md
+  /// § 6). `null` = the default of [WorldEventRules.talks]: a roaming
+  /// foe (drawn as its enemy) fights at once, everyone else talks. A
+  /// future talking enemy sets `true`.
+  final bool? talks;
 
   /// Talk topics of the event NPC (§ 3.6): question and answer.
   final List<EventTopic> topics;
@@ -154,6 +161,7 @@ class WorldEventDef {
           'n': n,
         },
         if (greeting.byLocale.values.any((v) => v.isNotEmpty)) 'greeting': greeting.toJson(),
+        if (talks != null) 'talks': talks,
         if (topics.isNotEmpty) 'topics': [for (final t in topics) t.toJson()],
         if (actions.isNotEmpty)
           'actions': [for (final a in actions) a.toJson()],
@@ -202,6 +210,7 @@ class WorldEventDef {
               ? raw['weather'] as String
               : null,
       greeting: LocalizedText.fromJson(raw['greeting']),
+      talks: raw['talks'] is bool ? raw['talks'] as bool : null,
       topics: [
         if (raw['topics'] case final List l)
           for (final t in l) EventTopic.fromJson(t)
