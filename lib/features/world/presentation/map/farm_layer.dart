@@ -17,6 +17,7 @@ import '../../../../game_engine/rules/town_rules.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import 'fishing_layer.dart';
 import 'map_themes.dart';
+import 'tile_target.dart';
 
 class _Pop {
   _Pop(this.playerId, this.tx, this.ty, this.label, this.color, this.fruit,
@@ -76,15 +77,8 @@ class MapFarmLayer {
 
   /// Recuadro de los tiles que tocará el próximo E / clic: verde si la
   /// herramienta elegida sirve, naranja si no (el motivo va en el aviso).
-  void drawTarget(Canvas c, List<(int, int)> tiles, bool ok) {
-    final p = Paint()
-      ..color = ok ? FarmPalette.targetOk : FarmPalette.targetBad
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (final (x, y) in tiles) {
-      c.drawRect(Rect.fromLTWH(x * ts + 0.5, y * ts + 0.5, ts - 1, ts - 1), p);
-    }
-  }
+  void drawTarget(Canvas c, List<(int, int)> tiles, bool ok) =>
+      drawTileTarget(c, tiles, ok);
 
   /// La bolsita de semillas en la mano, con el color del fruto elegido.
   void drawSeedBag(Canvas c, double px, double py, num face, Color fruit) {

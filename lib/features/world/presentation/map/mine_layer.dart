@@ -7,15 +7,16 @@ import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/rules/mine_work_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import 'map_themes.dart';
+import 'tile_target.dart';
 
 typedef MineText = void Function(
     String s, double x, double y, Color col, double size);
 
 class _Particle {
   _Particle(this.x, this.y, this.vx, this.vy, this.life, this.color,
-      {this.size = 1.5});
+      {this.size = 1.5, this.gravity = 160});
   double x, y, vx, vy, life;
-  final double size;
+  final double size, gravity;
   final Color color;
   double age = 0;
 }
@@ -68,15 +69,94 @@ class MineLayer {
     }
   }
 
-  /// Sparks of a swing on ([tx], [ty]).
-  void onSwing(int tx, int ty, double t) {
+  /// One local hit on ([tx], [ty]) from a player at ([fromX], [fromY])
+  /// (feet, px): rock chips thrown back toward the player, a puff of
+  /// dust and a couple of sparks; [bounced] (pick too weak / bedrock)
+  /// throws only sparks. Also starts the tile's impact shake.
+  void onSwing(int tx, int ty, double t,
+      {double? fromX, double? fromY, bool bounced = false}) {
     final cx = (tx + 0.5) * ts, cy = (ty + 0.5) * ts;
-    for (var i = 0; i < 4; i++) {
+    _hitTile = (tx, ty);
+    _hitT0 = t;
+    // Impact point: the face of the tile toward the player.
+    final ax = fromX == null ? 0.0 : (fromX - cx).sign;
+    final ay = fromY == null ? 0.0 : (fromY - 9 - cy).sign;
+    final ix = cx + ax * 6, iy = cy + ay * 6;
+    final sparks = bounced ? 7 : 3;
+    for (var i = 0; i < sparks; i++) {
       final a = _rand.nextDouble() * math.pi * 2;
-      _parts.add(_Particle(cx, cy, math.cos(a) * 40, math.sin(a) * 40, 0.18,
+      final sp = 35 + _rand.nextDouble() * 25;
+      _parts.add(_Particle(ix, iy, math.cos(a) * sp + ax * 20,
+          math.sin(a) * sp + ay * 20, 0.16 + _rand.nextDouble() * 0.08,
           MinePalette.spark,
           size: 1));
     }
+    if (bounced) return;
+    for (var i = 0; i < 4; i++) {
+      final sp = 25 + _rand.nextDouble() * 35;
+      final spread = (_rand.nextDouble() - 0.5) * 40;
+      _parts.add(_Particle(
+          ix,
+          iy,
+          ax * sp + (ax == 0 ? spread : spread * 0.3),
+          ay * sp - 35 + (ay == 0 ? 0 : spread * 0.3),
+          0.35 + _rand.nextDouble() * 0.2,
+          i.isEven ? MinePalette.rockLight : MinePalette.rockTop,
+          size: i == 0 ? 2 : 1));
+    }
+    for (var i = 0; i < 3; i++) {
+      _parts.add(_Particle(
+          ix + (_rand.nextDouble() - 0.5) * 6,
+          iy + (_rand.nextDouble() - 0.5) * 6,
+          (_rand.nextDouble() - 0.5) * 10 + ax * 6,
+          -8 - _rand.nextDouble() * 8,
+          0.45 + _rand.nextDouble() * 0.2,
+          MinePalette.dust.withValues(alpha: 0.7),
+          size: 2 + _rand.nextDouble() * 1.5,
+          gravity: 0));
+    }
+  }
+
+  (int, int)? _hitTile;
+  double _hitT0 = -1e9;
+
+  /// Milliseconds the hit tile shakes; the dig indicator stays after the
+  /// last hit when the player is no longer holding E / the click.
+  static const hitShakeMs = 110.0, indicatorLingerMs = 600.0;
+
+  /// The swing of the pick, ms after a hit: strike (the head lands at
+  /// [strikeMs], with the chips), recoil, then wind-up back over the shoulder for the next hit.
+  static const strikeMs = 45.0, recoilMs = 90.0;
+
+  /// Pick angle relative to pointing at the target (rad; negative =
+  /// raised back over the shoulder) [ms] after a hit, with [period] ms
+  /// between hits. Past the period it stays raised.
+  static double swingOffset(double ms, double period) {
+    const raised = -2.1, recoil = -0.55;
+    if (ms < 0) return raised;
+    if (ms < strikeMs) {
+      return raised * (1 - Curves.easeIn.transform(ms / strikeMs));
+    }
+    if (ms < strikeMs + recoilMs) {
+      final k = (ms - strikeMs) / recoilMs;
+      return recoil * Curves.easeOut.transform(k);
+    }
+    final rest = math.max(1.0, period - strikeMs - recoilMs);
+    final k = ((ms - strikeMs - recoilMs) / rest).clamp(0.0, 1.0);
+    return recoil + (raised - recoil) * Curves.easeInOut.transform(k);
+  }
+
+  /// Fill of the dig indicator for a tile with [dealt] of [hits], or
+  /// `null` when it hides: the player let go more than
+  /// [indicatorLingerMs] ago.
+  static double? digProgress(
+      {required int dealt,
+      required int hits,
+      required double sinceHitMs,
+      required bool holding}) {
+    if (!holding && sinceHitMs > indicatorLingerMs) return null;
+    if (hits <= 0) return 0;
+    return (dealt / hits).clamp(0.0, 1.0);
   }
 
   void onBomb(int tx, int ty, double fuse, double t) =>
@@ -109,35 +189,81 @@ class MineLayer {
   static int crackStage(int dealt, int hits) =>
       hits <= 0 || dealt <= 0 ? 0 : (1 + (dealt * 3 ~/ hits)).clamp(1, 3);
 
-  void _crack(Canvas c, double px, double py, int stage) {
+  /// Crack segments, in the order they appear as damage grows (tile
+  /// local px).
+  static const _crackSegs = [
+    (8.0, 2.0, 6.0, 6.0),
+    (6.0, 6.0, 9.0, 9.0),
+    (6.0, 6.0, 2.0, 8.0),
+    (9.0, 9.0, 13.0, 12.0),
+    (9.0, 9.0, 8.0, 14.0),
+    (6.0, 6.0, 11.0, 4.0),
+    (2.0, 8.0, 2.0, 12.0),
+    (13.0, 12.0, 14.0, 6.0),
+  ];
+
+  /// Crack segments drawn at [progress] (0..1) of a tile's hits.
+  static int crackSegments(double progress) => progress <= 0
+      ? 0
+      : (1 + progress * (_crackSegs.length - 1))
+          .floor()
+          .clamp(1, _crackSegs.length);
+
+  void _crack(Canvas c, double px, double py, double progress) {
+    final n = crackSegments(progress);
+    if (n == 0) return;
     final p = Paint()
       ..color = MinePalette.crack
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    final path = Path()
-      ..moveTo(px + 8, py + 2)
-      ..lineTo(px + 6, py + 6)
-      ..lineTo(px + 9, py + 9);
-    if (stage >= 2) {
+    final path = Path();
+    for (final (x0, y0, x1, y1) in _crackSegs.take(n)) {
       path
-        ..moveTo(px + 6, py + 6)
-        ..lineTo(px + 2, py + 8)
-        ..moveTo(px + 9, py + 9)
-        ..lineTo(px + 13, py + 12);
-    }
-    if (stage >= 3) {
-      path
-        ..moveTo(px + 9, py + 9)
-        ..lineTo(px + 8, py + 14)
-        ..moveTo(px + 6, py + 6)
-        ..lineTo(px + 11, py + 4);
+        ..moveTo(px + x0, py + y0)
+        ..lineTo(px + x1, py + y1);
     }
     c.drawPath(path, p);
+    // Deep damage: loose chips darken the face.
+    if (n >= 6) {
+      _rect(c, MinePalette.rockDark, px + 3, py + 3, 2, 2);
+      _rect(c, MinePalette.rockDark, px + 11, py + 9, 2, 1);
+    }
+  }
+
+  /// The crack overlay of tile ([x], [y]) at [progress] (0..1), shaken
+  /// for [hitShakeMs] after a hit on it.
+  void drawCrack(Canvas c, int x, int y, double progress, double t) {
+    var ox = 0.0, oy = 0.0;
+    if (t - _hitT0 < hitShakeMs && _hitTile == (x, y)) {
+      final k = 1 - (t - _hitT0) / hitShakeMs;
+      ox = (math.sin(t / 9) * 1.5 * k).roundToDouble();
+      oy = (math.cos(t / 13) * k).roundToDouble();
+    }
+    _crack(c, x * ts + ox, y * ts + oy, progress);
+  }
+
+  /// A short light flash over the face of the tile just hit.
+  void drawImpactFlash(Canvas c, double t) {
+    final k = 1 - (t - _hitT0) / hitShakeMs;
+    if (k <= 0 || k > 1) return;
+    if (_hitTile case (final hx, final hy)) {
+      _rect(c, MinePalette.pickEdge.withValues(alpha: 0.35 * k), hx * ts + 1,
+          hy * ts + 1, ts - 2, ts - 2);
+    }
+  }
+
+  /// Steps and draws the loose particles (chips, dust, sparks) alone
+  /// (previews).
+  void drawEffects(Canvas c, double t) {
+    _step(t);
+    _drawParticles(c, (_) => null, (s, x, y, col, size) {}, t);
   }
 
   /// The mine level: station and cart, miners, cracks, bombs, particles,
   /// pops. [cracks]: tile index → hits dealt (local prediction).
-  /// [swing]: the local player's swing (target tile and progress 0..1).
+  /// [swing]: the local player's swing (target tile, ms since the last
+  /// hit, ms between hits, player feet). [indicator]: the tile being
+  /// dug, its fill 0..1 and whether the pick can break it.
   void drawMine(
     Canvas c,
     MineLevel lvl,
@@ -148,7 +274,8 @@ class MineLayer {
     required ui.Image? minerSprite,
     required MineText text,
     required String Function(String key, [Map<String, Object?> a]) tr,
-    ((int, int), double, (double, double))? swing,
+    ((int, int), double, double, (double, double))? swing,
+    ((int, int), double, bool)? indicator,
   }) {
     _step(t);
     // Station and its cart.
@@ -193,12 +320,16 @@ class MineLayer {
       final a = math.sin(t / 120 + m.x) * 0.8;
       _pick(c, mx + 4, my - 8, a);
     }
-    // Cracks.
+    // Cracks (with the impact shake on the tile just hit).
     for (final e in cracks.entries) {
       final (x, y) = lvl.xy(e.key);
-      final code = MiningRules.tileAt(lvl, st, x, y);
-      final stage = crackStage(e.value, MiningRules.hits(code, lvl.level));
-      if (stage > 0) _crack(c, x * ts, y * ts, stage);
+      final hits = MiningRules.hits(MiningRules.tileAt(lvl, st, x, y), lvl.level);
+      if (hits > 0) drawCrack(c, x, y, e.value / hits, t);
+    }
+    drawImpactFlash(c, t);
+    // Dig indicator (the same marker as the farm's).
+    if (indicator case (final tile, final progress, final ok)) {
+      drawTileTarget(c, [tile], ok, progress: progress);
     }
     // Lit bombs.
     for (final (bx, by, at) in _bombs) {
@@ -211,11 +342,10 @@ class MineLayer {
       text(left.toStringAsFixed(1), cx, cy - 10, MinePalette.spark, 6);
     }
     _bombs.removeWhere((b) => b.$3 < t - 600);
-    // Local swing.
-    if (swing case ((final tx, final ty), final k, (final ox, final oy))) {
-      final a = -1.2 + 2.0 * Curves.easeIn.transform(k.clamp(0.0, 1.0));
-      final dx = (tx + 0.5) * ts - ox, dy = (ty + 0.5) * ts - oy;
-      _pick(c, ox + dx * 0.45, oy - 4 + dy * 0.45, a);
+    // Local swing, facing the target tile.
+    if (swing
+        case ((final tx, final ty), final ms, final period, (final ox, final oy))) {
+      drawSwing(c, tx, ty, ox, oy, swingOffset(ms, period));
     }
     _drawParticles(c, playerAt, text, t);
   }
@@ -245,7 +375,7 @@ class MineLayer {
     _lastT = t;
     for (final q in _parts) {
       q.age += dt;
-      q.vy += 160 * dt;
+      q.vy += q.gravity * dt;
       q.x += q.vx * dt;
       q.y += q.vy * dt;
     }
@@ -320,6 +450,31 @@ class MineLayer {
     }
     _circle(c, MinePalette.cartDark, x + 3, y + 10, 2);
     _circle(c, MinePalette.cartDark, x + 11, y + 10, 2);
+  }
+
+  /// The player's pick from the shoulder of a player at ([ox], [oy])
+  /// (feet, px) toward tile ([tx], [ty]), turned [offset] rad back from
+  /// pointing at it (over the shoulder on the side the player faces).
+  void drawSwing(
+      Canvas c, int tx, int ty, double ox, double oy, double offset) {
+    final sx = ox, sy = oy - 9;
+    final dx = (tx + 0.5) * ts - sx, dy = (ty + 0.5) * ts - sy;
+    final side = dx < -0.5 ? -1.0 : 1.0;
+    final a = math.atan2(dy, dx) + side * offset;
+    c.save();
+    c.translate(sx.roundToDouble(), sy.roundToDouble());
+    c.rotate(a);
+    // Handle along +x, head across its end; the spike on the striking
+    // side (toward the tile at the impact).
+    _rect(c, MinePalette.timberDark, 1, 0, 10, 1);
+    _rect(c, MinePalette.timber, 1, -1, 10, 1);
+    _rect(c, MinePalette.pickHeadDark, 10, -4, 3, 8);
+    _rect(c, MinePalette.pickHead, 10, -4, 2, 8);
+    final down = side > 0;
+    _rect(c, MinePalette.pickHead, 9, down ? 4 : -6, 2, 2);
+    _rect(c, MinePalette.pickEdge, 8, down ? 6 : -7, 1, 1);
+    _rect(c, MinePalette.pickHeadDark, 9, down ? -5 : 4, 2, 1);
+    c.restore();
   }
 
   void _pick(Canvas c, double x, double y, double a) {

@@ -207,6 +207,26 @@ anfitrión; en cooperativo cualquiera descarga.
 Golpe animado, chispas, grietas, escombros, mena volando al jugador,
 sacudida de bomba, ganchos de sonido (`Sfx`). Todo cliente (`MineLayer`).
 
+**Golpe del pico.** El pico sale del hombro del jugador y
+apunta al tile golpeado (de frente, de costado, arriba o abajo). Cada
+golpe: bajada rápida (`MineLayer.strikeMs`), rebote (`recoilMs`) y
+vuelta a levantarlo por encima del hombro durante el resto del ritmo del
+pico (`tool<n>Swing`); mientras se mantiene E / el clic queda en alto
+esperando el próximo golpe. Al impactar: astillas de roca que saltan
+hacia el jugador, polvo que sube, un par de chispas, el tile tiembla
+(`hitShakeMs`) con un destello breve y la grieta crece por segmentos con
+el daño (hasta 8, con desconchados al final). Si el pico no alcanza
+(§ 1.12) solo saltan chispas.
+
+**Indicador de picado.** Sobre el tile que se está picando aparece el
+mismo recuadro de objetivo que en la huerta (`drawTileTarget`), verde si
+el pico lo puede romper y naranja si no, con una barra fina abajo que se
+llena con los golpes dados sobre los que hacen falta (predicción local).
+Se ve mientras se mantiene E / el clic y hasta `indicatorLingerMs`
+(0,6 s) después del último golpe; al romperse el tile desaparece.
+Vista previa: `docs/preview/mining_feedback.png`
+(`MINING_PREVIEW=1 flutter test test/features/world/mine_feedback_test.dart`).
+
 ### 1.10 Guardado
 
 `TownState.mines` (`mn` en el bloque del pueblo, también sincronizado a

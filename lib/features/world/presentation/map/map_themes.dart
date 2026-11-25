@@ -472,6 +472,11 @@ abstract final class FishingPalette {
   static const zoneOut = Color(0xAAE0A040);
 }
 
+/// Progress bar under a work target (`drawTileTarget`).
+abstract final class TargetPalette {
+  static const barBack = Color(0xCC0E0C12);
+}
+
 /// Colores de los recolectables de los exteriores (overworld_biomes.md
 /// § 3.2): la mata y el fruto de cada tipo (índice de `kForageKinds`).
 /// Mine art (mining_smithing.md § 1): entrance, vein rock and the ore
@@ -502,6 +507,12 @@ abstract final class MinePalette {
   static const chestBand = Color(0xFFE0B860);
   static const relic = Color(0xFF7AE0D0);
   static const lore = Color(0xFF7A8FA8);
+  // Pick swing (mining_smithing.md § 1.9).
+  static const pickHead = Color(0xFFB8C2CC);
+  static const pickEdge = Color(0xFFE8EEF4);
+  static const pickHeadDark = Color(0xFF6E7780);
+  static const timberDark = Color(0xFF4E3420);
+  static const dust = Color(0xFFA89F96);
   static const _veins = {
     'mina_bosque': Color(0xFFD9824A),
     'mina_ruinas': Color(0xFFE0B860),
