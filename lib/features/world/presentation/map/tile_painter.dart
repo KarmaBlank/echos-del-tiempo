@@ -9,6 +9,7 @@ import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'map_themes.dart';
 part 'mine_tiles.dart';
+part 'terrain_tiles.dart';
 
 /// Tile vecino (tx, ty) del mapa; `null` fuera del mapa.
 typedef TileAt = String? Function(int tx, int ty);
@@ -121,6 +122,11 @@ class TilePainter {
         _rect(c, const Color(0x08FFFFFF), px, py, ts, 1);
         return;
       }
+      if (terrainDetailTheme(themeId)) {
+        _groundDetail(c, th, px, py, h);
+        _floorDetail(c, th, themeId, px, py, tx, ty, h, t);
+        return;
+      }
       if (h % 3 == 0) {
         _rect(c, th.ground2, px + jsShiftMod(h, 3, 12),
             py + jsShiftMod(h, 7, 12), 2, 2);
@@ -171,6 +177,8 @@ class TilePainter {
     switch (ch) {
       case Tile.floor:
         floor();
+      case Tile.path when !lobby && terrainDetailTheme(themeId):
+        _pathDetail(c, th, px, py, tx, ty, h, at);
       case Tile.path:
         _rect(c, th.path, px, py, ts, ts);
         if (h % 2 == 0) {
@@ -234,7 +242,11 @@ class TilePainter {
             _rect(c, const Color(0x55FFFFFF), px + 7, py + 4, 1, 6);
         }
       case Tile.water:
-        _rect(c, th.water, px, py, ts, ts);
+        if (!lobby && terrainDetailTheme(themeId)) {
+          _waterDetail(c, th, px, py, tx, ty, h, at);
+        } else {
+          _rect(c, th.water, px, py, ts, ts);
+        }
         final o = (t / 250 + tx).floor() % 4;
         _rect(c, const Color(0x40FFFFFF), px + o * 3, py + 4 + (ty % 2) * 6, 5,
             1);
@@ -364,17 +376,26 @@ class TilePainter {
         if (tx == 12 || tx == 13) {
           _rect(c, const Color(0xFF48DBFB), px + 4, py - 4, 8, 6);
         }
+      case Tile.grass when terrainDetailTheme(themeId):
+        _grassDetail(c, th, px, py, tx, ty, h, at);
       case Tile.grass:
         _grass(c, th, px, py, h);
       // Tierra de la huerta (farming.md § 2.3): lo arado y los cultivos
       // los dibuja la capa de la huerta, desde el estado.
+      case Tile.soil when terrainDetailTheme(themeId):
+        _soilDetail(c, px, py, h);
       case Tile.soil:
         _rect(c, FarmPalette.soil, px, py, ts, ts);
-        if (h % 3 == 0) _rect(c, FarmPalette.soilDark, px + 3 + h % 7, py + 4 + h % 5, 2, 1);
+        if (h % 3 == 0) {
+          _rect(c, FarmPalette.soilDark, px + 3 + h % 7, py + 4 + h % 5, 2, 1);
+        }
         if (h % 5 == 1) _rect(c, FarmPalette.soilDark, px + 9, py + 11, 2, 1);
       case Tile.tree:
         _grass(c, th, px, py, h);
         _tree(c, th, px, py, h, themeId);
+      case Tile.rock when terrainDetailTheme(themeId):
+        _grassDetail(c, th, px, py, tx, ty, h, at);
+        _rockDetail(c, th, px, py, tx, ty, h, at);
       case Tile.rock:
         _grass(c, th, px, py, h);
         _rock(c, th, px, py, h);
@@ -741,8 +762,8 @@ class TilePainter {
   /// the local player, drawn over the static tile.
   void waystoneGlow(Canvas c, double px, double py, double t) {
     final k = 0.6 + 0.4 * math.sin(t / 300);
-    _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 7, py - 3, 2,
-        8);
+    _rect(
+        c, RegionPalette.waystoneOn.withValues(alpha: k), px + 7, py - 3, 2, 8);
     _rect(c, RegionPalette.waystoneOn.withValues(alpha: k), px + 6, py, 4, 1);
     _rect(c, RegionPalette.waystoneOn.withValues(alpha: 0.18 * k), px + 2,
         py - 9, 12, 24);
@@ -812,13 +833,13 @@ class TilePainter {
   void _fountain(Canvas c, double px, double py, int tx, int ty, double t) {
     final left = tx.isEven, top = ty.isEven;
     _rect(c, TownPalette.stoneDark, px, py, ts, ts);
-    _rect(c, TownPalette.stone, px + (left ? 1 : 0), py + (top ? 1 : 0),
-        ts - 1, ts - 1);
-    _rect(c, TownPalette.basin, px + (left ? 3 : 0), py + (top ? 3 : 0),
-        ts - 3, ts - 3);
+    _rect(c, TownPalette.stone, px + (left ? 1 : 0), py + (top ? 1 : 0), ts - 1,
+        ts - 1);
+    _rect(c, TownPalette.basin, px + (left ? 3 : 0), py + (top ? 3 : 0), ts - 3,
+        ts - 3);
     final o = (t / 300 + tx + ty).floor() % 3;
-    _rect(c, TownPalette.foam, px + (left ? 5 : 2) + o * 2,
-        py + (top ? 7 : 4), 3, 1);
+    _rect(c, TownPalette.foam, px + (left ? 5 : 2) + o * 2, py + (top ? 7 : 4),
+        3, 1);
     // Pilar central (cuarto de un cuadrado de 6×6 en la esquina interior).
     final cx = left ? px + ts - 3 : px, cy = top ? py + ts - 3 : py;
     _rect(c, TownPalette.stoneDark, cx, cy, 3, 3);
@@ -844,17 +865,18 @@ class TilePainter {
       Canvas c, double px, double py, int tx, int ty, String themeId,
       {required bool used}) {
     final kind = [for (final l in kBiomeLayouts.values) ...l.forage]
-        .where((f) => f.x == tx && f.y == ty)
-        .map((f) => f.kind)
-        .firstOrNull ?? 0;
+            .where((f) => f.x == tx && f.y == ty)
+            .map((f) => f.kind)
+            .firstOrNull ??
+        0;
     final veg = used ? null : vegetation?.bush(themeId, tileHash(tx, ty));
     if (veg != null) {
       _image(c, veg, px, py);
     } else {
       _circle(c, used ? ForagePalette.picked : ForagePalette.bush, px + 8,
           py + 9, 7);
-      _circle(c, used ? ForagePalette.picked : ForagePalette.bushLight,
-          px + 6, py + 7, 3);
+      _circle(c, used ? ForagePalette.picked : ForagePalette.bushLight, px + 6,
+          py + 7, 3);
     }
     if (used) return;
     final col = ForagePalette.fruit[kind % ForagePalette.fruit.length];
@@ -953,8 +975,7 @@ class TilePainter {
   void _image(Canvas c, Image im, double px, double py) {
     c.drawImage(
         im,
-        Offset(px + ((ts - im.width) / 2).floorToDouble(),
-            py + ts - im.height),
+        Offset(px + ((ts - im.width) / 2).floorToDouble(), py + ts - im.height),
         _paint);
   }
 
@@ -1404,9 +1425,13 @@ class TilePainter {
         1);
   }
 
-  void _ashFleck(Canvas c, double px, double py, int h) =>
-      _rect(c, const Color(0xFF26211F), px + jsShiftMod(h, 6, 12).abs(),
-          py + jsShiftMod(h, 12, 12).abs() + 2, 3, 1);
+  void _ashFleck(Canvas c, double px, double py, int h) => _rect(
+      c,
+      const Color(0xFF26211F),
+      px + jsShiftMod(h, 6, 12).abs(),
+      py + jsShiftMod(h, 12, 12).abs() + 2,
+      3,
+      1);
 
   /// Abismo / cementerio / corazón: pilar de roca (o cristal) flotante.
   void _floatingRock(Canvas c, MapTheme th, String themeId, double px,
