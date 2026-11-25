@@ -11,6 +11,7 @@ import '../models/weapon.dart';
 import 'battle_engine.dart' show RandomSource;
 import 'farming_rules.dart';
 import 'fishing_rules.dart';
+import 'gear_v2_rules.dart';
 import 'item_rules.dart';
 import 'life_tree_rules.dart';
 import 'loot_rules.dart';
@@ -50,8 +51,11 @@ abstract final class GearRules {
   }
 
   /// Profession that makes [i].
-  static LifeSkillKind? professionOf(ItemInstance i) =>
-      fishOf(i) != null ? LifeSkillKind.pesca : defOf(i)?.source.profession;
+  static LifeSkillKind? professionOf(ItemInstance i) => fishOf(i) != null
+      ? LifeSkillKind.pesca
+      : (gearIdOf(i)?.startsWith(kPartsGearPrefix) ?? false)
+          ? LifeSkillKind.herreria
+          : defOf(i)?.source.profession;
 
   // ---------------- making (§ 1) ----------------
 
@@ -259,8 +263,10 @@ abstract final class GearRules {
         (rng() < LifeTreeRules.farm(p, LifeFx.livingAffix) ? 1 : 0);
     final held = plot.held;
     if (held != null) return _grown(loot, rng, g, held, q, plot, extraAffix);
-    return makeDef(loot, rng, g, rarityOf(q), livingLevel(p),
-        extra: compostMods(plot), bonusAffixes: extraAffix);
+    // v2 (profession_gear_v2.md § 5): affinity, quality and slots.
+    return GearV2Rules.living(loot, rng, p, plot,
+        makeDef(loot, rng, g, rarityOf(q), livingLevel(p),
+            extra: compostMods(plot), bonusAffixes: extraAffix));
   }
 
   /// A regrown living weapon: more item level, its rarity rises to what
@@ -335,9 +341,15 @@ abstract final class GearRules {
 
   /// A sunken echo weapon for [p] at [itemLevel].
   static ItemInstance sunken(
-          LootRules loot, RandomSource rng, PlayerProfile p, int itemLevel) =>
-      makeDef(loot, rng, _pick(rng, gearOf(GearSource.sunken)),
-          sunkenRarity(rng, p), itemLevel);
+          LootRules loot, RandomSource rng, PlayerProfile p, int itemLevel,
+          {bool manual = true}) =>
+      GearV2Rules.sunken(
+          loot,
+          rng,
+          p,
+          makeDef(loot, rng, _pick(rng, gearOf(GearSource.sunken)),
+              sunkenRarity(rng, p), itemLevel),
+          manual: manual);
 
   /// Why Brann can't forge [species] for [p] now (`null` = can).
   static FishForgeBlock? fishForgeBlock(PlayerProfile p, String species) {
@@ -377,11 +389,14 @@ abstract final class GearRules {
         rarity: r,
         itemLevel: il,
         name: fishForgeName(species));
+    // v2 (profession_gear_v2.md § 4): affinity of the species, a
+    // helper's quality (Brann does it).
+    final touched = GearV2Rules.wholeFish(loot, rng, p, species, item);
     final paid = p.copyWith(
         credits: p.credits - t.i('fishForgeGold'),
         life: p.life
             .copyWith(bag: {...p.life.bag, species: p.life.count(species) - 1}));
-    return (paid, item);
+    return (paid, touched);
   }
 
   // Fishing sub-paths (life_trees_v2.md § 2.1).

@@ -41,6 +41,7 @@ abstract final class TuningId {
   static const regions = 'regions';
   static const ascension = 'ascension';
   static const gear = 'gear';
+  static const gearV2 = 'gearV2';
 }
 
 /// Los valores del código.
@@ -776,12 +777,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'sunkenChestFade': 0.02,
     'sunkenDepth': 0.05,
     'sunkenEpic': 0.95,
-    'sunkenLegend': 0.02,
+    'sunkenLegend': 0.035,
     'sunkenLegendTree': 0.0,
     'fishForgeGold': 600,
     'fishForgeLegend': 0.15,
     'fishForgeLegendTree': 0.2,
-    'fishForgeLevel': 10,
+    'fishForgeLevel': 12,
     // § 4.3 Fishing sub-paths.
     'netEverySec': 60,
     'harpoonDepth': 2,
@@ -808,6 +809,37 @@ const Map<String, TuningDef> kTuningDefaults = {
     'parityRarityRaro': 1,
     'parityRarityEpico': 2.5,
     'parityRarityLegendario': 8,
+  }),
+  // profession_gear_v2.md: forge by parts, fish taken apart, living
+  // weapons of every type; quality, slots and the manual edge.
+  TuningId.gearV2: TuningDef('Oficios: equipo v2', {
+    // § 2 Quality q (0..1) and mod slots.
+    'slotLevelCap': 30,
+    'slotLevelW': 0.3,
+    'slotMatW': 0.2,
+    'slotManualW': 0.5,
+    'autoQualityShare': 0.2,
+    'masterworkQ': 0.85,
+    'settingQ': 0.1,
+    // § 3 Forge by parts: rarity by q and cost.
+    'forgeQMagico': 0.15,
+    'forgeQRaro': 0.3,
+    'forgeQEpico': 0.55,
+    'forgeQLegend': 0.85,
+    'partsBaseIngots': 8,
+    // § 4 Fish taken apart at Brann's.
+    'fishPartGold': 150,
+    'fishPartLevel': 5,
+    'fishScaleEpic': 2,
+    'fishScaleLegend': 3,
+    'fishBone': 1,
+    'fishEssenceEpic': 1,
+    'fishEssenceLegend': 2,
+    // § 1 ULT of a Legendary profession weapon.
+    'legendUltChance': 1,
+    // § 2 Parity model.
+    'parityExtraSlotW': 0.5,
+    'parityManualEdge': 1.15,
   }),
   // ascension.md § 3 (v0.49): points, branch stats and Trades conditions
   // of the ascension tree v2.

@@ -298,6 +298,7 @@ abstract final class ActionJson {
             if (a.base != null) 'b': a.base,
             if (a.rarity != 0) 'r': a.rarity,
             if (a.n != 1) 'n': a.n,
+            if (a.parts.isNotEmpty) 'p': a.parts,
           },
         // Protocolo 57 (v0.33.0): salir solo de la mazmorra.
         LeaveDungeonAction() => {
@@ -601,10 +602,14 @@ abstract final class ActionJson {
       case 'smith':
         final op = SmithOp.values.asNameMap()[j.str('o')] ??
             (throw FormatException('JSON inválido: smith', j['o']));
+        final pt = j['p'];
         return SmithAction(op, j.str('g'),
             base: j.strOrNull('b'),
             rarity: j.intOrNull('r') ?? 0,
-            n: j.intOrNull('n') ?? 1);
+            n: j.intOrNull('n') ?? 1,
+            parts: pt is List
+                ? [for (final x in pt) if (x is String) x]
+                : const []);
       case 'leaveD':
         return LeaveDungeonAction(poiId: j.intOrNull('i'));
       case 'offer':

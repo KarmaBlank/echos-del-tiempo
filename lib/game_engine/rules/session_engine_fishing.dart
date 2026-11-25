@@ -408,7 +408,8 @@ extension _FishingOp on _Op {
         // profession_gear.md § 4.1: sometimes a sunken echo weapon inside.
         if (_rand() < GearRules.sunkenChestChance(p.profile)) {
           final w = GearRules.sunken(rules.loot, _rand, p.profile,
-              LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap()));
+              LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap()),
+              manual: !_f.auto.containsKey(p.id));
           drops.add(LootDrop.item(w));
           if (w.rarity.index > rarity.index) rarity = w.rarity;
         }
@@ -418,7 +419,8 @@ extension _FishingOp on _Op {
         // profession_gear.md § 4.1: a sunken echo weapon (fishing only).
         if (_rand() <
             GearRules.sunkenChance(p.profile, fishDepth(e.mapFor(s), p))) {
-          final item = GearRules.sunken(rules.loot, _rand, p.profile, il);
+          final item = GearRules.sunken(rules.loot, _rand, p.profile, il,
+              manual: !_f.auto.containsKey(p.id));
           final d = LootDrop.item(item);
           drops.add(d);
           label = _dropText(d);

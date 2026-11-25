@@ -715,7 +715,9 @@ void main() {
           source: MiningRules.mineSource(kBosque), day: 4);
       final all = SmithCollection.entries(p);
       expect(all.length,
-          kSmithMaterials.values.where((d) => d.kind != SmithMatKind.tool && d.kind != SmithMatKind.supply).length);
+          kSmithMaterials.values.where((d) => d.kind != SmithMatKind.tool &&
+              d.kind != SmithMatKind.supply &&
+              d.kind != SmithMatKind.fishPart).length);
       final cu = all.firstWhere((x) => x.id == 'ore_copper');
       expect(cu.discovered, isTrue);
       expect(cu.icon, 'vida_ore_copper');
@@ -725,7 +727,9 @@ void main() {
       expect(hidden.discovered, isFalse);
       expect(hidden.rows, isEmpty);
       for (final d in kSmithMaterials.values) {
-        if (d.kind == SmithMatKind.tool || d.kind == SmithMatKind.supply) {
+        if (d.kind == SmithMatKind.tool ||
+            d.kind == SmithMatKind.supply ||
+            d.kind == SmithMatKind.fishPart) {
           continue;
         }
         expect(SmithCollection.usesOf(d.id), isNotEmpty, reason: d.id);

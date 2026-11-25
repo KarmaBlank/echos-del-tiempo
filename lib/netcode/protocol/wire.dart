@@ -216,7 +216,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
 /// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
 /// (`life.tv`, `life.rf` refund notice).
-const kProtocolVersion = 92;
+/// 93: profession gear v2 (profession_gear_v2.md § 7): `SmithOp.forgeParts`
+/// (`b` type, `g` base ingot, `p` parts) and `SmithOp.fishSplit`; items
+/// carry `pt` (parts) and `mw` (masterwork); fish parts `fp_*` in `ore`;
+/// living weapon seeds for every type but the rifle.
+const kProtocolVersion = 93;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

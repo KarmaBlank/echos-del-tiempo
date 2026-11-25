@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/rules/life_tree_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +25,26 @@ void main() {
         if (r.score <= 0 || (r.score - mean).abs() / mean > 0.15) {
           fails.add(r.row());
         }
+      }
+    }
+    // ignore: avoid_print
+    print(report);
+    expect(fails, isEmpty, reason: '$report');
+  });
+
+  test('manual work yields at least parityManualEdge × the helpers', () {
+    final edge = tuning(TuningId.gearV2).d('parityManualEdge');
+    final report = StringBuffer();
+    final fails = <String>[];
+    for (final level in const [10, 20, 30]) {
+      for (final k in LifeSkillKind.values) {
+        final m = simulateParity(k, level);
+        final h = simulateParity(k, level, manual: false);
+        final ratio = m.score / h.score;
+        report.writeln('${k.name.padRight(9)} L$level  manual '
+            '${m.score.toStringAsFixed(2)}  ayudante '
+            '${h.score.toStringAsFixed(2)}  x${ratio.toStringAsFixed(2)}');
+        if (ratio < edge - 1e-9) fails.add('${k.name} L$level');
       }
     }
     // ignore: avoid_print

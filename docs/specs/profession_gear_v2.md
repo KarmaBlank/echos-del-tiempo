@@ -1,322 +1,153 @@
-# Spec: Equipo de oficios v2 (forja por piezas, armas de pez, armas vivas)
+# Spec: Equipo de oficios v2 (forja por piezas, peces desarmados, armas vivas)
 
-Estado: PROPUESTA (sin código). Base: profession_gear.md (v0.50,
-protocolo 92), mining_smithing.md § 4, loot.md (afijos, ranuras, tiers),
-branch_ults.md, ultimates_v2.md, design_pillars.md. Protocolo nuevo:
-**93**. Números: grupo **Oficios: equipo v2** del Balance
-(`kTuning[TuningId.gearV2]`), todos ajustables.
+Estado: IMPLEMENTADO (v0.50.x, protocolo **93**). Base: profession_gear.md
+(protocolo 92), mining_smithing.md § 4, loot.md, branch_ults.md,
+ultimates_v2.md, design_pillars.md. Números: grupo **Oficios: equipo v2**
+del Balance (`kTuning[TuningId.gearV2]`), todos ajustables.
+
+Dirección del dueño: **simple y mínimo**. Nada de ULT nuevas, metales
+nuevos, rasgos nuevos ni habilidades nuevas: v2 solo **combina lo que ya
+existe** (lingotes, raros de bioma, peces, semillas, elementos, pools de
+ULT, íconos).
 
 ## 0. Lo que no cambia
 - Un arma de oficio sigue siendo un `ItemInstance` normal (marca `gear-`).
-- Afijos, tiers por nivel de objeto, ranura de Quebrar, fusión y
-  traslado: loot.md, sin cambios.
-- Las ULT de camino (branch_ults.md) y las ULT de rareza
-  (ultimates_v2.md) siguen como están; v2 solo decide **qué pool** de ULT
-  puede tirar un arma de oficio.
-- Paridad ±15 % (profession_gear.md § 7) y pilares: partes simples,
-  la suma vale más que las partes, nada de grind; lo automático sube
-  rápido, lo manual da resultados; hay un camino dedicado al legendario.
+- Afijos, tiers, Quebrar, fusión y traslado: loot.md, sin cambios.
+- Las ULT existentes no cambian; v2 solo decide **qué pool** puede tirar.
+- Las armas fijas de v1 (vivas, hundidas, de forja, de pez) siguen igual.
+- Paridad ±15 % (profession_gear.md § 7) y pilares (lo automático sube
+  igual de rápido, lo manual rinde más; camino dedicado al legendario).
 - Lore: solo ecos del tiempo, futuro inmutable, pasado magitec.
 
-## 1. Conceptos comunes a los tres oficios
-### 1.1 Afinidad
-Toda arma de oficio v2 tiene **una afinidad** (`aff`), que viene del
-material que la define (metal base, pez, bioma de la semilla). La afinidad
-decide (a) el elemento del arma, (b) un afijo implícito chico y (c) el
-**pool de ULT** que puede tirar.
+## 1. Afinidad = elemento existente
+La afinidad de un arma v2 es un **`GameElement`** (físico, fuego, hielo,
+veneno, sagrado, agua, electro). No hay tipos nuevos.
 
-| Afinidad | Elemento / estilo | Implícito | Pool de ULT (caminos de branch_ults.md) |
-|---|---|---|---|
-| `ferro` | físico, filo | +% ATQ | filo, verdugo, vanguardia |
-| `quiebre` | físico, quebradura | +daño a Quebrar | quiebre, coloso, muralla |
-| `brasa` | fuego | +stacks Quemadura | brasa, forja |
-| `escarcha` | hielo | +stacks Congelación | escarcha, cronos |
-| `toxina` | veneno | +stacks Veneno | toxina, acecho, alquimia |
-| `voltio` | rayo | +carga de ULT | voltio, centella, galvanica |
-| `marea` | agua | +regeneración | marea, monzon, manantial |
-| `viento` | aire, velocidad | +velocidad | viento, lluvia, precision |
-| `arcano` | maná, runas | +maná | arcano, runas, hojaArcana |
-| `luz` | sagrado | +curación | luz, fe, exorcismo |
-| `eco` | temporal | +% crítico | cronos, sintonia, prisma |
-| `bosque` | vida (solo armas vivas) | +robo de vida | ver § 4.4 |
+| Fuente | Afinidad |
+|---|---|
+| Lingote de cobre / Ámbar de raíz | físico / veneno |
+| Lingote de bronce rúnico / Engranaje antiguo | electro |
+| Lingote de hierro helado / Cristal de escarcha | hielo |
+| Lingote de acero ígneo / Corazón de magma | fuego |
+| Lingote de plata del eco / Arena detenida | sagrado |
+| Pez (por especie, `fishAffinity`) | hielo / fuego / electro / sagrado / agua |
+| Arma viva (abono elemental que más tiene) | fuego / hielo / electro / sagrado / veneno / físico |
 
-- Una ULT del pool solo es válida si su camino admite el **tipo** del arma
-  (tabla de branch_ults.md § 5). Si el cruce queda vacío, se usa la ULT de
-  tipo de siempre (loot.md § 8.1).
-- Legendario: además del pool, puede tirar las **ULT legendarias de esa
-  afinidad** (ultimates_v2.md, filtradas por elemento) y, si el material
-  lo permite, una **ULT especial de material** (§ 2.5 / § 3.4 / § 4.4).
+Efectos:
+- **Elemento del arma** (`ItemInstance.element`, weapon_identity.md § 4)
+  desde Raro, salvo físico.
+- **Pool de ULT**: las ULT que ya existen para ese tipo de arma
+  (`branchUltsForType` y, en Legendario, las ULT de legendarios v2 de ese
+  tipo) **filtradas por elemento == afinidad**. Si el cruce queda vacío,
+  el pool normal del tipo (`ultV2ModsForType`). Probabilidad: la de
+  siempre (Raro 8 %, Épico 20 %); Legendario `legendUltChance`.
 
-### 1.2 Calidad de oficio y ranuras de mod
-Cada fabricación calcula una **calidad** `q` (0..1) y de ahí las
-ranuras de mod (prefijos + sufijos):
-
+## 2. Calidad y ranuras (manual vs ayudante)
 ```
 q = clamp(nivelOficio / slotLevelCap × slotLevelW
         + calidadMateriales × slotMatW
-        + bonusManual × slotManualW, 0, 1)
-ranuras = rarity.minAffixes + floor(q × (rarity.maxAffixes − rarity.minAffixes + slotBonusMax))
+        + manual × slotManualW, 0, 1)
+mods = rarity.minMods + floor(q × (rarity.maxMods − rarity.minMods + 1)) (tope maxMods)
+obra maestra: q ≥ masterworkQ → +1 mod sobre el máximo (`mw`), nunca más
 ```
+- `manual` = 1 hecho a mano; `autoQualityShare` (0.5) si lo hizo un
+  ayudante (Brann forja el pez entero; arma viva que cosecha quien no la
+  plantó). El oficio sube igual de rápido.
+- `calidadMateriales` = media de `tier / 5` de las piezas (los peces:
+  Épico 4, Legendario 5). Arma viva: semilla común 0.5, antigua 1.
+- Paridad: manual ≥ ayudante × `parityManualEdge` (1.15).
 
-- `calidadMateriales` = media de la calidad de las piezas (tier del
-  material / tier máximo).
-- `bonusManual` = 1 si se hizo a mano (forja paso a paso, pesca manual,
-  cuidado manual de la parcela), `autoQualityShare` (0.5) si lo hizo un
-  ayudante. Lo automático **sube el oficio igual de rápido**, pero rinde
-  ranuras un poco menores.
-- `slotBonusMax` (1): un arma perfecta puede tener **una ranura más** que
-  el máximo de su rareza (marcada "Obra maestra"). Nunca más de una.
+## 3. HERRERÍA: forja por piezas
+HERRERÍA → FORJAR, **paso a paso** (subtabs, no secciones apiladas):
 
-### 1.3 Rarezas
-Las cinco de loot.md: Normal, Mágico, Raro, Épico, Legendario. Cada oficio
-tiene su puerta legendaria propia y dedicada (§ 2.4, § 3.3, § 4.3).
-
-## 2. HERRERÍA: forja por piezas
-### 2.1 Idea
-Forjar desde cero **cualquier tipo de arma** eligiendo cada pieza. Cada
-pieza es simple (un material, una ranura), pero juntas definen el arma.
-Empieza con lo más básico (cobre, roble) y escala por tiers.
-
-### 2.2 Piezas por tipo
-| Pieza | Qué define | Materiales posibles |
+| Paso | Material | Define |
 |---|---|---|
-| **Base / núcleo** | tier → nivel de objeto, **afinidad** | lingote (§ 2.3) |
-| **Cabeza / hoja** | daño base (± % por material), afijo implícito 2 | lingote, escama de pez, cristal |
-| **Mango / empuñadura** | velocidad / maná, estadística requerida | madera, hueso, madera viva |
-| **Ligadura** | estabilidad: sube `q` y el rango de tiradas | cuero, fibra, alambre, tendón |
-| **Engaste** (opcional, desde Raro) | +1 tirada guiada de afijo (elegís la familia) | gema, núcleo, esencia |
+| **Tipo** | cualquier tipo de arma | la forma |
+| **Base** | lingote (5 tiers existentes) | nivel de objeto (`ingotIlPerTier`), afinidad |
+| **Cabeza / hoja** | lingote o escama de pez | color de la cabeza, calidad |
+| **Mango** | lingote o hueso de pez | color del mango, calidad |
+| **Engaste** (opcional) | raro de bioma o esencia de pez | **cambia la afinidad** al suyo, +`settingQ` |
 
-Cada tipo de arma nombra sus piezas en la UI (espada: hoja / empuñadura /
-guarda; arco: palas / empuñadura / cuerda; varita: núcleo / vara / anillo;
-martillo+escudo: cabeza / mango / ribete; tomo: tapa / lomo / cierre;
-rifle: cañón / culata / mecanismo; etc.), pero las 5 ranuras son las
-mismas en reglas (`kForgePartSlots[type]` solo traduce nombres).
+Sin ligadura (no aportaba decisión). Sin fallos que destruyan materiales.
+- Costo: `partsBaseIngots` del lingote base + 1 de cada pieza + oro
+  `craftGoldPerIl` × nivel de objeto.
+- Rareza = la que da `q` (`forgeQMagico/Raro/Epico/Legend`), con tope del
+  nivel de Herrería (mining_smithing.md § 4). **Legendario** además
+  consume un Plano antiguo o un Núcleo de guardián (camino dedicado).
+- El arma: base del catálogo del tipo al nivel de objeto, mods por § 2,
+  elemento y ULT por § 1, nombre "<Tipo> de <material base>".
+- Brann (encargo) sigue con la receta de siempre (mining_smithing.md § 5).
 
-### 2.3 Materiales de base (tiers y afinidad)
-| Tier | Material | Nivel de objeto | Afinidad | HerrerÍa mín. |
-|---|---|---|---|---|
-| 1 | Cobre | 1–8 | ferro | 1 |
-| 2 | Hierro | 8–15 | ferro / quiebre (forjado en frío) | 5 |
-| 3 | Acero de brasa | 15–22 | brasa | 10 |
-| 4 | Plata de escarcha | 18–25 | escarcha | 12 |
-| 5 | Bronce de ciénaga | 20–28 | toxina | 15 |
-| 6 | Cobre voltaico | 24–32 | voltio | 18 |
-| 7 | Oricalco de marea | 28–36 | marea / viento | 22 |
-| 8 | Hierro estelar | 32–40 | arcano / luz | 26 |
-| 9 | Acero de eco | 36–44 | eco | 30 |
-| 10 | Aleación del pasado magitec | 40–50 | cualquiera (elegís) | 35 |
+## 4. PESCA: peces del otro tiempo
+En Brann → PEZ DEL OTRO TIEMPO (grilla de peces Épicos y Legendarios):
+- **Épico**: solo **Desarmar** (piezas).
+- **Legendario**: **Forjar entero** (flujo de v1, ahora con afinidad, pool
+  de ULT y `q` de ayudante) **o Desarmar**.
+- Desarmar **consume el pez**, cuesta `fishPartGold` y pide Pesca
+  `fishPartLevel`. Rinde escamas (`fishScaleEpic/Legend`), hueso
+  (`fishBone`) y esencia (`fishEssenceEpic/Legend`), que se guardan como
+  materiales de herrería (`fp_<especie>_<pieza>`) y se usan en la forja
+  por piezas (§ 3).
 
-- Los lingotes salen de las vetas existentes (mining_smithing.md § 1–3);
-  los tiers 8–10 piden vetas raras de mazmorra/jefe.
-- El nivel de objeto final = mín(nivel del personaje − `craftIlGap`,
-  rango del tier ajustado por `q`).
+## 5. CULTIVO: armas vivas
+- Semillas para **todos los tipos menos rifle** (`ws_<tipo>` y
+  `ws_<tipo>_old`), desde el principio, con el mismo flujo de semilla
+  (plantar, regar, abonar, cosechar, replantar).
+- Afinidad = el abono elemental que más tiene la parcela (§ 1). Pool de
+  ULT por § 1 (ULT existentes). Ranuras por § 2.
+- Las 4 armas vivas de v1 conservan su sprite; las nuevas tienen su
+  sprite generado `vida_gear_vivo_<tipo>` (y semilla `vida_semilla_ws_*`)
+  por `tool/export_life_icons.dart`, vía manifest.
 
-### 2.4 Rareza en la forja por piezas
-La rareza máxima sigue la tabla de mining_smithing.md § 4 (nivel de
-HerrerÍa). Dentro del tope, la rareza tirada depende de `q`:
-`q ≥ forgeQRaro/Epico/Legend`. **Legendario** pide además: base de tier
-≥ 8, Plano antiguo o Núcleo de guardián (como hoy) y la rama Forja del
-árbol de vida. Ese es el camino dedicado.
+## 5b. Pesca: armas hundidas y peces enteros
+- El arma hundida pasa por el mismo toque v2 (afinidad + calidad); la
+  pesca manual cuenta como mano (`slotManualW`), la autopesca no.
+- Ajustes de v1 (`profession_gear` en el catálogo): `sunkenLegend`
+  0.02 → 0.035 y `fishForgeLevel` 10 → 12 para mantener la paridad.
 
-### 2.5 ULT especiales de material (tiers 8–10)
-| Material | ULT especial (nueva) | Efecto |
-|---|---|---|
-| Hierro estelar | **Caída Estelar** | daño de luz/arcano en área + Quebrar |
-| Hierro estelar | **Firmamento Quieto** | escudo al grupo + silencio a enemigos |
-| Acero de eco | **Golpe que Ya Ocurrió** | repite el último golpe del aliado con 60 % de daño |
-| Acero de eco | **Eco Doble** | la próxima habilidad se lanza dos veces |
-| Aleación magitec | **Núcleo Despierto** | sobrecarga: +ULT a todo el grupo, autodaño |
-| Aleación magitec | **Engranaje del Pasado** | congela el turno de un enemigo (no jefes) |
-
-Solo Legendarios; `forgeSpecialUltChance` (0.35) de reemplazar la ULT del
-pool. Viven en `kMaterialUltimates` (se suman a `kAllUltimates`).
-
-### 2.6 Fallos y sin grind
-- No hay fallos que destruyan materiales. La vista previa muestra rangos
-  (nivel de objeto, ranuras posibles, pool de ULT), no las tiradas.
-- Repetir la misma receta guarda "receta favorita" (un clic).
-
-## 3. PESCA: armas de pez del otro tiempo
-### 3.1 Idea
-Los peces **Épicos y Legendarios** son peces mágicos "de otro tiempo".
-En Brann (forja de pez, profession_gear.md § 4.2) un pez se **desarma en
-piezas** que sirven en la forja por piezas o en una receta directa.
-
-### 3.2 Piezas del pez
-| Pieza | Uso como pieza (§ 2.2) | Rinde |
-|---|---|---|
-| **Escamas** | cabeza/hoja o chapado | Épico 2, Legendario 3 |
-| **Esqueleto** | mango/cuerpo (como madera, pero hueso: +velocidad) | 1 |
-| **Esencia / sangre** | engaste; da el rasgo "Arma de pez del otro tiempo" | Épico 1, Legendario 2 |
-
-Desarmar cuesta `fishPartGold` y pide Pesca `fishPartLevel` (Épico) /
-`fishForgeLevel` (Legendario, como hoy).
-
-### 3.3 Rareza
-- Receta directa (pez entero, como hoy): Épico → arma Raro/Épico;
-  Legendario → Épico, Legendario con `fishForgeLegend` + árbol.
-- Por piezas: la rareza la decide la forja (§ 2.4), pero **escama +
-  esqueleto + esencia del mismo pez** cuentan como "set del pez" y suben
-  `q` en `fishSetQ`. Legendario pide la esencia de un pez legendario.
-
-### 3.4 Rasgo y afinidad por especie
-Rasgo fijo **Eco del otro tiempo**: el arma gana +`fishTraitUlt` % de
-carga de ULT y su primer golpe de cada combate aplica el elemento de su
-afinidad. La especie decide afinidad y tipo sugerido:
-
-| Pez (rareza) | Afinidad | Tipo sugerido | ULT especial (solo Legendario) |
-|---|---|---|---|
-| Lucio de brasa (Épico) | brasa | dagas | — |
-| Raya de escarcha (Épico) | escarcha | lanza | — |
-| Anguila voltaica (Épico) | voltio | varita | — |
-| Pez de ciénaga (Épico) | toxina | ballesta | — |
-| Carpa de eco (Legendario) | eco | tomo | **Marea del Ayer**: cura lo perdido el turno anterior |
-| Leviatán menor (Legendario) | marea | sable/espada | **Abismo que Recuerda**: arrastre + Quebrar |
-| Pez de luz antigua (Legendario) | luz | báculo | **Faro Sumergido** |
-
-La tabla final usa las especies reales de fishing.md (`kFishSpecies`);
-cada especie Épica/Legendaria recibe `aff` y `type` en el catálogo.
-
-## 4. CULTIVO: armas vivas v2
-### 4.1 Más variedad
-Semillas de arma para **todos los tipos** (`ws_<tipo>`), no solo 4:
-espada, hacha, lanza, dagas, arco, ballesta, varita, báculo, tomo,
-martillo+escudo, maza+escudo, espada+escudo (rifle no: no crece).
-
-### 4.2 Bioma de la semilla → afinidad
-La semilla guarda su bioma de origen (`b`). Cada bioma tiene bosque:
-
-| Bioma | Afinidad | Rasgo vivo |
-|---|---|---|
-| Bosque / pradera | bosque | Savia: robo de vida |
-| Pantano | toxina | Espinas venenosas |
-| Lava | brasa | Corteza ardiente |
-| Montaña / piedra | quiebre | Raíz pétrea: quebradura |
-| Nieve | escarcha | Rama helada |
-| Costa | marea | Musgo de marea |
-| Ruinas magitec | eco | Brote del eco |
-
-### 4.3 Rareza como botín
-Se tira como loot (Normal → Legendario) con pesos movidos por:
-`score = nivelCultivo × livingLevelQ + calidadSemilla × livingSeedQ +
-abonos × livingCompostQ + riego/cuidado × livingWaterQ` (la fórmula de
-profession_gear.md § 3.4, con `calidadSemilla` nueva: común, buena,
-antigua). Legendario mantiene su puerta dedicada (semilla antigua, abono
-del Eco, rama Madera viva).
-
-### 4.4 Habilidades y ULT "ecos del bosque"
-Las armas vivas tienen **habilidad propia** (una, por tipo) y desde Épico
-**ULT propia** del pool `bosque` + la de su afinidad de bioma.
-
-| Habilidad viva | Tipos | Efecto |
-|---|---|---|
-| Brote | báculo, varita, tomo | cura chica en el tiempo |
-| Enredadera | lanza, arco, ballesta | inmoviliza 1 turno |
-| Corteza | escudos | escudo que crece por turno |
-| Espina | espada, hacha, dagas | daño + estado de su afinidad |
-
-| ULT del bosque (nueva) | Rareza | Efecto |
-|---|---|---|
-| **Eco del Bosque** | Épico+ | invoca un árbol aliado 2 turnos |
-| **Raíces del Ayer** | Épico+ | todos los enemigos: inmóviles + estado de afinidad |
-| **Bosque que Vuelve** | Legendario | revive a un aliado caído con 30 % |
-
-Al replantar (§ 3.5 de profession_gear.md), un arma viva puede ganar la
-ULT si sube a Épico.
-
-## 5. Paridad
-- El modelo de `profession_parity_sim.dart` suma `q` y ranuras al
-  puntaje: `puntaje = Σ armas/h × peso(rareza) × (1 + ranurasExtra ×
-  parityExtraSlotW)`.
-- Objetivo: cada oficio ±15 % de la media en niveles 10/20/30, y además
-  manual ≥ auto × `parityManualEdge` (1.15) para el mismo oficio.
-- Si la forja por piezas sube de más a HerrerÍa, se baja `forgeQEpico`.
-
-## 6. UI (DsColors, grilla + detalle a la derecha, sin secciones apiladas)
-### 6.1 HERRERÍA → FORJAR (paso a paso)
-- Arriba: subtabs de paso **Tipo · Base · Hoja · Mango · Ligadura ·
-  Engaste · Resultado** (no secciones apiladas).
-- Centro: grilla de materiales válidos para ese paso (casillas tipo
-  INVENTARIO, grises con tooltip si falta nivel o material).
-- Derecha: detalle del arma en armado (sprite por piezas desde el
-  manifest, nivel de objeto, rangos, ranuras posibles, afinidad, pool de
-  ULT, costo). Botón FORJAR gris con motivo si falta algo.
-### 6.2 Brann → PEZ DEL OTRO TIEMPO
-Grilla de peces Épicos/Legendarios de la bolsa; detalle: piezas que rinde,
-afinidad, tipo sugerido; botones **Forjar entero** / **Desarmar**.
-### 6.3 Detalle de arma viva
-Tooltip y panel: bioma de origen, rasgo, habilidad, ULT, veces
-replantada; filtro "Vivas" en el inventario.
-### 6.4 Sprites
-`items.forge_part_<tipo>_<pieza>_<tier>`, `items.fish_part_<especie>_<pieza>`,
-`items.vida_gear_<tipo>_<bioma>` en `sprite_manifest.yaml` (8 bits).
-i18n: `data.items.gear2.*` en es-AR, en, zh-Hans.
-
-### 6.5 Íconos: misma forma, color por material
-Hoy (sprites.md "Íconos" e "Identidad del arma";
-`lib/core/procedural/item_icon_rows.dart`, `WeaponLook` /
-`paintItemIcon`, `tool/export_item_icons.dart`, `WeaponOverlay.kGrips`)
-hay un PNG 16×16 por forma (25) + `<forma>_acento.png` gris teñido por
-rareza. **Decisión del dueño: no hay variantes de silueta.** Cada tipo
-conserva su única forma (los 25 PNG, editables en el Editor de Sprites);
-solo cambian los **colores** según los materiales elegidos.
-- **Capas de recoloreo por región** (escala de grises, mismo 16×16):
-  `<forma>_head.png` (hoja/cabeza/metal), `<forma>_grip.png`
-  (mango/asta/madera/hueso) y el `<forma>_acento.png` existente
-  (gema/acento). Las genera `tool/export_item_icons.dart` a partir del
-  arte actual; todas van al manifest y se pueden reemplazar en el Editor.
-- **Tinte**: cada capa usa la rampa de 4 tonos (`kMaterialRamps`) del
-  material elegido para esa pieza: cabeza → material de base/hoja,
-  mango → material del mango, acento → afinidad/rareza. Encima, como hoy:
-  aura, destello y marca de ULT por rareza.
-- **Peces**: rampa de escama (por especie) en cabeza, rampa de hueso en
-  mango. **Vivas**: rampa de madera viva teñida por bioma (§ 4.2).
-- **Caché**: ícono compuesto por clave `(forma, materiales, afinidad,
-  rareza)`; lo usan inventario, tooltips, retratos y el sprite en mano
-  del mapa/batalla (vía `WeaponOverlay.kGrips`).
-- **Retrocompatibilidad**: los materiales por defecto reproducen el
-  ícono actual píxel a píxel (test de píxeles sobre las 25 formas); un
-  arma sin `pt` usa esos materiales.
-- **Vista previa**: `docs/preview/weapon_parts/` (export tool): por
-  forma, grilla material de cabeza × material de mango, más filas de
-  rareza y afinidad.
-- Tamaño: 25 formas × 2 capas nuevas = **50 PNG chicos** (el acento ya
-  existe); las rampas son datos, no archivos.
+## 6. Íconos: misma forma, color por material
+Cada tipo conserva **su única forma** (los PNG de `items/`, editables en
+el Editor). Solo cambian colores:
+- Capas en grises por forma, 16 × 16: `<forma>_head.png` (metal) y
+  `<forma>_grip.png` (mango), más el `<forma>_acento.png` de siempre.
+  Las genera `tool/export_item_icons.dart` **a partir del PNG actual**: un
+  píxel va a la capa si coincide con uno de los 4 tonos del color por
+  defecto (sombra, base, luz, brillo); el gris guarda el índice del tono.
+- Tinte: cada píxel de la capa toma el tono de la rampa de 4
+  (`kMaterialRamps`) del material de esa pieza. Cabeza → material de la
+  cabeza; mango → material del mango; acento → rareza (como hoy).
+- **Retrocompatibilidad**: la rampa por defecto reproduce el PNG píxel a
+  píxel (test sobre las 25 formas); un arma sin `pt` no se recolorea.
+- Vista previa: `docs/preview/weapon_parts/` (forma × material de
+  cabeza × material de mango).
 
 ## 7. Guardado y red (protocolo 93)
-- `ItemInstance` suma campos opcionales: `aff` (afinidad), `pt` (piezas:
-  lista de ids de material), `q` (calidad 0..100), `mw` (obra maestra),
-  `bo` (bioma de origen, vivas). Ausentes = valores por defecto.
-- Acción nueva `SmithOp.forgeParts` con `t` (tipo), `p` (piezas) y
-  `SmithOp.fishSplit` (`s` especie). Semilla `farm.ws` gana `b` y `sq`.
-- El host valida todo (materiales, niveles, tope de rareza); los clientes
-  solo mandan la elección.
+- `ItemInstance`: `pt` (piezas: `[base, cabeza, mango, engaste?]`, ids de
+  material; un arma viva guarda `['living', <afinidad>]`, una de pez entero `['fish', <especie>]`) y `mw` (obra
+  maestra). Ausentes = v1.
+- `SmithOp.forgeParts` (`b` tipo, `g` lingote base, `p` piezas) y
+  `SmithOp.fishSplit` (`g` especie).
+- El host valida todo (materiales, niveles, tope de rareza).
 
 ## 8. Migración
-- Armas de oficio v1: `aff` inferida del afijo/firma (`kCompostAffix`,
-  especie, o `ferro`), `q` = 50, sin piezas. No pierden mods.
-- Semillas viejas: bioma `bosque`, calidad común (`_old` → antigua).
-- Las 4 armas vivas y las 4 de forja v1 quedan como recetas.
+- Armas de oficio v1 sin `pt`: se les infiere la afinidad (elemento, si
+  no el del afijo firma) y quedan con `pt = ['v1', <material>]`; no
+  pierden mods, nombre ni sprite.
+- Semillas: los ids `ws_*` de v1 siguen válidos; las nuevas solo se suman.
 
 ## 9. Claves de Balance (grupo gearV2)
-`slotLevelCap, slotLevelW, slotMatW, slotManualW, slotBonusMax,
-autoQualityShare, forgeQRaro, forgeQEpico, forgeQLegend,
-forgeSpecialUltChance, fishPartGold, fishPartLevel, fishSetQ,
-fishTraitUlt, livingSeedQ, livingSeedGood, livingSeedAncient,
-livingSkillPower, livingUltChance, parityExtraSlotW, parityManualEdge`
-+ por tier de base: `baseIlMin/Max[t]`, `baseLevel[t]`.
+`slotLevelCap, slotLevelW, slotMatW, slotManualW, autoQualityShare,
+masterworkQ, settingQ, forgeQMagico, forgeQRaro, forgeQEpico,
+forgeQLegend, partsBaseIngots, fishPartGold, fishPartLevel,
+fishScaleEpic, fishScaleLegend, fishBone, fishEssenceEpic,
+fishEssenceLegend, legendUltChance, parityExtraSlotW, parityManualEdge`.
 
-## 10. Plan de tests
-- `forge_parts_rules_test`: afinidad por base, nivel de objeto por tier,
-  fórmula de ranuras (bordes 0 y 1, obra maestra máx. +1), puerta
-  legendaria, pool de ULT ∩ tipo, fallback a ULT de tipo.
-- `fish_parts_test`: rendimientos por rareza, set del pez, rasgo.
-- `living_v2_test`: bioma → afinidad, pesos de rareza, habilidad/ULT,
-  replantar sube a Épico y gana ULT.
-- `session_json` ida y vuelta con campos nuevos y migración v92 → v93.
-- `profession_parity_sim_test` con v2: ±15 % y ventaja manual.
-- Protocolo: handshake 93 rechaza 92.
-
-## 11. Preguntas abiertas
-Ver el reporte de propuesta (afinidades finales, ULT especiales nuevas vs
-reusar, número de semillas, rifle vivo, coste de desarmar peces).
+## 10. Tests
+- `gear_v2_rules_test`: afinidad por material, q y ranuras (bordes,
+  obra maestra +1 máx.), rareza por q con tope y receta, pool de ULT ∩
+  elemento y fallback, desarmar pez (épico solo piezas, consume el pez).
+- `gear_v2_migration_test`: v1 → `pt`, ida y vuelta de `session_json`.
+- `weapon_parts_icon_test`: rampas por defecto = PNG actual (25 formas).
+- Widgets: pasos de la forja y desarme en Brann.
+- `profession_parity_sim_test`: ±15 % en 10/20/30 y manual ≥ 1.15×.
+- Handshake 93.

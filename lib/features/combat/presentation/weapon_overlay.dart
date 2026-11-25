@@ -131,6 +131,7 @@ void _icon(Canvas c, Rect r, String shape, Color accent, ProcParams params,
     return;
   }
   paintItemIconPng(c, r, png, ItemIconImages.accent(key), accent);
+  if (look != null) paintPartColors(c, r, key, look);
   if (look != null) {
     paintItemIcon(c, r, rows, accent, params,
         look: look, time: time, base: false);

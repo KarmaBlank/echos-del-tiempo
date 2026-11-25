@@ -11,6 +11,7 @@ import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/life_craft_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/rules/gear_v2_rules.dart';
 import '../../../game_engine/rules/profession_gear_rules.dart';
 
 /// Item-catalog text in the active language (docs/specs/i18n.md § 3.4).
@@ -180,6 +181,16 @@ String? _gearName(ItemInstance i) {
     return i.rarity == Rarity.legendario
         ? CatalogText.of('data.items.gear.${def.id}.legend', def.legend)
         : CatalogText.of('data.items.gear.${def.id}.name', def.name);
+  }
+  // Forged by parts (profession_gear_v2.md § 3): "<type> de <metal>".
+  if (GearV2Rules.partsType(i) case final type?) {
+    final base = i.parts.isEmpty ? '' : i.parts.first;
+    return CatalogText.of('data.items.gear.parts.name', '{type} de {metal}', {
+      'type': CatalogText.of('data.items.gear.type.${gearTypeKey(type)}',
+          kGearTypeNames[type] ?? type),
+      'metal': CatalogText.of('data.items.gear.metal.$base',
+          GearV2Rules.metalName(base)),
+    });
   }
   final fish = GearRules.fishOf(i);
   if (fish == null) return null;

@@ -23,7 +23,7 @@ Color smithKindColor(SmithMatKind k) => RarityColors.of(switch (k) {
       SmithMatKind.supply =>
         Rarity.comun,
       SmithMatKind.rare => Rarity.raro,
-      SmithMatKind.special => Rarity.epico,
+      SmithMatKind.special || SmithMatKind.fishPart => Rarity.epico,
     });
 
 /// Where a material was first found (`mine:<biome>`, `dungeon:<zone>`,
