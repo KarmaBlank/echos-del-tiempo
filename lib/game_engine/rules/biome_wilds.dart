@@ -386,6 +386,9 @@ class _Wilds extends _Gen {
     mineSpots.sort((a, c) => far(c.$1).compareTo(far(a.$1)));
     for (var k = 0; k < mineSpots.length && k < want * 2; k += 2) {
       final ((mx, my), cave) = mineSpots[k];
+      // The mouth is entered from the south: that tile needs open ground
+      // around it (not a shore between water).
+      if (!cave && _walkable4(mx, my + 1) < 2) continue;
       if (!cave) {
         // Rock around the mouth, but never on the passage that leads in.
         for (var dx = -1; dx <= 1; dx++) {
@@ -446,7 +449,15 @@ class _Wilds extends _Gen {
         for (final f in forage) (f.x, f.y),
         for (final w in waystones) (w.x, w.y),
         for (final l in lakes) l.approach,
+        // The tile in front of each mine mouth: it is entered from there.
+        for (final m in mines) (m.$1, m.$2 + 1),
       ];
+      for (final (mx, my) in mines) {
+        if (!inside(mx, my + 1)) continue;
+        reserved.add((mx, my + 1));
+        if (Tile.isWalkable(at(mx, my + 1))) continue;
+        put(mx, my + 1, indoor.at(mx, my + 1) ? Tile.floor : Tile.grass);
+      }
       var seen = _reach(main.first);
       bool touch((int, int) p) {
         for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
