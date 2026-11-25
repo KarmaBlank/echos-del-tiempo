@@ -33,7 +33,13 @@ class FishDef {
       this.lore = '',
       this.seasons = kAllSeasons,
       this.weather,
-      this.visitor = false});
+      this.visitor = false,
+      this.minDepth = 0});
+
+  /// Open-water species (fishing.md § 15): only bites with the bobber at
+  /// least this many tiles from the shore (a raft on a big lake). Not in
+  /// any stored lake list; joins its [biome]'s table out there.
+  final int minDepth;
 
   /// Seasons when it bites (weather_seasons.md § 4): out of season it
   /// never bites, not even off-hours.
@@ -220,6 +226,48 @@ const kFish = <String, FishDef>{
   'leviatan_quieto': FishDef('leviatan_quieto', 'Leviatán del Futuro Quieto', FishRarity.legendario,
       biome: 'abismo', minCm: 150, maxCm: 300, price: 3800, xp: 400,
       lore: 'El futuro no se cambia: él ya estaba en tu red.'),
+  // Aguas abiertas de los lagos grandes (fishing.md § 15): solo lejos de
+  // la orilla, desde una balsa.
+  'lucio_hondo': FishDef('lucio_hondo', 'Lucio de la hondura', FishRarity.epico,
+      biome: 'bosque', minCm: 70, maxCm: 150, price: 260, xp: 70,
+      minDepth: 4,
+      lore: 'Nada donde la luz del bosque ya no llega, esperando a alguien que se fue.'),
+  'carpa_olvido': FishDef('carpa_olvido', 'Carpa del Olvido', FishRarity.legendario,
+      biome: 'bosque', minCm: 110, maxCm: 200, price: 1500, xp: 230,
+      minDepth: 5,
+      lore: 'Guarda en las escamas los nombres que el bosque ya no recuerda.'),
+  'barbo_campana': FishDef('barbo_campana', 'Barbo de la campana hundida', FishRarity.epico,
+      biome: 'ruinas', minCm: 60, maxCm: 130, price: 380, xp: 85,
+      minDepth: 4,
+      lore: 'Suena como una campana que llamaba a una ciudad que ya no existe.'),
+  'pez_archivo': FishDef('pez_archivo', 'Pez del Archivo Ahogado', FishRarity.legendario,
+      biome: 'ruinas', minCm: 100, maxCm: 210, price: 2100, xp: 290,
+      minDepth: 5,
+      lore: 'Lleva grabada la última página de una biblioteca que el agua cerró.'),
+  'lucio_silencio': FishDef('lucio_silencio', 'Lucio del silencio', FishRarity.epico,
+      biome: 'cavernas', minCm: 70, maxCm: 150, price: 500, xp: 110,
+      minDepth: 4,
+      lore: 'En lo hondo del lago helado no se oye ni el eco de su propia aleta.'),
+  'esturion_escarcha': FishDef('esturion_escarcha', 'Esturión de la Escarcha Eterna', FishRarity.legendario,
+      biome: 'cavernas', minCm: 140, maxCm: 260, price: 2800, xp: 350,
+      minDepth: 5,
+      lore: 'Lo congeló un invierno que todavía no llegó, y aun así sigue nadando.'),
+  'dorado_rescoldo': FishDef('dorado_rescoldo', 'Dorado del rescoldo', FishRarity.epico,
+      biome: 'grieta', minCm: 65, maxCm: 140, price: 650, xp: 130,
+      minDepth: 4,
+      lore: 'Brilla como la última brasa de un hogar que nadie volvió a encender.'),
+  'pez_forja_muda': FishDef('pez_forja_muda', 'Pez de la Forja Muda', FishRarity.legendario,
+      biome: 'grieta', minCm: 120, maxCm: 230, price: 3600, xp: 420,
+      minDepth: 5,
+      lore: 'Nació del calor de una forja que se apagó cuando el pasado era más grande.'),
+  'raya_adios': FishDef('raya_adios', 'Raya del adiós', FishRarity.epico,
+      biome: 'abismo', minCm: 80, maxCm: 170, price: 850, xp: 150,
+      minDepth: 4,
+      lore: 'Pasa una sola vez junto a cada balsa, como una despedida que ya ocurrió.'),
+  'ballena_eco': FishDef('ballena_eco', 'Ballena del Último Eco', FishRarity.legendario,
+      biome: 'abismo', minCm: 200, maxCm: 400, price: 4800, xp: 500,
+      minDepth: 5,
+      lore: 'Canta lo que el futuro ya decidió; nadie la escucha dos veces.'),
   // Seasonal and weather visitors (weather_seasons.md § 4.2, v0.44.0):
   // they join the lakes of their biome only in their season / weather.
   'mojarra_primavera': FishDef('mojarra_primavera', 'Mojarra de primavera',
@@ -308,4 +356,11 @@ const kFishingLegendaries = ['filoHundido', 'relojAhogado', 'cuerdaOrilla'];
 List<String> get kTownLakeDefault => [
       for (final f in kFish.values)
         if (f.biome == kTownStartBiome && !f.visitor) f.id
+    ];
+
+/// Open-water species of [biome] that bite at [depth] tiles from the
+/// shore (fishing.md § 15).
+List<String> deepFishOf(String? biome, int depth) => [
+      for (final f in kFish.values)
+        if (f.minDepth > 0 && f.biome == biome && depth >= f.minDepth) f.id
     ];

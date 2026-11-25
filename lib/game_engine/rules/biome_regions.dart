@@ -9,6 +9,7 @@ import '../data/mine_catalog.dart' show MineTile, mineEntrances;
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import '../models/world_save.dart' show TownState;
+import 'raft_rules.dart';
 
 part 'biome_wilds.dart';
 
@@ -21,7 +22,22 @@ class BiomeLake {
     required this.approach,
     required this.name,
     this.cave,
+    this.giant = false,
   });
+
+  /// A giant lake of the wilds (biome_exploration.md § 2): always gets a
+  /// raft dock (fishing.md § 15).
+  final bool giant;
+
+  /// This lake marked as giant.
+  BiomeLake asGiant() => BiomeLake(
+      variant: variant,
+      ellipse: ellipse,
+      docks: docks,
+      approach: approach,
+      name: name,
+      cave: cave,
+      giant: true);
 
   final LakeVariant variant;
 
@@ -187,6 +203,12 @@ class BiomeLayout {
           ),
         for (final (zone, x, y) in ecoPortals) ('ECOS · ZONA $zone', x, y - 1),
       ];
+
+  /// The generated tile at (x, y) (without forage marks).
+  String baseTile(int x, int y) => _rows[y][x];
+
+  /// Raft docks of the big lakes (fishing.md § 15), deterministic.
+  late final List<RaftDock> raftDocks = RaftRules.placeDocks(this);
 
   bool isLake(int x, int y) =>
       x >= 0 &&

@@ -44,7 +44,7 @@ piedra de paso, § 5) y un tipo:
 |---|---|
 | `forest` | Bosque denso (árboles casi pegados), senderos que serpentean (A* con mucho ruido), **recovecos** (claros chicos al costado). |
 | `cavern` | Gruta chica: piso bajo techo, anillo de roca, con lago (`cavernLakeChance`) o seca; algunas con haces de luz (§ 4.2). |
-| `giantLake` | Lago gigante (radio `giantLakeR*`), muelles; ocasional (`giantLakeChance`, a lo sumo 1). |
+| `giantLake` | Lago gigante (radio `giantLakeR*`), muelles y siempre un muelle de balsas (fishing.md § 15); ocasional (`giantLakeChance`, a lo sumo 1). |
 | `shrine` | Fuente especial (tile `F`) o santuario (tile `H`): una vez por día da una bendición (§ 3.4). |
 | `meadow` | Pradera abierta con matas. |
 

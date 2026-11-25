@@ -60,6 +60,7 @@ import 'js_math.dart';
 import 'loot_filter_rules.dart';
 import 'loot_rules.dart';
 import 'map_fishing.dart';
+import 'raft_rules.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'party_limits.dart';
@@ -1167,6 +1168,38 @@ class _Op {
       ..ecoOwner = null;
   }
 
+  /// `raft` (fishing.md § 15): board at the dock in reach, or get off
+  /// at the nearest free shore tile. Both teleport (new epoch).
+  bool _raft(SessionPlayer p, bool on) {
+    if (s.mode != SessionMode.lobby || s.run != null || !p.alive) {
+      return false;
+    }
+    final map = e.mapFor(s);
+    final WorldPoint to;
+    if (on) {
+      if (p.rafting) return false;
+      final d = RaftRules.nearDock(biomeLayout(s.place), p.x, p.y);
+      if (d == null) return false;
+      to = RaftRules.launch(d);
+    } else {
+      if (!p.rafting) return false;
+      final l = RaftRules.landing(map, p.x, p.y);
+      if (l == null) return false;
+      to = l;
+    }
+    stopAutoFish(p, AutoFishStop.moved);
+    p
+      ..x = to.x
+      ..y = to.y
+      ..epoch += 1
+      ..moving = false
+      ..fishLine = null
+      ..stepX = 0
+      ..stepY = 0;
+    p.raftEpoch = on ? p.epoch : 0;
+    return true;
+  }
+
   // ---------------- acciones (`onMsg`) ----------------
 
   bool apply(SessionPlayer p, SessionAction a) {
@@ -1187,6 +1220,12 @@ class _Op {
         if (a.epoch != p.epoch ||
             !(s.mode == SessionMode.lobby || s.mode == SessionMode.field) ||
             !p.alive) {
+          return false;
+        }
+        // On a raft (fishing.md § 15) the center never leaves the water.
+        if (p.rafting &&
+            !RaftRules.onWater(e.mapFor(s), a.x.isFinite && a.x != 0 ? a.x : p.x,
+                a.y.isFinite && a.y != 0 ? a.y : p.y)) {
           return false;
         }
         final ox = p.x, oy = p.y;
@@ -1423,6 +1462,9 @@ class _Op {
       case WispAction(:final on):
         p.wisp = on;
         return true;
+
+      case RaftAction(:final on):
+        return _raft(p, on);
 
       case SetBuildWantsAction(:final wants):
         p.buildWants = wants == null || wants.isEmpty ? null : wants;

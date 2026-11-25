@@ -192,7 +192,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 81: profession-material gifts (share_materials.md): `giveLife` action.
 /// 82: biome exploration v2 (biome_exploration.md): 150 × 112 regions with
 /// wilds, `town.lv`, the `wx` action and deep exploration events.
-const kProtocolVersion = 82;
+/// 83: lake rafts (fishing.md § 15): the `raft` action and `rf` in the
+/// player snapshot.
+const kProtocolVersion = 83;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

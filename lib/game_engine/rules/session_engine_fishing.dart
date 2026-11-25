@@ -179,8 +179,12 @@ extension _FishingOp on _Op {
         FishingCast.nearHiddenSpot(map, s.place!, math.max(1, s.town.sky.day),
             p.x, p.y, _ft.i('spotRadius'));
     final spotRare = spot ? _ft.d('spotRare') : 0.0;
+    // Aguas abiertas (fishing.md § 15): tiles from the bobber (or the
+    // raft) to the shore; deep water adds rarity, size and its species.
+    final depth = wild ? fishDepth(map, p) : 0;
     final bait = BaitRules.active(p.profile);
-    final rare = (bait == null ? 0.0 : BaitRules.rare(bait)) +
+    final rare = RaftRules.depthRare(depth) +
+        (bait == null ? 0.0 : BaitRules.rare(bait)) +
         bonus.rare +
         dock +
         spotRare +
@@ -191,7 +195,9 @@ extension _FishingOp on _Op {
     // Estación y clima del lugar (weather_seasons.md § 4): fuera de
     // estación no pica; se suman los visitantes de la estación / clima.
     final table = LifeTimeRules.activeTable(
-        wild ? biome.fish : TownRules.lakeRoll(s.town, lake),
+        wild
+            ? [...biome.fish, ...deepFishOf(s.place, depth)]
+            : TownRules.lakeRoll(s.town, lake),
         s.town.sky,
         _rand,
         biome: wild ? s.place : kTownStartBiome,
@@ -201,13 +207,22 @@ extension _FishingOp on _Op {
     final junk = wild ? biome.junk : kWaterJunk;
     return (
       table: BaitRules.weighted(table, bait),
-      size: bait == null ? 0.0 : BaitRules.size(bait),
+      size: math.min(1.0,
+          (bait == null ? 0.0 : BaitRules.size(bait)) + RaftRules.depthSize(depth)),
       junk: junk,
       rare: rare,
       dock: dock,
       spot: spot,
       bonus: bonus,
     );
+  }
+
+  /// Depth (tiles to the shore) [p] fishes at: under the bobber, or
+  /// under the raft when there is no bobber yet (fishing.md § 15).
+  static int fishDepth(GameMap map, SessionPlayer p) {
+    final l = p.fishLine;
+    if (l != null && l.hasBobber) return RaftRules.depthAt(map, l.bx, l.by);
+    return p.rafting ? RaftRules.depthAt(map, p.x, p.y) : 0;
   }
 
   // ---------------- auto-fishing (fishing.md § 6) ----------------

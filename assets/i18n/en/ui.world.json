@@ -360,5 +360,8 @@
   "ui.world.way.site_cavern": "Cavern {n}",
   "ui.world.wild.prompt_chest": "[E] Open the chest",
   "ui.world.wild.prompt_shrine": "[E] Ask for the blessing",
-  "ui.world.wild.prompt_done": "Already used today: it returns tomorrow"
+  "ui.world.wild.prompt_done": "Already used today: it returns tomorrow",
+  "ui.world.raft.prompt_board": "[E] Board the raft",
+  "ui.world.raft.prompt_leave": "[E] Step onto the shore",
+  "ui.world.raft.prompt_fish": "[E] Fish from the raft"
 }

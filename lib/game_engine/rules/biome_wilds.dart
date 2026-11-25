@@ -66,6 +66,7 @@ class _Wilds extends _Gen {
       approach: o(l.approach),
       name: l.name,
       cave: c == null ? null : (c.$1 + ox, c.$2 + oy, c.$3, c.$4),
+      giant: l.giant,
     );
   }
 
@@ -203,7 +204,7 @@ class _Wilds extends _Gen {
             ),
             carveRoute: false);
         if (lk != null) {
-          lakes.add(lk);
+          lakes.add(lk.asGiant());
           anchors.add(lk.approach);
           pois.add((lk.approach, WaystoneSite.lake, lakes.length - 1));
           sections.add((kind: kind, x: x, y: y));

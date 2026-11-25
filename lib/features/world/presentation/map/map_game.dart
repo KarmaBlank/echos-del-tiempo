@@ -1048,6 +1048,7 @@ class MapGame extends Game {
       if (map.place case final place?) {
         fishing.drawHiddenSpot(
             c, map, place, math.max(1, s.town.sky.day), t / 1000);
+        _drawRaftDocks(c, place, t);
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
@@ -1288,7 +1289,10 @@ class MapGame extends Game {
       } else {
         _wisps.remove(p.id);
       }
+      final raft = s.mode == SessionMode.lobby && p.rafting;
       add(py, () {
+        // On a raft (fishing.md § 15): the logs under the hero.
+        if (raft) _drawRaft(c, px, py + 3, t);
         hero(px, py);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
@@ -1750,6 +1754,36 @@ class MapGame extends Game {
 
   /// Mueve la Llama errante de [id] (lighting.md § 3.1.1): flota sobre la
   /// cabeza del personaje con un vaivén lento y lo sigue con retraso.
+  /// Raft docks of the big lakes (fishing.md § 15): the dock on its
+  /// shore tile and a moored raft on the water in front, bobbing.
+  void _drawRaftDocks(Canvas c, String place, num t) {
+    final lay = biomeLayout(place);
+    if (lay == null || lay.raftDocks.isEmpty) return;
+    final dock = sprites.lifeIcon('muelle_balsa', '');
+    for (final d in lay.raftDocks) {
+      if (dock != null) {
+        c.drawImageRect(
+            dock,
+            Rect.fromLTWH(0, 0, dock.width.toDouble(), dock.height.toDouble()),
+            Rect.fromLTWH(d.x * ts, d.y * ts, ts, ts),
+            SpriteCatalog.pixelPaint());
+      }
+      _drawRaft(c, (d.wx + 0.5) * ts, (d.wy + 0.5) * ts, t);
+    }
+  }
+
+  /// One raft centered on (x, y) px, bobbing 1 px with the time [t] (ms).
+  void _drawRaft(Canvas c, double x, double y, num t) {
+    final im = sprites.lifeIcon('balsa', '');
+    if (im == null) return;
+    final bob = (t / 600).floor().isEven ? 0.0 : 1.0;
+    c.drawImageRect(
+        im,
+        Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
+        Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts),
+        SpriteCatalog.pixelPaint());
+  }
+
   _Wisp _wispFollow(String id, double px, double py) {
     final ph = (id.hashCode % 628) / 100.0;
     final sec = t / 1000;

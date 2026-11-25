@@ -558,5 +558,8 @@
   "ui.world.wild.prompt_done": {
     "text": "今天已经用过了：明天会恢复",
     "status": "draft"
-  }
+  },
+  "ui.world.raft.prompt_board": "[E] 登上木筏",
+  "ui.world.raft.prompt_leave": "[E] 上岸",
+  "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼"
 }

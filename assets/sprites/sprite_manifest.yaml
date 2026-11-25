@@ -297,6 +297,16 @@ items:
   vida_raya_reloj: { idle: items/vida_raya_reloj.png, size: [16, 16] }
   vida_pez_paradoja: { idle: items/vida_pez_paradoja.png, size: [16, 16] }
   vida_leviatan_quieto: { idle: items/vida_leviatan_quieto.png, size: [16, 16] }
+  vida_lucio_hondo: { idle: items/vida_lucio_hondo.png, size: [16, 16] }
+  vida_carpa_olvido: { idle: items/vida_carpa_olvido.png, size: [16, 16] }
+  vida_barbo_campana: { idle: items/vida_barbo_campana.png, size: [16, 16] }
+  vida_pez_archivo: { idle: items/vida_pez_archivo.png, size: [16, 16] }
+  vida_lucio_silencio: { idle: items/vida_lucio_silencio.png, size: [16, 16] }
+  vida_esturion_escarcha: { idle: items/vida_esturion_escarcha.png, size: [16, 16] }
+  vida_dorado_rescoldo: { idle: items/vida_dorado_rescoldo.png, size: [16, 16] }
+  vida_pez_forja_muda: { idle: items/vida_pez_forja_muda.png, size: [16, 16] }
+  vida_raya_adios: { idle: items/vida_raya_adios.png, size: [16, 16] }
+  vida_ballena_eco: { idle: items/vida_ballena_eco.png, size: [16, 16] }
   vida_mojarra_primavera: { idle: items/vida_mojarra_primavera.png, size: [16, 16] }
   vida_carpa_nevada: { idle: items/vida_carpa_nevada.png, size: [16, 16] }
   vida_pez_copo: { idle: items/vida_pez_copo.png, size: [16, 16] }
@@ -444,6 +454,8 @@ items:
   vida_npc_pescador: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_pescador_trabajo: { idle: items/vida_npc_pescador_trabajo.png, size: [16, 16] }
   vida_cofre_oficio: { idle: items/vida_cofre_oficio.png, size: [16, 16] }
+  vida_balsa: { idle: items/vida_balsa.png, size: [16, 16] }
+  vida_muelle_balsa: { idle: items/vida_muelle_balsa.png, size: [16, 16] }
   # Pescadores nativos de los biomas (fishing.md § 12): arte provisorio.
   vida_npc_pesc_bosque: { idle: items/vida_npc_pescador.png, size: [16, 16] }
   vida_npc_pesc_ruinas: { idle: items/vida_npc_pescador.png, size: [16, 16] }

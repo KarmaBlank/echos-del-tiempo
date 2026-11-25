@@ -138,6 +138,18 @@ const Map<String, TuningDef> kTuningDefaults = {
     'spotRare': 0.35,
     'spotLoot': 0.25,
     'spotRadius': 2,
+    // Balsas de los lagos grandes (fishing.md § 15): velocidad (× la de
+    // caminar), tiles de agua para que un lago tenga muelle, alcance
+    // (tiles) del muelle y de la orilla para bajar, y lo que suma cada
+    // tile de distancia a la orilla (rareza / tamaño, con tope).
+    'raftSpeed': 0.8,
+    'raftMinLakeTiles': 70,
+    'raftDockReach': 1.5,
+    'raftShoreReach': 1.2,
+    'deepRarePerTile': 0.08,
+    'deepRareMax': 0.5,
+    'deepSizePerTile': 0.05,
+    'deepSizeMax': 0.3,
     // Horarios de los peces (fishing.md § 13): chance de que un pez fuera
     // de su franja entre igual en la tirada.
     'offHoursChance': 0.03,

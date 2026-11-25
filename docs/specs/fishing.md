@@ -415,3 +415,84 @@ botín del agua (`baitWaterChance`) y minas (`BaitRules.foundBait`).
 Con la caña afuera, casillero CEBO junto a la caña: ícono, "Cebo [F]",
 cantidad. Clic o F pasa al siguiente; por defecto el mejor que tengas.
 La COLECCIÓN muestra el mejor cebo de cada pez.
+
+## 15. Balsas de los lagos grandes (protocolo 83)
+
+Código: `lib/game_engine/rules/raft_rules.dart` (`RaftRules`, puro),
+`BiomeLayout.raftDocks`, `SessionEngine._raft` (anfitrión), dibujo en
+`map_game.dart` (`vida_balsa`, `vida_muelle_balsa` del manifest, salen
+de `tool/export_life_icons.dart`). Tunables en `kTuning[TuningId.fishing]`.
+
+### 15.1 Qué lago tiene muelle
+
+- Un lago es **grande** si es gigante (`BiomeLake.giant`, el `giantLake`
+  de las tierras salvajes: siempre) o si su agua (tiles `~` conectados
+  desde el centro) llega a `raftMinLakeTiles` (70).
+- Cada lago grande tiene **un** muelle de balsas, determinista (mismo
+  layout = mismo muelle en todos los pares): el tile de tierra caminable
+  de la orilla más cercano al final del camino del lago (`approach`), que
+  no sea ese tile ni esté pegado a un muelle de pesca (`f`), y cuyo tile
+  de agua de enfrente tenga dos tiles más de agua detrás. Empates: fila,
+  después columna. No cambia tiles: el muelle es un adorno sobre tierra y
+  hay una balsa amarrada en el agua de enfrente.
+
+### 15.2 Subir, manejar, bajar
+
+- **E** a `raftDockReach` (1.5) tiles del muelle, a pie: acción
+  `raft {on: true}`. El anfitrión pone al jugador en el centro del tile de
+  agua de enfrente (teletransporte: época nueva) y guarda esa época en
+  `SessionPlayer.raftEpoch`. Está en balsa (`rafting`) mientras su época
+  sea esa: cualquier otro teletransporte (viaje, misión, piedra de paso)
+  lo deja a pie solo.
+- Cada jugador tiene su propia balsa: varios a la vez, sin límite.
+- En balsa se mueve con las teclas de siempre a `raftSpeed` (0.8) × la
+  velocidad de caminar, solo sobre agua (`RaftRules.step`: caja un poco
+  más chica que un tile, se desliza contra la orilla; los muelles de
+  pesca cuentan como orilla).
+- Posición: igual que a pie (el cliente la manda, `MoveAction`); en balsa
+  el anfitrión rechaza la que deja el centro fuera del agua.
+- **E** en balsa: si hay tierra libre a `raftShoreReach` (1.2) tiles o
+  menos (cualquier orilla, también el muelle) baja ahí: `raft {on:
+  false}`, el anfitrión lo pone en el centro del tile libre más cercano
+  (`RaftRules.landing`). Si no hay orilla cerca, E pesca.
+- Indicaciones: "[E] Subir a la balsa", "[E] Bajar a la orilla", "[E]
+  Pescar desde la balsa" (`ui.world.raft.*`).
+- Snapshot: `rf` (la época de la balsa) en el jugador, solo si está en
+  balsa; todos lo ven sobre su balsa.
+
+### 15.3 Aguas abiertas
+
+- La pesca desde la balsa es la de siempre (caña, lance, minijuego,
+  auto-pesca) y anda en cualquier parte del lago.
+- **Profundidad** = tiles (8 direcciones) del tile de la boya (o de la
+  balsa si todavía no hay boya) al tile más cercano que no es agua
+  (`RaftRules.depth`, cacheado por mapa). Solo en exteriores de bioma.
+- Cada tile después del primero suma `deepRarePerTile` (0.08) de rareza
+  (tope `deepRareMax`, 0.5) y `deepSizePerTile` (0.05) de tamaño (tope
+  `deepSizeMax`, 0.3).
+- **Especies de aguas abiertas** (`FishDef.minDepth`): no están en la
+  lista del lago; se suman a la tabla del bioma con la boya a esa
+  profundidad o más (`deepFishOf`). Los lagos comunes llegan a 3 de
+  profundidad; los gigantes a 4–6, así que solo ahí aparecen. Los ayudantes y el pescador nativo no
+  las ven (no cambian).
+
+| Bioma | Especie | Rareza | Prof. | cm | Precio | XP |
+|---|---|---|---|---|---|---|
+| bosque | Lucio de la hondura | épico | 4 | 70–150 | 260 | 70 |
+| bosque | Carpa del Olvido | legendario | 5 | 110–200 | 1500 | 230 |
+| ruinas | Barbo de la campana hundida | épico | 4 | 60–130 | 380 | 85 |
+| ruinas | Pez del Archivo Ahogado | legendario | 5 | 100–210 | 2100 | 290 |
+| cavernas | Lucio del silencio | épico | 4 | 70–150 | 500 | 110 |
+| cavernas | Esturión de la Escarcha Eterna | legendario | 5 | 140–260 | 2800 | 350 |
+| grieta | Dorado del rescoldo | épico | 4 | 65–140 | 650 | 130 |
+| grieta | Pez de la Forja Muda | legendario | 5 | 120–230 | 3600 | 420 |
+| abismo | Raya del adiós | épico | 4 | 80–170 | 850 | 150 |
+| abismo | Ballena del Último Eco | legendario | 5 | 200–400 | 4800 | 500 |
+
+### 15.4 Tests
+
+`test/game_engine/lake_raft_test.dart` (muelle determinista, subir,
+manejar, bordes, bajar, profundidad → especies),
+`test/netcode/lake_raft_sync_test.dart` (loopback: dos balsas a la vez),
+`test/features/world/lake_raft_prompt_test.dart` (indicación y E). Con
+`RAFT_PREVIEW=1` escribe `docs/preview/lake_raft.png`.
