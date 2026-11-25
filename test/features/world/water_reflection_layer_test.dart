@@ -212,4 +212,63 @@ void main() {
     final all = {for (final r in rows) ...r};
     expect(all, hasLength(1));
   });
+
+  test('only props right above the water reflect, from the water line', () {
+    final map = inletLake();
+    final layer = reflectionLayer(TilePainter());
+    frame((c) => layer.draw(c, map, const Rect.fromLTWH(0, 0, 512, 384),
+        t: 0,
+        darkness: 0,
+        cover: 0,
+        field: const Size(512, 384),
+        actors: const [],
+        roofed: (_, __) => false));
+    expect(layer.debugShoreProps, contains((10, 5)));
+    expect(layer.debugShoreProps, isNot(contains((20, 10))),
+        reason: 'two tiles above the water: no floating tree');
+    // An actor two tiles above the water does not reflect; adjacent does.
+    WaterKind at(int x, int y) => layer.kindAt(x, y);
+    expect(ReflectionRules.anchor(20 * 16 + 8, 10 * 16 + 15, at), isNull);
+    expect(ReflectionRules.anchor(20 * 16 + 8, 11 * 16 + 15, at), 12 * 16);
+  });
+
+  testWidgets('inlet: the water tint stays uniform past the reflection',
+      (tester) async {
+    final map = inletLake();
+    final layer = reflectionLayer(TilePainter());
+    const view = Rect.fromLTWH(96, 64, 256, 256);
+    final actors = [
+      (
+        x: 10 * 16 + 8.0,
+        y: 5 * 16 + 15.0,
+        moving: false,
+        onWater: false,
+        draw: (Canvas c) => c.drawRect(
+            const Rect.fromLTWH(160, 64, 16, 32), Paint()..color = const Color(0xFFFFFFFF)),
+      ),
+    ];
+    final img = record(256, 256, (c) {
+      c.translate(-view.left, -view.top);
+      layer.draw(c, map, view,
+          t: 0,
+          darkness: 0,
+          cover: 0,
+          field: const Size(512, 384),
+          actors: actors,
+          roofed: (_, __) => false);
+    });
+    final data = await tester.runAsync(
+        () => img.toByteData(format: ui.ImageByteFormat.rawRgba));
+    final px = data!.buffer.asUint32List();
+    int at(double x, double y) =>
+        px[(y - view.top).toInt() * 256 + (x - view.left).toInt()];
+    // Inlet column, well past the 1.5-tile reflection (line 96 + 24).
+    final open = at(300, 300);
+    for (var y = 96.0 + 26; y < 190; y += 3) {
+      for (var x = 161.0; x < 175; x += 3) {
+        expect(at(x, y), open, reason: '($x, $y)');
+      }
+    }
+    img.dispose();
+  });
 }

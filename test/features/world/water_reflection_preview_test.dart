@@ -22,7 +22,8 @@ void main() {
     if (!_on) return;
     late GameSprites sprites;
     await tester.runAsync(() async => sprites = await loadSprites());
-    final map = reflectionLake();
+    final lakeMap = reflectionLake();
+    final map = lakeMap;
     final tiles = TilePainter()..vegetation = sprites.vegetation;
     final painter = ActorPainter(sprites);
     const w = 320.0, h = 200.0, scale = 3.0;
@@ -40,13 +41,17 @@ void main() {
     ];
 
     Future<void> shot(String name, Rect view,
-        {required double dark,
+        {GameMap? on,
+        required double dark,
         double cover = 0.7,
         bool raft = false,
         double t = 2.0,
         Color? veil}) async {
+      final map = on ?? lakeMap;
       final layer = reflectionLayer(tiles);
-      var actors = lakeActors(map, 10, painter: painter, t: t * 1000);
+      var actors = on != null
+          ? <ReflectedActor>[]
+          : lakeActors(map, 10, painter: painter, t: t * 1000);
       if (raft) {
         final im = sprites.lifeIcon('balsa', '');
         final x = view.center.dx, y = view.center.dy + 10;
@@ -129,6 +134,8 @@ void main() {
         dark: 0.5, veil: const Color(0xFFF2D2C0), cover: 0.4);
     await shot('night_lights', shore,
         dark: 1, veil: const Color(0xFF3A4478), cover: 0.2);
+    await shot('inlet_tree', const Rect.fromLTWH(48, 16, 320, 200),
+        on: inletLake(), dark: 0, cover: 0);
     await shot('raft_wake', lake, dark: 0, raft: true, t: 3.3);
   });
 }

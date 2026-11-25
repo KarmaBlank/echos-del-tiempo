@@ -56,6 +56,19 @@ discretos.
    (`reflWakeAmp`) dentro de `reflWakeRadius` px, más espuma de 1 px en
    la estela de la balsa.
 
+### 1.6 Anclaje a la orilla (v0.49.9)
+
+- Solo se reflejan props y actores cuya base está JUSTO sobre el agua
+  (`reflRows` = `reflActorReach` = 1): un árbol a 2 tiles del agua no
+  se refleja (antes aparecía "flotando" en el medio del lago).
+- El reflejo se voltea sobre la base y la base reflejada cae en la
+  primera fila de agua de esa columna: sin hueco. Largo máximo
+  `reflMaxLen` (24 px = 1.5 tiles), desvanecido rápido.
+- Los desvanecidos de cada actor solo tocan píxeles del actor: la
+  textura de la orilla se dibuja detrás (`dstOver`), así no queda un
+  rectángulo de agua más clara alrededor del actor. El borde de la
+  orilla lisa es de `reflBankLip` = 2 px.
+
 ## 2. Tipos de agua
 
 | Tipo | Dónde | Reflejo |
