@@ -184,6 +184,13 @@ celdas, revelado, marcas del exterior), `TownState.discovery`,
   - Además Tú y Aliados.
   Élites y mercaderes de exploración son eventos del día y no se dibujan
   en el mapa (se encuentran explorando, § 6), así que no van en la leyenda.
+- `FullMap.overworldLegendFor(overlay)`: en el exterior la leyenda se
+  recorta a lo que hay dibujado (un tipo opcional aparece cuando hay uno
+  descubierto; Aliados solo con grupo; grupos vacíos no se muestran).
+- Texto de la leyenda (títulos de grupo y etiquetas) con `DsText.subtitle`,
+  el mismo tamaño que los botones del panel; en filas si no entra.
+- El título del panel en el exterior es el nombre del bioma
+  (`MAPA · BOSQUE`); en mazmorras sigue el nombre de la misión/piso.
 
 ### 11.2 Objetivos vs. opcional
 - Objetivos (entradas de mazmorra y portales de Eco): cuadro de 3 tiles
