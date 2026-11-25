@@ -296,6 +296,48 @@ void main() {
     expect((back.i, back.shrine), (2, true));
   });
 
+  test('wilds loot marks: per spot, per layout version, per day', () {
+    const day = 7;
+    final key = WildLootRules.lootKey('Ana', kBosque, 0, day);
+    var town = TownState(sky: const SkyState(day: day), daily: {key: 1});
+    // Only that spot (and not the shrine with the same index).
+    expect(WildLootRules.taken(town, 'Ana', kBosque, 0), isTrue);
+    expect(WildLootRules.taken(town, 'Ana', kBosque, 1), isFalse);
+    expect(WildLootRules.taken(town, 'Ana', kBosque, 0, shrine: true),
+        isFalse);
+    expect(WildLootRules.taken(town, 'Bea', kBosque, 0), isFalse);
+    // Next day it refills.
+    town = town.copyWith(sky: const SkyState(day: day + 1));
+    expect(WildLootRules.taken(town, 'Ana', kBosque, 0), isFalse);
+  });
+
+  test('a regenerated layout does not inherit the loot marks of today', () {
+    const day = 101;
+    // Marks written by an older layout today: the pre-fix key shape
+    // (no version) and a stale versioned one.
+    const old = TownState(
+        layoutVersion: BiomeLayout.version - 1,
+        sky: SkyState(day: day),
+        daily: {
+          'wx:Ana:$kBosque:c0:$day': 1,
+          'wx:Ana:$kBosque:s1:$day': 1,
+          'wx:Ana:$kBosque:v${BiomeLayout.version - 1}:c2:$day': 1,
+          'com:Ana:$day': 0,
+        });
+    for (final i in [0, 1, 2]) {
+      expect(WildLootRules.taken(old, 'Ana', kBosque, i), isFalse);
+      expect(WildLootRules.taken(old, 'Ana', kBosque, i, shrine: true),
+          isFalse);
+    }
+    final m = BiomeRegions.migrate(old);
+    expect(m.daily, {'com:Ana:$day': 0},
+        reason: 'only the layout-indexed loot marks go');
+    // The engine migrates on setWorld: new spots open the same day.
+    final e = sessionEngine(zones: true);
+    final s = e.setWorld(e.create(), 'w', 'W', town: old).state;
+    expect(s.town.daily.keys.where((k) => k.startsWith('wx:')), isEmpty);
+  });
+
   test('old worlds drop the layout-indexed state on load', () {
     const old = TownState(
         waystones: {'Ana|bosque:3'}, wild: {'bosque:2': 50}, daily: {'x:1': 1});
