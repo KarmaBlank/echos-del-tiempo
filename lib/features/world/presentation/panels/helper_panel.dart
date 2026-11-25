@@ -13,6 +13,7 @@ import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
+import 'item_source_text.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import '../world_strings.dart';
@@ -238,6 +239,10 @@ class _HelperPanelState extends State<HelperPanel> {
               context.t('ui.town.helper.costs', {'cost': HelperRules.costText(cost)}),
             if (cost != null) context.t('ui.town.helper.needs_level', {'n': cost.level}),
           ],
+          cost: cost == null || cost.mats.isEmpty
+              ? null
+              : itemCostGrid(context, p, cost.mats,
+                  key: ValueKey('helper-up-cost-${u.name}')),
           actions: [
             DsButton(max ? context.t('ui.town.helper.max') : context.t('ui.town.helper.upgrade'),
                 key: ValueKey('helper-up-go-${u.name}'),

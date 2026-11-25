@@ -4,6 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../world_strings.dart';
+import 'item_source_text.dart';
 
 /// Detalle de un ítem de oficio (panel de la derecha): todo escrito
 /// completo, nunca con "…".
@@ -17,7 +18,16 @@ class LifeItemDetail {
     this.actions = const [],
     this.compare,
     this.hoverTip = false,
+    this.itemId,
+    this.cost,
   });
+
+  /// Trade item id: adds its "where to get it" lines (item_sources.md).
+  final String? itemId;
+
+  /// What it costs, as an item grid ([itemCostGrid]); shown in the
+  /// detail pane under a REQUIERE header.
+  final Widget? cost;
 
   /// Cambios contra la equipada del mismo tipo (texto, mejora); `null` =
   /// no aplica, vacío = es la equipada o igual.
@@ -242,7 +252,14 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
         ]),
       ],
       SizedBox(height: DsSpace.xs),
-      for (final l in d.lines) Text(l, style: DsText.body()),
+      for (final l in lifeDetailLines(context, d)) Text(l, style: DsText.body()),
+      if (d.cost case final cost?) ...[
+        SizedBox(height: DsSpace.sm),
+        Text(context.t('ui.town.source.requires'),
+            style: DsText.subtitle(DsColors.textSecondary)),
+        SizedBox(height: DsSpace.xs),
+        cost,
+      ],
       ...lifeCompareLines(context, d),
       if (d.description != null) ...[
         SizedBox(height: DsSpace.xs),
@@ -256,6 +273,13 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
   return DsDetailPane(
       key: const ValueKey('life-detail'), body: body, actions: actions);
 }
+
+/// Data lines of a detail plus, with [LifeItemDetail.itemId], where the
+/// item is obtained.
+List<String> lifeDetailLines(BuildContext context, LifeItemDetail d) => [
+      ...d.lines,
+      if (d.itemId case final id?) ...itemSourceLines(context, id),
+    ];
 
 /// "vs equipped" lines of a detail (empty when not applicable).
 List<Widget> lifeCompareLines(BuildContext context, LifeItemDetail d) {
@@ -275,7 +299,8 @@ Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) => DsTooltipCard(
       titleColor: d.nameColor,
       tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
       children: [
-        for (final l in d.lines) Text(l, style: DsText.body()),
+        for (final l in lifeDetailLines(context, d))
+          Text(l, style: DsText.body()),
         ...lifeCompareLines(context, d),
       ],
     );

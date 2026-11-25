@@ -23,6 +23,7 @@ import '../../../../game_engine/rules/sky_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
+import 'item_source_text.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
@@ -933,6 +934,14 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             if (h != null && why != null && cost != null) why,
             _s.t('ui.town.npc.house_levels'),
           ],
+          cost: h != null && cost != null
+              ? Builder(
+                  builder: (context) => itemCostGrid(
+                      context,
+                      p,
+                      {...cost.cost.mats, cost.loot: cost.lootN},
+                      key: ValueKey('house-cost-${n.id}')))
+              : null,
           actions: [
             if (h != null && cost != null)
               DsButton(_s.t('ui.town.npc.invest'),

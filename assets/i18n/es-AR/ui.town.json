@@ -538,5 +538,21 @@
   "ui.town.trader.kind.mine_goods": "Minerales",
   "ui.town.trader.kind.mine_supplies": "Insumos",
   "ui.town.trader.kind.mine_tools": "Picos",
-  "ui.town.trader.tab_mining": "MINERÍA"
+  "ui.town.trader.tab_mining": "MINERÍA",
+  "ui.town.source.farm_shop": "Se compra en el AGROPECUARIO",
+  "ui.town.source.crop": "Se cultiva (semilla de {place}) · {seasons}",
+  "ui.town.source.forage": "Se recolecta en {place} (plantas silvestres)",
+  "ui.town.source.forage_any": "Se recolecta en rincones ocultos de cualquier bioma",
+  "ui.town.source.forage_season": "Se recolecta en cualquier bioma · {seasons}",
+  "ui.town.source.fishing": "Se pesca en el lago de {place} · {seasons}",
+  "ui.town.source.mine": "Se extrae en la mina de {place}",
+  "ui.town.source.dungeon_vein": "Sale de vetas en las mazmorras",
+  "ui.town.source.boss_drop": "Lo sueltan los jefes de zona",
+  "ui.town.source.smelting": "Se funde en la FORJA a partir de {item}",
+  "ui.town.source.smithing": "Se hace en la FORJA",
+  "ui.town.source.workshop": "Se hace en el TALLER DE OFICIOS",
+  "ui.town.source.cooking": "Se cocina en la COCINA",
+  "ui.town.source.bait_craft": "Se prepara en la mesa de CEBOS",
+  "ui.town.source.have_need": "Tenés {have} de {need}",
+  "ui.town.source.requires": "REQUIERE"
 }
