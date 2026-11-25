@@ -49,6 +49,8 @@ class _SmithBenchState extends State<SmithBench> {
     final inWorld = session.run == null;
     final smithLv = SmithRules.level(p);
     final brann = session.town.resident('brann');
+    // BRANN only shows once Brann lives in town (has a house).
+    final brannHome = brann.invited && brann.house > 0;
     final brannCap = Rarity.values[ResidentRules.commissionRarity(brann,
         fishLv: FishingRules.level(p),
         farmLv: FarmingRules.level(p),
@@ -109,7 +111,7 @@ class _SmithBenchState extends State<SmithBench> {
           : why(SmithCraftRules.cannotForge(p, w, ingot, _rarity,
               maxRarity: cap,
               brann: byBrann,
-              brannHome: brann.invited && brann.house > 0));
+              brannHome: brannHome));
       final tag = byBrann ? 'brann' : 'forge';
       final mark = byBrann ? DsColors.mp : RarityColors.of(_rarity);
       return DsCraftItem(
@@ -249,13 +251,15 @@ class _SmithBenchState extends State<SmithBench> {
       filters: [
         DsTransferFilter(s.t('ui.inventory.smith.tab.smelt'), 'smelt'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.forge'), 'forge'),
-        DsTransferFilter(s.t('ui.inventory.smith.tab.brann'), 'brann'),
+        if (brannHome)
+          DsTransferFilter(s.t('ui.inventory.smith.tab.brann'), 'brann'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.mine'), 'mine'),
       ],
       items: [
         for (final b in kBiomeOres.values) smelt(b.ore),
         for (final w in bases) forge(w.id, false),
-        for (final w in bases) forge(w.id, true),
+        if (brannHome)
+          for (final w in bases) forge(w.id, true),
         for (final t in kMineTools)
           if (t.ingot != null) tool(t.id),
         for (final id in kMineSupplies) tool(id),
