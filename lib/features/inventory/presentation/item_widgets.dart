@@ -14,8 +14,10 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
+import '../../../game_engine/rules/profession_gear_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
-import 'inventory_strings.dart';
+import 'inventory_strings.dart';
+
 import '../domain/eco_text.dart';
 
 /// Piezas visuales de objetos (loot v2): colores de rareza, ícono pixel,
@@ -56,6 +58,10 @@ abstract final class RarityColors {
 /// Clave del ícono de un tipo de arma: las armas con escudo muestran la
 /// combinación (`espada+escudo` → `espada_escudo`); un tipo con escudo
 /// sin forma propia cae al escudo solo.
+/// Manifest sprite of [it]'s own icon if it is a fixed profession
+/// weapon (profession_gear.md), else `null` (the type's icon).
+String? gearSpriteOf(ItemInstance it) => GearRules.defOf(it)?.sprite;
+
 String iconKeyForType(String type) {
   if (kItemIconRows.containsKey(type)) return type;
   if (type.contains('escudo')) {
@@ -89,7 +95,8 @@ class PixelIcon extends StatelessWidget {
       this.accent = ProtoColors.ice,
       this.size = 32,
       this.procKey,
-      this.look});
+      this.look,
+      this.gearSprite});
 
   final String iconKey;
   final Color accent;
@@ -102,6 +109,9 @@ class PixelIcon extends StatelessWidget {
   /// Identidad del arma (aura sutil del elemento, ULT, variante).
   final WeaponLook? look;
 
+  /// Own icon of a profession weapon (`gear_<id>`; [gearSpriteOf]).
+  final String? gearSprite;
+
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
@@ -110,7 +120,8 @@ class PixelIcon extends StatelessWidget {
             procKey == null ? 'items' : 'items.$procKey',
             look: look)
           ..pngKey = ItemIconImages.keyOf(
-              kItemIconRows.containsKey(iconKey) ? iconKey : 'espada'),
+              kItemIconRows.containsKey(iconKey) ? iconKey : 'espada')
+          ..gearSprite = gearSprite,
       );
 }
 
@@ -183,7 +194,8 @@ class ItemCell extends StatelessWidget {
           accent: RarityColors.of(it.rarity),
           size: size - 12 * k,
           procKey: procKeyForType(type),
-          look: WeaponLook.of(it));
+          look: WeaponLook.of(it),
+          gearSprite: gearSpriteOf(it));
     } else if (c?.eco case final e?) {
       border = RarityColors.of(e.rarity);
       // Más chico y arriba: abajo a la derecha va el tier.

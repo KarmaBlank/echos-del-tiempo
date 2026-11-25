@@ -116,6 +116,35 @@ abstract final class MineWorkRules {
     return st.copyWith(known: {...st.known, who: {...had, ...add}});
   }
 
+  /// Hidden veins within [radius] tiles of ([px], [py]): vein tiles with
+  /// no walkable neighbour (still inside the rock). The Pico sub-path B
+  /// perk (`detect`, life_trees_v2.md § 5) makes them sparkle; the gem
+  /// ring of a sealed grotto counts, so hidden grottoes sparkle too.
+  static List<(int, int)> hiddenVeins(
+      MineLevel lvl, MineLevelState st, double px, double py, double radius) {
+    if (radius <= 0) return const [];
+    final r = radius.ceil(), cx = px.floor(), cy = py.floor();
+    final out = <(int, int)>[];
+    for (var y = math.max(0, cy - r); y <= math.min(lvl.height - 1, cy + r); y++) {
+      for (var x = math.max(0, cx - r); x <= math.min(lvl.width - 1, cx + r); x++) {
+        if (!MineTile.veins.contains(MiningRules.tileAt(lvl, st, x, y))) {
+          continue;
+        }
+        final dx = x + 0.5 - px, dy = y + 0.5 - py;
+        if (dx * dx + dy * dy > radius * radius) continue;
+        var open = false;
+        for (final (ax, ay) in _n4) {
+          if (Tile.isWalkable(MiningRules.tileAt(lvl, st, x + ax, y + ay))) {
+            open = true;
+            break;
+          }
+        }
+        if (!open) out.add((x, y));
+      }
+    }
+    return out;
+  }
+
   /// The veins [who] has on the minimap now: discovered and still veins.
   static List<(int, int, String)> knownVeins(
       MineLevel lvl, MineLevelState st, String who) => [
