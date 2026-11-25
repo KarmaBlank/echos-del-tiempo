@@ -88,7 +88,20 @@ class BattleView extends StatefulWidget {
     this.layoutCatalog,
     this.queue = const [],
     this.onCancelQueued,
+    this.onMoveQueued,
+    this.onConfirmQueue,
+    this.queueAgreed,
   });
+
+  /// Moves a queued command to position `to`; `null` = no arrows.
+  final void Function(String id, int to)? onMoveQueued;
+
+  /// The local player agrees the queue order; `null` = no button (already
+  /// agreed, or not in the block).
+  final void Function()? onConfirmQueue;
+
+  /// (agreed, needed) humans of the block for the queue order.
+  final (int, int)? queueAgreed;
 
   /// Action queue of the turn (turn_modes.md § 3.1), in resolution order.
   final List<BattleQueueEntry> queue;
@@ -1552,6 +1565,11 @@ class BattleViewState extends State<BattleView>
                     title: _s.t('ui.combat.queue.title'),
                     cancelLabel: _s.t('ui.combat.queue.cancel'),
                     onCancel: widget.onCancelQueued,
+                    onMove: widget.onMoveQueued,
+                    onConfirm: widget.onConfirmQueue,
+                    confirmLabel: _s.t('ui.combat.queue.confirm'),
+                    moveLabel: _s.t('ui.combat.queue.move_up'),
+                    agreed: widget.queueAgreed,
                   ),
                 ),
               ),
@@ -1981,12 +1999,31 @@ class BattleQueueRow extends StatelessWidget {
     required this.title,
     required this.cancelLabel,
     this.onCancel,
+    this.onMove,
+    this.onConfirm,
+    this.confirmLabel = '',
+    this.moveLabel = '',
+    this.agreed,
   });
 
   final List<BattleQueueEntry> entries;
   final String title;
   final String cancelLabel;
   final void Function(String id)? onCancel;
+
+  /// Moves an entry to another position (◀ = one earlier).
+  final void Function(String id, int to)? onMove;
+
+  /// Agrees the order; `null` = no button.
+  final VoidCallback? onConfirm;
+  final String confirmLabel;
+  final String moveLabel;
+
+  /// (agreed, needed) humans of the block.
+  final (int, int)? agreed;
+
+  static String _agreedText(int ok, int need) => '✓ $ok/$need';
+  static String _bracket(String s) => '[$s]';
 
   @override
   Widget build(BuildContext context) {
@@ -2003,6 +2040,18 @@ class BattleQueueRow extends StatelessWidget {
             ProtoText(title),
             for (var i = 0; i < entries.length; i++) ...[
               const SizedBox(width: 8),
+              if (i > 0 && onMove != null)
+                Tooltip(
+                  message: moveLabel,
+                  child: GestureDetector(
+                    key: ValueKey('queue-up-${entries[i].id}'),
+                    onTap: () => onMove!(entries[i].id, i - 1),
+                    child: const Padding(
+                      padding: EdgeInsets.only(right: 3),
+                      child: ProtoText('◀'),
+                    ),
+                  ),
+                ),
               ProtoText('${i + 1}. ${entries[i].glyph} '
                   '${protoEsc(entries[i].name)}'),
               if (entries[i].mine && onCancel != null)
@@ -2017,6 +2066,18 @@ class BattleQueueRow extends StatelessWidget {
                     ),
                   ),
                 ),
+            ],
+            if (agreed case (final ok, final need)) ...[
+              const SizedBox(width: 8),
+              ProtoText(_agreedText(ok, need)),
+            ],
+            if (onConfirm != null) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                key: const ValueKey('queue-confirm'),
+                onTap: onConfirm,
+                child: ProtoText(_bracket(protoEsc(confirmLabel))),
+              ),
             ],
           ],
         ),

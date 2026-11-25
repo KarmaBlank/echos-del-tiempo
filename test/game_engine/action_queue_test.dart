@@ -26,6 +26,23 @@ void main() {
     return s;
   }
 
+  /// Every pending human of the block agrees the queue order.
+  GameSession agree(SessionEngine e, GameSession s) {
+    for (final c in [...s.battle!.state.pendingGroup]) {
+      s = e.apply(s, c.id, const ConfirmBattleQueueAction())?.state ?? s;
+    }
+    return s;
+  }
+
+  /// [id] acts on its own and the block agrees: it resolves at once.
+  GameSession now(SessionEngine e, GameSession s, String id, BattleCommand c) {
+    s = agree(e, act(e, s, id, BattleAction(c)));
+    for (var i = 0; i < 40 && s.battle!.queued(id); i++) {
+      s = e.tick(s, 0.05).state;
+    }
+    return s;
+  }
+
   void sturdy(GameSession s) {
     for (final c in [...s.battle!.state.party, ...s.battle!.state.enemies]) {
       c.hp = c.maxHp * 50;
@@ -51,8 +68,8 @@ void main() {
     test('queue keeps arrival order, cancel and change in place', () {
       final e = sessionEngine();
       var s = partyPhase(e, fight(e, CombatMode.phases));
-      // p0 acts at once; the host animates (wait > 0).
-      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      // p0 acts (agreed); the host animates (wait > 0).
+      s = now(e, s, 'p0', const DefendCommand());
       expect(s.battle!.wait, greaterThan(0));
       expect(s.battle!.queue, isEmpty);
       // While it animates p2 then p1 confirm: both queue, in that order.
@@ -75,6 +92,7 @@ void main() {
       final seen = j.fromJson(asJson(jsonDecode(jsonEncode(j.toJson(s)))));
       expect([for (final q in seen.battle!.queue) q.playerId], ['p1', 'p2']);
       expect(seen.battle!.queue.first.command, isA<AttackCommand>());
+      s = agree(e, s);
       final un = ActionJson.fromJson(
           asJson(jsonDecode(jsonEncode(
               ActionJson.toJson(const CancelQueuedBattleAction())))));
@@ -104,9 +122,10 @@ void main() {
         return markTestSkipped('single-enemy encounter');
       }
       final doomed = enemies.first.id;
-      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      s = now(e, s, 'p0', const DefendCommand());
       s = act(e, s, 'p1', BattleAction(AttackCommand(targetId: doomed)));
       expect(s.battle!.queue.single.playerId, 'p1');
+      s = agree(e, s);
       s.battle!.state.byId(doomed)!.hp = 0;
       for (var i = 0; i < 400 && s.battle!.queue.isNotEmpty; i++) {
         s = e.tick(s, 0.05).state;
@@ -117,7 +136,7 @@ void main() {
     test('duo: partner queued is busy', () {
       final e = sessionEngine();
       var s = partyPhase(e, fight(e, CombatMode.phases));
-      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      s = now(e, s, 'p0', const DefendCommand());
       s = act(e, s, 'p1', const BattleAction(DefendCommand()));
       expect(e.apply(s, 'p2', const BattleAction(DualCommand('p1'))), isNull);
       expect(e.apply(s, 'p2', const BattleAction(DualCommand('p0'))), isNull);
@@ -150,7 +169,7 @@ void main() {
         final other = st.pendingGroup.first.id;
         final step = e.apply(s, other, const BattleAction(DefendCommand()));
         if (step != null) {
-          s = step.state;
+          s = agree(e, step.state);
           continue;
         }
       }
@@ -196,7 +215,7 @@ void main() {
         final step = e.apply(
             s, st.pendingGroup.first.id, const BattleAction(DefendCommand()));
         if (step != null) {
-          s = step.state;
+          s = agree(e, step.state);
           continue;
         }
       }
@@ -233,13 +252,14 @@ void main() {
       expect(battleQueueEnabled(s), isTrue);
       expect([for (final c in s.battle!.state.pendingGroup) c.id],
           ['p0', 'p1']);
-      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      s = now(e, s, 'p0', const DefendCommand());
       expect(s.battle!.wait, greaterThan(0));
       // p1 confirms while p0 animates: queued.
       s = act(e, s, 'p1', const BattleAction(DefendCommand()));
       expect([for (final q in s.battle!.queue) q.playerId], ['p1']);
       // p2 is behind an enemy: refused, not queued.
       expect(e.apply(s, 'p2', const BattleAction(DefendCommand())), isNull);
+      s = agree(e, s);
       final order = drain(e, () => s, (x) => s = x, 'p1');
       expect(order, ['p1']);
       expect(s.battle!.state.acted, containsAll(['p0', 'p1']));
@@ -249,7 +269,7 @@ void main() {
       final e = sessionEngine();
       var s = roundsWith(e, ['p0', 'E', 'p1', 'p2']);
       expect([for (final c in s.battle!.state.pendingGroup) c.id], ['p0']);
-      s = act(e, s, 'p0', const BattleAction(DefendCommand()));
+      s = now(e, s, 'p0', const DefendCommand());
       expect(e.apply(s, 'p1', const BattleAction(DefendCommand())), isNull);
       expect(s.battle!.queue, isEmpty);
     });
@@ -267,8 +287,7 @@ void main() {
       // Order: p0, p1, E, p2 (p2 cut off by the enemy).
       expect([for (final c in s.battle!.state.pendingGroup) c.id],
           ['p0', 'p1']);
-      s = act(e, s, 'p0',
-          BattleAction(SkillCommand('grietaTemporal', targetId: foe)));
+      s = now(e, s, 'p0', SkillCommand('grietaTemporal', targetId: foe));
       if (s.battle!.state.byId('p0')!.chained) {
         s = act(e, s, 'p0', const BattleAction(DefendCommand()));
       }
@@ -279,6 +298,7 @@ void main() {
       s = act(e, s, 'p2', const BattleAction(DefendCommand()));
       s = act(e, s, 'p1', const BattleAction(DefendCommand()));
       expect([for (final q in s.battle!.queue) q.playerId], ['p2', 'p1']);
+      s = agree(e, s);
       final order = drain(e, () => s, (x) => s = x, 'p1');
       expect(order, ['p2', 'p1']);
     });
@@ -288,17 +308,108 @@ void main() {
       final e = sessionEngine();
       var s = roundsWith(e, ['p0', 'p1', 'E', 'p2']);
       final foe = s.battle!.state.enemies.firstWhere((x) => x.alive).id;
-      s = act(e, s, 'p0',
-          BattleAction(SkillCommand('brasaEco', targetId: foe)));
+      s = now(e, s, 'p0', SkillCommand('brasaEco', targetId: foe));
       expect(s.battle!.state.byId('p0')!.chained, isTrue);
       expect(s.battle!.wait, greaterThan(0));
       // Partner confirms during the INSTANT animation; the actor too.
       s = act(e, s, 'p1', const BattleAction(DefendCommand()));
       s = act(e, s, 'p0', BattleAction(AttackCommand(targetId: foe)));
+      s = agree(e, s);
       final order = drain(e, () => s, (x) => s = x, 'p1');
       // The turn holder's follow-up first, then the partner.
       expect(order, ['p0', 'p1']);
       expect(s.battle!.queue, isEmpty);
+    });
+  });
+
+  group('agreed order (protocol 78)', () {
+    List<String> ids(GameSession s) =>
+        [for (final q in s.battle!.queue) q.playerId];
+
+    /// Ticks [n] steps and returns who acted in that time.
+    Set<String> run(SessionEngine e, GameSession Function() get,
+        void Function(GameSession) set, int n) {
+      var s = get();
+      final was = {...s.battle!.state.acted};
+      for (var i = 0; i < n; i++) {
+        sturdy(s);
+        s = e.tick(s, 0.05).state;
+      }
+      set(s);
+      return s.battle!.state.acted.difference(was);
+    }
+
+    for (final mode in [CombatMode.rounds, CombatMode.phases]) {
+      test('${mode.name}: client first, nobody fires until the block agrees',
+          () {
+        final e = sessionEngine();
+        var s = mode == CombatMode.rounds
+            ? roundsWith(e, ['p0', 'p1', 'E', 'p2'])
+            : partyPhase(e, fight(e, mode));
+        // The partner (a client, p1) picks first: queued, not resolved.
+        s = act(e, s, 'p1', const BattleAction(DefendCommand()));
+        expect(ids(s), ['p1']);
+        expect(run(e, () => s, (x) => s = x, 40), isEmpty);
+        // The host's player (p0) picks: queued behind.
+        s = act(e, s, 'p0', const BattleAction(AttackCommand()));
+        expect(ids(s), ['p1', 'p0']);
+        expect(run(e, () => s, (x) => s = x, 40), isEmpty);
+        // Reorder: p0 first. Anyone of the block may.
+        s = act(e, s, 'p1', const MoveQueuedBattleAction('p0', 0));
+        expect(ids(s), ['p0', 'p1']);
+        // One agreement is not enough.
+        s = act(e, s, 'p0', const ConfirmBattleQueueAction());
+        expect(run(e, () => s, (x) => s = x, 40), isEmpty);
+        // A change clears the agreement.
+        s = act(e, s, 'p1', const BattleAction(AttackCommand()));
+        expect(s.battle!.queueReady, isEmpty);
+        s = agree(e, s);
+        // Resolves in the agreed order.
+        final order = <String>[];
+        for (var i = 0; i < 400 && s.battle!.queue.isNotEmpty; i++) {
+          final was = {...s.battle!.state.acted};
+          sturdy(s);
+          s = e.tick(s, 0.05).state;
+          order.addAll(s.battle!.state.acted
+              .difference(was)
+              .where((id) => id == 'p0' || id == 'p1'));
+        }
+        expect(order, ['p0', 'p1']);
+        expect(s.battle!.queueReady, isEmpty);
+      });
+    }
+
+    test('time out: the chosen actions resolve instead of being dropped', () {
+      final e = sessionEngine();
+      var s = roundsWith(e, ['p0', 'p1', 'E', 'p2']);
+      s = act(e, s, 'p1', const BattleAction(AttackCommand()));
+      s.battle!.turnTime = 9999;
+      for (var i = 0; i < 400 && s.battle!.queue.isNotEmpty; i++) {
+        sturdy(s);
+        s = e.tick(s, 0.05).state;
+      }
+      expect(s.battle!.state.acted, contains('p1'));
+    });
+
+    test('wire: qmv, qok and qr round-trip', () {
+      for (final a in [
+        const MoveQueuedBattleAction('p1', 0),
+        const ConfirmBattleQueueAction(),
+      ]) {
+        final back = ActionJson.fromJson(
+            asJson(jsonDecode(jsonEncode(ActionJson.toJson(a)))));
+        expect(back.runtimeType, a.runtimeType);
+      }
+      final mv = ActionJson.fromJson(asJson(jsonDecode(jsonEncode(
+          ActionJson.toJson(const MoveQueuedBattleAction('p1', 2))))));
+      expect((mv as MoveQueuedBattleAction).to, 2);
+      final e = sessionEngine();
+      var s = partyPhase(e, fight(e, CombatMode.phases));
+      s = act(e, s, 'p1', const BattleAction(DefendCommand()));
+      s = act(e, s, 'p1', const ConfirmBattleQueueAction());
+      const j = SessionJson();
+      final seen = j.fromJson(asJson(jsonDecode(jsonEncode(j.toJson(s)))));
+      expect(seen.battle!.queueReady, {'p1'});
     });
   });
 
