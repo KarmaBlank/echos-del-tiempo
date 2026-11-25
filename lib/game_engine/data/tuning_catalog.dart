@@ -301,6 +301,10 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // farming.md § 6–8 (v0.23.0): ampliaciones, lago y ayudante.
   TuningId.town: TuningDef('Pueblo', {
+    // World labels (ui_style.md § "Etiquetas en el mundo"): names over
+    // NPCs, places and objects show only within this many tiles of the
+    // local player (then fade over one tile). Players' names always show.
+    'labelRevealTiles': 4.5,
     // Dar materiales de oficio (share_materials.md § 3): el botón del
     // medio del selector de cantidad (1 / giveStep / todo).
     'giveStep': 5,
