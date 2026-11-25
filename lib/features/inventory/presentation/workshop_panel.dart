@@ -72,9 +72,10 @@ class _WorkshopPanelState extends State<WorkshopPanel> {
         fill: true,
         help: workshopHelp(context),
         onClose: close,
-        titleTrailing: ProtoText(s.t('ui.inventory.workshop.credits',
-            {'credits': '₵${p.credits}'})),
-        header: PartyMemberBar.header(view, controller, const SizedBox.shrink()),
+        titleTrailing: ProtoText(
+            s.t('ui.inventory.workshop.credits', {'credits': '₵${p.credits}'})),
+        header:
+            PartyMemberBar.header(view, controller, const SizedBox.shrink()),
         actions: [
           PanelButton(s.t('ui.inventory.armory.character'),
               onPressed: () => controller.openPanel(WorldPanel.character)),
@@ -130,8 +131,9 @@ class WorkshopGrid extends StatefulWidget {
 
   final ShopContext shop;
 
-  /// Grid column: 6 inventory cells (the three filter chips fit in a row).
-  static const gridWidth = LifeItemGrid.cell * 6 + LifeItemGrid.gap * 5 + 8;
+  /// Grid column: 4 inventory cells per row (few recipes: the detail
+  /// gets the rest of the width).
+  static const gridWidth = LifeItemGrid.cell * 4 + LifeItemGrid.gap * 3 + 8;
 
   @override
   State<WorkshopGrid> createState() => _WorkshopGridState();
@@ -221,8 +223,8 @@ class _WorkshopGridState extends State<WorkshopGrid> {
         detail: i.detail,
         children: [
           Text(
-              invStrings(context).t('ui.town.source.have_need',
-                  {'have': i.have, 'need': i.need}),
+              invStrings(context).t(
+                  'ui.town.source.have_need', {'have': i.have, 'need': i.need}),
               style: DsText.body(
                   i.have >= i.need ? DsColors.success : DsColors.danger)),
           for (final l in i.sources) Text(l, style: DsText.body()),
@@ -265,20 +267,23 @@ class _WorkshopGridState extends State<WorkshopGrid> {
     ];
     final sel = ids.contains(_sel) ? _sel : ids.firstOrNull;
     final s = invStrings(context);
-    final filters =
-        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-      for (var i = 0; i < _tags.length; i++)
-        DsButton(
-            s.t(switch (i) {
-              0 => 'ui.inventory.workshop.filter.all',
-              1 => 'ui.inventory.workshop.filter.farming',
-              _ => 'ui.inventory.workshop.filter.fishing',
-            }),
-            key: ValueKey('workshop-filter-$i'),
-            size: DsButtonSize.compact,
-            selected: _filter == i,
-            onPressed: () => setState(() => _filter = i)),
-    ]);
+    final filters = Wrap(
+        key: const ValueKey('workshop-filters'),
+        spacing: DsSpace.xs,
+        runSpacing: DsSpace.xs,
+        children: [
+          for (var i = 0; i < _tags.length; i++)
+            DsButton(
+                s.t(switch (i) {
+                  0 => 'ui.inventory.workshop.filter.all',
+                  1 => 'ui.inventory.workshop.filter.farming',
+                  _ => 'ui.inventory.workshop.filter.fishing',
+                }),
+                key: ValueKey('workshop-filter-$i'),
+                size: DsButtonSize.compact,
+                selected: _filter == i,
+                onPressed: () => setState(() => _filter = i)),
+        ]);
     final grid = Wrap(
       spacing: LifeItemGrid.gap,
       runSpacing: LifeItemGrid.gap,
@@ -304,37 +309,45 @@ class _WorkshopGridState extends State<WorkshopGrid> {
           ),
       ],
     );
-    return LayoutBuilder(builder: (context, box) {
-      final left = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [filters, SizedBox(height: DsSpace.sm), grid],
-      );
-      final detail = sel == null
-          ? null
-          : KeyedSubtree(
-              key: const ValueKey('workshop-detail'),
-              child: _detail(context, sel));
-      if (box.maxWidth >= 560 && box.hasBoundedHeight) {
-        return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SizedBox(
-              width: WorkshopGrid.gridWidth,
-              child: SingleChildScrollView(child: left)),
-          SizedBox(width: DsSpace.sm),
-          if (detail != null) Expanded(child: detail),
-        ]);
-      }
-      return SingleChildScrollView(
-        child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              left,
-              SizedBox(height: DsSpace.sm),
-              if (detail != null) SizedBox(height: 460, child: detail),
-            ]),
-      );
-    });
+    final detail = sel == null
+        ? null
+        : KeyedSubtree(
+            key: const ValueKey('workshop-detail'),
+            child: _detail(context, sel));
+    // Filter chips in one row across the panel; under them, the recipe
+    // grid (narrow column) and the detail filling the rest.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        filters,
+        SizedBox(height: DsSpace.sm),
+        Expanded(
+          child: LayoutBuilder(builder: (context, box) {
+            if (box.maxWidth >= 560) {
+              return Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                        width: WorkshopGrid.gridWidth,
+                        child: SingleChildScrollView(child: grid)),
+                    SizedBox(width: DsSpace.sm),
+                    if (detail != null) Expanded(child: detail),
+                  ]);
+            }
+            return SingleChildScrollView(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    grid,
+                    SizedBox(height: DsSpace.sm),
+                    if (detail != null) SizedBox(height: 460, child: detail),
+                  ]),
+            );
+          }),
+        ),
+      ],
+    );
   }
 
   Widget _detail(BuildContext context, String id) {
@@ -343,8 +356,8 @@ class _WorkshopGridState extends State<WorkshopGrid> {
     final max = LifeCraftRules.maxTimes(p, id);
     final inWorld = widget.shop.view.session.run == null;
     final n = _qty.clamp(1, LifeCraftRules.maxStack);
-    final a = CraftAction(CraftOp.condense, '${LifeCraftRules.prefix}$id',
-        index: n);
+    final a =
+        CraftAction(CraftOp.condense, '${LifeCraftRules.prefix}$id', index: n);
     final why = !inWorld
         ? s.t('ui.inventory.workshop.world_only')
         : max < n

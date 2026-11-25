@@ -593,5 +593,6 @@
   "ui.town.source.bait_craft": "在鱼饵台制作",
   "ui.town.source.have_need": "拥有 {have} / 需要 {need}",
   "ui.town.source.requires": "需要",
-  "ui.town.source.tool_shop": "在手艺工坊 › 工具 购买"
+  "ui.town.source.tool_shop": "在手艺工坊 › 工具 购买",
+  "ui.town.trader.kind.picks": "镐"
 }

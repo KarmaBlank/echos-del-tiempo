@@ -34,16 +34,13 @@ class ToolShopGrid extends StatelessWidget {
         groups: [
           LifeItemGroup(context.t('ui.town.trader.kind.rods'), _rods(context),
               headerKey: const ValueKey('tools-filter-rods')),
-          LifeItemGroup(
-              context.t('ui.town.trader.kind.hoes'),
+          LifeItemGroup(context.t('ui.town.trader.kind.hoes'),
               _farm(context, FarmToolKind.azada),
               headerKey: const ValueKey('tools-filter-hoes')),
-          LifeItemGroup(
-              context.t('ui.town.trader.kind.cans'),
+          LifeItemGroup(context.t('ui.town.trader.kind.cans'),
               _farm(context, FarmToolKind.regadera),
               headerKey: const ValueKey('tools-filter-cans')),
-          LifeItemGroup(context.t('ui.town.trader.kind.mine_tools'),
-              _picks(context),
+          LifeItemGroup(context.t('ui.town.trader.kind.picks'), _picks(context),
               headerKey: const ValueKey('tools-filter-picks')),
         ],
         empty: context.t('ui.town.trader.nothing_to_buy'),
@@ -187,10 +184,14 @@ class ToolShopGrid extends StatelessWidget {
                 nameColor: DsColors.textPrimary,
                 itemId: t.id,
                 tags: [
-                  (context.t('ui.town.trader.kind.mine_tools'),
-                      DsColors.textSecondary),
-                  (context.t('ui.inventory.workshop.tier', {'n': t.tier}),
-                      DsColors.textSecondary),
+                  (
+                    context.t('ui.town.trader.kind.picks'),
+                    DsColors.textSecondary
+                  ),
+                  (
+                    context.t('ui.inventory.workshop.tier', {'n': t.tier}),
+                    DsColors.textSecondary
+                  ),
                 ],
                 lines: [
                   context.t('ui.town.trader.price', {'n': price}),
