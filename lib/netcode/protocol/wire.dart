@@ -194,7 +194,6 @@ import '../../game_engine/serialization/session_json.dart';
 /// and the `rcl` claimed mask in the profile.
 /// 83: dungeon-entry gatherings (free_movement.md § 2.1.1): `lf` countdown
 /// in `gat`, gathering kind `eco`.
-const kProtocolVersion = 83;
 /// 84: life trees v2 (life_trees_v2.md): new node ids, claimed rewards
 /// `life.lc` in the profile.
 const kProtocolVersion = 84;

@@ -2,7 +2,6 @@ import '../../../inventory/domain/item_names.dart';
 import '../../domain/quest_text.dart';
 import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
-import '../../../../core/i18n/game_text.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';

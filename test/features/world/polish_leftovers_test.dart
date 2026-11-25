@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:echos_del_tiempo/core/i18n/catalog_text.dart';
 import 'package:echos_del_tiempo/core/i18n/game_text.dart';
 import 'package:echos_del_tiempo/core/i18n/locale_id.dart';
 import 'package:echos_del_tiempo/core/i18n/string_tables.dart';
@@ -21,7 +22,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final tables = StringTables.loadDirectorySync(StringTables.assetRoot)!;
   final zh = LocaleId.fromTag('zh-Hans')!;
-  tearDown(() => GameText.current = null);
+  tearDown(() {
+    GameText.current = null;
+    CatalogText.active = null;
+  });
 
   test('Eco names render in the active language (3 locales)', () {
     const rules = EcoRules();
@@ -41,6 +45,7 @@ void main() {
         QuestTrackRules.itemName(k));
     final en = tables.strings(LocaleId.en);
     GameText.current = en;
+    CatalogText.active = en;
     expect(residentItemName(id), en.t('data.materials.smith.$id.name'));
     final a = ActiveQuest(
         npc: kBiomeNpcs.first,
@@ -51,8 +56,9 @@ void main() {
         have: 0,
         need: 2,
         tracked: false);
-    expect(questTitleText(en, a), '2 × ${residentItemName(id, en)}');
-    expect(questTitleText(tables.strings(zh), a), startsWith('2 × '));
+    expect(activeQuestTitle(en, a), '2 × ${residentItemName(id, en)}');
+    CatalogText.active = tables.strings(zh);
+    expect(activeQuestTitle(tables.strings(zh), a), startsWith('2 × '));
   });
 
   test('Brann and Ilda home lines are editable (home_ambient)', () {
