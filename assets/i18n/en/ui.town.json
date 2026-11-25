@@ -548,5 +548,14 @@
   "ui.town.cook.extra.shield": "Legendary: {n}% HP shield when the battle starts",
   "ui.town.cook.give": "GIVE TO {name}",
   "ui.town.cook.feast": "FEAST {q}",
-  "ui.town.cook.feast_line": "Feast: ingredients ×{n}, feeds the whole party in town"
+  "ui.town.cook.feast_line": "Feast: ingredients ×{n}, feeds the whole party in town",
+  "ui.town.fountain.houses": "ASSIGN HOUSES",
+  "ui.town.fountain.houses_line": "Pick a free house and who will live there.",
+  "ui.town.houses.title": "ASSIGN HOUSES",
+  "ui.town.houses.empty": "There is nobody to assign",
+  "ui.town.houses.no_houses": "There are no free houses",
+  "ui.town.houses.who": "Can live here:",
+  "ui.town.houses.assign": "ASSIGN",
+  "ui.town.houses.cell": "HOUSE {n}",
+  "ui.town.houses.level": "Level {n}"
 }

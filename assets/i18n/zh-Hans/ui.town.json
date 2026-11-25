@@ -560,5 +560,14 @@
   "ui.town.cook.extra.shield": "传说：战斗开始时获得 {n}% 生命的护盾",
   "ui.town.cook.give": "送给 {name}",
   "ui.town.cook.feast": "盛宴 {q}",
-  "ui.town.cook.feast_line": "盛宴：食材 ×{n}，让镇上全队都吃上"
+  "ui.town.cook.feast_line": "盛宴：食材 ×{n}，让镇上全队都吃上",
+  "ui.town.fountain.houses": "分配房屋",
+  "ui.town.fountain.houses_line": "选择一栋空房和入住的人。",
+  "ui.town.houses.title": "分配房屋",
+  "ui.town.houses.empty": "没有可分配的人",
+  "ui.town.houses.no_houses": "没有空房",
+  "ui.town.houses.who": "可以住在这里：",
+  "ui.town.houses.assign": "分配",
+  "ui.town.houses.cell": "房屋 {n}",
+  "ui.town.houses.level": "等级 {n}"
 }

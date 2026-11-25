@@ -2628,6 +2628,18 @@ class SessionController extends StateNotifier<SessionView?> {
     return true;
   }
 
+  /// ASIGNAR from the rune fountain's house screen (town_editor.md
+  /// § 1.1): the same host op as the dialogue's ASIGNAR CASA. Takes the
+  /// edit lock for the op when this player does not hold it.
+  bool assignHouse(String npc, String houseId) {
+    if (cannotEditTown != null) return false;
+    final held = _s?.townEditor == localId;
+    if (!held && !_apply(const TownAction(TownOp.lock))) return false;
+    final ok = residentOp(TownOp.assign, npc, target: houseId);
+    if (!held) _apply(const TownAction(TownOp.unlock));
+    return ok;
+  }
+
   /// Habitante que acaba de recibir casa: su diálogo abre agradeciendo.
   String? thanksNpc;
 

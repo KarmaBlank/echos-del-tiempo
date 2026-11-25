@@ -548,5 +548,14 @@
   "ui.town.cook.extra.shield": "Legendaria: escudo de {n}% de vida al empezar la batalla",
   "ui.town.cook.give": "DAR A {name}",
   "ui.town.cook.feast": "FESTÍN {q}",
-  "ui.town.cook.feast_line": "Festín: ingredientes ×{n}, alimenta a todo el grupo en el pueblo"
+  "ui.town.cook.feast_line": "Festín: ingredientes ×{n}, alimenta a todo el grupo en el pueblo",
+  "ui.town.fountain.houses": "ASIGNAR CASAS",
+  "ui.town.fountain.houses_line": "Elegí una casa libre y quién va a vivir ahí.",
+  "ui.town.houses.title": "ASIGNAR CASAS",
+  "ui.town.houses.empty": "No hay nadie para asignar",
+  "ui.town.houses.no_houses": "No hay casas libres",
+  "ui.town.houses.who": "Pueden vivir acá:",
+  "ui.town.houses.assign": "ASIGNAR",
+  "ui.town.houses.cell": "CASA {n}",
+  "ui.town.houses.level": "Nivel {n}"
 }
