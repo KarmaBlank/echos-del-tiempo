@@ -79,6 +79,10 @@ en una casa:
   FORJA → HERRERÍA → BRANN arma un arma de la base que elijas con tus
   lingotes y materiales, por oro; la rareza tope es la de este encargo.
 
+Además, con Brann en casa su menú tiene **Encargar arma** (la forja de
+mining_smithing.md § 5.1), y su tienda vende materiales de Herrería
+según la relación (overworld_biomes.md § 9.1.1).
+
 ## 5. Poder de aventurero en los oficios (v0.31.0)
 
 Cada árbol de oficio suma nodos de poder que valen dentro y fuera de las

@@ -8,9 +8,6 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
 import '../../../game_engine/rules/mining_rules.dart';
-import '../../../game_engine/rules/resident_rules.dart' show ResidentRules;
-import '../../../game_engine/rules/farming_rules.dart';
-import '../../../game_engine/rules/fishing_rules.dart';
 import '../../world/presentation/panels/life_icon.dart';
 import '../domain/item_names.dart';
 import 'inventory_strings.dart';
@@ -19,7 +16,8 @@ import 'shop_sections.dart';
 
 /// FORJA → HERRERÍA (mining_smithing.md § 3–5): the workshop template
 /// (grid like the INVENTORY, detail on the right) with the recipes as
-/// sub-tabs: SMELT, FORGE and BRANN. The host validates everything.
+/// sub-tabs: SMELT, FORGE and MINE. Brann's commissions live in his own
+/// NPC menu (mining_smithing.md § 5.1). The host validates everything.
 class SmithBench extends StatefulWidget {
   const SmithBench({super.key, required this.shop});
 
@@ -48,14 +46,6 @@ class _SmithBenchState extends State<SmithBench> {
         b == null ? null : s.t('ui.inventory.smith.why.${b.name}');
     final inWorld = session.run == null;
     final smithLv = SmithRules.level(p);
-    final brann = session.town.resident('brann');
-    // BRANN only shows once Brann lives in town (has a house).
-    final brannHome = brann.invited && brann.house > 0;
-    final brannCap = Rarity.values[ResidentRules.commissionRarity(brann,
-        fishLv: FishingRules.level(p),
-        farmLv: FarmingRules.level(p),
-        smithLv: smithLv)];
-
     DsCraftItem smelt(String ore) {
       final (per, gold) = SmithCraftRules.smeltCost(ore)!;
       final max = SmithCraftRules.smeltMax(p, ore);
@@ -70,7 +60,8 @@ class _SmithBenchState extends State<SmithBench> {
             kind: DsButtonKind.primary,
             tooltip: w,
             onPressed: w == null
-                ? () => shop.controller.smith(SmithAction(SmithOp.smelt, ore, n: n))
+                ? () =>
+                    shop.controller.smith(SmithAction(SmithOp.smelt, ore, n: n))
                 : null);
       }
 
@@ -102,24 +93,22 @@ class _SmithBenchState extends State<SmithBench> {
       );
     }
 
-    DsCraftItem forge(String id, bool byBrann) {
+    DsCraftItem forge(String id) {
       final w = shop.rules.catalog.weapons[id]!;
-      final cap = byBrann ? brannCap : SmithCraftRules.maxRarity(smithLv);
-      final c = SmithCraftRules.cost(p.level, ingot, _rarity, brann: byBrann)!;
+      final cap = SmithCraftRules.maxRarity(smithLv);
+      final c = SmithCraftRules.cost(p.level, ingot, _rarity)!;
       final block = !inWorld
           ? s.t('ui.inventory.smith.world_only')
           : why(SmithCraftRules.cannotForge(p, w, ingot, _rarity,
-              maxRarity: cap,
-              brann: byBrann,
-              brannHome: brannHome));
-      final tag = byBrann ? 'brann' : 'forge';
-      final mark = byBrann ? DsColors.mp : RarityColors.of(_rarity);
+              maxRarity: cap));
+      const tag = 'forge';
+      final mark = RarityColors.of(_rarity);
       return DsCraftItem(
         id: '$tag-$id',
         icon: PixelIcon(iconKeyForType(w.type),
             accent: RarityColors.of(_rarity), procKey: procKeyForType(w.type)),
         border: mark,
-        name: byBrann ? s.t('ui.inventory.smith.brann_name', {'name': w.text}) : w.text,
+        name: w.text,
         tag: tag,
         search: '${w.text} ${w.type}',
         description: s.t('ui.inventory.smith.forge_desc',
@@ -151,15 +140,7 @@ class _SmithBenchState extends State<SmithBench> {
           s.t('ui.inventory.smith.cost_gold', {'gold': c.gold}),
           // Who forges, the cap, the price and the wait (§ 5): the two
           // tabs must not read the same.
-          if (byBrann) ...[
-            s.t('ui.inventory.smith.who_brann'),
-            s.t('ui.inventory.smith.cap_brann', {'rarity': cap.text}),
-            s.t('ui.inventory.smith.brann_extra', {
-              'gold': c.gold -
-                  SmithCraftRules.cost(p.level, ingot, _rarity)!.gold
-            }),
-            s.t('ui.inventory.smith.wait_brann'),
-          ] else ...[
+          ...[
             s.t('ui.inventory.smith.who_self',
                 {'xp': SmithCraftRules.forgeXp(_rarity)}),
             s.t('ui.inventory.smith.cap_self',
@@ -167,17 +148,14 @@ class _SmithBenchState extends State<SmithBench> {
           ],
         ],
         actions: [
-          DsButton(
-              s.t(byBrann
-                  ? 'ui.inventory.smith.go_brann'
-                  : 'ui.inventory.smith.go_forge'),
+          DsButton(s.t('ui.inventory.smith.go_forge'),
               key: ValueKey('smith-go-$tag-$id'),
               size: DsButtonSize.compact,
               kind: DsButtonKind.primary,
               tooltip: block,
               onPressed: block == null
                   ? () => shop.controller.smith(SmithAction(
-                      byBrann ? SmithOp.brann : SmithOp.forge, ingot,
+                      SmithOp.forge, ingot,
                       base: id, rarity: _rarity.index))
                   : null),
         ],
@@ -192,8 +170,7 @@ class _SmithBenchState extends State<SmithBench> {
           orElse: () => ores.first);
       final rec = MiningRules.recipe(id, ore)!;
       final owned = mineTool(id) != null && p.life.ore(id) > 0;
-      final short = rec.mats.entries
-          .any((e) => p.life.ore(e.key) < e.value);
+      final short = rec.mats.entries.any((e) => p.life.ore(e.key) < e.value);
       final block = !inWorld
           ? s.t('ui.inventory.smith.world_only')
           : owned
@@ -225,7 +202,8 @@ class _SmithBenchState extends State<SmithBench> {
               'ingot': name(e.key),
               'have': p.life.ore(e.key)
             }),
-          if (rec.gold > 0) s.t('ui.inventory.smith.cost_gold', {'gold': rec.gold}),
+          if (rec.gold > 0)
+            s.t('ui.inventory.smith.cost_gold', {'gold': rec.gold}),
           if (rec.n > 1) s.t('ui.inventory.smith.mine_batch', {'n': rec.n}),
         ],
         actions: [
@@ -251,15 +229,11 @@ class _SmithBenchState extends State<SmithBench> {
       filters: [
         DsTransferFilter(s.t('ui.inventory.smith.tab.smelt'), 'smelt'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.forge'), 'forge'),
-        if (brannHome)
-          DsTransferFilter(s.t('ui.inventory.smith.tab.brann'), 'brann'),
         DsTransferFilter(s.t('ui.inventory.smith.tab.mine'), 'mine'),
       ],
       items: [
         for (final b in kBiomeOres.values) smelt(b.ore),
-        for (final w in bases) forge(w.id, false),
-        if (brannHome)
-          for (final w in bases) forge(w.id, true),
+        for (final w in bases) forge(w.id),
         for (final t in kMineTools)
           if (t.ingot != null) tool(t.id),
         for (final id in kMineSupplies) tool(id),

@@ -1586,6 +1586,7 @@ const _townLabels = {
   'resNearTiles': 'Pedidos: tiles de cercanía a la casa',
   'resStockRare': 'Tienda: nivel para la semilla rara',
   'resStockLegend': 'Tienda: nivel para la legendaria',
+  'resWareMarkup': 'Tienda: materiales × precio del comerciante',
   'orderEveryDays': 'Órdenes: días entre órdenes',
   'orderXpPerValue': 'Órdenes: XP por oro de valor',
   'orderXpDayCap': 'Órdenes: tope de XP por día',

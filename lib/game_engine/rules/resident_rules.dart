@@ -1010,7 +1010,40 @@ abstract final class ResidentRules {
     if (legend != null && tier >= t.i('resStockLegend')) {
       out[legend] = n.seeds.values.fold<int>(0, math.max) * 3;
     }
+    for (final w in n.wares) {
+      if (!(tier >= w.tier || (home && w.home))) continue;
+      final p = warePrice(w.id);
+      if (p > 0) out[w.id] = p;
+    }
     return out;
+  }
+
+  /// Resident price of a trade good (§ 9.1.1): mine supplies and tools at
+  /// the trader's price; materials at the trader's buying price times
+  /// `resWareMarkup`.
+  static int warePrice(String id) {
+    final d = kSmithMaterials[id];
+    if (d == null) return 0;
+    if (d.kind == SmithMatKind.supply || d.kind == SmithMatKind.tool) {
+      return MiningRules.price(id);
+    }
+    return (SmithCraftRules.sellPrice(id) * t.d('resWareMarkup')).ceil();
+  }
+
+  /// [p] after buying [n] of the trade good [id] at [price] each, into
+  /// `life.ores`; `null` if it is not a ware, gold is short or the stack
+  /// would overflow `stackCap`.
+  static PlayerProfile? buyWare(
+      PlayerProfile p, String id, int n, int? price) {
+    if (!kSmithMaterials.containsKey(id) || price == null || price <= 0) {
+      return null;
+    }
+    if (n <= 0 || p.credits < price * n) return null;
+    if (p.life.ore(id) + n > math.max(1, MiningRules.t.i('stackCap'))) {
+      return null;
+    }
+    return MiningRules.give(p, {id: n})
+        .copyWith(credits: p.credits - price * n);
   }
 
   /// Precio de la semilla [crop] en el pueblo [s] (la vende algún
