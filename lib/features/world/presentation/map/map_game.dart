@@ -1410,9 +1410,8 @@ class MapGame extends Game {
         // Fishing from the raft the rider sits on a crate; the awning
         // posts stand behind them, the cloth above (cozy_life.md § 1).
         final sit = raft && line != null;
-        final dir = mine ? controller.local.dir : p.dir;
         if (raft) cozy.drawRaftPosts(c, px, py + 3, _bob(t), p.profile.life);
-        if (sit) cozy.drawRaftSeat(c, px, py, dir);
+        if (sit) cozy.drawRaftSeat(c, px, py);
         hero(px, py, seated: sit);
         if (raft) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).

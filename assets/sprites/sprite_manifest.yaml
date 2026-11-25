@@ -461,7 +461,7 @@ items:
   vida_raft_lantern: { idle: items/vida_raft_lantern.png, size: [16, 16] }
   vida_raft_roof: { idle: items/vida_raft_roof.png, size: [32, 6] }
   vida_raft_posts: { idle: items/vida_raft_posts.png, size: [32, 17] }
-  vida_raft_seat: { idle: items/vida_raft_seat.png, size: [10, 6] }
+  vida_raft_seat: { idle: items/vida_raft_seat.png, size: [16, 6] }
   vida_decor_fence: { idle: items/vida_decor_fence.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }

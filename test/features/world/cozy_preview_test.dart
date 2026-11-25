@@ -173,7 +173,7 @@ void main() {
     void raftAt(double x, {bool? seated}) {
       cozy.drawRaft(c, raft, x, y, 0, life);
       cozy.drawRaftPosts(c, x, y, 0, life);
-      if (seated == true) cozy.drawRaftSeat(c, x, y - 3, 1);
+      if (seated == true) cozy.drawRaftSeat(c, x, y - 3);
       if (seated != null) hero(x, seated: seated, moving: !seated);
       cozy.drawRaftRoof(c, x, y, 0, life);
     }
@@ -197,7 +197,7 @@ void main() {
             raftOn: const {'lantern', 'roof', 'paint_blue'});
         cozy.drawRaft(c2, raft, 125, y, 0, lone);
         cozy.drawRaftPosts(c2, 125, y, 0, lone);
-        cozy.drawRaftSeat(c2, 125, y - 3, 1);
+        cozy.drawRaftSeat(c2, 125, y - 3);
         actors.hero(c2,
             classId: 'guerrero', weaponType: null, x: 125, y: y - 3, t: 0,
             dir: 1, moving: false, dead: false, blink: false,
@@ -207,6 +207,25 @@ void main() {
         final png = await img.toByteData(format: ui.ImageByteFormat.png);
         File('docs/preview/cozy_raft_seated_4x.png')
             .writeAsBytesSync(png!.buffer.asUint8List());
+        // 4-up, 4x: the seated pose works for every class sprite.
+        const classes = ['guerrero', 'maga', 'paladin', 'tirador'];
+        final rec3 = ui.PictureRecorder();
+        final c3 = Canvas(rec3)..scale(4);
+        c3.drawRect(const Rect.fromLTWH(0, 0, 160, 40),
+            Paint()..color = const Color(0xFF2B5D8A));
+        for (var i = 0; i < classes.length; i++) {
+          final x = 20.0 + 40 * i;
+          cozy.drawRaft(c3, raft, x, 32, 0, null);
+          cozy.drawRaftSeat(c3, x, 29);
+          actors.hero(c3,
+              classId: classes[i], weaponType: null, x: x, y: 29, t: 0,
+              dir: 1, moving: false, dead: false, blink: false,
+              showWeapon: false, seated: true);
+        }
+        final img3 = await rec3.endRecording().toImage(640, 160);
+        final png3 = await img3.toByteData(format: ui.ImageByteFormat.png);
+        File('docs/preview/cozy_seated_classes_4x.png')
+            .writeAsBytesSync(png3!.buffer.asUint8List());
       });
     }
     expect(tester.takeException(), isNull);

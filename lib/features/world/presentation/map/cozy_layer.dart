@@ -95,15 +95,14 @@ class CozyLayer {
   }
 
   /// The crate a rider seated at (px, py) (the hero's anchor) sits on,
-  /// with its small contact shadow; [dir] < 0 mirrors it. Drawn before
-  /// the hero.
-  void drawRaftSeat(Canvas c, double px, double py, int dir) {
+  /// centred under the hips and wider than the legs, with its small
+  /// contact shadow. Drawn before the hero.
+  void drawRaftSeat(Canvas c, double px, double py) {
     final x = px.roundToDouble(), y = py.roundToDouble();
-    final left = dir < 0 ? x - 4 : x - 6;
-    c.drawOval(Rect.fromLTWH(left, y + 4, 10, 2),
+    c.drawOval(Rect.fromLTWH(x - 7, y + 3, 14, 2),
         Paint()..color = CozyPalette.seatShadow);
     if (icon('raft_seat') case final im?) {
-      _img(c, im, Rect.fromLTWH(left, y - 1, 10, 6), SpriteCatalog.pixelPaint());
+      _img(c, im, Rect.fromLTWH(x - 8, y - 2, 16, 6), SpriteCatalog.pixelPaint());
     }
   }
 

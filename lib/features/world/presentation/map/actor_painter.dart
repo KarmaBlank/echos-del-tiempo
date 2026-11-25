@@ -31,29 +31,28 @@ class ActorPainter {
   /// Px the body drops when seated.
   static const seatDrop = 3.0;
 
-  /// Seated pose (fishing on the raft), derived from the hero sprite so
-  /// every class and ascension sits without extra art: head and torso
-  /// (rows 0..11) drop [seatDrop] px, the legs become a bent strip (thighs
-  /// forward, shins down) painted with the sprite's own pants, boot and
-  /// outline pixels. Faces +x (the caller mirrors for dir < 0).
+  /// Seated pose (fishing on the raft), front-facing and derived from
+  /// the hero sprite so every class and ascension sits without extra art:
+  /// head and torso (rows 0..11) drop [seatDrop] px; below the hips a
+  /// symmetric pair of legs seen from the front (foreshortened knees,
+  /// straight shins, boots), mirrored around the sprite centre (x = 0)
+  /// and painted with the sprite's own pants, boot and outline pixels.
   void _seated(Canvas c, ui.Image img) {
-    void fill(int sx, int sy, Rect dst) => c.drawImageRect(
-        img, Rect.fromLTWH(sx.toDouble(), sy.toDouble(), 1, 1), dst, _sprite);
+    void fill((int, int) src, Rect dst) => c.drawImageRect(img,
+        Rect.fromLTWH(src.$1.toDouble(), src.$2.toDouble(), 1, 1), dst, _sprite);
     const outline = (3, 12), pants = (4, 12), boot = (3, 15);
-    // Two bent legs side by side (3/4 top-down): the far one first, the
-    // near one 1 px lower and 3 px forward, so the outline column between
-    // the shins reads as the gap. Each: thigh forward, shin down, boot.
-    void leg(double x0, double y0) {
-      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 - 1, y0 - 1, 8, 4));
-      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 + 3, y0 + 1, 4, 6));
-      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 + 3, y0 + 4, 5, 3));
-      fill(pants.$1, pants.$2, Rect.fromLTWH(x0, y0, 6, 2));
-      fill(pants.$1, pants.$2, Rect.fromLTWH(x0 + 4, y0 + 2, 2, 3));
-      fill(boot.$1, boot.$2, Rect.fromLTWH(x0 + 4, y0 + 5, 3, 1));
+    // Outline silhouette first: knees, shins, boots.
+    fill(outline, const Rect.fromLTWH(-6, -4, 12, 4));
+    fill(outline, const Rect.fromLTWH(-4, -2, 8, 4));
+    fill(outline, const Rect.fromLTWH(-5, 0, 10, 4));
+    // Both sides, mirrored around x = 0 (s = -1 left, 1 right).
+    for (final s in const [-1.0, 1.0]) {
+      Rect m(double x, double y, double w, double h) =>
+          Rect.fromLTWH(s < 0 ? -x - w : x, y, w, h);
+      fill(pants, m(1, -3, 4, 2)); // knee (foreshortened thigh)
+      fill(pants, m(1, -1, 2, 2)); // shin
+      fill(boot, m(1, 1, 3, 2)); // boot
     }
-
-    leg(-3, -4);
-    leg(0, -3);
     final w = img.width.toDouble();
     c.drawImageRect(img, Rect.fromLTWH(0, 0, w, 12),
         Rect.fromLTWH(-7, -17 + seatDrop, w, 12), _sprite);
