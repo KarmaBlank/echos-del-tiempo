@@ -723,6 +723,9 @@ class BattleViewState extends State<BattleView>
       value: _skillInfo(sk, cur, crit: false).trim(),
       instant: instant,
       reach: skillReach(sk),
+      breaker: sk.breaks,
+      breakReady: sk.breaks &&
+          (_foes.where((e) => e.id == tg).firstOrNull?.fissured ?? false),
       mpCost: sk.mp > 0 || sk.pulse == 0 ? sk.mp : null,
       pulseCost: sk.pulse > 0 ? sk.pulse : null,
       summary: skillSummaryMarkup(sk, cur),
