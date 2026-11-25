@@ -110,8 +110,15 @@ Elipse con borde irregular (dos armónicos), radios entre
 - E frente a una (a `waystoneReach` px): si no está activa, se activa
   (acción `way {i}`) y se abre el menú **PIEDRAS DE PASO**. La de la
   entrada está activa siempre.
-- Menú: grilla de piedras (activas con su lugar, las otras grises "Sin
-  descubrir") y a la derecha el detalle con **IR**. IR manda
+- Menú (v0.48.5): el **mapa grande de la región** (`FullMap`, el mismo
+  de las piedras de paso de las mazmorras, worldgen.md § 11.4) en *modo
+  elegir* (`FullMapPick`): todas las piedras marcadas con su número
+  (activas en cian, las otras grises "Sin descubrir"); pasar el mouse
+  muestra su nombre (tooltip), clic la elige (no viaja todavía) y a la
+  derecha va su detalle con **VIAJAR** (gris si es la de acá o no está
+  activa; Tab / número eligen, Enter viaja). Abre con la piedra de acá
+  elegida. Vista previa: `docs/preview/waystone_map.png`
+  (`WAYSTONE_MAP_PREVIEW=1`). VIAJAR manda
   `way {i: desde, to: hasta}`; el anfitrión valida que estés junto a una
   piedra activa y que el destino esté activo, y mueve **solo a ese
   jugador** al camino junto a la piedra destino.

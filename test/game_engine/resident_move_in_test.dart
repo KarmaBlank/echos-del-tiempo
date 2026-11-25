@@ -36,14 +36,15 @@ void main() {
     expect(ResidentRules.living(back).map((n) => n.id), contains('ilda'));
   });
 
-  test('sale caminando por el camino del sur y se desvanece en el borde', () {
+  test('sale caminando hacia el cartel del pueblo y se desvanece en el borde', () {
     final town = invited('ilda', time: 100);
     final n = biomeNpc('ilda')!;
     final r = town.resident('ilda');
     expect(r.leftAt, 100);
     final a = ResidentRules.departure(n, r, 100.5)!;
     final b = ResidentRules.departure(n, r, 103)!;
-    expect(b.y, greaterThanOrEqualTo(a.y));
+    // Walks along its A* route to the town sign (biome_route_test.dart).
+    expect((b.x, b.y), isNot((a.x, a.y)));
     expect(a.alpha, 1);
     // Al final ya no está y el anfitrión limpia la marca.
     expect(ResidentRules.departure(n, r, 200), isNull);

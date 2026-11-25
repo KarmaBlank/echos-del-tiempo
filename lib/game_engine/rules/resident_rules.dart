@@ -16,7 +16,9 @@ import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import '../data/town_layout.dart';
 import 'helper_rules.dart';
+import 'biome_route_rules.dart';
 import 'npc_camp_rules.dart';
+import '../models/game_map.dart' show WorldPoint;
 import 'life_tree_rules.dart';
 import 'town_plan.dart';
 
@@ -444,27 +446,61 @@ abstract final class ResidentRules {
   static bool homeless(TownState s, String npc) =>
       s.resident(npc).invited && s.houseOf(npc) == null;
 
-  /// Dónde va [n] mientras sale de su bioma: del punto de su paseo al
-  /// salir, al camino (x = 17) y por él hasta el borde sur, donde se
-  /// desvanece ([alpha] baja en los últimos 24 px). `null` = no está
+  /// Dónde va [n] mientras sale de su bioma (§ 10.1.1): del punto de su
+  /// paseo al salir, por la ruta A* de [BiomeRouteRules.toTown] (sobre
+  /// tiles caminables, prefiriendo el sendero; nunca agua ni lava) hasta
+  /// el cartel "CAMINO AL PUEBLO", y de ahí baja por el borde sur, donde
+  /// se desvanece ([alpha] baja en los últimos 24 px). `null` = no está
   /// saliendo (ya llegó o nunca salió).
   static ({double x, double y, double alpha})? departure(
       BiomeNpcDef n, ResidentState r, double time) {
     if (!r.invited || r.leftAt <= 0) return null;
     final dt = time - r.leftAt;
     if (dt < 0) return null;
-    final start = NpcCampRules.state(n, r.leftAt);
-    const pathX = 17.0 * 16;
-    const endY = BiomeLayout.height * 16.0 + 8;
-    final leg1 = (pathX - start.x).abs();
-    final leg2 = math.max(0.0, endY - start.y);
-    final total = leg1 + leg2;
+    final pts = departureRoute(n, r);
     final d = dt * t.d('resWalkSpeed');
+    var total = 0.0;
+    double len(int i) => math.sqrt(math.pow(pts[i].x - pts[i - 1].x, 2) +
+        math.pow(pts[i].y - pts[i - 1].y, 2));
+    for (var i = 1; i < pts.length; i++) {
+      total += len(i);
+    }
     if (d >= total) return null;
-    final (x, y) = d < leg1
-        ? (start.x + (pathX > start.x ? d : -d), start.y)
-        : (pathX, start.y + (d - leg1));
-    return (x: x, y: y, alpha: ((total - d) / 24).clamp(0.0, 1.0).toDouble());
+    var left = d;
+    for (var i = 1; i < pts.length; i++) {
+      final seg = len(i);
+      if (left <= seg && seg > 0) {
+        final k = left / seg, a = pts[i - 1], b = pts[i];
+        return (
+          x: a.x + (b.x - a.x) * k,
+          y: a.y + (b.y - a.y) * k,
+          alpha: ((total - d) / 24).clamp(0.0, 1.0).toDouble()
+        );
+      }
+      left -= seg;
+    }
+    return null;
+  }
+
+  /// Los puntos (px) que recorre [n] al mudarse: su lugar al salir, los
+  /// centros de los tiles de la ruta al cartel del pueblo y el borde sur.
+  /// Sin ruta (layout raro), va derecho al cartel.
+  static List<WorldPoint> departureRoute(BiomeNpcDef n, ResidentState r) {
+    final start = NpcCampRules.state(n, r.leftAt);
+    final from = WorldPoint(start.x, start.y);
+    final lay = biomeLayout(n.biome);
+    if (lay == null) {
+      return [from, WorldPoint(start.x, BiomeLayout.height * 16.0 + 8)];
+    }
+    final exit = BiomeRouteRules.townExit(lay);
+    final route = BiomeRouteRules.toTown(
+            lay, ((start.x / 16).floor(), (start.y / 16).floor())) ??
+        [exit];
+    return [
+      from,
+      for (final (x, y) in route) WorldPoint(x * 16 + 8.0, y * 16 + 8.0),
+      WorldPoint(exit.$1 * 16 + 8.0, BiomeLayout.height * 16.0 + 8),
+    ];
   }
 
   /// Limpia [ResidentState.leftAt] de quien ya llegó al borde (o si el
