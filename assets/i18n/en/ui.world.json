@@ -354,5 +354,20 @@
   "ui.world.tools.torch": "Torch",
   "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]",
   "ui.world.mine.need_tier": "You need a better pick (tier {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})",
+  "ui.world.mine.prompt_open_miners": "[E] Miners",
+  "ui.world.miners.title": "MINERS",
+  "ui.world.miners.gone": "There is no miners' station here.",
+  "ui.world.miners.none": "You haven't hired miners on this level yet. [G] at the station hires one.",
+  "ui.world.miners.count": "Miners on this level: {n}/{max}",
+  "ui.world.miners.have": "You have {gold} gold",
+  "ui.world.miners.name": "Miner {n}",
+  "ui.world.miners.tier_short": "T{tier}",
+  "ui.world.miners.rock": "Rock and veins on this level",
+  "ui.world.miners.deep": "Deep veins and gems",
+  "ui.world.miners.breaks_yes": "breaks them (needs tier {tier})",
+  "ui.world.miners.breaks_no": "goes around (needs tier {tier})",
+  "ui.world.miners.yield": "Yields {pct}% of what you mine",
+  "ui.world.miners.next": "Next: {name} (tier {tier})",
+  "ui.world.miners.max_text": "Pick maxed: breaks everything."
 }

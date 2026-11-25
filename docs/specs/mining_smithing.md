@@ -170,9 +170,19 @@ nadie esté en la mina; se ven trabajando.
 - **Pico del minero** (`MinerState.tier`, 0–4, JSON `pt`): solo rompe la
   roca o la veta cuyo nivel pedido (`MiningRules.reqTierOf`: el del
   nivel de la mina, +1 para vetas profundas y de gema) sea ≤ su pico; lo
-  demás lo rodea o lo saltea. U en la estación mejora el pico más bajo:
+  demás lo rodea o lo saltea. Mejorar un pico cuesta
   `minerUpGold` × nivel de oro y `minerUpIngots` × nivel lingotes del
-  pico de ese nivel. Al máximo pica todo.
+  pico de ese nivel (`MineOp.upgrade` con el índice del minero; lo valida
+  el anfitrión). Al máximo pica todo.
+- **Panel MINEROS** (`WorldPanel.miners`): E sobre la estación armada, o
+  G al lado de un minero (como cualquier ayudante), lo abre. Grilla de
+  los mineros del nivel (ícono del pico, `N<nivel>`) con el detalle a la
+  derecha: pico actual y nivel, si rompe la roca/vetas de este nivel y
+  las vetas profundas/gemas (con el nivel que piden), rinde `minerYield`
+  en % contra un jugador, el siguiente pico y su costo (chip de costo:
+  oro y lingotes, en rojo lo que falta) y MEJORAR (gris si no alcanza;
+  MÁXIMO al tope). U en la estación queda como atajo: mejora el pico más
+  bajo con la misma operación.
 - **Rinde menos que un jugador**: cada veta da `minerYield` (< 1) de lo
   normal, sin bonus de herramienta, aceite de veta, pasivas ni nodos de
   oficio.
@@ -306,7 +316,30 @@ sin cortes; test de overflow en
 - Pedidos de herrería: con la infraestructura de pedidos de vecinos, si
   alguien de la sala tiene Herrería, con `smithOrderChance` el pedido es
   un lote de lingotes (`smithOrderMin..Max`, nivel ≤ 1 + Herrería / 5),
-  pagado × `smithOrderPay`. (Pedidos de un arma forjada: pendiente.)
+  pagado × `smithOrderPay`.
+- Pedidos de arma forjada (v0.48.x): desde Herrería `forgeOrderLevel`
+  (la mejor de la sala), con `forgeOrderChance` por día y vecino
+  (determinista; se tira **antes** que el lote de lingotes, y este antes
+  que la comida) el pedido es 1 arma forjada (uid `smith-`) de un tipo
+  del catálogo, rareza mínima ≤ mín(la que forja ese nivel,
+  `forgeOrderMaxRarity`) y nivel de objeto mínimo `ingotIlPerTier` ×
+  (nivel de lingote − 1) con nivel de lingote ≤ 1 + Herrería / 5. Id de
+  orden `wpn:<tipo>:<nivelMín>`, `orderQ` = rareza mínima, `orderN` = 1.
+  - Valor = `itemValue(nivelMín)` × fracción de venta de la rareza ×
+    (`forgedSellMult` + `forgedSellPerRarity` × rareza) ×
+    `forgeOrderPay`; `orderReward` usa ese valor (sin el × (1 + q) de
+    las otras órdenes): XP de personaje, oro, relación y punto de árbol
+    como siempre. Además da `forgeOrderXp` × (rareza mínima + 1) de
+    Herrería a quien entrega.
+  - Entrega: el jugador elige cuál arma (`TownAction(order, id: vecino,
+    target: uid)`; sin `target`, la primera que sirva). El anfitrión
+    valida tipo, rareza, nivel y la marca de forja; el arma equipada
+    nunca cuenta ni se consume. Sin cambio de protocolo (`target` ya
+    viajaba).
+  - UI: la casilla de ORDEN muestra el ícono del tipo (acento de la
+    rareza), "1 × {tipo} forjada ({rareza} o mejor, nivel N+)", cuántas
+    tenés, las recompensas y, si sirven varias, un botón por arma para
+    elegir. El diario la lista como "Tipo (nv N+)".
 
 ## 3. Fundir
 
@@ -350,6 +383,16 @@ legendaria solo arraigado, con su objeto y el oficio en
 `comLegendLevel`), y el legendario igual pide el Plano o el Núcleo. Da
 `smithXpCommission` / 2 de Herrería a quien lo pide. Es la extensión
 del encargo de forja de siempre, que sigue igual.
+
+### 5.1 Dónde se pide
+
+Desde el menú de Brann (**Encargar arma → ENCARGOS DE FORJA**), solo con
+Brann viviendo en una casa; la HERRERÍA de la Forja ya no tiene filtro
+BRANN. Arriba: lingote y rareza (hasta su tope). Grilla de bases de arma
+(casillas de inventario, tooltip al pasar) y detalle: base, tipo, nivel de
+objeto, costo, tiempo (al instante), su tope de rareza contra el propio,
+la XP de Herrería que da, el oro extra y los modificadores **al azar**
+(no se muestran tiradas).
 
 ## 6. Red
 

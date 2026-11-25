@@ -188,6 +188,32 @@ beneficio que daría en el pueblo y sus semillas en la grilla de oficios
   grupo está en el bioma de quien la vende (`BiomeRules.vendorPrice`).
   Sin cambio de red.
 
+#### 9.1.1 Mercancía según el oficio
+
+Además de semillas, cada habitante puede vender **mercancía de su oficio**
+(`BiomeNpcDef.wares`, lista de `NpcWare(id, tier, home)` en
+`biomes_catalog.dart`; datos, no nombres en código):
+
+- Un `NpcWare` es un id de `kSmithMaterials`; aparece en la tienda desde el
+  nivel de relación `tier`, o siempre en su propio bioma si `home`.
+- Precio (`ResidentRules.warePrice`): insumos y herramientas de mina al
+  precio del comerciante (`MiningRules.price`); menas, lingotes y raros al
+  precio que paga el comerciante × `resWareMarkup` (Balance, def. 2.0), así
+  comprar nunca es mejor negocio que vender.
+- Forjador (Brann): antorcha, mena y lingote de cobre desde el nivel 0;
+  bomba y lingote de bronce desde 1; aceite de veta y lingote helado desde
+  2; lingote ígneo desde 3; mena ígnea siempre en la Grieta.
+- Herbolaria (Ilda) y el resto: solo semillas (no hay pociones como
+  ítem de oficio todavía).
+- Compra: la misma acción de siempre (`FarmShopAction buySeed`, sin
+  cambio de protocolo); si el id es un material, el anfitrión valida el
+  precio contra el stock del habitante (en su bioma o con casa en el
+  pueblo), el oro y el tope `stackCap`, y lo suma a `life.ores`.
+  `townSeedPrice` sigue igual (también devuelve el precio de la
+  mercancía en el pueblo).
+- Tienda: la misma grilla + detalle; los materiales muestran su tipo y
+  nivel y van a los materiales de Herrería.
+
 ### 9.2 Campamento y paseo (v0.41.9)
 
 Mientras vive en su bioma, cada habitante tiene un campamento chico
@@ -381,6 +407,10 @@ vacío):
   FUENTE muestra un resumen.
 - Valor: `res<rol>Base + res<rol>Step × nivel`. Su pantalla muestra
   "Beneficio: …" y el del nivel siguiente; la fuente, un resumen.
+
+Desde la v0.48.x, Arraigado pide relación 10 (antes 12) y la relación
+también paga hitos concretos (cofres, materiales, comidas, armas, Ecos):
+ver roles.md § 9.
 
 ### 10.4 Pedidos, ánimo y edificio
 - Cada `resRequestEveryDays` (2) días del mundo, si no tiene pedido,

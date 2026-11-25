@@ -534,5 +534,65 @@
   "ui.world.mine.prompt_miner_up": {
     "text": "[U] 将矿工的镐升级到等级 {tier}（{gold} 金币，{n} × {ingot}）",
     "status": "draft"
+  },
+  "ui.world.mine.prompt_open_miners": {
+    "text": "[E] 矿工",
+    "status": "draft"
+  },
+  "ui.world.miners.title": {
+    "text": "矿工",
+    "status": "draft"
+  },
+  "ui.world.miners.gone": {
+    "text": "这里没有矿工站。",
+    "status": "draft"
+  },
+  "ui.world.miners.none": {
+    "text": "你还没有在这一层雇用矿工。在矿工站按 [G] 雇用。",
+    "status": "draft"
+  },
+  "ui.world.miners.count": {
+    "text": "本层矿工：{n}/{max}",
+    "status": "draft"
+  },
+  "ui.world.miners.have": {
+    "text": "你有 {gold} 金币",
+    "status": "draft"
+  },
+  "ui.world.miners.name": {
+    "text": "矿工 {n}",
+    "status": "draft"
+  },
+  "ui.world.miners.tier_short": {
+    "text": "{tier}级",
+    "status": "draft"
+  },
+  "ui.world.miners.rock": {
+    "text": "本层的岩石和矿脉",
+    "status": "draft"
+  },
+  "ui.world.miners.deep": {
+    "text": "深层矿脉和宝石",
+    "status": "draft"
+  },
+  "ui.world.miners.breaks_yes": {
+    "text": "能开采（需要等级 {tier}）",
+    "status": "draft"
+  },
+  "ui.world.miners.breaks_no": {
+    "text": "会绕开（需要等级 {tier}）",
+    "status": "draft"
+  },
+  "ui.world.miners.yield": {
+    "text": "产量为你的 {pct}%",
+    "status": "draft"
+  },
+  "ui.world.miners.next": {
+    "text": "下一级：{name}（等级 {tier}）",
+    "status": "draft"
+  },
+  "ui.world.miners.max_text": {
+    "text": "镐已满级：什么都能开采。",
+    "status": "draft"
   }
 }

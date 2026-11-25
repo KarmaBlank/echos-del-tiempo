@@ -1857,6 +1857,10 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       case MineTile.station when !mineState.station:
         return _apply(MineAction(MineOp.use, x: x, y: y));
+      case MineTile.station:
+        // Built station: the miners panel (§ 1.7).
+        openMiners();
+        return true;
       default:
     }
     switch (mineHand) {
@@ -1904,6 +1908,31 @@ class SessionController extends StateNotifier<SessionView?> {
   }
   bool fireMiner() => _apply(const MineAction(MineOp.fire));
 
+  /// Raise the pick of miner [k] of this level by one tier (§ 1.7; the
+  /// host validates gold and ingots).
+  bool upgradeMinerAt(int k) => _apply(MineAction(MineOp.upgrade, n: k));
+
+  /// Miner selected when the miners panel opens (G next to a miner).
+  int minerPanelFocus = 0;
+
+  /// The miners panel of this level (§ 1.7): needs its station built.
+  bool openMiners({int focus = 0}) {
+    if (!inMine || !mineState.station) return false;
+    minerPanelFocus = focus;
+    openPanel(WorldPanel.miners);
+    return true;
+  }
+
+  /// Index of the miner next to the player, or `null`.
+  int? get nearMiner {
+    if (!inMine) return null;
+    final m = mineState.miners;
+    for (var i = 0; i < m.length; i++) {
+      if (_tileDist(local.x, local.y, m[i].x, m[i].y) < 26) return i;
+    }
+    return null;
+  }
+
   /// In the mine, next to its built station.
   bool get nearMineStation {
     final lvl = mineLevel;
@@ -1928,11 +1957,11 @@ class SessionController extends StateNotifier<SessionView?> {
     if (c == MineTile.mushroom) return strings.t('ui.world.mine.prompt_mushroom');
     if (c == MineTile.lore) return strings.t('ui.world.mine.prompt_lore');
     if (nearMineStation) {
-      final base = strings.t('ui.world.mine.prompt_miners', {
+      final base = '${strings.t('ui.world.mine.prompt_open_miners')} · ${strings.t('ui.world.mine.prompt_miners', {
         'n': mineState.miners.length,
         'max': MiningRules.t.i('minerMax'),
         'gold': MiningRules.t.i('minerCost'),
-      });
+      })}';
       final k = _minerToUpgrade;
       final up = k == null
           ? null
@@ -2434,6 +2463,10 @@ class SessionController extends StateNotifier<SessionView?> {
   // Habitantes (overworld_biomes.md § 10): todo lo valida el anfitrión.
   bool residentOp(TownOp op, String npc, {String? target}) =>
       _apply(TownAction(op, id: npc, target: target));
+
+  /// Claims milestone [i] of resident [npc] (roles.md § 9). Host-validated.
+  bool claimMilestone(String npc, int i) =>
+      _apply(TownAction(TownOp.claimMilestone, id: npc, n: i));
 
   /// El pueblo de la sala (habitantes, casas).
   TownState get townState => _s?.town ?? const TownState();
@@ -3529,6 +3562,14 @@ class SessionController extends StateNotifier<SessionView?> {
         HardwareKeyboard.instance.isShiftPressed ? fireMiner() : hireMiner();
         return true;
       }
+      // G next to a miner: its panel, like any helper (§ 1.7).
+      if (key == LogicalKeyboardKey.keyG) {
+        if (nearMiner case final k? when mineState.station) {
+          openMiners(focus: k);
+          return true;
+        }
+      }
+      // U: quick upgrade of the weakest pick (same op as the panel).
       if (key == LogicalKeyboardKey.keyU && nearMineStation) {
         upgradeMiner();
         return true;

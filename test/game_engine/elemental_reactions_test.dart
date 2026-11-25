@@ -445,7 +445,8 @@ void main() {
       ], _foe('e0', type: 'ojoAbismo'));
       final p = s.state.party.single;
       expect(p.hp, 100 - 15);
-      expect(p.stacks(StatusKind.stun), 1);
+      // combat.md § "Control sobre jugadores": no stun on players.
+      expect(p.stacks(StatusKind.stun), 0);
       expect(p.stacks(StatusKind.wet), 0);
       final r = _reactions(s).single;
       expect([r.kind, r.targetId, r.sourceId],

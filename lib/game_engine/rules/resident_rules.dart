@@ -6,6 +6,10 @@ import '../data/cooking_catalog.dart'
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/smithing_catalog.dart';
+import '../data/weapons_catalog.dart' show kWeapons;
+import '../models/item.dart' show ItemInstance, Rarity;
+import 'craft_rules.dart' show CraftRules;
+import 'inventory_rules.dart' show InventoryRules;
 import 'mining_rules.dart' show MiningRules, SmithCraftRules;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
@@ -698,6 +702,11 @@ abstract final class ResidentRules {
     final n = biomeNpc(r.npc);
     if (n == null) return r;
     final h = day * 31 + r.npc.codeUnits.fold<int>(0, (a, c) => a + c);
+    // Forged weapon order (mining_smithing.md § 2.2): a weapon the room's
+    // smiths can forge; checked first, then the ingot batch.
+    if (forgeOrder(r.npc, day, smithLv) case (final id, final q)?) {
+      return r.copyWith(order: id, orderN: 1, orderQ: q, orderDay: day);
+    }
     // Smithing order (mining_smithing.md § 2.2): a batch of ingots the
     // room's smiths can make, paid well.
     if (smithOrder(r.npc, day, smithLv) case (final ingot, final count)?) {
@@ -822,7 +831,9 @@ abstract final class ResidentRules {
   }
 
   /// Valor en oro de una unidad de [item] (precio de venta).
-  static int unitValue(String item) => kSmithMaterials.containsKey(item)
+  static int unitValue(String item) => isForgeOrder(item)
+      ? forgeOrderValue(item)
+      : kSmithMaterials.containsKey(item)
       ? (SmithCraftRules.sellPrice(item) * MiningRules.t.d('smithOrderPay'))
           .round()
       : kMeals.containsKey(item)
@@ -848,6 +859,87 @@ abstract final class ResidentRules {
     final hi = math.max(lo, st.i('smithOrderMax'));
     return (ingots[(h ~/ 1000) % ingots.length], lo + (h ~/ 7) % (hi - lo + 1));
   }
+
+  // ---------------- forged weapon orders (mining_smithing.md § 2.2) ----
+
+  static const forgeOrderPrefix = 'wpn:';
+
+  static bool isForgeOrder(String id) => id.startsWith(forgeOrderPrefix);
+
+  /// `wpn:<type>:<minIl>` → (weapon type, min item level), or `null`.
+  static (String, int)? parseForgeOrder(String id) {
+    if (!isForgeOrder(id)) return null;
+    final rest = id.substring(forgeOrderPrefix.length);
+    final i = rest.lastIndexOf(':');
+    if (i <= 0) return null;
+    final il = int.tryParse(rest.substring(i + 1));
+    return il == null ? null : (rest.substring(0, i), il);
+  }
+
+  static String forgeOrderId(String type, int minIl) =>
+      '$forgeOrderPrefix$type:$minIl';
+
+  /// Weapon types of the catalog, sorted (stable for the daily roll).
+  static List<String> forgeTypes() =>
+      ({for (final w in kWeapons.values) w.type}.toList()..sort());
+
+  /// The forged weapon order of [npc] on [day] with the room's best
+  /// Smithing level [smithLv]: (order id, min rarity index), or `null`
+  /// (deterministic by day; from `forgeOrderLevel`, chance
+  /// `forgeOrderChance`, rarity up to what the smith forges capped at
+  /// `forgeOrderMaxRarity`, item level from an ingot tier ≤ 1 + lv / 5).
+  static (String, int)? forgeOrder(String npc, int day, int smithLv) {
+    final st = MiningRules.t;
+    if (smithLv <= 0 || smithLv < st.i('forgeOrderLevel')) return null;
+    final h = (day * 4483 + npc.codeUnits.fold<int>(0, (a, c) => a * 13 + c))
+        .abs();
+    if ((h % 1000) / 1000 >= st.d('forgeOrderChance')) return null;
+    final types = forgeTypes();
+    if (types.isEmpty) return null;
+    final maxQ = math.min(SmithCraftRules.maxRarity(smithLv).index,
+        st.i('forgeOrderMaxRarity').clamp(0, Rarity.values.length - 1));
+    final q = (h ~/ 7) % (maxQ + 1);
+    final tier = 1 + (h ~/ 13) % (1 + smithLv ~/ 5);
+    final il = math.max(1, st.i('ingotIlPerTier') * (tier - 1));
+    return (forgeOrderId(types[(h ~/ 1000) % types.length], il), q);
+  }
+
+  /// Gold value of a forged weapon order [id] at its min rarity [q]
+  /// (the forged sell price of that rarity × `forgeOrderPay`).
+  static int forgeOrderValue(String id, [int q = 0]) {
+    final o = parseForgeOrder(id);
+    if (o == null) return 0;
+    final st = MiningRules.t;
+    final r = Rarity.values[q.clamp(0, Rarity.values.length - 1)];
+    final mult = st.d('forgedSellMult') + st.d('forgedSellPerRarity') * q;
+    return (CraftRules.itemValue(o.$2) *
+            CraftRules.sellFraction(r) *
+            mult *
+            st.d('forgeOrderPay'))
+        .round();
+  }
+
+  /// Forged weapons of [p] that fill [id] at min rarity [q]: forged at
+  /// the HERRERÍA, of the type, rarity and item level asked; never the
+  /// equipped one.
+  static List<ItemInstance> forgeOrderMatches(
+      PlayerProfile p, String id, int q) {
+    final o = parseForgeOrder(id);
+    if (o == null) return const [];
+    return [
+      for (final i in p.items)
+        if (i.uid.startsWith(CraftRules.forgedPrefix) &&
+            i.uid != p.equippedUid &&
+            kWeapons[i.baseId]?.type == o.$1 &&
+            i.rarity.index >= q &&
+            i.itemLevel >= o.$2)
+          i
+    ];
+  }
+
+  /// Smithing XP for delivering a forged weapon order at rarity [q].
+  static int forgeOrderXp(int q) =>
+      MiningRules.t.i('forgeOrderXp') * (q + 1);
 
   /// The meal order of [npc] on [day] with the room's best Cultivo level
   /// [farmLv]: (recipe, count, min quality), or `null` (deterministic by
@@ -901,6 +993,7 @@ abstract final class ResidentRules {
   /// (fishing.md § 10): con uno así de grande pescado, cuentan los que
   /// tenga de esa especie.
   static int orderHave(PlayerProfile p, String item, int q) {
+    if (isForgeOrder(item)) return forgeOrderMatches(p, item, q).length;
     if (kSmithMaterials.containsKey(item)) return p.life.ore(item);
     if (kMeals.containsKey(item)) {
       var n = 0;
@@ -929,7 +1022,9 @@ abstract final class ResidentRules {
       ResidentState r) {
     final o = r.order;
     if (o == null) return (xp: 0, gold: 0, rep: 0, point: false);
-    final v = unitValue(o) * r.orderN * (1 + r.orderQ);
+    final v = isForgeOrder(o)
+        ? forgeOrderValue(o, r.orderQ) * r.orderN
+        : unitValue(o) * r.orderN * (1 + r.orderQ);
     final every = math.max(1, t.i('orderSkillEvery'));
     return (
       xp: (v * t.d('orderXpPerValue')).round(),
@@ -941,14 +1036,23 @@ abstract final class ResidentRules {
 
   /// Entrega la orden de [npc]. [xpLeft]: lo que le queda a [p] del tope
   /// diario de XP por órdenes. Devuelve perfil (con oro, punto de árbol;
-  /// la XP la suma el motor), pueblo y la XP a dar.
+  /// la XP la suma el motor), pueblo y la XP a dar. [pick]: uid of the
+  /// forged weapon to hand over (a weapon order; else the first match).
   static (PlayerProfile, TownState, int)? deliverOrder(
-      PlayerProfile p, TownState s, String npc, int xpLeft) {
+      PlayerProfile p, TownState s, String npc, int xpLeft,
+      {String? pick}) {
     final r = s.resident(npc);
     final o = r.order;
     if (o == null || orderHave(p, o, r.orderQ) < r.orderN) return null;
     PlayerProfile? prof;
-    if (kSmithMaterials.containsKey(o)) {
+    if (isForgeOrder(o)) {
+      final m = forgeOrderMatches(p, o, r.orderQ);
+      final w = pick == null
+          ? m.first
+          : m.where((i) => i.uid == pick).firstOrNull;
+      if (w == null) return null;
+      prof = InventoryRules.removeItem(p, w.uid);
+    } else if (kSmithMaterials.containsKey(o)) {
       prof = MiningRules.give(p, {o: -r.orderN});
     } else if (kMeals.containsKey(o)) {
       final meals = {...p.life.farm.meals};
@@ -1017,7 +1121,40 @@ abstract final class ResidentRules {
     if (legend != null && tier >= t.i('resStockLegend')) {
       out[legend] = n.seeds.values.fold<int>(0, math.max) * 3;
     }
+    for (final w in n.wares) {
+      if (!(tier >= w.tier || (home && w.home))) continue;
+      final p = warePrice(w.id);
+      if (p > 0) out[w.id] = p;
+    }
     return out;
+  }
+
+  /// Resident price of a trade good (§ 9.1.1): mine supplies and tools at
+  /// the trader's price; materials at the trader's buying price times
+  /// `resWareMarkup`.
+  static int warePrice(String id) {
+    final d = kSmithMaterials[id];
+    if (d == null) return 0;
+    if (d.kind == SmithMatKind.supply || d.kind == SmithMatKind.tool) {
+      return MiningRules.price(id);
+    }
+    return (SmithCraftRules.sellPrice(id) * t.d('resWareMarkup')).ceil();
+  }
+
+  /// [p] after buying [n] of the trade good [id] at [price] each, into
+  /// `life.ores`; `null` if it is not a ware, gold is short or the stack
+  /// would overflow `stackCap`.
+  static PlayerProfile? buyWare(
+      PlayerProfile p, String id, int n, int? price) {
+    if (!kSmithMaterials.containsKey(id) || price == null || price <= 0) {
+      return null;
+    }
+    if (n <= 0 || p.credits < price * n) return null;
+    if (p.life.ore(id) + n > math.max(1, MiningRules.t.i('stackCap'))) {
+      return null;
+    }
+    return MiningRules.give(p, {id: n})
+        .copyWith(credits: p.credits - price * n);
   }
 
   /// Precio de la semilla [crop] en el pueblo [s] (la vende algún

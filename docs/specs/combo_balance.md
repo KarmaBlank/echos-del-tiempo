@@ -512,6 +512,9 @@ Límites de combate):
   terminar: barra a 0 y umbral +25%. Mientras está quebrado la barra no
   se llena.
 - **Baja**: al empezar su turno, `pBreakDecay` (0.1) del umbral.
+- **Aturdir enemigo**: un Aturdido de enemigo sobre un jugador llena
+  `pStunBreak` (0.35) del umbral en vez de aturdir; quebrarse estando
+  silenciado termina el Silencio (combat.md § "Control sobre jugadores").
 - `pBreakOn` = 0 lo apaga (sin barra ni efectos).
 - **UI**: barra "QB" compacta en la tarjeta del grupo (HUD) y en la lista
   de aliados; chip "Quebrado (+25% daño)" con tooltip.

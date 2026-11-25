@@ -80,3 +80,60 @@ Ninguno es recadero: son de construcción (town_editor.md § 3.4).
 Las historias de los eventos del mundo (world_events.md) ya nacen sin
 recadero: el editor solo ofrece vencer o explorar (escoltar, hablar,
 resistir y resolver se suman cuando existan sus sistemas).
+
+## 7. Auditoría automática (`test/game_engine/quest_audit_test.dart`)
+
+Recorre toda definición de encargo y falla si alguna no se puede cumplir
+o se ve mal. Chequea:
+
+- **Cadenas de los habitantes** (código y `npcs.json`, que deben
+  coincidir): objetivo en su catálogo (pez, cultivo o zona jugable),
+  con fuente conocida (lago de bioma o del pueblo, semilla de bioma, de
+  habitante o del pueblo, recolección, recolección de estación), oro y
+  relación > 0, texto no vacío, objeto único solo en el último paso.
+- **Órdenes de entrega** (`orderPool` en todos los niveles, `smithOrder`,
+  `mealOrder`): el producto existe, tiene fuente (las comidas: cada
+  ingrediente) y su nombre nunca es el id.
+- **Pedido del pescador nativo**: siempre un pez de su lago.
+- **Eventos del pueblo**: quien propone es habitante, enemigos de cada
+  ronda en el catálogo, premio > 0, textos en es-AR / en / zh-Hans.
+- **Temas de HABLAR** (`npcs.json`): textos en los 3 idiomas; INVITAR
+  solo en arraigados, CASA nunca en arraigados.
+- **i18n**: toda clave que usan los menús de encargos existe en los 3
+  idiomas; tipos de encargo, textos de cada paso y objetos únicos
+  tienen clave propia; las zonas se nombran, nunca con su número.
+
+### 7.1 Hallazgos y arreglos
+
+| Hallazgo | Arreglo |
+|---|---|
+| Órdenes de herrería mostraban el id crudo (`ingot_copper`) en la orden, el DIARIO y el HUD | `questItemName` (nombre del material) e ícono de herramienta |
+| Órdenes de comida mostraban el id crudo en SEGUIDOS y el HUD (`QuestTrackRules.itemName` no conocía comidas) | `itemName` suma comidas y materiales; la UI usa `questItemName` (traducido) |
+| Pasos de mazmorra / élite decían "Ganar la zona 2" | Nombre de la zona traducido |
+| Tipo de encargo, título de pedido, "encargo/orden" del HUD y objetos únicos solo en es-AR | Claves `ui.town.npc.kind.*`, `ui.town.track.kind.*`, `ui.town.request.*`, `ui.town.relic.*` |
+| Texto de cada paso de la cadena solo en es-AR | Claves `ui.town.quest.<npc>.<i>` en los 3 idiomas |
+
+Sin hallazgos: todas las cadenas, órdenes, pedidos del pescador,
+eventos y temas son cumplibles. Pendiente fuera de alcance: los nombres
+de zona en zh-Hans están vacíos (idioma oculto; cae a es-AR).
+
+## 8. Menús de encargos livianos
+
+Orden de un habitante, paso de su cadena, SEGUIDOS del DIARIO y lista
+del HUD. Nada se borra: se escalona.
+
+- **A la vista:** nombre, etiqueta de tipo, qué pide (`3 × Chile de
+  volcán`) y `Tenés 0/3`.
+- **Premios como chips** (`DsChip`): `+360 XP`, `+108 oro`,
+  `+1 relación`, `+1 punto de árbol`, objeto único, récord de pesca; el
+  texto largo (p. ej. "XP de personaje: +360 (con tope diario)") va en
+  el tooltip del chip.
+- **Ambientación y explicaciones** (texto del paso, "Pide algo nuevo
+  cada día…", entregadas) detrás del chip `?` junto al nombre.
+- **SEGUIDOS:** una línea de avance; la cantidad en la casilla.
+- **HUD:** una fila por encargo (`Brann · orden  0/3`), sin cortar
+  texto; la línea completa en su tooltip.
+
+Antes / después: `docs/preview/orders_before.png`,
+`docs/preview/orders_after.png` (`ORDERS_PREVIEW=before|after flutter
+test test/features/world/orders_menu_preview_test.dart`).

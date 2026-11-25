@@ -91,7 +91,15 @@ class EnemyLiveInfo extends StatefulWidget {
                 ? 'ui.combat.enemy.ult_power_all'
                 : 'ui.combat.enemy.ult_power_one',
             {'x': fm(u.power)}),
-        if (u.status case final st?) statusApplicationMarkup(st),
+        // Main status and secondary ones (e.g. a 30% stun on top).
+        for (final st in [if (u.status != null) u.status!, ...u.extraStatuses])
+          st.kind == StatusKind.stun
+              // combat.md § "Control sobre jugadores".
+              ? s.t('ui.combat.enemy.ult_break_fill', {
+                  'pct':
+                      st.chance == null ? '' : '${jsRound(st.chance! * 100)}%: '
+                })
+              : statusApplicationMarkup(st),
         if (u.delayAll > 0) s.t('ui.combat.enemy.ult_delay_all'),
         if (u.wipeBuffs) s.t('ui.combat.enemy.ult_wipe_buffs'),
         if (u.guaranteedCrit) s.t('ui.combat.enemy.ult_sure_crit'),
