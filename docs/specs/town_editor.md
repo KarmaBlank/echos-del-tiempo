@@ -202,7 +202,9 @@ verde / rojo; la esquina va en el tile del mouse.
 - Posición: `TownPlan.landmarksOf(town)` (los movidos donde quedaron,
   el resto en su lugar de siempre). Pueblos guardados antes de v0.32.3:
   el TALLER DE OFICIOS sin marca va a (6, 6) y la ARMERÍA a (26, 6)
-  (`TownLayout.lateSpots`, en ese orden); si ahí ya hay algo (una
+  (`TownLayout.lateSpots`, en ese orden; también VAGONETAS, la
+  estación chica de 2 × 1 en (14, 19), pegada al oeste de la salida
+  sur, mining_smithing.md § 1.8); si ahí ya hay algo (una
   construcción a menos de 2 tiles, un faro, un árbol, un camino fijo u
   otro lugar movido a menos de 1), va al hueco libre más cercano
   (distancia Manhattan) sin guardar marca, hasta que el dueño lo mueva. De ahí salen el dibujo, las
