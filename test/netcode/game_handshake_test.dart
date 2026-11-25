@@ -11,8 +11,8 @@ import '../game_engine/session_test_helpers.dart';
 /// juego"): Mundo y Travesía no comparten salas.
 void main() {
   test('Mundo en 88 (puesto del jugador) y Travesía arranca su secuencia en 1', () {
-    expect(WireGame.mundo.protocol, 88);
-    expect(kProtocolVersion, 88);
+    expect(WireGame.mundo.protocol, 90);
+    expect(kProtocolVersion, 90);
     expect(WireGame.travesia.protocol, 6);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });

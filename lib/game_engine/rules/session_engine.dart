@@ -97,6 +97,7 @@ import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
+import 'map_discovery_rules.dart';
 import 'waystone_rules.dart';
 import 'world_event_rules.dart';
 import '../data/world_events_catalog.dart';

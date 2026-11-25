@@ -19,6 +19,8 @@ import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/memo.dart';
+import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout;
+import '../../../../game_engine/rules/map_discovery_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
@@ -1050,17 +1052,44 @@ void setMinimapZoom(WidgetRef ref, int zoom) {
       .update(s.copyWith(minimapZoom: zoom)));
 }
 
-/// Tamaño (px) de la ventana del minimapa con zoom 2 y 3 (como el
-/// minimapa de antes de v0.8.1): a zoom 3 son ~27×19 tiles alrededor
-/// del jugador. Para ver más está el mapa grande (M).
-const kMinimapWindow = Size(200, 140);
+/// Tamaño (px) de la ventana del minimapa: a zoom 3 son ~22×16 tiles
+/// alrededor del jugador; con zoom 1 el piso entero se encoge para caber
+/// (biome_exploration.md § 11.3). Para ver más está el mapa grande (M).
+const kMinimapWindow = Size(168, 118);
+
+/// The overworld map layer (biome_exploration.md § 11) when the party is
+/// in a biome exterior; `null` in town, dungeons and the world map.
+OverworldOverlay? overworldOverlayFor(
+    SessionView view, SessionController controller) {
+  final s = view.session;
+  if (s.mode != SessionMode.lobby) return null;
+  final lay = biomeLayout(s.place);
+  if (lay == null || view.map.place != lay.id) return null;
+  final town = s.town;
+  return OverworldOverlay(
+    known: MapDiscoveryRules.known(town, lay),
+    cacheKey: (lay.id, lay.seed, town.discovery[lay.id] ?? ''),
+    marks: MapDiscoveryRules.marks(lay),
+    entranceOpen: _entranceOpen(view, controller),
+    waystoneActive: controller.waystoneActive,
+  );
+}
 
 /// El minimapa del HUD con el zoom [zoom]: 1 = el piso entero; 2 y 3 =
 /// ventana de [kMinimapWindow] centrada en el jugador (exploration.md §
 /// "HUD").
 Minimap hudMinimap(SessionView view, SessionController controller,
     {int zoom = 1}) {
-  final cell = Minimap.baseCell * zoom;
+  final area = MapGame.currentFloor(view)?.bounds ??
+      TileRect(0, 0, view.map.width, view.map.height);
+  // Zoom 1: the whole floor, shrunk to fit the window (§ 11.3).
+  final cell = zoom <= 1
+      ? [
+          Minimap.baseCell,
+          kMinimapWindow.width / area.w,
+          kMinimapWindow.height / area.h,
+        ].reduce((a, b) => a < b ? a : b)
+      : Minimap.baseCell * zoom;
   return Minimap(
     key: const ValueKey('hud-minimap'),
     map: view.map,
@@ -1073,6 +1102,7 @@ Minimap hudMinimap(SessionView view, SessionController controller,
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
+    overworld: overworldOverlayFor(view, controller),
     exit: switch (MapGame.dungeonExitAt(view,
         freeMovement: controller.engine.freeMovement, run: controller.isRun)) {
       (final x, final y) => Offset(x, y),
@@ -1137,7 +1167,8 @@ Widget fullMapPanel(SessionView view, SessionController controller,
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
-    waystones: _seenWaystones(view),
+    overworld: overworldOverlayFor(view, controller),
+    waystones: _seenWaystones(view, controller),
     destinations: controller.travelDestinations,
     originId: controller.travelOrigin?.id,
     onTravel: controller.travelTo,
@@ -1147,7 +1178,20 @@ Widget fullMapPanel(SessionView view, SessionController controller,
 }
 
 /// Piedras de paso descubiertas del piso actual (§ 11.7), activada o no.
-List<(MapPoi, bool)> _seenWaystones(SessionView view) {
+List<(MapPoi, bool)> _seenWaystones(
+    SessionView view, SessionController controller) {
+  // Overworld: the activated ones and those in discovered ground (§ 11.4).
+  if (overworldOverlayFor(view, controller) case final ow?) {
+    return [
+      for (final m in ow.marks)
+        if (m.kind == OverworldMarkKind.waystone)
+          if (controller.waystoneActive(m.index!) || ow.knownTile(m.x, m.y))
+            (
+              MapPoi(id: m.index!, kind: PoiKind.waystone, tx: m.x, ty: m.y),
+              controller.waystoneActive(m.index!)
+            ),
+    ];
+  }
   final m = view.session.mission;
   final f = MapGame.currentFloor(view);
   if (m == null || f == null || view.session.mode != SessionMode.field) {

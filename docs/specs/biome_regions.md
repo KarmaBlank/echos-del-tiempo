@@ -117,8 +117,10 @@ Elipse con borde irregular (dos armónicos), radios entre
   entrada está activa siempre.
 - Menú (v0.48.5): el **mapa grande de la región** (`FullMap`, el mismo
   de las piedras de paso de las mazmorras, worldgen.md § 11.4) en *modo
-  elegir* (`FullMapPick`): todas las piedras marcadas con su número
-  (activas en cian, las otras grises "Sin descubrir"); pasar el mouse
+  elegir* (`FullMapPick`): las piedras marcadas con su número
+  (activas en cian; desde el protocolo 90 las no activadas solo aparecen, en
+  gris "Sin descubrir", si están en terreno ya descubierto:
+  biome_exploration.md § 11.4); pasar el mouse
   muestra su nombre (tooltip), clic la elige (no viaja todavía) y a la
   derecha va su detalle con **VIAJAR** (gris si es la de acá o no está
   activa; Tab / número eligen, Enter viaja). Abre con la piedra de acá

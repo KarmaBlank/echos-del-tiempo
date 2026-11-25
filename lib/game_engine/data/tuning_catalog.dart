@@ -810,6 +810,11 @@ const Map<String, TuningDef> kTuningDefaults = {
     'forageRecheckSec': 6,
     // Waystones (§ 4): reach (px) to activate / use one.
     'waystoneReach': 26,
+    // Overworld map discovery (biome_exploration.md § 11.4): tiles each
+    // player reveals around them, and tiles known from the start around
+    // the arrival and the story goals.
+    'mapRevealRadius': 9,
+    'mapStartRadius': 5,
     // Caverns (§ 3.1): × of the lake radii, thickness of the rock rim
     // (tiles) and the most openings above (0 = none).
     'caveScaleX': 2.0,

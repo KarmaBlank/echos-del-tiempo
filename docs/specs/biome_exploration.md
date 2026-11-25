@@ -155,3 +155,84 @@ santuarios una vez por día, migración de versión, llama en grutas.
 `test/features/world/biome_v2_preview_test.dart`: la luz recorta la
 sombra (siempre) y, con `BIOME_PREVIEW=1`, las vistas
 `docs/preview/biomes_v2/biome_<id>.png` y `cavern_light.png`.
+
+## 11. Mapa del exterior: leyenda propia, objetivos y descubrimiento (protocolo 90)
+
+El mapa grande (M, y el de PIEDRAS DE PASO) y el minimapa se comportan
+distinto en un **exterior de bioma** que en una mazmorra. En mazmorras no
+cambia nada (leyenda, niebla de mazmorra oscura y PdI siguen igual).
+
+Código: `lib/game_engine/rules/map_discovery_rules.dart` (Dart puro:
+celdas, revelado, marcas del exterior), `TownState.discovery`,
+`hud/full_map.dart` (`FullMapMode`), `hud/minimap.dart`
+(`OverworldOverlay`).
+
+### 11.1 Leyenda por modo
+- `FullMap.legendFor(mode)`: cada modo tiene su leyenda y solo lista lo
+  que ese modo dibuja.
+- **Mazmorra** (como siempre): Tú, Aliados, Escalera, Jefe, Cofre,
+  Secreto, Santuario, Piedra de paso, Enemigo.
+- **Exterior**, en dos grupos con título:
+  - **OBJETIVOS**: Portal de mazmorra, Portal de Eco (los dos de cada
+    tipo que piden la historia y el final).
+  - **OPCIONAL**: Piedra de paso, Santuario, Cofre, Mina, Muelle,
+    Habitante (el puesto del habitante del bioma).
+  - Además Tú y Aliados.
+  Élites y mercaderes de exploración son eventos del día y no se dibujan
+  en el mapa (se encuentran explorando, § 6), así que no van en la leyenda.
+
+### 11.2 Objetivos vs. opcional
+- Objetivos (entradas de mazmorra y portales de Eco): cuadro de 3 tiles
+  con **marco dorado** (`MapMark.goal`), siempre visibles aunque estén en
+  la niebla; la entrada lleva el color de su zona (gris si está cerrada),
+  el Eco su color (`MapMark.echo`).
+- Opcional: punto chico de su color, solo en lo descubierto.
+
+### 11.3 Minimapa más chico
+- La ventana del minimapa con zoom 2–3 pasa de 200 × 140 a **168 × 118**
+  px (`kMinimapWindow`).
+- Con zoom 1 (el piso entero) el piso se encoge para caber en esa misma
+  ventana (antes, el lienzo de 150 × 112 ocupaba 375 × 280 px).
+
+### 11.4 Descubrimiento (niebla del exterior)
+- El exterior se parte en **celdas** de `mapCell` = 4 × 4 tiles
+  (38 × 28 celdas; constante de código porque cambia el formato).
+- Al entrar a un bioma **no** se ve el plano: solo se conocen las celdas a
+  `mapStartRadius` tiles de la llegada y de cada objetivo (§ 11.2). Eso no
+  se guarda: se calcula del plano.
+- El anfitrión, cada tick del exterior, marca como descubiertas las
+  celdas cuyo centro está a `mapRevealRadius` tiles de algún jugador (no
+  compañeros). Solo cambia el estado si hay celda nueva.
+- Lo no descubierto se tapa en el minimapa y el mapa grande con el color
+  del vacío (máscara de 1 px por celda, cacheada por versión). Los
+  jugadores y los objetivos se ven igual.
+- **Compartido por el grupo**: está en el mundo (`TownState.discovery`,
+  JSON `md`: bioma → `w,h,base64` de 1 bit por celda, como `FogOfWar.pack`)
+  y viaja en el `town` del estado. El snapshot de la sala solo manda el
+  bioma donde está el grupo (`farmJson(place:)`); el guardado, todos.
+- **Versión de plano** (§ 7): `migrate` también borra `discovery`; un
+  valor con otro tamaño de celdas se descarta al leerlo.
+- Piedras de paso: el mapa de PIEDRAS DE PASO y el mapa grande solo
+  muestran las activadas y las que están en lo descubierto (estas en gris
+  "sin encontrar"); solo se viaja a las activadas (como antes).
+
+### 11.5 Tunables (`kTuning[TuningId.regions]`, editables en Balance)
+| Clave | Default | Qué |
+|---|---|---|
+| `mapRevealRadius` | 9 | Radio (tiles) que revela cada jugador al caminar. |
+| `mapStartRadius` | 5 | Radio (tiles) conocido desde el inicio alrededor de la llegada y de cada objetivo. |
+
+### 11.6 Rendimiento
+- El tick no decodifica el base64 cada vez: hay un caché por bioma
+  (cadena → bits). Con todo ya descubierto alrededor no se crea estado
+  nuevo.
+- La máscara de niebla del exterior se graba como `Picture` (1 px por
+  celda) y se rehace solo cuando cambia la cadena del bioma.
+
+### 11.7 Tests
+`test/game_engine/map_discovery_test.dart` (inicio solo con objetivos,
+revelado al caminar, sin cambio si ya estaba, empaquetado, migración,
+snapshot solo del bioma actual), `test/features/world/overworld_map_test.dart`
+(leyenda por modo, minimapa dentro de la ventana, piedras sin descubrir
+ocultas) y la vista `docs/preview/overworld_map_fog.png` con
+`OVERWORLD_MAP_PREVIEW=1`.

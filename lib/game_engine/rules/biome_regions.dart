@@ -287,6 +287,7 @@ abstract final class BiomeRegions {
     return t.copyWith(
         waystones: const {},
         wild: const {},
+        discovery: const {},
         layoutVersion: BiomeLayout.version);
   }
 

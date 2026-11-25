@@ -204,7 +204,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// player snapshot.
 /// 88: player stall (player_shop.md): `stall` action (StallAction) and
 /// `life.ps` in the profile.
-const kProtocolVersion = 88;
+/// 90: overworld map discovery (biome_exploration.md § 11.4): `town.md`
+/// (biome → cell bits; the room snapshot carries only the current biome).
+const kProtocolVersion = 90;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

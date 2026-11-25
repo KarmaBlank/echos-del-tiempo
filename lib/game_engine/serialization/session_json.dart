@@ -93,7 +93,11 @@ class SessionJson {
         if (s.worldId != null) 'wid': s.worldId,
         if (s.worldName != null) 'wname': s.worldName,
         // v0.23.0 (protocolo 44): huerta, ampliaciones y lago.
-        if (s.town.farmJson() case final t when t.isNotEmpty) 'town': t,
+        // Protocol 90: only the current biome's map discovery
+        // (biome_exploration.md § 11.4).
+        if (s.town.farmJson(place: s.place, allMaps: false)
+            case final t when t.isNotEmpty)
+          'town': t,
         // v0.26.0 (protocolo 48): exterior de bioma donde está el grupo.
         if (s.place != null) 'place': s.place,
         // v0.28.0 (protocolo 50): quién edita el pueblo.

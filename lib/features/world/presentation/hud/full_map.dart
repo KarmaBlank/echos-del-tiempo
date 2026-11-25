@@ -42,7 +42,16 @@ class FullMap extends StatefulWidget {
     this.reduceMotion = false,
     this.fog,
     this.pick,
+    this.overworld,
   });
+
+  /// Overworld biome layer (biome_exploration.md § 11): discovery, goal
+  /// marks and its own legend. `null` = dungeon / world map.
+  final OverworldOverlay? overworld;
+
+  /// Which legend this map shows.
+  FullMapMode get mode =>
+      overworld == null ? FullMapMode.dungeon : FullMapMode.overworld;
 
   /// Pick mode (biome_regions.md § 4, worldgen.md § 11.4): every stone of
   /// [waystones] is selectable (hover = tooltip, click = select), the
@@ -115,6 +124,46 @@ class FullMap extends StatefulWidget {
         for (final (l, m) in legendMarks)
           (l, m == MapMark.waystone ? waystoneColor : MapPalette.mark(m)),
       ];
+
+  /// Overworld legend (biome_exploration.md § 11.1) in groups: title key
+  /// → (label key, mark, is a goal). Only what the overworld draws.
+  static const overworldLegendMarks =
+      <(String, List<(String, MapMark, bool)>)>[
+    (
+      'ui.world.map.legend.group_goals',
+      [
+        ('ui.world.map.legend.portal', MapMark.goal, true),
+        ('ui.world.map.legend.echo', MapMark.echo, true),
+      ]
+    ),
+    (
+      'ui.world.map.legend.group_optional',
+      [
+        ('ui.world.map.legend.waystone', MapMark.waystone, false),
+        ('ui.world.map.legend.shrine', MapMark.shrine, false),
+        ('ui.world.map.legend.chest', MapMark.chest, false),
+        ('ui.world.map.legend.mine', MapMark.mine, false),
+        ('ui.world.map.legend.dock', MapMark.dock, false),
+        ('ui.world.map.legend.resident', MapMark.resident, false),
+      ]
+    ),
+    (
+      'ui.world.map.legend.group_party',
+      [
+        ('ui.world.map.legend.me', MapMark.me, false),
+        ('ui.world.map.legend.ally', MapMark.ally, false),
+      ]
+    ),
+  ];
+
+  /// Every label key of the legend of [mode].
+  static List<String> legendKeys(FullMapMode mode) => switch (mode) {
+        FullMapMode.dungeon => [for (final (l, _) in legendMarks) l],
+        FullMapMode.overworld => [
+            for (final (_, items) in overworldLegendMarks)
+              for (final (l, _, _) in items) l
+          ],
+      };
 
   @override
   State<FullMap> createState() => FullMapState();
@@ -499,6 +548,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                           view: _view,
                           center: _center ?? _player,
                           fog: widget.fog,
+                          overworld: widget.overworld,
                         ),
                         ..._stoneMarks(context,
                             Minimap.viewRect(a, _view, _center ?? _player)),
@@ -516,22 +566,33 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
             key: const ValueKey('full-map-legend'),
             spacing: 16,
             runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              for (final (label, color) in FullMap.legend)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                        width: RetroType.width(context, 8),
-                        height: RetroType.width(context, 8),
-                        decoration: BoxDecoration(
-                            color: color,
-                            border: Border.all(
-                                color: ProtoColors.panelBorder, width: 1))),
-                    const SizedBox(width: 6),
-                    Text(retroText(context.t(label))),
-                  ],
-                ),
+              if (widget.mode == FullMapMode.dungeon)
+                for (final (label, color) in FullMap.legend)
+                  _LegendItem(label: context.t(label), color: color)
+              else
+                for (final (group, items) in FullMap.overworldLegendMarks)
+                  Wrap(
+                    key: ValueKey('full-map-legend-$group'),
+                    spacing: 12,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(retroText(context.t(group)),
+                          style: TextStyle(
+                              color: group.endsWith('goals')
+                                  ? DsColors.reward
+                                  : DsColors.textSecondary)),
+                      for (final (label, mark, goal) in items)
+                        _LegendItem(
+                            label: context.t(label),
+                            color: mark == MapMark.waystone
+                                ? FullMap.waystoneColor
+                                : MapPalette.mark(mark),
+                            goal: goal),
+                    ],
+                  ),
               if (choosing && _pick == null)
                 Text(
                     key: const ValueKey('full-map-choose-hint'),
@@ -560,4 +621,40 @@ class FullMapPick {
 
   /// Stone selected when it opens (id), e.g. the one you stand at.
   final int? initial;
+}
+
+/// Which legend / behaviour the big map uses (biome_exploration.md § 11).
+enum FullMapMode { dungeon, overworld }
+
+/// One legend entry: swatch + label. Goals get the gold frame they wear
+/// on the map (§ 11.2).
+class _LegendItem extends StatelessWidget {
+  const _LegendItem(
+      {required this.label, required this.color, this.goal = false});
+
+  final String label;
+  final Color color;
+  final bool goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = RetroType.width(context, 8);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+            width: box,
+            height: box,
+            decoration: BoxDecoration(
+                color: color,
+                border: Border.all(
+                    color: goal
+                        ? MapPalette.mark(MapMark.goal)
+                        : ProtoColors.panelBorder,
+                    width: goal ? 2 : 1))),
+        const SizedBox(width: 6),
+        Text(retroText(label)),
+      ],
+    );
+  }
 }
