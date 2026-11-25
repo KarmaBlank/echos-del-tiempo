@@ -241,5 +241,16 @@
   "data.materials.meal.mojarra_nabo.name": "Mojarra with turnip",
   "data.materials.meal.mojarra_nabo.lore": "Fishing and farming on one plate.",
   "data.materials.meal.trucha_cebolla.name": "Onion trout",
-  "data.materials.meal.trucha_cebolla.lore": "Two coppers that get along."
+  "data.materials.meal.trucha_cebolla.lore": "Two coppers that get along.",
+  "data.materials.crop.brote_primavera.name": "Spring sprout",
+  "data.materials.crop.brote_primavera.seed": "Spring sprout seed",
+  "data.materials.crop.fresa_estival.name": "Summer strawberry",
+  "data.materials.crop.fresa_estival.seed": "Summer strawberry seed",
+  "data.materials.crop.castana_otono.name": "Autumn chestnut",
+  "data.materials.crop.castana_otono.seed": "Autumn chestnut seed",
+  "data.materials.crop.baya_invierno.name": "Winter berry",
+  "data.materials.crop.baya_invierno.seed": "Winter berry seed",
+  "data.materials.crop.flor_eco.name": "Echo bloom",
+  "data.materials.crop.flor_eco.seed": "Echo bloom seed",
+  "data.materials.crop.flor_eco.lore": "It blooms where time repeats itself, and lasts as long as an echo."
 }

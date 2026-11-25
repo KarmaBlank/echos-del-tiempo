@@ -306,5 +306,21 @@
   "ui.world.npcv.time_tip": "Cuándo está afuera (reloj del mundo).",
   "ui.world.npcv.invitable_on": "INVITABLE AL PUEBLO",
   "ui.world.npcv.invitable_off": "NO SE MUDA",
-  "ui.world.npcv.invitable_tip": "Con el tema INVITAR se muda al pueblo."
+  "ui.world.npcv.invitable_tip": "Con el tema INVITAR se muda al pueblo.",
+  "ui.world.way.prompt_activate": "[E] Activar la piedra de paso",
+  "ui.world.way.prompt_use": "[E] Piedra de paso: viaje rápido",
+  "ui.world.way.title": "PIEDRAS DE PASO",
+  "ui.world.way.help": "Viajá entre las piedras de paso que activaste en esta región.",
+  "ui.world.way.go": "IR",
+  "ui.world.way.here": "ACÁ",
+  "ui.world.way.unknown": "Sin descubrir",
+  "ui.world.way.unknown_tip": "Activala tocándola con E para poder viajar acá.",
+  "ui.world.way.site_entrance": "Entrada de la región",
+  "ui.world.way.site_lake": "Lago: {name}",
+  "ui.world.way.site_mine": "Boca de mina {n}",
+  "ui.world.way.close": "CERRAR",
+  "ui.world.forage.prompt": "[E] Recolectar {name}",
+  "ui.world.forage.regrow": "{name}: vuelve a crecer en {n} s",
+  "ui.world.forage.seed_bush": "Mata de semillas",
+  "ui.world.forage.echo_bloom": "Flor del eco"
 }

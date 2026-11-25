@@ -18,6 +18,9 @@ import '../../../game_engine/rules/atlas_rules.dart';
 enum WorldPanel {
   missionBoard,
 
+  /// Region waystones: fast travel inside a biome (biome_regions.md § 4).
+  waystone,
+
   /// ARMERÍA: comprar y vender armas (v0.32.3).
   armory,
 

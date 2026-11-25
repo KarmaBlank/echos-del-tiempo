@@ -164,7 +164,8 @@ class BalanceBase {
         BalanceKind.town ||
         BalanceKind.fishing ||
         BalanceKind.lifeTree ||
-        BalanceKind.smithing =>
+        BalanceKind.smithing ||
+        BalanceKind.regions =>
           {k.jsonKey: kTuningDefaults[k.jsonKey]!},
         BalanceKind.featReward => kAchievementsById,
       };

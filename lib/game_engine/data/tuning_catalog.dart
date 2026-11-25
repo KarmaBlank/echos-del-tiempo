@@ -35,6 +35,7 @@ abstract final class TuningId {
   static const lifeTree = 'lifeTree';
   static const dungeon = 'dungeon';
   static const smithing = 'smithing';
+  static const regions = 'regions';
 }
 
 /// Los valores del código.
@@ -580,6 +581,37 @@ const Map<String, TuningDef> kTuningDefaults = {
     'rareEpico': 2,
     'rareLegend': 3,
     'stackCap': 999,
+  }),
+  // biome_regions.md (v0.45.0): generated biome regions, side paths,
+  // lakes, waystones and region foraging.
+  TuningId.regions: TuningDef('Regiones de bioma', {
+    // Layout: extra lakes (0..1 on top of the first), lake radii (tiles),
+    // trees per 100 free tiles, plant spots per side path.
+    'secondLakeChance': 0.6,
+    'lakeRxMin': 3,
+    'lakeRxMax': 5,
+    'lakeRyMin': 2.4,
+    'lakeRyMax': 3.6,
+    'treeDensity': 7,
+    'plantSpots': 12,
+    'seedBushes': 2,
+    'seasonalSpots': 2,
+    // The main path (spawn -> farthest portal) must stay under this many
+    // steps (biome_regions.md § 2.1).
+    'mainPathMax': 38,
+    // Forage (§ 5): seed bush rare-seed weight multiplier, echo bloom
+    // regrow (s), seasonal XP multiplier, echo bloom XP multiplier.
+    'seedBushRareMul': 4,
+    'echoBloomRespawnSec': 1800,
+    'seasonalXpMul': 1.5,
+    'echoBloomXpMul': 4,
+    // Regrown forage only shows up out of view: a spot whose timer ran
+    // out stays bare while a player is within this many px, and is
+    // checked again after forageRecheckSec.
+    'forageHideRadius': 360,
+    'forageRecheckSec': 6,
+    // Waystones (§ 4): reach (px) to activate / use one.
+    'waystoneReach': 26,
   }),
   TuningId.mission: TuningDef('Misiones', {
     'maxFloors': 3,

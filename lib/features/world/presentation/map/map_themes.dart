@@ -503,7 +503,43 @@ abstract final class ForagePalette {
     Color(0xFFBFE8FF), Color(0xFF5AA8D8), Color(0xFFE0F0FF), // Cavernas
     Color(0xFFFF5A2A), Color(0xFFB0A8A0), Color(0xFFFF9A3A), // Grieta
     Color(0xFFC08AFF), Color(0xFFFFE08A), Color(0xFF8AFFE0), // Abismo
+    // Regions: seed bush, seasonal sprouts, echo bloom.
+    Color(0xFFE8D8A0), Color(0xFF7AE07A), Color(0xFFB89CFF),
   ];
+}
+
+/// Colors of the generated biome regions (biome_regions.md § 6–7).
+abstract final class RegionPalette {
+  /// Glowing shore plants: stem, leaf, bulb and its glow.
+  static const glowStem = Color(0xFF2A5A4A);
+  static const glowLeaf = Color(0xFF3A8A6A);
+  static const glowBulb = Color(0xFF9AFFE0);
+  static const glowHalo = Color(0x559AFFE0);
+
+  /// Soft cloud shadow over the ground (alpha in the layer).
+  static const cloudShadow = Color(0xFF101828);
+
+  /// Light shaft: the beam and the bright patch on the floor.
+  static const shaftBeam = Color(0xFFFFF4D8);
+  static const shaftPatch = Color(0xFFFFF8E8);
+
+  /// Darkness under a cave roof in a daylit region.
+  static const caveShade = Color(0xFF05070C);
+
+  /// Dappled light: leaf shadows.
+  static const dapple = Color(0xFF0A1408);
+
+  /// Ambient critters by kind (butterfly, spark, frost, ember, echo).
+  static const critters = [
+    Color(0xFFFFE08A),
+    Color(0xFFFFC870),
+    Color(0xFFD8F0FF),
+    Color(0xFFFF8A3A),
+    Color(0xFFD2B8FF),
+  ];
+
+  /// Activated waystone rune.
+  static const waystoneOn = Color(0xFF8AE8FF);
 }
 /// Forma del fruto maduro de un cultivo (farming.md § 2.3, v0.25.3).
 enum CropShape { root, grain, tuber, pumpkin, berries, bulb, flower, melon, rose, crystal }
@@ -622,6 +658,32 @@ abstract final class CropPalette {
         plant: Color(0xFF6A8A5A),
         fruit: Color(0xFFC8402E),
         accent: Color(0xFFFFE8C8)),
+    // Region forage (biome_regions.md § 5).
+    'brote_primavera': CropLook(CropShape.grain,
+        seed: Color(0xFF7A9A5A),
+        plant: Color(0xFF4FA03E),
+        fruit: Color(0xFFB8F07A),
+        accent: Color(0xFFF0FFD8)),
+    'fresa_estival': CropLook(CropShape.berries,
+        seed: Color(0xFF8A5A40),
+        plant: Color(0xFF3F8A3E),
+        fruit: Color(0xFFE0404A),
+        accent: Color(0xFFFFD0D0)),
+    'castana_otono': CropLook(CropShape.tuber,
+        seed: Color(0xFF6A4A30),
+        plant: Color(0xFF8A6A3A),
+        fruit: Color(0xFF9A5A2A),
+        accent: Color(0xFFE8C090)),
+    'baya_invierno': CropLook(CropShape.berries,
+        seed: Color(0xFF5A6A8A),
+        plant: Color(0xFF4A6A7A),
+        fruit: Color(0xFF8AC8FF),
+        accent: Color(0xFFE8F8FF)),
+    'flor_eco': CropLook(CropShape.bulb,
+        seed: Color(0xFF5A4A8A),
+        plant: Color(0xFF4A5A9A),
+        fruit: Color(0xFFB89CFF),
+        accent: Color(0xFFF0E8FF)),
     'moras_bosque': CropLook(CropShape.berries,
         seed: Color(0xFF5A3A5A),
         plant: Color(0xFF2E6B30),
@@ -842,6 +904,7 @@ abstract final class LightPalette {
     'agua': Color(0xFFA8D0FF),
     'botin': Color(0xFFFFE8A8),
     'hongo': Color(0xFFC8B8FF),
+    'shaft': Color(0xFFFFF4D8),
   };
   static const fallback = Color(0xFFFFFFFF);
 

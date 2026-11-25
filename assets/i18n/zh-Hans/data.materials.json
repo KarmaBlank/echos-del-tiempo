@@ -292,5 +292,49 @@
   "data.materials.meal.mojarra_nabo.name": "芜菁配银鱼",
   "data.materials.meal.mojarra_nabo.lore": "钓鱼与耕种同在一盘。",
   "data.materials.meal.trucha_cebolla.name": "洋葱鳟鱼",
-  "data.materials.meal.trucha_cebolla.lore": "两种铜色相得益彰。"
+  "data.materials.meal.trucha_cebolla.lore": "两种铜色相得益彰。",
+  "data.materials.crop.brote_primavera.name": {
+    "text": "春芽",
+    "status": "draft"
+  },
+  "data.materials.crop.brote_primavera.seed": {
+    "text": "春芽种子",
+    "status": "draft"
+  },
+  "data.materials.crop.fresa_estival.name": {
+    "text": "夏日草莓",
+    "status": "draft"
+  },
+  "data.materials.crop.fresa_estival.seed": {
+    "text": "夏日草莓种子",
+    "status": "draft"
+  },
+  "data.materials.crop.castana_otono.name": {
+    "text": "秋栗",
+    "status": "draft"
+  },
+  "data.materials.crop.castana_otono.seed": {
+    "text": "秋栗种子",
+    "status": "draft"
+  },
+  "data.materials.crop.baya_invierno.name": {
+    "text": "冬莓",
+    "status": "draft"
+  },
+  "data.materials.crop.baya_invierno.seed": {
+    "text": "冬莓种子",
+    "status": "draft"
+  },
+  "data.materials.crop.flor_eco.name": {
+    "text": "回响之花",
+    "status": "draft"
+  },
+  "data.materials.crop.flor_eco.seed": {
+    "text": "回响之花种子",
+    "status": "draft"
+  },
+  "data.materials.crop.flor_eco.lore": {
+    "text": "在时间重复之处绽放，只持续一声回响的时间。",
+    "status": "draft"
+  }
 }

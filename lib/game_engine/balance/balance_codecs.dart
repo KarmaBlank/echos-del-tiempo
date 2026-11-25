@@ -101,7 +101,10 @@ enum BalanceKind {
   lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios'),
 
   /// Minas, vetas, fundir y forjar armas (mining_smithing.md).
-  smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería');
+  smithing('smithing', 'Minería y herrería', 'Ajustes de minería y herrería'),
+
+  /// Generated biome regions and region foraging (biome_regions.md).
+  regions('regions', 'Regiones de bioma', 'Ajustes de regiones de bioma');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1698,6 +1701,29 @@ const _smithingLabels = {
   'stackCap': 'Tope por material',
 };
 
+final regionsCodec = _tuningCodec(
+    BalanceKind.regions, _autoFields('regions', _regionsLabels));
+
+const _regionsLabels = {
+  'secondLakeChance': 'Región: chance de un segundo lago',
+  'lakeRxMin': 'Lago: radio horizontal mínimo',
+  'lakeRxMax': 'Lago: radio horizontal máximo',
+  'lakeRyMin': 'Lago: radio vertical mínimo',
+  'lakeRyMax': 'Lago: radio vertical máximo',
+  'treeDensity': 'Región: árboles cada 100 tiles libres',
+  'plantSpots': 'Recolección: matas del bioma',
+  'seedBushes': 'Recolección: matas de semillas',
+  'seasonalSpots': 'Recolección: brotes de estación',
+  'mainPathMax': 'Camino principal: pasos máximos',
+  'seedBushRareMul': 'Mata de semillas: × peso de las raras',
+  'echoBloomRespawnSec': 'Flor del eco: segundos de rebrote',
+  'seasonalXpMul': 'Brotes de estación: × XP',
+  'echoBloomXpMul': 'Flor del eco: × XP',
+  'forageHideRadius': 'Rebrote: distancia de vista (px)',
+  'forageRecheckSec': 'Rebrote: segundos entre chequeos',
+  'waystoneReach': 'Piedra de paso: distancia (px)',
+};
+
 final lifeTreeCodec = _tuningCodec(
     BalanceKind.lifeTree, _autoFields('lifeTree', _lifeTreeLabels()));
 
@@ -1736,6 +1762,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
       BalanceKind.smithing => smithingCodec,
+      BalanceKind.regions => regionsCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1755,4 +1782,5 @@ const kTuningKinds = [
   BalanceKind.fishing,
   BalanceKind.lifeTree,
   BalanceKind.smithing,
+  BalanceKind.regions,
 ];

@@ -30,7 +30,8 @@ abstract final class FishingCast {
         if (!isWater(m, x, y)) continue;
         var land = false;
         for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
-          if (_inside(m, x + dx, y + dy) && !isWater(m, x + dx, y + dy)) {
+          if (_inside(m, x + dx, y + dy) &&
+              Tile.isWalkable(m.tileAt(x + dx, y + dy))) {
             land = true;
           }
         }

@@ -298,6 +298,21 @@ la red ni se guarda.
   Pruebas y Abismo siguen siendo nuevos en cada entrada: faroles y
   niebla duran esa visita.
 
+### 5.7 Regiones de bioma (v0.46.0)
+
+Ver `biome_regions.md` § 7. Resumen:
+
+- **Sombras de nubes** de día al aire libre: manchas suaves que derivan;
+  la cobertura crece con lluvia y tormenta (`LightShaftRules.cloudCover`).
+- **Haces de luz** solo en zonas interiores con aberturas marcadas por
+  datos (`BiomeRegionStyle.caveOpenings`, `skylights` del layout). Luz
+  moteada bajo el haz. `LightId.shaft` aporta además una fuente al
+  mapa de luz.
+- **Rendimiento:** solo lo visible; la sombra de cueva es un `Picture`
+  cacheado por layout; la lista de haces se calcula una vez por mapa
+  (Expando); pinturas cuantizadas, sin asignaciones por cuadro. Test
+  `region_light_perf_test.dart`.
+
 ## 6. Colores
 
 En `LightPalette` (`map_themes.dart`). Las luces se distinguen sobre

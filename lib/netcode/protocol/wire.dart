@@ -177,7 +177,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// profile, `meal` in the battle build, FarmShopOp.cook/eat.
 /// 75: event NPCs (world_events.md § 3.6): `dn` in `wev` and the
 /// `wevAct` action.
-const kProtocolVersion = 75;
+/// 76: generated biome regions (biome_regions.md): the exterior layout
+/// comes from the world seed, `town.ws` (activated waystones), the
+/// `way` action and region forage kinds.
+const kProtocolVersion = 76;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -13,6 +13,8 @@ extension _BiomeOp on _Op {
         return _travel(p, place, ecoZone);
       case ForageAction(:final spot):
         return _forage(p, spot);
+      case WaystoneAction(:final stone, :final to):
+        return _waystone(p, stone, to);
       default:
         return false;
     }
@@ -82,23 +84,73 @@ extension _BiomeOp on _Op {
     final cx = (f.x + 0.5) * 16, cy = (f.y + 0.5) * 16;
     if (WorldRules.distance(p.x, p.y, cx, cy) > forageReach) return false;
     if (BiomeRules.regrowIn(s.town, biome, spot, s.time) > 0) return false;
-    s.town = BiomeRules.pick(s.town, biome, spot, s.time);
-    final r = BiomeRules.forage(_rand, f.kind, lay.seeds);
-    final crop = kCrops[r.item]!;
+    s.town = BiomeRules.pick(s.town, biome, spot, s.time,
+        respawn: BiomeRules.respawnOf(f.kind));
+    // Region forage (biome_regions.md § 5): plants, seed bushes,
+    // seasonal sprouts and echo blooms.
+    final r = BiomeRules.forageSpot(_rand, f.kind, lay.seeds,
+        season: WeatherRules.season(s.town.sky.day));
+    final crop = r.item == null ? null : kCrops[r.item];
+    final seedCrop = r.seed == null ? null : kCrops[r.seed];
+    if (crop == null && seedCrop == null) return false;
     final lvl0 = FarmingRules.level(p.profile);
-    var farm = p.profile.life.farm.addCrop(cropKey(crop.id, CropQuality.normal));
+    var farm = p.profile.life.farm;
+    if (crop != null) {
+      farm = farm.addCrop(cropKey(crop.id, CropQuality.normal));
+    }
     if (r.seed != null) farm = farm.addSeed(r.seed!);
     // Recolectar cuenta como Cultivo (overworld_biomes.md § 3.2).
+    final rar = (crop ?? seedCrop)!.rarity.index + 1;
     farm = farm.copyWith(
-        xp: farm.xp + BiomeRules.t.i('forageXp') * (crop.rarity.index + 1));
+        xp: farm.xp +
+            (BiomeRules.t.i('forageXp') * rar * BiomeRules.xpMul(f.kind))
+                .round());
     _profileChange(
         p, p.profile.copyWith(life: p.profile.life.copyWith(farm: farm)),
         gain: true);
-    events.add(CropHarvestedEvent(p.id, crop.id, 0, 1, f.x, f.y));
-    final seed = r.seed == null ? '' : ' y ${kCrops[r.seed]!.seedName}';
-    say('${p.name} recolectó ${crop.name}$seed.');
+    events.add(
+        CropHarvestedEvent(p.id, (crop ?? seedCrop)!.id, 0, 1, f.x, f.y));
+    final seed = seedCrop == null ? '' : seedCrop.seedName;
+    say(crop == null
+        ? '${p.name} recolectó $seed.'
+        : '${p.name} recolectó ${crop.name}${seed.isEmpty ? '' : ' y $seed'}.');
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) say('${p.name} subió Cultivo a nivel $lvl1.');
     return true;
+  }
+
+  /// Activates the waystone [stone] in reach, or travels from it to the
+  /// active stone [to] (biome_regions.md § 4). Only the traveller moves.
+  bool _waystone(SessionPlayer p, int stone, int? to) {
+    if (s.mode != SessionMode.lobby || p.isCompanion) return false;
+    final lay = biomeLayout(s.place);
+    if (lay == null) return false;
+    final who = p.profile.name;
+    if (WaystoneRules.near(lay, p.x, p.y) != stone) return false;
+    if (to == null) {
+      final next = WaystoneRules.activate(s.town, who, lay, stone);
+      if (identical(next, s.town)) return false;
+      s.town = next;
+      say('${p.name} activó una piedra de paso.');
+      return true;
+    }
+    if (WaystoneRules.blocked(s.town, who, lay, p.x, p.y, to) != null) {
+      return false;
+    }
+    final a = WaystoneRules.arrival(lay, to);
+    p
+      ..x = a.x
+      ..y = a.y
+      ..fishLine = null
+      ..epoch += 1;
+    return true;
+  }
+
+  /// Regrowth out of view (biome_regions.md § 5.2), every lobby tick.
+  void forageHoldTick() {
+    final lay = biomeLayout(s.place);
+    if (lay == null || s.town.wild.isEmpty) return;
+    s.town = BiomeRules.holdInView(s.town, lay.id, lay.forage,
+        [for (final q in players) (q.x, q.y)], s.time);
   }
 }

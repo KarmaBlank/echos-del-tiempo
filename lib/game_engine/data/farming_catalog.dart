@@ -288,6 +288,22 @@ const kCrops = <String, CropDef>{
       biome: 'silvestre', growSec: 1e9, price: 46, xp: 12),
   'fruto_paradoja': CropDef('fruto_paradoja', 'Frutos paradoja', FishRarity.raro,
       biome: 'silvestre', growSec: 1e9, price: 90, xp: 22),
+  // Region forage (biome_regions.md § 5): seasonal sprouts of every biome
+  // (one per season) and the rare echo bloom of the optional nooks.
+  'brote_primavera': CropDef('brote_primavera', 'Brote de primavera',
+      FishRarity.comun,
+      biome: 'silvestre', growSec: 1e9, price: 16, xp: 7),
+  'fresa_estival': CropDef('fresa_estival', 'Fresa estival', FishRarity.comun,
+      biome: 'silvestre', growSec: 1e9, price: 18, xp: 7),
+  'castana_otono': CropDef('castana_otono', 'Castaña de otoño',
+      FishRarity.comun,
+      biome: 'silvestre', growSec: 1e9, price: 18, xp: 7),
+  'baya_invierno': CropDef('baya_invierno', 'Baya de invierno',
+      FishRarity.raro,
+      biome: 'silvestre', growSec: 1e9, price: 30, xp: 10),
+  'flor_eco': CropDef('flor_eco', 'Flor del eco', FishRarity.epico,
+      biome: 'silvestre', growSec: 1e9, price: 160, xp: 40,
+      lore: 'Florece donde el tiempo se repite: dura lo que dura un eco.'),
 };
 
 /// Clave de la bolsa de cosechas: `<cultivo>@<calidad>`.
