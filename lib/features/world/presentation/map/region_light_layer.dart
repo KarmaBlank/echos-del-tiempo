@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
@@ -24,12 +25,6 @@ class RegionLightLayer {
   static const _steps = 8;
 
   final _visible = <(int, int)>[];
-  final List<Paint> _cloud = [
-    for (var i = 0; i <= _steps; i++)
-      Paint()
-        ..color = RegionPalette.cloudShadow
-            .withValues(alpha: 0.18 * i / _steps)
-  ];
   final List<Paint> _beam = [
     for (var i = 0; i <= _steps; i++)
       Paint()
@@ -96,25 +91,63 @@ class RegionLightLayer {
     if (n == 0) return;
     final k = _q(cover);
     if (k == 0) return;
-    final p = _cloud[k];
+    // Pixelated, irregular shadows (v0.48.4, owner): each cloud is a
+    // grid of 8 px cells whose edge is broken by value noise that moves
+    // with the cloud, faded in [_cloudLevels] alpha steps toward the rim.
+    // Cells are batched as square points, one draw per step.
+    const cell = 8.0;
+    for (final b in _cloudPts) {
+      b.clear();
+    }
     for (var i = 0; i < n; i++) {
       final (x, y, rx, ry) = LightShaftRules.cloud(i, t, fieldW, fieldH);
-      if (x + rx < view.left ||
-          x - rx > view.right ||
-          y + ry < view.top ||
-          y - ry > view.bottom) {
+      final ex = rx * 1.25, ey = ry * 1.25;
+      if (x + ex < view.left ||
+          x - ex > view.right ||
+          y + ey < view.top ||
+          y - ey > view.bottom) {
         continue;
       }
-      c.save();
-      c.translate(x, y);
-      c.scale(1, ry / rx);
-      // Three stacked discs: a soft edge without a shader or blur.
-      c.drawCircle(Offset.zero, rx, p);
-      c.drawCircle(Offset.zero, rx * 0.78, p);
-      c.drawCircle(Offset.zero, rx * 0.55, p);
-      c.restore();
+      // Snap the cloud to the cell grid so it slides a pixel step at a time.
+      final ox = (x / cell).round() * cell, oy = (y / cell).round() * cell;
+      final cw = (ex / cell).ceil(), ch = (ey / cell).ceil();
+      for (var cy = -ch; cy <= ch; cy++) {
+        final wy = oy + cy * cell;
+        if (wy + cell < view.top || wy > view.bottom) continue;
+        for (var cx = -cw; cx <= cw; cx++) {
+          final wx = ox + cx * cell;
+          if (wx + cell < view.left || wx > view.right) continue;
+          final dx = cx * cell / rx, dy = cy * cell / ry;
+          final d = math.sqrt(dx * dx + dy * dy);
+          // Low-frequency noise only bends the outline (lobes), the body stays
+          // one flat shade: a shadow, not smoke.
+          final nz = MapSkyLayer.noise(cx / 5.0, cy / 5.0, 57 + i) - 0.5;
+          final v = (1.0 - d + nz * 0.45) / 0.22;
+          if (v <= 0) continue;
+          final step = (v.clamp(0.0, 1.0) * _cloudLevels).ceil();
+          if (step <= 0) continue;
+          _cloudPts[step - 1]
+            ..add(wx + cell / 2)
+            ..add(wy + cell / 2);
+        }
+      }
+    }
+    for (var s = 0; s < _cloudLevels; s++) {
+      final pts = _cloudPts[s];
+      if (pts.isEmpty) continue;
+      _cloudPx
+        ..strokeWidth = cell
+        ..color = RegionPalette.cloudShadow
+            .withValues(alpha: 0.18 * (k / _steps) * (s + 1) / _cloudLevels);
+      c.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), _cloudPx);
     }
   }
+
+  static const _cloudLevels = 3;
+  final _cloudPts = List.generate(_cloudLevels, (_) => <double>[]);
+  final _cloudPx = Paint()
+    ..isAntiAlias = false
+    ..strokeCap = StrokeCap.square;
 
   /// Darkness under cave roofs of a region ([lay]) with a vignette
   /// toward the walls (biome_regions.md § 7.2.1): a cached picture of the

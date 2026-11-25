@@ -157,6 +157,38 @@ inventario.
 | `rarity` | Prisma Roto ×1 / ×2 / ×4 (a Mágico / Raro / Épico; v0.15, antes ×3) | sube la rareza (hasta Épico) y agrega mods hasta el mínimo nuevo |
 | `tier` | 1 Ancla Temporal | tier +1 (hasta 16) |
 
+### 4.2 Fusión de Ecos (v0.49, protocolo 78)
+
+`EcoFuseAction(uids)` (wire `{'t': 'ecoFuse', 'us': [...]}`): el jugador
+entrega `fuseCount` Ecos (Balance `ecoTier.fuseCount`, 3 por defecto)
+**del mismo tier** y recibe 1 Eco de **tier + 1** (hasta 16).
+
+- **Validación del host** (`EcoRules.cannotFuse` + `SessionEngine`):
+  solo lobby / preparación (`canShop`), Ecos del inventario del que
+  actúa, exactamente `fuseCount` uids distintos, todos del mismo tier,
+  tier < 16, ninguno es el Eco que se vota / prepara, y las Anclas
+  extra (`ecoTier.fuseAnchors`, 0 por defecto) si hay costo. Si algo
+  falla, nada cambia.
+- **Zona**: si los Ecos comparten zona, se queda; si no, una al azar
+  entre las zonas distintas de los elegidos (azar del host,
+  `ecoRandom`).
+- **Rareza**: la mayor de los elegidos. El Eco se **genera como un drop**
+  de esa rareza (`EcoRules.generate`): mods nuevos hasta el mínimo de la
+  rareza, sin repetir; jefe, pisos, semilla y nombre (Raro+) nuevos. Los
+  mods de los Ecos entregados se pierden.
+- **Resultado**: un Eco normal con `uid` nuevo; se puede craftear con
+  todas las ops de § 4.1.
+- **Costo**: solo los Ecos (más Anclas si `fuseAnchors` > 0).
+- **UI** (Portal → ECOS → subpestaña FUSIONAR, junto a MEJORAR): grilla
+  de Ecos estilo INVENTARIO (tier abajo a la derecha) y el detalle a la
+  derecha con las `fuseCount` casillas, lo que saldría (tier, zona o
+  zonas posibles, rareza y mods nuevos, costo) y FUSIONAR / VACIAR.
+  Tocar un Eco de otro tier reinicia la selección con ese. FUSIONAR va
+  gris hasta completar; el motivo solo se muestra si es raro (fuera del
+  pueblo, Eco en votación, tier 16, faltan Anclas). Tras fusionar vuelve
+  a MEJORAR con el Eco nuevo elegido.
+- La Travesía no fusiona Ecos (rechaza la acción).
+
 ## 5. Atlas del Tiempo
 
 Compartido por **todos los personajes de la cuenta** (`account.json`,

@@ -6,8 +6,12 @@
 // Para cambiar el arte, reemplazá el PNG o la ruta en el manifest.
 import 'dart:io';
 
+import 'package:echos_del_tiempo/game_engine/data/bait_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/life_skills.dart'
+    show kLifeMaterialIds;
 
 import 'export_sprites.dart' show RgbaImage, encodePng;
 
@@ -226,6 +230,69 @@ RgbaImage _npc({required bool farmer, required bool work}) {
   return p.img;
 }
 
+/// Cooked meal (cooking.md): a bowl with the dish on top, tinted by the
+/// meal's stat and rarity.
+RgbaImage _meal(MealDef m) {
+  final p = _Pen();
+  final food = _mix(
+      switch (m.stat) {
+        MealStat.hp => 0xe07a4a,
+        MealStat.atk => 0xd04a3a,
+        MealStat.res => 0x6a9ad0,
+      },
+      _rarity(m.rarity),
+      0.3);
+  p.rect(3, 9, 10, 4, 0xc8a46a);
+  p.rect(4, 13, 8, 1, 0xa0804a);
+  p.rect(4, 7, 8, 2, food);
+  p.rect(5, 6, 6, 1, food);
+  p.px(6, 7, _mix(food, 0xffffff, 0.5));
+  if (m.hasFish) p.rect(9, 6, 2, 1, 0xd8d8d8);
+  p.px(7, 3, 0xe0e0e0);
+  p.px(8, 2, 0xe0e0e0);
+  p.outline();
+  return p.img;
+}
+
+/// Fishing bait (fishing.md § 14): a small jar with the bait inside.
+RgbaImage _bait(BaitDef b) {
+  final p = _Pen();
+  final h = _hash(b.id);
+  final bait = _mix(_rarity(b.rarity),
+      [0xd88a8a, 0xe0d070, 0x8ad0e0, 0xa08ac8][h % 4], 0.5);
+  p.rect(4, 5, 8, 9, 0x9ab8c0);
+  p.rect(5, 3, 6, 2, _woodDark);
+  p.line(5, 11, 10, 8, bait);
+  p.line(5, 12, 10, 9, bait);
+  p.px(6, 7, 0xe8f0f0);
+  p.outline();
+  return p.img;
+}
+
+/// Trade material (fibra, cebo, tabla).
+RgbaImage _material(String id) {
+  final p = _Pen();
+  switch (id) {
+    case 'fibra':
+      for (var x = 4; x < 12; x += 2) {
+        p.line(x, 13, x + 2, 3, 0xb8c070);
+      }
+      p.rect(4, 8, 9, 1, 0x8a6a3a);
+    case 'cebo':
+      p.rect(4, 6, 8, 7, 0x8a6a4a);
+      p.rect(5, 5, 6, 1, 0x8a6a4a);
+      p.px(6, 8, 0xd88a8a);
+      p.px(9, 10, 0xd88a8a);
+    default:
+      p.rect(2, 6, 12, 3, _wood);
+      p.rect(2, 10, 12, 3, _wood);
+      p.rect(2, 8, 12, 1, _woodDark);
+      p.rect(2, 12, 12, 1, _woodDark);
+  }
+  p.outline();
+  return p.img;
+}
+
 RgbaImage _chest() {
   final p = _Pen();
   p.rect(2, 7, 12, 7, _wood);
@@ -260,6 +327,9 @@ void main() {
       'vida_semilla_${c.id}': _seed(_rarity(c.rarity)),
       'vida_cosecha_${c.id}': _crop(c.id, _rarity(c.rarity)),
     },
+    for (final m in kMeals.values) 'vida_comida_${m.id}': _meal(m),
+    for (final b in kBaits.values) 'vida_cebo_${b.id}': _bait(b),
+    for (final id in kLifeMaterialIds) 'vida_mat_$id': _material(id),
     for (final cat in ['herramienta', 'pescado', 'semilla', 'cosecha', 'basura'])
       'vida_cat_$cat': _category(cat),
     'vida_npc_granjero': _npc(farmer: true, work: false),
@@ -278,13 +348,24 @@ void main() {
   for (final k in icons.keys) {
     block.writeln('  $k: { idle: items/$k.png, size: [16, 16] }');
   }
-  block.write('  # vida:fin');
   final start = text.indexOf('  # vida:inicio');
   final String next;
   if (start >= 0) {
     final end = text.indexOf('  # vida:fin') + '  # vida:fin'.length;
+    // Hand-written entries inside the block (provisional NPC art, houses)
+    // are kept as they are, after the generated ones.
+    final old = text.substring(start, end).split(RegExp(r'\r?\n'));
+    for (final line in old.skip(1)) {
+      final t = line.trim();
+      if (t.startsWith('# vida:fin')) continue;
+      final key = t.split(':').first;
+      if (icons.containsKey(key)) continue;
+      block.writeln(line);
+    }
+    block.write('  # vida:fin');
     next = text.replaceRange(start, end, block.toString());
   } else {
+    block.write('  # vida:fin');
     const anchor = '  cofre: { procedural: true, size: [16, 16] }';
     next = text.replaceFirst(anchor, '$anchor\n$block');
   }

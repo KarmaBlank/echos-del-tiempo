@@ -145,6 +145,7 @@
   "ui.world.ctl.farm.fert_generic": "",
   "ui.world.ctl.farm.till": "",
   "ui.world.ctl.farm.plant": "",
+  "ui.world.ctl.farm.paused_season": "已暂停：不在季节",
   "ui.world.ctl.farm.water": "",
   "ui.world.ctl.helper.fisher_title": "",
   "ui.world.ctl.helper.fisher_line": "",

@@ -28,7 +28,7 @@ Una **casilla** es una pila; la cantidad de una pila no tiene tope.
 |---|---|---|
 | PESCA | cañas propias, cada especie de pescado y de basura del agua | TODO · CAÑAS · PESCADOS · BASURA · BESTIARIO |
 | CULTIVO | azadas y regaderas, cada semilla, cada abono, cada cosecha por calidad | TODO · HERRAMIENTAS · SEMILLAS · ABONOS · COSECHAS |
-| HERRERÍA | materiales de oficio (fibra vegetal, cebo prensado, tabla tratada) | — |
+| HERRERÍA | materiales de oficio (fibra vegetal, cebo prensado, tabla tratada); también lista menas y lingotes (no ocupan casillas) | TODO · MATERIALES · MINERALES · COLECCIÓN |
 
 El BESTIARIO DE PESCA es un filtro de PESCA (registro, no ocupa
 casillas), con sus botones de bioma y franja (fishing.md § 10). Los
@@ -63,6 +63,11 @@ admite pilas nuevas hasta bajar de 40. El JSON del perfil no cambia.
 
 Sin cambios en el protocolo: no hay acciones ni campos nuevos; el host
 valida y el estado llega como siempre. `kProtocolVersion` queda igual.
+
+## 5b. Dar a un compañero
+
+Cada pila (salvo herramientas) tiene DAR A <compañero> en su detalle:
+ver share_materials.md (protocolo 78).
 
 ## 6. Teclas (v0.32.4)
 

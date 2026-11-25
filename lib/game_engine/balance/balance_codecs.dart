@@ -1328,6 +1328,8 @@ final materialsCodec = _tuningCodec(BalanceKind.materials, const [
 final ecoTierCodec = _tuningCodec(BalanceKind.ecoTier, const [
   BalanceField('tierQuantity', 'Cantidad extra por tier sobre T1', _frac, max: 1, step: 0.005),
   BalanceField('partyQuantity', 'Cantidad extra por jugador extra', _frac, max: 1, step: 0.01),
+  BalanceField('fuseCount', 'Fusión: Ecos del mismo tier', _int, min: 2, max: 6),
+  BalanceField('fuseAnchors', 'Fusión: Anclas Temporales extra', _int, max: 99),
 ]);
 
 final featRewardCodec = EntityCodec(
@@ -1403,7 +1405,6 @@ const _farmLabels = {
   'dryRate': 'Crecimiento sin regar (×)',
   'waterSec': 'Segundos que dura un riego',
   'waterRateMin': 'Ritmo de riego con nivel 1 (×)',
-  'missionGrowSec': 'Segundos que suma cada misión ganada',
   'workXp': 'XP por arar, plantar o regar',
   'wQNormal': 'Peso calidad normal',
   'wQRaro': 'Peso calidad rara',

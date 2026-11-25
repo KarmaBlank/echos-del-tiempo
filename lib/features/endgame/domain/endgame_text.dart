@@ -84,6 +84,28 @@ String? ecoCraftBlocked(
   return null;
 }
 
+/// FUSIONAR (ecos_atlas.md § 4.2): `(se puede, motivo)`. Sin los Ecos
+/// completos el botón va gris SIN motivo (es lo normal); el motivo sale
+/// solo en los casos raros (fuera del pueblo, Eco en votación, tier 16,
+/// faltan Anclas).
+(bool, String?) ecoFuseState(
+    GameSession s, String localId, PlayerProfile p, List<String> uids) {
+  if (!s.canShop) return (false, _t('ui.endgame.only_in_town'));
+  if (s.ecoOwner == localId && uids.contains(s.eco?.uid)) {
+    return (false, _t('ui.endgame.blocked.eco_in_vote'));
+  }
+  return switch (EcoRules.cannotFuse(p, uids)) {
+    null => (true, null),
+    EcoFuseBlock.maxTier => (false, _t('ui.endgame.fuse.max_tier')),
+    EcoFuseBlock.material => (
+        false,
+        _t('ui.endgame.craft.missing',
+            {'material': CraftMaterial.ancla.endgameTr})
+      ),
+    _ => (false, null),
+  };
+}
+
 /// Etiqueta del botón de crafteo (`MODS NUEVOS (Esquirla del Eco ×1)`).
 String ecoCraftLabel(EcoItem e, EcoCraftOp op) {
   final c = EcoRules.cost(e, op);

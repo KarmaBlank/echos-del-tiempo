@@ -429,6 +429,13 @@ abstract final class ResidentRules {
     return null;
   }
 
+  /// Residents who live in town but have no house yet, in biome order
+  /// (town_editor.md § 1.1, ASIGNAR CASAS in the rune fountain).
+  static List<BiomeNpcDef> awaitingHouse(TownState s) => [
+        for (final n in living(s))
+          if (s.houseOf(n.id) == null) n
+      ];
+
   /// Sin casa: le falta algo (marca de pendiente sobre la cabeza).
   static bool homeless(TownState s, String npc) =>
       s.resident(npc).invited && s.houseOf(npc) == null;

@@ -20,7 +20,12 @@ import '../../combat/presentation/game_sprites.dart';
 import '../domain/endgame_text.dart';
 import 'abyss_view.dart';
 import 'atlas_view.dart';
+import 'eco_fusion_view.dart';
 import 'eco_zone_hub.dart';
+import '../../../app/design/design.dart';
+import '../../../game_engine/data/eco_catalog.dart' show ecoModRange;
+import '../../../game_engine/rules/eco_rules.dart';
+import '../../inventory/domain/item_names.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../domain/endgame_names.dart';
 
@@ -61,6 +66,15 @@ class EcoPortalPanel extends ConsumerStatefulWidget {
 class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
   late var _tab = widget.initialTab;
   String? _sel;
+
+  /// Subpestaña FUSIONAR de ECOS (ecos_atlas.md § 4.2) y sus elegidos.
+  bool _fuse = false;
+  final _fuseSel = <String>[];
+
+  /// Ecos de antes de fusionar: el que aparece nuevo es el resultado y
+  /// queda elegido en MEJORAR.
+  Set<String>? _fuseBefore;
+  bool _justFused = false;
 
   SessionController get c => widget.controller;
   SessionView get view => widget.view;
@@ -152,6 +166,130 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
   }
 
   Widget _ecos(PlayerProfile p) {
+    if (_fuseBefore case final before?) {
+      for (final e in p.ecos) {
+        if (before.contains(e.uid)) continue;
+        _sel = e.uid;
+        _fuseBefore = null;
+        _justFused = true;
+        _fuse = false;
+        break;
+      }
+    }
+    _fuseSel.removeWhere((u) => p.ecoByUid(u) == null);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          DsButton(ref.t('ui.endgame.ecos.sub.upgrade'),
+              key: const ValueKey('eco-sub-upgrade'),
+              size: DsButtonSize.compact,
+              selected: !_fuse,
+              onPressed: () => setState(() => _fuse = false)),
+          DsButton(ref.t('ui.endgame.ecos.sub.fuse'),
+              key: const ValueKey('eco-sub-fuse'),
+              size: DsButtonSize.compact,
+              selected: _fuse,
+              onPressed: () => setState(() {
+                    _fuse = true;
+                    _justFused = false;
+                  })),
+        ]),
+        SizedBox(height: DsSpace.sm),
+        if (_justFused && !_fuse) ...[
+          Text(ref.t('ui.endgame.fuse.after'),
+              key: const ValueKey('eco-fuse-after'),
+              style: DsText.detail(DsColors.success)),
+          SizedBox(height: DsSpace.xs),
+        ],
+        Expanded(child: _fuse ? _fusion(p) : _upgrade(p)),
+      ],
+    );
+  }
+
+  void _toggleFuse(PlayerProfile p, String uid) {
+    setState(() {
+      if (_fuseSel.remove(uid)) return;
+      final e = p.ecoByUid(uid);
+      if (e == null) return;
+      final first = _fuseSel.isEmpty ? null : p.ecoByUid(_fuseSel.first);
+      if (first != null && first.tier != e.tier) _fuseSel.clear();
+      if (_fuseSel.length < EcoRules.fuseCount) _fuseSel.add(uid);
+    });
+  }
+
+  Widget _fusion(PlayerProfile p) {
+    final rules = c.engine.progression;
+    final n = EcoRules.fuseCount;
+    final picked = [
+      for (final u in _fuseSel)
+        if (p.ecoByUid(u) case final e?) e
+    ];
+    final (ok, why) = ecoFuseState(view.session, view.actorId, p, _fuseSel);
+    String zoneName(int z) =>
+        c.engine.catalog.zone(z)?.tr ??
+        ref.t('ui.endgame.zone_n', {'zone': z});
+    final lines = <String>[];
+    if (picked.isNotEmpty) {
+      final pre = EcoRules.fusePreview(picked);
+      lines
+        ..add(ref.t('ui.endgame.fuse.tier', {'tier': pre.tier}))
+        ..add(pre.zones.length == 1
+            ? ref.t('ui.endgame.fuse.zone', {'zone': zoneName(pre.zones.single)})
+            : ref.t('ui.endgame.fuse.zone_random',
+                {'zones': pre.zones.map(zoneName).join(', ')}))
+        ..add(ref.t('ui.endgame.fuse.rarity', {
+          'rarity': pre.rarity.text,
+          'mods': ecoModRange(pre.rarity).$1,
+        }))
+        ..add(EcoRules.fuseAnchors > 0
+            ? ref.t('ui.endgame.fuse.cost', {
+                'material': CraftMaterial.ancla.endgameTr,
+                'n': EcoRules.fuseAnchors,
+              })
+            : ref.t('ui.endgame.fuse.cost_free'));
+    }
+    return EcoFusionView(
+      key: const ValueKey('eco-fusion'),
+      rules: rules,
+      ecos: [...p.ecos]..sort((a, b) => a.tier.compareTo(b.tier)),
+      selected: _fuseSel,
+      onToggle: (u) => _toggleFuse(p, u),
+      title: ref.t('ui.endgame.fuse.title'),
+      hint: ref.t('ui.endgame.fuse.hint', {'n': n}),
+      slots: [
+        for (var i = 0; i < n; i++)
+          (
+            eco: i < picked.length ? picked[i] : null,
+            label: i < picked.length
+                ? '${rules.ecos.displayName(picked[i])} · T${picked[i].tier}'
+                : '${ref.t('ui.endgame.fuse.slot', {
+                        'i': i + 1
+                      })} · ${ref.t('ui.endgame.fuse.slot_empty')}',
+          ),
+      ],
+      resultTitle: ref.t('ui.endgame.fuse.result'),
+      resultLines: lines,
+      fuseLabel: ref.t('ui.endgame.fuse.button'),
+      clearLabel: ref.t('ui.endgame.fuse.clear'),
+      fuseReason: why,
+      empty: p.ecos.isEmpty ? ref.t('ui.endgame.ecos.none') : null,
+      onClear: _fuseSel.isEmpty ? null : () => setState(_fuseSel.clear),
+      onFuse: !ok
+          ? null
+          : () => setState(() {
+                final uids = [..._fuseSel];
+                _fuseBefore = {for (final e in p.ecos) e.uid};
+                if (c.ecoFuse(uids)) {
+                  _fuseSel.clear();
+                } else {
+                  _fuseBefore = null;
+                }
+              }),
+    );
+  }
+
+  Widget _upgrade(PlayerProfile p) {
     final rules = c.engine.progression;
     final s = view.session;
     final ecos = p.ecos;

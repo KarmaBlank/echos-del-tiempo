@@ -97,6 +97,7 @@ import '../../../game_engine/rules/fishing_rules.dart';
 import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
 import '../../../game_engine/rules/farming_rules.dart';
+import '../../../game_engine/rules/life_time_rules.dart';
 import '../../../game_engine/rules/life_tree_rules.dart';
 import '../../../game_engine/models/fish_line.dart';
 import '../../../core/audio/sfx_catalog.dart';
@@ -1580,7 +1581,8 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Frase del habitante (cambia con el día del mundo).
   String npcLine(BiomeNpcDef n) =>
-      NpcTalkRules.dayLine(n.id, town.sky.day) ?? '…';
+      NpcTalkRules.dayLine(n.id, town.sky.day,
+          inTown: town.resident(n.id).invited) ?? '…';
 
   bool travelPlace(String id) {
     if (cannotTravel != null || id == place) return false;
@@ -1716,8 +1718,40 @@ class SessionController extends StateNotifier<SessionView?> {
   (int, int)? lastSwingTile;
   final mineClock = Stopwatch()..start();
 
-  /// Called with each local swing (sparks in the map layer).
-  void Function(int tx, int ty)? onMineSwing;
+  /// Called with each local swing (chips and sparks in the map layer);
+  /// `bounced` = the pick cannot break that tile.
+  void Function(int tx, int ty, bool bounced)? onMineSwing;
+
+  /// Whether E / the click is held in a mine (keeps the pick raised and
+  /// the dig indicator up between hits).
+  bool get mineHolding => _mineHold != null;
+
+  /// Ms between hits of the held pick (the swing animation's period).
+  double get mineSwingPeriodMs {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? 300 : MiningRules.tool(p).swing * 1000;
+  }
+
+  /// The tile last hit, its hits dealt (prediction), its total hits and
+  /// whether the pick can break it; `null` = no breakable tile there (it
+  /// broke, or none hit yet). The map turns it into the dig indicator.
+  ((int, int), int, int, bool)? get mineDigState {
+    final lvl = mineLevel;
+    final p = _s?.players[localId]?.profile;
+    final tile = lastSwingTile;
+    if (lvl == null || p == null || tile == null || !inMine) return null;
+    final (x, y) = tile;
+    final c = MiningRules.tileAt(lvl, mineState, x, y);
+    if (!MineTile.breakable.contains(c) && c != MineTile.bedrock) return null;
+    final ok =
+        MiningRules.cannotBreak(c, lvl.level, MiningRules.tool(p)) == null;
+    return (
+      tile,
+      ok ? mineCracks[lvl.idx(x, y)] ?? 0 : 0,
+      MiningRules.hits(c, lvl.level),
+      ok
+    );
+  }
 
   Timer? _mineHold;
   double _lastSwingT = -1e9;
@@ -1763,7 +1797,7 @@ class SessionController extends StateNotifier<SessionView?> {
         _lastSwingT = st;
         lastSwingMs = now;
         lastSwingTile = (x, y);
-        onMineSwing?.call(x, y);
+        onMineSwing?.call(x, y, true);
         _emit();
       }
       return false;
@@ -1776,7 +1810,7 @@ class SessionController extends StateNotifier<SessionView?> {
         !MineTile.breakable.contains(MiningRules.tileAt(
             lvl, mineState, k % lvl.width, k ~/ lvl.width)));
     mineCracks[i] = (mineCracks[i] ?? 0) + tool.power;
-    onMineSwing?.call(x, y);
+    onMineSwing?.call(x, y, false);
     fishSfx?.call(Sfx.hit);
     return _apply(MineAction(MineOp.dig, x: x, y: y));
   }
@@ -2321,6 +2355,12 @@ class SessionController extends StateNotifier<SessionView?> {
   static String _pct(double v) =>
       v >= 0.1 ? '${(v * 100).round()} %' : '${(v * 100).toStringAsFixed(1)} %';
 
+  /// The crop does not grow right now (out of season, farming.md § 15).
+  bool _cropPaused(FarmPlot pl) =>
+      pl.seed != null &&
+      FarmingRules.growthPaused(
+          pl, LifeTimeRules.cropGrowth(pl.seed!, townState.sky));
+
   /// Lo que se sabe de una parcela (aviso y tooltip): quién plantó, quién
   /// regó, el abono y las chances si la cosechás vos.
   String plotInfo(int x, int y) {
@@ -2337,6 +2377,7 @@ class SessionController extends StateNotifier<SessionView?> {
         'pct': (r * 100).round(),
         'watered': pl.watered ? 'yes' : 'no'
       }),
+      if (_cropPaused(pl)) strings.t('ui.world.ctl.farm.paused_season'),
       if (pl.planter != null) strings.t('ui.world.ctl.farm.planted_by', {'name': pl.planter}),
       if (pl.waterer != null)
         strings.t('ui.world.ctl.farm.watered_by', {'name': pl.waterer, 'n': pl.waterings}),
@@ -2381,7 +2422,10 @@ class SessionController extends StateNotifier<SessionView?> {
     if (pl == null) return strings.t('ui.world.ctl.farm.till');
     if (!pl.planted) return strings.t('ui.world.ctl.farm.plant', {'crop': kCrops[seed]!.name});
     final r = (FarmingRules.ratio(pl) * 100).round();
-    return '${strings.t('ui.world.ctl.farm.water', {'pct': r})}$fert';
+    final paused = _cropPaused(pl)
+        ? ' · ${strings.t('ui.world.ctl.farm.paused_season')}'
+        : '';
+    return '${strings.t('ui.world.ctl.farm.water', {'pct': r})}$paused$fert';
   }
 
   bool buySeed(String id, [int n = 1]) =>
@@ -2625,6 +2669,18 @@ class SessionController extends StateNotifier<SessionView?> {
       ..center = true;
     _emit();
     return true;
+  }
+
+  /// ASIGNAR from the rune fountain's house screen (town_editor.md
+  /// § 1.1): the same host op as the dialogue's ASIGNAR CASA. Takes the
+  /// edit lock for the op when this player does not hold it.
+  bool assignHouse(String npc, String houseId) {
+    if (cannotEditTown != null) return false;
+    final held = _s?.townEditor == localId;
+    if (!held && !_apply(const TownAction(TownOp.lock))) return false;
+    final ok = residentOp(TownOp.assign, npc, target: houseId);
+    if (!held) _apply(const TownAction(TownOp.unlock));
+    return ok;
   }
 
   /// Habitante que acaba de recibir casa: su diálogo abre agradeciendo.
@@ -3906,6 +3962,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool give(String toPlayerId, String token, {int count = 1}) =>
       _applyFor(actingId, GiveItemAction(toPlayerId, token, count: count));
 
+  /// Give [count] of the profession cell [cell] to [toPlayerId]
+  /// (share_materials.md).
+  bool giveLife(String toPlayerId, String cell, int count) =>
+      _apply(GiveLifeAction(toPlayerId, cell, count: count));
+
   /// Soltar al piso (compartido).
   bool dropItem(String token, {int count = 1}) =>
       _applyFor(actingId, DropItemAction(token, count: count));
@@ -4043,6 +4104,10 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Craftear un Eco del inventario.
   bool ecoCraft(String uid, EcoCraftOp op) =>
       _applyFor(actingId, EcoCraftAction(uid, op));
+
+  /// Fusionar Ecos del mismo tier en uno de tier + 1 (ecos_atlas.md § 4.2).
+  bool ecoFuse(List<String> uids) =>
+      _applyFor(actingId, EcoFuseAction(List.unmodifiable(uids)));
 
   /// Solo desarrollo: un Eco Raro de [tier] (el motor la rechaza sin
   /// `devTools`).

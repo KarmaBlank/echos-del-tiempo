@@ -397,6 +397,16 @@ class GiveItemAction extends SessionAction {
   const GiveItemAction(this.toPlayerId, this.token, {this.count = 1});
 }
 
+/// `giveLife`: give [count] of the profession cell [cell] (`fish:<id>`,
+/// `crop:<key>`, `seed:<id>`, `fert:<id>`, `craft:<id>`, `ore:<id>`) to
+/// the player [toPlayerId] (share_materials.md, protocol 78). Both in town.
+class GiveLifeAction extends SessionAction {
+  final String toPlayerId;
+  final String cell;
+  final int count;
+  const GiveLifeAction(this.toPlayerId, this.cell, {this.count = 1});
+}
+
 /// `drop`: soltar al piso (compartido) un arma o [count] de una pila.
 class DropItemAction extends SessionAction {
   final String token;
@@ -510,6 +520,13 @@ class EcoCraftAction extends SessionAction {
   final String uid;
   final EcoCraftOp op;
   const EcoCraftAction(this.uid, this.op);
+}
+
+/// Fusionar Ecos propios del mismo tier en uno de tier + 1
+/// (ecos_atlas.md § 4.2).
+class EcoFuseAction extends SessionAction {
+  final List<String> uids;
+  const EcoFuseAction(this.uids);
 }
 
 /// Solo desarrollo (`FeatureFlags.devTools`): activa el portal y da un

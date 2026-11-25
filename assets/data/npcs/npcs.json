@@ -168,6 +168,23 @@
           "zh-Hans": "哪天你的村子需要医者，告诉我。"
         }
       ],
+      "home_ambient": [
+        {
+          "es-AR": "Las moras de acá saben distinto cada mañana. Como si el bosque se acordara de algo.",
+          "en": "The berries here taste different every morning. As if the forest remembered something.",
+          "zh-Hans": "这里的莓果每天早上味道都不一样，好像森林想起了什么。"
+        },
+        {
+          "es-AR": "Hay ecos que bajan por el río. Yo no los pesco: los dejo pasar.",
+          "en": "Echoes drift down the river. I don't catch them: I let them pass.",
+          "zh-Hans": "有回响顺着河漂下来。我不去捞，就让它们过去。"
+        },
+        {
+          "es-AR": "Si alguien del pueblo se lastima, que venga. Para eso me mudé.",
+          "en": "If anyone in town gets hurt, send them over. That is why I moved.",
+          "zh-Hans": "村里谁受了伤，就让他来找我。我就是为这个搬来的。"
+        }
+      ],
       "night": {
         "ilda_garden": {
           "es-AR": "De noche la huerta se queda sola y las plagas lo saben. Vengo a espantarlas y a ver si los brotes aguantan el rocío.",
@@ -685,6 +702,28 @@
           "es-AR": "Llevame a tu pueblo y tus mejoras van a salir más baratas.",
           "en": "Take me to your town and your upgrades will cost less.",
           "zh-Hans": "带我去你的村子，你的强化会更便宜。"
+        }
+      ],
+      "home_ambient": [
+        {
+          "es-AR": "Este calor viene de abajo, de un mecanismo viejo que sigue andando.",
+          "en": "This heat comes from below, from an old mechanism still running.",
+          "zh-Hans": "这热气来自下面，来自一台仍在运转的旧机关。"
+        },
+        {
+          "es-AR": "Forjo con lo que deja el pasado. Nada se pierde del todo.",
+          "en": "I forge with what the past leaves behind. Nothing is ever fully lost.",
+          "zh-Hans": "我用过去留下的东西锻造。没有什么会彻底消失。"
+        },
+        {
+          "es-AR": "La forja del pueblo ya agarró temperatura. Traeme lingotes y te hago algo.",
+          "en": "The town forge is finally up to heat. Bring me ingots and I will make you something.",
+          "zh-Hans": "村里的锻炉终于烧热了。带锭子来，我给你打点东西。"
+        },
+        {
+          "es-AR": "Acá el fuego es más chico, pero es mío. Me gusta despertarme al lado.",
+          "en": "The fire here is smaller, but it is mine. I like waking up next to it.",
+          "zh-Hans": "这里的火小一些，但它是我的。我喜欢在它旁边醒来。"
         }
       ],
       "night": {

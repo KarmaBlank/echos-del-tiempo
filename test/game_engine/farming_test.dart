@@ -1,5 +1,4 @@
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
-import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -61,12 +60,6 @@ void main() {
       }
       expect(FarmingRules.ripe(p), isTrue);
       expect(FarmingRules.stage(p), CropStage.maduro);
-    });
-
-    test('una misión ganada suma tiempo de crecimiento', () {
-      final p = FarmingRules.plant(FarmingRules.till(), 'nabo_claro')!;
-      final m = FarmingRules.missionGrow(p);
-      expect(m.grow, kTuning[TuningId.farming]!.values['missionGrowSec']);
     });
 
     test('el abono acelera y sesga la calidad', () {

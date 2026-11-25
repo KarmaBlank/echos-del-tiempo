@@ -118,9 +118,6 @@ void main() {
       expect(LifeTimeRules.seasonPrice('nabo_claro', Season.winter), 1);
       // Los de todo el año no tienen estación.
       expect(LifeTimeRules.seasonGrow('flor_cristal', Season.summer), 1);
-      final plot = FarmingRules.plant(FarmingRules.till(), 'nabo_claro')!;
-      expect(FarmingRules.missionGrow(plot, season: Season.summer).grow,
-          closeTo(_v('missionGrowSec') * _v('seasonGrowMult'), 1e-9));
     });
   });
 
@@ -132,7 +129,6 @@ void main() {
       expect(f['legendPityAfter'], 100);
       expect(f['seedDropChance'], 0.55);
       expect(f['dryRate'], 0.5);
-      expect(f['missionGrowSec'], 600);
       expect(f['seasonPriceMult'], 1.3);
       expect(f['seasonGrowMult'], 1.2);
       expect(f['mealBuffBase'], 0.05);

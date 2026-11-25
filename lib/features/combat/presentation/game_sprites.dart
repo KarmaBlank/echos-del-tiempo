@@ -103,8 +103,19 @@ class GameSprites {
 
   /// Ícono de oficio de [id] (`items.vida_<id>` del manifest), o el de
   /// [category] (`vida_cat_<categoría>`), o `null`.
-  ui.Image? lifeIcon(String id, String category) =>
-      _life[id] ?? _life['cat_$category'];
+  ui.Image? lifeIcon(String id, String category) {
+    for (final k in lifeIconKeys(id)) {
+      final img = _life[k];
+      if (img != null) return img;
+    }
+    return _life['cat_$category'];
+  }
+
+  /// Manifest keys (without `vida_`) tried for a life icon id, in order:
+  /// the id itself, then for `mat_<id>` (shared material cells) the
+  /// smithing sprite of that ore, ingot, rare or tool.
+  static List<String> lifeIconKeys(String id) =>
+      [id, if (id.startsWith('mat_')) id.substring(4)];
 
   /// Frame `idle` de un tipo de enemigo, o `null`.
   ui.Image? enemy(String enemyType) => _enemies[enemyType]?.image;

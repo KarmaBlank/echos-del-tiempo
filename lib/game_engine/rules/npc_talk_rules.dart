@@ -130,9 +130,18 @@ abstract final class NpcTalkRules {
 
   /// The loose line of [npc] for world [day] (one per day, in order), or
   /// `null` if it has none.
-  static String? dayLine(String npc, int day) {
-    final a = npcTalk(npc)?.ambient ?? const [];
+  static String? dayLine(String npc, int day, {bool inTown = false}) {
+    final a = ambient(npc, inTown: inTown);
     return a.isEmpty ? null : a[day % a.length].text;
+  }
+
+  /// Loose lines of [npc]: once a resident lives in town ([inTown] =
+  /// `ResidentState.invited`), `homeAmbient` replaces `ambient` when set,
+  /// so no recruit pitch plays after moving (overworld_biomes.md § 12.1).
+  static List<LocalizedText> ambient(String npc, {required bool inTown}) {
+    final d = npcTalk(npc);
+    if (d == null) return const [];
+    return inTown && d.homeAmbient.isNotEmpty ? d.homeAmbient : d.ambient;
   }
 
   /// Why [npc] went out tonight ([outing] = `NightOuting.id`), or `null`.

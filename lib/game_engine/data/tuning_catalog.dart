@@ -202,7 +202,6 @@ const Map<String, TuningDef> kTuningDefaults = {
     'dryRate': 0.5,
     'waterSec': 240,
     'waterRateMin': 0.6,
-    'missionGrowSec': 600,
     'workXp': 3,
     // Calidad (farming.md § 3): pesos base de normal / rara / épica /
     // legendaria; el puntaje S de los aportes multiplica la rara × (1+S),
@@ -278,6 +277,9 @@ const Map<String, TuningDef> kTuningDefaults = {
   }),
   // farming.md § 6–8 (v0.23.0): ampliaciones, lago y ayudante.
   TuningId.town: TuningDef('Pueblo', {
+    // Dar materiales de oficio (share_materials.md § 3): el botón del
+    // medio del selector de cantidad (1 / giveStep / todo).
+    'giveStep': 5,
     // Ampliaciones (town_editor.md § 2: cada una suma una franja de 8 a un
     // lado): tope total, tope por lado y costo de la n-ésima (oro = base ×
     // mult^(n−1); Esquirlas × n; Cristales desde la 2.ª).
@@ -853,6 +855,9 @@ const Map<String, TuningDef> kTuningDefaults = {
   TuningId.ecoTier: TuningDef('Bonus de tier de Ecos', {
     'tierQuantity': 0.03,
     'partyQuantity': 0.10,
+    // ecos_atlas.md § 4.2: Ecos del mismo tier por fusión y Anclas extra.
+    'fuseCount': 3,
+    'fuseAnchors': 0,
   }),
   // build_planner.md § 9: pesos de la guía del builder.
   TuningId.buildGuide: TuningDef('Guía del builder', {

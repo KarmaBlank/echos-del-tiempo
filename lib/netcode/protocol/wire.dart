@@ -188,7 +188,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 79: co-op action queue agreement (turn_modes.md § 3.1): the block's
 /// commands wait until every pending human agrees the order (`qok`),
 /// `qmv` reorders, `qr` in the battle snapshot.
-const kProtocolVersion = 79;
+/// 80: Echo fusion (ecos_atlas.md § 4.2): the `ecoFuse` action.
+/// 81: profession-material gifts (share_materials.md): `giveLife` action.
+const kProtocolVersion = 81;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

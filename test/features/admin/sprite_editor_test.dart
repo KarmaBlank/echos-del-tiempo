@@ -93,7 +93,7 @@ void main() {
       expect(find('guerrero'), contains('characters.guerrero.idle'));
       expect(find('GUERRERO berserker'),
           ['characters.guerrero_berserker.idle', 'characters.aura_berserker.idle']);
-      expect(find('ÁRBOL'), isEmpty);
+      expect(find('ÁRBOL'), contains('items.vida_semilla_arbol_paradoja.idle'));
       expect(find('baculo'), contains('items.baculo.idle'));
       expect(find('efectos'), everyElement(startsWith('fx.')));
       expect(find(''), hasLength(cat.entries.length));

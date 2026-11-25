@@ -455,6 +455,13 @@ muda al pueblo…" se fue).
 - Al abrir el diálogo dice un saludo al azar (sus saludos + sus frases
   de siempre). Si tiene un encargo nuevo para contarte, eso va primero
   (roles.md § 8.4).
+- Frases sueltas en el pueblo (v0.13.5): las `ambient` pueden incluir la
+  oferta de mudarse ("Llevame a tu pueblo…"). Cuando el habitante ya vive
+  en el pueblo (`ResidentState.invited`), se usan sus `homeAmbient`
+  (JSON `home_ambient`) en lugar de `ambient`, así nunca vuelve a ofrecer
+  mudarse; si no tiene `homeAmbient`, siguen las `ambient`. Regla:
+  `NpcTalkRules.ambient(npc, inTown:)`. Hoy tienen `homeAmbient` Ilda y
+  Brann (BORRADOR); los demás no tienen frases de reclutamiento.
 - Abrir el diálogo cuenta una charla (`town {o: talk, id}`), una por día
   del mundo y por habitante. Las charlas, los pedidos / encargos
   cumplidos y la relación abren temas ("¿Vivís acá?" desde la segunda

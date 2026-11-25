@@ -139,6 +139,7 @@ abstract final class ActionJson {
           },
         ProposeEcoAction() => {'t': 'eco', 'u': a.uid},
         EcoCraftAction() => {'t': 'ecoCraft', 'u': a.uid, 'op': a.op.name},
+        EcoFuseAction() => {'t': 'ecoFuse', 'us': a.uids},
         DevGrantEcoAction() => {'t': 'devEco', 'tier': a.tier},
         // Ascensión v0.5 (ascension.md § 6).
         ProposeTrialAction() => {'t': 'trial', 'n': a.trial},
@@ -214,6 +215,12 @@ abstract final class ActionJson {
             'x': a.tx,
             'y': a.ty,
             if (a.seed != null) 'sd': a.seed,
+          },
+        GiveLifeAction() => {
+            't': 'giveLife',
+            'to': a.toPlayerId,
+            'c': a.cell,
+            if (a.count != 1) 'n': a.count,
           },
         FarmShopAction() => {
             't': 'farmShop',
@@ -419,6 +426,8 @@ abstract final class ActionJson {
       case 'ecoCraft':
         return EcoCraftAction(
             j.str('u'), j.enumByName('op', EcoCraftOp.values));
+      case 'ecoFuse':
+        return EcoFuseAction(List.unmodifiable(j.strings('us')));
       case 'devEco':
         return DevGrantEcoAction(j.integer('tier'));
       case 'trial':
@@ -514,6 +523,9 @@ abstract final class ActionJson {
         return FarmTileAction(j.enumByName('o', FarmOp.values),
             j.integer('x'), j.integer('y'),
             seed: j.strOrNull('sd'));
+      case 'giveLife':
+        return GiveLifeAction(j.str('to'), j.str('c'),
+            count: j.intOrNull('n') ?? 1);
       case 'farmShop':
         return FarmShopAction(j.enumByName('o', FarmShopOp.values),
             id: j.strOrNull('id'),

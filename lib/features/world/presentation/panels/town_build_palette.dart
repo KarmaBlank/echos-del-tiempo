@@ -10,6 +10,7 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import '../world_strings.dart';
+import 'item_source_text.dart';
 import 'town_piece_preview.dart';
 
 /// Filtro de la paleta (town_editor.md § 1.2).
@@ -25,6 +26,7 @@ class TownPiece {
     required this.h,
     required this.detail,
     this.cost,
+    this.costItems = const {},
     this.why,
   });
 
@@ -36,6 +38,9 @@ class TownPiece {
 
   /// Texto del costo; `null` = gratis.
   final String? cost;
+
+  /// Items it costs (id → amount), shown as a cost grid.
+  final Map<String, int> costItems;
 
   /// Por qué no se puede poner ahora (o `null`).
   final String? why;
@@ -107,6 +112,7 @@ class TownBuildPalette extends StatefulWidget {
             h: d.h,
             detail: d.detail,
             cost: HelperRules.costText(ResidentRules.placeCost()),
+            costItems: ResidentRules.placeCost().mats,
             why: p == null
                 ? s.t('ui.town.edit.no_character')
                 : HelperRules.cannotPay(p, ResidentRules.placeCost()),
@@ -390,6 +396,12 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
                 ? s.t('ui.town.edit.free')
                 : s.t('ui.town.edit.cost', {'cost': p.cost}),
             style: DsText.detail(p.enabled ? null : DsColors.danger)),
+        if (p.costItems.isNotEmpty) ...[
+          gap,
+          itemCostGrid(context, widget.controller.view?.me?.profile,
+              p.costItems,
+              key: const ValueKey('town-build-cost')),
+        ],
         if (p.why case final why?)
           Text(why,
               key: const ValueKey('town-build-why'),

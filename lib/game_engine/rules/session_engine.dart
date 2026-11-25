@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
 import '../data/construction_catalog.dart';
+import 'life_give_rules.dart';
 import '../data/exploration_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
@@ -446,6 +447,7 @@ class SessionEngine {
         BuyWeaponAction() ||
         BuyItemAction() ||
         EcoCraftAction() ||
+        EcoFuseAction() ||
         GiveItemAction() ||
         DropItemAction() =>
           true,
@@ -1435,6 +1437,8 @@ class _Op {
         return _withEventDiscount(
             p, a is BuyRodAction, () => fishingAction(p, a));
 
+      case GiveLifeAction():
+        return _giveLife(p, a);
       case FarmTileAction() ||
             FarmShopAction() ||
             TownAction() ||
@@ -1548,6 +1552,9 @@ class _Op {
 
       case EcoCraftAction():
         return _ecoCraft(p, a);
+
+      case EcoFuseAction():
+        return _ecoFuse(p, a);
 
       case DevGrantEcoAction():
         if (!e.devTools) return false;
@@ -2247,6 +2254,17 @@ class _Op {
     return true;
   }
 
+  /// `EcoFuseAction` (ecos_atlas.md § 4.2): solo lobby / preparación,
+  /// Ecos propios, distintos, del mismo tier y < 16.
+  bool _ecoFuse(SessionPlayer p, EcoFuseAction a) {
+    if (!s.canShop) return false;
+    if (s.ecoOwner == p.id && a.uids.contains(s.eco?.uid)) return false;
+    final r = ecos.fuse(p.profile, a.uids, _ecoRand);
+    if (!_profileChange(p, r.profile)) return false;
+    say('${p.name}: ${ecos.fullName(r.after!)} (fusión)');
+    return true;
+  }
+
   static String _ecoVerb(EcoCraftOp op) => switch (op) {
         EcoCraftOp.reroll => 'Esquirla del Eco: modificadores nuevos',
         EcoCraftOp.addMod => 'Cristal de Era: modificador nuevo',
@@ -2333,6 +2351,22 @@ class _Op {
     _profileChange(to, got);
     events.add(ItemGivenEvent(p.id, to.id, drop));
     say('${p.name} le dio ${_dropText(drop)} a ${to.name}');
+    return true;
+  }
+
+  /// `GiveLifeAction` (share_materials.md § 2): both humans in town, the
+  /// giver owns the amount and it fits in the recipient's bag.
+  bool _giveLife(SessionPlayer p, GiveLifeAction a) {
+    final to = s.players[a.toPlayerId];
+    if (to == null || to.id == p.id || !_inTown(p) || !_inTown(to)) {
+      return false;
+    }
+    final g = LifeGiveRules.give(p.profile, to.profile, a.cell, a.count);
+    if (g == null) return false;
+    _profileChange(p, g.$1);
+    _profileChange(to, g.$2);
+    say('${p.name} le dio ${a.count} × '
+        '${OficioStorageRules.name(a.cell)} a ${to.name}');
     return true;
   }
 

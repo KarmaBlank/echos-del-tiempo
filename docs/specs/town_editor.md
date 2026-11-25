@@ -15,6 +15,15 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   con el motivo en esa línea): EDITAR PUEBLO, CONTRATAR GRANJERO,
   CONTRATAR PESCADOR (farming.md § 8.1), TABLERO DE ENCARGOS, y CERRAR
   abajo. Sin contador de ampliaciones.
+- ASIGNAR CASAS: subpantalla de la fuente. Grilla con las casas sin
+  habitante (`ResidentRules.freeHouses`); al elegir una, a la derecha la
+  lista de quienes pueden vivir ahí (`ResidentRules.awaitingHouse`:
+  invitados al pueblo sin casa) y el botón ASIGNAR, que manda la misma
+  acción del diálogo (`TownOp.assign`, validada por el anfitrión; sin
+  protocolo nuevo). Si el jugador no tiene el candado lo toma solo para
+  esa acción. ASIGNAR gris sin habitante elegido o si otro edita. Sin
+  nadie para asignar: "No hay nadie para asignar"; sin casas libres:
+  "No hay casas libres".
 - EDITAR PUEBLO (v0.28.0): cualquiera de la sala, de a uno (§ 1.3).
   Mientras otro edita, el botón (y CONTRATAR GRANJERO / PESCADOR) sale
   gris con "Está editando <nombre>" en su línea y en el tooltip.
