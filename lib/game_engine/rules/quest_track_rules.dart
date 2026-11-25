@@ -61,8 +61,12 @@ abstract final class QuestTrackRules {
 
   static String trackKey(QuestTrackKind k, String npc) => '${k.name}:$npc';
 
-  static String itemName(String id) =>
-      kFish[id]?.name ?? kCrops[id]?.name ?? id;
+  static String itemName(String id) {
+    if (ResidentRules.parseForgeOrder(id) case (final type, final il)?) {
+      return '${type[0].toUpperCase()}${type.substring(1)} (nv $il+)';
+    }
+    return kFish[id]?.name ?? kCrops[id]?.name ?? id;
+  }
 
   /// Huella de "lo que tiene para decir" un habitante: cambia con un paso
   /// nuevo de su cadena, un pedido nuevo o una orden nueva.
