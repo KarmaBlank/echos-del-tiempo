@@ -281,22 +281,11 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
   /// Destino resaltado con Tab (Enter viaja).
   int _sel = 0;
 
-  /// Pick mode: the selected stone (id) and the hovered one + cursor.
-  int? _picked;
+  /// The hovered stone + cursor (name tooltip).
   int? _hoverId;
   Offset _cursor = Offset.zero;
 
   FullMapPick? get _pick => widget.pick;
-
-  /// Pick mode: the selected stone.
-  MapPoi? get _pickedPoi {
-    final all = widget.waystones;
-    if (all.isEmpty) return null;
-    final id = _picked ?? _pick?.initial;
-    return all.where((w) => w.$1.id == id).firstOrNull?.$1 ?? all.first.$1;
-  }
-
-  void _select(MapPoi p) => setState(() => _picked = p.id);
 
   @override
   void initState() {
@@ -326,10 +315,6 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
     _blink.dispose();
     super.dispose();
   }
-
-  /// Número de la piedra (1..n en el orden del piso).
-  int _number(MapPoi p) =>
-      widget.waystones.indexWhere((w) => w.$1.id == p.id) + 1;
 
   void _travel(MapPoi p) => widget.onTravel?.call(p.id);
   Offset? _center;
@@ -398,27 +383,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
       _zoomOut();
       return KeyEventResult.handled;
     }
-    if (_pick != null) {
-      final all = widget.waystones;
-      if (k == LogicalKeyboardKey.tab && all.isNotEmpty) {
-        final i = all.indexWhere((w) => w.$1.id == _pickedPoi?.id);
-        _select(all[(i + 1) % all.length].$1);
-        return KeyEventResult.handled;
-      }
-      if (k == LogicalKeyboardKey.enter ||
-          k == LogicalKeyboardKey.numpadEnter) {
-        final p = _pickedPoi;
-        if (p != null && widget.destinations.any((d) => d.id == p.id)) {
-          _travel(p);
-        }
-        return KeyEventResult.handled;
-      }
-      final digit = _digit(k);
-      if (digit != null && digit <= all.length) {
-        _select(all[digit - 1].$1);
-        return KeyEventResult.handled;
-      }
-    } else if (widget.choosing) {
+    if (widget.choosing) {
       final d = widget.destinations;
       if (k == LogicalKeyboardKey.tab) {
         setState(() => _sel = (_sel + 1) % d.length);
@@ -427,12 +392,6 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
       if (k == LogicalKeyboardKey.enter ||
           k == LogicalKeyboardKey.numpadEnter) {
         _travel(d[_sel.clamp(0, d.length - 1)]);
-        return KeyEventResult.handled;
-      }
-      final digit = _digit(k);
-      if (digit != null) {
-        final hit = d.where((p) => _number(p) == digit).firstOrNull;
-        if (hit != null) _travel(hit);
         return KeyEventResult.handled;
       }
     }
@@ -447,35 +406,6 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
     return KeyEventResult.ignored;
   }
 
-  static int? _digit(LogicalKeyboardKey k) {
-    const rows = [
-      LogicalKeyboardKey.digit1,
-      LogicalKeyboardKey.digit2,
-      LogicalKeyboardKey.digit3,
-      LogicalKeyboardKey.digit4,
-      LogicalKeyboardKey.digit5,
-      LogicalKeyboardKey.digit6,
-      LogicalKeyboardKey.digit7,
-      LogicalKeyboardKey.digit8,
-      LogicalKeyboardKey.digit9,
-    ];
-    const pad = [
-      LogicalKeyboardKey.numpad1,
-      LogicalKeyboardKey.numpad2,
-      LogicalKeyboardKey.numpad3,
-      LogicalKeyboardKey.numpad4,
-      LogicalKeyboardKey.numpad5,
-      LogicalKeyboardKey.numpad6,
-      LogicalKeyboardKey.numpad7,
-      LogicalKeyboardKey.numpad8,
-      LogicalKeyboardKey.numpad9,
-    ];
-    final i = rows.indexOf(k);
-    if (i >= 0) return i + 1;
-    final j = pad.indexOf(k);
-    return j >= 0 ? j + 1 : null;
-  }
-
   /// Las marcas de piedras de paso sobre la ventana [v] del mapa.
   List<Widget> _stoneMarks(BuildContext context, Rect v) {
     final size = math.max(22.0, _cell * 1.6);
@@ -486,17 +416,14 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
       if (x < 0 || y < 0 || x > v.width * _cell || y > v.height * _cell) {
         continue;
       }
-      final picking = _pick != null;
-      final dest = picking ||
-          (widget.choosing && widget.destinations.any((d) => d.id == poi.id));
-      final selected = picking
-          ? _pickedPoi?.id == poi.id
-          : dest && widget.destinations[_sel].id == poi.id;
+      final dest =
+          widget.choosing && widget.destinations.any((d) => d.id == poi.id);
+      final selected = dest && widget.destinations[_sel].id == poi.id;
       // The stone you stand at: steady, gold frame (the goal frame).
       final here = _isHere(poi);
       final color = on
           ? FullMap.waystoneColor
-          : picking
+          : _pick != null
               ? DsColors.textDisabled
               : FullMap.waystoneColor.withValues(alpha: 0.45);
       // No number (exploration.md § Piedras de paso en el mapa): only the
@@ -541,7 +468,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
           label: name,
           child: hover(GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => picking ? _select(poi) : _travel(poi),
+            onTap: () => _travel(poi),
             child: mark,
           )),
         );
@@ -559,8 +486,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
 
   /// The stone the player stands at: the origin of the trip, or (pick
   /// mode) the one the menu opened on.
-  bool _isHere(MapPoi p) =>
-      p.id == widget.originId || (_pick != null && p.id == _pick!.initial);
+  bool _isHere(MapPoi p) => p.id == widget.originId;
 
   /// Hover name: the pick label, or the generic stone name (dungeons).
   String _stoneName(BuildContext context, MapPoi p) =>
@@ -587,25 +513,6 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
     ];
   }
 
-  /// Pick mode: the map with the chosen stone's detail on the right.
-  Widget _withDetail(Widget map) {
-    final pick = _pick;
-    final p = _pickedPoi;
-    if (pick == null || p == null) return map;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: map),
-        SizedBox(width: DsSpace.md),
-        SizedBox(
-            width: FullMapPick.detailWidth,
-            child: KeyedSubtree(
-                key: const ValueKey('full-map-detail'),
-                child: pick.detail(p))),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final choosing = widget.choosing;
@@ -623,12 +530,6 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
             key: const ValueKey('full-map-center'), onPressed: _recenter),
       ],
       actions: [
-        if (choosing && _pick == null)
-          for (final d in widget.destinations)
-            PanelButton(context.t('ui.world.map.travel_button', {'n': _number(d)}),
-                key: ValueKey('full-map-travel-${d.id}'),
-                selected: widget.destinations[_sel].id == d.id,
-                onPressed: () => _travel(d)),
         PanelButton(context.t('ui.world.map.close'),
             key: const ValueKey('full-map-close'), onPressed: widget.onClose),
       ],
@@ -636,7 +537,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: _withDetail(Focus(
+            child: Focus(
               autofocus: true,
               onKeyEvent: _onKey,
               child: LayoutBuilder(builder: (context, box) {
@@ -685,7 +586,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                   ),
                 );
               }),
-            )),
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -724,7 +625,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                             goal: goal),
                     ],
                   ),
-              if (choosing && _pick == null)
+              if (choosing)
                 Text(
                     key: const ValueKey('full-map-choose-hint'),
                     retroText(context.t('ui.world.map.choose_hint')),
@@ -739,19 +640,12 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Pick mode of [FullMap]: how to name a stone (hover tooltip) and the
-/// detail pane of the selected one (with its own TRAVEL button).
+/// Waystone menu mode of [FullMap] (biome_regions.md § 4): how to name a
+/// stone (hover tooltip); undiscovered stones are grey.
 class FullMapPick {
-  const FullMapPick({required this.label, required this.detail, this.initial});
-
-  /// Width of the detail pane on the right.
-  static const detailWidth = 300.0;
+  const FullMapPick({required this.label});
 
   final String Function(MapPoi stone) label;
-  final Widget Function(MapPoi stone) detail;
-
-  /// Stone selected when it opens (id), e.g. the one you stand at.
-  final int? initial;
 }
 
 /// Which legend / behaviour the big map uses (biome_exploration.md § 11).

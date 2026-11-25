@@ -82,7 +82,7 @@ Future<void> _use(WidgetTester tester, SessionController c, int i) async {
 void main() {
   setUpAll(loadRealFonts);
 
-  testWidgets('opens the region map: marks, hover, detail, TRAVEL',
+  testWidgets('opens the region map: marks, hover, click travels',
       (tester) async {
     final c = await _biome(tester);
     final n0 = biomeLayout(c.place)!.waystones.length;
@@ -127,13 +127,13 @@ void main() {
         matching: find.byType(Container)));
     expect((grey.decoration! as BoxDecoration).color, DsColors.textDisabled);
 
-    // Opens on the stone you stand at: HERE, TRAVEL grey.
-    expect(find.byKey(const ValueKey('way-here')), findsOneWidget);
+    // No detail pane, no TRAVEL button: click is the travel.
+    expect(find.byKey(const ValueKey('full-map-detail')), findsNothing);
     expect(
-        tester
-            .widget<DsButton>(find.byKey(const ValueKey('way-go-0')))
-            .onPressed,
-        isNull);
+        find.descendant(
+            of: find.byKey(const ValueKey('panel-waystone')),
+            matching: find.byType(DsButton)),
+        findsNothing);
 
     // Hover names the stone.
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -144,21 +144,24 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('full-map-stone-tip')), findsOneWidget);
 
-    // The undiscovered one: selectable, explained, no TRAVEL.
-    await tester.tap(find.byKey(ValueKey('full-map-stone-$g')));
-    await tester.pump();
-    expect(
-        tester
-            .widget<DsButton>(find.byKey(ValueKey('way-go-$g')))
-            .onPressed,
-        isNull);
-
-    // Click stone 1 selects it (does not travel yet); TRAVEL goes.
-    await tester.tap(find.byKey(const ValueKey('full-map-stone-1')));
+    // The undiscovered one: click does nothing.
+    await tester.tap(find.byKey(ValueKey('full-map-stone-$g')),
+        warnIfMissed: false);
+    c.advance(0.05);
     await tester.pump();
     expect(c.view!.panel, WorldPanel.waystone);
-    expect(find.byKey(const ValueKey('way-here')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('way-go-1')));
+    expect(c.nearWaystone, 0);
+
+    // The stone you stand at: click does nothing either.
+    await tester.tap(find.byKey(const ValueKey('full-map-stone-0')),
+        warnIfMissed: false);
+    c.advance(0.05);
+    await tester.pump();
+    expect(c.view!.panel, WorldPanel.waystone);
+    expect(c.nearWaystone, 0);
+
+    // Click stone 1 travels right away.
+    await tester.tap(find.byKey(const ValueKey('full-map-stone-1')));
     c.advance(0.05);
     await tester.pump();
     expect(c.view!.panel, isNull);
@@ -176,7 +179,6 @@ void main() {
       await _use(tester, c, i);
     }
     await _use(tester, c, 0);
-    await tester.tap(find.byKey(const ValueKey('full-map-stone-1')));
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(mouse.removePointer);
     await mouse.addPointer(location: Offset.zero);

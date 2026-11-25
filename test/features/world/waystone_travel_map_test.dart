@@ -127,9 +127,14 @@ void main() {
     for (final p in st) {
       expect(find.byKey(ValueKey('full-map-stone-${p.id}')), findsOneWidget);
     }
-    expect(find.byKey(ValueKey('full-map-travel-${st[0].id}')), findsOneWidget);
-    expect(find.byKey(ValueKey('full-map-travel-${st[1].id}')), findsOneWidget);
-    expect(find.byKey(ValueKey('full-map-travel-${st.last.id}')), findsNothing);
+    // No numbered TRAVEL buttons any more: click the stone.
+    expect(find.byKey(ValueKey('full-map-travel-${st[0].id}')), findsNothing);
+    // The stone you stand at: click does nothing.
+    await tester.tap(find.byKey(ValueKey('full-map-stone-${st.last.id}')),
+        warnIfMissed: false);
+    c.advance(0.05);
+    await tester.pump();
+    expect(c.view!.panel, WorldPanel.map);
 
     // Clic en la piedra 1 (no es "la siguiente"): viaja y cierra.
     await tester.tap(find.byKey(ValueKey('full-map-stone-${st[0].id}')));
@@ -141,11 +146,16 @@ void main() {
             c.local.x, c.local.y, st[0].center.x, st[0].center.y),
         lessThan(20));
 
-    // Teclado: M junto a una piedra activada también elige; tecla 2.
+    // Teclado: M junto a una piedra activada también elige; los
+    // números ya no viajan.
     await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
     await tester.pump();
     expect(find.byKey(const ValueKey('full-map-choose-hint')), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    c.advance(0.05);
+    await tester.pump();
+    expect(c.view!.panel, WorldPanel.map);
+    await tester.tap(find.byKey(ValueKey('full-map-stone-${st[1].id}')));
     c.advance(0.05);
     await tester.pump();
     expect(c.view!.panel, isNull);
