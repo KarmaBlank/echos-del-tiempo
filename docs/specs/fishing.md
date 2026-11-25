@@ -421,7 +421,7 @@ Con la caña afuera, casillero CEBO junto a la caña: ícono, "Cebo [F]",
 cantidad. Clic o F pasa al siguiente; por defecto el mejor que tengas.
 La COLECCIÓN muestra el mejor cebo de cada pez.
 
-## 15. Balsas de los lagos grandes (protocolo 83)
+## 15. Balsas de los lagos grandes (protocolo 87)
 
 Código: `lib/game_engine/rules/raft_rules.dart` (`RaftRules`, puro),
 `BiomeLayout.raftDocks`, `SessionEngine._raft` (anfitrión), dibujo en
@@ -478,7 +478,7 @@ de `tool/export_life_icons.dart`). Tunables en `kTuning[TuningId.fishing]`.
 - **Especies de aguas abiertas** (`FishDef.minDepth`): no están en la
   lista del lago; se suman a la tabla del bioma con la boya a esa
   profundidad o más (`deepFishOf`). Los lagos comunes llegan a 3 de
-  profundidad; los gigantes a 4–6, así que solo ahí aparecen. Los ayudantes y el pescador nativo no
+  profundidad; los gigantes a 5–6 (`giantLakeRyMin` = 6 garantiza que cada lago gigante llegue al `minDepth` 5 del legendario de su bioma), así que solo ahí aparecen. Los ayudantes y el pescador nativo no
   las ven (no cambian).
 
 | Bioma | Especie | Rareza | Prof. | cm | Precio | XP |

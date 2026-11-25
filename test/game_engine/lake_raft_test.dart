@@ -227,4 +227,29 @@ void main() {
     }
     expect(seen.intersection(deep), isNotEmpty, reason: '$seen');
   });
+
+  test('every biome with a giant lake can roll its legendary (seeds 0-11)', () {
+    for (var seed = 0; seed < 12; seed++) {
+      BiomeRegions.bind(seed);
+      for (final e in kBiomeLayouts.entries) {
+        final lay = e.value;
+        final legend = [
+          for (final f in kFish.values)
+            if (f.biome == e.key && f.minDepth > 0 &&
+                f.rarity == FishRarity.legendario) f.id
+        ];
+        if (legend.isEmpty) continue;
+        final m = MapGenerator.biome(lay, const {});
+        for (var i = 0; i < lay.lakes.length; i++) {
+          if (!lay.lakes[i].giant) continue;
+          var bd = 0;
+          for (final (x, y) in RaftRules.lakeTiles(lay, lay.lakes[i])) {
+            bd = math.max(bd, RaftRules.depth(m, x, y));
+          }
+          expect(deepFishOf(e.key, bd), containsAll(legend),
+              reason: 'seed $seed ${e.key} lake $i depth $bd');
+        }
+      }
+    }
+  });
 }

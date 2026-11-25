@@ -771,7 +771,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'giantLakeChance': 0.5,
     'giantLakeRxMin': 8,
     'giantLakeRxMax': 12,
-    'giantLakeRyMin': 5,
+    'giantLakeRyMin': 6,
     'giantLakeRyMax': 7,
     'cavernLakeChance': 0.5,
     'cavernShaftChance': 0.4,
