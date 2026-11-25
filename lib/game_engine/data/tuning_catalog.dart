@@ -455,6 +455,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resNearTiles': 6,
     'resStockRare': 1,
     'resStockLegend': 3,
+    // overworld_biomes.md § 9.1.1: materials by role, x trader price.
+    'resWareMarkup': 2.0,
     'orderEveryDays': 1,
     'orderXpPerValue': 2.0,
     'orderXpDayCap': 4000,

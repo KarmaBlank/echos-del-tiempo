@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/biomes_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/world_save.dart';
+import 'resident_rules.dart' show ResidentRules;
 
 /// Reglas del mapa de viaje, los exteriores de bioma, los refuerzos y la
 /// dificultad por sala (docs/specs/overworld_biomes.md). Puras; los
@@ -32,6 +33,15 @@ abstract final class BiomeRules {
   /// (§ 9.1); `null` = no la vende ahí.
   static int? vendorPrice(String? place, String crop) =>
       biomeLayout(place)?.npc.seeds[crop];
+
+  /// Price of [id] at the resident of [place] at relationship [tier],
+  /// seeds and trade goods (overworld_biomes.md § 9.1.1), or `null`.
+  static int? vendorStockPrice(String? place, String id, int tier) {
+    final n = biomeLayout(place)?.npc;
+    return n == null
+        ? null
+        : ResidentRules.stock(n, tier < 0 ? 0 : tier, home: true)[id];
+  }
 
   /// Clave de un recolectable en `TownState.wild`.
   static String wildKey(String biome, int i) => '$biome:$i';

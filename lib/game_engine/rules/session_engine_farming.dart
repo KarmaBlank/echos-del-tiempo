@@ -476,6 +476,19 @@ extension _FarmingOp on _Op {
     final id = a.id;
     switch (a.op) {
       case FarmShopOp.buySeed:
+        // Trade goods of a resident (overworld_biomes.md § 9.1.1): same
+        // op, the id says which bag it goes to.
+        if (id != null && kSmithMaterials.containsKey(id)) {
+          final npc = biomeLayout(s.place)?.npc;
+          final price = npc != null
+              ? BiomeRules.vendorStockPrice(
+                  s.place, id, ResidentRules.tier(s.town.resident(npc.id)))
+              : (s.place == null
+                  ? ResidentRules.townSeedPrice(s.town, id)
+                  : null);
+          return _profileChange(
+              p, ResidentRules.buyWare(prof, id, a.n, price));
+        }
         // Habitante del bioma (overworld_biomes.md § 9.1): sus semillas.
         final vendor = id == null
             ? null

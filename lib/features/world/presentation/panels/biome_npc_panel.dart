@@ -18,6 +18,14 @@ import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/session_action.dart' show TownOp;
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/models/item.dart' show Rarity;
+import '../../../../core/procedural/item_icons.dart' show procKeyForType;
+import '../../../../game_engine/data/smithing_catalog.dart';
+import '../../../../game_engine/models/session_action.dart'
+    show SmithAction, SmithOp;
+import '../../../../game_engine/models/weapon.dart' show WeaponDef;
+import '../../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
+import '../../../../game_engine/rules/mining_rules.dart' show SmithCraftRules;
+import '../../../inventory/presentation/item_widgets.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
@@ -219,7 +227,29 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
 }
 
 /// Las opciones del diálogo con un habitante, en orden.
-enum NpcMenu { comprar, encargos, pedidos, regalar, casa }
+enum NpcMenu { comprar, forja, encargos, pedidos, regalar, casa }
+
+/// One good of a resident's shop (seed or trade good).
+class _Good {
+  const _Good(
+      {required this.id,
+      required this.name,
+      required this.color,
+      required this.icon,
+      required this.tags,
+      required this.info,
+      required this.lore,
+      required this.extra,
+      required this.owned,
+      required this.price});
+  final String id, name, lore;
+  final Color color;
+  final Widget Function(double) icon;
+  final List<(String, Color)> tags;
+  final List<String> info;
+  final List<(String, String)> extra;
+  final int owned, price;
+}
 
 /// Habitante de un bioma o del pueblo (overworld_biomes.md § 9 y § 10,
 /// ui_minimal.md § 10): primero el cuadro de diálogo abajo (retrato,
@@ -241,6 +271,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
 
   NpcMenu? _menu;
   String? _sel;
+  String? _comIngot;
+  Rarity _comRarity = Rarity.comun;
   int _qty = 1;
 
   /// Lo que dijo al abrir el diálogo (no cambia al marcarlo visto).
@@ -435,7 +467,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                             _offerSignup
                                 ? _s.t('ui.town.npc.event_signup')
                                 : _s.t('ui.town.npc.event_accept'),
-                            key: const ValueKey('npc-event-yes'), onSelected: () {
+                            key: const ValueKey('npc-event-yes'),
+                            onSelected: () {
                           setState(() => _offer = null);
                           if (_offerSignup) {
                             c.signUpTourney(offer.id);
@@ -448,75 +481,82 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                             onSelected: () => setState(() => _offer = null)),
                       ]
                     : talk.active
-                    ? talk.choices(town, refresh,
-                        inTown: home, strings: _s, actions: actions)
-                    : [
-                        talk.entry(town, refresh, inTown: home, strings: _s),
-                        if (live != null &&
-                            live.kind == TownEventKind.tournament)
-                          DsChoice(
-                              _s.t('ui.town.npc.event_today',
-                                  {'title': live.title.text}),
-                              key: ValueKey('npc-event-live-${live.id}'),
-                              onSelected: () => setState(() {
-                                    _offer = live;
-                                    _offerSignup = true;
-                                  })),
-                        for (final d in proposals)
-                          DsChoice(d.title.text,
-                              key: ValueKey('npc-event-${d.id}'),
-                              onSelected: () => setState(() {
-                                    _offer = d;
-                                    _offerSignup = false;
-                                  })),
-                        opt(
-                            NpcMenu.comprar,
-                            _s.t('ui.town.npc.menu_buy'),
-                            stock.isEmpty
-                                ? _s.t('ui.town.npc.sells_nothing')
-                                : null),
-                        opt(
-                            NpcMenu.encargos,
-                            _s.t('ui.town.npc.menu_quests'),
-                            questCells(_s, c, n, r, p).isEmpty
-                                ? _s.t('ui.town.npc.asked_nothing')
-                                : null),
-                        opt(
-                            NpcMenu.pedidos,
-                            _s.t('ui.town.npc.menu_requests'),
-                            r.invited
-                                ? null
-                                : _s.t('ui.town.npc.requests_when_living')),
-                        opt(
-                            NpcMenu.regalar,
-                            _s.t('ui.town.npc.menu_gift'),
-                            _gifts(c, n, p).isEmpty
-                                ? _s.t('ui.town.npc.nothing_from_biome')
-                                : null),
-                        opt(
-                            NpcMenu.casa,
-                            _s.t('ui.town.npc.menu_house'),
-                            r.invited
-                                ? null
-                                : _s.t('ui.town.npc.invite_first')),
-                        if (offerHouse)
-                          DsChoice(_s.t('ui.town.npc.assign_house'),
-                              key: const ValueKey('npc-assign-house'),
-                              reason: houseWhy,
-                              onSelected: houseWhy == null
-                                  ? () => c.enterHousePick(n.id)
-                                  : null)
-                        else
-                          DsChoice(_s.t('ui.town.npc.invite'),
-                              key: const ValueKey('npc-invite'),
-                              reason: inviteWhy,
-                              onSelected: inviteWhy == null
-                                  ? () => setState(() => _acceptedBy = n.id)
-                                  : null),
-                        DsChoice(_s.t('ui.town.npc.bye'),
-                            key: const ValueKey('npc-close'),
-                            onSelected: c.closePanel),
-                      ],
+                        ? talk.choices(town, refresh,
+                            inTown: home, strings: _s, actions: actions)
+                        : [
+                            talk.entry(town, refresh,
+                                inTown: home, strings: _s),
+                            if (live != null &&
+                                live.kind == TownEventKind.tournament)
+                              DsChoice(
+                                  _s.t('ui.town.npc.event_today',
+                                      {'title': live.title.text}),
+                                  key: ValueKey('npc-event-live-${live.id}'),
+                                  onSelected: () => setState(() {
+                                        _offer = live;
+                                        _offerSignup = true;
+                                      })),
+                            for (final d in proposals)
+                              DsChoice(d.title.text,
+                                  key: ValueKey('npc-event-${d.id}'),
+                                  onSelected: () => setState(() {
+                                        _offer = d;
+                                        _offerSignup = false;
+                                      })),
+                            opt(
+                                NpcMenu.comprar,
+                                _s.t('ui.town.npc.menu_buy'),
+                                stock.isEmpty
+                                    ? _s.t('ui.town.npc.sells_nothing')
+                                    : null),
+                            if (n.role == NpcRole.forjador &&
+                                home &&
+                                r.invited &&
+                                r.house > 0)
+                              opt(NpcMenu.forja, _s.t('ui.town.npc.menu_forge'),
+                                  null),
+                            opt(
+                                NpcMenu.encargos,
+                                _s.t('ui.town.npc.menu_quests'),
+                                questCells(_s, c, n, r, p).isEmpty
+                                    ? _s.t('ui.town.npc.asked_nothing')
+                                    : null),
+                            opt(
+                                NpcMenu.pedidos,
+                                _s.t('ui.town.npc.menu_requests'),
+                                r.invited
+                                    ? null
+                                    : _s.t('ui.town.npc.requests_when_living')),
+                            opt(
+                                NpcMenu.regalar,
+                                _s.t('ui.town.npc.menu_gift'),
+                                _gifts(c, n, p).isEmpty
+                                    ? _s.t('ui.town.npc.nothing_from_biome')
+                                    : null),
+                            opt(
+                                NpcMenu.casa,
+                                _s.t('ui.town.npc.menu_house'),
+                                r.invited
+                                    ? null
+                                    : _s.t('ui.town.npc.invite_first')),
+                            if (offerHouse)
+                              DsChoice(_s.t('ui.town.npc.assign_house'),
+                                  key: const ValueKey('npc-assign-house'),
+                                  reason: houseWhy,
+                                  onSelected: houseWhy == null
+                                      ? () => c.enterHousePick(n.id)
+                                      : null)
+                            else
+                              DsChoice(_s.t('ui.town.npc.invite'),
+                                  key: const ValueKey('npc-invite'),
+                                  reason: inviteWhy,
+                                  onSelected: inviteWhy == null
+                                      ? () => setState(() => _acceptedBy = n.id)
+                                      : null),
+                            DsChoice(_s.t('ui.town.npc.bye'),
+                                key: const ValueKey('npc-close'),
+                                onSelected: c.closePanel),
+                          ],
           ),
         ),
       ),
@@ -611,6 +651,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     void back() => setState(() => _menu = null);
     final title = switch (menu) {
       NpcMenu.comprar => _s.t('ui.town.npc.title_shop'),
+      NpcMenu.forja => _s.t('ui.town.npc.title_forge'),
       NpcMenu.encargos => _s.t('ui.town.npc.title_quests'),
       NpcMenu.pedidos => _s.t('ui.town.npc.title_requests'),
       NpcMenu.regalar => _s.t('ui.town.npc.title_gift'),
@@ -618,6 +659,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     };
     final Widget body = switch (menu) {
       NpcMenu.comprar => _shopView(c, n, tier, p, inBiome: !home),
+      NpcMenu.forja => _forgeView(c, p, town),
       NpcMenu.encargos =>
         _grid(questCells(_s, c, n, r, p), _s.t('ui.town.npc.nothing_yet')),
       NpcMenu.pedidos => _grid(_requests(c, n, r, p, town, home: home),
@@ -660,25 +702,64 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       LifeItemGrid(groups: [LifeItemGroup(null, cells)], empty: empty);
 
   /// Tienda: grilla de mercancía (ícono, nombre, precio, cuántos tenés) y
-  /// el detalle a la derecha con cantidad y COMPRAR.
+  /// el detalle a la derecha con cantidad y COMPRAR. Semillas y, según el
+  /// oficio del habitante, materiales (overworld_biomes.md § 9.1.1).
   Widget _shopView(
       SessionController c, BiomeNpcDef n, int tier, PlayerProfile? p,
       {required bool inBiome}) {
     final f = p?.life.farm;
     final gold = p?.credits ?? 0;
-    final goods = [
-      for (final e in ResidentRules.stock(n, tier, home: inBiome).entries)
-        if (kCrops[e.key] case final s?) (s, e.value),
-    ];
+    final goods = <_Good>[];
+    for (final e in ResidentRules.stock(n, tier, home: inBiome).entries) {
+      if (kCrops[e.key] case final s?) {
+        goods.add(_Good(
+          id: s.id,
+          name: s.seedText,
+          color: fishRarityColor(s.rarity),
+          icon: (sz) =>
+              LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: sz),
+          tags: [
+            (_s.t('ui.town.npc.seed'), DsColors.textSecondary),
+            (s.rarity.text.toUpperCase(), fishRarityColor(s.rarity)),
+          ],
+          info: seedInfoLines(context, s),
+          lore: s.lore,
+          extra: [
+            (
+              _s.t('ui.town.npc.grows_in'),
+              _s.t('ui.town.npc.minutes', {'n': (s.growSec / 60).round()})
+            ),
+          ],
+          owned: f?.seedCount(s.id) ?? 0,
+          price: e.value,
+        ));
+      } else if (kSmithMaterials[e.key] case final m?) {
+        goods.add(_Good(
+          id: m.id,
+          name: _s.t(m.textKey),
+          color: DsColors.textTitle,
+          icon: (sz) => LifeIcon(m.id, LifeIconKind.herramienta, size: sz),
+          tags: [
+            (_s.t('ui.town.npc.ware.${m.kind.name}'), DsColors.textSecondary),
+            if (m.tier > 0)
+              (_s.t('ui.town.npc.ware_tier', {'n': m.tier}), DsColors.reward),
+          ],
+          info: [_s.t('ui.town.npc.ware_bag')],
+          lore: '',
+          extra: const [],
+          owned: p?.life.ore(m.id) ?? 0,
+          price: e.value,
+        ));
+      }
+    }
     if (goods.isEmpty) {
       return Text(_s.t('ui.town.npc.sells_nothing_dot'),
           style: DsText.detail(DsColors.textSecondary));
     }
-    final sel = goods.where((g) => g.$1.id == _sel).firstOrNull ?? goods.first;
-    final (s, price) = sel;
+    final s = goods.where((g) => g.id == _sel).firstOrNull ?? goods.first;
+    final price = s.price;
     final maxQ = price <= 0 ? 1 : (gold ~/ price).clamp(1, 99);
     final qty = _qty.clamp(1, maxQ);
-    final owned = f?.seedCount(s.id) ?? 0;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -689,7 +770,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               spacing: LifeItemGrid.gap,
               runSpacing: LifeItemGrid.gap,
               children: [
-                for (final (g, pr) in goods)
+                for (final g in goods)
                   LifeItemCell(
                     key: ValueKey('npc-seed-${g.id}'),
                     selected: g.id == s.id,
@@ -699,26 +780,17 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                     }),
                     data: LifeItemCellData(
                       id: 'npc-seed-cell-${g.id}',
-                      icon: LifeIcon('semilla_${g.id}', LifeIconKind.semilla,
-                          size: LifeItemGrid.iconSize),
-                      border: fishRarityColor(g.rarity),
-                      search: g.seedText,
-                      count: (f?.seedCount(g.id) ?? 0) > 0
-                          ? f!.seedCount(g.id)
-                          : null,
+                      icon: g.icon(LifeItemGrid.iconSize),
+                      border: g.color,
+                      search: g.name,
+                      count: g.owned > 0 ? g.owned : null,
                       detail: LifeItemDetail(
-                        name: g.seedText,
-                        nameColor: fishRarityColor(g.rarity),
-                        tags: [
-                          (_s.t('ui.town.npc.seed'), DsColors.textSecondary),
-                          (
-                            g.rarity.text.toUpperCase(),
-                            fishRarityColor(g.rarity)
-                          ),
-                        ],
+                        name: g.name,
+                        nameColor: g.color,
+                        tags: g.tags,
                         lines: [
-                          ...seedInfoLines(context, g),
-                          _s.t('ui.town.npc.gold_each', {'n': pr}),
+                          ...g.info,
+                          _s.t('ui.town.npc.gold_each', {'n': g.price}),
                         ],
                       ),
                     ),
@@ -737,19 +809,15 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  LifeIcon('semilla_${s.id}', LifeIconKind.semilla, size: 48),
+                  s.icon(48),
                   SizedBox(width: DsSpace.sm),
                   Expanded(
-                    child: Text(s.seedText,
-                        style: DsText.title(fishRarityColor(s.rarity))),
+                    child: Text(s.name, style: DsText.title(s.color)),
                   ),
                 ]),
                 SizedBox(height: DsSpace.sm),
                 Wrap(spacing: DsSpace.xs, children: [
-                  DsTag(_s.t('ui.town.npc.seed'),
-                      color: DsColors.textSecondary),
-                  DsTag(s.rarity.text.toUpperCase(),
-                      color: fishRarityColor(s.rarity)),
+                  for (final (t, col) in s.tags) DsTag(t, color: col),
                 ]),
                 if (s.lore.isNotEmpty) ...[
                   SizedBox(height: DsSpace.sm),
@@ -758,11 +826,8 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                       style: DsText.detail(DsColors.textSecondary)),
                 ],
                 SizedBox(height: DsSpace.sm),
-                _kv(
-                    _s.t('ui.town.npc.grows_in'),
-                    _s.t('ui.town.npc.minutes',
-                        {'n': (s.growSec / 60).round()})),
-                _kv(_s.t('ui.town.npc.owned'), owned.toString()),
+                for (final (k, v) in s.extra) _kv(k, v),
+                _kv(_s.t('ui.town.npc.owned'), s.owned.toString()),
                 _kv(_s.t('ui.town.npc.price'),
                     _s.t('ui.town.npc.gold_each', {'n': price})),
               ],
@@ -795,6 +860,123 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  /// Encargos de forja a Brann (mining_smithing.md § 5.1): grilla de
+  /// bases de arma y el detalle con lingote, rareza, costo y qué agrega
+  /// Brann. Las tiradas (modificadores) no se muestran: salen al azar.
+  Widget _forgeView(SessionController c, PlayerProfile? p, TownState town) {
+    if (p == null) {
+      return Text(_s.t('ui.town.npc.no_profile'),
+          style: DsText.detail(DsColors.textSecondary));
+    }
+    final b = town.resident('brann');
+    final brannHome = b.invited && b.house > 0;
+    final ingots = [for (final o in kBiomeOres.values) o.ingot];
+    final ingot = _comIngot ??
+        ingots.lastWhere((i) => p.life.ore(i) > 0, orElse: () => ingots.first);
+    final smithLv = SmithRules.level(p);
+    final cap = Rarity.values[ResidentRules.commissionRarity(b,
+        fishLv: FishingRules.level(p),
+        farmLv: FarmingRules.level(p),
+        smithLv: smithLv)];
+    final selfCap = SmithCraftRules.maxRarity(smithLv);
+    final rarity = _comRarity.index > cap.index ? cap : _comRarity;
+    final bases =
+        SmithCraftRules.bases(c.engine.catalog.weapons.values, p.level, ingot);
+    String mat(String id) => _s.t(kSmithMaterials[id]!.textKey);
+    final cost = SmithCraftRules.cost(p.level, ingot, rarity, brann: true)!;
+    final self = SmithCraftRules.cost(p.level, ingot, rarity)!;
+    LifeItemCellData cell(WeaponDef w) {
+      final why = SmithCraftRules.cannotForge(p, w, ingot, rarity,
+          maxRarity: cap, brann: true, brannHome: brannHome);
+      final whyText =
+          why == null ? null : _s.t('ui.inventory.smith.why.${why.name}');
+      return LifeItemCellData(
+        id: 'brann-com-${w.id}',
+        icon: PixelIcon(iconKeyForType(w.type),
+            accent: RarityColors.of(rarity), procKey: procKeyForType(w.type)),
+        border: RarityColors.of(rarity),
+        search: '${w.text} ${w.type}',
+        detail: LifeItemDetail(
+          name: w.text,
+          nameColor: RarityColors.of(rarity),
+          hoverTip: true,
+          tags: [
+            (w.type.toUpperCase(), DsColors.textSecondary),
+            (rarity.text.toUpperCase(), RarityColors.of(rarity)),
+          ],
+          lines: [
+            _s.t('ui.town.npc.com.base', {'lv': w.level, 'il': cost.itemLevel}),
+            _s.t('ui.inventory.smith.cost_ingots', {
+              'n': cost.ingots,
+              'ingot': mat(ingot),
+              'have': p.life.ore(ingot)
+            }),
+            if (cost.rares > 0)
+              _s.t('ui.inventory.smith.cost_rare', {
+                'n': cost.rares,
+                'rare': mat(cost.rare),
+                'have': p.life.ore(cost.rare)
+              }),
+            if (cost.recipe) _s.t('ui.inventory.smith.cost_recipe'),
+            _s.t('ui.inventory.smith.cost_gold', {'gold': cost.gold}),
+            _s.t('ui.town.npc.com.time'),
+            _s.t('ui.town.npc.com.cap',
+                {'rarity': cap.text, 'self': selfCap.text}),
+            _s.t('ui.town.npc.com.xp',
+                {'xp': SmithRules.t.i('smithXpCommission') ~/ 2}),
+            _s.t('ui.town.npc.com.extra', {'gold': cost.gold - self.gold}),
+            _s.t('ui.town.npc.com.random'),
+            if (whyText != null) whyText,
+          ],
+          description: _s.t('ui.town.npc.com.special'),
+          actions: [
+            DsButton(_s.t('ui.inventory.smith.go_brann'),
+                key: ValueKey('brann-com-go-${w.id}'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.primary,
+                tooltip: whyText,
+                onPressed: whyText == null
+                    ? () => c.smith(SmithAction(SmithOp.brann, ingot,
+                        base: w.id, rarity: rarity.index))
+                    : null),
+          ],
+        ),
+      );
+    }
+
+    // Ingot and rarity apply to every base: chosen above the grid.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(spacing: DsSpace.md, runSpacing: DsSpace.xs, children: [
+          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            for (final i in ingots)
+              DsButton(mat(i),
+                  key: ValueKey('brann-com-ingot-$i'),
+                  size: DsButtonSize.compact,
+                  selected: i == ingot,
+                  onPressed: () => setState(() => _comIngot = i)),
+          ]),
+          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            for (final r in Rarity.values)
+              DsButton(r.text,
+                  key: ValueKey('brann-com-rarity-${r.name}'),
+                  size: DsButtonSize.compact,
+                  selected: r == rarity,
+                  onPressed: r.index <= cap.index
+                      ? () => setState(() => _comRarity = r)
+                      : null),
+          ]),
+        ]),
+        SizedBox(height: DsSpace.sm),
+        Expanded(
+          child: _grid(
+              [for (final w in bases) cell(w)], _s.t('ui.town.npc.com.empty')),
         ),
       ],
     );
