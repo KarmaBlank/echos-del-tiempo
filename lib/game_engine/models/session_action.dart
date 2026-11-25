@@ -71,6 +71,19 @@ class ForageAction extends SessionAction {
   const ForageAction(this.spot);
 }
 
+/// What a [CozyAction] does (cozy_life.md, protocol 91).
+enum CozyOp { search, raftDeco, compost }
+
+/// `cozy` (protocol 91, cozy_life.md): search the tree at ([x], [y]) of
+/// the biome exterior, buy / toggle raft decoration [id] or prepare the
+/// compost recipe [id].
+class CozyAction extends SessionAction {
+  final CozyOp op;
+  final String? id;
+  final int? x, y;
+  const CozyAction(this.op, {this.id, this.x, this.y});
+}
+
 /// `way` (protocol 73, biome_regions.md § 4): activate the region
 /// waystone [stone] in reach, or travel from it to the active stone [to].
 class WaystoneAction extends SessionAction {

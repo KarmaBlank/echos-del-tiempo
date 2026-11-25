@@ -290,6 +290,7 @@ abstract final class BiomeRegions {
     return t.copyWith(
         waystones: const {},
         wild: const {},
+        discovery: const {},
         daily: WildLootRules.dropLoot(t.daily),
         layoutVersion: BiomeLayout.version);
   }

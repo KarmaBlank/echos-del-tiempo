@@ -47,6 +47,7 @@ import '../../missions/presentation/results_panel.dart';
 import '../../settings/presentation/settings_menu.dart';
 import 'hud/departure_cinematic.dart';
 import 'hud/pause_banner.dart';
+import 'hud/cozy_hud_dim.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
@@ -879,6 +880,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           // § 1); el HUD normal se oculta para que nada se pise.
           if (!controller.editingTown)
             Positioned.fill(
+                child: CozyHudDim(
+              calm: controller.isFishing,
               child: WorldHud(
                 view: view,
                 controller: controller,
@@ -887,7 +890,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 chatFocus: _chatFocus,
                 onChatDone: _chatDone,
               ),
-            ),
+            )),
           if (view.panel case final panel?)
             Positioned.fill(child: _panel(panel, view, controller)),
           if (s.victoryLap) ...[

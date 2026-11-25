@@ -411,7 +411,11 @@ extension _FishingOp on _Op {
         xpMult: xm,
         treeMult: auto ? _at.d('autoPassiveMult') : 1.0);
     if (log) {
-      prof = prof.copyWith(life: prof.life.logCatch(c.species, c.sizeCm));
+      prof = prof.copyWith(
+          life: prof.life
+              .logCatch(c.species, c.sizeCm)
+              // Fishing journal (cozy_life.md § 4): where and when.
+              .logFishFind(c.species, s.place ?? kPueblo, s.town.sky.day));
       // One bait per catch (fishing.md § 14.3), manual or auto.
       final bait = BaitRules.active(prof);
       if (bait != null) prof = BaitRules.consume(prof, bait);

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/music/music_service.dart';
+import '../../../game_engine/rules/cozy_rules.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
@@ -23,7 +24,7 @@ final sessionMusicProvider = Provider.autoDispose<SessionMusic>((ref) {
     ref.watch(musicServiceProvider),
     localId: controller.localId,
     themeOf: (id) => controller.engine.catalog.mission(id)?.theme,
-    fishing: () => controller.mapFishing != null,
+    fishing: () => controller.mapFishing != null || controller.onRaft,
     night: () => SkyRules.isNight(controller.sky),
   );
   final remove = controller.addListener(music.onView);
@@ -113,6 +114,9 @@ abstract final class MusicSelector {
         // Pescando en el pueblo: la variante de ocarina (music.md § 5.2);
         // gana aun de noche.
         if (inTown && fishing) return Music.fishing;
+        // Outside the town, fishing or on a raft: the calm piece
+        // (cozy_life.md § 1).
+        if (!inTown && fishing) return Music.cozy;
         // De noche, la variante calma (§ 5.3).
         // Biome exterior (overworld_biomes.md): the biome's theme.
         if (place != null && Music.biomeZones.contains(zoneForTheme(place))) {
@@ -280,7 +284,11 @@ class SessionMusic {
         t != Music.fishing &&
         (fishing?.call() ?? false);
     music.holdAmbience(
-        quiet ? RegionAmbienceRules.fishingMusicLevel : 1,
+        quiet
+            ? (t == Music.cozy
+                ? CozyRules.musicLevel
+                : RegionAmbienceRules.fishingMusicLevel)
+            : 1,
         seconds: RegionAmbienceRules.fishingDuckSec);
   }
 

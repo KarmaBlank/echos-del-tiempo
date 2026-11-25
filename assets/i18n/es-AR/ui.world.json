@@ -31,6 +31,14 @@
   "ui.world.map.legend.shrine": "Santuario",
   "ui.world.map.legend.waystone": "Piedra de paso",
   "ui.world.map.legend.enemy": "Enemigos",
+  "ui.world.map.legend.portal": "Portal de mazmorra",
+  "ui.world.map.legend.echo": "Portal de Eco",
+  "ui.world.map.legend.mine": "Mina",
+  "ui.world.map.legend.dock": "Muelle",
+  "ui.world.map.legend.resident": "Habitante",
+  "ui.world.map.legend.group_goals": "OBJETIVOS",
+  "ui.world.map.legend.group_optional": "OPCIONAL",
+  "ui.world.map.legend.group_party": "GRUPO",
   "ui.world.map.travel_to_stone": "Viajar a la piedra {n}",
   "ui.world.map.title": "MAPA · {name}",
   "ui.world.map.center": "CENTRAR [C]",
@@ -320,7 +328,7 @@
   "ui.world.way.site_lake": "Lago: {name}",
   "ui.world.way.site_mine": "Boca de mina {n}",
   "ui.world.way.close": "CERRAR",
-  "ui.world.forage.prompt": "[E] Recolectar {name}",
+  "ui.world.forage.prompt": "[Mantené E] Recolectar {name}",
   "ui.world.forage.regrow": "{name}: vuelve a crecer en {n} s",
   "ui.world.forage.seed_bush": "Mata de semillas",
   "ui.world.forage.echo_bloom": "Flor del eco",
@@ -407,5 +415,7 @@
   "ui.world.wild.prompt_done": "Ya lo usaste hoy: volvé mañana",
   "ui.world.raft.prompt_board": "[E] Subir a la balsa",
   "ui.world.raft.prompt_leave": "[E] Bajar a la orilla",
-  "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa"
+  "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa",
+  "ui.world.cozy.search_prompt": "[Mantené E] Buscar en el árbol",
+  "ui.world.cozy.searched": "Ya buscaste en este árbol hoy"
 }

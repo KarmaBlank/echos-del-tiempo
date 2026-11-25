@@ -282,6 +282,23 @@ abstract final class Sfx {
   /// A water drip under a roof.
   static const ambDrip = 'amb.drip';
 
+  // ---- cozy life (cozy_life.md § 1-2): procedural placeholders ----
+  /// Small lapping water by the shore / raft.
+  static const ambWater = 'amb.water';
+
+  /// A short bird call (day).
+  static const ambBird = 'amb.bird';
+
+  /// Crickets (night).
+  static const ambCricket = 'amb.cricket';
+
+  /// Rain on the crops.
+  static const ambRain = 'amb.rain';
+
+  /// Hoe into the soil / watering can.
+  static const farmHoe = 'farm.hoe';
+  static const farmWater = 'farm.water';
+
   // ---- ascensión (docs/specs/ascension.md § 1.1 y § 5) ----
   /// Cinemática: la luz que converge en el personaje.
   static const ascBuild = 'asc.build';

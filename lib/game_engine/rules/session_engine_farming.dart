@@ -396,7 +396,9 @@ extension _FarmingOp on _Op {
       m.tileAt(x, y) == Tile.soil;
 
   void _grantHarvest(SessionPlayer p, FarmPlot pl, int tx, int ty) {
-    final h = FarmingRules.harvest(_rand, p.profile, pl)!;
+    // Scarecrow nearby: a small quality bias (cozy_life.md § 2).
+    final h = FarmingRules.harvest(_rand, p.profile, pl,
+        bias: CozyRules.scarecrowBias(s.town, tx, ty))!;
     final lvl0 = FarmingRules.level(p.profile);
     var prof = FarmingRules.addHarvest(p.profile, h);
     final used = _fa.charXp[p.id] ?? 0;
@@ -859,6 +861,27 @@ extension _FarmingOp on _Op {
         _shiftTown(before);
         _profileChange(p, r.$1);
         say('${p.name} amplió el pueblo al ${side.label.toLowerCase()}.');
+        return true;
+      case TownOp.place when kFarmDecos.containsKey(a.id):
+        final x = a.x, y = a.y;
+        if (!_mayEdit(p) || x == null || y == null) return false;
+        final r = CozyRules.placeDecor(p.profile, s.town, a.id!, x, y);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1);
+        return true;
+      case TownOp.move when TownState.parseDecorId(a.target) != null:
+        final x = a.x, y = a.y;
+        if (!_mayEdit(p) || x == null || y == null) return false;
+        final r = CozyRules.moveDecor(s.town, a.target!, x, y);
+        if (r == null) return false;
+        s.town = r;
+        return true;
+      case TownOp.remove when TownState.parseDecorId(a.target) != null:
+        if (!_mayEdit(p)) return false;
+        final r = CozyRules.removeDecor(s.town, a.target!);
+        if (r == null) return false;
+        s.town = r;
         return true;
       case TownOp.place when a.id == kFaroId:
         final x = a.x, y = a.y;

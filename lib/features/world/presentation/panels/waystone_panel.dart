@@ -4,7 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../hud/full_map.dart';
-import '../hud/world_hud.dart' show minimapLootFor;
+import '../hud/world_hud.dart' show minimapLootFor, overworldOverlayFor;
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../world_strings.dart';
@@ -54,7 +54,17 @@ class WaystonePanel extends StatelessWidget {
     final c = controller;
     final lay = biomeLayout(c.place);
     final here = c.nearWaystone;
-    final all = lay == null ? const <MapPoi>[] : stones(lay);
+    final ow = overworldOverlayFor(view, c);
+    // Only the activated stones and those in discovered ground
+    // (biome_exploration.md § 11.4); the rest stay hidden in the fog.
+    final all = [
+      if (lay != null)
+        for (final p in stones(lay))
+          if (c.waystoneActive(p.id) ||
+              ow == null ||
+              ow.knownTile(p.tx, p.ty))
+            p
+    ];
     final active = {
       for (final p in all)
         if (c.waystoneActive(p.id)) p.id
@@ -102,6 +112,7 @@ class WaystonePanel extends StatelessWidget {
       localY: c.local.y,
       time: view.session.time,
       loot: minimapLootFor(view, c),
+      overworld: ow,
       waystones: [for (final p in all) (p, active.contains(p.id))],
       destinations: [
         for (final p in all)

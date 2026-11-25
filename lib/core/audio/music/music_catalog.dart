@@ -5,6 +5,7 @@ import 'tracks/battle_variations.dart';
 import 'tracks/secret_boss_theme.dart';
 import 'tracks/boss_theme.dart';
 import 'tracks/final_boss_theme.dart';
+import 'tracks/cozy_theme.dart';
 import 'tracks/fishing_theme.dart';
 import 'tracks/jingles.dart';
 import 'tracks/overworld_theme.dart';
@@ -29,6 +30,10 @@ abstract final class Music {
 
   /// Pueblo mientras el jugador local pesca (variante de ocarina).
   static const fishing = 'fishing';
+
+  /// Fishing or on a raft outside the town (cozy_life.md § 1): the calm
+  /// plucked piece.
+  static const cozy = 'cozy';
 
   /// Pueblo de noche (variante calma, music.md § 5.3).
   static const townNight = 'townNight';
@@ -82,6 +87,7 @@ final Map<String, Song> kMusicCatalog = {
     titleTheme(),
     townTheme(),
     fishingTheme(),
+    cozyTheme(),
     townNightTheme(),
     overworldTheme(),
     zone1Pradera(),

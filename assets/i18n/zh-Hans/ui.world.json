@@ -31,6 +31,14 @@
   "ui.world.map.legend.shrine": "",
   "ui.world.map.legend.waystone": "",
   "ui.world.map.legend.enemy": "",
+  "ui.world.map.legend.portal": "地牢传送门",
+  "ui.world.map.legend.echo": "回响传送门",
+  "ui.world.map.legend.mine": "矿洞",
+  "ui.world.map.legend.dock": "码头",
+  "ui.world.map.legend.resident": "居民",
+  "ui.world.map.legend.group_goals": "目标",
+  "ui.world.map.legend.group_optional": "可选",
+  "ui.world.map.legend.group_party": "队伍",
   "ui.world.map.travel_to_stone": "",
   "ui.world.map.title": "",
   "ui.world.map.center": "",
@@ -393,7 +401,7 @@
     "status": "draft"
   },
   "ui.world.forage.prompt": {
-    "text": "[E] 采集{name}",
+    "text": "[按住 E] 采集 {name}",
     "status": "draft"
   },
   "ui.world.forage.regrow": {
@@ -650,5 +658,13 @@
   },
   "ui.world.raft.prompt_board": "[E] 登上木筏",
   "ui.world.raft.prompt_leave": "[E] 上岸",
-  "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼"
+  "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼",
+  "ui.world.cozy.search_prompt": {
+    "text": "[按住 E] 搜索树木",
+    "status": "draft"
+  },
+  "ui.world.cozy.searched": {
+    "text": "今天已经搜索过这棵树",
+    "status": "draft"
+  }
 }

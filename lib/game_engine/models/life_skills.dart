@@ -1,4 +1,5 @@
 import '../data/bait_catalog.dart';
+import '../data/cozy_catalog.dart' show kRaftDecos;
 import '../data/fishing_catalog.dart';
 import '../data/life_tree_catalog.dart';
 import '../data/smithing_catalog.dart' show kSmithMaterials;
@@ -35,7 +36,17 @@ class LifeSkills {
     String? bait,
     Set<String> claimed = const {},
     PlayerStall? stall,
+    Set<String> raftDecos = const {},
+    Set<String> raftOn = const {},
+    Map<String, OreFind> fishFinds = const {},
   })  : stall = stall ?? PlayerStall.empty,
+        raftDecos = Set.unmodifiable(raftDecos.where(kRaftDecos.containsKey)),
+        raftOn = Set.unmodifiable(raftOn.where(
+            (d) => kRaftDecos.containsKey(d) && raftDecos.contains(d))),
+        fishFinds = Map.unmodifiable({
+          for (final e in fishFinds.entries)
+            if (kFish.containsKey(e.key)) e.key: e.value,
+        }),
         claimed = Set.unmodifiable(claimed),
         oreLog = Map.unmodifiable({
           for (final e in oreLog.entries)
@@ -159,6 +170,26 @@ class LifeSkills {
 
   bool discovered(String species) => log.containsKey(species);
 
+  /// Raft decorations bought (cozy_life.md § 1; JSON `rd`) and the ones
+  /// shown on the raft (`ro`, a subset).
+  final Set<String> raftDecos;
+  final Set<String> raftOn;
+
+  /// Fishing journal (cozy_life.md § 4): species → first catch (world
+  /// day, place id) and how many were logged. JSON `ff`.
+  final Map<String, OreFind> fishFinds;
+
+  /// [fishFinds] with one more [species] caught at [place] on [day].
+  LifeSkills logFishFind(String species, String place, int day) {
+    final f = fishFinds[species];
+    return copyWith(fishFinds: {
+      ...fishFinds,
+      species: f == null
+          ? OreFind(day, place, 1)
+          : OreFind(f.day, f.source, f.count + 1),
+    });
+  }
+
   /// Baits (fishing.md § 14): id → count, and the one picked on the
   /// CEBO slot (`null` = the best owned).
   final Map<String, int> baits;
@@ -191,8 +222,14 @@ class LifeSkills {
     String? bait,
     Set<String>? claimed,
     PlayerStall? stall,
+    Set<String>? raftDecos,
+    Set<String>? raftOn,
+    Map<String, OreFind>? fishFinds,
   }) =>
       LifeSkills(
+          raftDecos: raftDecos ?? this.raftDecos,
+          raftOn: raftOn ?? this.raftOn,
+          fishFinds: fishFinds ?? this.fishFinds,
           stall: stall ?? this.stall,
           claimed: claimed ?? this.claimed,
           fishXp: fishXp ?? this.fishXp,
@@ -239,6 +276,10 @@ class LifeSkills {
         if (bait != null) 'bs': bait,
         if (claimed.isNotEmpty) 'lc': [...claimed]..sort(),
         if (!stall.isEmpty) 'ps': stall.toJson(),
+        if (raftDecos.isNotEmpty) 'rd': [...raftDecos]..sort(),
+        if (raftOn.isNotEmpty) 'ro': [...raftOn]..sort(),
+        if (fishFinds.isNotEmpty)
+          'ff': {for (final e in fishFinds.entries) e.key: e.value.toJson()},
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -308,6 +349,18 @@ class LifeSkills {
           ? {for (final x in raw['lc'] as List) if (x is String) x}
           : const {},
       stall: PlayerStall.fromJson(raw['ps']),
+      raftDecos: raw['rd'] is List
+          ? {for (final x in raw['rd'] as List) if (x is String) x}
+          : const {},
+      raftOn: raw['ro'] is List
+          ? {for (final x in raw['ro'] as List) if (x is String) x}
+          : const {},
+      fishFinds: raw['ff'] is Map
+          ? {
+              for (final e in (raw['ff'] as Map).entries)
+                if (OreFind.fromJson(e.value) case final f?) '${e.key}': f
+            }
+          : const {},
     );
   }
 
@@ -337,6 +390,12 @@ class LifeSkills {
       oreLog.entries.every((e) => other.oreLog[e.key] == e.value) &&
       other.bait == bait &&
       other.stall == stall &&
+      other.raftDecos.length == raftDecos.length &&
+      other.raftDecos.containsAll(raftDecos) &&
+      other.raftOn.length == raftOn.length &&
+      other.raftOn.containsAll(raftOn) &&
+      other.fishFinds.length == fishFinds.length &&
+      fishFinds.entries.every((e) => other.fishFinds[e.key] == e.value) &&
       other.baits.length == baits.length &&
       baits.entries.every((e) => other.baits[e.key] == e.value);
 

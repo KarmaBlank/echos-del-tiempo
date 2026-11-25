@@ -317,6 +317,9 @@ abstract final class TownRules {
     if (s.lights.any((l) => l != ignore && l == (x, y))) {
       return 'Ya hay un faro';
     }
+    if (ignore == null && s.decor.any((d) => d.$2 == x && d.$3 == y)) {
+      return 'Ya hay una decoración';
+    }
     final tile = TownPlan.of(s).at(x + ox, y + oy);
     if (tile != Tile.grass && tile != Tile.path) return 'Ahí no entra';
     return null;
