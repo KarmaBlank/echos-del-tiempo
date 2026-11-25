@@ -50,13 +50,15 @@ void main() {
             of: find.byKey(ValueKey('tab-badge-${CharacterTab.oficios.index}')),
             matching: find.text('3')),
         findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('life-node-p_a1')));
+    await tester.ensureVisible(find.byKey(const ValueKey('life-node-fish_a1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('life-node-fish_a1')));
     await tester.pump();
     expect(find.text('MUÑECA FIRME'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('life-take')));
     await tester.pump(const Duration(milliseconds: 100));
     var me = c.view!.me!.profile;
-    expect(LifeTreeRules.has(me, LifeSkillKind.pesca, 'p_a1'), isTrue);
+    expect(LifeTreeRules.has(me, LifeSkillKind.pesca, 'fish_a1'), isTrue);
     expect(LifeTreeRules.free(me, LifeSkillKind.pesca), 2);
     await tester.tap(find.byKey(const ValueKey('life-reset')));
     await tester.pump(const Duration(milliseconds: 100));

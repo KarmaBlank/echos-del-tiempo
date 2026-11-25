@@ -14,7 +14,7 @@ import 'session_test_helpers.dart';
 /// aventurero, pescador nativo, tamaño en órdenes y topes guardados.
 void main() {
   test('bestiario, Herrería y topes del día viajan en JSON', () {
-    final life = LifeSkills(smithXp: 500, smithTree: const ['h_a1'])
+    final life = LifeSkills(smithXp: 500, smithTree: const ['smith_a1'])
         .logCatch(kForestFish.first, 30)
         .logCatch(kForestFish.first, 20);
     expect(life.log[kForestFish.first], 30);
@@ -28,8 +28,8 @@ void main() {
     var p = newProfile('Ana', 'guerrero');
     p = SmithRules.gain(p, 5000);
     expect(SmithRules.level(p), greaterThan(1));
-    p = LifeTreeRules.take(p, LifeSkillKind.herreria, 'h_a1')!;
-    p = LifeTreeRules.take(p, LifeSkillKind.herreria, 'h_b1')!;
+    p = LifeTreeRules.take(p, LifeSkillKind.herreria, 'smith_a1')!;
+    p = LifeTreeRules.take(p, LifeSkillKind.herreria, 'smith_d1')!;
     expect(SmithRules.forgeDiscount(p), greaterThan(0));
     expect(LifeTreeRules.power(p, LifeFx.hp), greaterThan(0));
     expect(ResidentRules.forgeDiscount(p, const TownState()),

@@ -1631,10 +1631,13 @@ Map<String, String> _lifeTreeLabels() => {
       'smithXpCommission': 'Herrería: XP por encargo de forja',
       'smithXpCondense': 'Herrería: XP por condensado',
       'smithForgeCap': 'Herrería: descuento máximo de forja',
+      'tierLevelStep': 'Niveles de oficio por escalón',
       for (final e in kLifeTrees.entries)
         for (final n in e.value) ...{
-          n.id: '${e.key.label}: ${n.name}',
-          '${n.id}_2': '${e.key.label}: ${n.name} (2.º)',
+          for (final f in n.effects.entries)
+            f.value: '${e.key.label}: ${n.name} (${f.key})',
+          for (final g in n.grants.entries)
+            g.value: '${e.key.label}: ${n.name} (entrega ${g.key})',
         },
     };
 
