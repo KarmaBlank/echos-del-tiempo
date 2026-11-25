@@ -44,7 +44,7 @@ piedra de paso, § 5) y un tipo:
 |---|---|
 | `forest` | Bosque denso (árboles casi pegados), senderos que serpentean (A* con mucho ruido), **recovecos** (claros chicos al costado). |
 | `cavern` | Gruta chica: piso bajo techo, anillo de roca, con lago (`cavernLakeChance`) o seca; algunas con haces de luz (§ 4.2). |
-| `giantLake` | Lago gigante (radio `giantLakeR*`), muelles y siempre un muelle de balsas (fishing.md § 15); ocasional (`giantLakeChance`, a lo sumo 1). |
+| `giantLake` | Lago gigante (radio `giantLakeR*`: 16–20 × 10–12, unos 32–42 × 19–26 tiles de agua; antes ~24×14), muelles y siempre un muelle de balsas (fishing.md § 15); ocasional (`giantLakeChance`, a lo sumo 1). Es más grande que una celda de sección, así que se ubica **antes** que las demás secciones: el centro más lejano cuyo rectángulo (radios × 1,25 + 3, más 2 de margen) quede todo en pasto libre y fuera del frente. Las secciones cuyo propio rectángulo tocaría ese lago se descartan, y la orilla (todo tile pegado al agua) queda reservada y transitable, así ningún árbol, roca o gruta corta el acceso a los muelles. |
 | `shrine` | Fuente especial (tile `F`) o santuario (tile `H`): una vez por día da una bendición (§ 3.4). |
 | `meadow` | Pradera abierta con matas. |
 
@@ -125,7 +125,7 @@ mundo (world_events.md § 3.6), no se duplica nada:
 - Cofres y santuarios (§ 3.3–3.4) se rellenan cada día.
 
 ## 7. Versión de plano (migración)
-- `BiomeLayout.version` (hoy 2). `TownState.layoutVersion` (JSON `lv`,
+- `BiomeLayout.version` (hoy 3: v0.49.3 agrandó el lago gigante). `TownState.layoutVersion` (JSON `lv`,
   0 si falta).
 - En `setWorld`, `BiomeRegions.migrate`: si `lv` ≠ versión se borran las
   piedras activadas (`town.ws`; la de la entrada siempre está activa) y
