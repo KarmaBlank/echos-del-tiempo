@@ -61,6 +61,28 @@ void main() {
     expect(ReflectionRules.anchor(40, (3 - reach - 1) * 16 + 4, at), isNull);
   });
 
+  test('actor fade: 1 at the edge, smooth and monotonic down to 0', () {
+    final far = r.d('reflActorReach') + r.d('reflActorFadeTiles');
+    expect(ReflectionRules.actorFade(0), 1);
+    expect(ReflectionRules.actorFade(far), 0);
+    expect(ReflectionRules.actorFade(far + 3), 0);
+    var prev = 1.0;
+    for (var g = 0.0; g <= far + 0.5; g += 1 / 16) {
+      final a = ReflectionRules.actorFade(g);
+      expect(a, lessThanOrEqualTo(prev));
+      expect(prev - a, lessThan(0.15), reason: 'no pop at gap $g');
+      prev = a;
+    }
+    // Continuous foot position: walking 1 px never jumps the opacity.
+    WaterKind at(int x, int y) => y >= 3 ? WaterKind.clear : WaterKind.none;
+    double fadeAt(double y) => ReflectionRules.actorLine(40, y, at)?.$2 ?? 0;
+    for (var y = 0.0; y < 47; y += 1) {
+      expect((fadeAt(y + 1) - fadeAt(y)).abs(), lessThan(0.15));
+      expect(fadeAt(y + 1), greaterThanOrEqualTo(fadeAt(y)));
+    }
+    expect(fadeAt(48), 1);
+  });
+
   test('actor cap keeps the nearest to the view center', () {
     final all = <ReflectionCandidate>[
       for (var i = 0; i < 30; i++) (x: i * 10.0, y: 0, moving: false),
