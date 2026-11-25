@@ -156,6 +156,9 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - Al aire libre con cielo (`WeatherRules.hasSky`) y de día: sombras
   suaves que derivan despacio. Más gruesas con lluvia y tormenta
   (`LightShaftRules.cloudCover`); nada de noche.
+- v0.48.3: con cielo despejado la cobertura es 0.5 y cada disco llega a
+  alfa 0.18 × cobertura (antes 0.055: no se veían). El centro de una nube
+  oscurece ~25% en un día despejado.
 
 ### 7.2 Haces de luz
 - Interiores: grutas de lago, cuevas cortas, exteriores sin cielo,
