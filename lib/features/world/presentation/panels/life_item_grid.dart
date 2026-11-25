@@ -17,7 +17,16 @@ class LifeItemDetail {
     this.actions = const [],
     this.compare,
     this.hoverTip = false,
+    this.chips = const [],
+    this.info,
   });
+
+  /// Compact chips (rewards, record): short label, color and the long
+  /// text as tooltip (quest_audit.md § 8).
+  final List<({String label, Color color, String? tip})> chips;
+
+  /// Flavor or explanation behind a "?" chip next to the name.
+  final String? info;
 
   /// Cambios contra la equipada del mismo tipo (texto, mejora); `null` =
   /// no aplica, vacío = es la equipada o igual.
@@ -234,6 +243,13 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
               key: const ValueKey('life-detail-name'),
               style: DsText.subtitle(d.nameColor)),
         ),
+        if (d.info case final i?) ...[
+          SizedBox(width: DsSpace.xs),
+          DsChip('?',
+              key: const ValueKey('life-detail-info'),
+              color: DsColors.textSecondary,
+              tip: i),
+        ],
       ]),
       if (d.tags.isNotEmpty) ...[
         SizedBox(height: DsSpace.xs),
@@ -243,6 +259,7 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
       ],
       SizedBox(height: DsSpace.xs),
       for (final l in d.lines) Text(l, style: DsText.body()),
+      ...lifeChips(d),
       ...lifeCompareLines(context, d),
       if (d.description != null) ...[
         SizedBox(height: DsSpace.xs),
@@ -256,6 +273,21 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
   return DsDetailPane(
       key: const ValueKey('life-detail'), body: body, actions: actions);
 }
+
+/// The chips row of a detail (empty when it has none).
+List<Widget> lifeChips(LifeItemDetail d) => d.chips.isEmpty
+    ? const []
+    : [
+        SizedBox(height: DsSpace.xs),
+        Wrap(
+          key: const ValueKey('life-detail-chips'),
+          spacing: DsSpace.xs,
+          runSpacing: DsSpace.xs,
+          children: [
+            for (final c in d.chips) DsChip(c.label, color: c.color, tip: c.tip)
+          ],
+        ),
+      ];
 
 /// "vs equipped" lines of a detail (empty when not applicable).
 List<Widget> lifeCompareLines(BuildContext context, LifeItemDetail d) {
@@ -276,6 +308,7 @@ Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) => DsTooltipCard(
       tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
       children: [
         for (final l in d.lines) Text(l, style: DsText.body()),
+        ...lifeChips(d),
         ...lifeCompareLines(context, d),
       ],
     );

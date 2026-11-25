@@ -1,4 +1,5 @@
 import '../../../inventory/domain/item_names.dart';
+import '../../domain/quest_text.dart';
 import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -9,6 +10,7 @@ import '../../../../game_engine/rules/renown_rules.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/cooking_catalog.dart' show kMeals;
 import '../../../../game_engine/data/fishing_catalog.dart';
+import '../../../../game_engine/data/smithing_catalog.dart' show kSmithMaterials;
 import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/session_action.dart' show TownOp;
@@ -32,12 +34,13 @@ import 'seed_text.dart';
 import '../world_strings.dart';
 
 /// Nombre de un producto, cultivo o pez.
-String residentItemName(String id) =>
-    kMeals[id]?.text ?? kFish[id]?.text ?? kCrops[id]?.text ?? id;
+String residentItemName(String id) => questItemName(id);
 
 /// Ícono de un producto, cultivo o pez.
 Widget residentItemIcon(String id) => kMeals.containsKey(id)
     ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
+    : kSmithMaterials.containsKey(id)
+        ? LifeIcon(id, LifeIconKind.herramienta, size: 32)
     : kFish.containsKey(id)
         ? LifeIcon(id, LifeIconKind.pescado, size: 32)
         : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
@@ -82,8 +85,10 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
   final done = i < r.quest, now = i == r.quest;
   final have = p == null ? 0 : ResidentRules.questHave(p, q);
   final what = switch (q.kind) {
-    QuestKind.mazmorra => s.t('ui.town.npc.quest_zone', {'zone': q.target}),
-    QuestKind.elite => s.t('ui.town.npc.quest_elite', {'zone': q.target}),
+    QuestKind.mazmorra =>
+      s.t('ui.town.npc.quest_zone', {'zone': questZoneName(q)}),
+    QuestKind.elite =>
+      s.t('ui.town.npc.quest_elite', {'zone': questZoneName(q)}),
     _ => '${q.n} × ${residentItemName(q.target)}',
   };
   final relic = kResidentRelics[q.reward];
@@ -105,17 +110,40 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
       name: s.t('ui.town.npc.quest_name', {'name': n.name, 'n': i + 1}),
       nameColor: DsColors.textTitle,
       tags: [
-        (q.kind.label.toUpperCase(), DsColors.textSecondary),
+        (questKindText(q.kind).toUpperCase(), DsColors.textSecondary),
         if (done) (s.t('ui.town.npc.fulfilled'), DsColors.success),
       ],
+      // Essential: what and how far; rewards as chips, flavor behind "?"
+      // (quest_audit.md § 8).
       lines: [
         what,
-        if (now && q.kind.delivered) s.t('ui.town.npc.have', {'n': have}),
-        if (now) s.t('ui.town.npc.progress', {'n': r.progress, 'goal': q.n}),
-        s.t('ui.town.npc.quest_reward', {'gold': q.gold, 'rep': q.rep}),
-        if (relic != null) s.t('ui.town.npc.unique_item', {'name': relic.name}),
+        if (now && q.kind.delivered)
+          s.t('ui.town.npc.have_of', {'have': have, 'need': q.n - r.progress})
+        else if (now)
+          s.t('ui.town.npc.progress', {'n': r.progress, 'goal': q.n}),
       ],
-      description: q.text,
+      chips: [
+        (
+          label: s.t('ui.town.chip.gold', {'n': q.gold}),
+          color: DsColors.reward,
+          tip: s.t('ui.town.npc.quest_reward', {'gold': q.gold, 'rep': q.rep}),
+        ),
+        (
+          label: s.t('ui.town.chip.rep', {'n': q.rep}),
+          color: DsColors.success,
+          tip: s.t('ui.town.chip.rep_tip', {'name': n.name}),
+        ),
+        if (relic != null)
+          (
+            label: relicName(relic),
+            color: DsColors.warning,
+            tip: [
+              s.t('ui.town.npc.unique_item', {'name': relicName(relic)}),
+              relicLore(relic),
+            ].join('\n'),
+          ),
+      ],
+      info: q.text.isEmpty ? null : questFlavor(n.id, i, q),
       actions: [
         if (now) trackButton(c, p, n.id, QuestTrackKind.encargo),
         if (now && q.kind.delivered)
@@ -159,7 +187,7 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
                 ? s.t('ui.town.npc.from_cm', {'cm': cm})
                 : meal
                     ? mealTierText(q).toUpperCase()
-                    : q.label.toUpperCase(),
+                    : cropQualityText(q).toUpperCase(),
             DsColors.textSecondary
           ),
       ],
@@ -172,17 +200,45 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
                 : s.t('ui.town.npc.order_line_q', {
                     'n': r.orderN,
                     'item': residentItemName(o),
-                    'q': meal ? mealTierText(q) : q.label
+                    'q': meal ? mealTierText(q) : cropQualityText(q)
                   }),
-        if (fish && cm > 0)
-          s.t('ui.town.npc.record', {'cm': p?.life.log[o] ?? 0}),
-        s.t('ui.town.npc.have', {'n': have}),
-        s.t('ui.town.npc.order_xp', {'n': w.xp}),
-        s.t('ui.town.npc.order_gold', {'gold': w.gold, 'rep': w.rep}),
-        if (w.point) s.t('ui.town.npc.order_point'),
-        s.t('ui.town.npc.delivered', {'n': r.orders}),
+        s.t('ui.town.npc.have_of', {'have': have, 'need': r.orderN}),
       ],
-      description: s.t('ui.town.npc.order_desc'),
+      // Rewards as chips; the long text in their tooltips
+      // (quest_audit.md § 8).
+      chips: [
+        (
+          label: s.t('ui.town.chip.xp', {'n': w.xp}),
+          color: DsColors.mp,
+          tip: s.t('ui.town.npc.order_xp', {'n': w.xp}),
+        ),
+        (
+          label: s.t('ui.town.chip.gold', {'n': w.gold}),
+          color: DsColors.reward,
+          tip: s.t('ui.town.npc.order_gold', {'gold': w.gold, 'rep': w.rep}),
+        ),
+        (
+          label: s.t('ui.town.chip.rep', {'n': w.rep}),
+          color: DsColors.success,
+          tip: s.t('ui.town.chip.rep_tip', {'name': n.name}),
+        ),
+        if (w.point)
+          (
+            label: s.t('ui.town.chip.point'),
+            color: DsColors.warning,
+            tip: s.t('ui.town.npc.order_point'),
+          ),
+        if (fish && cm > 0)
+          (
+            label: s.t('ui.town.chip.record', {'cm': p?.life.log[o] ?? 0}),
+            color: DsColors.textSecondary,
+            tip: s.t('ui.town.npc.record', {'cm': p?.life.log[o] ?? 0}),
+          ),
+      ],
+      info: [
+        s.t('ui.town.npc.order_desc'),
+        s.t('ui.town.npc.delivered', {'n': r.orders}),
+      ].join('\n'),
       actions: [
         trackButton(c, p, n.id, QuestTrackKind.orden),
         DsButton(s.t('ui.town.npc.deliver_order'),
@@ -271,7 +327,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           r.progress == 0 &&
           !QuestTrackRules.questSeen(p, r) &&
           q.text.isNotEmpty)
-        q.text
+        questFlavor(n.id, r.quest, q)
       else
         NpcTalk.greet(n.id, extra: [
           ...?npcTalk(n.id)?.ambient,
@@ -282,7 +338,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         ]),
       if (fresh && r.request != null)
         _s.t('ui.town.npc.line_request',
-            {'what': r.request!.label.toLowerCase()}),
+            {'what': requestText(r.request!).toLowerCase()}),
       if (fresh && r.order != null)
         _s.t('ui.town.npc.line_order',
             {'n': r.orderN, 'item': residentItemName(r.order!)}),
@@ -791,10 +847,10 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           icon: const LifeIcon('cofre_oficio', LifeIconKind.herramienta,
               size: 32),
           border: r.unhappy ? DsColors.danger : DsColors.selected,
-          search: req.label,
+          search: requestText(req),
           caption: _s.t('ui.town.npc.request'),
           detail: LifeItemDetail(
-            name: req.label,
+            name: requestText(req),
             nameColor: DsColors.textTitle,
             tags: [
               (_s.t('ui.town.npc.request'), DsColors.selected),
@@ -962,14 +1018,14 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           icon: const LifeIcon('cofre_oficio', LifeIconKind.herramienta,
               size: 32),
           border: DsColors.reward,
-          search: relic.name,
+          search: relicName(relic),
           caption: _s.t('ui.town.npc.unique'),
           detail: LifeItemDetail(
-            name: relic.name,
+            name: relicName(relic),
             nameColor: DsColors.reward,
             tags: [(_s.t('ui.town.npc.unique_tag'), DsColors.reward)],
             lines: [_s.t('ui.town.npc.relic_line')],
-            description: relic.lore,
+            description: relicLore(relic),
           ),
         ),
     ];

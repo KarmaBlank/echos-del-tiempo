@@ -1,6 +1,8 @@
 import '../data/biomes_catalog.dart';
+import '../data/cooking_catalog.dart' show kMeals;
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/smithing_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'resident_rules.dart';
@@ -61,8 +63,14 @@ abstract final class QuestTrackRules {
 
   static String trackKey(QuestTrackKind k, String npc) => '${k.name}:$npc';
 
+  /// es-AR name of what an order asks for (host notices; the UI shows
+  /// `questItemName`). Meals and ingots too (quest_audit.md § 7).
   static String itemName(String id) =>
-      kFish[id]?.name ?? kCrops[id]?.name ?? id;
+      kMeals[id]?.name ??
+      kFish[id]?.name ??
+      kCrops[id]?.name ??
+      kSmithMaterials[id]?.name ??
+      id;
 
   /// Huella de "lo que tiene para decir" un habitante: cambia con un paso
   /// nuevo de su cadena, un pedido nuevo o una orden nueva.

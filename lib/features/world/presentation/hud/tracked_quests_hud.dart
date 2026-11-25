@@ -6,16 +6,29 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
+import '../../../../game_engine/rules/resident_rules.dart';
+import '../../domain/quest_text.dart';
 import '../world_strings.dart';
 
 /// Texto de avance de un encargo: "Tenés 1/2 Helecho dulce" o su título.
 String questProgressText(Strings s, ActiveQuest a) => a.item == null
-    ? a.title
+    ? activeQuestTitle(a)
     : s.t('ui.world.quests.progress', {
         'have': a.have,
         'need': a.need,
-        'item': QuestTrackRules.itemName(a.item!)
+        'item': questItemName(a.item!)
       });
+
+/// Short title of [a] in the active language (the engine's is es-AR).
+String activeQuestTitle(ActiveQuest a) => a.item != null
+    ? '${a.need} × ${questItemName(a.item!)}'
+    : [
+        for (final r in ResidentRequest.values)
+          if (r.label == a.title) requestText(r),
+        for (final k in QuestKind.values)
+          if (k.label == a.title) questKindText(k),
+        a.title,
+      ].first;
 
 /// Encargos seguidos en el HUD (roles.md § 8.2): compacto, debajo del
 /// reloj; nombre y avance de cada uno. Cuando sube lo que tenés de algo
@@ -64,7 +77,7 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
       final before = _have[a.key];
       if (a.item != null && before != null && a.have > before) {
         _notes.add(context.t('ui.world.quests.progress_for', {
-          'who': a.who,
+          'who': activeQuestWho(a),
           'have': a.have.clamp(0, a.need),
           'need': a.need
         }));
@@ -111,9 +124,7 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
                   color: DsColors.surface,
                   border: Border.all(color: DsColors.reward)),
               child: Text(t,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DsText.detail(DsColors.reward)),
+                  softWrap: true, style: DsText.detail(DsColors.reward)),
             ),
           if (tracked.isNotEmpty)
             MouseRegion(
@@ -131,18 +142,26 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
                     children: [
                       Text(context.t('ui.world.hud.journal'),
                           style: DsText.detail(DsColors.textSecondary)),
+                      // One row per quest: who and a short count; the
+                      // whole line in its tooltip (quest_audit.md § 8).
                       for (final a in tracked) ...[
                         SizedBox(height: DsSpace.xs),
-                        Text(a.who,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DsText.detail(a.ready
-                                ? DsColors.success
-                                : DsColors.textTitle)),
-                        Text(questProgressText(worldStrings(context), a),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DsText.detail(DsColors.textSecondary)),
+                        Text.rich(
+                          TextSpan(children: [
+                            TextSpan(
+                                text: activeQuestWho(a),
+                                style: DsText.detail(a.ready
+                                    ? DsColors.success
+                                    : DsColors.textTitle)),
+                            TextSpan(
+                                text: a.item == null
+                                    ? ''
+                                    : '  ${a.have.clamp(0, a.need)}/${a.need}',
+                                style: DsText.detail(DsColors.textSecondary)),
+                          ]),
+                          key: ValueKey('hud-tracked-${a.key}'),
+                          softWrap: true,
+                        ).tip(questProgressText(worldStrings(context), a)),
                       ],
                     ],
                   ),
