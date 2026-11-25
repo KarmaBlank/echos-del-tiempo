@@ -249,3 +249,5 @@ puntos de eventos alcanzables; variantes de lago con agua brillante
 válida; activar y viajar entre piedras; rebrote fuera de la vista;
 recolección de estación; haces solo donde hay aberturas.
 `test/features/world/region_light_perf_test.dart`: rendimiento.
+
+- **Sombras de nubes pixeladas (v0.48.4):** cada nube es una grilla de celdas de 8 px con borde irregular (ruido que viaja con la nube) y 4 escalones de alfa hacia el borde; se dibujan en lotes de puntos, una llamada por escalón.
