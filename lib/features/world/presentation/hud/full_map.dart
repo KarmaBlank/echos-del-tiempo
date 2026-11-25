@@ -13,6 +13,8 @@ import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/fog_of_war.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/rules/map_discovery_rules.dart'
+    show OverworldMarkKind;
 import 'map_hover_tip.dart';
 import 'minimap.dart';
 import '../world_strings.dart';
@@ -155,6 +157,38 @@ class FullMap extends StatefulWidget {
       ]
     ),
   ];
+
+  /// The overworld legend trimmed to what [ow] actually draws: goals
+  /// always, optional kinds only once one is discovered, allies only with
+  /// company. Empty groups are dropped.
+  static List<(String, List<(String, MapMark, bool)>)> overworldLegendFor(
+      OverworldOverlay ow,
+      {bool allies = true}) {
+    bool drawn(MapMark m) {
+      if (m == MapMark.me) return true;
+      if (m == MapMark.ally) return allies;
+      return ow.marks.any((k) =>
+          _markOf(k.kind) == m && (k.goal || ow.knownTile(k.x, k.y)));
+    }
+
+    return [
+      for (final (g, items) in overworldLegendMarks)
+        if (items.where((i) => drawn(i.$2)).toList() case final keep
+            when keep.isNotEmpty)
+          (g, keep),
+    ];
+  }
+
+  static MapMark _markOf(OverworldMarkKind k) => switch (k) {
+        OverworldMarkKind.portal => MapMark.goal,
+        OverworldMarkKind.echo => MapMark.echo,
+        OverworldMarkKind.waystone => MapMark.waystone,
+        OverworldMarkKind.shrine => MapMark.shrine,
+        OverworldMarkKind.chest => MapMark.chest,
+        OverworldMarkKind.mine => MapMark.mine,
+        OverworldMarkKind.dock => MapMark.dock,
+        OverworldMarkKind.resident => MapMark.resident,
+      };
 
   /// Every label key of the legend of [mode].
   static List<String> legendKeys(FullMapMode mode) => switch (mode) {
@@ -564,15 +598,17 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
           const SizedBox(height: 8),
           Wrap(
             key: const ValueKey('full-map-legend'),
-            spacing: 16,
-            runSpacing: 4,
+            spacing: 24,
+            runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (widget.mode == FullMapMode.dungeon)
                 for (final (label, color) in FullMap.legend)
                   _LegendItem(label: context.t(label), color: color)
               else
-                for (final (group, items) in FullMap.overworldLegendMarks)
+                for (final (group, items) in FullMap.overworldLegendFor(
+                    widget.overworld!,
+                    allies: widget.session.players.length > 1))
                   Wrap(
                     key: ValueKey('full-map-legend-$group'),
                     spacing: 12,
@@ -580,10 +616,9 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(retroText(context.t(group)),
-                          style: TextStyle(
-                              color: group.endsWith('goals')
-                                  ? DsColors.reward
-                                  : DsColors.textSecondary)),
+                          style: DsText.subtitle(group.endsWith('goals')
+                              ? DsColors.reward
+                              : DsColors.textSecondary)),
                       for (final (label, mark, goal) in items)
                         _LegendItem(
                             label: context.t(label),
@@ -597,9 +632,9 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                 Text(
                     key: const ValueKey('full-map-choose-hint'),
                     retroText(context.t('ui.world.map.choose_hint')),
-                    style: const TextStyle(color: FullMap.waystoneColor)),
+                    style: DsText.subtitle(FullMap.waystoneColor)),
               Text(retroText(context.t('ui.world.map.controls')),
-                  style: const TextStyle(color: ProtoColors.dim)),
+                  style: DsText.subtitle(ProtoColors.dim)),
             ],
           ),
         ],
@@ -638,7 +673,7 @@ class _LegendItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = RetroType.width(context, 8);
+    final box = RetroType.width(context, 12);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -653,7 +688,7 @@ class _LegendItem extends StatelessWidget {
                         : ProtoColors.panelBorder,
                     width: goal ? 2 : 1))),
         const SizedBox(width: 6),
-        Text(retroText(label)),
+        Text(retroText(label), style: DsText.subtitle(DsColors.text)),
       ],
     );
   }

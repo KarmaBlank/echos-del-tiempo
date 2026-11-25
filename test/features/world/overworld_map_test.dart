@@ -121,6 +121,16 @@ void main() {
     expect(find.text('Portal de mazmorra'), findsOneWidget);
     expect(find.text('Escalera'), findsNothing);
     expect(find.text('Jefe'), findsNothing);
+    // Title names the biome; legend only lists what is drawn.
+    expect(map.title, isNot(contains('Mapa del mundo')));
+    expect(find.text('Aliados'), findsNothing);
+    final full = FullMap.legendKeys(FullMapMode.overworld).length;
+    final shown = [
+      for (final (_, items) in FullMap.overworldLegendFor(map.overworld!,
+          allies: false))
+        ...items
+    ].length;
+    expect(shown, lessThan(full));
     // Minimap and big map share the overworld layer.
     final mm = tester.widget<Minimap>(find.byKey(const ValueKey('full-map')));
     expect(mm.overworld, isNotNull);

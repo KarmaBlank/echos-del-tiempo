@@ -19,7 +19,7 @@ import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/memo.dart';
-import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout;
+import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout, kBiomes;
 import '../../../../game_engine/rules/map_discovery_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -1149,11 +1149,16 @@ Widget fullMapPanel(SessionView view, SessionController controller,
   final str = strings ?? worldFallbackStrings();
   final name =
       WorldHud(view: view, controller: controller)._missionName(s, str);
-  final title = m == null || s.mode == SessionMode.lobby
-      ? str.t('ui.missions.hud.world_map')
-      : m.floors > 1
-          ? floorLabelText(str, name, m.floor, m.floors)
-          : name;
+  final overworld = overworldOverlayFor(view, controller);
+  final biome = overworld == null
+      ? null
+      : kBiomes.where((b) => b.id == view.map.place).firstOrNull?.name;
+  final title = biome ??
+      (m == null || s.mode == SessionMode.lobby
+          ? str.t('ui.missions.hud.world_map')
+          : m.floors > 1
+              ? floorLabelText(str, name, m.floor, m.floors)
+              : name);
   return FullMap(
     key: const ValueKey('panel-map'),
     title: title,
@@ -1167,7 +1172,7 @@ Widget fullMapPanel(SessionView view, SessionController controller,
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
     fog: controller.fog,
-    overworld: overworldOverlayFor(view, controller),
+    overworld: overworld,
     waystones: _seenWaystones(view, controller),
     destinations: controller.travelDestinations,
     originId: controller.travelOrigin?.id,
