@@ -1328,6 +1328,8 @@ final materialsCodec = _tuningCodec(BalanceKind.materials, const [
 final ecoTierCodec = _tuningCodec(BalanceKind.ecoTier, const [
   BalanceField('tierQuantity', 'Cantidad extra por tier sobre T1', _frac, max: 1, step: 0.005),
   BalanceField('partyQuantity', 'Cantidad extra por jugador extra', _frac, max: 1, step: 0.01),
+  BalanceField('fuseCount', 'Fusión: Ecos del mismo tier', _int, min: 2, max: 6),
+  BalanceField('fuseAnchors', 'Fusión: Anclas Temporales extra', _int, max: 99),
 ]);
 
 final featRewardCodec = EntityCodec(

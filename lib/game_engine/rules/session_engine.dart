@@ -444,6 +444,7 @@ class SessionEngine {
         BuyWeaponAction() ||
         BuyItemAction() ||
         EcoCraftAction() ||
+        EcoFuseAction() ||
         GiveItemAction() ||
         DropItemAction() =>
           true,
@@ -1535,6 +1536,9 @@ class _Op {
       case EcoCraftAction():
         return _ecoCraft(p, a);
 
+      case EcoFuseAction():
+        return _ecoFuse(p, a);
+
       case DevGrantEcoAction():
         if (!e.devTools) return false;
         final eco = ecos.generate(_ecoRand,
@@ -2230,6 +2234,17 @@ class _Op {
     final r = ecos.craft(p.profile, a.uid, a.op, _rand);
     if (!_profileChange(p, r.profile)) return false;
     say('${p.name}: ${ecos.fullName(r.after!)} (${_ecoVerb(a.op)})');
+    return true;
+  }
+
+  /// `EcoFuseAction` (ecos_atlas.md § 4.2): solo lobby / preparación,
+  /// Ecos propios, distintos, del mismo tier y < 16.
+  bool _ecoFuse(SessionPlayer p, EcoFuseAction a) {
+    if (!s.canShop) return false;
+    if (s.ecoOwner == p.id && a.uids.contains(s.eco?.uid)) return false;
+    final r = ecos.fuse(p.profile, a.uids, _ecoRand);
+    if (!_profileChange(p, r.profile)) return false;
+    say('${p.name}: ${ecos.fullName(r.after!)} (fusión)');
     return true;
   }
 

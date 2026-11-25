@@ -64,6 +64,9 @@ extension _RunOp on _Op {
         return false;
       case CraftAction(:final op) when !op.destroys:
         return stop == RunNodeType.armeria ? null : false;
+      // Los Ecos son del Mundo: la Travesía no los fusiona.
+      case EcoFuseAction():
+        return false;
       case FuseAction() || UpgradeAction() || EcoCraftAction():
         return stop == RunNodeType.armeria ? null : false;
       // Lo del Mundo que la Travesía no tiene: misiones, pueblo, alijo,

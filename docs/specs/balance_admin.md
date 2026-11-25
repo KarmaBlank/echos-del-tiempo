@@ -361,7 +361,7 @@ el `jsonKey`; los instala `BalanceRegistries.install` en el lugar y
 | `ultCharge` | `takenFactor`, `dealtBase`, `dealtScale`, `dealtCap`, `enemyPerTurn`, `enemyPerHp` |
 | `condense` | `cristalCost`, `cristalCredits`, `prismaCost`, `prismaCredits` |
 | `materials` | prob. de drop por material, × por fuente, pesos de rareza, Épico fuera de Ecos, desarme, subir rareza, traslado, afijos |
-| `ecoTier` | `tierQuantity`, `partyQuantity` |
+| `ecoTier` | `tierQuantity`, `partyQuantity`, `fuseCount` (Ecos por fusión, 3), `fuseAnchors` (Anclas extra por fusión, 0) |
 | `featReward` | por hazaña (id): `credits`, `esquirlas`, `cristales`, `prismas`, `potions`, `ethers` (la ULT que enseña no se edita) |
 
 Sin vista previa de impacto (no son combate). Las pasivas y nodos que

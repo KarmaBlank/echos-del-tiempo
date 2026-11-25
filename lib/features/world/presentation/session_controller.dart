@@ -4015,6 +4015,10 @@ class SessionController extends StateNotifier<SessionView?> {
   bool ecoCraft(String uid, EcoCraftOp op) =>
       _applyFor(actingId, EcoCraftAction(uid, op));
 
+  /// Fusionar Ecos del mismo tier en uno de tier + 1 (ecos_atlas.md § 4.2).
+  bool ecoFuse(List<String> uids) =>
+      _applyFor(actingId, EcoFuseAction(List.unmodifiable(uids)));
+
   /// Solo desarrollo: un Eco Raro de [tier] (el motor la rechaza sin
   /// `devTools`).
   bool devGrantEco(int tier) => _apply(DevGrantEcoAction(tier));

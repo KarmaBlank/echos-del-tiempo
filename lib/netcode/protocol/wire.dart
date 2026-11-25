@@ -183,7 +183,8 @@ import '../../game_engine/serialization/session_json.dart';
 /// 77: mining v2 (mining_smithing.md § 1): dig-first levels (`mn` in the
 /// town farm block), `mine` action ops, `mDug`/`mBomb`/`mBlast` events,
 /// discovered veins and miner pick tiers.
-const kProtocolVersion = 77;
+/// 78: Echo fusion (ecos_atlas.md § 4.2): the `ecoFuse` action.
+const kProtocolVersion = 78;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
