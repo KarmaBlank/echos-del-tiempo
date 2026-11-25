@@ -9,6 +9,7 @@ import '../../../../game_engine/rules/biome_regions.dart';
 import '../../../../game_engine/rules/light_shaft_rules.dart';
 import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'map_themes.dart';
+import 'sky_layer.dart';
 import 'tile_painter.dart';
 
 /// Cloud shadows, cave shade and light shafts (docs/specs/biome_regions.md
@@ -223,18 +224,36 @@ class RegionLightLayer {
     for (final lk in lay.lakes) {
       if (lk.cave == null) continue;
       salt++;
-      // Mist: wide, low, pixel-stepped bands drifting over the lake.
-      for (var k = 0; k < bands; k++) {
-        final (mx, my, hw, hh) = RegionAmbienceRules.mist(lk.ellipse, k, t);
-        final fade = 0.5 + 0.5 * math.sin(t * 0.2 + k * 1.7);
-        _mist.color = pal.mist.withValues(alpha: 0.05 * fade * strength);
-        for (var i = 0; i < 3; i++) {
-          final w = (hw * (1 - i * 0.28)).roundToDouble();
-          final hh2 = (hh * (1 - i * 0.3)).roundToDouble();
-          c.drawRect(
-              Rect.fromLTWH((mx - w).roundToDouble(),
-                  (my - hh2).roundToDouble(), w * 2, hh2 * 2),
-              _mist);
+      // Mist (§ 7.2.1): the weather fog's style — world-anchored 8 px
+      // cells of soft value noise with quantized alpha, drifting slowly,
+      // kept low over the lake and fading out toward its shore.
+      final (ex, ey, erx, ery) = lk.ellipse;
+      const cell = 8.0;
+      final speed = RegionAmbienceRules.mistSpeed;
+      final x0 = ((ex - erx - 1) * ts / cell).floor(),
+          x1 = ((ex + erx + 1) * ts / cell).ceil();
+      final y0 = ((ey - ery - 1) * ts / cell).floor(),
+          y1 = ((ey + ery + 1) * ts / cell).ceil();
+      for (var layer = 0; layer < bands; layer++) {
+        final scale = 5.0 - layer * 1.5;
+        final dx = t * speed * (1 + layer * 0.6);
+        final dy = t * speed * 0.2;
+        final maxA = (0.14 - layer * 0.04) * strength;
+        if (maxA <= 0) continue;
+        for (var cy = y0; cy < y1; cy++) {
+          for (var cx = x0; cx < x1; cx++) {
+            final wx = (cx + 0.5) * cell / ts, wy = (cy + 0.5) * cell / ts;
+            final nx = (wx - ex) / (erx + 1), ny = (wy - ey) / (ery + 0.8);
+            final r2 = nx * nx + ny * ny;
+            if (r2 > 1) continue;
+            final n = MapSkyLayer.noise((cx + dx / cell) / scale,
+                (cy + dy / cell) / scale, 57 + layer + salt * 5);
+            final k = ((n - 0.4) / 0.6).clamp(0.0, 1.0) * (1 - r2);
+            final a = (k * 3).round() / 3 * maxA;
+            if (a <= 0) continue;
+            _mist.color = pal.mist.withValues(alpha: a);
+            c.drawRect(Rect.fromLTWH(cx * cell, cy * cell, cell, cell), _mist);
+          }
         }
       }
       // Drip ripple: a widening pixel ring on one water tile.
@@ -270,6 +289,11 @@ class RegionLightLayer {
         ..isAntiAlias = false;
       final body = p(pal.rock), mid = p(pal.rockMid);
       final deep = p(pal.rockDeep), lit = p(pal.rockLit);
+      // Seen from outside: a lit brow juts past the mouth and casts a
+      // soft shadow on the ground in front of it.
+      final shadow = Paint()
+        ..color = RegionPalette.caveShade.withValues(alpha: 0.35)
+        ..isAntiAlias = false;
       for (var y = 0; y < BiomeLayout.height; y++) {
         for (var x = 0; x < BiomeLayout.width; x++) {
           for (final side in RegionAmbienceRules.roofEdges(lay, at, x, y)) {
@@ -282,33 +306,45 @@ class RegionLightLayer {
               final d = lip - 2 + hk % 4;
               final o = k * 4.0;
               final len = 2.0 + (hk >> 2) % 6, wd = 1.0 + (hk >> 1) % 2;
-              final Rect band, edge, tip, point;
+              final brow = 2.0 + hk % 2;
+              final Rect band, edge, tip, point, out, shade;
               switch (side) {
                 case RoofSide.north:
                   band = Rect.fromLTWH(px + o, py, 4, d);
                   edge = Rect.fromLTWH(px + o, py, 4, 1);
                   tip = Rect.fromLTWH(px + o + 1, py + d, wd, len);
                   point = Rect.fromLTWH(px + o + 1, py + d + len, 1, 1);
+                  out = Rect.fromLTWH(px + o, py - brow, 4, brow);
+                  shade = Rect.fromLTWH(px + o, py - brow - 3, 4, 3);
                 case RoofSide.south:
                   band = Rect.fromLTWH(px + o, py + ts - d, 4, d);
                   edge = Rect.fromLTWH(px + o, py + ts - 1, 4, 1);
                   tip = Rect.fromLTWH(px + o + 1, py + ts - d - len, wd, len);
                   point =
                       Rect.fromLTWH(px + o + 1, py + ts - d - len - 1, 1, 1);
+                  out = Rect.fromLTWH(px + o, py + ts, 4, brow);
+                  shade = Rect.fromLTWH(px + o, py + ts + brow, 4, 3);
                 case RoofSide.west:
                   band = Rect.fromLTWH(px, py + o, d, 4);
                   edge = Rect.fromLTWH(px, py + o, 1, 4);
                   tip = Rect.fromLTWH(px + d, py + o + 1, len, wd);
                   point = Rect.fromLTWH(px + d + len, py + o + 1, 1, 1);
+                  out = Rect.fromLTWH(px - brow, py + o, brow, 4);
+                  shade = Rect.fromLTWH(px - brow - 3, py + o, 3, 4);
                 case RoofSide.east:
                   band = Rect.fromLTWH(px + ts - d, py + o, d, 4);
                   edge = Rect.fromLTWH(px + ts - 1, py + o, 1, 4);
                   tip = Rect.fromLTWH(px + ts - d - len, py + o + 1, len, wd);
                   point =
                       Rect.fromLTWH(px + ts - d - len - 1, py + o + 1, 1, 1);
+                  out = Rect.fromLTWH(px + ts, py + o, brow, 4);
+                  shade = Rect.fromLTWH(px + ts + brow, py + o, 3, 4);
               }
-              pc.drawRect(band, k.isEven ? body : mid);
-              pc.drawRect(edge, lit);
+              pc
+                ..drawRect(shade, shadow)
+                ..drawRect(band, k.isEven ? body : mid)
+                ..drawRect(out, k.isEven ? mid : body)
+                ..drawRect(edge, lit);
               if (hk % 3 != 0) {
                 pc
                   ..drawRect(tip, deep)

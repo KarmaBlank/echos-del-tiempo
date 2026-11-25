@@ -211,24 +211,14 @@ abstract final class RegionAmbienceRules {
     return h < share * 1024;
   }
 
-  /// Mist band [k] over a lake ellipse (cx, cy, rx, ry, tiles) at [t]:
-  /// center (px) and half-size (px). Slow drift along x, wrapping.
-  static (double, double, double, double) mist(
-      (double, double, double, double) lake, int k, double t) {
-    final (cx, cy, rx, ry) = lake;
-    final speed = _r.d('caveMistSpeed');
-    final ph = (k * 0.37) % 1.0;
-    final f = (t * speed / math.max(1.0, rx) + ph) % 1.0;
-    final x = (cx - rx + f * 2 * rx) * 16;
-    final y = (cy - ry * 0.5 + (k % 3) * ry * 0.5) * 16 +
-        math.sin(t * 0.3 + k) * 2;
-    return (x, y, rx * 16 * 0.45, 5 + (k % 2) * 2.0);
-  }
+  /// Drift of the cavern mist (px/s).
+  static double get mistSpeed => _r.d('caveMistSpeed');
 
   /// Alpha of the cold glow on cave water.
   static double get waterGlow => _r.d('caveWaterGlow').clamp(0.0, 1.0);
 
-  static int get mistBands => _r.i('caveMistBands').clamp(0, 8);
+  /// Noise layers of the cavern mist (0 = no mist).
+  static int get mistBands => _r.i('caveMistBands').clamp(0, 3);
 
   /// Drip ripple on a lake: every `caveDripSec` seconds a ring opens on
   /// a water tile (by hash of the period). Returns the tile and the age

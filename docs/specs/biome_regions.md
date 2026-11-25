@@ -183,8 +183,10 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
   Paleta por bioma (`CavePalette.of(tema)`).
 - Oscuridad `caveDark` + viñeta hacia las paredes (`caveVignette`,
   `caveVignetteTiles`) en celdas de 8 px (imagen cacheada). Encima: brillo
-  frío del agua (`caveWaterGlow`) y de los hongos (cacheado), niebla baja
-  (`caveMistBands`, `caveMistSpeed`) y ondas de gotas (`caveDripSec`).
+  frío del agua (`caveWaterGlow`) y de los hongos (cacheado), niebla baja con
+  el estilo de la niebla del clima (celdas de 8 px ancladas al mundo,
+  ruido suave, alfa cuantizada; `caveMistBands` capas, deriva
+  `caveMistSpeed` px/s) y ondas de gotas (`caveDripSec`).
 - La boca: alero irregular con estalactitas, encima de los personajes.
 - Toda la gruta de un lago de cueva (y las cuevas cortas) es una **zona
   techada**: la roca que la rodea (roca a ≤ 2 tiles de un tile techado,
