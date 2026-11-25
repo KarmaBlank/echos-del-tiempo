@@ -428,6 +428,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       game
         ..scaleMode = gfx.scale
         ..particleDensity = gfx.particles.factor
+        // Water reflections (water_reflections.md § 6).
+        ..reflectionLevel = gfx.reflections
         // Destellos del rayo y lluvia (accessibility.md; day_night_weather.md § 4).
         ..flashFactor = gfx.flashFactor
         ..reduceMotion = gfx.reduceMotion

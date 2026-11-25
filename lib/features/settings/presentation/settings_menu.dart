@@ -687,6 +687,20 @@ class _DisplayTab extends ConsumerWidget {
           ),
         ),
         _SettingRow(
+          label: t.t('ui.settings.display.reflections.label'),
+          hint: t.t('ui.settings.display.reflections.hint'),
+          control: _Choice<ReflectionLevel>(
+            keyPrefix: 'display-reflections',
+            options: {
+              ReflectionLevel.off: t.t('ui.settings.display.reflections.off'),
+              ReflectionLevel.low: t.t('ui.settings.display.reflections.low'),
+              ReflectionLevel.high: t.t('ui.settings.display.reflections.high'),
+            },
+            value: s.reflections,
+            onChanged: (v) => c.update(s.copyWith(reflections: v)),
+          ),
+        ),
+        _SettingRow(
           label: t.t('ui.settings.display.fps.label'),
           hint: t.t('ui.settings.display.fps.hint'),
           control: _Choice<FpsLimit>(

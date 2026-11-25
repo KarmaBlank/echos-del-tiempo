@@ -5,9 +5,7 @@ import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/panel_widgets.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
-import '../../../app/widgets/menu_widgets.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
@@ -21,13 +19,19 @@ import '../domain/endgame_text.dart';
 import 'abyss_view.dart';
 import 'atlas_view.dart';
 import 'eco_fusion_view.dart';
+import 'eco_upgrade_view.dart';
+import '../../../game_engine/data/biomes_catalog.dart' show biomeDef;
+import '../../../game_engine/models/loot.dart' show StackKind;
+import '../../../game_engine/rules/eco_portal_rules.dart';
+import '../../inventory/presentation/item_widgets.dart'
+    show PixelIcon, iconForStack;
 import 'eco_zone_hub.dart';
 import '../../../app/design/design.dart';
 import '../../../game_engine/data/eco_catalog.dart' show ecoModRange;
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../inventory/domain/item_names.dart';
 import '../../../core/i18n/i18n_providers.dart';
-import '../domain/endgame_names.dart';
+import '../domain/endgame_names.dart';
 import '../../inventory/domain/eco_text.dart';
 
 /// Pestañas del Portal del Eco.
@@ -290,6 +294,21 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
     );
   }
 
+  /// The material of an upgrade as an item cell with `have/need`.
+  DsCostEntry _cost(PlayerProfile p, CraftMaterial m, int need) {
+    final (icon, color) = iconForStack(StackKind.of(m));
+    final have = p.material(m);
+    return DsCostEntry(
+      id: m.name,
+      icon: PixelIcon(icon, accent: color, size: 32),
+      need: need,
+      have: have,
+      card: DsTooltipCard(title: m.endgameTr, children: [
+        Text(ref.t('ui.endgame.craft.have_need', {'have': have, 'need': need})),
+      ]),
+    );
+  }
+
   Widget _upgrade(PlayerProfile p) {
     final rules = c.engine.progression;
     final s = view.session;
@@ -299,94 +318,68 @@ class _EcoPortalPanelState extends ConsumerState<EcoPortalPanel> {
       if (e.uid == _sel) sel = e;
     }
     sel ??= ecos.isEmpty ? null : ecos.first;
-    final atlasFx = c.engine.atlasOf(s);
-    final dev = FeatureFlags.instance.devTools;
-    final list = <Widget>[
-      if (ecos.isEmpty)
-        ProtoText(protoColor(
-            ProtoColors.dim,
-            ref.t('ui.endgame.ecos.none'))),
-      for (final e in ecos)
-        MenuRow(
-          wrap: true,
-          key: ValueKey('eco-row-${e.uid}'),
-          selected: e.uid == sel?.uid,
-          onTap: () => setState(() => _sel = e.uid),
-          label: ecoNameMarkup(rules, e),
-          value: protoColor(
-              ProtoColors.dim, protoEsc(rules.ecos.zoneOf(e)?.tr ?? '?')),
-        ),
-      if (dev) ...[
-        const SizedBox(height: 8),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          for (final t in const [1, 8, 16])
-            PanelButton('DEV: +ECO T$t',
-                key: ValueKey('eco-dev-$t'),
-                onPressed: () => setState(() => c.devGrantEco(t))),
-        ]),
-      ],
-    ];
     final e = sel;
-    if (e != null) {
-      // Mejoras del Eco elegido, debajo de la lista (se ven sin bajar): una
-      // fila por material con el costo y, si no se puede, el motivo.
-      list.addAll([
-        const SizedBox(height: 8),
-        MenuHeader('${ref.t('ui.endgame.ecos.upgrade')} ${protoColor(ProtoColors.dim, ref.t('ui.endgame.ecos.have', {
-              'shard': p.material(CraftMaterial.esquirla),
-              'crystal': p.material(CraftMaterial.cristal),
-              'prism': p.material(CraftMaterial.prisma),
-              'anchor': p.material(CraftMaterial.ancla),
-            }))}'),
-        for (final op in EcoCraftOp.values)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  // Sin cortar: si no entra, pasa a 2 líneas.
-                  child: ProtoText(ecoCraftRowMarkup(e, op)),
+    String zoneName(int z) =>
+        c.engine.catalog.zone(z)?.tr ??
+        ref.t('ui.endgame.zone_n', {'zone': z});
+    final (ready, status) = e == null
+        ? (false, '')
+        : ecoStatusText(p, e,
+            zoneName: zoneName(e.zone),
+            biomeName: switch (EcoPortalRules.of(e.zone)) {
+              final spot? => biomeDef(spot.biome)?.name ?? spot.biome,
+              null => null,
+            });
+    return EcoUpgradeView(
+      key: const ValueKey('eco-upgrade'),
+      rules: rules,
+      ecos: ecos,
+      selected: e,
+      onSelect: (u) => setState(() => _sel = u),
+      empty: ref.t('ui.endgame.ecos.none'),
+      info: e == null
+          ? const SizedBox.shrink()
+          : ProtoText(
+              key: const ValueKey('eco-detail'),
+              ecoTooltipMarkup(rules, e,
+                  atlas: c.engine.atlasOf(s), players: s.players.length)),
+      statusText: status,
+      statusReady: ready,
+      opensAt: ref.t('ui.endgame.ecos.opens_at'),
+      goLabel: ref.t('ui.endgame.go_to_portal'),
+      // Ecos open at their zone's portal (ecos_zone.md § 4): here you
+      // only travel there.
+      goReason: e == null ? null : c.ecoTravelBlocked(e.zone),
+      onGo: () {
+        if (e != null) c.travelToEcoPortal(e.zone, tier: e.tier);
+      },
+      upgradesTitle: ref.t('ui.endgame.ecos.upgrade_title'),
+      applyLabel: ref.t('ui.endgame.ecos.apply'),
+      ops: e == null
+          ? const []
+          : [
+              for (final op in EcoCraftOp.values)
+                EcoUpgradeOp(
+                  id: op.name,
+                  label: ref.t('ui.endgame.craft.op.${op.name}'),
+                  effect: ref.t('ui.endgame.craft.effect.${op.name}'),
+                  cost: switch (EcoRules.cost(e, op)) {
+                    (final m, final n) => _cost(p, m, n),
+                    null => null,
+                  },
+                  reason: ecoCraftBlocked(s, view.actorId, p, e, op),
+                  onApply: () => setState(() => c.ecoCraft(e.uid, op)),
                 ),
-                const SizedBox(width: 8),
-                PanelButton(ref.t('ui.endgame.ecos.use'),
-                    key: ValueKey('eco-craft-${op.name}'),
-                    reason: ecoCraftBlocked(s, view.actorId, p, e, op),
-                    onPressed: () => setState(() => c.ecoCraft(e.uid, op))),
-              ],
-            ),
-          ),
-      ]);
-    }
-    return PanelSplit(
-      listWidth: 440,
-      list: list,
-      detail: PanelDetail(
-        footer: e == null
-            ? const []
-            : [
-                KeyHints(
-                    confirm: ref.t('ui.endgame.hint.choose'),
-                    back: ref.t('ui.endgame.hint.close')),
-                // Los Ecos se abren en el portal de su zona (ecos_zone.md
-                // § 4): acá solo se viaja hasta él.
-                PanelButton(ref.t('ui.endgame.go_to_portal'),
-                    key: const ValueKey('eco-go'),
-                    accent: ProtoColors.green,
-                    reason: c.ecoTravelBlocked(e.zone),
-                    onPressed: () => c.travelToEcoPortal(e.zone, tier: e.tier)),
-              ],
-        children: e == null
-            ? [
-                ProtoText(protoColor(ProtoColors.dim,
-                    ref.t('ui.endgame.ecos.pick'))),
-              ]
-            : [
-                ProtoText(
-                    key: const ValueKey('eco-detail'),
-                    ecoTooltipMarkup(rules, e,
-                        atlas: atlasFx, players: s.players.length)),
-              ],
-      ),
+            ],
+      footer: [
+        if (FeatureFlags.instance.devTools)
+          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            for (final t in const [1, 8, 16])
+              PanelButton('DEV: +ECO T$t',
+                  key: ValueKey('eco-dev-$t'),
+                  onPressed: () => setState(() => c.devGrantEco(t))),
+          ]),
+      ],
     );
   }
 }

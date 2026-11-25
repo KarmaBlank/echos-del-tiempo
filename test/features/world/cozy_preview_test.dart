@@ -8,6 +8,7 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/cozy_hud_dim.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/actor_painter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/cozy_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/map_themes.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
@@ -143,6 +144,74 @@ void main() {
     expect(CozyRules.hasRoof(life), isTrue);
   });
 
+  testWidgets('map: wide raft, awning, seated rider fishing', (tester) async {
+    final sprites = await _sprites(tester);
+    if (sprites == null) return;
+    final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
+    final actors = ActorPainter(sprites);
+    final raft = sprites.lifeIcon('balsa', '')!;
+    // Two tiles wide, one tall: a raft, not a stall.
+    expect((raft.width, raft.height), (32, 16));
+    expect(sprites.lifeIcon('raft_roof', '')!.width, 32);
+    expect(sprites.lifeIcon('raft_posts', ''), isNotNull);
+    // Water strip, then: bare, docked (awning + lantern + blue paint),
+    // rider seated fishing under the awning, rider sailing.
+    const w = 200.0, h = 56.0, scale = 5.0;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec)..scale(scale);
+    c.drawRect(const Rect.fromLTWH(0, 0, w, h),
+        Paint()..color = const Color(0xFF2B5D8A));
+    final life = LifeSkills(
+        raftDecos: const {'lantern', 'roof', 'paint_blue'},
+        raftOn: const {'lantern', 'roof', 'paint_blue'});
+    const y = 40.0;
+    void hero(double x, {required bool seated, required bool moving}) =>
+        actors.hero(c,
+            classId: 'guerrero', weaponType: null, x: x, y: y - 3, t: 140,
+            dir: 1, moving: moving, dead: false, blink: false,
+            showWeapon: false, seated: seated);
+    void raftAt(double x, {bool? seated}) {
+      cozy.drawRaft(c, raft, x, y, 0, life);
+      cozy.drawRaftPosts(c, x, y, 0, life);
+      if (seated == true) cozy.drawRaftSeat(c, x, y - 3, 1);
+      if (seated != null) hero(x, seated: seated, moving: !seated);
+      cozy.drawRaftRoof(c, x, y, 0, life);
+    }
+    cozy.drawRaft(c, raft, 25, y, 0, null);
+    raftAt(75);
+    raftAt(125, seated: true);
+    raftAt(175, seated: false);
+    await _picShot(tester, rec.endRecording(), (w * scale).round(),
+        (h * scale).round(), 'cozy_raft_decor');
+    // 4x crop of the seated rider for review.
+    if (_shots) {
+      await tester.runAsync(() async {
+        final rec2 = ui.PictureRecorder();
+        final c2 = Canvas(rec2)
+          ..scale(4)
+          ..translate(-105, -8);
+        c2.drawRect(const Rect.fromLTWH(105, 8, 40, 40),
+            Paint()..color = const Color(0xFF2B5D8A));
+        final lone = LifeSkills(
+            raftDecos: const {'lantern', 'roof', 'paint_blue'},
+            raftOn: const {'lantern', 'roof', 'paint_blue'});
+        cozy.drawRaft(c2, raft, 125, y, 0, lone);
+        cozy.drawRaftPosts(c2, 125, y, 0, lone);
+        cozy.drawRaftSeat(c2, 125, y - 3, 1);
+        actors.hero(c2,
+            classId: 'guerrero', weaponType: null, x: 125, y: y - 3, t: 0,
+            dir: 1, moving: false, dead: false, blink: false,
+            showWeapon: false, seated: true);
+        cozy.drawRaftRoof(c2, 125, y, 0, lone);
+        final img = await rec2.endRecording().toImage(160, 160);
+        final png = await img.toByteData(format: ui.ImageByteFormat.png);
+        File('docs/preview/cozy_raft_seated_4x.png')
+            .writeAsBytesSync(png!.buffer.asUint8List());
+      });
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('map: farm decorations around the base farm', (tester) async {
     final sprites = await _sprites(tester);
     final cozy = CozyLayer((id) => sprites?.lifeIcon(id, ''));
@@ -243,7 +312,7 @@ void main() {
     expect(find.byKey(const ValueKey('raft-deco-roof')), findsOneWidget);
     expect(c.view!.me!.profile.life.raftOn, {'lantern'});
     await tapVisible(tester, find.byKey(const ValueKey('raft-deco-roof')));
-    await _panelShot(tester, 'panel-raft-decor', 'cozy_raft_decor');
+    await _panelShot(tester, 'panel-raft-decor', 'cozy_raft_decor_panel');
     await tapVisible(tester, find.byKey(const ValueKey('raft-deco-act-roof')));
     expect(c.view!.me!.profile.life.raftOn, {'lantern', 'roof'});
     expect(tester.takeException(), isNull);

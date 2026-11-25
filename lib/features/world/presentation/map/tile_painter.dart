@@ -30,6 +30,10 @@ class TilePainter {
   /// keeps the fallback drawing (round canopy, two-disc bush).
   VegetationAtlas? vegetation;
 
+  /// Skip the ground under props (the water reflections draw only the
+  /// prop; water_reflections.md § 1.2).
+  bool noGround = false;
+
   /// Which part of a glow tile ([glowSplit]) [draw] paints: everything,
   /// only the clock-free base (chunk cache) or only the glow on top.
   TileGlowPass glowPass = TileGlowPass.all;
@@ -116,6 +120,7 @@ class TilePainter {
     final h = tileHash(tx, ty);
 
     void floor() {
+      if (noGround) return;
       _rect(c, th.ground, px, py, ts, ts);
       if (lobby) {
         if ((tx + ty) % 2 == 0) _rect(c, th.ground2, px, py, ts, ts);
@@ -930,6 +935,7 @@ class TilePainter {
   }
 
   void _grass(Canvas c, MapTheme th, double px, double py, int h) {
+    if (noGround) return;
     _rect(c, th.grass, px, py, ts, ts);
     if (h % 3 == 0) {
       final x = px + jsShiftMod(h, 3, 11).abs() + 2,
