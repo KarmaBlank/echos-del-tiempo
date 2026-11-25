@@ -23,14 +23,15 @@ class WaystonePanel extends StatefulWidget {
 }
 
 class _WaystonePanelState extends State<WaystonePanel> {
+  static const _cellW = 220.0;
   int? _sel;
 
   String _name(BuildContext context, BiomeLayout lay, int i) {
     final w = lay.waystones[i];
     return switch (w.site) {
       WaystoneSite.entrance => context.t('ui.world.way.site_entrance'),
-      WaystoneSite.lake => context.t(
-          'ui.world.way.site_lake', {'name': lay.lakes[w.ref].name}),
+      WaystoneSite.lake =>
+        context.t('ui.world.way.site_lake', {'name': lay.lakes[w.ref].name}),
       WaystoneSite.mine =>
         context.t('ui.world.way.site_mine', {'n': w.ref + 1}),
     };
@@ -47,7 +48,7 @@ class _WaystonePanelState extends State<WaystonePanel> {
       return PanelFrame(
           key: const ValueKey('panel-waystone'),
           title: context.t('ui.world.way.title'),
-          width: 720,
+          width: 820,
           onClose: c.closePanel,
           actions: [close],
           child: const SizedBox.shrink());
@@ -56,9 +57,12 @@ class _WaystonePanelState extends State<WaystonePanel> {
     final sel = (_sel ?? here ?? 0).clamp(0, n - 1);
     final active = [for (var i = 0; i < n; i++) c.waystoneActive(i)];
 
-    Widget cell(int i) => SizedBox(
-          width: 148,
-          height: 64,
+    // No fixed height and no truncation (ui rule): the cell grows with
+    // the name at any text scale.
+    Widget cell(int i) => ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: SizedBox(
+          width: _cellW,
           child: DsCard(
             key: ValueKey('way-cell-$i'),
             selected: i == sel,
@@ -75,14 +79,13 @@ class _WaystonePanelState extends State<WaystonePanel> {
                     active[i]
                         ? _name(context, lay, i)
                         : context.t('ui.world.way.unknown'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: DsText.detail(
-                        active[i] ? null : DsColors.textDisabled)),
+                    softWrap: true,
+                    style:
+                        DsText.body(active[i] ? null : DsColors.textDisabled)),
               ),
             ]),
           ),
-        );
+        ));
 
     final canGo = active[sel] && here != null && here != sel;
     final detail = DsDetailPane(
@@ -95,6 +98,7 @@ class _WaystonePanelState extends State<WaystonePanel> {
               active[sel]
                   ? _name(context, lay, sel)
                   : context.t('ui.world.way.unknown'),
+              softWrap: true,
               style: DsText.title()),
           SizedBox(height: DsSpace.sm),
           if (sel == here)
@@ -114,7 +118,7 @@ class _WaystonePanelState extends State<WaystonePanel> {
     return PanelFrame(
       key: const ValueKey('panel-waystone'),
       title: context.t('ui.world.way.title'),
-      width: 720,
+      width: 820,
       onClose: c.closePanel,
       actions: [close],
       child: Column(
@@ -124,12 +128,12 @@ class _WaystonePanelState extends State<WaystonePanel> {
           Text(context.t('ui.world.way.help'), style: DsText.detail()),
           SizedBox(height: DsSpace.sm),
           SizedBox(
-            height: 220,
+            height: 300,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  width: 3 * 148 + 2 * DsSpace.sm,
+                  width: 2 * _cellW + DsSpace.sm,
                   child: SingleChildScrollView(
                     child: Wrap(
                       spacing: DsSpace.sm,
