@@ -12,6 +12,7 @@ import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/world_screen.dart';
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/rules/map_discovery_rules.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -84,23 +85,45 @@ void main() {
   testWidgets('opens the region map: marks, hover, detail, TRAVEL',
       (tester) async {
     final c = await _biome(tester);
-    final lay = biomeLayout(c.place)!;
-    final n = lay.waystones.length;
+    final n0 = biomeLayout(c.place)!.waystones.length;
     // Activate every stone except the last one.
-    for (var i = 0; i < n - 1; i++) {
+    for (var i = 0; i < n0 - 1; i++) {
       await _use(tester, c, i);
     }
+    // The layout the world settled on; g = a stone not activated yet.
+    final lay = biomeLayout(c.place)!;
+    final n = lay.waystones.length;
+    final g = [
+      for (var i = 0; i < n; i++)
+        if (!c.waystoneActive(i)) i
+    ].last;
+    // Walk near it (revealed by discovery, not touched:
+    // biome_exploration.md § 11.4).
+    final st = lay.waystones[g];
+    c.closePanel();
+    c.teleport((st.x + 0.5) * 16, (st.y + 4.5) * 16);
+    c.advance(0.05);
+    if (c.nearWaystone == g) {
+      c.teleport((st.x + 0.5) * 16, (st.y - 3.5) * 16);
+      c.advance(0.05);
+    }
+    expect(c.waystoneActive(g), isFalse);
     await _use(tester, c, 0);
     expect(c.view!.panel, WorldPanel.waystone);
     expect(find.byKey(const ValueKey('panel-waystone')), findsOneWidget);
-    // It is the big map, with every stone marked (found or not).
+    // It is the big map: activated stones and discovered ones are marked,
+    // stones still in the fog are not.
     expect(find.byKey(const ValueKey('full-map')), findsOneWidget);
     for (var i = 0; i < n; i++) {
-      expect(find.byKey(ValueKey('full-map-stone-$i')), findsOneWidget);
+      final shown = c.waystoneActive(i) ||
+          MapDiscoveryRules.knownTile(
+              c.town, lay, lay.waystones[i].x, lay.waystones[i].y);
+      expect(find.byKey(ValueKey('full-map-stone-$i')),
+          shown ? findsOneWidget : findsNothing);
     }
-    // The undiscovered one is grey.
+    // The discovered-but-not-activated one is grey.
     final grey = tester.widget<Container>(find.descendant(
-        of: find.byKey(ValueKey('full-map-stone-${n - 1}')),
+        of: find.byKey(ValueKey('full-map-stone-$g')),
         matching: find.byType(Container)));
     expect((grey.decoration! as BoxDecoration).color, DsColors.textDisabled);
 
@@ -122,11 +145,11 @@ void main() {
     expect(find.byKey(const ValueKey('full-map-stone-tip')), findsOneWidget);
 
     // The undiscovered one: selectable, explained, no TRAVEL.
-    await tester.tap(find.byKey(ValueKey('full-map-stone-${n - 1}')));
+    await tester.tap(find.byKey(ValueKey('full-map-stone-$g')));
     await tester.pump();
     expect(
         tester
-            .widget<DsButton>(find.byKey(ValueKey('way-go-${n - 1}')))
+            .widget<DsButton>(find.byKey(ValueKey('way-go-$g')))
             .onPressed,
         isNull);
 

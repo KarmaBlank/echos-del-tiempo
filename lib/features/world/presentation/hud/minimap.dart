@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +11,7 @@ import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
+import '../../../../game_engine/rules/map_discovery_rules.dart';
 import '../../../../game_engine/rules/mine_work_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../map/map_themes.dart';
@@ -93,6 +95,51 @@ List<(MapPoi, Color)> minimapPois(MapFloor? floor, MissionRun m) => [
           if (poiMinimapColor(poi, m) case final c?) (poi, c),
     ];
 
+/// The overworld layer of the minimap / big map (biome_exploration.md
+/// § 11): discovery mask, goal marks (always) and optional marks (only
+/// where discovered). Pure data built by the HUD.
+class OverworldOverlay {
+  const OverworldOverlay({
+    required this.known,
+    required this.cacheKey,
+    required this.marks,
+    this.entranceOpen,
+    this.waystoneActive,
+  });
+
+  /// One byte per [MapDiscoveryRules.cell] cell: 1 = known.
+  final Uint8List known;
+
+  /// Changes whenever [known] changes (the mask is cached by it; compared
+  /// with `==`).
+  final Object cacheKey;
+
+  final List<OverworldMark> marks;
+  final bool Function(int zone)? entranceOpen;
+  final bool Function(int stone)? waystoneActive;
+
+  bool knownTile(int tx, int ty) {
+    final cx = tx ~/ MapDiscoveryRules.cell, cy = ty ~/ MapDiscoveryRules.cell;
+    if (tx < 0 || ty < 0) return false;
+    if (cx >= MapDiscoveryRules.cols || cy >= MapDiscoveryRules.rows) {
+      return false;
+    }
+    return known[cy * MapDiscoveryRules.cols + cx] != 0;
+  }
+
+  /// Colour of an optional mark.
+  static Color color(OverworldMarkKind k) => MapPalette.mark(switch (k) {
+        OverworldMarkKind.portal => MapMark.goal,
+        OverworldMarkKind.echo => MapMark.echo,
+        OverworldMarkKind.waystone => MapMark.waystone,
+        OverworldMarkKind.shrine => MapMark.shrine,
+        OverworldMarkKind.chest => MapMark.chest,
+        OverworldMarkKind.mine => MapMark.mine,
+        OverworldMarkKind.dock => MapMark.dock,
+        OverworldMarkKind.resident => MapMark.resident,
+      });
+}
+
 /// Vacío en el minimapa con el tema AZUL (como el fondo fuera del mapa).
 const kMinimapVoid = Color(0xFF05060C); // arte: = MapTerrain.voidTile en AZUL
 
@@ -119,7 +166,11 @@ class Minimap extends StatelessWidget {
     this.center,
     this.fog,
     this.exit,
+    this.overworld,
   });
+
+  /// Overworld biome layer (biome_exploration.md § 11); `null` elsewhere.
+  final OverworldOverlay? overworld;
 
   /// Salida de la mazmorra (free_movement.md § 2.4), en píxeles del mapa;
   /// se marca como una escalera. `null` = no hay.
@@ -209,6 +260,9 @@ final _baseCache = Expando<(Object, ui.Image)>('minimapa');
 final _fogCache = Expando<(int, ui.Picture)>('niebla');
 
 final _bossStar = <(bool, double), TextPainter>{};
+
+/// Overworld discovery mask (1 px per cell) by its key.
+(Object, ui.Picture)? _overworldMask;
 
 class _MinimapPainter extends CustomPainter {
   _MinimapPainter(this.w, this.v);
@@ -307,6 +361,13 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawPicture(_fogMask(fog, map));
       canvas.restore();
     }
+    final ow = w.overworld;
+    if (ow != null) {
+      canvas.save();
+      canvas.scale(cell * MapDiscoveryRules.cell);
+      canvas.drawPicture(_overworldFog(ow));
+      canvas.restore();
+    }
     canvas.restore();
 
     // Con niebla: lo no explorado no se marca y los enemigos (no los
@@ -352,8 +413,9 @@ class _MinimapPainter extends CustomPainter {
       }
     }
 
+    if (ow != null) _overworldMarks(canvas, p, ow, dk, dot);
     // Entradas de zona (mundo): cuadro de 3 tiles del color de la zona.
-    for (final e in map.entrances) {
+    for (final e in ow == null ? map.entrances : const <ZoneEntrance>[]) {
       final open = w.entranceOpen?.call(e.zone) ?? true;
       p.color = MapPalette.mark(MapMark.outline);
       canvas.drawRect(
@@ -447,6 +509,74 @@ class _MinimapPainter extends CustomPainter {
           MapPalette.mark(mine ? MapMark.me : MapMark.ally), mine ? 3.5 : 3);
     }
     canvas.restore();
+  }
+
+  /// Overworld marks: goals as a 3-tile square with a gold frame (always
+  /// visible), optional content as small dots where discovered (§ 11.2).
+  void _overworldMarks(Canvas canvas, Paint p, OverworldOverlay ow, double dk,
+      void Function(double, double, Color, double) dot) {
+    for (final m in ow.marks) {
+      if (m.goal) continue;
+      if (!ow.knownTile(m.x, m.y)) continue;
+      if (m.kind == OverworldMarkKind.waystone &&
+          !(ow.waystoneActive?.call(m.index ?? -1) ?? true)) {
+        dot((m.x + 0.5) * _ts, (m.y + 0.5) * _ts,
+            MapPalette.mark(MapMark.spent), 3);
+        continue;
+      }
+      dot((m.x + 0.5) * _ts, (m.y + 0.5) * _ts, OverworldOverlay.color(m.kind),
+          3);
+    }
+    const cell = Minimap.baseCell;
+    final f = math.max(1.0, 1.5 * dk);
+    for (final m in ow.marks) {
+      if (!m.goal) continue;
+      final r = Rect.fromLTWH(
+          (m.x - 1) * cell, (m.y - 1) * cell, cell * 3, cell * 3);
+      p.color = MapPalette.mark(MapMark.outline);
+      canvas.drawRect(r.inflate(f * 2), p);
+      p.color = MapPalette.mark(MapMark.goal);
+      canvas.drawRect(r.inflate(f), p);
+      p.color = m.kind == OverworldMarkKind.echo
+          ? MapPalette.mark(MapMark.echo)
+          : (ow.entranceOpen?.call(m.zone ?? -1) ?? true)
+              ? zoneColor(m.zone ?? 0)
+              : kLockedZoneColor;
+      canvas.drawRect(r, p);
+    }
+  }
+
+  /// Unknown overworld cells covered with the void colour (1 px per
+  /// cell), rebuilt only when the discovery changes.
+  ui.Picture _overworldFog(OverworldOverlay ow) {
+    final cached = _overworldMask;
+    if (cached != null && cached.$1 == ow.cacheKey) return cached.$2;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    final p = Paint()
+      ..isAntiAlias = false
+      ..color = kMinimapVoid;
+    final w = MapDiscoveryRules.cols, h = MapDiscoveryRules.rows;
+    for (var y = 0; y < h; y++) {
+      var x = 0;
+      while (x < w) {
+        if (ow.known[y * w + x] != 0) {
+          x++;
+          continue;
+        }
+        final start = x;
+        while (x < w && ow.known[y * w + x] == 0) {
+          x++;
+        }
+        c.drawRect(
+            Rect.fromLTWH(
+                start.toDouble(), y.toDouble(), (x - start).toDouble(), 1),
+            p);
+      }
+    }
+    final pic = rec.endRecording();
+    _overworldMask = (ow.cacheKey, pic);
+    return pic;
   }
 
   /// Tiles sin explorar, tapados con el color del vacío (1 px por tile),

@@ -207,7 +207,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 89: wilds loot `town.daily` keys carry the layout version
 /// (`wx:<player>:<biome>:v<n>:<c|s><i>:<day>`); an 88 peer would read
 /// the marks of a regenerated layout on the wrong spots.
-const kProtocolVersion = 89;
+/// 90: overworld map discovery (biome_exploration.md § 11.4): `town.md`
+/// (biome → cell bits; the room snapshot carries only the current biome).
+const kProtocolVersion = 90;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -1925,6 +1925,8 @@ const _regionsLabels = {
   'forageHideRadius': 'Rebrote: distancia de vista (px)',
   'forageRecheckSec': 'Rebrote: segundos entre chequeos',
   'waystoneReach': 'Piedra de paso: distancia (px)',
+  'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',
+  'mapStartRadius': 'Mapa del exterior: radio conocido al llegar (tiles)',
   'caveScaleX': 'Caverna: × ancho del lago',
   'caveScaleY': 'Caverna: × alto del lago',
   'caveWallTiles': 'Caverna: grosor de la pared (tiles)',
