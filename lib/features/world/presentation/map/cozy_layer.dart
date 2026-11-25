@@ -47,36 +47,73 @@ class CozyLayer {
     }
   }
 
-  /// The raft sprite [raft] at (x, y) (centre) with the decorations of
-  /// [life]: paint tint, roof above and lantern at the corner.
+  /// The raft deck [raft] (32 x 16, two tiles wide) centred on (x, y),
+  /// tinted with the wood colour or the paint of [life]. The sprite is
+  /// drawn in light neutral shades and tinted with `modulate`, so a
+  /// painted raft keeps the paint's hue (blue stays blue). Without an
+  /// awning the lantern sits at the deck's corner.
   void drawRaft(Canvas c, ui.Image raft, double x, double y, double bob,
       LifeSkills? life) {
-    final paint = life == null ? null : CozyRules.paintOf(life);
-    final p = SpriteCatalog.pixelPaint();
-    if (paint != null) {
-      p.colorFilter = ui.ColorFilter.mode(
-          CozyPalette.paints[paint % CozyPalette.paints.length],
-          BlendMode.modulate);
-    }
-    _img(c, raft, Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts), p);
-    if (life == null) return;
+    _img(c, raft, Rect.fromLTWH(x - ts, y - ts / 2 + bob, ts * 2, ts),
+        _tint(_paint(life) ?? CozyPalette.wood));
+    if (life == null || CozyRules.hasRoof(life)) return;
     if (CozyRules.hasLantern(life)) {
       if (icon('raft_lantern') case final im?) {
-        _img(c, im, Rect.fromLTWH(x + 2, y - ts + 2 + bob, ts / 2, ts / 2),
+        _img(c, im, Rect.fromLTWH(x + 6, y - ts + 1 + bob, ts / 2, ts / 2),
             SpriteCatalog.pixelPaint());
       }
     }
   }
 
-  /// The little roof, drawn over the hero (after it).
+  /// The two short posts of the awning, standing on the deck's back
+  /// edge. Drawn before the rider (they are behind them).
+  void drawRaftPosts(
+      Canvas c, double x, double y, double bob, LifeSkills? life) {
+    if (life == null || !CozyRules.hasRoof(life)) return;
+    if (icon('raft_posts') case final im?) {
+      _img(c, im, Rect.fromLTWH(x - ts, y - 23 + bob, ts * 2, 17),
+          SpriteCatalog.pixelPaint());
+    }
+  }
+
+  /// The awning of the raft centred on (x, y): a flat cloth canopy just
+  /// above a standing rider's head, on [drawRaftPosts], with the lantern
+  /// hanging from the right post. Drawn after the rider.
   void drawRaftRoof(
       Canvas c, double x, double y, double bob, LifeSkills? life) {
     if (life == null || !CozyRules.hasRoof(life)) return;
     if (icon('raft_roof') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - ts / 2, y - ts * 1.6 + bob, ts, ts),
-          SpriteCatalog.pixelPaint());
+      _img(c, im, Rect.fromLTWH(x - ts, y - 28 + bob, ts * 2, 6),
+          _tint(_paint(life) ?? CozyPalette.cloth));
+    }
+    if (CozyRules.hasLantern(life)) {
+      if (icon('raft_lantern') case final im?) {
+        _img(c, im, Rect.fromLTWH(x + 9, y - 22 + bob, ts / 2, ts / 2),
+            SpriteCatalog.pixelPaint());
+      }
     }
   }
+
+  /// The crate a rider seated at (px, py) (the hero's anchor) sits on,
+  /// with its small contact shadow; [dir] < 0 mirrors it. Drawn before
+  /// the hero.
+  void drawRaftSeat(Canvas c, double px, double py, int dir) {
+    final x = px.roundToDouble(), y = py.roundToDouble();
+    final left = dir < 0 ? x - 4 : x - 6;
+    c.drawOval(Rect.fromLTWH(left, y + 4, 10, 2),
+        Paint()..color = CozyPalette.seatShadow);
+    if (icon('raft_seat') case final im?) {
+      _img(c, im, Rect.fromLTWH(left, y - 1, 10, 6), SpriteCatalog.pixelPaint());
+    }
+  }
+
+  static Color? _paint(LifeSkills? life) {
+    final i = life == null ? null : CozyRules.paintOf(life);
+    return i == null ? null : CozyPalette.paints[i % CozyPalette.paints.length];
+  }
+
+  static Paint _tint(Color color) => SpriteCatalog.pixelPaint()
+    ..colorFilter = ui.ColorFilter.mode(color, BlendMode.modulate);
 
   /// Farm decorations of [town] (map origin [ox], [oy] in tiles).
   void drawDecor(Canvas c, TownState town, int ox, int oy) {

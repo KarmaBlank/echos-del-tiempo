@@ -193,6 +193,7 @@ class MapGame extends Game {
 
   /// Ground marks of the seasons and the weather.
   final ground = MapGroundLayer();
+
   /// Mines: cracks, debris, bombs, carts (mining_smithing.md § 1.9).
   final mine = MineLayer();
 
@@ -532,7 +533,13 @@ class MapGame extends Game {
 
   void _onEvent(SessionEvent e) {
     switch (e) {
-      case MineDugEvent(:final playerId, :final tx, :final ty, :final code, :final label):
+      case MineDugEvent(
+          :final playerId,
+          :final tx,
+          :final ty,
+          :final code,
+          :final label
+        ):
         final theme = controller.view?.map.theme ?? '';
         mine.onDug(tx, ty, code, label, playerId, theme, t);
         if (playerId == controller.localId) {
@@ -858,17 +865,16 @@ class MapGame extends Game {
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2
               ..color = color);
-        c.drawOval(
-            Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
+        c.drawOval(Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
             Paint()..color = color.withValues(alpha: 0.25));
-        _rankedText(c, d.title.text.toUpperCase(), x, y - 18,
-            TownPalette.label, 6, 899);
+        _rankedText(c, d.title.text.toUpperCase(), x, y - 18, TownPalette.label,
+            6, 899);
         continue;
       }
       // Un NPC de datos vinculado protagoniza la visita (npc_editor.md
       // § 6.4): se dibuja él, no el actor del evento.
-      if (kCustomNpcs.values.any((n) =>
-          n.spawn == CustomNpcSpawn.event && n.place == d.id)) {
+      if (kCustomNpcs.values
+          .any((n) => n.spawn == CustomNpcSpawn.event && n.place == d.id)) {
         continue;
       }
       // A roaming elite (biome_exploration.md § 6) shows its enemy.
@@ -880,7 +886,9 @@ class MapGame extends Game {
       final bottom = y + 8;
       if (im != null) {
         final w = im.width.toDouble(), h = im.height.toDouble();
-        c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+        c.drawImageRect(
+            im,
+            Rect.fromLTWH(0, 0, w, h),
             Rect.fromLTWH(x - w / 2, bottom - h, w, h),
             SpriteCatalog.pixelPaint());
       }
@@ -1036,8 +1044,8 @@ class MapGame extends Game {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
       // Labels stay inside the view (a pond at the edge was clipped).
-      double inView(double x) => x.clamp(
-          worldView.left + 36, math.max(worldView.left + 36, worldView.right - 36));
+      double inView(double x) => x.clamp(worldView.left + 36,
+          math.max(worldView.left + 36, worldView.right - 36));
       for (final (txt, x, y)
           in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
         _placeText(c, txt, inView((x + 0.5) * ts), y * ts - 4,
@@ -1049,11 +1057,11 @@ class MapGame extends Game {
         // Above the mouth, and hidden while someone stands at it (it
         // covered the player's name).
         final mx = (x + 0.5) * ts, my = y * ts;
-        final busy = s.players.values.any((p) =>
-            (p.x - mx).abs() < 20 && p.y > my && p.y - my < 40);
+        final busy = s.players.values
+            .any((p) => (p.x - mx).abs() < 20 && p.y > my && p.y - my < 40);
         if (busy) continue;
-        _placeText(c, controller.strings.t('ui.world.mine.label'), mx,
-            my - 8, TownPalette.label, 6, rank++);
+        _placeText(c, controller.strings.t('ui.world.mine.label'), mx, my - 8,
+            TownPalette.label, 6, rank++);
       }
     } else if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
@@ -1095,8 +1103,8 @@ class MapGame extends Game {
       if (map.place == null && !controller.editingTown) {
         // Tier and event dressing (renown_town_growth.md § 5.2, § 6.4).
         _dressing = TownDressingRules.select(s.town, s.town.sky.day);
-        dressing.drawGround(c, map, _dressing!, map.townOrigin,
-            reduceMotion ? 0.0 : t / 1000,
+        dressing.drawGround(
+            c, map, _dressing!, map.townOrigin, reduceMotion ? 0.0 : t / 1000,
             night: SkyRules.darkness(s.town.sky) > 0.25);
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
@@ -1201,7 +1209,8 @@ class MapGame extends Game {
         final bottom = n.y + ts / 2;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
-          void draw(Canvas cc) => cc.drawImageRect(im,
+          void draw(Canvas cc) => cc.drawImageRect(
+              im,
               Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(n.x - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
@@ -1218,7 +1227,9 @@ class MapGame extends Game {
         final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
-          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+          c.drawImageRect(
+              im,
+              Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
         }
@@ -1278,11 +1289,11 @@ class MapGame extends Game {
         final d = kFarmDecos[id];
         final im = d == null ? null : sprites.lifeIcon(d.sprite, '');
         if (im == null) continue;
-        add(id == 'stone_path' ? py : py + 14,
+        add(
+            id == 'stone_path' ? py : py + 14,
             () => c.drawImageRect(
                 im,
-                Rect.fromLTWH(
-                    0, 0, im.width.toDouble(), im.height.toDouble()),
+                Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
                 Rect.fromLTWH(px, py, ts, ts),
                 SpriteCatalog.pixelPaint()));
       }
@@ -1314,22 +1325,25 @@ class MapGame extends Game {
           (mine
               ? controller.activeTool != null
               : p.fishLine != null || controller.nearSoilAt(px, py));
-      void heroOn(Canvas cc, double x, double y) => actors.hero(cc,
-          classId: p.profile.classId,
-          weaponType: weapon?.type,
-          look: p.profile.equippedItem == null
-              ? null
-              : WeaponLook.of(p.profile.equippedItem!),
-          x: x,
-          y: y,
-          t: t,
-          dir: mine ? controller.local.dir : p.dir,
-          moving: mine ? controller.local.moving : p.moving,
-          dead: p.hp <= 0,
-          blink: grace && p.hp > 0,
-          ascensionId: p.profile.ascension.id,
-          showWeapon: !toolOut);
-      void hero(double x, double y) => heroOn(c, x, y);
+      void heroOn(Canvas cc, double x, double y, {bool seated = false}) =>
+          actors.hero(cc,
+              classId: p.profile.classId,
+              weaponType: weapon?.type,
+              look: p.profile.equippedItem == null
+                  ? null
+                  : WeaponLook.of(p.profile.equippedItem!),
+              x: x,
+              y: y,
+              t: t,
+              dir: mine ? controller.local.dir : p.dir,
+              moving: mine ? controller.local.moving : p.moving,
+              dead: p.hp <= 0,
+              blink: grace && p.hp > 0,
+              ascensionId: p.profile.ascension.id,
+              showWeapon: !toolOut,
+              seated: seated);
+      void hero(double x, double y, {bool seated = false}) =>
+          heroOn(c, x, y, seated: seated);
       if (fall != null && fq != null) {
         if (fq < 0.5) {
           // Se achica y se desvanece donde cayó.
@@ -1381,17 +1395,26 @@ class MapGame extends Game {
         moving: mine ? controller.local.moving : p.moving,
         onWater: raft,
         draw: (cc) {
-          if (raft) _drawRaft(cc, px, py + 3, t);
-          heroOn(cc, px, py);
+          final life = p.profile.life;
+          if (raft) {
+            _drawRaft(cc, px, py + 3, t, life: life);
+            cozy.drawRaftPosts(cc, px, py + 3, _bob(t), life);
+          }
+          heroOn(cc, px, py, seated: raft && line != null);
+          if (raft) cozy.drawRaftRoof(cc, px, py + 3, _bob(t), life);
         },
       ));
       add(py, () {
         // On a raft (fishing.md § 15): the logs under the hero.
         if (raft) _drawRaft(c, px, py + 3, t, life: p.profile.life);
-        hero(px, py);
-        if (raft) {
-          cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
-        }
+        // Fishing from the raft the rider sits on a crate; the awning
+        // posts stand behind them, the cloth above (cozy_life.md § 1).
+        final sit = raft && line != null;
+        final dir = mine ? controller.local.dir : p.dir;
+        if (raft) cozy.drawRaftPosts(c, px, py + 3, _bob(t), p.profile.life);
+        if (sit) cozy.drawRaftSeat(c, px, py, dir);
+        hero(px, py, seated: sit);
+        if (raft) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
           final face = mine ? controller.local.fx : p.dir;
@@ -1424,7 +1447,7 @@ class MapGame extends Game {
           if (b != null) _lastBobber[p.id] = b;
           fishing.drawAngler(c,
               px: px,
-              py: py,
+              py: sit ? py + ActorPainter.seatDrop : py,
               dir: mine ? controller.local.dir : p.dir,
               line: line,
               t: t,
@@ -1432,17 +1455,19 @@ class MapGame extends Game {
               text: (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
         }
         // Solo el nombre, un paso más chico (v0.37.3).
-        actors.text(c, p.name, px, py - 22,
+        // Under the raft awning the name rises above the cloth.
+        final lift = nameLift(raft: raft, life: p.profile.life);
+        actors.text(c, p.name, px, py - 22 - lift,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 5);
         // Auto-fishing tag with this session's catches (fishing.md § 6).
-        final auto = line != null &&
-            (mine ? controller.autoFishing : line.auto);
+        final auto =
+            line != null && (mine ? controller.autoFishing : line.auto);
         if (auto) {
           final tag = mine
-              ? controller.strings.t('ui.world.ctl.autofish.tag',
-                  {'n': controller.autoFishCaught})
+              ? controller.strings.t(
+                  'ui.world.ctl.autofish.tag', {'n': controller.autoFishCaught})
               : controller.strings.t('ui.world.ctl.autofish.label');
-          actors.text(c, tag, px, py - 29, const Color(0xFF7FD8FF), 4);
+          actors.text(c, tag, px, py - 29 - lift, const Color(0xFF7FD8FF), 4);
         }
       });
     }
@@ -1594,8 +1619,8 @@ class MapGame extends Game {
         actors.text(c, txt, x, y, col, size);
     if (controller.mineLevel case final lvl? when inMine) {
       final p = controller.session?.players[controller.localId];
-      final ms = controller.mineClock.elapsedMilliseconds -
-          controller.lastSwingMs;
+      final ms =
+          controller.mineClock.elapsedMilliseconds - controller.lastSwingMs;
       final period = controller.mineSwingPeriodMs;
       // The pick shows through a swing, and stays raised while held.
       final swinging = ms < period + 150 || controller.mineHolding;
@@ -1661,8 +1686,8 @@ class MapGame extends Game {
             SkyRules.nowIn(s.town.sky, s.place).name, dayDark);
         // Over water the same cloud shows as its reflection instead
         // (water_reflections.md § 1.3).
-        regionLight.drawClouds(c, worldView, secs, cover, map.width * ts,
-            map.height * ts,
+        regionLight.drawClouds(
+            c, worldView, secs, cover, map.width * ts, map.height * ts,
             onWater: reflections.level == ReflectionLevel.off
                 ? null
                 : (x, y) => reflections.reflectsSky(x, y));
@@ -1720,10 +1745,10 @@ class MapGame extends Game {
       final townLights =
           map.lobby && map.place == null ? s.town.lights : const <(int, int)>[];
       final campLay = map.lobby ? biomeLayout(map.place) : null;
-      final campNpc = campLay != null &&
-              !s.town.resident(campLay.npc.id).invited
-          ? campLay.npc
-          : null;
+      final campNpc =
+          campLay != null && !s.town.resident(campLay.npc.id).invited
+              ? campLay.npc
+              : null;
       if (ambient.$1 < 0.995 || ambient.$3 < 0.995) {
         light.draw(c, map, worldView,
             ambient: ambient,
@@ -1810,8 +1835,7 @@ class MapGame extends Game {
         }
         final clay = map.lobby ? biomeLayout(map.place) : null;
         if (clay != null && !s.town.resident(clay.npc.id).invited) {
-          if (NpcCampRules.light(clay.npc, vx0, vy0, vx1, vy1)
-              case final l?) {
+          if (NpcCampRules.light(clay.npc, vx0, vy0, vx1, vy1) case final l?) {
             addLight(l);
           }
         }
@@ -1937,11 +1961,13 @@ class MapGame extends Game {
     final q = (_now - t0) / skyNoticeMs;
     if (q >= 1) return;
     final a = (q < 5 / 6 ? 1.0 : (1 - q) * 6).clamp(0.0, 1.0);
-    c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
-        Paint()..color = SkyPalette.forecastBack.withValues(
-            alpha: SkyPalette.forecastBack.a * a));
-    actors.text(c, txt, vw / 2, 40,
-        SkyPalette.forecast.withValues(alpha: a), 6);
+    c.drawRect(
+        const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
+        Paint()
+          ..color = SkyPalette.forecastBack
+              .withValues(alpha: SkyPalette.forecastBack.a * a));
+    actors.text(
+        c, txt, vw / 2, 40, SkyPalette.forecast.withValues(alpha: a), 6);
   }
 
   /// How long the weather / forecast notice stays up (ms).
@@ -1961,6 +1987,7 @@ class MapGame extends Game {
     final lay = biomeLayout(place);
     if (lay == null || lay.raftDocks.isEmpty) return;
     final dock = sprites.lifeIcon('muelle_balsa', '');
+    final life = controller.view?.me?.profile.life;
     for (final d in lay.raftDocks) {
       if (dock != null) {
         c.drawImageRect(
@@ -1969,14 +1996,22 @@ class MapGame extends Game {
             Rect.fromLTWH(d.x * ts, d.y * ts, ts, ts),
             SpriteCatalog.pixelPaint());
       }
-      final rx = (d.wx + 0.5) * ts, ry = (d.wy + 0.5) * ts;
-      _drawRaft(c, rx, ry, t);
+      // The moored raft shows its owner's decorations (roof, lantern,
+      // paint) so it looks the same docked as when ridden, also mirrored.
+      final x = (d.wx + 0.5) * ts, y = (d.wy + 0.5) * ts;
+      void moored(Canvas cc) {
+        _drawRaft(cc, x, y, t, life: life);
+        cozy.drawRaftPosts(cc, x, y, _bob(t), life);
+        cozy.drawRaftRoof(cc, x, y, _bob(t), life);
+      }
+
+      moored(c);
       _refl.add((
-        x: rx,
-        y: ry + ts / 2,
+        x: x,
+        y: y + ts / 2,
         moving: false,
         onWater: false,
-        draw: (cc) => _drawRaft(cc, rx, ry, t),
+        draw: moored,
       ));
     }
   }
@@ -1988,6 +2023,11 @@ class MapGame extends Game {
     // Decorations of its rider (cozy_life.md § 1).
     cozy.drawRaft(c, im, x, y, _bob(t), life);
   }
+
+  /// Px the name label rises so it clears the raft awning; only when the
+  /// rider is on a raft that has one.
+  static double nameLift({required bool raft, LifeSkills? life}) =>
+      raft && life != null && CozyRules.hasRoof(life) ? 8.0 : 0.0;
 
   static double _bob(num t) => (t / 600).floor().isEven ? 0.0 : 1.0;
 
@@ -2153,9 +2193,9 @@ class MapGame extends Game {
     final fx = (fire.$1 + 0.5) * ts, fy = (fire.$2 + 1) * ts - 7;
     for (var i = 0; i < 3; i++) {
       final ph = ((t / 90 + i * 3.7) % 6) / 6;
-      _campPaint.color = Color.lerp(const Color(0xFFFFE08A),
-              const Color(0xFFFF6A2A), ph)!
-          .withValues(alpha: 1 - ph);
+      _campPaint.color =
+          Color.lerp(const Color(0xFFFFE08A), const Color(0xFFFF6A2A), ph)!
+              .withValues(alpha: 1 - ph);
       c.drawRect(
           Rect.fromLTWH(fx - 2 + i * 1.5, fy - ph * 6, 1, 1), _campPaint);
     }
@@ -2169,8 +2209,7 @@ class MapGame extends Game {
     for (var i = 0; i < 4; i++) {
       final ph = ((t / 160 + i * 1.9) % 4) / 4;
       _campPaint.color = base.withValues(alpha: 1 - ph);
-      c.drawRect(
-          Rect.fromLTWH(x - 5 + i * 3.0, bottom - 3 - ph * 8, 1, 1),
+      c.drawRect(Rect.fromLTWH(x - 5 + i * 3.0, bottom - 3 - ph * 8, 1, 1),
           _campPaint);
     }
   }
