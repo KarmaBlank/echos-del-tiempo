@@ -11,6 +11,7 @@
   "ui.combat.enemy.hit_cap": "No cae de un golpe: cada golpe le saca como máximo el {pct}% de su vida.",
   "ui.combat.enemy.ult_power_all": "ATQ × {x} a todo el grupo",
   "ui.combat.enemy.ult_power_one": "ATQ × {x} al objetivo",
+  "ui.combat.enemy.ult_break_fill": "{pct}Llena la barra de quiebre (no aturde a jugadores)",
   "ui.combat.enemy.ult_delay_all": "Retrasa a todo el grupo",
   "ui.combat.enemy.ult_wipe_buffs": "Borra los buffs del grupo",
   "ui.combat.enemy.ult_sure_crit": "Crítico seguro",

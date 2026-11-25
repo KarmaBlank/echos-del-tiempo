@@ -455,8 +455,7 @@ class BattleEngine {
     if (encounter != null) _applyInitiative(state, encounter, triggeredBy);
     // After the initiative: opening wards read the opening order.
     applyOpeningWards(state);
-    applyOpeningSilence(state,
-        ambush: encounter == EncounterKind.ambush);
+    applyOpeningSilence(state, ambush: encounter == EncounterKind.ambush);
     return BattleStep(state, const []);
   }
 
@@ -3814,6 +3813,13 @@ class _Turn {
       ? LogLine.empty
       : _l('status_plus', {'n': st.stacks + bonus, 's': _st(st.kind)});
 
+  /// [_statusText] of an enemy status on players: a stun only fills the
+  /// break bar (combat.md § "Control sobre jugadores").
+  LogLine _enemyStatusText(StatusApplication? st, {int bonus = 0}) =>
+      st?.kind == StatusKind.stun
+          ? _l('stun_to_break')
+          : _statusText(st, bonus: bonus);
+
   /// Texto del estado principal de una acción del grupo según lo que
   /// PASÓ: intentado en [tried] objetivos vivos, entró en [landed]. Nunca
   /// dice que un estado entró si no entró (falló la probabilidad o el
@@ -4806,7 +4812,7 @@ class _Turn {
             _l('x_def', {'n': jsRound(h.defensePercent * 100)}),
         ], ' ');
     LogLine infText(Combatant p) => p.alive && inf != null
-        ? _statusText(inf,
+        ? _enemyStatusText(inf,
             bonus: inf.kind == StatusKind.regen ? 0 : p.statusWeakness)
         : LogLine.empty;
     final tauntText = taunter != null ? _l('taunted') : LogLine.empty;
@@ -5050,7 +5056,7 @@ class _Turn {
         ], ' '),
         'p': LogLine.join(parts, ', '),
       }),
-      if (status != null) _statusText(status),
+      if (status != null) _enemyStatusText(status),
       if (ult.delayAll > 0) _l('delays_all'),
       if (ult.wipeBuffs) _l('wipes_buffs'),
       extra,
@@ -5342,7 +5348,7 @@ class _Turn {
                 if (marked.defending) _l('x_defend'),
               ], ' '),
             }),
-      if (got) _statusText(inf),
+      if (got) _enemyStatusText(inf),
     ]);
   }
 
@@ -5384,8 +5390,8 @@ class _Turn {
         ..fissured = false;
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
-    _notes.add(_l('transform',
-        {'a': e.name, 'p': _pct(m.power - 1), 'n': m.every}));
+    _notes.add(
+        _l('transform', {'a': e.name, 'p': _pct(m.power - 1), 'n': m.every}));
   }
 
   void _shiftStance(Combatant e, BossMechanicDef m) {
@@ -5420,8 +5426,8 @@ class _Turn {
       total = math.max(total, _r2(-v));
     }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.frost, value: total));
-    _notes.add(_l('frost',
-        {'m': m.name, 'p': _pct(m.value), 't': _pct(total)}));
+    _notes
+        .add(_l('frost', {'m': m.name, 'p': _pct(m.value), 't': _pct(total)}));
   }
 
   static double _r2(double v) => (v * 100).round() / 100;
@@ -6229,8 +6235,7 @@ class _Turn {
           // Primer Golpe: +daño si el objetivo tiene la vida llena.
           if (tk.openerBonus > 0 && e.hp >= e.maxHp) {
             b *= 1 + tk.openerBonus;
-            _notes.add(
-                _l('opener', {'s': _sk(tk), 'p': _pct(tk.openerBonus)}));
+            _notes.add(_l('opener', {'s': _sk(tk), 'p': _pct(tk.openerBonus)}));
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
@@ -6313,7 +6318,8 @@ class _Turn {
         if (burnBlocked) {
           log = log.plus(_l('burn_blocked', {
             's': _st(StatusKind.burn),
-            'k': LogLine.named(CatalogKeys.mechName('almaHielo'), 'Alma de Hielo'),
+            'k': LogLine.named(
+                CatalogKeys.mechName('almaHielo'), 'Alma de Hielo'),
           }));
         } else if (st != null) {
           log += _statusOutcome(st, bonus, tried, landed);
@@ -6422,8 +6428,8 @@ class _Turn {
     t.statuses[StatusKind.poison] = 0;
     t.nextTurn = state.clock + _iv(t);
     events.add(RevivedEvent(t.id));
-    state.logLine = _l('aether_revive',
-        {'a': p.name, 'b': t.name, 'h': t.hp, 'm': t.maxHp});
+    state.logLine = _l(
+        'aether_revive', {'a': p.name, 'b': t.name, 'h': t.hp, 'm': t.maxHp});
     return true;
   }
 
