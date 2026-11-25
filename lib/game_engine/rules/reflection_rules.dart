@@ -96,6 +96,38 @@ abstract final class ReflectionRules {
     return null;
   }
 
+  /// Water line (px) and opacity factor (0..1) of an actor whose foot is
+  /// at (x, y) px (§ 1.1). The factor is a smoothstep of the continuous
+  /// foot-to-water gap: 1 on the edge, 0 at `reflActorReach` +
+  /// `reflActorFadeTiles` tiles, so the reflection never pops. `null` =
+  /// no water within that distance.
+  static (double, double)? actorLine(
+      double x, double y, WaterKind Function(int, int) at) {
+    const ts = 16.0;
+    final tx = (x / ts).floor(), ty = (y / ts).floor();
+    if (at(tx, ty) != WaterKind.none) return (y, 1.0);
+    final far = _r.d('reflActorReach') + _r.d('reflActorFadeTiles');
+    final steps = far.ceil();
+    for (var d = 1; d <= steps; d++) {
+      if (at(tx, ty + d) != WaterKind.none) {
+        final line = (ty + d) * ts;
+        final a = actorFade((line - y) / ts);
+        return a <= 0 ? null : (line, a);
+      }
+    }
+    return null;
+  }
+
+  /// Opacity factor of an actor reflection whose foot is [gap] tiles
+  /// above the water line: 1 at 0, smoothstep down to 0 at
+  /// `reflActorReach` + `reflActorFadeTiles`.
+  static double actorFade(double gap) {
+    final far = _r.d('reflActorReach') + _r.d('reflActorFadeTiles');
+    if (far <= 0) return gap <= 0 ? 1 : 0;
+    final u = (gap / far).clamp(0.0, 1.0);
+    return 1 - u * u * (3 - 2 * u);
+  }
+
   /// Indices of the [all] candidates to reflect: at most [cap], the
   /// nearest to the view center (cx, cy).
   static List<int> pick(

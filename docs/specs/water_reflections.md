@@ -24,6 +24,11 @@ discretos.
    reflejo de la balsa y su jinete se lee debajo. Se
    reflejan como mucho `reflActorsHigh` (ALTA) o `reflActorsLow` (BAJA),
    los más cercanos al centro de la vista.
+   **Fundido por distancia**: la opacidad del reflejo es un smoothstep de
+   la distancia continua (px, sin redondear a tile) del pie a la línea
+   del agua: 1 en la orilla, 0 a `reflActorReach` + `reflActorFadeTiles`
+   tiles (`ReflectionRules.actorFade`). Al acercarse aparece de a poco y
+   al alejarse se desvanece; nunca se prende ni se apaga de golpe.
 2. **Orilla**: los tiles de tierra de las `reflRows` filas sobre el agua
    (árboles y matas procedurales, casas, faroles, piedras de paso,
    rocas, y la propia orilla), volteados respecto de la línea del agua

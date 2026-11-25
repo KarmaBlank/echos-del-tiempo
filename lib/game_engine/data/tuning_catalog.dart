@@ -876,6 +876,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'reflTint': 0.16,
     'reflRows': 1,
     'reflActorReach': 1,
+    'reflActorFadeTiles': 1,
     'reflMaxLen': 24,
     'reflActorsHigh': 16,
     'reflActorsLow': 6,

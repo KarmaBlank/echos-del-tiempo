@@ -1913,6 +1913,7 @@ const _regionsLabels = {
   'reflTint': 'Reflejos: tinte hacia el color del agua',
   'reflRows': 'Reflejos: filas de orilla reflejadas',
   'reflActorReach': 'Reflejos: distancia al agua de actores y luces (tiles)',
+  'reflActorFadeTiles': 'Reflejos: fundido de actores al alejarse del agua (tiles)',
   'reflActorsHigh': 'Reflejos: actores como máximo (ALTA)',
   'reflActorsLow': 'Reflejos: actores como máximo (BAJA)',
   'reflWaveAmp': 'Reflejos: amplitud de la onda (px)',
