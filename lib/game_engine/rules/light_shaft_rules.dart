@@ -11,9 +11,11 @@ abstract final class LightShaftRules {
   /// Openings of [map]: a biome region's cave skylights, or the theme's
   /// openings (`kLightShaftThemes`); themes without an entry stay dark.
   static bool hasOpenings(GameMap map) {
+    // A biome region: only its cave skylights. The theme's hashed
+    // openings are for roofed maps; on an open exterior they put bright
+    // shaft lights on open grass (v0.49.9 bug).
     if (map.lobby && biomeLayout(map.place) != null) {
-      return biomeLayout(map.place)!.skylights.isNotEmpty ||
-          kLightShaftThemes.containsKey(map.theme);
+      return biomeLayout(map.place)!.skylights.isNotEmpty;
     }
     return kLightShaftThemes.containsKey(map.theme);
   }
@@ -29,7 +31,14 @@ abstract final class LightShaftRules {
   static List<(int, int)> _build(GameMap map) {
     final out = <(int, int)>[];
     if (map.lobby) {
-      if (biomeLayout(map.place) case final lay?) out.addAll(lay.skylights);
+      if (biomeLayout(map.place) case final lay?) {
+        // Only skylights under the roof (biome_regions.md § 7.2.1).
+        out.addAll([
+          for (final (x, y) in lay.skylights)
+            if (lay.isIndoor(x, y)) (x, y),
+        ]);
+        return List.unmodifiable(out);
+      }
     }
     final def = kLightShaftThemes[map.theme];
     if (def == null) return List.unmodifiable(out);

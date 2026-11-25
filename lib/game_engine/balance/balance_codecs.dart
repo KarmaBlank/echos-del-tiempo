@@ -1927,6 +1927,7 @@ const _regionsLabels = {
   'reflGlowLen': 'Reflejos: largo del brillo de una luz (px)',
   'reflGlowAlpha': 'Reflejos: opacidad del brillo de una luz',
   'reflBankAlpha': 'Reflejos: opacidad de la orilla reflejada',
+  'reflMaxLen': 'Reflejos: largo máximo de un reflejo (px)',
   'reflBankLip': 'Reflejos: alto de la orilla lisa reflejada (px)',
   'reflFloatDrop': 'Reflejos: bajada del reflejo de la balsa (px)',
   'reflDuskTint': 'Reflejos: tinte cálido del agua al atardecer',

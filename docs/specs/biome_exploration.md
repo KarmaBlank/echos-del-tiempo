@@ -204,6 +204,14 @@ celdas, revelado, marcas del exterior), `TownState.discovery`,
   px (`kMinimapWindow`).
 - Con zoom 1 (el piso entero) el piso se encoge para caber en esa misma
   ventana (antes, el lienzo de 150 × 112 ocupaba 375 × 280 px).
+- **Zoom por defecto en el exterior** (v0.49.9): cerca. La caja que va
+  de la llegada a los portales de zona (+ 3 tiles de margen) llena la
+  ventana (`biomeMinimapCell`), entre el zoom de todo el bioma y el
+  zoom 3; centrado en el jugador como siempre. No se aleja solo al
+  descubrir más: el jugador ve los senderos que salen de la ventana y
+  aleja con `-` si quiere. El zoom que elige en los exteriores se
+  recuerda durante la sesión (`biomeMinimapZoomProvider`, aparte del
+  zoom guardado de las mazmorras, que no cambia).
 
 ### 11.4 Descubrimiento (niebla del exterior)
 - El exterior se parte en **celdas** de `mapCell` = 4 × 4 tiles
