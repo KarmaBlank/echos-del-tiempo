@@ -69,6 +69,8 @@ abstract final class QuestTrackRules {
   /// forage, or a mining / smithing item (ore, ingot, rare, tool). Never
   /// the raw id: unknown ids become readable (`ingot_x` → `Ingot x`).
   static String itemName(String id) {
+    // Forged weapon orders: the UI names them (`questItemText`).
+    if (ResidentRules.isForgeOrder(id)) return id;
     if (kMeals[id]?.name case final n?) return n;
     if (kFish[id]?.name case final n?) return n;
     if (kCrops[id]?.name case final n?) return n;
