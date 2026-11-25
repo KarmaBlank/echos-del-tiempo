@@ -144,18 +144,19 @@ void main() {
     expect(CozyRules.hasRoof(life), isTrue);
   });
 
-  testWidgets('map: roofed raft is one object, with and without rider',
-      (tester) async {
+  testWidgets('map: wide raft, awning, seated rider fishing', (tester) async {
     final sprites = await _sprites(tester);
     if (sprites == null) return;
     final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
     final actors = ActorPainter(sprites);
     final raft = sprites.lifeIcon('balsa', '')!;
-    final roof = sprites.lifeIcon('raft_roof', '')!;
-    expect((roof.width, roof.height), (16, 32));
-    // Water strip, then four rafts: bare, docked (roof + lantern + paint),
-    // ridden (same decorations) and ridden while moving.
-    const w = 160.0, h = 56.0, scale = 6.0;
+    // Two tiles wide, one tall: a raft, not a stall.
+    expect((raft.width, raft.height), (32, 16));
+    expect(sprites.lifeIcon('raft_roof', '')!.width, 32);
+    expect(sprites.lifeIcon('raft_posts', ''), isNotNull);
+    // Water strip, then: bare, docked (awning + lantern + blue paint),
+    // rider seated fishing under the awning, rider sailing.
+    const w = 200.0, h = 48.0, scale = 5.0;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec)..scale(scale);
     c.drawRect(const Rect.fromLTWH(0, 0, w, h),
@@ -163,22 +164,21 @@ void main() {
     final life = LifeSkills(
         raftDecos: const {'lantern', 'roof', 'paint_blue'},
         raftOn: const {'lantern', 'roof', 'paint_blue'});
-    const y = 38.0;
-    void ride(double x, {LifeSkills? deco, bool rider = false,
-        bool moving = false}) {
-      cozy.drawRaft(c, raft, x, y, 0, deco);
-      if (rider) {
+    const y = 32.0;
+    void hero(double x, {required bool seated, required bool moving}) =>
         actors.hero(c,
             classId: 'guerrero', weaponType: null, x: x, y: y - 3, t: 140,
             dir: 1, moving: moving, dead: false, blink: false,
-            showWeapon: false);
-      }
-      cozy.drawRaftRoof(c, x, y, 0, deco);
-    }
-    ride(20);
-    ride(60, deco: life);
-    ride(100, deco: life, rider: true);
-    ride(140, deco: life, rider: true, moving: true);
+            showWeapon: false, seated: seated);
+    cozy.drawRaft(c, raft, 25, y, 0, null);
+    cozy.drawRaft(c, raft, 75, y, 0, life);
+    cozy.drawRaftRoof(c, 75, y, 0, life);
+    cozy.drawRaft(c, raft, 125, y, 0, life);
+    hero(125, seated: true, moving: false);
+    cozy.drawRaftRoof(c, 125, y, 0, life);
+    cozy.drawRaft(c, raft, 175, y, 0, life);
+    cozy.drawRaftRoof(c, 175, y, 0, life);
+    hero(175, seated: false, moving: true);
     await _picShot(tester, rec.endRecording(), (w * scale).round(),
         (h * scale).round(), 'cozy_raft_decor');
     expect(tester.takeException(), isNull);

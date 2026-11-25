@@ -1287,7 +1287,7 @@ class MapGame extends Game {
           (mine
               ? controller.activeTool != null
               : p.fishLine != null || controller.nearSoilAt(px, py));
-      void hero(double x, double y) => actors.hero(c,
+      void hero(double x, double y, {bool seated = false}) => actors.hero(c,
           classId: p.profile.classId,
           weaponType: weapon?.type,
           look: p.profile.equippedItem == null
@@ -1301,7 +1301,8 @@ class MapGame extends Game {
           dead: p.hp <= 0,
           blink: grace && p.hp > 0,
           ascensionId: p.profile.ascension.id,
-          showWeapon: !toolOut);
+          showWeapon: !toolOut,
+          seated: seated);
       if (fall != null && fq != null) {
         if (fq < 0.5) {
           // Se achica y se desvanece donde cayó.
@@ -1350,10 +1351,14 @@ class MapGame extends Game {
       add(py, () {
         // On a raft (fishing.md § 15): the logs under the hero.
         if (raft) _drawRaft(c, px, py + 3, t, life: p.profile.life);
-        hero(px, py);
-        if (raft) {
+        // Fishing from the raft the rider sits under the awning; sailing
+        // they stand in front of it (cozy_life.md § 1).
+        final sit = raft && line != null;
+        if (raft && !sit) {
           cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         }
+        hero(px, py, seated: sit);
+        if (sit) cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
           final face = mine ? controller.local.fx : p.dir;

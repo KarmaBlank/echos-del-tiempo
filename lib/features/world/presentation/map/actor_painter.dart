@@ -26,6 +26,9 @@ class ActorPainter {
     ..strokeWidth = 1
     ..isAntiAlias = false;
   final _sprite = SpriteCatalog.pixelPaint();
+
+  /// Px the body drops when seated.
+  static const _sit = 5.0;
   final _texts = <(String, int, double), TextPainter>{};
 
   static const _shadow = Color(0x66000000);
@@ -102,6 +105,7 @@ class ActorPainter {
     String? ascensionId,
     WeaponLook? look,
     bool showWeapon = true,
+    bool seated = false,
   }) {
     final img = sprites.heroFor(classId, ascensionId);
     c.save();
@@ -120,7 +124,19 @@ class ActorPainter {
     // Aura de la ascensión (docs/specs/ascension.md § 5).
     if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
-    if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
+    if (img != null && seated && !dead) {
+      // Seated (fishing on the raft): the legs fold, so the body drops
+      // [_sit] px over the feet. Derived from the hero sprite, so every
+      // class and ascension sits without extra art.
+      final w = img.width.toDouble(), h = img.height.toDouble();
+      c.drawImageRect(img, Rect.fromLTWH(0, 0, w, h - _sit - 2),
+          Rect.fromLTWH(-7, -17 + _sit, w, h - _sit - 2), _sprite);
+      c.drawImageRect(img, Rect.fromLTWH(0, h - 2, w, 2),
+          Rect.fromLTWH(-7, -17 + h - 2, w, 2), _sprite);
+      c.translate(0, _sit);
+    } else if (img != null) {
+      c.drawImage(img, const Offset(-7, -17), _sprite);
+    }
     // Con una herramienta de vida en la mano no se ve el arma.
     if (showWeapon) {
       WeaponOverlay.draw(c, classId, weaponType, look: look, time: t / 1000);

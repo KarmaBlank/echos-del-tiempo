@@ -47,46 +47,53 @@ class CozyLayer {
     }
   }
 
-  /// The raft sprite [raft] at (x, y) (centre) with the decorations of
-  /// [life]: paint tint, roof above and lantern at the corner.
+  /// The raft deck [raft] (32 x 16, two tiles wide) centred on (x, y),
+  /// tinted with the wood colour or the paint of [life]. The sprite is
+  /// drawn in light neutral shades and tinted with `modulate`, so a
+  /// painted raft keeps the paint's hue (blue stays blue). Without an
+  /// awning the lantern sits at the deck's corner.
   void drawRaft(Canvas c, ui.Image raft, double x, double y, double bob,
       LifeSkills? life) {
-    final paint = life == null ? null : CozyRules.paintOf(life);
-    final p = SpriteCatalog.pixelPaint();
-    if (paint != null) {
-      p.colorFilter = ui.ColorFilter.mode(
-          CozyPalette.paints[paint % CozyPalette.paints.length],
-          BlendMode.modulate);
-    }
-    _img(c, raft, Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts), p);
-    // With a roof the lantern hangs from its post ([drawRaftRoof]).
+    _img(c, raft, Rect.fromLTWH(x - ts, y - ts / 2 + bob, ts * 2, ts),
+        _tint(_paint(life) ?? CozyPalette.wood));
     if (life == null || CozyRules.hasRoof(life)) return;
     if (CozyRules.hasLantern(life)) {
       if (icon('raft_lantern') case final im?) {
-        _img(c, im, Rect.fromLTWH(x + 2, y - ts + 2 + bob, ts / 2, ts / 2),
+        _img(c, im, Rect.fromLTWH(x + 6, y - ts + 1 + bob, ts / 2, ts / 2),
             SpriteCatalog.pixelPaint());
       }
     }
   }
 
-  /// The roof of the raft centred on (x, y), drawn after the rider so
-  /// they sit under it. The sprite is 16 x 32: the slab on top and two
-  /// posts that stand on the deck's front corners, so roof and deck read
-  /// as one object; the lantern hangs from the right post.
+  /// The awning of the raft centred on (x, y): a low flat cloth on two
+  /// short posts standing on the deck, the lantern hanging from the
+  /// right post. Drawn after a seated rider (they sit under it) and
+  /// before a standing one (they stand in front of it).
   void drawRaftRoof(
       Canvas c, double x, double y, double bob, LifeSkills? life) {
     if (life == null || !CozyRules.hasRoof(life)) return;
+    final p = SpriteCatalog.pixelPaint();
+    if (icon('raft_posts') case final im?) {
+      _img(c, im, Rect.fromLTWH(x - ts, y - 16 + bob, ts * 2, 18), p);
+    }
     if (icon('raft_roof') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - ts / 2, y + 5 - ts * 2 + bob, ts, ts * 2),
-          SpriteCatalog.pixelPaint());
+      _img(c, im, Rect.fromLTWH(x - ts, y - 20 + bob, ts * 2, 6),
+          _tint(_paint(life) ?? CozyPalette.cloth));
     }
     if (CozyRules.hasLantern(life)) {
       if (icon('raft_lantern') case final im?) {
-        _img(c, im, Rect.fromLTWH(x + 3, y - 18 + bob, ts / 2, ts / 2),
-            SpriteCatalog.pixelPaint());
+        _img(c, im, Rect.fromLTWH(x + 9, y - 15 + bob, ts / 2, ts / 2), p);
       }
     }
   }
+
+  static Color? _paint(LifeSkills? life) {
+    final i = life == null ? null : CozyRules.paintOf(life);
+    return i == null ? null : CozyPalette.paints[i % CozyPalette.paints.length];
+  }
+
+  static Paint _tint(Color color) => SpriteCatalog.pixelPaint()
+    ..colorFilter = ui.ColorFilter.mode(color, BlendMode.modulate);
 
   /// Farm decorations of [town] (map origin [ox], [oy] in tiles).
   void drawDecor(Canvas c, TownState town, int ox, int oy) {
