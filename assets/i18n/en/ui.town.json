@@ -608,5 +608,12 @@
   "ui.town.trades.effects": "EFFECTS",
   "ui.town.trades.claimed": "Already received",
   "ui.town.trades.capstone": "Capstone: only one per tree",
-  "ui.town.trades.tier_of": "{branch} · tier {n}"
+  "ui.town.trades.tier_of": "{branch} · tier {n}",
+  "ui.town.trades.block.unknown": "Unknown node",
+  "ui.town.trades.block.taken": "Already taken",
+  "ui.town.trades.block.points": "Not enough points ({have}/{need})",
+  "ui.town.trades.block.level": "Requires level {need}",
+  "ui.town.trades.block.unlinked": "Not connected",
+  "ui.town.trades.block.exclusive": "You chose {node}",
+  "ui.town.trades.block.inventory": "Inventory full"
 }

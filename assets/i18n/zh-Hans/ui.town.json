@@ -620,5 +620,12 @@
   "ui.town.trades.effects": "效果",
   "ui.town.trades.claimed": "已领取",
   "ui.town.trades.capstone": "顶点：每棵树仅限一个",
-  "ui.town.trades.tier_of": "{branch} · 第 {n} 层"
+  "ui.town.trades.tier_of": "{branch} · 第 {n} 层",
+  "ui.town.trades.block.unknown": "未知节点",
+  "ui.town.trades.block.taken": "已拥有",
+  "ui.town.trades.block.points": "点数不足（{have}/{need}）",
+  "ui.town.trades.block.level": "需要等级 {need}",
+  "ui.town.trades.block.unlinked": "未连接",
+  "ui.town.trades.block.exclusive": "你已选择 {node}",
+  "ui.town.trades.block.inventory": "背包已满"
 }

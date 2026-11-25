@@ -20,6 +20,31 @@ export '../data/life_tree_catalog.dart';
 /// per tree, free reset, one-time rewards and the sum of the continuous
 /// effects the fishing / farming / smithing / cooking rules read. Pure:
 /// the host applies them.
+/// Why a node can't be taken (life_trees_v2.md § 2).
+enum LifeBlockKind { unknown, taken, points, level, unlinked, exclusive, inventory }
+
+class LifeBlock {
+  const LifeBlock(this.kind, {this.have = 0, this.need = 0, this.node});
+  final LifeBlockKind kind;
+  final int have, need;
+
+  /// The capstone already chosen ([LifeBlockKind.exclusive]).
+  final LifeTreeNode? node;
+
+  /// i18n key `ui.town.trades.block.<kind>` (args `have`, `need`, `node`).
+  String get key => 'ui.town.trades.block.${kind.name}';
+
+  String get es => switch (kind) {
+        LifeBlockKind.unknown => 'Nodo desconocido',
+        LifeBlockKind.taken => 'Ya lo tenés',
+        LifeBlockKind.points => 'Faltan puntos ($have/$need)',
+        LifeBlockKind.level => 'Pide nivel $need',
+        LifeBlockKind.unlinked => 'No está conectado',
+        LifeBlockKind.exclusive => 'Elegiste ${node?.name}',
+        LifeBlockKind.inventory => 'Inventario lleno',
+      };
+}
+
 abstract final class LifeTreeRules {
   static TuningDef get t => tuning(TuningId.lifeTree);
 
@@ -70,32 +95,42 @@ abstract final class LifeTreeRules {
   static bool claimed(PlayerProfile p, String id) =>
       p.life.claimed.contains(id);
 
-  /// Why [id] can't be taken (or `null`).
-  static String? cannotTake(PlayerProfile p, LifeSkillKind k, String id) {
+  /// Why [id] can't be taken (or `null`); the UI translates it.
+  static LifeBlock? block(PlayerProfile p, LifeSkillKind k, String id) {
     final n = lifeTreeNode(k, id);
-    if (n == null) return 'Nodo desconocido';
-    if (has(p, k, id)) return 'Ya lo tenés';
+    if (n == null) return const LifeBlock(LifeBlockKind.unknown);
+    if (has(p, k, id)) return const LifeBlock(LifeBlockKind.taken);
     final f = free(p, k);
-    if (f < n.cost) return 'Faltan puntos ($f/${n.cost})';
+    if (f < n.cost) {
+      return LifeBlock(LifeBlockKind.points, have: f, need: n.cost);
+    }
     final need = tierLevel(n.tier);
-    if (level(p, k) < need) return 'Pide nivel $need';
-    if (!n.links.any((l) => has(p, k, l))) return 'No está conectado';
+    if (level(p, k) < need) return LifeBlock(LifeBlockKind.level, need: need);
+    if (!n.links.any((l) => has(p, k, l))) {
+      return const LifeBlock(LifeBlockKind.unlinked);
+    }
     final ex = n.exclusive;
     if (ex != null) {
       for (final o in taken(p, k)) {
         final on = lifeTreeNode(k, o);
-        if (on != null && on.exclusive == ex) return 'Elegiste ${on.name}';
+        if (on != null && on.exclusive == ex) {
+          return LifeBlock(LifeBlockKind.exclusive, node: on);
+        }
       }
     }
     if (!claimed(p, id) && n.grants.keys.any((g) => g.startsWith('weapon:'))) {
       final w = weaponFor(p, n);
       if (w != null &&
           InventoryRules.cannotReceive(p, LootDrop.item(w)) != null) {
-        return 'Inventario lleno';
+        return const LifeBlock(LifeBlockKind.inventory);
       }
     }
     return null;
   }
+
+  /// es-AR text of [block] (logs and tests; the UI uses i18n keys).
+  static String? cannotTake(PlayerProfile p, LifeSkillKind k, String id) =>
+      block(p, k, id)?.es;
 
   static PlayerProfile _with(
           PlayerProfile p, LifeSkillKind k, List<String> nodes) =>

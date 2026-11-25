@@ -1,5 +1,3 @@
-import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart';
-import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
@@ -79,6 +77,10 @@ void main() {
       p = LifeTreeRules.take(p, LifeSkillKind.pesca, 'fish_a2')!;
       expect(LifeTreeRules.cannotTake(p, LifeSkillKind.pesca, 'fish_a3'),
           'Pide nivel 7');
+      final b = LifeTreeRules.block(p, LifeSkillKind.pesca, 'fish_a3')!;
+      expect(b.kind, LifeBlockKind.level);
+      expect(b.need, 7);
+      expect(b.key, 'ui.town.trades.block.level');
     });
 
     test('chain: a tier needs the one below in the same branch', () {

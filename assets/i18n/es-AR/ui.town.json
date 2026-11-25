@@ -608,5 +608,12 @@
   "ui.town.trades.effects": "EFECTOS",
   "ui.town.trades.claimed": "Ya recibido",
   "ui.town.trades.capstone": "Remate: solo uno por árbol",
-  "ui.town.trades.tier_of": "{branch} · escalón {n}"
+  "ui.town.trades.tier_of": "{branch} · escalón {n}",
+  "ui.town.trades.block.unknown": "Nodo desconocido",
+  "ui.town.trades.block.taken": "Ya lo tenés",
+  "ui.town.trades.block.points": "Faltan puntos ({have}/{need})",
+  "ui.town.trades.block.level": "Pide nivel {need}",
+  "ui.town.trades.block.unlinked": "No está conectado",
+  "ui.town.trades.block.exclusive": "Elegiste {node}",
+  "ui.town.trades.block.inventory": "Inventario lleno"
 }

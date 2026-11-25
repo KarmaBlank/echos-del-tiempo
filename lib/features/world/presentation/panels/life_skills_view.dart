@@ -144,7 +144,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
   LifeNodeState _state(LifeSkillKind k, LifeTreeNode n) =>
       LifeTreeRules.has(p, k, n.id)
           ? LifeNodeState.taken
-          : LifeTreeRules.cannotTake(p, k, n.id) == null
+          : LifeTreeRules.block(p, k, n.id) == null
               ? LifeNodeState.available
               : LifeNodeState.locked;
 
@@ -209,7 +209,15 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final nodes = kLifeTrees[k]!;
     final n = lifeTreeNode(k, _sel ?? '') ?? nodes.first;
     final has = LifeTreeRules.has(p, k, n.id);
-    final why = widget.editBlocked ?? LifeTreeRules.cannotTake(p, k, n.id);
+    final blk = LifeTreeRules.block(p, k, n.id);
+    final why = widget.editBlocked ??
+        (blk == null
+            ? null
+            : context.t(blk.key, {
+                'have': blk.have,
+                'need': blk.need,
+                'node': blk.node == null ? '' : lifeNodeName(blk.node!),
+              }));
     final fx = lifeNodeEffects(context, n);
     final gr = lifeNodeGrants(context, n);
     final claimed = LifeTreeRules.claimed(p, n.id);
@@ -408,12 +416,18 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               ]),
             ),
             const SizedBox(height: 2),
-            Text(lifeNodeName(n),
-                textAlign: TextAlign.center,
-                softWrap: true,
-                style: DsText.detail(st == LifeNodeState.locked
-                    ? DsColors.textDisabled
-                    : DsColors.textPrimary)),
+            // Opaque plate: links never show through the label.
+            Container(
+              key: ValueKey('life-label-${n.id}'),
+              color: DsColors.background,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Text(lifeNodeName(n),
+                  textAlign: TextAlign.center,
+                  softWrap: true,
+                  style: DsText.detail(st == LifeNodeState.locked
+                      ? DsColors.textDisabled
+                      : DsColors.textPrimary)),
+            ),
           ]),
         ),
       ),
