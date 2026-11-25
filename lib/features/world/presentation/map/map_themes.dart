@@ -481,6 +481,27 @@ abstract final class MinePalette {
   static const rockLight = Color(0xFF6E6875);
   static const mouth = Color(0xFF0C0A10);
   static const timber = Color(0xFF7A5230);
+  // Mining v2 (mining_smithing.md § 1.9).
+  static const rockDark = Color(0xFF2E2A33);
+  static const rockTop = Color(0xFF8A8392);
+  static const bedrock = Color(0xFF16141B);
+  static const bedrockLight = Color(0xFF26232D);
+  static const caveFloor = Color(0xFF3A3540);
+  static const caveFloor2 = Color(0xFF332F39);
+  static const crack = Color(0xFF0E0C12);
+  static const spark = Color(0xFFFFE08A);
+  static const bomb = Color(0xFF22202A);
+  static const rail = Color(0xFF9A9AA8);
+  static const cart = Color(0xFF6A4A2C);
+  static const cartDark = Color(0xFF3A2816);
+  static const label = Color(0xFFE8E0C8);
+  static const crystal = Color(0xFF9FE8FF);
+  static const flame = Color(0xFFFFB347);
+  static const mushroom = Color(0xFFB06AE0);
+  static const chestWood = Color(0xFF8A5A2B);
+  static const chestBand = Color(0xFFE0B860);
+  static const relic = Color(0xFF7AE0D0);
+  static const lore = Color(0xFF7A8FA8);
   static const _veins = {
     'mina_bosque': Color(0xFFD9824A),
     'mina_ruinas': Color(0xFFE0B860),
@@ -929,6 +950,9 @@ abstract final class LightPalette {
 
   /// Ambiente de una mazmorra oscura (casi negro).
   static const darkDungeon = Color(0xFF0A0A12);
+
+  /// Mines: dark, but rock shapes stay readable (mining_smithing.md § 1.6).
+  static const darkMine = Color(0xFF2A2630);
 
   /// Silueta de un enemigo en la penumbra.
   static const silhouette = Color(0xFF000000);

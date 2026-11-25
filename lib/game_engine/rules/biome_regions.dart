@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 
 import '../data/biomes_catalog.dart';
+import '../data/mine_catalog.dart' show mineEntrances;
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 
@@ -199,10 +200,12 @@ abstract final class BiomeRegions {
   static int _seed = 0;
   static final Map<String, BiomeLayout> _cache = {};
 
-  /// Mining's entrance hook (mining_smithing.md): when set, picks the
-  /// mine entrances of a layout (the generated cave mouths are in
-  /// `lay.mineSites`). `null` = use the cave mouths.
-  static List<(int, int)> Function(BiomeLayout lay)? mineHook;
+  /// Mining's entrance hook (mining_smithing.md § 1.1): picks the mine
+  /// entrances of a layout (the generated cave mouths, off the main path,
+  /// are in `lay.mineSites`). Set to mining's [mineEntrances]; `null` =
+  /// use the cave mouths.
+  static List<(int, int)> Function(BiomeLayout lay)? mineHook =
+      mineEntrances;
 
   /// The world seed the regions are built from (`town.sky.seed`).
   static int get seed => _seed;

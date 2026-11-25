@@ -252,5 +252,13 @@
   "data.materials.crop.baya_invierno.seed": "Winter berry seed",
   "data.materials.crop.flor_eco.name": "Echo bloom",
   "data.materials.crop.flor_eco.seed": "Echo bloom seed",
-  "data.materials.crop.flor_eco.lore": "It blooms where time repeats itself, and lasts as long as an echo."
+  "data.materials.crop.flor_eco.lore": "It blooms where time repeats itself, and lasts as long as an echo.",
+  "data.materials.smith.pico.name": "Iron pick",
+  "data.materials.smith.pick_copper.name": "Copper pick",
+  "data.materials.smith.pick_frost.name": "Frost iron pick",
+  "data.materials.smith.pick_ember.name": "Ember steel pick",
+  "data.materials.smith.drill_echo.name": "Echo silver drill",
+  "data.materials.smith.mine_torch.name": "Mine torch",
+  "data.materials.smith.mine_bomb.name": "Mine bomb",
+  "data.materials.smith.vein_oil.name": "Vein oil"
 }

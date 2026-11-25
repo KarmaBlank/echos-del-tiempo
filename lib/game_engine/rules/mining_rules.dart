@@ -1,135 +1,344 @@
 import 'dart:math' as math;
 
 import '../data/biomes_catalog.dart';
+import '../data/mine_catalog.dart';
 import '../data/smithing_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import '../models/item.dart' show ItemInstance, Rarity;
+import '../models/mine_state.dart';
 import '../models/player_profile.dart';
 import '../models/weapon.dart';
 import '../models/world_save.dart' show TownState;
 import 'battle_engine.dart' show RandomSource;
 import 'bait_rules.dart';
-import 'biome_rules.dart';
+import 'craft_rules.dart' show CraftRules;
 import '../models/loot.dart' show LootSource;
 import 'loot_rules.dart';
 import 'mine_generator.dart';
 import 'weather_rules.dart';
 
-/// Mines and veins (docs/specs/mining_smithing.md § 1). Pure; numbers in
+export '../models/mine_state.dart';
+export 'mine_generator.dart' show MineLevel;
+
+/// Mines (docs/specs/mining_smithing.md § 1, v2): dig-through levels,
+/// tools, torches, bombs and the booster. Pure; numbers in
 /// `kTuning[TuningId.smithing]`.
 abstract final class MiningRules {
   static TuningDef get t => tuning(TuningId.smithing);
 
   static const _prefix = 'mine:';
 
-  /// Place id of mine [i] of [biome].
-  static String placeOf(String biome, int i) => '$_prefix$biome:$i';
+  /// Levels per mine (≥ 1).
+  static int get levels => math.max(1, t.i('mineLevels'));
 
-  /// `(biome, index)` of a mine place, or `null`.
-  static (String, int)? parse(String? place) {
+  /// Place id of level [level] of mine [i] of [biome]. Level 0 keeps the
+  /// v1 id (`mine:<biome>:<i>`).
+  static String placeOf(String biome, int i, [int level = 0]) =>
+      level == 0 ? '$_prefix$biome:$i' : '$_prefix$biome:$i:$level';
+
+  /// `(biome, index, level)` of a mine place, or `null`.
+  static (String, int, int)? parse(String? place) {
     if (place == null || !place.startsWith(_prefix)) return null;
     final rest = place.substring(_prefix.length).split(':');
-    if (rest.length != 2) return null;
+    if (rest.length != 2 && rest.length != 3) return null;
     final i = int.tryParse(rest[1]);
+    final l = rest.length == 3 ? int.tryParse(rest[2]) : 0;
     final lay = biomeLayout(rest[0]);
-    if (i == null || lay == null || i < 0 || i >= lay.mines.length) {
+    if (i == null ||
+        l == null ||
+        lay == null ||
+        i < 0 ||
+        i >= entrances(lay).length ||
+        l < 0 ||
+        l >= levels ||
+        (rest.length == 3 && l == 0)) {
       return null;
     }
-    return (rest[0], i);
+    return (rest[0], i, l);
   }
 
   static bool isMine(String? place) => parse(place) != null;
 
-  /// From [from] (current place; `null` = town) one can travel to the mine
-  /// [to]: only from its biome exterior. Leaving a mine goes back to its
-  /// biome only.
+  /// Mine entrances of a biome exterior: the one hook the lobby layout
+  /// goes through (§ 1.1).
+  static List<(int, int)> entrances(BiomeLayout lay) => mineEntrances(lay);
+
+  /// From [from] (`null` = town) one can travel to [to]: a mine's first
+  /// level only from its biome; between levels of the same mine only one
+  /// step up or down; out of a mine only from its first level, back to
+  /// its biome.
   static bool canTravel(String? from, String to) {
-    final dst = parse(to);
-    if (dst != null) return from == dst.$1;
-    final src = parse(from);
-    return src == null || src.$1 == to;
+    final dst = parse(to), src = parse(from);
+    if (dst != null) {
+      if (src == null) return from == dst.$1 && dst.$3 == 0;
+      return src.$1 == dst.$1 &&
+          src.$2 == dst.$2 &&
+          (src.$3 - dst.$3).abs() == 1;
+    }
+    return src == null || (src.$1 == to && src.$3 == 0);
   }
 
   /// Where a player stands when leaving mine [i] of [biome] (px): the
   /// path tile under the entrance.
   static WorldPoint entranceFront(String biome, int i) {
-    final (x, y) = biomeLayout(biome)!.mines[i];
+    final (x, y) = entrances(biomeLayout(biome)!)[i];
     return WorldPoint(x * 16 + 8.0, (y + 1) * 16 + 10.0);
+  }
+
+  /// Where the group lands travelling [from] → [to] when [to] is a mine
+  /// level: going up, next to that level's shaft; else its arrival.
+  static WorldPoint? arrival(String? from, String to, {String? worldId}) {
+    final dst = parse(to);
+    if (dst == null) return null;
+    final lvl = level(to, worldId: worldId)!;
+    final src = parse(from);
+    if (src != null && src.$3 > dst.$3 && lvl.shaft != null) {
+      final (x, y) = lvl.shaft!;
+      return WorldPoint(x * 16 + 8.0, y * 16 - 6.0);
+    }
+    return WorldPoint(lvl.spawn.$1 * 16 + 8.0, lvl.spawn.$2 * 16 + 8.0);
   }
 
   /// Log name of a place (es-AR, like the rest of the room log).
   static String placeName(String place) {
     final m = parse(place);
     if (m == null) return biomeDef(place)?.name ?? place;
-    return 'la mina ${m.$2 + 1} de ${biomeDef(m.$1)?.name ?? m.$1}';
+    final lv = m.$3 == 0 ? '' : ' (nivel ${m.$3 + 1})';
+    return 'la mina ${m.$2 + 1} de ${biomeDef(m.$1)?.name ?? m.$1}$lv';
   }
 
-  /// FNV-1a seed of the mine, reshaped every `mineReshapeDays` days.
-  static int seedFor(String? worldId, String biome, int i, int day) {
-    final week = day ~/ math.max(1, t.i('mineReshapeDays'));
+  /// FNV-1a seed of a level. Fixed per world: the levels never reshape;
+  /// only veins grow back (§ 1.5).
+  static int seedFor(String? worldId, String biome, int i, int level) {
     var h = 0x811c9dc5;
-    for (final c in '${worldId ?? ''}|${placeOf(biome, i)}|$week'.codeUnits) {
+    for (final c in '${worldId ?? ''}|${placeOf(biome, i, level)}|v2'.codeUnits) {
       h ^= c;
       h = (h * 0x01000193) & 0xffffffff;
     }
     return h % 1000000000;
   }
 
-  static final _cache = <String, MineLayout>{};
-
-  /// The mine at [place] (cached; `null` if not a mine).
-  static MineLayout? layout(String? place, {String? worldId, int day = 0}) {
-    final m = parse(place);
-    if (m == null) return null;
-    final seed = seedFor(worldId, m.$1, m.$2, day);
-    final key = '${place!}|$seed|${t.i('mineNodes')}|${t.d('mineNpcChance')}';
-    final hit = _cache[key];
-    if (hit != null) return hit;
-    if (_cache.length > 16) _cache.clear();
-    return _cache[key] = MineGenerator.generate(m.$1, m.$2, seed,
-        nodes: t.i('mineNodes'), npcChance: t.d('mineNpcChance'));
+  /// Vein weights of [biome] at [level] (§ 1.3).
+  static Map<String, double> weights(String biome, int level) {
+    final rich = t.values.containsKey('rich_$biome') ? t.d('rich_$biome') : 1.0;
+    final next = kBiomeOres.values
+        .any((b) => b.tier == (kBiomeOres[biome]?.tier ?? 9) + 1);
+    return {
+      Tile.ore: t.d('wCommon'),
+      MineTile.rich: (t.d('wRich') + t.d('wRichPerLevel') * level) * rich,
+      MineTile.deep:
+          next ? t.d('wDeep') + t.d('wDeepPerLevel') * level : 0,
+      MineTile.gem: (t.d('wGem') + t.d('wGemPerLevel') * level) * rich,
+    };
   }
 
-  static final _maps = <String, GameMap>{};
+  static MineGenParams params(String biome, int level) => MineGenParams(
+        width: t.i('mineW'),
+        height: t.i('mineH'),
+        caveDensity: t.d('caveDensity'),
+        formations: t.i('formations'),
+        streamChance: t.d('streamChance'),
+        lakeChance: t.d('lakeChance'),
+        chambers: t.i('chambers'),
+        chamberMin: t.i('chamberMin'),
+        chamberMax: t.i('chamberMax'),
+        grottoChance: t.d('grottoChance'),
+        secretChance: t.d('secretChance'),
+        relicChance: t.d('relicChance'),
+        mushroomChance: t.d('mushroomChance'),
+        loreChance: t.d('loreChance'),
+        chestRate: t.d('chestRate'),
+        clusters: t.i('veinClusters') + t.i('veinClustersPerLevel') * level,
+        sizeMin: t.i('veinSizeMin'),
+        sizeMax: t.i('veinSizeMax'),
+        weights: weights(biome, level),
+        npcChance: t.d('mineNpcChance'),
+        last: level >= levels - 1,
+      );
 
-  /// The map of [lay] with [spent] veins (a safe lobby map, theme `mina`).
-  static GameMap mapOf(MineLayout lay, Set<int> spent) {
-    final key =
-        '${placeOf(lay.biome, lay.index)}|${lay.rows.hashCode}|${(spent.toList()..sort()).join(',')}';
-    final hit = _maps[key];
+  static final _cache = <String, MineLevel>{};
+
+  /// The generated level at [place] (cached; `null` if not a mine).
+  static MineLevel? level(String? place, {String? worldId}) {
+    final m = parse(place);
+    if (m == null) return null;
+    final seed = seedFor(worldId, m.$1, m.$2, m.$3);
+    final p = params(m.$1, m.$3);
+    final key = '${place!}|$seed|${p.width}x${p.height}|${p.clusters}|'
+        '${p.weights.values.join(',')}|${p.caveDensity}|${p.chestRate}|${p.chambers}|${p.chamberMin}|${p.chamberMax}|${p.lakeChance}|${p.streamChance}';
+    final hit = _cache[key];
     if (hit != null) return hit;
-    if (_maps.length > 16) _maps.clear();
-    return _maps[key] = GameMap(
-      width: lay.width,
-      height: lay.height,
-      rows: lay.rowsWith(spent),
-      theme: themeOf(lay.biome),
-      spawn: WorldPoint(lay.spawn.$1 * 16 + 8.0, lay.spawn.$2 * 16 + 8.0),
+    if (_cache.length > 24) _cache.clear();
+    return _cache[key] = MineGenerator.generate(m.$1, m.$2, m.$3, seed, p);
+  }
+
+  /// The tile at ([x], [y]) of [lvl] with [st] laid on top.
+  static String tileAt(MineLevel lvl, MineLevelState st, int x, int y) {
+    if (x < 0 || y < 0 || x >= lvl.width || y >= lvl.height) {
+      return MineTile.bedrock;
+    }
+    final i = lvl.idx(x, y);
+    final base = lvl.at(x, y);
+    if (st.dug.contains(i)) {
+      return st.torches.contains(i) ? MineTile.torch : Tile.floor;
+    }
+    if (st.grown[i] case final g?) return g;
+    if (st.torches.contains(i)) {
+      return base == Tile.floor || base == MineTile.station
+          ? MineTile.torch
+          : MineTile.wallTorch;
+    }
+    if (st.opened.contains(i)) {
+      return switch (base) {
+        MineTile.chest || MineTile.relic => MineTile.chestOpen,
+        MineTile.mushroom => Tile.floor,
+        _ => base,
+      };
+    }
+    return base;
+  }
+
+  static final _rows = Expando<(MineLevel, List<String>)>('mine rows');
+
+  /// The rows of [lvl] with [st] (memoized per state instance).
+  static List<String> rowsOf(MineLevel lvl, MineLevelState st) {
+    final hit = _rows[st];
+    if (hit != null && identical(hit.$1, lvl)) return hit.$2;
+    final out = st.isEmpty
+        ? lvl.rows
+        : [
+            for (var y = 0; y < lvl.height; y++)
+              String.fromCharCodes([
+                for (var x = 0; x < lvl.width; x++)
+                  tileAt(lvl, st, x, y).codeUnitAt(0)
+              ])
+          ];
+    _rows[st] = (lvl, out);
+    return out;
+  }
+
+  static final _maps = Expando<(MineLevel, GameMap)>('mine map');
+
+  /// The map of [lvl] with [st] (a safe lobby map, theme `mina_<biome>`).
+  static GameMap mapOf(MineLevel lvl, MineLevelState st) {
+    final hit = _maps[st];
+    if (hit != null && identical(hit.$1, lvl)) return hit.$2;
+    final map = GameMap(
+      width: lvl.width,
+      height: lvl.height,
+      rows: rowsOf(lvl, st),
+      theme: themeOf(lvl.biome),
+      spawn: WorldPoint(lvl.spawn.$1 * 16 + 8.0, lvl.spawn.$2 * 16 + 8.0),
       lobby: true,
-      place: placeOf(lay.biome, lay.index),
+      place: placeOf(lvl.biome, lvl.index, lvl.level),
+    );
+    _maps[st] = (lvl, map);
+    return map;
+  }
+
+  /// Map theme of the mines of [biome] (`mina_<biome>`; all dark).
+  static String themeOf(String biome) => 'mina_$biome';
+
+  // ---------------- digging (§ 1.3, § 1.6) ----------------
+
+  /// Hardness tier needed to break rock at [level].
+  static int reqTier(int level) =>
+      t.values.containsKey('reqTierLv$level') ? t.i('reqTierLv$level') : level;
+
+  /// Pick tier needed for [code] at [level]: the level's, one more for
+  /// deep and gem veins (at most the top tier).
+  static int reqTierOf(String code, int level) {
+    final base = reqTier(level);
+    final extra = code == MineTile.deep || code == MineTile.gem ? 1 : 0;
+    return math.min(kMineTools.last.tier, base + extra);
+  }
+
+  /// Hits to break [code] at [level] (`0` = unbreakable).
+  static int hits(String code, int level) {
+    if (!MineTile.breakable.contains(code)) return 0;
+    final rock = math.max(1, t.i('rockHits') + t.i('rockHitsPerLevel') * level);
+    if (code == MineTile.wallTorch) return 1;
+    if (code == MineTile.crystal) return math.max(1, rock ~/ 2);
+    if (MineTile.veins.contains(code)) {
+      return math.max(1, (rock * t.d('veinHitMult')).round());
+    }
+    return rock;
+  }
+
+  /// The best mining tool [p] owns.
+  static MineToolDef tool(PlayerProfile p) {
+    var best = kMineTools.first;
+    for (final d in kMineTools) {
+      if (d.tier > best.tier && p.life.ore(d.id) > 0) best = d;
+    }
+    return best;
+  }
+
+  /// Why [tool] cannot break [code] at [level] (`null` = it can).
+  static String? cannotBreak(String code, int level, MineToolDef tool) {
+    if (code == MineTile.bedrock) return 'bedrock';
+    if (hits(code, level) <= 0) return 'solid';
+    if (code != MineTile.wallTorch && tool.tier < reqTierOf(code, level)) {
+      return 'tier';
+    }
+    return null;
+  }
+
+  /// The tiles a bomb at ([x], [y]) breaks: every breakable tile within
+  /// `bombRadius` (round), never bedrock nor solid finds.
+  static List<(int, int)> bombTiles(
+      MineLevel lvl, MineLevelState st, int x, int y) {
+    final r = math.max(0, t.i('bombRadius'));
+    final out = <(int, int)>[];
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r + r) continue;
+        final c = tileAt(lvl, st, x + dx, y + dy);
+        if (MineTile.breakable.contains(c)) out.add((x + dx, y + dy));
+      }
+    }
+    return out;
+  }
+
+  /// [st] with ([x], [y]) dug at room second [now]. A vein of the level
+  /// (not one that grew back) starts its regrow clock; a torch on the
+  /// rock comes off with it.
+  static MineLevelState dig(
+      MineLevel lvl, MineLevelState st, int x, int y, double now) {
+    final i = lvl.idx(x, y);
+    final code = tileAt(lvl, st, x, y);
+    final grown = st.grown.containsKey(i);
+    final base = lvl.at(x, y);
+    return st.copyWith(
+      dug: {...st.dug, i},
+      torches: code == MineTile.wallTorch
+          ? ({...st.torches}..remove(i))
+          : st.torches,
+      grown: grown ? ({...st.grown}..remove(i)) : st.grown,
+      regrow: MineTile.veins.contains(code)
+          ? {
+              ...st.regrow,
+              // A regrown vein keeps echoing from its first origin.
+              if (!grown && MineTile.veins.contains(base))
+                i: now + t.d('regrowSec')
+              else if (grown)
+                i: now + t.d('regrowSec'),
+            }
+          : st.regrow,
     );
   }
 
-  /// Map theme of the mines of [biome] (`mina_<biome>`; all dark,
-  /// lighting.md § 5).
-  static String themeOf(String biome) => 'mina_$biome';
-
-  /// Spent veins of [place] at [now].
-  static Set<int> spent(TownState town, String place, double now) =>
-      BiomeRules.picked(town, place, now);
-
-  static double regrowIn(TownState town, String place, int i, double now) =>
-      BiomeRules.regrowIn(town, place, i, now);
-
-  /// [town] with vein [i] of [place] spent for `mineRespawnSec`.
-  static TownState spend(TownState town, String place, int i, double now) {
-    final wild = {
-      for (final e in town.wild.entries)
-        if (e.value > now) e.key: e.value,
-      BiomeRules.wildKey(place, i): (now + t.d('mineRespawnSec')).ceil(),
-    };
-    return town.copyWith(wild: wild);
+  /// Whether a torch can go on ([x], [y]): floor or a rock face next to
+  /// a walkable tile, and none there yet.
+  static bool canTorch(MineLevel lvl, MineLevelState st, int x, int y) {
+    final c = tileAt(lvl, st, x, y);
+    if (c == Tile.floor || c == MineTile.station) return true;
+    if (c != Tile.wall) return false;
+    for (final (dx, dy) in const [(0, 1), (0, -1), (1, 0), (-1, 0)]) {
+      if (Tile.isWalkable(tileAt(lvl, st, x + dx, y + dy))) return true;
+    }
+    return false;
   }
 
   /// Material [d] can be found on world [day] (mining_smithing.md § 0):
@@ -146,18 +355,40 @@ abstract final class MiningRules {
             e.key: e.value,
       };
 
-  /// What a vein of [biome] yields: `mineOreMin..mineOreMax` ores and,
-  /// with `mineRareChance`, one rare material. Materials out of season on
-  /// world [day] are dropped ([inSeason]).
+  /// What breaking [code] in a mine of [biome] gives (§ 1.3). [toolBonus]
+  /// is the tool's extra-ore chance; [boosted]: the booster is on.
+  /// Materials out of season on world [day] are dropped ([inSeason]).
   static Map<String, int> veinYield(RandomSource rand, String biome,
-      {int day = 0}) {
+      {String code = Tile.ore,
+      double toolBonus = 0,
+      bool boosted = false,
+      int day = 0}) {
     final b = kBiomeOres[biome];
     if (b == null) return const {};
+    final rareMult = boosted ? 1 + t.d('boostRare') : 1.0;
+    final extra = toolBonus + (boosted ? t.d('boostYield') : 0);
+    int more() => rand() < extra ? 1 : 0;
+    if (code == MineTile.crystal) {
+      return {
+        if (rand() < t.d('crystalRareChance') * rareMult) b.rare: 1,
+      };
+    }
+    if (!MineTile.veins.contains(code)) return const {};
+    if (code == MineTile.gem) return {b.rare: 1 + more()};
     final lo = t.i('mineOreMin'), hi = math.max(lo, t.i('mineOreMax'));
-    final n = lo + (rand() * (hi - lo + 1)).floor().clamp(0, hi - lo);
+    var n = lo + (rand() * (hi - lo + 1)).floor().clamp(0, hi - lo) + more();
+    var ore = b.ore;
+    var rare = t.d('mineRareChance');
+    if (code == MineTile.rich) {
+      n += t.i('richOreBonus');
+      rare = t.d('richRareChance');
+    } else if (code == MineTile.deep) {
+      final next = kBiomeOres.values.where((o) => o.tier == b.tier + 1);
+      if (next.isNotEmpty) ore = next.first.ore;
+    }
     return _seasonal({
-      if (n > 0) b.ore: n,
-      if (rand() < t.d('mineRareChance')) b.rare: 1,
+      if (n > 0) ore: n,
+      if (rand() < rare * rareMult) b.rare: 1,
     }, day);
   }
 
@@ -169,6 +400,31 @@ abstract final class MiningRules {
   /// Smith XP of a vein of [biome].
   static int veinXp(String biome) =>
       t.i('mineXp') * (kBiomeOres[biome]?.tier ?? 1);
+
+  /// Smith XP of breaking [code] in a mine of [biome].
+  static int digXp(String biome, String code) =>
+      MineTile.veins.contains(code)
+          ? t.i('mineXp') * (kBiomeOres[biome]?.tier ?? 1)
+          : t.i('digXp');
+
+  /// Loading a world (the room clock restarts at [now]): no vein waits
+  /// longer than a full regrow and carts keep their remaining time.
+  static TownState rebase(TownState town, double now) {
+    if (town.mines.isEmpty) return town;
+    final cap = now + t.d('regrowSec');
+    return town.copyWith(mines: {
+      for (final e in town.mines.entries)
+        e.key: e.value.copyWith(
+          regrow: {
+            for (final r in e.value.regrow.entries)
+              r.key: math.min(r.value, cap)
+          },
+          cart: e.value.cart.phase == CartPhase.mine
+              ? e.value.cart
+              : e.value.cart.copyWith(t: now),
+        ),
+    });
+  }
 
   /// What a rare dungeon vein of zone [zone] yields: one rare material of
   /// its biome and, with `dungeonSchematicChance`, a schematic (only
@@ -199,6 +455,41 @@ abstract final class MiningRules {
   /// Collection source of a mine of [biome] / a dungeon of [zone].
   static String mineSource(String biome) => 'mine:$biome';
   static String dungeonSource(int zone) => 'dungeon:$zone';
+
+  // ---------------- shop and crafting (§ 1.6) ----------------
+
+  /// Gold price of a mine consumable or tool at the trader.
+  static int price(String id) {
+    final tool = mineTool(id);
+    if (tool != null) return tool.gold;
+    final k = kMineSupplyKey[id];
+    return k == null ? 0 : t.i('${k}Gold');
+  }
+
+  /// What the smith pays to craft [id]: materials and gold; the amount
+  /// made. `null` if it is not craftable.
+  static ({Map<String, int> mats, int gold, int n})? recipe(
+      String id, String biomeOre) {
+    final tool = mineTool(id);
+    if (tool != null) {
+      if (tool.ingot == null) return null;
+      return (
+        mats: {tool.ingot!: tool.ingots},
+        gold: tool.gold ~/ 3,
+        n: 1
+      );
+    }
+    return switch (id) {
+      kMineTorch => (
+          mats: {biomeOre: t.i('torchOre')},
+          gold: 0,
+          n: math.max(1, t.i('torchBatch'))
+        ),
+      kMineBomb => (mats: {biomeOre: t.i('bombOre')}, gold: 0, n: 1),
+      kVeinOil => (mats: {biomeOre: t.i('oilOre')}, gold: 0, n: 1),
+      _ => null,
+    };
+  }
 }
 
 /// Why a smelt or forge is refused (UI key `ui.inventory.smith.why.<name>`).
@@ -400,19 +691,38 @@ abstract final class SmithCraftRules {
   /// the base's family), item level from [cost].
   static ItemInstance make(LootRules loot, RandomSource rand, WeaponDef base,
       Rarity r, int itemLevel) {
+    ItemInstance forged(ItemInstance i) =>
+        i.copyWith(uid: '${CraftRules.forgedPrefix}${i.uid}');
     if (r == Rarity.legendario) {
       final u = loot.pickUnique(rand, itemLevel, family: base.classId);
-      if (u != null) return loot.generateUnique(rand, u, itemLevel);
+      if (u != null) return forged(loot.generateUnique(rand, u, itemLevel));
       r = Rarity.epico;
     }
-    return loot.generate(rand,
+    return forged(loot.generate(rand,
         itemLevel: itemLevel,
         rarity: r,
         baseId: base.id,
-        source: LootSource.chest);
+        source: LootSource.chest));
   }
 
   static int forgeXp(Rarity r) => t.i('craftXp') * (r.index + 1);
+
+  // ---------------- income (§ 2.2) ----------------
+
+  /// What the trader pays for one [id] (0 = not sold there). An ingot is
+  /// worth more than its ores plus the smelting gold.
+  static int sellPrice(String id) {
+    final d = kSmithMaterials[id];
+    if (d == null) return 0;
+    final tier = math.max(1, d.tier);
+    return switch (d.kind) {
+      SmithMatKind.ore => t.i('orePricePerTier') * tier,
+      SmithMatKind.ingot => t.i('ingotPricePerTier') * tier,
+      SmithMatKind.rare => t.i('rarePricePerTier') * tier,
+      SmithMatKind.special => t.i('specialPrice'),
+      SmithMatKind.tool || SmithMatKind.supply => 0,
+    };
+  }
 }
 
 /// One entry of the smithing material collection (mining_smithing.md
@@ -438,9 +748,22 @@ abstract final class SmithCollection {
   static String rarityKey(SmithMaterialDef d) =>
       'ui.inventory.smith.col.rarity.${d.kind.name}';
 
+  /// Material kinds shown in the collection (tools and mine supplies
+  /// are shop goods, not finds).
+  static const kinds = [
+    SmithMatKind.ore,
+    SmithMatKind.ingot,
+    SmithMatKind.rare,
+    SmithMatKind.special,
+  ];
+
+  /// The materials of the collection, in catalog order.
+  static Iterable<SmithMaterialDef> get materials =>
+      kSmithMaterials.values.where((d) => kinds.contains(d.kind));
+
   /// Every smithing material, in catalog order, for [p]'s collection.
   static List<SmithCollectionEntry> entries(PlayerProfile p) => [
-        for (final d in kSmithMaterials.values)
+        for (final d in materials)
           if (p.life.oreLog[d.id] case final f?)
             SmithCollectionEntry(
               id: d.id,
@@ -475,6 +798,7 @@ abstract final class SmithCollection {
       SmithMatKind.ingot => [('forge', id)],
       SmithMatKind.rare => [('rare', kBiomeOres[d.biome]!.ingot)],
       SmithMatKind.special => [('legend', id)],
+      SmithMatKind.tool || SmithMatKind.supply => const [],
     };
   }
 }

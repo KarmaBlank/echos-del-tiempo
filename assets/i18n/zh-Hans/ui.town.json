@@ -534,5 +534,21 @@
   "ui.town.events.duel_go": "准备迎战！",
   "ui.town.events.duel_none": "这里没有地方战斗。",
   "ui.town.events.rumor_badge": "传闻",
-  "ui.town.events.rumor_tip": "有人跟你提起过这个地方。"
+  "ui.town.events.rumor_tip": "有人跟你提起过这个地方。",
+  "ui.town.trader.kind.mine_goods": {
+    "text": "矿石与锭",
+    "status": "draft"
+  },
+  "ui.town.trader.kind.mine_supplies": {
+    "text": "耗材",
+    "status": "draft"
+  },
+  "ui.town.trader.kind.mine_tools": {
+    "text": "镐",
+    "status": "draft"
+  },
+  "ui.town.trader.tab_mining": {
+    "text": "采矿",
+    "status": "draft"
+  }
 }

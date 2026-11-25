@@ -248,7 +248,15 @@ abstract final class ActionJson {
             if (a.to != null) 'to': a.to,
           },
         // Protocol 69: mining and smithing (mining_smithing.md § 6).
-        MineAction() => {'t': 'mine', 'i': a.vein},
+        MineAction() => {
+            't': 'mine',
+            'o': a.op.name,
+            if (a.x != 0) 'x': a.x,
+            if (a.y != 0) 'y': a.y,
+            if (a.id != null) 'i': a.id,
+            if (a.mat != null) 'g': a.mat,
+            if (a.n != 1) 'n': a.n,
+          },
         SmithAction() => {
             't': 'smith',
             'o': a.op.name,
@@ -521,7 +529,14 @@ abstract final class ActionJson {
       case 'way':
         return WaystoneAction(j.integer('i'), to: j.intOrNull('to'));
       case 'mine':
-        return MineAction(j.integer('i'));
+        final op = MineOp.values.asNameMap()[j.str('o')] ??
+            (throw FormatException('JSON inválido: mine', j['o']));
+        return MineAction(op,
+            x: j.intOrNull('x') ?? 0,
+            y: j.intOrNull('y') ?? 0,
+            id: j.strOrNull('i'),
+            mat: j.strOrNull('g'),
+            n: j.intOrNull('n') ?? 1);
       case 'smith':
         final op = SmithOp.values.asNameMap()[j.str('o')] ??
             (throw FormatException('JSON inválido: smith', j['o']));

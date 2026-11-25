@@ -502,5 +502,22 @@
   "ui.inventory.smith.col.tab.ore": "MENAS",
   "ui.inventory.smith.col.tab.ingot": "LINGOTES",
   "ui.inventory.smith.col.tab.rare": "RAROS",
-  "ui.inventory.smith.col.tab.special": "ESPECIALES"
+  "ui.inventory.smith.col.tab.special": "ESPECIALES",
+  "ui.inventory.smith.brann_extra": "Encargo: +{gold} de oro por el trabajo de Brann",
+  "ui.inventory.smith.brann_name": "{name} (encargo)",
+  "ui.inventory.smith.cap_brann": "Brann forja hasta {rarity}",
+  "ui.inventory.smith.cap_self": "Tu nivel de herrería {lv} llega hasta {rarity}",
+  "ui.inventory.smith.go_make": "FABRICAR",
+  "ui.inventory.smith.have_gold": "Tenés {n} menas, pero falta oro ({gold} por lingote)",
+  "ui.inventory.smith.have_short": "Tenés {n} menas: hacen falta {per} por lingote",
+  "ui.inventory.smith.mine_batch": "Hace {n} por tanda",
+  "ui.inventory.smith.mine_owned": "Ya la tenés",
+  "ui.inventory.smith.mine_tool_desc": "Herramienta de mina, nivel {tier}. Fuerza {power}, golpe cada {swing} s.",
+  "ui.inventory.smith.mine_desc.mine_torch": "Se clava en el piso o en la pared de la mina y queda encendida.",
+  "ui.inventory.smith.mine_desc.mine_bomb": "Rompe la roca alrededor tras una mecha corta.",
+  "ui.inventory.smith.mine_desc.vein_oil": "Por un rato, las vetas dan más y mejor mineral.",
+  "ui.inventory.smith.tab.mine": "MINERÍA",
+  "ui.inventory.smith.wait_brann": "Brann lo entrega al instante, pero cobra su parte",
+  "ui.inventory.smith.who_brann": "Lo forja Brann, el herrero del pueblo",
+  "ui.inventory.smith.who_self": "Lo forjás vos: +{xp} de experiencia de herrería"
 }

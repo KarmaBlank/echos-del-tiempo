@@ -326,6 +326,30 @@ class FishBiteEvent extends SessionEvent {
   const FishBiteEvent(this.playerId, this.species, this.sizeCm);
 }
 
+/// [playerId] broke the mine tile ([tx], [ty]) that was [code] and got
+/// [label] (empty = only rock; mining_smithing.md § 1.9: debris, ore
+/// pop-out).
+class MineDugEvent extends SessionEvent {
+  final String playerId;
+  final int tx, ty;
+  final String code;
+  final String label;
+  const MineDugEvent(this.playerId, this.tx, this.ty, this.code, this.label);
+}
+
+/// A bomb was lit on ([tx], [ty]); it goes off in [fuse] seconds.
+class MineBombEvent extends SessionEvent {
+  final int tx, ty;
+  final double fuse;
+  const MineBombEvent(this.tx, this.ty, this.fuse);
+}
+
+/// A bomb went off on ([tx], [ty]) with [radius] tiles (screen shake).
+class MineBlastEvent extends SessionEvent {
+  final int tx, ty, radius;
+  const MineBlastEvent(this.tx, this.ty, this.radius);
+}
+
 /// [playerId] sacó del agua algo que no es un pez (fishing.md § 8):
 /// [label] para el aviso y [rarity] (índice de `Rarity`) para el color.
 class WaterLootEvent extends SessionEvent {

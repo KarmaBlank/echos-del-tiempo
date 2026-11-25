@@ -6,9 +6,12 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/map_palette.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/fog_of_war.dart';
+import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
+import '../../../../game_engine/rules/mine_work_rules.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import '../map/map_themes.dart';
 
 /// Un ícono de loot en el minimapa (`Icono` del filtro, loot.md § 6).
@@ -54,6 +57,10 @@ Color minimapTileColor(String ch) => switch (ch) {
       Tile.lava => MapPalette.terrain(MapTerrain.lava),
       Tile.tombstone => MapPalette.terrain(MapTerrain.tombstone),
       Tile.gear => MapPalette.terrain(MapTerrain.gear),
+      // Mine rock, veins and sealed finds read as rock until found
+      // (mining_smithing.md § 1.11).
+      _ when MineTile.solid.contains(ch) || MineTile.veins.contains(ch) =>
+        MapPalette.terrain(MapTerrain.wall),
       _ when Tile.entranceZone(ch) != null =>
         MapPalette.terrain(MapTerrain.grass),
       _ => MapPalette.terrain(MapTerrain.floor),
@@ -220,9 +227,19 @@ class _MinimapPainter extends CustomPainter {
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     final p = Paint()..isAntiAlias = false;
+    final mine = map.theme.startsWith('mina_');
+    // In a mine only the ground reachable on foot shows: sealed chambers
+    // stay rock until someone digs into them (§ 1.11).
+    final open = mine ? _reachable(map) : null;
     for (var y = 0; y < map.height; y++) {
       for (var x = 0; x < map.width; x++) {
-        p.color = minimapTileColor(map.tileAt(x, y));
+        final ch = map.tileAt(x, y);
+        p.color = (mine && ch == Tile.ore) ||
+                (open != null &&
+                    Tile.isWalkable(ch) &&
+                    !open.contains(y * map.width + x))
+            ? MapPalette.terrain(MapTerrain.wall)
+            : minimapTileColor(ch);
         c.drawRect(Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1), p);
       }
     }
@@ -231,6 +248,27 @@ class _MinimapPainter extends CustomPainter {
     pic.dispose();
     _baseCache[map] = (version, img);
     return img;
+  }
+
+  static Set<int> _reachable(GameMap map) {
+    final out = <int>{};
+    final todo = [
+      ((map.spawn.x / _ts).floor(), (map.spawn.y / _ts).floor())
+    ];
+    while (todo.isNotEmpty) {
+      final (x, y) = todo.removeLast();
+      if (x < 0 || y < 0 || x >= map.width || y >= map.height) continue;
+      if (!Tile.isWalkable(map.tileAt(x, y)) && out.isNotEmpty) {
+        continue;
+      }
+      if (!out.add(y * map.width + x)) continue;
+      todo
+        ..add((x + 1, y))
+        ..add((x - 1, y))
+        ..add((x, y + 1))
+        ..add((x, y - 1));
+    }
+    return out;
   }
 
   @override
@@ -298,6 +336,20 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawRect(
           Rect.fromLTWH(px / _ts * cell - d / 2, py / _ts * cell - d / 2, d, d),
           p);
+    }
+
+    // Veins the local player discovered (mining_smithing.md § 1.11).
+    if (MiningRules.level(map.place, worldId: s.worldId) case final lvl?
+        when lvl.width == map.width) {
+      final who = s.players[w.localId]?.profile.name;
+      if (who != null) {
+        final st = s.town.mine(map.place!);
+        p.color = MinePalette.vein(map.theme);
+        for (final (x, y, _) in MineWorkRules.knownVeins(lvl, st, who)) {
+          canvas.drawRect(
+              Rect.fromLTWH(x * cell, y * cell, cell, cell), p);
+        }
+      }
     }
 
     // Entradas de zona (mundo): cuadro de 3 tiles del color de la zona.

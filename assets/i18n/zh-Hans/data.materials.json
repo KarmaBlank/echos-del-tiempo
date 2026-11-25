@@ -336,5 +336,37 @@
   "data.materials.crop.flor_eco.lore": {
     "text": "在时间重复之处绽放，只持续一声回响的时间。",
     "status": "draft"
+  },
+  "data.materials.smith.pico.name": {
+    "text": "铁镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_copper.name": {
+    "text": "铜镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_frost.name": {
+    "text": "寒铁镐",
+    "status": "draft"
+  },
+  "data.materials.smith.pick_ember.name": {
+    "text": "炽钢镐",
+    "status": "draft"
+  },
+  "data.materials.smith.drill_echo.name": {
+    "text": "回声银钻头",
+    "status": "draft"
+  },
+  "data.materials.smith.mine_torch.name": {
+    "text": "矿洞火把",
+    "status": "draft"
+  },
+  "data.materials.smith.mine_bomb.name": {
+    "text": "矿洞炸弹",
+    "status": "draft"
+  },
+  "data.materials.smith.vein_oil.name": {
+    "text": "矿脉油",
+    "status": "draft"
   }
 }

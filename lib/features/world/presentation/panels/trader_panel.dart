@@ -7,6 +7,9 @@ import '../../../../game_engine/rules/bait_rules.dart';
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
+import '../../../../game_engine/data/mine_catalog.dart';
+import '../../../../game_engine/data/smithing_catalog.dart';
+import '../../../../game_engine/rules/mining_rules.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../domain/town_names.dart';
@@ -69,10 +72,16 @@ class _TraderPanelState extends State<TraderPanel> {
         'basura' => 'ui.town.trader.kind.junk',
         'legendarios' => 'ui.town.trader.kind.legendary',
         'cultivos' => 'ui.town.trader.kind.crops',
+        'mine_tools' => 'ui.town.trader.kind.mine_tools',
+        'mine_supplies' => 'ui.town.trader.kind.mine_supplies',
+        'mine_goods' => 'ui.town.trader.kind.mine_goods',
         _ => 'ui.town.trader.kind.all',
       });
 
   List<String> get _kinds => switch ((_mode, _tab)) {
+        (_, 2) => _mode == 0
+            ? const ['mine_tools', 'mine_supplies']
+            : const ['mine_goods'],
         (0, 0) => const ['cañas', 'cebos'],
         (0, _) => const ['semillas', 'abonos', 'azadas', 'regaderas'],
         (_, 0) => const ['peces', 'basura', 'legendarios'],
@@ -96,7 +105,7 @@ class _TraderPanelState extends State<TraderPanel> {
       fill: true,
       onClose: c.closePanel,
       actions: [
-        if (_mode == 1)
+        if (_mode == 1 && _tab < 2)
           PanelButton(context.t('ui.town.trader.sell_all'),
               key: const ValueKey('trade-sell-all'),
               onPressed: (_tab == 0 ? fishSellAll : cropSellAll)
@@ -134,6 +143,7 @@ class _TraderPanelState extends State<TraderPanel> {
             tabs: [
               DsTab(context.t('ui.town.trader.tab_fishing'), key: const ValueKey('trade-tab-pesca')),
               DsTab(context.t('ui.town.trader.tab_crops'), key: const ValueKey('trade-tab-cultivo')),
+              DsTab(context.t('ui.town.trader.tab_mining'), key: const ValueKey('trade-tab-mina')),
             ],
             index: _tab,
             onChanged: (i) => setState(() {
@@ -165,7 +175,7 @@ class _TraderPanelState extends State<TraderPanel> {
             SizedBox(height: DsSpace.xs),
             _seedFilterRow(),
           ],
-          if (_mode == 1) ...[
+          if (_mode == 1 && _tab < 2) ...[
             SizedBox(height: DsSpace.xs),
             Row(children: [
               Text(context.t('ui.town.trader.charge_in'), style: DsText.subtitle()),
@@ -196,7 +206,11 @@ class _TraderPanelState extends State<TraderPanel> {
           Expanded(
             child: LifeItemGrid(
               key: ValueKey('trade-grid-$_mode-$_tab'),
-              groups: _visible(_tab == 0 ? _fishing() : _farming()),
+              groups: _visible(switch (_tab) {
+                0 => _fishing(),
+                1 => _farming(),
+                _ => _mining(),
+              }),
               empty: _query.isNotEmpty || _kind != null
                   ? context.t('ui.town.trader.no_match')
                   : _mode == 1
@@ -614,6 +628,95 @@ class _TraderPanelState extends State<TraderPanel> {
                 ],
               ),
             )),
+    ];
+  }
+
+  // ---------------- MINERÍA (mining_smithing.md § 1.6, § 2.2) ----------------
+
+  List<_Row> _mining() {
+    final p = widget.view.me?.profile;
+    final gold = p?.credits ?? 0;
+    int have(String id) => p?.life.ore(id) ?? 0;
+    String name(String id) =>
+        context.t('data.materials.smith.$id.name');
+    final buy = [
+      for (final t in kMineTools)
+        if (t.tier > 0) (t.id, 'mine_tools'),
+      for (final id in kMineSupplies) (id, 'mine_supplies'),
+    ];
+    return [
+      for (final (id, kind) in buy)
+        _Row(
+            kind,
+            LifeItemCellData(
+              id: 'trade-mine-$id',
+              icon: LifeIcon(id, LifeIconKind.herramienta, size: _icon),
+              border: DsColors.border,
+              search: name(id),
+              count: have(id) > 0 ? have(id) : null,
+              caption: mineTool(id) != null && have(id) > 0
+                  ? context.t('ui.town.trader.owned')
+                  : context.t('ui.town.trader.price_short',
+                      {'n': MiningRules.price(id)}),
+              detail: LifeItemDetail(
+                name: name(id),
+                nameColor: DsColors.textPrimary,
+                tags: [
+                  (_kindLabel(kind), DsColors.textSecondary),
+                ],
+                lines: [
+                  context.t('ui.town.trader.have', {'n': have(id)}),
+                  context.t('ui.town.trader.price', {'n': MiningRules.price(id)}),
+                ],
+                actions: [
+                  DsButton(
+                      context.t('ui.town.trader.buy_price',
+                          {'n': MiningRules.price(id)}),
+                      key: ValueKey('trade-mine-buy-$id'),
+                      size: DsButtonSize.compact,
+                      onPressed: gold >= MiningRules.price(id) &&
+                              !(mineTool(id) != null && have(id) > 0)
+                          ? () => c.buyMine(id)
+                          : null),
+                ],
+              ),
+            )),
+      for (final d in kSmithMaterials.values)
+        if (have(d.id) > 0 && SmithCraftRules.sellPrice(d.id) > 0)
+          _Row(
+              'mine_goods',
+              sell: true,
+              LifeItemCellData(
+                id: 'trade-mine-sell-${d.id}',
+                icon: LifeIcon(d.id, LifeIconKind.herramienta, size: _icon),
+                border: DsColors.border,
+                search: name(d.id),
+                count: have(d.id),
+                caption: context.t('ui.town.trader.price_short',
+                    {'n': SmithCraftRules.sellPrice(d.id)}),
+                detail: LifeItemDetail(
+                  name: name(d.id),
+                  nameColor: DsColors.textPrimary,
+                  tags: [
+                    (_kindLabel('mine_goods'), DsColors.textSecondary),
+                  ],
+                  lines: [
+                    context.t('ui.town.trader.have', {'n': have(d.id)}),
+                    context.t('ui.town.trader.worth_each',
+                        {'n': SmithCraftRules.sellPrice(d.id)}),
+                  ],
+                  actions: [
+                    DsButton(context.t('ui.town.trader.sell'),
+                        key: ValueKey('trade-mine-sell1-${d.id}'),
+                        size: DsButtonSize.compact,
+                        onPressed: () => c.sellMine(d.id)),
+                    DsButton(context.t('ui.town.trader.sell_all'),
+                        key: ValueKey('trade-mine-sellall-${d.id}'),
+                        size: DsButtonSize.compact,
+                        onPressed: () => c.sellMine(d.id, have(d.id))),
+                  ],
+                ),
+              )),
     ];
   }
 

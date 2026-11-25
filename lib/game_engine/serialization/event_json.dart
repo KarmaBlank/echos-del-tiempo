@@ -86,6 +86,16 @@ class EventJson {
             'sp': e.species,
             'cm': e.sizeCm,
           },
+        MineDugEvent() => {
+            't': 'mDug',
+            'id': e.playerId,
+            'x': e.tx,
+            'y': e.ty,
+            'c': e.code,
+            if (e.label.isNotEmpty) 'l': e.label,
+          },
+        MineBombEvent() => {'t': 'mBomb', 'x': e.tx, 'y': e.ty, 'f': e.fuse},
+        MineBlastEvent() => {'t': 'mBlast', 'x': e.tx, 'y': e.ty, 'r': e.radius},
         WaterLootEvent() => {
             't': 'fLoot',
             'id': e.playerId,
@@ -272,6 +282,14 @@ class EventJson {
         return FishBiteEvent(j.str('id'), j.str('sp'), j.integer('cm'));
       case 'fLoot':
         return WaterLootEvent(j.str('id'), j.str('l'), j.integer('r'));
+      case 'mDug':
+        return MineDugEvent(j.str('id'), j.integer('x'), j.integer('y'),
+            j.str('c'), j.strOrNull('l') ?? '');
+      case 'mBomb':
+        return MineBombEvent(j.integer('x'), j.integer('y'),
+            (j['f'] as num?)?.toDouble() ?? 1);
+      case 'mBlast':
+        return MineBlastEvent(j.integer('x'), j.integer('y'), j.integer('r'));
       case 'cHarv':
         return CropHarvestedEvent(j.str('id'), j.str('c'), j.integer('q'),
             j.integer('n'), j.integer('x'), j.integer('y'),

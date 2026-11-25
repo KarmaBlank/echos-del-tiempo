@@ -17,7 +17,11 @@ import 'seed_text.dart' show lifeBiomeLabel;
 
 /// Rarity color of a material kind.
 Color smithKindColor(SmithMatKind k) => RarityColors.of(switch (k) {
-      SmithMatKind.ore || SmithMatKind.ingot => Rarity.comun,
+      SmithMatKind.ore ||
+      SmithMatKind.ingot ||
+      SmithMatKind.tool ||
+      SmithMatKind.supply =>
+        Rarity.comun,
       SmithMatKind.rare => Rarity.raro,
       SmithMatKind.special => Rarity.epico,
     });
@@ -87,7 +91,7 @@ Widget smithCollection(BuildContext context, PlayerProfile p) =>
       ],
       filters: [
         ('all', context.t('ui.town.collection.tab_all')),
-        for (final k in SmithMatKind.values)
+        for (final k in SmithCollection.kinds)
           (k.name, context.t('ui.inventory.smith.col.tab.${k.name}')),
       ],
       progressLabel: (f, t) => context

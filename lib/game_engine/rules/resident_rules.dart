@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import '../data/biomes_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/smithing_catalog.dart';
+import 'mining_rules.dart' show MiningRules, SmithCraftRules;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
@@ -622,14 +624,14 @@ abstract final class ResidentRules {
   /// [onDay] y [newOrder] para todos los que viven en el pueblo.
   /// [fishLv] / [farmLv]: el oficio más alto de la sala (roles.md § 3).
   static TownState onDayAll(TownState s, int day,
-      {int fishLv = 1, int farmLv = 1}) {
+      {int fishLv = 1, int farmLv = 1, int smithLv = 0}) {
     Map<String, ResidentState>? res;
     for (final r in s.residents.values) {
       if (!r.invited) continue;
       // Los NPC hechos con datos no piden nada (npc_editor.md § 6.3).
       if (biomeNpc(r.npc) == null) continue;
-      final next =
-          newOrder(onDay(r, day), day, fishLv: fishLv, farmLv: farmLv);
+      final next = newOrder(onDay(r, day), day,
+          fishLv: fishLv, farmLv: farmLv, smithLv: smithLv);
       if (next == r) continue;
       (res ??= {...s.residents})[r.npc] = next;
     }
@@ -681,12 +683,18 @@ abstract final class ResidentRules {
   /// (determinista por día): 2 a 4 unidades; los cultivos de vez en
   /// cuando de calidad rara o mejor.
   static ResidentState newOrder(ResidentState r, int day,
-      {int fishLv = 1, int farmLv = 1}) {
+      {int fishLv = 1, int farmLv = 1, int smithLv = 0}) {
     if (r.order != null) return r;
     if (day - r.orderDay < t.i('orderEveryDays')) return r;
     final n = biomeNpc(r.npc);
     if (n == null) return r;
     final h = day * 31 + r.npc.codeUnits.fold<int>(0, (a, c) => a + c);
+    // Smithing order (mining_smithing.md § 2.2): a batch of ingots the
+    // room's smiths can make, paid well.
+    if (smithOrder(r.npc, day, smithLv) case (final ingot, final count)?) {
+      return r.copyWith(
+          order: ingot, orderN: count, orderQ: 0, orderDay: day);
+    }
     final fish = h % 2 == 0;
     var items = orderPool(n, fish: fish, lv: fish ? fishLv : farmLv);
     if (items.isEmpty) items = giftables(n);
@@ -800,8 +808,30 @@ abstract final class ResidentRules {
   }
 
   /// Valor en oro de una unidad de [item] (precio de venta).
-  static int unitValue(String item) =>
-      kFish[item]?.price ?? kCrops[item]?.price ?? 10;
+  static int unitValue(String item) => kSmithMaterials.containsKey(item)
+      ? (SmithCraftRules.sellPrice(item) * MiningRules.t.d('smithOrderPay'))
+          .round()
+      : kFish[item]?.price ?? kCrops[item]?.price ?? 10;
+
+  /// The smithing order of [npc] on [day] with the room's best Smithing
+  /// level [smithLv]: (ingot, count), or `null` (deterministic by day;
+  /// chance `smithOrderChance`, ingots up to tier 1 + lv / 5).
+  static (String, int)? smithOrder(String npc, int day, int smithLv) {
+    if (smithLv <= 0) return null;
+    final st = MiningRules.t;
+    final h = (day * 7919 + npc.codeUnits.fold<int>(0, (a, c) => a * 31 + c))
+        .abs();
+    if ((h % 1000) / 1000 >= st.d('smithOrderChance')) return null;
+    final maxTier = 1 + smithLv ~/ 5;
+    final ingots = [
+      for (final b in kBiomeOres.values)
+        if (b.tier <= maxTier) b.ingot
+    ];
+    if (ingots.isEmpty) return null;
+    final lo = st.i('smithOrderMin');
+    final hi = math.max(lo, st.i('smithOrderMax'));
+    return (ingots[(h ~/ 1000) % ingots.length], lo + (h ~/ 7) % (hi - lo + 1));
+  }
 
   /// Tamaño mínimo (cm) de un pescado pedido con [q] (1..3), o 0: un
   /// cuarto, la mitad o tres cuartos del rango de la especie.
@@ -816,6 +846,7 @@ abstract final class ResidentRules {
   /// (fishing.md § 10): con uno así de grande pescado, cuentan los que
   /// tenga de esa especie.
   static int orderHave(PlayerProfile p, String item, int q) {
+    if (kSmithMaterials.containsKey(item)) return p.life.ore(item);
     if (kFish.containsKey(item)) {
       final cm = orderCm(item, q);
       if (cm > 0 && (p.life.log[item] ?? 0) < cm) return 0;
@@ -854,7 +885,9 @@ abstract final class ResidentRules {
     final o = r.order;
     if (o == null || orderHave(p, o, r.orderQ) < r.orderN) return null;
     PlayerProfile? prof;
-    if (kFish.containsKey(o)) {
+    if (kSmithMaterials.containsKey(o)) {
+      prof = MiningRules.give(p, {o: -r.orderN});
+    } else if (kFish.containsKey(o)) {
       prof = takeFish(p, o, r.orderN);
     } else {
       final crops = {...p.life.farm.crops};

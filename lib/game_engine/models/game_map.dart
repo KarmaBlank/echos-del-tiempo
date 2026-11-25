@@ -1,3 +1,4 @@
+import '../data/mine_catalog.dart' show MineTile;
 import '../data/town_layout.dart' show TownLandmark;
 
 /// Un punto del mundo en px (no en tiles).
@@ -182,6 +183,7 @@ abstract final class Tile {
     waystoneOn, wind,
     shortcut, brazier, brazierLit, lantern, lanternLit, forage, forageUsed, house,
     workshop, shop, mineEntrance, ore, oreUsed, glowPlant,
+    ...MineTile.solid,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).
