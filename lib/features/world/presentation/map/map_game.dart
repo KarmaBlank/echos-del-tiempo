@@ -1442,12 +1442,14 @@ class MapGame extends Game {
       final (ox, oy) = map.townOrigin;
       for (final l in TownPlan.landmarksOf(s.town)) {
         if (l.spot != TownSpot.carts) continue;
+        final rail = TownPlan.of(s.town).cartRail(l, s.town.lights);
+        final top = (l.y + l.h + oy) * ts;
         mine.drawTown(
             c,
             s.town.mines,
             s.time,
             Rect.fromLTWH((l.x + ox) * ts, (l.y + oy) * ts, l.w * ts, l.h * ts),
-            map.height * ts,
+            rail.isEmpty ? top : (rail.last.$2 + 1) * ts,
             t,
             text: mineText,
             label: controller.cartLabel);

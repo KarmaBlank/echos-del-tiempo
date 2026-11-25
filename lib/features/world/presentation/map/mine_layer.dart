@@ -253,16 +253,19 @@ class MineLayer {
     if (_parts.length > 400) _parts.removeRange(0, _parts.length - 400);
   }
 
-  /// The town cart station (§ 1.8): rails to the town exit, carts rolling
-  /// in, parked with their mine and biome, and rolling back out.
+  /// The town cart station (§ 1.8): a short rail stub from the town
+  /// exit edge ([railEnd], px; `TownPlan.cartRail`) up into the station,
+  /// carts rolling in along it, parked on the station with their mine and
+  /// biome, and rolling back out.
   void drawTown(Canvas c, MinesState mines, double now, Rect station,
-      double exitY, double t,
+      double railEnd, double t,
       {required MineText text,
       required String Function(String place) label}) {
     _step(t);
-    final railX = station.right + 4;
-    // Rails from the station down to the town exit.
-    for (var y = station.top; y < exitY; y += 4) {
+    final railX = station.center.dx;
+    // Only the stub: the tiles south of the station that TownPlan
+    // found bare, never over plots, builds or trees.
+    for (var y = station.bottom; y < railEnd; y += 4) {
       _rect(c, MinePalette.rail, railX - 5, y, 1, 3);
       _rect(c, MinePalette.rail, railX + 4, y, 1, 3);
       _rect(c, MinePalette.timber, railX - 6, y, 12, 1);
@@ -270,33 +273,38 @@ class MineLayer {
     final carts = MineWorkRules.townCarts(mines);
     final arrive = MiningRules.t.d('cartTravelSec');
     const anim = 4.0;
+    // Carts come in from just past the edge so they roll into view.
+    final from = railEnd + 12;
+    final parkY = station.top + 3;
     var slot = 0;
     for (final (place, cart) in carts) {
-      final slotY = station.top + 4 + slot * 18.0;
+      // Parked carts sit side by side on the station, westward.
+      final slotX = station.right - 16.0 * (slot + 1) + 1;
       double? y;
+      var onRail = true;
       switch (cart.phase) {
         case CartPhase.toTown:
           final left = cart.t + arrive - now;
           if (left > anim) continue;
-          y = slotY + (exitY - slotY) * (left / anim).clamp(0.0, 1.0);
+          y = parkY + (from - parkY) * (left / anim).clamp(0.0, 1.0);
         case CartPhase.town:
-          y = slotY;
+          y = parkY;
+          onRail = false;
         case CartPhase.back:
           final k = (now - cart.t) / anim;
           if (k >= 1) continue;
-          y = slotY + (exitY - slotY) * k.clamp(0.0, 1.0);
+          y = parkY + (from - parkY) * k.clamp(0.0, 1.0);
         case CartPhase.mine:
           continue;
       }
       final m = MiningRules.parse(place);
       final col = MinePalette.vein(MiningRules.themeOf(m?.$1 ?? ''));
-      _cart(c, railX - 7, y,
+      _cart(c, onRail ? railX - 7 : slotX, y,
           cart.phase == CartPhase.back ? 0 : 1, col);
       if (cart.phase == CartPhase.town) {
-        // Left-aligned beside the rail (text() centres): it never covers
-        // the labels west of the station.
-        final l = label(place);
-        text(l, railX + 12 + l.length * 3.2, y + 6, MinePalette.label, 6);
+        // Stacked above the station, one line per parked cart.
+        text(label(place), station.center.dx, station.top - 4 - slot * 8.0,
+            MinePalette.label, 6);
       }
       slot++;
     }

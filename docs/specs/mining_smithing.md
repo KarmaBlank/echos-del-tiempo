@@ -185,6 +185,23 @@ junto a la salida), rotulada con mina, nivel y bioma. E la descarga
 (todo al que descarga) y vuelve vacía (`cartBackSec`). Todo lo decide el
 anfitrión; en cooperativo cualquiera descarga.
 
+- **Estación chica junto a la salida**: 2 × 1 tiles en (14, 19) del
+  pueblo base, pegada al oeste del camino de salida sur (el eje de la
+  fuente). Es un lugar fijo tardío (`TownLayout.lateSpots`): reservado
+  con 1 tile de margen para construir, y en un pueblo guardado con algo
+  ahí va al hueco libre más cercano sin romper construcciones
+  (town_editor.md § 3.3).
+- **Riel corto**: `TownPlan.cartRail` da el tramo recto al sur de la
+  estación, a lo sumo `cartRailMax` (2) filas, cortado en la primera
+  fila que no sea pasto pelado (parcelas, construcciones, lagos, casas,
+  árboles, faros, caminos). En el pueblo base es una fila, hasta el
+  borde del mapa. Nunca se dibuja riel fuera de ese tramo.
+- **Animación**: la vagoneta entra desde el borde por el tramo hasta la
+  estación (y sale por ahí); estacionadas, una al lado de la otra sobre
+  la estación, con su rótulo apilado encima. Vista previa:
+  `docs/preview/mining_v2/05_town_cart_station.png`
+  (`MINING_PREVIEW=1 flutter test test/features/world/town_cart_preview_test.dart`).
+
 ### 1.9 Sensación
 
 Golpe animado, chispas, grietas, escombros, mena volando al jugador,
