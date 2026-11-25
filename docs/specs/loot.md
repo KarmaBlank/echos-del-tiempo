@@ -239,6 +239,34 @@ fila: `TOMAR` (al inventario; en partida pasa por el host como
 `stashTake`, entera o, un material, lo que entre) y `DESCARTAR`
 (solo local). Con una operación en curso los botones quedan grises.
 
+## 4c. Botín en el piso fuera de las mazmorras (protocolo 96)
+
+Los exteriores (biomas, minas) y el pueblo usan el **mismo** sistema de
+piso que las mazmorras: `GroundLoot` instanciado (`ownerId` = quien lo
+ganó: solo él lo ve y lo levanta), auto-levantar al pasar encima
+(`pickupRange`) o `pickUp` con E (`pickReach`), y `LootPickedEvent` →
+aviso `+` a la izquierda. El host decide todo.
+
+- **Bienes** (`LootDrop.goods`, JSON `{gd, n}`; `GoodsRules`): lo que no
+  ocupa casilla del inventario: `gold` (oro), `ore:<id>` (menas,
+  lingotes, raros), `crop:<id@calidad>`, `seed:<id>`, `wseed:<id>`,
+  `bait:<id>`, `fert:<id>`. Siempre entran (cada uno a su bolsa) y el
+  filtro nunca los oculta; color dorado.
+- **Quién derrama**: cofre de bioma (sobre el cofre), santuario/fuente
+  (una casilla delante), cofre y cofre reliquia de mina (sobre el
+  cofre), cofre hundido pescado desde tierra (a los pies; desde una
+  balsa entra directo con aviso), cosecha de huerta, matas recolectadas
+  y búsqueda en árboles (sobre la parcela / mata / árbol). Armas y pilas
+  pasan por `_deliver` con `LootSource.chest` (filtro y topes de siempre).
+- **Imán**: los bienes de cosecha (todo menos `gold` y `ore`) se levantan
+  solos dentro de `magnetRange` (40 px), así cosechar no es tedioso; el
+  oro y el mineral esperan en el piso como el botín de un cofre.
+- Un compañero (o un motor sin `groundLoot`) los recibe directo, con
+  aviso.
+- **Cerrar el mapa** (viajar a otro lugar, empezar una misión, volver de
+  una misión): lo no levantado vuelve a su dueño como siempre (§ 4b.1);
+  los bienes no tienen lugar en el alijo y entran directo a sus bolsas.
+
 ## 5. Crafteo
 
 Tres materiales que también caen como loot.

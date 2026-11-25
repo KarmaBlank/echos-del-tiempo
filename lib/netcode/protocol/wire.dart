@@ -216,7 +216,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
 /// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
 /// (`life.tv`, `life.rf` refund notice).
-const kProtocolVersion = 92;
+/// 93–95: reserved by parallel branches.
+/// 96: overworld ground loot (loot.md § 4c): `LootDrop` goods (`gd` +
+/// `n`: gold, ore, crops, seeds…) on the floor of biomes, mines and the
+/// town; wilds chests, shrines, mine and sunken chests and harvests
+/// spill them instead of granting silently.
+const kProtocolVersion = 96;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

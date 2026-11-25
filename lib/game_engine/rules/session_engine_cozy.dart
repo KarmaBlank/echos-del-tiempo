@@ -47,12 +47,15 @@ extension _CozyOp on _Op {
     if (s.town.daily.containsKey(key)) return false;
     s.town = s.town.copyWith(daily: {...s.town.daily, key: 1});
     final lvl0 = FarmingRules.level(p.profile);
-    var life = p.profile.life;
+    final life = p.profile.life;
     var farm = life.farm;
+    // What falls from the branches pops out as ground loot with the
+    // short magnet (cozy_life.md § 3, loot.md § 4c).
+    final found = <LootDrop>[];
     // profession_gear.md § 3.1: a rare weapon seed in the branches.
     if (_rand() < GearRules.t.d('seedSearchChance')) {
       final ws = GearRules.rollSeed(_rand);
-      farm = farm.addWseed(ws);
+      found.add(GoodsRules.wseed(ws));
       say('${p.name} encontró ${kWeaponSeedNames[ws]} en un árbol.');
     }
     switch (CozyRules.searchRoll(_rand())) {
@@ -61,20 +64,20 @@ extension _CozyOp on _Op {
       case SearchFind.seed:
         final seed = _pickSeed(lay.seeds);
         if (seed != null) {
-          farm = farm.addSeed(seed);
+          found.add(GoodsRules.seed(seed, 1));
           say('${p.name} encontró ${kCrops[seed]!.seedName}.');
         }
       case SearchFind.mushroom:
-        farm = farm.addCrop(cropKey(CozyRules.mushroom, CropQuality.normal));
+        found.add(GoodsRules.crop(
+            cropKey(CozyRules.mushroom, CropQuality.normal), 1));
         say('${p.name} encontró un hongo.');
       case SearchFind.nest:
-        life = life.addBait(CozyRules.nestBait, CozyRules.nestBaits);
+        found.add(GoodsRules.bait(CozyRules.nestBait, CozyRules.nestBaits));
         say('${p.name} encontró un nido con lombrices.');
       case SearchFind.recipe:
         final r = CozyRules.newRecipe(farm.recipes, _rand());
         if (r == null) {
-          farm = farm.copyWith(
-              ferts: {...farm.ferts, 'abono': farm.fertCount('abono') + 1});
+          found.add(GoodsRules.fert('abono', 1));
           say('${p.name} encontró una bolsa de abono.');
         } else {
           farm = farm.copyWith(recipes: {...farm.recipes, r});
@@ -84,6 +87,7 @@ extension _CozyOp on _Op {
     farm = farm.copyWith(xp: farm.xp + CozyRules.t.i('searchXp'));
     _profileChange(p, p.profile.copyWith(life: life.copyWith(farm: farm)),
         gain: true);
+    _spill(p, found, (x + 0.5) * 16, (y + 0.5) * 16 + 8);
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) say('${p.name} subió Cultivo a nivel $lvl1.');
     return true;

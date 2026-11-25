@@ -223,24 +223,22 @@ extension _MiningOp on _Op {
         final def = kChestTiers[relic ? ChestTier.oro : ChestTier.madera]!;
         final lvlP = math.max(1, p.profile.level);
         final cr = ((15 + (_rand() * 26).floor()) * def.creditMult).round();
-        _profileChange(p, p.profile.copyWith(credits: p.profile.credits + cr));
-        final drops = _chestDrops(p, def, lvlP);
-        events.add(MineDugEvent(p.id, x, y, code, '+$cr'));
+        final drops = <LootDrop>[
+          GoodsRules.goldDrop(cr),
+          ..._chestDrops(p, def, lvlP),
+        ];
+        events.add(MineDugEvent(p.id, x, y, code, ''));
         // profession_gear.md § 3.1: cave chests may hold a weapon seed.
         if (_rand() < GearRules.t.d('seedMineChestChance')) {
           final ws = GearRules.rollSeed(_rand, ancientBonus: relic ? 0.25 : 0);
-          final f = p.profile.life.farm;
-          _profileChange(
-              p,
-              p.profile.copyWith(
-                  life: p.profile.life.copyWith(farm: f.addWseed(ws))),
-              gain: true);
-          say('${p.name} encontró ${kWeaponSeedNames[ws]} en el cofre.');
+          drops.add(GoodsRules.wseed(ws));
         }
         say(relic
-            ? '${p.name} abrió un cofre reliquia magitec (+$cr de oro).'
-            : '${p.name} abrió un cofre de la mina (+$cr de oro).');
-        _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
+            ? '${p.name} abrió un cofre reliquia magitec.'
+            : '${p.name} abrió un cofre de la mina.');
+        // Spills on the ground like a dungeon chest (mining_smithing.md
+        // § 1.3, loot.md § 4c).
+        _spill(p, drops, (x + 0.5) * 16, (y + 0.5) * 16);
         return true;
       case MineTile.mushroom:
         s.town = s.town.withMine(place, st.copyWith(opened: {...st.opened, i}));

@@ -668,14 +668,16 @@ class WorldHud extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(label,
                             key: const ValueKey('hud-prompt'),
-                            fontSize: label.startsWith('[E]')
+                            fontSize: label.startsWith('[E')
                                 ? RetroType.title
                                 : RetroType.small,
                             color: view.prompt == WorldPrompt.seal
                                 ? ProtoColors.violet
-                                : label.startsWith('[E]')
-                                    ? ProtoColors.gold
-                                    : ProtoColors.sky),
+                                : view.prompt == WorldPrompt.spent
+                                    ? ProtoColors.dim
+                                    : label.startsWith('[E')
+                                        ? ProtoColors.gold
+                                        : ProtoColors.sky),
                       )
                     else if (_pickPrompt(context, s) case final text?)
                       Padding(

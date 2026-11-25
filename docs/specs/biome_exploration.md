@@ -76,9 +76,22 @@ poda al cambiar el día): mañana vuelven a llenarse. `<i>` es el índice del
 plano generado, por eso la clave lleva `BiomeLayout.version`: al
 regenerarse el plano, una marca vieja no cae sobre un cofre nuevo.
 
+**Botín en el piso (protocolo 96, loot.md § 4c).** Abrir el cofre ya no
+entrega en silencio: el oro, el mineral y el botín **caen al piso sobre
+el cofre** como en las mazmorras (instanciado: solo quien lo abrió lo ve
+y lo levanta, caminando encima o con E), y cada cosa levantada muestra
+el aviso de la izquierda. Prompt: `[E/Clic] Abrir el cofre`; clic sobre
+el cofre en alcance = E.
+
 ### 3.4 Santuarios y fuentes
-E da, una vez por jugador por día, `shrineGold` de oro y 1 del material
-raro del bioma. Mismo guardado (`wx:<jugador>:<bioma>:v<versión>:s<i>:<día>`).
+E (o clic) da, una vez por jugador por día, `shrineGold` de oro y 1 del
+material raro del bioma, que **caen al piso delante del santuario** (una
+casilla abajo) como botín instanciado (loot.md § 4c). Mismo guardado
+(`wx:<jugador>:<bioma>:v<versión>:s<i>:<día>`).
+
+- Prompt disponible: `[E/Clic] Recibir bendición (oro + material raro)`.
+- Usado hoy (cofre o santuario): línea **gris** sin tecla
+  `Ya lo usaste hoy · se renueva mañana` (`WorldPrompt.spent`).
 
 ## 4. Luz en grutas
 

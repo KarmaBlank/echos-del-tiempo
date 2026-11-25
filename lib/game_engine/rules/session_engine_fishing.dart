@@ -401,7 +401,7 @@ extension _FishingOp on _Op {
         final tier = _rand() < 0.15 ? ChestTier.plata : ChestTier.madera;
         final def = kChestTiers[tier]!;
         final cr = ((20 + (_rand() * 31).floor()) * def.creditMult).round();
-        p.profile = p.profile.copyWith(credits: p.profile.credits + cr);
+        drops.add(GoodsRules.goldDrop(cr));
         drops.addAll(_chestDrops(p, def, lvl));
         label = 'un cofre hundido (+$cr de oro)';
         rarity = tier == ChestTier.plata ? Rarity.epico : Rarity.raro;
@@ -454,6 +454,18 @@ extension _FishingOp on _Op {
         life: marked.life.copyWith(fishXp: marked.life.fishXp + 10));
     events.add(WaterLootEvent(p.id, label, rarity.index));
     say('${p.name} sacó del agua $label.');
+    if (kind == WaterLootKind.cofre && !p.rafting) {
+      // A sunken chest fished from land spills at the angler's feet
+      // (loot.md § 4c).
+      _spill(p, drops, p.x, p.y + 6);
+      return;
+    }
+    // On a raft there is no floor: goods go straight in, with notice.
+    for (final d in drops.where((d) => d.isGoods)) {
+      _giveGoods(p, d);
+      events.add(LootDropEvent(p.id, d, LootSource.chest));
+    }
+    drops.removeWhere((d) => d.isGoods);
     _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
   }
 

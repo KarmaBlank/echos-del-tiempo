@@ -645,15 +645,15 @@
     "status": "draft"
   },
   "ui.world.wild.prompt_chest": {
-    "text": "[E] 打开宝箱",
+    "text": "[E/点击] 打开宝箱",
     "status": "draft"
   },
   "ui.world.wild.prompt_shrine": {
-    "text": "[E] 祈求祝福",
+    "text": "[E/点击] 接受祝福（金币 + 稀有材料）",
     "status": "draft"
   },
   "ui.world.wild.prompt_done": {
-    "text": "今天已经用过了：明天会恢复",
+    "text": "今天已经用过了 · 明天刷新",
     "status": "draft"
   },
   "ui.world.raft.prompt_board": "[E] 登上木筏",
@@ -665,6 +665,14 @@
   },
   "ui.world.cozy.searched": {
     "text": "今天已经搜索过这棵树",
+    "status": "draft"
+  },
+  "ui.world.prompt.spent": {
+    "text": "已经用过了",
+    "status": "draft"
+  },
+  "ui.world.loot.gold": {
+    "text": "{n} 金币",
     "status": "draft"
   }
 }

@@ -3,7 +3,11 @@ import '../../../game_engine/data/cooking_catalog.dart' show MealDef;
 import '../../../game_engine/data/farming_catalog.dart';
 import '../../../game_engine/data/fishing_catalog.dart';
 import '../../../game_engine/i18n/item_keys.dart';
+import '../../../game_engine/data/bait_catalog.dart';
+import '../../../game_engine/data/smithing_catalog.dart';
 import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/loot.dart';
+import '../../../game_engine/rules/goods_rules.dart';
 import '../../../game_engine/models/item_def.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/models/weapon_passive.dart';
@@ -189,4 +193,26 @@ String? _gearName(ItemInstance i) {
         'data.items.gear.type.${gearTypeKey(type)}', kGearTypeNames[type] ?? type),
     'fish': CatalogText.of(ItemKeys.fishName(fish), kFish[fish]?.name ?? fish),
   });
+}
+
+/// Name of an overworld goods drop (loot.md § 4c) in the active
+/// language: `120 gold`, `2 Copper ore`, `Clear turnip`…
+String localGoodsName(LootDrop d) {
+  final (kind, id) = GoodsRules.split(d.goods ?? '');
+  final n = d.count;
+  if (kind == GoodsRules.gold) {
+    return CatalogText.of('ui.world.loot.gold', '$n de oro', {'n': n});
+  }
+  final base = switch (kind) {
+    'ore' => CatalogText.of(
+        'data.materials.smith.$id.name', kSmithMaterials[id]?.name ?? id),
+    'crop' => parseCropKey(id)?.$1.text ?? id,
+    'seed' => kCrops[id]?.seedText ?? id,
+    'wseed' => kWeaponSeedNames[id] ?? id,
+    'bait' =>
+      CatalogText.of('data.materials.bait.$id.name', kBaits[id]?.name ?? id),
+    'fert' => kFertilizers[id]?.text ?? id,
+    _ => id,
+  };
+  return n > 1 ? '$n $base' : base;
 }
