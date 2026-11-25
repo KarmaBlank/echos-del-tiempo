@@ -1,4 +1,5 @@
 import '../data/biomes_catalog.dart';
+import '../data/cooking_catalog.dart' show kMeals;
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/mine_catalog.dart' show kMineTools;
@@ -63,10 +64,12 @@ abstract final class QuestTrackRules {
 
   static String trackKey(QuestTrackKind k, String npc) => '${k.name}:$npc';
 
-  /// es-AR source name of an item a resident asks for: fish, crop /
+  /// es-AR source name of an item a resident asks for (host notices; the
+  /// UI shows `questItemName`): meal, fish, crop /
   /// forage, or a mining / smithing item (ore, ingot, rare, tool). Never
   /// the raw id: unknown ids become readable (`ingot_x` → `Ingot x`).
   static String itemName(String id) {
+    if (kMeals[id]?.name case final n?) return n;
     if (kFish[id]?.name case final n?) return n;
     if (kCrops[id]?.name case final n?) return n;
     if (kSmithMaterials[id]?.name case final n?) return n;

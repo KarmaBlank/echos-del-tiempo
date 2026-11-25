@@ -1,12 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/models/player_profile.dart';
+import '../../domain/quest_text.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
-import '../hud/tracked_quests_hud.dart' show questProgressText, questTitleText;
+import '../hud/tracked_quests_hud.dart' show questProgressText;
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'biome_npc_panel.dart'
@@ -109,7 +110,7 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                         }),
                   if (r.request != null)
                     context.t('ui.town.journal.status_asks',
-                        {'what': r.request!.label.toLowerCase()}),
+                        {'what': requestText(r.request!).toLowerCase()}),
                 ].join(' · '),
                 key: const ValueKey('quest-log-status'),
                 softWrap: true,
@@ -153,17 +154,17 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
             : const LifeIcon('cofre_oficio', LifeIconKind.herramienta,
                 size: 32),
         border: a.ready ? DsColors.success : DsColors.selected,
-        search: a.who,
-        caption:
-            a.item == null ? a.kind.label.toUpperCase() : '${a.have}/${a.need}',
+        search: activeQuestWho(a),
+        count: a.item == null ? null : a.need,
         detail: LifeItemDetail(
-          name: a.who,
+          name: activeQuestWho(a),
           nameColor: DsColors.textTitle,
           tags: [
-            (a.kind.label.toUpperCase(), DsColors.textSecondary),
+            (trackKindText(a.kind).toUpperCase(), DsColors.textSecondary),
             if (a.ready) (context.t('ui.town.journal.ready'), DsColors.success),
           ],
-          lines: [questTitleText(worldStrings(context), a), questProgressText(worldStrings(context), a)],
+          // One line: what and how far (quest_audit.md § 8).
+          lines: [questProgressText(worldStrings(context), a)],
           actions: [trackButton(widget.controller, p, a.npc.id, a.kind)],
         ),
       );

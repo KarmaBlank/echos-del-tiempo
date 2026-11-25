@@ -716,6 +716,32 @@ class DsCost extends StatelessWidget {
   }
 }
 
+/// Compact chip (quest_audit.md § 8): a short value ("+540 XP") with a
+/// thin border of its color; the long explanation goes in [tip] (the
+/// standard fixed-size tooltip). Visual only: the caller gives text.
+class DsChip extends StatelessWidget {
+  const DsChip(this.label, {super.key, required this.color, this.tip});
+
+  final String label;
+  final Color color;
+
+  /// Detail shown on hover (`null`: none).
+  final String? tip;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = Container(
+      padding: EdgeInsets.symmetric(horizontal: DsSpace.xs, vertical: 1),
+      decoration: BoxDecoration(
+          color: DsColors.surface,
+          border: Border.all(color: color, width: 1)),
+      child: Text(label, softWrap: true, style: DsText.detail(color)),
+    );
+    final t = tip;
+    return t == null || t.isEmpty ? box : box.tip(t);
+  }
+}
+
 /// Etiqueta en mayúsculas con borde del color de su tipo.
 class DsTag extends StatelessWidget {
   const DsTag(this.text, {super.key, required this.color}) : textKey = null;
