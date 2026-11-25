@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
 import '../data/construction_catalog.dart';
+import 'life_give_rules.dart';
 import '../data/exploration_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
@@ -1433,6 +1434,8 @@ class _Op {
         return _withEventDiscount(
             p, a is BuyRodAction, () => fishingAction(p, a));
 
+      case GiveLifeAction():
+        return _giveLife(p, a);
       case FarmTileAction() ||
             FarmShopAction() ||
             TownAction() ||
@@ -2319,6 +2322,22 @@ class _Op {
     _profileChange(to, got);
     events.add(ItemGivenEvent(p.id, to.id, drop));
     say('${p.name} le dio ${_dropText(drop)} a ${to.name}');
+    return true;
+  }
+
+  /// `GiveLifeAction` (share_materials.md § 2): both humans in town, the
+  /// giver owns the amount and it fits in the recipient's bag.
+  bool _giveLife(SessionPlayer p, GiveLifeAction a) {
+    final to = s.players[a.toPlayerId];
+    if (to == null || to.id == p.id || !_inTown(p) || !_inTown(to)) {
+      return false;
+    }
+    final g = LifeGiveRules.give(p.profile, to.profile, a.cell, a.count);
+    if (g == null) return false;
+    _profileChange(p, g.$1);
+    _profileChange(to, g.$2);
+    say('${p.name} le dio ${a.count} × '
+        '${OficioStorageRules.name(a.cell)} a ${to.name}');
     return true;
   }
 

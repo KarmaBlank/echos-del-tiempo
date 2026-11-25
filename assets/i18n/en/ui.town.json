@@ -538,5 +538,12 @@
   "ui.town.trader.kind.mine_goods": "Ores and ingots",
   "ui.town.trader.kind.mine_supplies": "Supplies",
   "ui.town.trader.kind.mine_tools": "Picks",
-  "ui.town.trader.tab_mining": "MINING"
+  "ui.town.trader.tab_mining": "MINING",
+  "ui.town.bag.give_all": "ALL",
+  "ui.town.bag.give_to": "GIVE TO {name}",
+  "ui.town.bag.give_nobody": "GIVE TO...",
+  "ui.town.bag.give_full": "{name} has no room for that",
+  "ui.town.bag.give_none": "No teammates in town",
+  "ui.town.bag.filter.materials": "MATERIALS",
+  "ui.town.bag.filter.ores": "ORES"
 }

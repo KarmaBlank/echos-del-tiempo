@@ -213,6 +213,12 @@ abstract final class ActionJson {
             'y': a.ty,
             if (a.seed != null) 'sd': a.seed,
           },
+        GiveLifeAction() => {
+            't': 'giveLife',
+            'to': a.toPlayerId,
+            'c': a.cell,
+            if (a.count != 1) 'n': a.count,
+          },
         FarmShopAction() => {
             't': 'farmShop',
             'o': a.op.name,
@@ -507,6 +513,9 @@ abstract final class ActionJson {
         return FarmTileAction(j.enumByName('o', FarmOp.values),
             j.integer('x'), j.integer('y'),
             seed: j.strOrNull('sd'));
+      case 'giveLife':
+        return GiveLifeAction(j.str('to'), j.str('c'),
+            count: j.intOrNull('n') ?? 1);
       case 'farmShop':
         return FarmShopAction(j.enumByName('o', FarmShopOp.values),
             id: j.strOrNull('id'),

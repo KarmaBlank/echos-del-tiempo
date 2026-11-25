@@ -538,5 +538,12 @@
   "ui.town.trader.kind.mine_goods": "Minerales",
   "ui.town.trader.kind.mine_supplies": "Insumos",
   "ui.town.trader.kind.mine_tools": "Picos",
-  "ui.town.trader.tab_mining": "MINERÍA"
+  "ui.town.trader.tab_mining": "MINERÍA",
+  "ui.town.bag.give_all": "TODO",
+  "ui.town.bag.give_to": "DAR A {name}",
+  "ui.town.bag.give_nobody": "DAR A...",
+  "ui.town.bag.give_full": "{name} no tiene lugar para eso",
+  "ui.town.bag.give_none": "No hay compañeros en el pueblo",
+  "ui.town.bag.filter.materials": "MATERIALES",
+  "ui.town.bag.filter.ores": "MINERALES"
 }
