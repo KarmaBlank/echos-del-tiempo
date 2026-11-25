@@ -9,6 +9,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/i18n/catalog_text.dart';
 import '../domain/skill_text.dart' show SkillReach;
 
 /// Ventana de comandos de la batalla (docs/specs/battle_presentation.md
@@ -56,6 +57,8 @@ class BattleAction {
     this.separatorBefore,
     this.instant = false,
     this.reach,
+    this.breaker = false,
+    this.breakReady = false,
     this.mpCost,
     this.pulseCost,
     this.ultCharge,
@@ -109,6 +112,14 @@ class BattleAction {
   final SkillReach? reach;
 
   /// Costos de habilidad (MP azul, Pulso dorado; rojo si no alcanza).
+  /// Habilidad que quiebra (`SkillDef.breaks`): etiqueta PUEDE QUEBRAR
+  /// junto a INSTANTE; gris si el objetivo no está Fisurado ([breakReady]).
+  final bool breaker;
+
+  /// El objetivo está Fisurado: la etiqueta se enciende y la fila se
+  /// resalta como una condición cumplida.
+  final bool breakReady;
+
   final int? mpCost;
   final int? pulseCost;
 
@@ -301,6 +312,24 @@ class _Actions extends StatelessWidget {
   Widget? _trailing(BattleAction a, double width) {
     final tags = <Widget>[
       if (a.instant) const DsTag.instant(),
+      if (a.breaker)
+        DsTooltip(
+          key: ValueKey('battle-break-${a.id}'),
+          card: DsTooltipCard(
+              title: CatalogText.of('ui.combat.tag.can_break', 'PUEDE QUEBRAR'),
+              children: [
+                Text(
+                    a.breakReady
+                        ? CatalogText.of('ui.combat.tag.break_ready',
+                            'El objetivo está Fisurado: este golpe lo quiebra.')
+                        : CatalogText.of('ui.combat.tag.break_need',
+                            'Para quebrar, el objetivo tiene que estar Fisurado.'),
+                    style: DsText.detail()),
+              ]),
+          child: DsTag(
+              CatalogText.of('ui.combat.tag.can_break', 'PUEDE QUEBRAR'),
+              color: a.breakReady ? DsColors.warning : DsColors.textDisabled),
+        ),
       if (a.reach case final r?)
         DsTag(r.tr.toUpperCase(),
             color: ProtoColors.parse(r.hex) ?? DsColors.textSecondary),
@@ -397,7 +426,7 @@ class _Actions extends StatelessWidget {
                     : null,
                 titleColor: a.dual ? DsColors.warning : null,
                 selected: i == selected,
-                highlighted: a.conditionReady,
+                highlighted: a.conditionReady || a.breakReady,
                 enabled: a.onSelect != null,
                 onTap: a.onSelect,
                 compact: true,

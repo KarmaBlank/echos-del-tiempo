@@ -115,6 +115,32 @@ void main() {
     });
   });
 
+  group('silence cooldown (per target)', () {
+    test('after it ends, the same player is immune for silenceCooldown turns', () {
+      final p = _hero('p1')..silenced = 1;
+      final e = _plain();
+      var s = BattleState(party: [p], enemies: [_foe('e0', 'slime')]);
+      s = e.nextTurn(s).state;
+      expect(s.party.first.silenced, -BattleEngine.silenceCooldown);
+      expect(e.silenceTarget(s), isNull, reason: 'immune: not a target');
+      for (var i = 0; i < BattleEngine.silenceCooldown; i++) {
+        s.currentId = null;
+        s = e.nextTurn(s).state;
+      }
+      expect(s.party.first.silenced, 0);
+      expect(e.silenceTarget(s)?.id, 'p1');
+    });
+
+    test('another silencer picks a different, non-immune target', () {
+      final e = _plain();
+      final s = BattleState(party: [
+        _hero('mage', magic: 40, skills: ['rayoArcano'])..silenced = -2,
+        _hero('weak', magic: 10, skills: ['misil']),
+      ], enemies: [_foe('e0', 'almaErrante')]);
+      expect(e.silenceTarget(s)?.id, 'weak');
+    });
+  });
+
   group('player break', () {
     test('enemy hits fill the bar and break the player', () {
       _tune({'pBreakMax': 30, 'pBreakHit': 10, 'pBreakHp': 0});
