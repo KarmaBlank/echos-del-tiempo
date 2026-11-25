@@ -5,6 +5,7 @@ import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/biomes_catalog.dart' show kBiomeLayouts;
 import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
+import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'map_themes.dart';
 part 'mine_tiles.dart';
 
@@ -134,10 +135,11 @@ class TilePainter {
     // Roofed cave of a biome region (biome_regions.md § 7.2.1): rock
     // walls and dark stone floor instead of peaks and grass.
     if (cave && (ch == Tile.rock || ch == Tile.floor)) {
+      final pal = CavePalette.of(themeId);
       if (ch == Tile.rock) {
-        _caveWall(c, px, py, h);
+        _caveRock(c, pal, px, py, tx, ty, h, at);
       } else {
-        _caveFloor(c, px, py, h);
+        _caveFloor(c, pal, px, py, tx, ty, h, at);
       }
       return;
     }
@@ -911,33 +913,115 @@ class TilePainter {
     if (h % 4 == 0) _rect(c, const Color(0x33000000), px + 10, py + 9, 3, 2);
   }
 
-  /// Cave wall block: stacked stone with a lit top edge and cracks.
-  void _caveWall(Canvas c, double px, double py, int h) {
-    _rect(c, RegionPalette.caveWall, px, py, ts, ts);
-    // Two courses of blocks, offset by the hash.
-    final off = (h % 3) * 3.0;
-    _rect(c, RegionPalette.caveWallDark, px, py + 7, ts, 1);
-    _rect(c, RegionPalette.caveWallDark, px + 4 + off, py, 1, 7);
-    _rect(c, RegionPalette.caveWallDark, px + (10 - off).abs(), py + 8, 1, 8);
-    _rect(c, RegionPalette.caveWallLight, px, py, ts, 1);
-    _rect(c, RegionPalette.caveWallLight, px, py + 8, ts, 1);
-    if (h % 4 == 0) {
-      _rect(c, RegionPalette.caveCrack, px + 2 + h % 9, py + 3, 1, 3);
-      _rect(c, RegionPalette.caveCrack, px + 3 + h % 9, py + 5, 2, 1);
-    }
-    _rect(c, RegionPalette.caveWallDark, px, py + ts - 1, ts, 1);
+  /// Pixel blob (an octagon of two rects) of radius [r] at (cx, cy).
+  void _blob(Canvas c, Color col, double cx, double cy, double r) {
+    _rect(c, col, cx - r, cy - r + 1, r * 2, r * 2 - 2);
+    _rect(c, col, cx - r + 1, cy - r, r * 2 - 2, r * 2);
   }
 
-  /// Cave floor: dark stone with a few pebbles.
-  void _caveFloor(Canvas c, double px, double py, int h) {
-    _rect(c, RegionPalette.caveFloor, px, py, ts, ts);
+  /// Rough cavern rock (biome_regions.md § 7.2.1): heaped boulders in
+  /// varied shades with lit facets and cracks; against the cave floor the
+  /// base breaks into an irregular, shadowed silhouette.
+  void _caveRock(Canvas c, CavePalette pal, double px, double py, int tx,
+      int ty, int h, TileAt? at) {
+    c.save();
+    c.clipRect(Rect.fromLTWH(px, py, ts, ts));
+    _rect(c, pal.rockDeep, px, py, ts, ts);
+    for (var k = 0; k < 4; k++) {
+      final hk = (h >> (k * 5)) & 0x3ff;
+      final r = 3.0 + hk % 4;
+      final cx = px + 1 + (hk >> 2) % 15, cy = py + 1 + (hk >> 5) % 15;
+      _blob(c, k.isEven ? pal.rock : pal.rockMid, cx, cy, r);
+      // Lit facet up-left, shadow down-right.
+      _rect(c, pal.rockLit, cx - r + 1, cy - r, r, 1);
+      _rect(c, pal.rockLit, cx - r, cy - r + 1, 1, r - 1);
+      _rect(c, pal.rockDeep, cx, cy + r - 1, r - 1, 1);
+    }
     if (h % 3 == 0) {
-      _rect(c, RegionPalette.caveFloor2, px + jsShiftMod(h, 3, 12).abs(),
+      final x0 = px + 3 + h % 9, y0 = py + 2 + (h >> 4) % 6;
+      _rect(c, pal.crack, x0, y0, 1, 3);
+      _rect(c, pal.crack, x0 + 1, y0 + 3, 1, 2);
+      _rect(c, pal.crack, x0, y0 + 5, 1, 2);
+    }
+    // Rough foot where the rock meets the cave floor.
+    bool floor(int x, int y) => at?.call(x, y) == Tile.floor;
+    if (floor(tx, ty + 1)) {
+      for (var i = 0; i < 4; i++) {
+        final d = 1.0 + ((h >> (i * 3)) % 4);
+        _rect(c, pal.rockDeep, px + i * 4, py + ts - d, 4, d);
+      }
+    }
+    c.restore();
+  }
+
+  /// Cavern floor: dark stone, a wet shore by the water, rock bumps and
+  /// stalagmites against the walls, a few glowing specks.
+  void _caveFloor(Canvas c, CavePalette pal, double px, double py, int tx,
+      int ty, int h, TileAt? at) {
+    String? n(int x, int y) => at?.call(x, y);
+    bool water(String? t) => t == Tile.water || t == Tile.fishing;
+    final wet = water(n(tx - 1, ty)) ||
+        water(n(tx + 1, ty)) ||
+        water(n(tx, ty - 1)) ||
+        water(n(tx, ty + 1));
+    _rect(c, wet ? pal.wet : pal.floor, px, py, ts, ts);
+    if (h % 3 == 0) {
+      _rect(c, pal.floor2, px + jsShiftMod(h, 3, 12).abs(),
           py + jsShiftMod(h, 7, 12).abs(), 3, 2);
     }
-    if (h % 5 == 1) {
-      _rect(c, RegionPalette.caveWallLight, px + jsShiftMod(h, 9, 13).abs(),
-          py + jsShiftMod(h, 13, 13).abs(), 1, 1);
+    if (h % 4 == 1) {
+      _rect(c, pal.floor2, px + jsShiftMod(h, 9, 13).abs(),
+          py + jsShiftMod(h, 13, 13).abs(), 2, 1);
+    }
+    if (wet) {
+      _rect(c, pal.wetGlint, px + 2 + h % 11, py + 3 + (h >> 3) % 9, 1, 1);
+      if (h % 2 == 0) {
+        _rect(c, pal.wetGlint, px + 4 + (h >> 5) % 9, py + 9 + h % 5, 2, 1);
+      }
+    }
+    // Rock bumps intruding from the walls: the silhouette is never a
+    // straight tile edge.
+    bool rock(int x, int y) => n(x, y) == Tile.rock;
+    if (rock(tx, ty - 1)) {
+      for (var i = 0; i < 4; i++) {
+        final d = ((h >> (i * 2)) % 4).toDouble();
+        if (d > 0) _rect(c, pal.rock, px + i * 4, py, 4, d);
+      }
+      _rect(c, pal.rockDeep, px, py, ts, 1);
+    }
+    if (rock(tx - 1, ty)) {
+      for (var i = 0; i < 4; i++) {
+        final d = ((h >> (i * 2 + 1)) % 4).toDouble();
+        if (d > 0) _rect(c, pal.rockMid, px, py + i * 4, d, 4);
+      }
+    }
+    if (rock(tx + 1, ty)) {
+      for (var i = 0; i < 4; i++) {
+        final d = ((h >> (i * 2 + 3)) % 4).toDouble();
+        if (d > 0) _rect(c, pal.rock, px + ts - d, py + i * 4, d, 4);
+      }
+    }
+    if (rock(tx, ty + 1)) {
+      for (var i = 0; i < 4; i++) {
+        final d = ((h >> (i * 2 + 5)) % 3).toDouble();
+        if (d > 0) _rect(c, pal.rockMid, px + i * 4, py + ts - d, 4, d);
+      }
+    }
+    // Stalagmites along the walls.
+    final byWall = rock(tx, ty - 1) || rock(tx - 1, ty) || rock(tx + 1, ty);
+    if (byWall && !wet && h % 3 == 0) {
+      final sx = px + 4 + (h >> 6) % 8, sy = py + 12.0;
+      _rect(c, pal.rockMid, sx - 2, sy, 5, 2);
+      _rect(c, pal.rockMid, sx - 1, sy - 3, 3, 3);
+      _rect(c, pal.rockMid, sx, sy - 6, 1, 3);
+      _rect(c, pal.rockLit, sx - 1, sy - 3, 1, 3);
+      _rect(c, pal.rockDeep, sx - 2, sy + 2, 6, 1);
+    }
+    // A tiny glowing mushroom (the glow is drawn above the darkness).
+    if (!wet && RegionAmbienceRules.speckAt(tx, ty)) {
+      final mx = px + 5 + (h >> 7) % 6, my = py + 6 + (h >> 9) % 6;
+      _rect(c, pal.floor2, mx + 1, my + 1, 1, 2);
+      _rect(c, pal.speck.withValues(alpha: 0.7), mx, my, 3, 1);
     }
   }
 

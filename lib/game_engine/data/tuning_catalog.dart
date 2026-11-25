@@ -732,11 +732,29 @@ const Map<String, TuningDef> kTuningDefaults = {
     'forageRecheckSec': 6,
     // Waystones (§ 4): reach (px) to activate / use one.
     'waystoneReach': 26,
+    // Caverns (§ 3.1): × of the lake radii, thickness of the rock rim
+    // (tiles) and the most openings above (0 = none).
+    'caveScaleX': 2.0,
+    'caveScaleY': 2.2,
+    'caveWallTiles': 2.5,
+    'caveSkylightsMax': 2,
+    // Cavern look (§ 7.2.1): darkness by day, extra darkness against
+    // the walls and over how many tiles it fades, share of floor tiles
+    // with a glowing speck, water glow alpha, mist bands and their speed
+    // (tiles/s), seconds between drip ripples.
+    'caveDark': 0.78,
+    'caveVignette': 0.6,
+    'caveVignetteTiles': 3,
+    'caveSpecks': 0.06,
+    'caveWaterGlow': 0.16,
+    'caveMistBands': 3,
+    'caveMistSpeed': 0.25,
+    'caveDripSec': 3.5,
     // Roofed caves (§ 7.2.1): roof lip at the mouth (px), light pools
     // under the openings (alpha, half-size px, pixel step), dust motes
     // per pool and their drift speed (cycles/s).
-    'caveRoofLip': 5,
-    'cavePoolAlpha': 0.14,
+    'caveRoofLip': 7,
+    'cavePoolAlpha': 0.07,
     'cavePoolSize': 13,
     'cavePoolPixel': 3,
     'caveMotes': 3,

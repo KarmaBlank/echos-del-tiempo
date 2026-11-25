@@ -349,7 +349,10 @@ void main() {
         if (!lay.base.style.caveOpenings) {
           expect(lay.skylights, isEmpty, reason: '${lay.id}/$seed');
         } else if (caves.isNotEmpty) {
-          expect(lay.skylights, isNotEmpty, reason: '${lay.id}/$seed');
+          // Optional: at most caveSkylightsMax per cavern (§ 7.2.1).
+          expect(lay.skylights.length,
+              lessThanOrEqualTo(caves.length * rt().i('caveSkylightsMax')),
+              reason: '${lay.id}/$seed');
         } else {
           expect(lay.skylights, isEmpty, reason: '${lay.id}/$seed');
         }

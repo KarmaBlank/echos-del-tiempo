@@ -9,6 +9,7 @@ import '../../../../game_engine/rules/biome_regions.dart';
 import '../../../../game_engine/rules/light_shaft_rules.dart';
 import '../../../../game_engine/rules/region_ambience_rules.dart';
 import 'map_themes.dart';
+import 'tile_painter.dart';
 
 /// Cloud shadows, cave shade and light shafts (docs/specs/biome_regions.md
 /// § 7). Built for the frame budget: only what is inside the view is
@@ -114,24 +115,39 @@ class RegionLightLayer {
     }
   }
 
-  /// Darkness under cave roofs of a daylit region ([lay]); a cached
-  /// picture of the whole layout, clipped by the canvas to the view.
+  /// Darkness under cave roofs of a region ([lay]) with a vignette
+  /// toward the walls (biome_regions.md § 7.2.1): a cached picture of the
+  /// whole layout in 8 px cells (each the mean of its tile and the roofed
+  /// neighbours it leans to), clipped by the canvas to the view.
   void drawCaveShade(Canvas c, BiomeLayout lay, double strength) {
     if (strength <= 0) return;
     if (_shade == null || !identical(_shadeKey, lay)) {
       _shade?.dispose();
       final rec = ui.PictureRecorder();
       final pc = Canvas(rec);
-      final paint = Paint()..color = RegionPalette.caveShade;
+      final paint = Paint()..isAntiAlias = false;
+      double dark(int x, int y) =>
+          lay.isIndoor(x, y) ? RegionAmbienceRules.caveDarkness(lay, x, y) : -1;
       for (var y = 0; y < BiomeLayout.height; y++) {
-        var run = -1;
-        for (var x = 0; x <= BiomeLayout.width; x++) {
-          final inn = x < BiomeLayout.width && lay.isIndoor(x, y);
-          if (inn && run < 0) run = x;
-          if (!inn && run >= 0) {
-            pc.drawRect(
-                Rect.fromLTWH(run * ts, y * ts, (x - run) * ts, ts), paint);
-            run = -1;
+        for (var x = 0; x < BiomeLayout.width; x++) {
+          final d0 = dark(x, y);
+          if (d0 < 0) continue;
+          for (var sy = 0; sy < 2; sy++) {
+            for (var sx = 0; sx < 2; sx++) {
+              final nx = x + (sx == 0 ? -1 : 1), ny = y + (sy == 0 ? -1 : 1);
+              var sum = d0, n = 1;
+              for (final v in [dark(nx, y), dark(x, ny), dark(nx, ny)]) {
+                if (v >= 0) {
+                  sum += v;
+                  n++;
+                }
+              }
+              final k = (sum / n * _steps * 2).round() / (_steps * 2);
+              paint.color = RegionPalette.caveShade.withValues(alpha: k);
+              pc.drawRect(
+                  Rect.fromLTWH(x * ts + sx * 8, y * ts + sy * 8, 8, 8),
+                  paint);
+            }
           }
         }
       }
@@ -146,6 +162,99 @@ class RegionLightLayer {
     c.restore();
   }
 
+  ui.Picture? _glow;
+  Object? _glowKey;
+  final _water = <(int, int)>[];
+  final Paint _mist = Paint()..isAntiAlias = false;
+  final Paint _ring = Paint()..isAntiAlias = false;
+
+  /// Above the darkness (§ 7.2.1): the faint cold glow of the cave water
+  /// and the glowing specks (cached picture), slow low mist over each
+  /// cave lake and an occasional drip ripple (a handful of rects).
+  void drawCaveLife(Canvas c, BiomeLayout lay, double t,
+      {double strength = 1, bool motion = true}) {
+    if (strength <= 0) return;
+    final pal = CavePalette.of(lay.base.theme);
+    if (_glow == null || !identical(_glowKey, lay)) {
+      _glow?.dispose();
+      _water.clear();
+      final rec = ui.PictureRecorder();
+      final pc = Canvas(rec);
+      final glowA = RegionAmbienceRules.waterGlow;
+      Paint p(Color col, double a) => Paint()
+        ..color = col.withValues(alpha: a.clamp(0.0, 1.0))
+        ..isAntiAlias = false;
+      final water = p(pal.waterGlow, glowA);
+      final shine = p(pal.waterGlow, glowA * 1.8);
+      final halo = p(pal.speck, 0.2);
+      final core = p(pal.speck, 1);
+      for (var y = 0; y < BiomeLayout.height; y++) {
+        for (var x = 0; x < BiomeLayout.width; x++) {
+          if (!lay.isIndoor(x, y)) continue;
+          final h = TilePainter.tileHash(x, y);
+          if (lay.isLake(x, y)) {
+            _water.add((x, y));
+            pc.drawRect(Rect.fromLTWH(x * ts, y * ts, ts, ts), water);
+            if (h % 3 == 0) {
+              pc.drawRect(
+                  Rect.fromLTWH(
+                      x * ts + 2 + h % 8, y * ts + 4 + (h >> 4) % 8, 4, 1),
+                  shine);
+            }
+            continue;
+          }
+          if (!RegionAmbienceRules.speckAt(x, y)) continue;
+          // The mushroom the tile painter draws on this tile.
+          final mx = x * ts + 5 + (h >> 7) % 6, my = y * ts + 6 + (h >> 9) % 6;
+          pc
+            ..drawRect(Rect.fromLTWH(mx - 1, my, 5, 1), halo)
+            ..drawRect(Rect.fromLTWH(mx + 1, my - 2, 1, 5), halo)
+            ..drawRect(Rect.fromLTWH(mx, my - 1, 3, 3), halo)
+            ..drawRect(Rect.fromLTWH(mx + 1, my, 1, 1), core);
+        }
+      }
+      _glow = rec.endRecording();
+      _glowKey = lay;
+    }
+    c.drawPicture(_glow!);
+    if (!motion) return;
+    final bands = RegionAmbienceRules.mistBands;
+    var salt = 0;
+    for (final lk in lay.lakes) {
+      if (lk.cave == null) continue;
+      salt++;
+      // Mist: wide, low, pixel-stepped bands drifting over the lake.
+      for (var k = 0; k < bands; k++) {
+        final (mx, my, hw, hh) = RegionAmbienceRules.mist(lk.ellipse, k, t);
+        final fade = 0.5 + 0.5 * math.sin(t * 0.2 + k * 1.7);
+        _mist.color = pal.mist.withValues(alpha: 0.05 * fade * strength);
+        for (var i = 0; i < 3; i++) {
+          final w = (hw * (1 - i * 0.28)).roundToDouble();
+          final hh2 = (hh * (1 - i * 0.3)).roundToDouble();
+          c.drawRect(
+              Rect.fromLTWH((mx - w).roundToDouble(),
+                  (my - hh2).roundToDouble(), w * 2, hh2 * 2),
+              _mist);
+        }
+      }
+      // Drip ripple: a widening pixel ring on one water tile.
+      final rp = RegionAmbienceRules.ripple(_water, salt, t);
+      if (rp != null) {
+        final ((wx, wy), age) = rp;
+        final r = (1 + age * 6).roundToDouble();
+        final rh = (r * 0.5).roundToDouble();
+        _ring.color =
+            pal.waterGlow.withValues(alpha: 0.4 * (1 - age) * strength);
+        final cx = wx * ts + 8, cy = wy * ts + 8;
+        c
+          ..drawRect(Rect.fromLTWH(cx - r, cy - rh, r * 2, 1), _ring)
+          ..drawRect(Rect.fromLTWH(cx - r, cy + rh, r * 2, 1), _ring)
+          ..drawRect(Rect.fromLTWH(cx - r - 1, cy - rh, 1, rh * 2), _ring)
+          ..drawRect(Rect.fromLTWH(cx + r, cy - rh, 1, rh * 2), _ring);
+      }
+    }
+  }
+
   /// Roof edge / overhang at the mouths of the roofed caves of [lay]
   /// (biome_regions.md § 7.2.1); drawn above the actors. Cached picture.
   void drawRoofEdges(Canvas c, BiomeLayout lay, String Function(int, int) at) {
@@ -155,44 +264,56 @@ class RegionLightLayer {
       _roof?.dispose();
       final rec = ui.PictureRecorder();
       final pc = Canvas(rec);
-      final body = Paint()
-        ..color = RegionPalette.roofLip
+      final pal = CavePalette.of(lay.base.theme);
+      Paint p(Color col) => Paint()
+        ..color = col
         ..isAntiAlias = false;
-      final edge = Paint()
-        ..color = RegionPalette.roofLipEdge
-        ..isAntiAlias = false;
+      final body = p(pal.rock), mid = p(pal.rockMid);
+      final deep = p(pal.rockDeep), lit = p(pal.rockLit);
       for (var y = 0; y < BiomeLayout.height; y++) {
         for (var x = 0; x < BiomeLayout.width; x++) {
           for (final side in RegionAmbienceRules.roofEdges(lay, at, x, y)) {
             final px = x * ts, py = y * ts;
             final h = LightShaftRules.hash(x, y);
-            switch (side) {
-              case RoofSide.north || RoofSide.south:
-                final top = side == RoofSide.north;
-                final y0 = top ? py : py + ts - lip;
-                pc.drawRect(Rect.fromLTWH(px, y0, ts, lip), body);
-                pc.drawRect(
-                    Rect.fromLTWH(px, top ? y0 : y0 + lip - 1, ts, 1), edge);
-                // Hanging teeth of rock.
-                for (var k = 0; k < 3; k++) {
-                  final tx = px + 1 + k * 5 + (h >> k) % 2;
-                  final th = 1.0 + ((h >> (k + 2)) % 3);
-                  pc.drawRect(
-                      Rect.fromLTWH(tx, top ? y0 + lip : y0 - th, 2, th), body);
-                }
-              case RoofSide.west || RoofSide.east:
-                final left = side == RoofSide.west;
-                final x0 = left ? px : px + ts - lip;
-                pc.drawRect(Rect.fromLTWH(x0, py, lip, ts), body);
-                pc.drawRect(
-                    Rect.fromLTWH(left ? x0 : x0 + lip - 1, py, 1, ts), edge);
-                for (var k = 0; k < 3; k++) {
-                  final ty = py + 1 + k * 5 + (h >> k) % 2;
-                  final tw = 1.0 + ((h >> (k + 2)) % 3);
-                  pc.drawRect(
-                      Rect.fromLTWH(left ? x0 + lip : x0 - tw, ty, tw, 2),
-                      body);
-                }
+            // A jagged band of rock along the open side, lit on its outer
+            // edge, with stalactites hanging inward (4 px columns).
+            for (var k = 0; k < 4; k++) {
+              final hk = h >> (k * 4);
+              final d = lip - 2 + hk % 4;
+              final o = k * 4.0;
+              final len = 2.0 + (hk >> 2) % 6, wd = 1.0 + (hk >> 1) % 2;
+              final Rect band, edge, tip, point;
+              switch (side) {
+                case RoofSide.north:
+                  band = Rect.fromLTWH(px + o, py, 4, d);
+                  edge = Rect.fromLTWH(px + o, py, 4, 1);
+                  tip = Rect.fromLTWH(px + o + 1, py + d, wd, len);
+                  point = Rect.fromLTWH(px + o + 1, py + d + len, 1, 1);
+                case RoofSide.south:
+                  band = Rect.fromLTWH(px + o, py + ts - d, 4, d);
+                  edge = Rect.fromLTWH(px + o, py + ts - 1, 4, 1);
+                  tip = Rect.fromLTWH(px + o + 1, py + ts - d - len, wd, len);
+                  point =
+                      Rect.fromLTWH(px + o + 1, py + ts - d - len - 1, 1, 1);
+                case RoofSide.west:
+                  band = Rect.fromLTWH(px, py + o, d, 4);
+                  edge = Rect.fromLTWH(px, py + o, 1, 4);
+                  tip = Rect.fromLTWH(px + d, py + o + 1, len, wd);
+                  point = Rect.fromLTWH(px + d + len, py + o + 1, 1, 1);
+                case RoofSide.east:
+                  band = Rect.fromLTWH(px + ts - d, py + o, d, 4);
+                  edge = Rect.fromLTWH(px + ts - 1, py + o, 1, 4);
+                  tip = Rect.fromLTWH(px + ts - d - len, py + o + 1, len, wd);
+                  point =
+                      Rect.fromLTWH(px + ts - d - len - 1, py + o + 1, 1, 1);
+              }
+              pc.drawRect(band, k.isEven ? body : mid);
+              pc.drawRect(edge, lit);
+              if (hk % 3 != 0) {
+                pc
+                  ..drawRect(tip, deep)
+                  ..drawRect(point, deep);
+              }
             }
           }
         }
@@ -304,6 +425,8 @@ class RegionLightLayer {
   void dispose() {
     _shade?.dispose();
     _shade = null;
+    _glow?.dispose();
+    _glow = null;
     _roof?.dispose();
     _roof = null;
   }

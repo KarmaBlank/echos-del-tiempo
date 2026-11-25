@@ -448,8 +448,17 @@ class _Gen {
     final lakeCount = r.d() < t.d('secondLakeChance') ? 2 : 1;
     final lakes = <BiomeLake>[];
     final variants = _pickVariants(lakeCount);
+    // A cavern (§ 3.1) also takes the middle site above its lake site:
+    // it is far bigger than an open lake.
+    final caveSites = <(int, int, int, int)>{};
     for (var k = 0; k < lakeCount; k++) {
-      final lk = _lake(sites[k], variants[k], k, main);
+      var site = sites[k];
+      if (variants[k] == LakeVariant.cave) {
+        final mid = site == sw ? wm : em;
+        site = (site.$1, mid.$2, site.$3, site.$4);
+        caveSites.add(mid);
+      }
+      final lk = _lake(site, variants[k], k, main);
       if (lk != null) lakes.add(lk);
     }
     // At least one lake: the first site with an open lake.
@@ -460,7 +469,12 @@ class _Gen {
       if (lakeCount == 1) sites[1],
       if (r.d() < 0.5) wm else em,
       if (r.d() < 0.5) em else wm,
-    ];
+    ]..removeWhere(caveSites.contains);
+    if (free.isEmpty) {
+      free.add(lakeCount == 1
+          ? sites[1]
+          : (caveSites.contains(wm) ? em : wm));
+    }
 
     // Waystones at the lakes and mines.
     for (var k = 0; k < lakes.length; k++) {
@@ -576,7 +590,9 @@ class _Gen {
     final skylights = <(int, int)>[];
     for (final lk in lakes) {
       if (lk.cave case final c? when b.style.caveOpenings) {
-        final n = 1 + r.i(3);
+        // At most one or two faint openings (§ 7.2.1), tunable.
+        final maxN = t.i('caveSkylightsMax').clamp(0, 4);
+        final n = maxN == 0 ? 0 : r.i(maxN + 1);
         for (var k = 0; k < n; k++) {
           final a = r.d() * 2 * math.pi;
           final rr = r.range(0.2, 0.75);
@@ -720,17 +736,38 @@ class _Gen {
 
     // The approach comes from the main path side.
     final towardMain = main.last.$1 < cx ? -1 : 1;
-    final crx = rx + 3, cry = ry + 2.6;
+    // The cavern (§ 3.1): an irregular blob 2–3 × the lake, ringed by a
+    // thick rock rim. Its own harmonics and a per-tile jitter make the
+    // silhouette organic; the rim fills the site up to its border.
+    final wallT = t.d('caveWallTiles');
+    final crx = math.min((x1 - x0) / 2 - wallT - 0.5,
+        rx * t.d('caveScaleX') + 1);
+    final cry = math.min((y1 - y0) / 2 - wallT - 0.5,
+        ry * t.d('caveScaleY') + 1);
+    final cp1 = r.d() * 6.28, cp2 = r.d() * 6.28, cp3 = r.d() * 6.28;
+    final ca1 = r.range(0.08, 0.16), ca2 = r.range(0.06, 0.12),
+        ca3 = r.range(0.03, 0.07);
+    final jit = r.i(1 << 20);
+    double cnorm(int x, int y) {
+      final dx = (x - cx) / crx, dy = (y - cy) / cry;
+      final ang = math.atan2(dy, dx);
+      final rr = 1 +
+          ca1 * math.sin(2 * ang + cp1) +
+          ca2 * math.sin(3 * ang + cp2) +
+          ca3 * math.sin(5 * ang + cp3);
+      final j = (((x * 73856093) ^ (y * 19349663) ^ jit) & 0xff) / 255;
+      return math.sqrt(dx * dx + dy * dy) / rr + (j - 0.5) * 0.08;
+    }
 
     if (cave) {
       for (var y = y0; y <= y1; y++) {
         for (var x = x0; x <= x1; x++) {
           if (!inside(x, y) || reserved.contains((x, y))) continue;
-          final d = norm(x.toDouble(), y.toDouble(), crx, cry);
+          final d = cnorm(x, y);
           if (d <= 1) {
             g[y][x] = Tile.floor;
             indoor.set(x, y);
-          } else if (d <= 1 + 1.8 / crx) {
+          } else if (d <= 1 + wallT / math.min(crx, cry)) {
             g[y][x] = Tile.rock;
           }
         }
@@ -775,15 +812,21 @@ class _Gen {
     }
 
     // Cave mouth: open the rock toward the approach.
+    // The one mouth: carve through the rim toward the approach until
+    // open ground (§ 3.1).
     if (cave) {
       var mx = approach.$1;
-      for (var s = 0; s < 8; s++) {
+      var outside = 0;
+      for (var s = 0; s < 40 && outside < 2 && inside(mx, row); s++) {
+        var rock = false;
         for (var yy = row - 1; yy <= row + 1; yy++) {
           if (at(mx, yy) == Tile.rock) {
+            rock = true;
             g[yy][mx] = Tile.floor;
             indoor.set(mx, yy);
           }
         }
+        if (!rock && !indoor.at(mx, row)) outside++;
         mx += towardMain;
       }
     }
