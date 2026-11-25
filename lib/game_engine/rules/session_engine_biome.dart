@@ -204,8 +204,8 @@ extension _BiomeOp on _Op {
       if (i == null) continue;
       final next = WaystoneRules.activate(s.town, q.profile.name, lay, i);
       if (identical(next, s.town)) continue;
+      // Silent: walking past is not news for the whole room's chat.
       s.town = next;
-      say('${q.name} descubrió una piedra de paso.');
     }
   }
 

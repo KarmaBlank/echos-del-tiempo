@@ -114,6 +114,8 @@ mundo (world_events.md § 3.6), no se duplica nada:
   `exploreChance` y `exploreMax`.
 - Se paran en un `exploreSpot` de lo profundo (no junto al camino
   principal), elegido por hash del uid.
+- No se anuncian en el chat (se encuentran explorando). Descubrir una
+  piedra al tocarla tampoco escribe en el chat.
 - Defaults (también en `assets/data/events/world_events.json`):
   **élite errante** (`explore_elite`, duelo con el élite de una zona del
   bioma: `target: "@elite"`; se dibuja con el sprite de ese enemigo), **mercader con carreta**

@@ -4619,7 +4619,11 @@ class SessionController extends StateNotifier<SessionView?> {
     final old = {for (final a in before.active) a.uid};
     for (final a in now.active) {
       if (old.contains(a.uid)) continue;
-      final text = kWorldEvents.def(a.def)?.notice.text;
+      final d = kWorldEvents.def(a.def);
+      // Deep actors of the wilds are found by exploring, not announced
+      // (biome_exploration.md § 6).
+      if (d != null && WorldEventRules.isDeep(d)) continue;
+      final text = d?.notice.text;
       if (text == null || text.isEmpty) continue;
       _messages.add(text);
       if (_messages.length > maxMessages) _messages.removeAt(0);
