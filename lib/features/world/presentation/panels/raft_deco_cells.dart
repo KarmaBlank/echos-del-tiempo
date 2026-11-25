@@ -74,5 +74,27 @@ Widget raftDecoIcon(RaftDecoDef d, {double size = 32}) {
       child: LifeIcon('balsa', LifeIconKind.herramienta, size: size),
     );
   }
+  if (d.slot == RaftDecoSlot.roof) {
+    // The awning: tinted cloth over its two posts (as on the map).
+    return SizedBox.square(
+      dimension: size,
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(
+          width: size,
+          height: size * 6 / 32,
+          child: ColorFiltered(
+            colorFilter:
+                const ColorFilter.mode(CozyPalette.cloth, BlendMode.modulate),
+            child: LifeIcon('raft_roof', LifeIconKind.herramienta, size: size),
+          ),
+        ),
+        SizedBox(
+          width: size,
+          height: size * 18 / 32,
+          child: LifeIcon('raft_posts', LifeIconKind.herramienta, size: size),
+        ),
+      ]),
+    );
+  }
   return LifeIcon('raft_${d.id}', LifeIconKind.herramienta, size: size);
 }

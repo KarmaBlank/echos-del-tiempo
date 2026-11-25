@@ -86,8 +86,10 @@ void main() {
     expect(d, contains('+2 grupos por piso'));
     expect(d, contains('Botín: +30% cantidad · +6% rareza'));
     // Sin materiales: los crafteos dicen qué falta.
-    expect(button(tester, 'eco-craft-tier').reason, 'Falta Ancla Temporal');
-    expect(button(tester, 'eco-craft-reroll').reason, 'Falta Esquirla del Eco');
+    DsButton ds(String k) => tester.widget<DsButton>(find.byKey(ValueKey(k)));
+    expect(ds('eco-craft-tier').tooltip, 'Falta Ancla Temporal');
+    expect(ds('eco-craft-tier').onPressed, isNull);
+    expect(ds('eco-craft-reroll').tooltip, 'Falta Esquirla del Eco');
     // Sin devTools no hay atajos.
     expect(find.byKey(const ValueKey('eco-dev-1')), findsNothing);
     // El pueblo ya no abre Ecos (ecos_zone.md § 1).

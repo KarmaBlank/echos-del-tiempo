@@ -26,10 +26,22 @@ class ItemIconPainter extends CustomPainter {
   /// o `null` = siempre procedural.
   String? pngKey;
 
+  /// Manifest id of a profession weapon's own icon (`gear_<id>`, see
+  /// profession_gear.md); when loaded it replaces the type's icon.
+  String? gearSprite;
+
   @override
   void paint(Canvas canvas, Size size) {
     final r = Offset.zero & size;
     final p = ProceduralArt.instance.resolve(entryId);
+    final gear = gearSprite == null ? null : ItemIconImages.gear(gearSprite!);
+    if (gear != null) {
+      paintItemIconPng(canvas, r, gear, null, accent);
+      if (look != null) {
+        paintItemIcon(canvas, r, rows, accent, p, look: look, base: false);
+      }
+      return;
+    }
     final png = pngKey == null ? null : ItemIconImages.base(pngKey!);
     if (png == null) {
       paintItemIcon(canvas, r, rows, accent, p, look: look);
@@ -49,6 +61,7 @@ class ItemIconPainter extends CustomPainter {
       old.entryId != entryId ||
       old.look != look ||
       old.pngKey != pngKey ||
+      old.gearSprite != gearSprite ||
       old.revision != revision;
 }
 
@@ -59,6 +72,13 @@ class ItemIconPainter extends CustomPainter {
 abstract final class ItemIconImages {
   static final _base = <String, ui.Image>{};
   static final _accent = <String, ui.Image>{};
+  static final _gear = <String, ui.Image>{};
+
+  /// Registers the icon of profession weapon sprite [id] (`gear_<id>`).
+  static void putGear(String id, ui.Image img) => _gear[id] = img;
+
+  /// Icon of profession weapon sprite [id], or `null` if not loaded.
+  static ui.Image? gear(String id) => _gear[id];
 
   /// Registra la imagen de la entrada [key] del manifest.
   static void put(String key, ui.Image img) => key.endsWith('_acento')
@@ -68,6 +88,7 @@ abstract final class ItemIconImages {
   static void clear() {
     _base.clear();
     _accent.clear();
+    _gear.clear();
   }
 
   static ui.Image? base(String key) => _base[key];

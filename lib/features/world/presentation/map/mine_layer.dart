@@ -350,6 +350,47 @@ class MineLayer {
     _drawParticles(c, playerAt, text, t);
   }
 
+  // Cached hidden veins for the Pico B sparkle: recomputed only when the
+  // player changes tile, the level state changes or the radius changes.
+  (Object?, int, int, double)? _detectKey;
+  List<(int, int)> _detectTiles = const [];
+
+  /// Hidden veins near the player for the Pico B perk (cached).
+  List<(int, int)> detectTiles(
+      MineLevel lvl, MineLevelState st, double px, double py, double radius) {
+    final key = (st, px.floor(), py.floor(), radius);
+    if (key != _detectKey) {
+      _detectKey = key;
+      _detectTiles = MineWorkRules.hiddenVeins(lvl, st, px, py, radius);
+    }
+    return _detectTiles;
+  }
+
+  /// Whether the sparkle of tile ([x], [y]) shows at [t] ms: each tile
+  /// blinks on its own phase, lit about a sixth of the time.
+  static bool sparkleOn(int x, int y, double t) {
+    final phase = ((x * 73856093) ^ (y * 19349663)) & 0x3ff;
+    return ((t + phase * 3) % 1400) < 220;
+  }
+
+  /// Subtle 1–2 px sparkle on hidden veins ([tiles]; Pico B detect).
+  void drawDetectSparkles(Canvas c, List<(int, int)> tiles, double t) {
+    final p = Paint()..color = MinePalette.spark.withValues(alpha: 0.85);
+    for (final (x, y) in tiles) {
+      if (!sparkleOn(x, y, t)) continue;
+      final h = ((x * 31) ^ (y * 17)) & 7;
+      final sx = (x * ts + 4 + h).floorToDouble(),
+          sy = (y * ts + 4 + ((h * 5) & 7)).floorToDouble();
+      c.drawRect(Rect.fromLTWH(sx, sy, 1, 1), p);
+      if (((t ~/ 110) + h).isEven) {
+        c.drawRect(Rect.fromLTWH(sx - 1, sy, 1, 1), p);
+        c.drawRect(Rect.fromLTWH(sx + 1, sy, 1, 1), p);
+        c.drawRect(Rect.fromLTWH(sx, sy - 1, 1, 1), p);
+        c.drawRect(Rect.fromLTWH(sx, sy + 1, 1, 1), p);
+      }
+    }
+  }
+
   void _drawParticles(Canvas c, (double, double)? Function(String id) playerAt,
       MineText text, double t) {
     final p = Paint();

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';import 'map_labels.dart';
 
@@ -26,6 +27,36 @@ class ActorPainter {
     ..strokeWidth = 1
     ..isAntiAlias = false;
   final _sprite = SpriteCatalog.pixelPaint();
+
+  /// Px the body drops when seated.
+  static const seatDrop = 3.0;
+
+  /// Seated pose (fishing on the raft), front-facing and derived from
+  /// the hero sprite so every class and ascension sits without extra art:
+  /// head and torso (rows 0..11) drop [seatDrop] px; below the hips a
+  /// symmetric pair of legs seen from the front (foreshortened knees,
+  /// straight shins, boots), mirrored around the sprite centre (x = 0)
+  /// and painted with the sprite's own pants, boot and outline pixels.
+  void _seated(Canvas c, ui.Image img) {
+    void fill((int, int) src, Rect dst) => c.drawImageRect(img,
+        Rect.fromLTWH(src.$1.toDouble(), src.$2.toDouble(), 1, 1), dst, _sprite);
+    const outline = (3, 12), pants = (4, 12), boot = (3, 15);
+    // Outline silhouette first: knees, shins, boots.
+    fill(outline, const Rect.fromLTWH(-6, -4, 12, 4));
+    fill(outline, const Rect.fromLTWH(-4, -2, 8, 4));
+    fill(outline, const Rect.fromLTWH(-5, 0, 10, 4));
+    // Both sides, mirrored around x = 0 (s = -1 left, 1 right).
+    for (final s in const [-1.0, 1.0]) {
+      Rect m(double x, double y, double w, double h) =>
+          Rect.fromLTWH(s < 0 ? -x - w : x, y, w, h);
+      fill(pants, m(1, -3, 4, 2)); // knee (foreshortened thigh)
+      fill(pants, m(1, -1, 2, 2)); // shin
+      fill(boot, m(1, 1, 3, 2)); // boot
+    }
+    final w = img.width.toDouble();
+    c.drawImageRect(img, Rect.fromLTWH(0, 0, w, 12),
+        Rect.fromLTWH(-7, -17 + seatDrop, w, 12), _sprite);
+  }
   final _texts = <(String, int, double), TextPainter>{};
 
   static const _shadow = Color(0x66000000);
@@ -102,6 +133,7 @@ class ActorPainter {
     String? ascensionId,
     WeaponLook? look,
     bool showWeapon = true,
+    bool seated = false,
   }) {
     final img = sprites.heroFor(classId, ascensionId);
     c.save();
@@ -116,11 +148,17 @@ class ActorPainter {
     }
     if (dir < 0) c.scale(-1, 1);
     final bob = moving ? (t / 140).floor() % 2 : 0;
-    _oval(c, _shadow, 0, 1, 6, 2);
+    // Seated, the seat under them casts the contact shadow.
+    if (!seated) _oval(c, _shadow, 0, 1, 6, 2);
     // Aura de la ascensión (docs/specs/ascension.md § 5).
     if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
-    if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
+    if (img != null && seated && !dead) {
+      _seated(c, img);
+      c.translate(0, seatDrop);
+    } else if (img != null) {
+      c.drawImage(img, const Offset(-7, -17), _sprite);
+    }
     // Con una herramienta de vida en la mano no se ve el arma.
     if (showWeapon) {
       WeaponOverlay.draw(c, classId, weaponType, look: look, time: t / 1000);

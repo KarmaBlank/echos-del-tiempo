@@ -222,6 +222,25 @@ class TileLayerCache {
     }
   }
 
+  /// Draws the single tile (x, y) of [map] like the cache does (theme,
+  /// roofed caves), frozen at t = 0: the shore of the water reflections
+  /// (water_reflections.md § 1.2).
+  void drawTileAt(Canvas c, GameMap map, int x, int y, {String? theme}) {
+    if (!map.contains(x, y)) return;
+    final ch = map.tileAt(x, y);
+    final lay = map.lobby ? biomeLayout(map.place) : null;
+    var cave = false;
+    if (lay != null) {
+      cave = ch == Tile.floor || ch == MineTile.chest
+          ? lay.isIndoor(x, y)
+          : ch == Tile.rock &&
+              RegionAmbienceRules.caveWall(lay, map.tileAt, x, y);
+    }
+    String? at(int xx, int yy) => map.contains(xx, yy) ? map.tileAt(xx, yy) : null;
+    tiles.draw(c, ch, x * _ts, y * _ts, theme ?? map.theme, x, y,
+        t: 0, gateOpen: false, lobby: map.lobby, at: at, cave: cave);
+  }
+
   /// Graba el bloque [key] (solo los tiles estáticos).
   ui.Image _build(int key, GameMap map) {
     final r = _chunkRect(key, map);
