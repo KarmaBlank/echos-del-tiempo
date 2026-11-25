@@ -116,6 +116,9 @@ class _TraderPanelState extends State<TraderPanel> {
                       ? c.sellFish(materials: _materials)
                       : c.sellCrop(null, materials: _materials)
                   : null),
+        PanelButton(context.t('ui.town.stall.open'),
+            key: const ValueKey('trade-stall'),
+            onPressed: () => c.openPanel(WorldPanel.stall)),
         PanelButton(context.t('ui.town.trader.close'),
             key: const ValueKey('trade-close'), onPressed: c.closePanel),
       ],

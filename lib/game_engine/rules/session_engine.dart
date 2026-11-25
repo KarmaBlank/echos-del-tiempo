@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import '../data/ascension_catalog.dart';
 import '../data/construction_catalog.dart';
 import 'life_give_rules.dart';
+import 'stall_rules.dart';
 import '../data/exploration_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
@@ -1440,6 +1441,8 @@ class _Op {
 
       case GiveLifeAction():
         return _giveLife(p, a);
+      case StallAction():
+        return _stall(p, a);
       case FarmTileAction() ||
             FarmShopAction() ||
             TownAction() ||
@@ -2369,6 +2372,41 @@ class _Op {
     say('${p.name} le dio ${a.count} × '
         '${OficioStorageRules.name(a.cell)} a ${to.name}');
     return true;
+  }
+
+  /// `StallAction` (player_shop.md § 3): the owner in town; a teammate
+  /// buys only while both are in town.
+  bool _stall(SessionPlayer p, StallAction a) {
+    if (!_inTown(p)) return false;
+    switch (a.op) {
+      case StallOp.list:
+        final next = StallRules.list(p.profile, a.cell, a.qty, a.price);
+        if (next == null) return false;
+        _profileChange(p, next);
+        if (a.qty > 0) {
+          say('${p.name} puso ${a.qty} × ${OficioStorageRules.name(a.cell)} '
+              'en su puesto.');
+        }
+        return true;
+      case StallOp.unlist:
+        final next = StallRules.unlist(p.profile, a.cell);
+        if (next == null) return false;
+        _profileChange(p, next);
+        return true;
+      case StallOp.buy:
+        final o = s.players[a.owner];
+        if (o == null || o.id == p.id || o.isCompanion || !_inTown(o)) {
+          return false;
+        }
+        final r = StallRules.buy(o.profile, p.profile, a.cell, a.qty,
+            buyerName: p.name, day: s.town.sky.day);
+        if (r == null) return false;
+        _profileChange(o, r.$1);
+        _profileChange(p, r.$2);
+        say('${p.name} le compró ${a.qty} × '
+            '${OficioStorageRules.name(a.cell)} a ${o.name}.');
+        return true;
+    }
   }
 
   bool get _onMap => s.mode == SessionMode.lobby || s.mode == SessionMode.field;

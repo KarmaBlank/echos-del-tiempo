@@ -58,6 +58,9 @@ enum WorldPanel {
   /// Puesto del agropecuario (fishing.md § 5).
   trader,
 
+  /// The player's own stall (player_shop.md § 5), from the trader.
+  stall,
+
   /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
   fountain,
 

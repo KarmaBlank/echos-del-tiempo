@@ -68,6 +68,19 @@ abstract final class LifeGiveRules {
     });
   }
 
+  /// Public [_add] for the player stall (player_shop.md § 3): the cell
+  /// must be valid ([have] > 0 or a known kind).
+  static PlayerProfile add(PlayerProfile p, String cell, int n) =>
+      _split(cell) == null ? p : _add(p, cell, n);
+
+  /// Whether [n] more of [cell] fit in [to]'s bags (same rules as giving).
+  static bool fits(PlayerProfile to, String cell, int n) {
+    if (_split(cell) == null) return false;
+    final after = _add(to, cell, n);
+    if (cell.startsWith('ore:') && have(after, cell) > _oreCap) return false;
+    return !OficioStorageRules.overflows(to, after);
+  }
+
   static int get _oreCap => math.max(1, MiningRules.t.i('stackCap'));
 
   /// Why [from] cannot give [n] of [cell] to [to] (or `null`).

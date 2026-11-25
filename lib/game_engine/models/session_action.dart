@@ -407,6 +407,23 @@ class GiveLifeAction extends SessionAction {
   const GiveLifeAction(this.toPlayerId, this.cell, {this.count = 1});
 }
 
+/// Operations on the player's own stall (player_shop.md § 4).
+enum StallOp { list, unlist, buy }
+
+/// `stall` (protocol 85): [StallOp.list] puts [qty] of [cell] at
+/// [price] (qty 0 = only change the price), [StallOp.unlist] takes the
+/// listing back and [StallOp.buy] buys [qty] of [cell] from the stall of
+/// [owner]. Town only.
+class StallAction extends SessionAction {
+  final StallOp op;
+  final String cell;
+  final int qty;
+  final int price;
+  final String? owner;
+  const StallAction(this.op, this.cell,
+      {this.qty = 0, this.price = 0, this.owner});
+}
+
 /// `drop`: soltar al piso (compartido) un arma o [count] de una pila.
 class DropItemAction extends SessionAction {
   final String token;

@@ -196,7 +196,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// in `gat`, gathering kind `eco`.
 /// 84: life trees v2 (life_trees_v2.md): new node ids, claimed rewards
 /// `life.lc` in the profile.
-const kProtocolVersion = 84;
+/// 85: player stall (player_shop.md): `stall` action and `life.ps` in
+/// the profile.
+const kProtocolVersion = 85;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

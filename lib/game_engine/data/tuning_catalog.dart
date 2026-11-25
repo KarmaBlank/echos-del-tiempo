@@ -283,6 +283,17 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Dar materiales de oficio (share_materials.md § 3): el botón del
     // medio del selector de cantidad (1 / giveStep / todo).
     'giveStep': 5,
+    // Player stall (player_shop.md § 3): listings, top price over the
+    // reference, visitors per world day and their buy chance / amount,
+    // and how many sales the log keeps.
+    'stallSlots': 6,
+    'stallMaxMarkup': 3,
+    'stallVisitors': 3,
+    'stallBaseChance': 0.6,
+    'stallElasticity': 2,
+    'stallMaxChance': 0.95,
+    'stallMaxBuy': 3,
+    'stallLogCap': 20,
     // Ampliaciones (town_editor.md § 2: cada una suma una franja de 8 a un
     // lado): tope total, tope por lado y costo de la n-ésima (oro = base ×
     // mult^(n−1); Esquirlas × n; Cristales desde la 2.ª).

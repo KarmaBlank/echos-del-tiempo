@@ -3,8 +3,10 @@ import '../data/fishing_catalog.dart';
 import '../data/life_tree_catalog.dart';
 import '../data/smithing_catalog.dart' show kSmithMaterials;
 import 'farm_skills.dart';
+import 'player_stall.dart';
 
 export 'farm_skills.dart';
+export 'player_stall.dart';
 
 /// Materiales de oficio (v0.27.0): fibra vegetal, cebo prensado y tabla
 /// tratada. Se hacen en el TALLER DE OFICIOS y pagan contratar y mejorar ayudantes.
@@ -32,7 +34,9 @@ class LifeSkills {
     Map<String, int> baits = const {},
     String? bait,
     Set<String> claimed = const {},
-  })  : claimed = Set.unmodifiable(claimed),
+    PlayerStall? stall,
+  })  : stall = stall ?? PlayerStall.empty,
+        claimed = Set.unmodifiable(claimed),
         oreLog = Map.unmodifiable({
           for (final e in oreLog.entries)
             if (kSmithMaterials.containsKey(e.key)) e.key: e.value,
@@ -103,6 +107,9 @@ class LifeSkills {
   final Map<String, int> crafts;
 
   int craft(String id) => crafts[id] ?? 0;
+
+  /// The player's own stall (player_shop.md). JSON `ps`.
+  final PlayerStall stall;
 
   /// XP total de Herrería (roles.md § 6).
   final int smithXp;
@@ -183,8 +190,10 @@ class LifeSkills {
     Map<String, int>? baits,
     String? bait,
     Set<String>? claimed,
+    PlayerStall? stall,
   }) =>
       LifeSkills(
+          stall: stall ?? this.stall,
           claimed: claimed ?? this.claimed,
           fishXp: fishXp ?? this.fishXp,
           rods: rods ?? this.rods,
@@ -229,6 +238,7 @@ class LifeSkills {
         if (baits.isNotEmpty) 'bt': baits,
         if (bait != null) 'bs': bait,
         if (claimed.isNotEmpty) 'lc': [...claimed]..sort(),
+        if (!stall.isEmpty) 'ps': stall.toJson(),
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -297,6 +307,7 @@ class LifeSkills {
       claimed: raw['lc'] is List
           ? {for (final x in raw['lc'] as List) if (x is String) x}
           : const {},
+      stall: PlayerStall.fromJson(raw['ps']),
     );
   }
 
@@ -325,6 +336,7 @@ class LifeSkills {
       other.oreLog.length == oreLog.length &&
       oreLog.entries.every((e) => other.oreLog[e.key] == e.value) &&
       other.bait == bait &&
+      other.stall == stall &&
       other.baits.length == baits.length &&
       baits.entries.every((e) => other.baits[e.key] == e.value);
 
