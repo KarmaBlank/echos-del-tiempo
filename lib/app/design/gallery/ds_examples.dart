@@ -326,3 +326,90 @@ class _TransferMockupState extends State<TransferMockup> {
         ),
       );
 }
+
+Widget _gem(Color c) => Container(
+    width: DsSizes.itemIcon,
+    height: DsSizes.itemIcon,
+    decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.5), border: Border.all(color: c)));
+
+/// The shared grid + detail (design_system.md § "Grilla de ítems") in
+/// its two templates: TALLER ([DsCraftGridTemplate]) with filters, and
+/// COLECCIÓN ([DsCollectionTemplate]) with discovered / unknown cells.
+/// Both are 6 columns of INVENTARIO-size cells, a scrollbar when rows
+/// overflow and a fixed-width detail on the right.
+class GridTemplatesMockup extends StatelessWidget {
+  const GridTemplatesMockup({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = [
+      DsColors.textSecondary,
+      DsColors.success,
+      DsColors.actionPrimary,
+      DsColors.reward,
+      DsColors.danger,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('TALLER · DsCraftGridTemplate (tienda, forja, cocina)',
+            style: DsText.subtitle()),
+        SizedBox(height: DsSpace.sm),
+        SizedBox(
+          width: 900,
+          height: 340,
+          child: DsCraftGridTemplate(
+            key: const ValueKey('gallery-craft'),
+            keyPrefix: 'gallery-craft',
+            searchHint: 'Buscar',
+            filters: const [
+              DsTransferFilter('TODO', null),
+              DsTransferFilter('SEMILLAS', 'seed'),
+            ],
+            items: [
+              for (var i = 0; i < 20; i++)
+                DsCraftItem(
+                  id: 'i$i',
+                  icon: _gem(colors[i % colors.length]),
+                  border: colors[i % colors.length],
+                  name: 'Semilla de prueba $i',
+                  tag: i.isEven ? 'seed' : null,
+                  count: i % 3 == 0 ? i + 1 : null,
+                  description: 'Precio: 4 de oro c/u',
+                  actions: const [DsButton('COMPRAR',
+                      kind: DsButtonKind.primary, onPressed: _noop)],
+                ),
+            ],
+          ),
+        ),
+        SizedBox(height: DsSpace.lg),
+        Text('COLECCIÓN · DsCollectionTemplate (pesca, cultivo, herrería)',
+            style: DsText.subtitle()),
+        SizedBox(height: DsSpace.sm),
+        SizedBox(
+          width: 900,
+          height: 300,
+          child: DsCollectionTemplate(
+            keyPrefix: 'gallery-col',
+            filters: const [('all', 'TODO')],
+            progressLabel: (f, t) => 'Descubiertos $f/$t',
+            unknownTitle: '???',
+            unknownHint: 'Todavía no lo encontraste.',
+            entries: [
+              for (var i = 0; i < 9; i++)
+                DsCollectionEntry(
+                  id: 'c$i',
+                  icon: _gem(colors[i % colors.length]),
+                  discovered: i < 6,
+                  title: 'Pez de prueba $i',
+                  border: colors[i % colors.length],
+                  rows: const ['Dónde: lago', 'Mejor tamaño: 42 cm'],
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

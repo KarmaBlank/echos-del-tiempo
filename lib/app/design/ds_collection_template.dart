@@ -4,8 +4,8 @@ import 'ds_components.dart';
 import 'ds_detail_pane.dart';
 import 'ds_tokens.dart';
 
-/// One entry of a collection (design_system.md § "Colección"). Generic:
-/// a fish, a crop, a smithing material… The template knows nothing else.
+/// One entry of a collection (design_system.md Â§ "ColecciÃ³n"). Generic:
+/// a fish, a crop, a smithing materialâ€¦ The template knows nothing else.
 class DsCollectionEntry {
   const DsCollectionEntry({
     required this.id,
@@ -33,10 +33,10 @@ class DsCollectionEntry {
   /// Cell frame (rarity); grey when undiscovered.
   final Color? border;
 
-  /// Short colored tags (rarity, biome…).
+  /// Short colored tags (rarity, biomeâ€¦).
   final List<(String, Color)> tags;
 
-  /// Detail rows, one per line (where, season, weather, best size…).
+  /// Detail rows, one per line (where, season, weather, best sizeâ€¦).
   final List<String> rows;
 
   /// Filter ids this entry belongs to (the subtabs; `all` always).
@@ -73,10 +73,11 @@ class DsCollectionTemplate extends StatefulWidget {
   final String keyPrefix;
 
   /// Cell, icon, gap and detail width (same as INVENTARIO).
-  static const cell = 44.0, iconSize = 32.0, gap = 4.0, detailWidth = 280.0;
+  static const cell = DsSizes.itemCell,
+      iconSize = DsSizes.itemIcon,
+      gap = DsSizes.itemGap,
+      detailWidth = DsSizes.detailPaneWidth;
 
-  /// From this width on the detail goes to the right.
-  static const wideFrom = 460.0;
 
   @override
   State<DsCollectionTemplate> createState() => _DsCollectionTemplateState();
@@ -102,79 +103,48 @@ class _DsCollectionTemplateState extends State<DsCollectionTemplate> {
     final sel = shown.where((e) => e.id == _selected).firstOrNull ??
         shown.firstOrNull;
     final p = widget.keyPrefix;
-    return Column(
-      key: ValueKey('$p-template'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(children: [
-          if (widget.filters.isNotEmpty)
-            Expanded(
-              child: DsTabBar(
-                key: ValueKey('$p-tabs'),
-                tabs: [
-                  for (final f in widget.filters)
-                    DsTab(f.$2, key: ValueKey('$p-tab-${f.$1}')),
-                ],
-                index: _tab.clamp(0, widget.filters.length - 1),
-                onChanged: (i) => setState(() => _tab = i),
-              ),
-            )
-          else
-            const Spacer(),
-          SizedBox(width: DsSpace.sm),
-          DsBadge(widget.progressLabel(found, shown.length),
-              key: ValueKey('$p-progress')),
-        ]),
-        SizedBox(height: DsSpace.xs),
+    final header = Row(children: [
+      if (widget.filters.isNotEmpty)
         Expanded(
-          child: LayoutBuilder(builder: (context, box) {
-            final wide = box.maxWidth >= DsCollectionTemplate.wideFrom;
-            final grid = SingleChildScrollView(
-              child: Wrap(
-                spacing: DsCollectionTemplate.gap,
-                runSpacing: DsCollectionTemplate.gap,
-                children: [
-                  for (final e in shown)
-                    _Cell(
-                        entry: e,
-                        selected: e.id == sel?.id,
-                        keyPrefix: p,
-                        unknownTitle: widget.unknownTitle,
-                        unknownHint: widget.unknownHint,
-                        onTap: () => setState(() => _selected = e.id)),
-                ],
-              ),
-            );
-            final detail = sel == null
-                ? const SizedBox.shrink()
-                : DsDetailPane(
-                    key: ValueKey('$p-detail'),
-                    body: _Detail(
-                        entry: sel,
-                        unknownTitle: widget.unknownTitle,
-                        unknownHint: widget.unknownHint));
-            if (wide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: grid),
-                  SizedBox(width: DsSpace.sm),
-                  SizedBox(
-                      width: DsCollectionTemplate.detailWidth, child: detail),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: grid),
-                SizedBox(height: DsSpace.xs),
-                Expanded(child: detail),
-              ],
-            );
-          }),
-        ),
-      ],
+          child: DsTabBar(
+            key: ValueKey('$p-tabs'),
+            tabs: [
+              for (final f in widget.filters)
+                DsTab(f.$2, key: ValueKey('$p-tab-${f.$1}')),
+            ],
+            index: _tab.clamp(0, widget.filters.length - 1),
+            onChanged: (i) => setState(() => _tab = i),
+          ),
+        )
+      else
+        const Spacer(),
+      SizedBox(width: DsSpace.sm),
+      DsBadge(widget.progressLabel(found, shown.length),
+          key: ValueKey('$p-progress')),
+    ]);
+    return KeyedSubtree(
+      key: ValueKey('$p-template'),
+      child: DsGridDetailLayout(
+        keyPrefix: p,
+        header: header,
+        count: shown.length,
+        cell: (context, i, size) => _Cell(
+            entry: shown[i],
+            size: size,
+            selected: shown[i].id == sel?.id,
+            keyPrefix: p,
+            unknownTitle: widget.unknownTitle,
+            unknownHint: widget.unknownHint,
+            onTap: () => setState(() => _selected = shown[i].id)),
+        detail: sel == null
+            ? null
+            : DsDetailPane(
+                key: ValueKey('$p-detail'),
+                body: _Detail(
+                    entry: sel,
+                    unknownTitle: widget.unknownTitle,
+                    unknownHint: widget.unknownHint)),
+      ),
     );
   }
 }
@@ -183,12 +153,14 @@ class _Cell extends StatelessWidget {
   const _Cell(
       {required this.entry,
       required this.selected,
+      this.size = DsSizes.itemCell,
       required this.keyPrefix,
       required this.unknownTitle,
       required this.unknownHint,
       required this.onTap});
   final DsCollectionEntry entry;
   final bool selected;
+  final double size;
   final String keyPrefix, unknownTitle, unknownHint;
   final VoidCallback onTap;
 
@@ -215,8 +187,8 @@ class _Cell extends StatelessWidget {
         key: ValueKey('$keyPrefix-${e.id}'),
         onTap: onTap,
         child: Container(
-          width: DsCollectionTemplate.cell,
-          height: DsCollectionTemplate.cell,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: DsColors.surfaceSunken,
@@ -224,7 +196,8 @@ class _Cell extends StatelessWidget {
           ),
           child: e.discovered
               ? SizedBox.square(
-                  dimension: DsCollectionTemplate.iconSize, child: e.icon)
+                  dimension: DsSizes.itemIcon * size / DsSizes.itemCell,
+                  child: FittedBox(child: e.icon))
               : FittedBox(
                   child: Text('?',
                       key: ValueKey('$keyPrefix-unknown-${e.id}'),
@@ -290,3 +263,182 @@ class _Detail extends StatelessWidget {
     );
   }
 }
+
+/// Organism DsGridDetailLayout (design_system.md Â§ "Grilla de Ã­tems"):
+/// the body of [DsCollectionTemplate] and the ONE grid + detail layout of every screen that shows items (shops, stalls, stash,
+/// forge, ecos, fishing and farming, helpers, journals, loot).
+///
+/// - [header] (filters, search, counters) on top, full width.
+/// - A grid exactly [DsSizes.gridColumns] wide of cells the size
+///   of INVENTARIO's; rows grow downward and a visible scrollbar appears
+///   when they overflow.
+/// - [detail] on the right, [DsSizes.detailPaneWidth] wide and the
+///   full height (usually a `DsDetailPane`, actions pinned at the bottom).
+/// - Narrow (< [DsSizes.gridDetailWideFrom]) or inside an outer scroll:
+///   detail on top, the grid below, scale Ã—1.
+///
+/// Purely visual: [cell] builds cell [i] at side `size`.
+class DsGridDetailLayout extends StatefulWidget {
+  const DsGridDetailLayout({
+    super.key,
+    required this.count,
+    required this.cell,
+    this.detail,
+    this.header,
+    this.empty,
+    this.footer = const [],
+    this.leading,
+    this.keyPrefix = 'igd',
+  });
+
+  /// Optional column left of the grid (wide) or above it (narrow).
+  final Widget? leading;
+
+  final int count;
+  final Widget Function(BuildContext context, int i, double size) cell;
+  final Widget? detail;
+  final Widget? header;
+
+  /// Shown instead of the grid when [count] is 0.
+  final Widget? empty;
+
+  /// Extra widgets under the grid (inside its scroll).
+  final List<Widget> footer;
+
+  /// Keys: `<p>-grid`, `<p>-pane`, `<p>-scroll`.
+  final String keyPrefix;
+
+  @override
+  State<DsGridDetailLayout> createState() => _DsGridDetailLayoutState();
+}
+
+class _DsGridDetailLayoutState extends State<DsGridDetailLayout> {
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Widget _grid(BuildContext context, double k) {
+    final size = DsSizes.itemCell * k;
+    final gap = DsSizes.itemGap * k;
+    final p = widget.keyPrefix;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.count == 0 && widget.empty != null)
+          widget.empty!
+        else
+          SizedBox(
+            key: ValueKey('$p-grid'),
+            width: DsSizes.gridWidth(k),
+            child: Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (var i = 0; i < widget.count; i++)
+                  SizedBox.square(
+                      dimension: size, child: widget.cell(context, i, size)),
+              ],
+            ),
+          ),
+        for (final f in widget.footer) ...[SizedBox(height: DsSpace.sm), f],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.keyPrefix;
+    final detail = widget.detail == null
+        ? null
+        : KeyedSubtree(key: ValueKey('$p-pane'), child: widget.detail!);
+    final body = LayoutBuilder(builder: (context, box) {
+      final bounded = box.hasBoundedHeight;
+      final wide =
+          box.maxWidth >= DsSizes.gridDetailWideFrom && bounded;
+      Widget pair(double w, double h) {
+        final k = DsSizes.itemScale(w, h,
+            screen: MediaQuery.sizeOf(context),
+            text: MediaQuery.textScalerOf(context).scale(240) / 240);
+        // Centered: the slack left by the scale steps splits on both
+        // sides instead of one big empty area.
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: DsSizes.gridWidth(k) + DsSizes.gridScrollbar,
+              child: Scrollbar(
+                key: ValueKey('$p-scroll'),
+                controller: _scroll,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _scroll,
+                  padding:
+                      const EdgeInsets.only(right: DsSizes.gridScrollbar),
+                  child: _grid(context, k),
+                ),
+              ),
+            ),
+            const SizedBox(width: DsSizes.gridDetailGap),
+            if (detail != null)
+              SizedBox(width: DsSizes.detailPaneWidth, child: detail),
+          ],
+        );
+      }
+
+      if (wide) {
+        final lead = widget.leading;
+        if (lead == null) return pair(box.maxWidth, box.maxHeight);
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SingleChildScrollView(child: lead),
+            const SizedBox(width: DsSizes.gridDetailGap),
+            Expanded(
+                child: LayoutBuilder(
+                    builder: (context, b) => pair(b.maxWidth, b.maxHeight))),
+          ],
+        );
+      }
+      final k = box.maxWidth.isFinite &&
+              box.maxWidth < DsSizes.gridWidth()
+          ? box.maxWidth / DsSizes.gridWidth()
+          : 1.0;
+      final column = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (detail != null) ...[detail, SizedBox(height: DsSpace.sm)],
+          if (widget.leading != null) ...[
+            Align(alignment: Alignment.topLeft, child: widget.leading),
+            SizedBox(height: DsSpace.sm),
+          ],
+          Align(alignment: Alignment.topLeft, child: _grid(context, k)),
+        ],
+      );
+      return bounded ? SingleChildScrollView(child: column) : column;
+    });
+    if (widget.header == null) return body;
+    return LayoutBuilder(builder: (context, box) {
+      final header = Padding(
+        padding: EdgeInsets.only(bottom: DsSpace.xs),
+        child: widget.header,
+      );
+      if (!box.hasBoundedHeight) {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [header, body]);
+      }
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [header, Expanded(child: body)]);
+    });
+  }
+}
+

@@ -57,7 +57,7 @@ class EcoFusionView extends StatelessWidget {
   /// Texto sin Ecos.
   final String? empty;
 
-  static const detailWidth = 300.0;
+  static const detailWidth = DsSizes.detailPaneWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +128,6 @@ class EcoFusionView extends StatelessWidget {
       ),
     );
     return EcoGridLayout(
-      detailWidth: detailWidth,
       empty: empty == null
           ? null
           : Text(empty!,

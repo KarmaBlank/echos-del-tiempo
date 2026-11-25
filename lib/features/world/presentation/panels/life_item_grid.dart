@@ -116,16 +116,12 @@ class LifeItemGrid extends StatefulWidget {
     this.emptyKey,
     this.extra,
     this.initial,
-    this.maxDetail = detailWidth,
   });
 
   final List<LifeItemGroup> groups;
 
   /// Cell selected first (`null`: the first one).
   final String? initial;
-  /// Widest the detail column gets (wide panels with few cells give it
-  /// more room so there is no big empty area).
-  final double maxDetail;
 
   /// Text shown when there are no cells.
   final String empty;
@@ -135,14 +131,12 @@ class LifeItemGrid extends StatefulWidget {
   final Widget? extra;
 
   /// Cell (same as INVENTARIO), icon, gap and max detail width.
-  static const cell = 44.0, iconSize = 32.0, gap = 4.0, detailWidth = 280.0;
+  static const cell = DsSizes.itemCell,
+      iconSize = DsSizes.itemIcon,
+      gap = DsSizes.itemGap,
+      detailWidth = DsSizes.detailPaneWidth;
 
-  /// From this width on the detail goes to the right.
-  static const wideFrom = 420.0;
 
-  /// Detail column width for a given available width.
-  static double detailFor(double maxWidth, [double max = detailWidth]) =>
-      (maxWidth * 0.45).clamp(180.0, max);
 
   @override
   State<LifeItemGrid> createState() => _LifeItemGridState();
@@ -167,82 +161,46 @@ class _LifeItemGridState extends State<LifeItemGrid> {
         ? group.cells
         : [for (final g in widget.groups) ...g.cells];
     final sel = all.where((c) => c.id == _sel).firstOrNull ?? all.firstOrNull;
-    final grid = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (widget.extra != null) ...[
-          widget.extra!,
-          SizedBox(height: DsSpace.xs)
-        ],
-        if (filters) ...[
-          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-            DsButton(context.t('ui.town.trader.kind.all'),
-                key: const ValueKey('life-group-all'),
-                size: DsButtonSize.compact,
-                selected: group == null,
-                onPressed: () => setState(() => _group = null)),
-            for (final g in titled)
-              DsButton(g.title!,
-                  key: g.headerKey,
-                  size: DsButtonSize.compact,
-                  selected: group == g,
-                  onPressed: () => setState(() => _group = g.title)),
-          ]),
-          SizedBox(height: DsSpace.xs),
-        ],
-        if (all.isEmpty)
-          Padding(
-            padding: EdgeInsets.all(DsSpace.sm),
-            child: Text(widget.empty,
-                key: widget.emptyKey, style: DsText.detail()),
-          )
-        else
-          Wrap(
-            spacing: LifeItemGrid.gap,
-            runSpacing: LifeItemGrid.gap,
+    final header = widget.extra == null && !filters
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final c in all)
-                LifeItemCell(
-                    data: c,
-                    selected: c.id == sel?.id,
-                    onTap: () => setState(() => _sel = c.id)),
+              if (widget.extra != null) widget.extra!,
+              if (widget.extra != null && filters) SizedBox(height: DsSpace.xs),
+              if (filters)
+                Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+                  DsButton(context.t('ui.town.trader.kind.all'),
+                      key: const ValueKey('life-group-all'),
+                      size: DsButtonSize.compact,
+                      selected: group == null,
+                      onPressed: () => setState(() => _group = null)),
+                  for (final g in titled)
+                    DsButton(g.title!,
+                        key: g.headerKey,
+                        size: DsButtonSize.compact,
+                        selected: group == g,
+                        onPressed: () => setState(() => _group = g.title)),
+                ]),
             ],
-          ),
-      ],
+          );
+    // Shared template (design_system.md § "Grilla de ítems").
+    return DsGridDetailLayout(
+      keyPrefix: 'life',
+      header: header,
+      count: all.length,
+      empty: Padding(
+        padding: EdgeInsets.all(DsSpace.sm),
+        child: Text(widget.empty, key: widget.emptyKey, style: DsText.detail()),
+      ),
+      cell: (context, i, size) => LifeItemCell(
+          data: all[i],
+          size: size,
+          selected: all[i].id == sel?.id,
+          onTap: () => setState(() => _sel = all[i].id)),
+      detail: sel == null ? null : lifeDetailPane(context, sel),
     );
-    return LayoutBuilder(builder: (context, box) {
-      final wide = box.maxWidth >= LifeItemGrid.wideFrom;
-      final bounded = box.hasBoundedHeight;
-      if (wide) {
-        // Bounded: grid and detail fill the panel body; the detail keeps
-        // its actions pinned at the bottom (DsDetailPane).
-        return Row(
-            crossAxisAlignment:
-                bounded ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                  child: bounded ? SingleChildScrollView(child: grid) : grid),
-              if (sel != null) ...[
-                SizedBox(width: DsSpace.sm),
-                SizedBox(
-                    width: LifeItemGrid.detailFor(
-                        box.maxWidth, widget.maxDetail),
-                    child: lifeDetailPane(context, sel)),
-              ],
-            ]);
-      }
-      final column = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (sel != null) ...[
-              lifeDetailPane(context, sel),
-              SizedBox(height: DsSpace.sm),
-            ],
-            grid,
-          ]);
-      return bounded ? SingleChildScrollView(child: column) : column;
-    });
   }
 }
 
@@ -352,15 +310,23 @@ Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) => DsTooltipCard(
 /// el nombre y los datos van en la ficha estándar al pasar el mouse.
 class LifeItemCell extends StatelessWidget {
   const LifeItemCell(
-      {super.key, required this.data, this.selected = false, this.onTap});
+      {super.key,
+      required this.data,
+      this.selected = false,
+      this.onTap,
+      this.size = LifeItemGrid.cell});
 
   final LifeItemCellData data;
+
+  /// Side of the cell (the template scales it like INVENTARIO).
+  final double size;
   final bool selected;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    const s = LifeItemGrid.cell;
+    final s = size;
+    final k = s / LifeItemGrid.cell;
     final c = data;
     final fixed = RetroType.fixedScaler(context);
     final box = Container(
@@ -373,7 +339,10 @@ class LifeItemCell extends StatelessWidget {
             width: selected ? 3 : RetroTheme.thinBorderWidth),
       ),
       child: Stack(children: [
-        Center(child: c.icon),
+        Center(
+            child: SizedBox.square(
+                dimension: LifeItemGrid.iconSize * k,
+                child: FittedBox(child: c.icon))),
         if (c.equipped)
           Positioned(
             right: 2,

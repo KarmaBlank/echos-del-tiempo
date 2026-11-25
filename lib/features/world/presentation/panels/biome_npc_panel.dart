@@ -60,12 +60,12 @@ bool _isSmithItem(String id) =>
 Widget residentItemIcon(String id) => ResidentRules.isForgeOrder(id)
     ? _forgeOrderIcon(id)
     : kMeals.containsKey(id)
-    ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
-    : kFish.containsKey(id)
-        ? LifeIcon(id, LifeIconKind.pescado, size: 32)
-        : _isSmithItem(id)
-            ? LifeIcon(id, LifeIconKind.herramienta, size: 32)
-        : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
+        ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
+        : kFish.containsKey(id)
+            ? LifeIcon(id, LifeIconKind.pescado, size: 32)
+            : _isSmithItem(id)
+                ? LifeIcon(id, LifeIconKind.herramienta, size: 32)
+                : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
 
 Widget _forgeOrderIcon(String id, [int q = 0]) {
   final type = ResidentRules.parseForgeOrder(id)?.$1 ?? 'espada';
@@ -78,8 +78,8 @@ Widget _forgeOrderIcon(String id, [int q = 0]) {
 /// Casilla de una orden de arma forjada (mining_smithing.md § 2.2): tipo,
 /// rareza y nivel de objeto mínimos; si varias armas sirven, un botón por
 /// cada una para elegir cuál entregar (nunca la equipada).
-LifeItemCellData _forgeOrderCell(Strings s, SessionController c,
-    BiomeNpcDef n, ResidentState r, PlayerProfile? p,
+LifeItemCellData _forgeOrderCell(Strings s, SessionController c, BiomeNpcDef n,
+    ResidentState r, PlayerProfile? p,
     {required bool home}) {
   final o = r.order!;
   final (type, il) = ResidentRules.parseForgeOrder(o) ?? ('espada', 1);
@@ -103,8 +103,7 @@ LifeItemCellData _forgeOrderCell(Strings s, SessionController c,
         (s.t('ui.town.npc.forge_tag'), DsColors.textSecondary),
       ],
       lines: [
-        s.t('ui.town.npc.forge_line',
-            {'type': tName, 'q': q.text, 'il': il}),
+        s.t('ui.town.npc.forge_line', {'type': tName, 'q': q.text, 'il': il}),
         s.t('ui.town.npc.have', {'n': matches.length}),
         s.t('ui.town.npc.order_xp', {'n': w.xp}),
         s.t('ui.town.npc.order_gold', {'gold': w.gold, 'rep': w.rep}),
@@ -833,7 +832,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         child: Row(children: [
           Expanded(
               child: Text(k, style: DsText.detail(DsColors.textSecondary))),
-          Text(v, style: DsText.body(DsColors.text)),
+          SizedBox(width: DsSpace.sm),
+          // Never cut: the value wraps if it does not fit.
+          Flexible(
+              child: Text(v,
+                  textAlign: TextAlign.right,
+                  style: DsText.body(DsColors.text))),
         ]),
       );
 
@@ -899,108 +903,94 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final price = s.price;
     final maxQ = price <= 0 ? 1 : (gold ~/ price).clamp(1, 99);
     final qty = _qty.clamp(1, maxQ);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Same cell as INVENTARIO; name and data in the hover card.
-        Expanded(
-          child: SingleChildScrollView(
-            child: Wrap(
-              spacing: LifeItemGrid.gap,
-              runSpacing: LifeItemGrid.gap,
-              children: [
-                for (final g in goods)
-                  LifeItemCell(
-                    key: ValueKey('npc-seed-${g.id}'),
-                    selected: g.id == s.id,
-                    onTap: () => setState(() {
-                      _sel = g.id;
-                      _qty = 1;
-                    }),
-                    data: LifeItemCellData(
-                      id: 'npc-seed-cell-${g.id}',
-                      icon: g.icon(LifeItemGrid.iconSize),
-                      border: g.color,
-                      search: g.name,
-                      count: g.owned > 0 ? g.owned : null,
-                      detail: LifeItemDetail(
-                        name: g.name,
-                        nameColor: g.color,
-                        tags: g.tags,
-                        lines: [
-                          ...g.info,
-                          _s.t('ui.town.npc.gold_each', {'n': g.price}),
-                        ],
-                      ),
-                    ),
-                  ),
+    // Shared grid + detail (design_system.md § "Grilla de ítems").
+    return DsGridDetailLayout(
+      keyPrefix: 'npc-shop',
+      count: goods.length,
+      cell: (context, i, size) {
+        final g = goods[i];
+        return LifeItemCell(
+          size: size,
+          key: ValueKey('npc-seed-${g.id}'),
+          selected: g.id == s.id,
+          onTap: () => setState(() {
+            _sel = g.id;
+            _qty = 1;
+          }),
+          data: LifeItemCellData(
+            id: 'npc-seed-cell-${g.id}',
+            icon: g.icon(LifeItemGrid.iconSize),
+            border: g.color,
+            search: g.name,
+            count: g.owned > 0 ? g.owned : null,
+            detail: LifeItemDetail(
+              name: g.name,
+              nameColor: g.color,
+              tags: g.tags,
+              lines: [
+                ...g.info,
+                _s.t('ui.town.npc.gold_each', {'n': g.price}),
               ],
             ),
           ),
+        );
+      },
+      detail: DsDetailPane(
+        key: const ValueKey('npc-shop-detail'),
+        sunken: true,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              s.icon(48),
+              SizedBox(width: DsSpace.sm),
+              Expanded(
+                child: Text(s.name, style: DsText.title(s.color)),
+              ),
+            ]),
+            SizedBox(height: DsSpace.sm),
+            Wrap(spacing: DsSpace.xs, children: [
+              for (final (t, col) in s.tags) DsTag(t, color: col),
+            ]),
+            if (s.lore.isNotEmpty) ...[
+              SizedBox(height: DsSpace.sm),
+              Text(s.lore,
+                  softWrap: true, style: DsText.detail(DsColors.textSecondary)),
+            ],
+            SizedBox(height: DsSpace.sm),
+            for (final (k, v) in s.extra) _kv(k, v),
+            _kv(_s.t('ui.town.npc.owned'), s.owned.toString()),
+            _kv(_s.t('ui.town.npc.price'),
+                _s.t('ui.town.npc.gold_each', {'n': price})),
+          ],
         ),
-        SizedBox(width: DsSpace.md),
-        SizedBox(
-          width: LifeItemGrid.detailWidth,
-          child: DsDetailPane(
-            key: const ValueKey('npc-shop-detail'),
-            sunken: true,
-            body: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  s.icon(48),
-                  SizedBox(width: DsSpace.sm),
-                  Expanded(
-                    child: Text(s.name, style: DsText.title(s.color)),
-                  ),
-                ]),
-                SizedBox(height: DsSpace.sm),
-                Wrap(spacing: DsSpace.xs, children: [
-                  for (final (t, col) in s.tags) DsTag(t, color: col),
-                ]),
-                if (s.lore.isNotEmpty) ...[
-                  SizedBox(height: DsSpace.sm),
-                  Text(s.lore,
-                      softWrap: true,
-                      style: DsText.detail(DsColors.textSecondary)),
-                ],
-                SizedBox(height: DsSpace.sm),
-                for (final (k, v) in s.extra) _kv(k, v),
-                _kv(_s.t('ui.town.npc.owned'), s.owned.toString()),
-                _kv(_s.t('ui.town.npc.price'),
-                    _s.t('ui.town.npc.gold_each', {'n': price})),
-              ],
-            ),
-            actions: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  DsQuantity(
-                      value: qty,
-                      max: maxQ,
-                      onChanged: (v) => setState(() => _qty = v)),
-                  SizedBox(width: DsSpace.sm),
-                  Flexible(
-                    child: Text(_s.t('ui.town.npc.total', {'n': price * qty}),
-                        key: const ValueKey('npc-shop-total'),
-                        style: DsText.body(gold >= price * qty
-                            ? DsColors.reward
-                            : DsColors.danger)),
-                  ),
-                ]),
-                SizedBox(height: DsSpace.sm),
-                DsButton(_s.t('ui.town.npc.buy'),
-                    key: ValueKey('npc-seed-buy-${s.id}'),
-                    kind: DsButtonKind.primary,
-                    onPressed: gold >= price * qty
-                        ? () => c.buySeed(s.id, qty)
-                        : null),
-              ],
-            ),
-          ),
+        actions: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              DsQuantity(
+                  value: qty,
+                  max: maxQ,
+                  onChanged: (v) => setState(() => _qty = v)),
+              SizedBox(width: DsSpace.sm),
+              Flexible(
+                child: Text(_s.t('ui.town.npc.total', {'n': price * qty}),
+                    key: const ValueKey('npc-shop-total'),
+                    style: DsText.body(gold >= price * qty
+                        ? DsColors.reward
+                        : DsColors.danger)),
+              ),
+            ]),
+            SizedBox(height: DsSpace.sm),
+            DsButton(_s.t('ui.town.npc.buy'),
+                key: ValueKey('npc-seed-buy-${s.id}'),
+                kind: DsButtonKind.primary,
+                onPressed:
+                    gold >= price * qty ? () => c.buySeed(s.id, qty) : null),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -1147,8 +1137,10 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         name: name,
         nameColor: RarityColors.of(Rarity.legendario),
         tags: [
-          (_s.t('ui.town.forge.fish_forge').toUpperCase(),
-              RarityColors.of(Rarity.legendario)),
+          (
+            _s.t('ui.town.forge.fish_forge').toUpperCase(),
+            RarityColors.of(Rarity.legendario)
+          ),
         ],
         lines: [
           _s.t('ui.town.forge.fish_forge_hint', {'gold': gold}),
@@ -1338,9 +1330,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           cost: h != null && cost != null
               ? Builder(
                   builder: (context) => itemCostGrid(
-                      context,
-                      p,
-                      {...cost.cost.mats, cost.loot: cost.lootN},
+                      context, p, {...cost.cost.mats, cost.loot: cost.lootN},
                       key: ValueKey('house-cost-${n.id}')))
               : null,
           actions: [

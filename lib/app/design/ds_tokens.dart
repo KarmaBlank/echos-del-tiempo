@@ -185,6 +185,113 @@ abstract final class DsMetrics {
   }
 }
 
+/// Item grid sizes (design_system.md § "Grilla de ítems"). INVENTARIO
+/// is the reference: every screen that shows items uses these.
+abstract final class DsSizes {
+  /// Base cell, gap and icon (same as `InventoryTab.cell` / `gap`).
+  static const itemCell = 44.0, itemGap = 4.0, itemIcon = 32.0;
+
+  /// Every item grid is exactly this many columns wide.
+  static const gridColumns = 6;
+
+  /// Rows the cell scale is fitted to (INVENTARIO's 5 rows).
+  static const gridRows = 5;
+
+  /// Fixed width of the detail column on the right of a grid.
+  static const detailPaneWidth = 340.0;
+
+  /// Separation between grid and detail, and room for the scrollbar.
+  static const gridDetailGap = 8.0, gridScrollbar = 10.0;
+
+  /// Width of the grid at scale [k].
+  static double gridWidth([double k = 1]) =>
+      (gridColumns * itemCell + (gridColumns - 1) * itemGap) * k;
+
+  /// Same steps as INVENTARIO (`inventoryLayout`): whole from ×2,
+  /// quarters between ×1 and ×2.
+  static double snap(double k) {
+    if (k < 1) return k > 0.3 ? k : 0.3;
+    return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
+  }
+
+  /// INVENTARIO's cell scale for a panel body of [w] × [h] at text
+  /// factor [text]: the same rule as `inventoryLayout` (8 × 5 grid, the
+  /// CAMBIOS strip — about a quarter of the width, more with big text —
+  /// and the side column of 240 × text), so every item grid gets the
+  /// inventory's cell size in the same panel.
+  static double inventoryScale(double w, double h, {double text = 1}) {
+    const base = 8 * itemCell + 7 * itemGap;
+    const unit = itemCell + itemGap;
+    const sep = 16.0;
+    final sideMin = 240 * text;
+    final width = w - 8;
+    final strip = w * (0.245 + 0.145 * (text - 1)) + 8;
+    double fit(double byW, double byH) {
+      final k = byW < byH ? byW : byH;
+      if (k < 1) return byW < 1 ? (byW > 0.3 ? byW : 0.3) : 1;
+      return snap(k);
+    }
+
+    if (width >= strip + base + sep + sideMin) {
+      final byW = (width - strip - sep - sideMin) / base;
+      var k = fit(byW, h.isFinite ? (h - 30) / (gridRows * unit) : byW);
+      double side(double k) =>
+          4 * unit * k > sideMin ? 4 * unit * k : sideMin;
+      while (k > 1 && base * k + sep + side(k) > width - strip) {
+        k = k > 2 ? k.ceilToDouble() - 1 : k - 0.25;
+      }
+      return k;
+    }
+    final byH = h.isFinite
+        ? (h - 120) / ((gridRows + 2) * unit)
+        : double.infinity;
+    if (width >= strip + base) return fit((width - strip) / base, byH);
+    return fit(width / base, byH);
+  }
+
+  static (Size, double, double)? _inventory;
+
+  /// INVENTARIO reports the cell scale it laid out with, for the screen
+  /// size and text width (`scale(240)`) it saw: [itemScale] reuses that
+  /// exact scale on the same screen, so every item grid matches it.
+  /// Until INVENTARIO has been shown, [inventoryScale] estimates it.
+  static void rememberInventoryScale(Size screen, double text240, double k) =>
+      _inventory = (screen, text240, k);
+
+  /// Body of the character panel (where INVENTARIO lives) on a screen
+  /// of [screen]: measured at 1280×720, 1920×1080 and 2560×1440.
+  static Size inventoryBodyFor(Size screen) =>
+      Size(screen.width * 0.78 - 36, screen.height * 0.767 - 105);
+
+  /// Cell scale of a grid + detail area of [w] × [h]: INVENTARIO's
+  /// ([inventoryScale]) for the same [screen] (so every item screen gets
+  /// the inventory's cell even when its own body is shorter — the grid
+  /// scrolls), lowered only if 6 columns plus the detail do not fit
+  /// across. Without [screen] the area itself is used.
+  static double itemScale(double w, double h,
+      {double text = 1, Size? screen}) {
+    if (!w.isFinite) return 1;
+    final body = screen == null || screen.isEmpty
+        ? Size(w, h)
+        : inventoryBodyFor(screen);
+    final known = _inventory;
+    final inv = known != null &&
+            screen != null &&
+            known.$1 == screen &&
+            (known.$2 - text * 240).abs() < 0.01
+        ? known.$3
+        : inventoryScale(body.width, body.height, text: text);
+    final byW =
+        (w - detailPaneWidth - gridDetailGap - gridScrollbar) / gridWidth();
+    if (inv <= byW) return inv;
+    return byW >= 1 ? snap(byW) : byW;
+  }
+
+  /// Width from which the detail goes on the right (scale ×1).
+  static double get gridDetailWideFrom =>
+      gridWidth() + gridDetailGap + gridScrollbar + detailPaneWidth;
+}
+
 /// Extensión de tema con los roles (para quien prefiera
 /// `Theme.of(context).extension<DsTheme>()`).
 @immutable

@@ -67,7 +67,7 @@ class DsItemCell extends StatelessWidget {
     this.dimension = size,
   });
 
-  static const size = 48.0;
+  static const size = DsSizes.itemCell;
 
   /// Side of the cell (default [size]).
   final double dimension;
@@ -95,7 +95,10 @@ class DsItemCell extends StatelessWidget {
                 width: selected ? 3 : RetroTheme.thinBorderWidth),
           ),
           child: Stack(children: [
-            Center(child: icon),
+            Center(
+                child: SizedBox.square(
+                    dimension: DsSizes.itemIcon * dimension / DsSizes.itemCell,
+                    child: FittedBox(child: icon))),
             if (count != null)
               Positioned(
                 right: 2,
