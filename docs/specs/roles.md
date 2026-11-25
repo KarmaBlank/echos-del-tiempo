@@ -61,6 +61,11 @@ Cada habitante que vive en el pueblo pide una orden por día del mundo
   (`ingot_x` → "Ingot x"). Ícono: el `vida_<id>` de minería si es de
   forja. `residentItemName` / `QuestTrackRules.itemName`.
 - Valor = precio de venta × cantidad × (1 + calidad pedida).
+- Herrería (mining_smithing.md § 2.2): con Herrería en la sala, antes
+  que todo lo demás puede pedir un arma forjada (tipo, rareza y nivel
+  mínimos; desde `forgeOrderLevel`) y si no, un lote de lingotes. El
+  arma la elige el jugador entre las que sirven; nunca la equipada. Da
+  además XP de Herrería (`forgeOrderXp` × (rareza + 1)).
 - Pescados con tamaño (v0.31.0): desde `orderSizeLevel` de Pesca, a veces
   piden "de N cm o más" (un cuarto, la mitad o tres cuartos del rango).
   La bolsa no guarda tamaños: vale el récord del bestiario.

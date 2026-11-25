@@ -316,7 +316,30 @@ sin cortes; test de overflow en
 - Pedidos de herrería: con la infraestructura de pedidos de vecinos, si
   alguien de la sala tiene Herrería, con `smithOrderChance` el pedido es
   un lote de lingotes (`smithOrderMin..Max`, nivel ≤ 1 + Herrería / 5),
-  pagado × `smithOrderPay`. (Pedidos de un arma forjada: pendiente.)
+  pagado × `smithOrderPay`.
+- Pedidos de arma forjada (v0.48.x): desde Herrería `forgeOrderLevel`
+  (la mejor de la sala), con `forgeOrderChance` por día y vecino
+  (determinista; se tira **antes** que el lote de lingotes, y este antes
+  que la comida) el pedido es 1 arma forjada (uid `smith-`) de un tipo
+  del catálogo, rareza mínima ≤ mín(la que forja ese nivel,
+  `forgeOrderMaxRarity`) y nivel de objeto mínimo `ingotIlPerTier` ×
+  (nivel de lingote − 1) con nivel de lingote ≤ 1 + Herrería / 5. Id de
+  orden `wpn:<tipo>:<nivelMín>`, `orderQ` = rareza mínima, `orderN` = 1.
+  - Valor = `itemValue(nivelMín)` × fracción de venta de la rareza ×
+    (`forgedSellMult` + `forgedSellPerRarity` × rareza) ×
+    `forgeOrderPay`; `orderReward` usa ese valor (sin el × (1 + q) de
+    las otras órdenes): XP de personaje, oro, relación y punto de árbol
+    como siempre. Además da `forgeOrderXp` × (rareza mínima + 1) de
+    Herrería a quien entrega.
+  - Entrega: el jugador elige cuál arma (`TownAction(order, id: vecino,
+    target: uid)`; sin `target`, la primera que sirva). El anfitrión
+    valida tipo, rareza, nivel y la marca de forja; el arma equipada
+    nunca cuenta ni se consume. Sin cambio de protocolo (`target` ya
+    viajaba).
+  - UI: la casilla de ORDEN muestra el ícono del tipo (acento de la
+    rareza), "1 × {tipo} forjada ({rareza} o mejor, nivel N+)", cuántas
+    tenés, las recompensas y, si sirven varias, un botón por arma para
+    elegir. El diario la lista como "Tipo (nv N+)".
 
 ## 3. Fundir
 

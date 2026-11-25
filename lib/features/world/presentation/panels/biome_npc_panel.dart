@@ -12,8 +12,6 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/data/mine_catalog.dart'
     show kMineSupplies, kMineTools;
 import '../../../../game_engine/data/npc_talk_catalog.dart';
-import '../../../../game_engine/data/smithing_catalog.dart'
-    show kSmithMaterials;
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/session_action.dart' show TownOp;
 import '../../../../game_engine/models/world_save.dart';
@@ -35,6 +33,7 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../hud/tracked_quests_hud.dart' show weaponTypeText;
 import 'cooking_view.dart' show mealTierText;
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'item_source_text.dart';
@@ -64,13 +63,89 @@ bool _isSmithItem(String id) =>
     kMineSupplies.contains(id);
 
 /// Icon of an item a resident asks for (see [residentItemName]).
-Widget residentItemIcon(String id) => kMeals.containsKey(id)
+Widget residentItemIcon(String id) => ResidentRules.isForgeOrder(id)
+    ? _forgeOrderIcon(id)
+    : kMeals.containsKey(id)
     ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
     : kFish.containsKey(id)
         ? LifeIcon(id, LifeIconKind.pescado, size: 32)
         : _isSmithItem(id)
             ? LifeIcon(id, LifeIconKind.herramienta, size: 32)
         : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
+
+Widget _forgeOrderIcon(String id, [int q = 0]) {
+  final type = ResidentRules.parseForgeOrder(id)?.$1 ?? 'espada';
+  return PixelIcon(iconKeyForType(type),
+      accent: RarityColors.of(Rarity.values[q]),
+      procKey: procKeyForType(type),
+      size: 32);
+}
+
+/// Casilla de una orden de arma forjada (mining_smithing.md § 2.2): tipo,
+/// rareza y nivel de objeto mínimos; si varias armas sirven, un botón por
+/// cada una para elegir cuál entregar (nunca la equipada).
+LifeItemCellData _forgeOrderCell(Strings s, SessionController c,
+    BiomeNpcDef n, ResidentState r, PlayerProfile? p,
+    {required bool home}) {
+  final o = r.order!;
+  final (type, il) = ResidentRules.parseForgeOrder(o) ?? ('espada', 1);
+  final q = Rarity.values[r.orderQ.clamp(0, Rarity.values.length - 1)];
+  final matches =
+      p == null ? const [] : ResidentRules.forgeOrderMatches(p, o, r.orderQ);
+  final w = ResidentRules.orderReward(r);
+  final tName = weaponTypeText(s, type);
+  return LifeItemCellData(
+    id: 'order-${n.id}',
+    icon: _forgeOrderIcon(o, r.orderQ),
+    border: DsColors.reward,
+    search: tName,
+    count: 1,
+    caption: s.t('ui.town.npc.order'),
+    detail: LifeItemDetail(
+      name: s.t('ui.town.npc.order_name', {'name': n.name}),
+      nameColor: DsColors.textTitle,
+      tags: [
+        (s.t('ui.town.npc.order'), DsColors.reward),
+        (s.t('ui.town.npc.forge_tag'), DsColors.textSecondary),
+      ],
+      lines: [
+        s.t('ui.town.npc.forge_line',
+            {'type': tName, 'q': q.text, 'il': il}),
+        s.t('ui.town.npc.have', {'n': matches.length}),
+        s.t('ui.town.npc.order_xp', {'n': w.xp}),
+        s.t('ui.town.npc.order_gold', {'gold': w.gold, 'rep': w.rep}),
+        s.t('ui.town.npc.forge_xp',
+            {'n': ResidentRules.forgeOrderXp(r.orderQ)}),
+        if (w.point) s.t('ui.town.npc.order_point'),
+        s.t('ui.town.npc.delivered', {'n': r.orders}),
+      ],
+      description: s.t('ui.town.npc.forge_desc'),
+      actions: [
+        trackButton(c, p, n.id, QuestTrackKind.orden),
+        if (matches.length <= 1)
+          DsButton(s.t('ui.town.npc.deliver_order'),
+              key: ValueKey('order-deliver-${n.id}'),
+              size: DsButtonSize.compact,
+              onPressed: home && matches.isNotEmpty
+                  ? () => c.residentOp(TownOp.order, n.id,
+                      target: matches.first.uid)
+                  : null)
+        else
+          for (final m in matches)
+            DsButton(
+                s.t('ui.town.npc.forge_pick', {
+                  'q': m.rarity.text,
+                  'il': m.itemLevel,
+                }),
+                key: ValueKey('order-deliver-${n.id}-${m.uid}'),
+                size: DsButtonSize.compact,
+                onPressed: home
+                    ? () => c.residentOp(TownOp.order, n.id, target: m.uid)
+                    : null),
+      ],
+    ),
+  );
+}
 
 /// Botón SEGUIR / DEJAR DE SEGUIR de un encargo activo (roles.md § 8).
 Widget trackButton(
@@ -165,6 +240,9 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
     {required bool home}) {
   final o = r.order;
   if (o == null) return null;
+  if (ResidentRules.isForgeOrder(o)) {
+    return _forgeOrderCell(s, c, n, r, p, home: home);
+  }
   final have = p == null ? 0 : ResidentRules.orderHave(p, o, r.orderQ);
   final w = ResidentRules.orderReward(r);
   final q = CropQuality.values[r.orderQ];

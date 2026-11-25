@@ -698,6 +698,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'smithOrderMin': 3,
     'smithOrderMax': 6,
     'smithOrderPay': 1.6,
+    // Forged weapon orders (§ 2.2): a weapon of a type, min rarity and
+    // min item level, forged at the HERRERÍA.
+    'forgeOrderLevel': 4,
+    'forgeOrderChance': 0.3,
+    'forgeOrderPay': 1.5,
+    'forgeOrderXp': 30,
+    'forgeOrderMaxRarity': 3,
     'mineOreMin': 1,
     'mineOreMax': 2,
     'mineRareChance': 0.06,

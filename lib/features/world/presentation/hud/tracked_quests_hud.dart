@@ -6,7 +6,27 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
+import '../../../../game_engine/rules/resident_rules.dart';
 import '../world_strings.dart';
+
+/// Localized name of a weapon type (`ui.town.npc.wtype.<key>`).
+String weaponTypeText(Strings s, String type) => s.t(
+    'ui.town.npc.wtype.${type.replaceAll('+', '_').replaceAll('á', 'a')}');
+
+/// Name of an order item; forged weapon orders go through i18n
+/// ("Sword (lv 10+)").
+String questItemText(Strings s, String id) =>
+    switch (ResidentRules.parseForgeOrder(id)) {
+      (final type, final il)? => s.t('ui.town.npc.forge_journal',
+          {'type': weaponTypeText(s, type), 'il': il}),
+      null => QuestTrackRules.itemName(id),
+    };
+
+/// Title of an active quest; forged weapon orders localized.
+String questTitleText(Strings s, ActiveQuest a) =>
+    a.item != null && ResidentRules.isForgeOrder(a.item!)
+        ? '${a.need} × ${questItemText(s, a.item!)}'
+        : a.title;
 
 /// Texto de avance de un encargo: "Tenés 1/2 Helecho dulce" o su título.
 String questProgressText(Strings s, ActiveQuest a) => a.item == null
@@ -14,7 +34,7 @@ String questProgressText(Strings s, ActiveQuest a) => a.item == null
     : s.t('ui.world.quests.progress', {
         'have': a.have,
         'need': a.need,
-        'item': QuestTrackRules.itemName(a.item!)
+        'item': questItemText(s, a.item!)
       });
 
 /// Encargos seguidos en el HUD (roles.md § 8.2): compacto, debajo del

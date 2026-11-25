@@ -703,11 +703,17 @@ extension _FarmingOp on _Op {
         if (!home) return false;
         final key = '${p.profile.name}:$day';
         final used = s.town.daily[key] ?? 0;
+        final ord = s.town.resident(npc).order;
+        final forged = ord != null && ResidentRules.isForgeOrder(ord);
+        final oq = s.town.resident(npc).orderQ;
         final r = ResidentRules.deliverOrder(
-            p.profile, s.town, npc, ResidentRules.t.i('orderXpDayCap') - used);
+            p.profile, s.town, npc, ResidentRules.t.i('orderXpDayCap') - used,
+            pick: a.target);
         if (r == null) return false;
         final pts = r.$1.treeBonus - p.profile.treeBonus;
         _profileChange(p, r.$1, gain: true);
+        // Forged weapon order (mining_smithing.md § 2.2): Smithing XP too.
+        if (forged) smithXp(p, ResidentRules.forgeOrderXp(oq));
         s.town = r.$2;
         s.town = s.town.copyWith(daily: {...s.town.daily, key: used + r.$3});
         grantCharXp(p, r.$3);

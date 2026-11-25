@@ -6,7 +6,7 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
-import '../hud/tracked_quests_hud.dart' show questProgressText;
+import '../hud/tracked_quests_hud.dart' show questProgressText, questTitleText;
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'biome_npc_panel.dart'
@@ -163,7 +163,7 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
             (a.kind.label.toUpperCase(), DsColors.textSecondary),
             if (a.ready) (context.t('ui.town.journal.ready'), DsColors.success),
           ],
-          lines: [a.title, questProgressText(worldStrings(context), a)],
+          lines: [questTitleText(worldStrings(context), a), questProgressText(worldStrings(context), a)],
           actions: [trackButton(widget.controller, p, a.npc.id, a.kind)],
         ),
       );
