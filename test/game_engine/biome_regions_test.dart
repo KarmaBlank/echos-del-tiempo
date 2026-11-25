@@ -113,9 +113,9 @@ void main() {
           expect(d[l.approach.$2][l.approach.$1], greaterThanOrEqualTo(0),
               reason: '$why lake ${l.variant}');
         }
-        expect(lay.mines.length, 2, reason: why);
+        expect(lay.mines.length, inInclusiveRange(1, 3), reason: why);
         for (final (x, y) in lay.mines) {
-          expect(d[y + 1][x], greaterThanOrEqualTo(0), reason: '$why mine');
+          expect(touchable(d, x, y), isTrue, reason: '$why mine');
         }
         expect(lay.waystones.first.site, WaystoneSite.entrance, reason: why);
         for (final w in lay.waystones) {
@@ -346,12 +346,14 @@ void main() {
       BiomeRegions.bind(seed);
       for (final lay in kBiomeLayouts.values) {
         final caves = lay.lakes.where((l) => l.cave != null);
+        // Wilds caverns (biome_exploration.md § 4.2) count too.
+        final roofs = caves.length + lay.caverns.length;
         if (!lay.base.style.caveOpenings) {
           expect(lay.skylights, isEmpty, reason: '${lay.id}/$seed');
-        } else if (caves.isNotEmpty) {
+        } else if (roofs > 0) {
           // Optional: at most caveSkylightsMax per cavern (§ 7.2.1).
           expect(lay.skylights.length,
-              lessThanOrEqualTo(caves.length * rt().i('caveSkylightsMax')),
+              lessThanOrEqualTo(roofs * rt().i('caveSkylightsMax')),
               reason: '${lay.id}/$seed');
         } else {
           expect(lay.skylights, isEmpty, reason: '${lay.id}/$seed');

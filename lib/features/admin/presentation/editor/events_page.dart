@@ -674,7 +674,9 @@ class _DialogueState extends State<_Dialogue> {
             for (final k in EventActionKind.values)
               if (k != EventActionKind.duel ||
                   widget.cat == WorldEventCategory.overworldNpc)
-                if (k != EventActionKind.trade || widget.cat.inTown)
+                if (k != EventActionKind.trade ||
+                    widget.cat.inTown ||
+                    widget.cat == WorldEventCategory.overworldNpc)
                   DsButton(_plus + _actLabel(k),
                       key: ValueKey('event-action-add-${k.name}'),
                       size: DsButtonSize.compact,

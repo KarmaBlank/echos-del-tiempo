@@ -836,7 +836,12 @@ class MapGame extends Game {
           n.spawn == CustomNpcSpawn.event && n.place == d.id)) {
         continue;
       }
-      final im = sprites.lifeIcon(d.sprite, 'herramienta');
+      // A roaming elite (biome_exploration.md § 6) shows its enemy.
+      final foe = WorldEventRules.duel(d, a.biome)?.bossId;
+      final im = (foe != null && WorldEventRules.isDeep(d)
+              ? sprites.enemy(foe)
+              : null) ??
+          sprites.lifeIcon(d.sprite, 'herramienta');
       final bottom = y + 8;
       if (im != null) {
         final w = im.width.toDouble(), h = im.height.toDouble();
@@ -1048,6 +1053,7 @@ class MapGame extends Game {
       if (map.place case final place?) {
         fishing.drawHiddenSpot(
             c, map, place, math.max(1, s.town.sky.day), t / 1000);
+        _drawRaftDocks(c, place, t);
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
@@ -1255,19 +1261,26 @@ class MapGame extends Game {
         continue;
       }
       _lastDrawn[p.id] = (px, py);
+      // Inside a roofed cave of a region the carried light (and the
+      // wisp, when lit) always shines (biome_exploration.md § 4.1).
+      final caveHere = map.lobby &&
+          (biomeLayout(map.place)
+                  ?.isIndoor((px / ts).floor(), (py / ts).floor()) ??
+              false);
       final wisp = p.hp > 0 &&
           LightRules.wispActive(
               toggled: p.wisp,
               outdoor: outdoor,
-              night: SkyRules.isNight(s.town.sky));
-      if (p.hp > 0 && (darkMap || night || wisp)) {
+              night: SkyRules.isNight(s.town.sky),
+              cave: caveHere);
+      if (p.hp > 0 && (darkMap || night || wisp || caveHere)) {
         // In a mine the carried light is small (§ 1.6): torches matter.
         movingLights.add(LightSource(
             px / ts,
             py / ts,
             inMine && !wisp
                 ? kLightDefs[LightId.minero]!
-                : LightRules.carried(dark: darkMap, wisp: wisp)));
+                : LightRules.carried(dark: darkMap || caveHere, wisp: wisp)));
       }
       final line = s.mode != SessionMode.lobby
           ? null
@@ -1281,7 +1294,10 @@ class MapGame extends Game {
       } else {
         _wisps.remove(p.id);
       }
+      final raft = s.mode == SessionMode.lobby && p.rafting;
       add(py, () {
+        // On a raft (fishing.md § 15): the logs under the hero.
+        if (raft) _drawRaft(c, px, py + 3, t);
         hero(px, py);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
@@ -1505,9 +1521,15 @@ class MapGame extends Game {
       }
       if (region != null) {
         regionLight
-          ..drawCaveShade(c, region, outdoor ? 1 - 0.5 * dayDark : 0.6)
+          ..drawCaveShade(c, region, outdoor ? 1 - 0.5 * dayDark : 0.6,
+              view: worldView,
+              lights: [
+                for (final l in movingLights)
+                  (l.x * ts, l.y * ts, l.def.radius * l.scale * ts),
+              ])
           // Water glow, specks, mist and drips (biome_regions.md § 7.2.1).
-          ..drawCaveLife(c, region, secs, motion: !reduceMotion);
+          ..drawCaveLife(c, region, secs,
+              motion: !reduceMotion, view: worldView);
       }
       // Roof edge at the cave mouths (biome_regions.md § 7.2.1).
       if (region != null) regionLight.drawRoofEdges(c, region, map.tileAt);
@@ -1613,6 +1635,12 @@ class MapGame extends Game {
       if (map.lobby && biomeLayout(map.place) != null) {
         regionLight.drawPools(c, map, worldView, secs,
             strength: strength, motion: !reduceMotion);
+        // Some caverns also get the mine's falling beams (§ 4.2).
+        final beams = biomeLayout(map.place)!.beams;
+        if (beams.isNotEmpty) {
+          regionLight.drawShafts(c, map, worldView, secs,
+              strength: strength, motion: !reduceMotion, only: beams);
+        }
       } else {
         regionLight.drawShafts(c, map, worldView, secs,
             strength: strength, motion: !reduceMotion);
@@ -1731,6 +1759,36 @@ class MapGame extends Game {
 
   /// Mueve la Llama errante de [id] (lighting.md § 3.1.1): flota sobre la
   /// cabeza del personaje con un vaivén lento y lo sigue con retraso.
+  /// Raft docks of the big lakes (fishing.md § 15): the dock on its
+  /// shore tile and a moored raft on the water in front, bobbing.
+  void _drawRaftDocks(Canvas c, String place, num t) {
+    final lay = biomeLayout(place);
+    if (lay == null || lay.raftDocks.isEmpty) return;
+    final dock = sprites.lifeIcon('muelle_balsa', '');
+    for (final d in lay.raftDocks) {
+      if (dock != null) {
+        c.drawImageRect(
+            dock,
+            Rect.fromLTWH(0, 0, dock.width.toDouble(), dock.height.toDouble()),
+            Rect.fromLTWH(d.x * ts, d.y * ts, ts, ts),
+            SpriteCatalog.pixelPaint());
+      }
+      _drawRaft(c, (d.wx + 0.5) * ts, (d.wy + 0.5) * ts, t);
+    }
+  }
+
+  /// One raft centered on (x, y) px, bobbing 1 px with the time [t] (ms).
+  void _drawRaft(Canvas c, double x, double y, num t) {
+    final im = sprites.lifeIcon('balsa', '');
+    if (im == null) return;
+    final bob = (t / 600).floor().isEven ? 0.0 : 1.0;
+    c.drawImageRect(
+        im,
+        Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
+        Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts),
+        SpriteCatalog.pixelPaint());
+  }
+
   _Wisp _wispFollow(String id, double px, double py) {
     final ph = (id.hashCode % 628) / 100.0;
     final sec = t / 1000;

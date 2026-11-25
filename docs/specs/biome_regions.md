@@ -29,8 +29,10 @@ Regiones de bioma). Dibujo: `region_light_layer.dart`,
 
 ## 2. Plano
 
-Tamaño fijo **60 × 36** (`BiomeLayout.width/height`), borde de árboles de
-2 tiles, salida al pueblo por el sur.
+Este plano (60 × 34) es ahora el **frente** de la región; desde la v2
+(protocolo 82) va abajo al centro de un lienzo de 150 × 112 con las
+**tierras salvajes** alrededor: ver `biome_exploration.md`. Borde de
+árboles de 2 tiles, salida al pueblo por el sur.
 
 ### 2.1 Camino principal
 - Del borde sur (aparición, `spawn`) sube serpenteando 2 tiles de ancho
@@ -54,7 +56,8 @@ Tamaño fijo **60 × 36** (`BiomeLayout.width/height`), borde de árboles de
 ### 2.3 Lugares
 - **Lagos** (§ 3): 1, y un 2.º con `secondLakeChance`, en los cuadrantes
   sur (oeste / este).
-- **Bocas de mina**: dos, en las esquinas del norte, con roca alrededor y
+- **Bocas de mina**: una (v2; antes dos), en una esquina del norte del
+  frente; las otras, en lo profundo (biome_exploration.md § 3.1), con roca alrededor y
   camino desde la entrada de su lado. Gancho para minería:
   `BiomeRegions.mineHook` (si está, elige las entradas con el layout;
   si no, `lay.mines` = `lay.mineSites`, las bocas generadas). Minería
@@ -107,6 +110,8 @@ Elipse con borde irregular (dos armónicos), radios entre
   una por **lago** (junto a su `approach`) y una por **boca de mina**.
   Tile `W` de siempre; activada se le prende la runa (solo para quien la
   activó).
+- Desde la v2 se activan también **al tocarlas** (pasar a
+  `waystoneReach`), y hay más en lo profundo (biome_exploration.md § 5).
 - E frente a una (a `waystoneReach` px): si no está activa, se activa
   (acción `way {i}`) y se abre el menú **PIEDRAS DE PASO**. La de la
   entrada está activa siempre.

@@ -226,6 +226,10 @@ variants:
   npc_ev_peregrina: { base: pescador, seed: 3313, palette: viajero, parts: [hood, scarf, backpack, staff] }
   npc_ev_automata: { base: obrero, seed: 4409, palette: magitec, parts: [magitec_antenna, magitec_gear, cap] }
   npc_ev_caravana: { base: obrero, seed: 5501, palette: viajero, parts: [hat_wide, backpack, scarf, beard] }
+  # Exploración de biomas (biome_exploration.md § 6).
+  npc_ev_elite: { base: obrero, seed: 8819, palette: magitec, parts: [hood, magitec_gear, staff] }
+  npc_ev_mercader: { base: aldeano, seed: 9127, palette: viajero, parts: [cap, backpack, lantern, beard] }
+  npc_ev_viajero: { base: pescador, seed: 9433, palette: erudito, parts: [hat_wide, scarf, staff] }
   # PNJ de la mina (mining_smithing.md § 1.2, kMineNpcs).
   npc_mina_miner: { base: minero, seed: 6607, palette: mina, parts: [helmet, beard, pickaxe, scarf] }
   npc_mina_hermit: { base: sabio, seed: 7703, palette: mina, parts: [hood, beard, lantern, staff] }

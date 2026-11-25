@@ -315,7 +315,7 @@
   "ui.world.way.go": "TRAVEL",
   "ui.world.way.here": "HERE",
   "ui.world.way.unknown": "Not found yet",
-  "ui.world.way.unknown_tip": "Touch it with E to activate it and travel here.",
+  "ui.world.way.unknown_tip": "Walk past it to discover it and travel here.",
   "ui.world.way.site_entrance": "Region entrance",
   "ui.world.way.site_lake": "Lake: {name}",
   "ui.world.way.site_mine": "Mine mouth {n}",
@@ -398,5 +398,14 @@
   "ui.world.veg.save": "SAVE PRESET",
   "ui.world.veg.save_tip": "Saves the vegetation presets.",
   "ui.world.hud.join_busy": "{name} is in combat or finishing: you cannot join now.",
-  "ui.world.hud.join_off": "You cannot join from here."
+  "ui.world.hud.join_off": "You cannot join from here.",
+  "ui.world.way.site_section": "Trail clearing {n}",
+  "ui.world.way.site_shrine": "Shrine {n}",
+  "ui.world.way.site_cavern": "Cavern {n}",
+  "ui.world.wild.prompt_chest": "[E] Open the chest",
+  "ui.world.wild.prompt_shrine": "[E] Ask for the blessing",
+  "ui.world.wild.prompt_done": "Already used today: it returns tomorrow",
+  "ui.world.raft.prompt_board": "[E] Board the raft",
+  "ui.world.raft.prompt_leave": "[E] Step onto the shore",
+  "ui.world.raft.prompt_fish": "[E] Fish from the raft"
 }

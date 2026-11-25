@@ -58,7 +58,6 @@ class RegionLightLayer {
   static const _moteRect = Rect.fromLTWH(0, 0, 1, 1);
   static const _fleck = Rect.fromLTWH(0, 0, 2, 1);
 
-  ui.Picture? _shade;
   Object? _shadeKey;
   ui.Picture? _roof;
   Object? _roofKey;
@@ -150,53 +149,164 @@ class RegionLightLayer {
     ..strokeCap = StrokeCap.square;
 
   /// Darkness under cave roofs of a region ([lay]) with a vignette
-  /// toward the walls (biome_regions.md § 7.2.1): a cached picture of the
-  /// whole layout in 8 px cells (each the mean of its tile and the roofed
-  /// neighbours it leans to), clipped by the canvas to the view.
-  void drawCaveShade(Canvas c, BiomeLayout lay, double strength) {
+  /// toward the walls (biome_regions.md § 7.2.1), in 8 px cells (each the
+  /// mean of its tile and the roofed neighbours it leans to). Cached in
+  /// blocks of [chunk] tiles; only the blocks touching [view] are drawn
+  /// (the whole layout when `null`). Every light in [lights] (px center,
+  /// px radius) cuts a soft hole in it, like the lights of a mine
+  /// (biome_exploration.md § 4.1).
+  void drawCaveShade(Canvas c, BiomeLayout lay, double strength,
+      {Rect? view, List<(double, double, double)> lights = const []}) {
     if (strength <= 0) return;
-    if (_shade == null || !identical(_shadeKey, lay)) {
-      _shade?.dispose();
-      final rec = ui.PictureRecorder();
-      final pc = Canvas(rec);
-      final paint = Paint()..isAntiAlias = false;
-      double dark(int x, int y) =>
-          lay.isIndoor(x, y) ? RegionAmbienceRules.caveDarkness(lay, x, y) : -1;
-      for (var y = 0; y < BiomeLayout.height; y++) {
-        for (var x = 0; x < BiomeLayout.width; x++) {
-          final d0 = dark(x, y);
-          if (d0 < 0) continue;
-          for (var sy = 0; sy < 2; sy++) {
-            for (var sx = 0; sx < 2; sx++) {
-              final nx = x + (sx == 0 ? -1 : 1), ny = y + (sy == 0 ? -1 : 1);
-              var sum = d0, n = 1;
-              for (final v in [dark(nx, y), dark(x, ny), dark(nx, ny)]) {
-                if (v >= 0) {
-                  sum += v;
-                  n++;
-                }
-              }
-              final k = (sum / n * _steps * 2).round() / (_steps * 2);
-              paint.color = RegionPalette.caveShade.withValues(alpha: k);
-              pc.drawRect(
-                  Rect.fromLTWH(x * ts + sx * 8, y * ts + sy * 8, 8, 8),
-                  paint);
-            }
-          }
-        }
-      }
-      _shade = rec.endRecording();
+    if (!identical(_shadeKey, lay)) {
+      _disposeChunks(_shadeChunks);
       _shadeKey = lay;
       shadeBuilds++;
     }
     final k = _q(strength);
     if (k == 0) return;
-    c.saveLayer(null, _shadeAlpha[k]);
-    c.drawPicture(_shade!);
+    c.saveLayer(view, _shadeAlpha[k]);
+    _eachChunk(view, (cx, cy) {
+      final key = cy * 1000 + cx;
+      final pic = _shadeChunks.containsKey(key)
+          ? _shadeChunks[key]
+          : (_shadeChunks[key] = _shadeChunk(lay, cx, cy));
+      if (pic != null) c.drawPicture(pic);
+    });
+    for (final (x, y, r) in lights) {
+      if (view != null &&
+          (x + r < view.left ||
+              x - r > view.right ||
+              y + r < view.top ||
+              y - r > view.bottom)) {
+        continue;
+      }
+      if (!_lightOverCave(lay, x, y, r)) continue;
+      final rq = (r / 8).round().clamp(1, 40);
+      final paint = _hole[rq] ??= Paint()
+        ..blendMode = BlendMode.dstOut
+        ..shader = ui.Gradient.radial(Offset.zero, rq * 8.0, const [
+          Color(0xFF000000),
+          Color(0xCC000000),
+          Color(0x00000000),
+        ], const [
+          0,
+          0.45,
+          1
+        ]);
+      c.save();
+      c.translate(x, y);
+      c.drawCircle(Offset.zero, rq * 8.0, paint);
+      c.restore();
+    }
     c.restore();
+    // And the light itself: a soft warm glow on the cave floor and walls.
+    for (final (x, y, r) in lights) {
+      if (view != null &&
+          (x + r < view.left ||
+              x - r > view.right ||
+              y + r < view.top ||
+              y - r > view.bottom)) {
+        continue;
+      }
+      if (!_lightOverCave(lay, x, y, r)) continue;
+      final rq = (r / 8).round().clamp(1, 40);
+      final glow = _warm[rq] ??= Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = ui.Gradient.radial(Offset.zero, rq * 8.0, [
+          RegionPalette.shaftPatch.withValues(alpha: 0.28),
+          RegionPalette.shaftPatch.withValues(alpha: 0.1),
+          RegionPalette.shaftPatch.withValues(alpha: 0),
+        ], const [
+          0,
+          0.5,
+          1
+        ]);
+      c.save();
+      c.translate(x, y);
+      c.drawCircle(Offset.zero, rq * 8.0, glow);
+      c.restore();
+    }
   }
 
-  ui.Picture? _glow;
+  final Map<int, Paint> _warm = {};
+
+  /// Cached hole paints by radius step (8 px).
+  final Map<int, Paint> _hole = {};
+  final Map<int, ui.Picture?> _shadeChunks = {};
+
+  /// Block side for the cached cave layers, in tiles.
+  static const chunk = 16;
+
+  bool _lightOverCave(BiomeLayout lay, double x, double y, double r) {
+    final x0 = ((x - r) / ts).floor(), x1 = ((x + r) / ts).ceil();
+    final y0 = ((y - r) / ts).floor(), y1 = ((y + r) / ts).ceil();
+    for (var ty = y0; ty <= y1; ty += 2) {
+      for (var tx = x0; tx <= x1; tx += 2) {
+        if (lay.isIndoor(tx, ty)) return true;
+      }
+    }
+    return false;
+  }
+
+  void _eachChunk(Rect? view, void Function(int cx, int cy) f) {
+    const side = chunk * ts;
+    final nx = (BiomeLayout.width / chunk).ceil(),
+        ny = (BiomeLayout.height / chunk).ceil();
+    final x0 = view == null ? 0 : (view.left / side).floor().clamp(0, nx - 1);
+    final x1 = view == null ? nx - 1 : (view.right / side).floor().clamp(0, nx - 1);
+    final y0 = view == null ? 0 : (view.top / side).floor().clamp(0, ny - 1);
+    final y1 = view == null ? ny - 1 : (view.bottom / side).floor().clamp(0, ny - 1);
+    for (var cy = y0; cy <= y1; cy++) {
+      for (var cx = x0; cx <= x1; cx++) {
+        f(cx, cy);
+      }
+    }
+  }
+
+  void _disposeChunks(Map<int, ui.Picture?> m) {
+    for (final p in m.values) {
+      p?.dispose();
+    }
+    m.clear();
+  }
+
+  ui.Picture? _shadeChunk(BiomeLayout lay, int cx, int cy) {
+    final rec = ui.PictureRecorder();
+    final pc = Canvas(rec);
+    final paint = Paint()..isAntiAlias = false;
+    double dark(int x, int y) =>
+        lay.isIndoor(x, y) ? RegionAmbienceRules.caveDarkness(lay, x, y) : -1;
+    var any = false;
+    for (var y = cy * chunk; y < (cy + 1) * chunk && y < BiomeLayout.height; y++) {
+      for (var x = cx * chunk; x < (cx + 1) * chunk && x < BiomeLayout.width; x++) {
+        final d0 = dark(x, y);
+        if (d0 < 0) continue;
+        any = true;
+        for (var sy = 0; sy < 2; sy++) {
+          for (var sx = 0; sx < 2; sx++) {
+            final nx = x + (sx == 0 ? -1 : 1), ny = y + (sy == 0 ? -1 : 1);
+            var sum = d0, n = 1;
+            for (final v in [dark(nx, y), dark(x, ny), dark(nx, ny)]) {
+              if (v >= 0) {
+                sum += v;
+                n++;
+              }
+            }
+            final k = (sum / n * _steps * 2).round() / (_steps * 2);
+            paint.color = RegionPalette.caveShade.withValues(alpha: k);
+            pc.drawRect(
+                Rect.fromLTWH(x * ts + sx * 8, y * ts + sy * 8, 8, 8), paint);
+          }
+        }
+      }
+    }
+    final pic = rec.endRecording();
+    if (any) return pic;
+    pic.dispose();
+    return null;
+  }
+
   Object? _glowKey;
   final _water = <(int, int)>[];
   final Paint _mist = Paint()..isAntiAlias = false;
@@ -206,57 +316,41 @@ class RegionLightLayer {
   /// and the glowing specks (cached picture), slow low mist over each
   /// cave lake and an occasional drip ripple (a handful of rects).
   void drawCaveLife(Canvas c, BiomeLayout lay, double t,
-      {double strength = 1, bool motion = true}) {
+      {double strength = 1, bool motion = true, Rect? view}) {
     if (strength <= 0) return;
     final pal = CavePalette.of(lay.base.theme);
-    if (_glow == null || !identical(_glowKey, lay)) {
-      _glow?.dispose();
+    if (!identical(_glowKey, lay)) {
+      _disposeChunks(_glowChunks);
       _water.clear();
-      final rec = ui.PictureRecorder();
-      final pc = Canvas(rec);
-      final glowA = RegionAmbienceRules.waterGlow;
-      Paint p(Color col, double a) => Paint()
-        ..color = col.withValues(alpha: a.clamp(0.0, 1.0))
-        ..isAntiAlias = false;
-      final water = p(pal.waterGlow, glowA);
-      final shine = p(pal.waterGlow, glowA * 1.8);
-      final halo = p(pal.speck, 0.2);
-      final core = p(pal.speck, 1);
       for (var y = 0; y < BiomeLayout.height; y++) {
         for (var x = 0; x < BiomeLayout.width; x++) {
-          if (!lay.isIndoor(x, y)) continue;
-          final h = TilePainter.tileHash(x, y);
-          if (lay.isLake(x, y)) {
-            _water.add((x, y));
-            pc.drawRect(Rect.fromLTWH(x * ts, y * ts, ts, ts), water);
-            if (h % 3 == 0) {
-              pc.drawRect(
-                  Rect.fromLTWH(
-                      x * ts + 2 + h % 8, y * ts + 4 + (h >> 4) % 8, 4, 1),
-                  shine);
-            }
-            continue;
-          }
-          if (!RegionAmbienceRules.speckAt(x, y)) continue;
-          // The mushroom the tile painter draws on this tile.
-          final mx = x * ts + 5 + (h >> 7) % 6, my = y * ts + 6 + (h >> 9) % 6;
-          pc
-            ..drawRect(Rect.fromLTWH(mx - 1, my, 5, 1), halo)
-            ..drawRect(Rect.fromLTWH(mx + 1, my - 2, 1, 5), halo)
-            ..drawRect(Rect.fromLTWH(mx, my - 1, 3, 3), halo)
-            ..drawRect(Rect.fromLTWH(mx + 1, my, 1, 1), core);
+          if (lay.isIndoor(x, y) && lay.isLake(x, y)) _water.add((x, y));
         }
       }
-      _glow = rec.endRecording();
       _glowKey = lay;
     }
-    c.drawPicture(_glow!);
+    _eachChunk(view, (cx, cy) {
+      final key = cy * 1000 + cx;
+      final pic = _glowChunks.containsKey(key)
+          ? _glowChunks[key]
+          : (_glowChunks[key] = _glowChunk(lay, pal, cx, cy));
+      if (pic != null) c.drawPicture(pic);
+    });
     if (!motion) return;
     final bands = RegionAmbienceRules.mistBands;
     var salt = 0;
     for (final lk in lay.lakes) {
       if (lk.cave == null) continue;
       salt++;
+      if (view != null) {
+        final (ex, ey, erx, ery) = lk.ellipse;
+        if ((ex + erx + 2) * ts < view.left ||
+            (ex - erx - 2) * ts > view.right ||
+            (ey + ery + 2) * ts < view.top ||
+            (ey - ery - 2) * ts > view.bottom) {
+          continue;
+        }
+      }
       // Mist (§ 7.2.1): the weather fog's style — world-anchored 8 px
       // cells of soft value noise with quantized alpha, drifting slowly,
       // kept low over the lake and fading out toward its shore.
@@ -305,6 +399,52 @@ class RegionLightLayer {
           ..drawRect(Rect.fromLTWH(cx + r, cy - rh, 1, rh * 2), _ring);
       }
     }
+  }
+
+  final Map<int, ui.Picture?> _glowChunks = {};
+
+  ui.Picture? _glowChunk(BiomeLayout lay, CavePalette pal, int cx, int cy) {
+    final rec = ui.PictureRecorder();
+    final pc = Canvas(rec);
+    final glowA = RegionAmbienceRules.waterGlow;
+    Paint p(Color col, double a) => Paint()
+      ..color = col.withValues(alpha: a.clamp(0.0, 1.0))
+      ..isAntiAlias = false;
+    final water = p(pal.waterGlow, glowA);
+    final shine = p(pal.waterGlow, glowA * 1.8);
+    final halo = p(pal.speck, 0.2);
+    final core = p(pal.speck, 1);
+    var any = false;
+    for (var y = cy * chunk; y < (cy + 1) * chunk && y < BiomeLayout.height; y++) {
+      for (var x = cx * chunk; x < (cx + 1) * chunk && x < BiomeLayout.width; x++) {
+        if (!lay.isIndoor(x, y)) continue;
+        final h = TilePainter.tileHash(x, y);
+        if (lay.isLake(x, y)) {
+          any = true;
+          pc.drawRect(Rect.fromLTWH(x * ts, y * ts, ts, ts), water);
+          if (h % 3 == 0) {
+            pc.drawRect(
+                Rect.fromLTWH(
+                    x * ts + 2 + h % 8, y * ts + 4 + (h >> 4) % 8, 4, 1),
+                shine);
+          }
+          continue;
+        }
+        if (!RegionAmbienceRules.speckAt(x, y)) continue;
+        any = true;
+        // The mushroom the tile painter draws on this tile.
+        final mx = x * ts + 5 + (h >> 7) % 6, my = y * ts + 6 + (h >> 9) % 6;
+        pc
+          ..drawRect(Rect.fromLTWH(mx - 1, my, 5, 1), halo)
+          ..drawRect(Rect.fromLTWH(mx + 1, my - 2, 1, 5), halo)
+          ..drawRect(Rect.fromLTWH(mx, my - 1, 3, 3), halo)
+          ..drawRect(Rect.fromLTWH(mx + 1, my, 1, 1), core);
+      }
+    }
+    final pic = rec.endRecording();
+    if (any) return pic;
+    pic.dispose();
+    return null;
   }
 
   /// Roof edge / overhang at the mouths of the roofed caves of [lay]
@@ -451,13 +591,22 @@ class RegionLightLayer {
   /// Light shafts of [map] inside [view] (px). [strength] 0..1 (daylight
   /// through the openings); [t] in seconds; [motion] animates the motes.
   void drawShafts(Canvas c, GameMap map, Rect view, double t,
-      {double strength = 1, bool motion = true}) {
-    lastShafts = 0;
+      {double strength = 1,
+      bool motion = true,
+      List<(int, int)>? only}) {
+    if (only == null) lastShafts = 0;
     if (strength <= 0) return;
     final x0 = (view.left / ts).floor() - 1, y0 = (view.top / ts).floor() - 1;
     final x1 = (view.right / ts).ceil() + 2,
         y1 = (view.bottom / ts).ceil() + 5;
-    LightShaftRules.visible(map, x0, y0, x1, y1, _visible);
+    if (only != null) {
+      _visible
+        ..clear()
+        ..addAll(only.where(
+            (p) => p.$1 >= x0 && p.$1 < x1 && p.$2 >= y0 && p.$2 < y1));
+    } else {
+      LightShaftRules.visible(map, x0, y0, x1, y1, _visible);
+    }
     if (_visible.isEmpty) return;
     final beam = _beam[_q(strength)], patch = _patch[_q(strength)];
     for (final (tx, ty) in _visible) {
@@ -492,10 +641,10 @@ class RegionLightLayer {
   }
 
   void dispose() {
-    _shade?.dispose();
-    _shade = null;
-    _glow?.dispose();
-    _glow = null;
+    _disposeChunks(_shadeChunks);
+    _shadeKey = null;
+    _disposeChunks(_glowChunks);
+    _glowKey = null;
     _roof?.dispose();
     _roof = null;
   }

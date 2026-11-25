@@ -269,6 +269,18 @@ enum CritterKind { butterfly, sparkMote, frostMote, ember, echoWisp }
 /// How a biome region is generated (biome_regions.md § 2): lake variants
 /// (weights), side-path flavour and ambient life. Pure data; the numbers
 /// that tune sizes and counts live in `kTuning[TuningId.regions]`.
+/// What a section of the wilds is (biome_exploration.md § 2).
+enum WildKind { forest, cavern, giantLake, shrine, meadow }
+
+/// Default section weights of the wilds (the giant lake has its own
+/// chance, `giantLakeChance`).
+const kDefaultWilds = {
+  WildKind.forest: 0.5,
+  WildKind.cavern: 0.22,
+  WildKind.meadow: 0.2,
+  WildKind.shrine: 0.08,
+};
+
 class BiomeRegionStyle {
   const BiomeRegionStyle(
       {required this.lakes,
@@ -277,7 +289,11 @@ class BiomeRegionStyle {
       this.critter = CritterKind.butterfly,
       this.caveOpenings = true,
       this.fishingAmbience = FishingAmbience.breeze,
-      this.lakeNames = const {}});
+      this.lakeNames = const {},
+      this.wilds = kDefaultWilds});
+
+  /// Section kind -> weight in the wilds (biome_exploration.md § 2).
+  final Map<WildKind, double> wilds;
 
   /// The quiet ambience while fishing here (§ 7.2.3).
   final FishingAmbience fishingAmbience;
@@ -462,6 +478,12 @@ const kBiomeBases = <String, BiomeBase>{
           grove: 0.1,
           tunnel: 0.6,
           critter: CritterKind.frostMote,
+          wilds: {
+            WildKind.cavern: 0.45,
+            WildKind.forest: 0.25,
+            WildKind.meadow: 0.15,
+            WildKind.shrine: 0.15,
+          },
           fishingAmbience: FishingAmbience.drip,
           lakeNames: _cn)),
   kGrieta: BiomeBase(kGrieta,
@@ -501,6 +523,12 @@ const kBiomeBases = <String, BiomeBase>{
           grove: 0.3,
           tunnel: 0.3,
           critter: CritterKind.echoWisp,
+          wilds: {
+            WildKind.forest: 0.4,
+            WildKind.cavern: 0.2,
+            WildKind.meadow: 0.2,
+            WildKind.shrine: 0.2,
+          },
           fishingAmbience: FishingAmbience.none,
           lakeNames: _cn)),
 };

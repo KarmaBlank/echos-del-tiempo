@@ -40,6 +40,12 @@ class WaystonePanel extends StatelessWidget {
         context.t('ui.world.way.site_lake', {'name': lay.lakes[w.ref].name}),
       WaystoneSite.mine =>
         context.t('ui.world.way.site_mine', {'n': w.ref + 1}),
+      WaystoneSite.section =>
+        context.t('ui.world.way.site_section', {'n': w.ref + 1}),
+      WaystoneSite.shrine =>
+        context.t('ui.world.way.site_shrine', {'n': w.ref + 1}),
+      WaystoneSite.cavern =>
+        context.t('ui.world.way.site_cavern', {'n': w.ref + 1}),
     };
   }
 

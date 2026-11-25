@@ -315,7 +315,7 @@
   "ui.world.way.go": "VIAJAR",
   "ui.world.way.here": "ACÁ",
   "ui.world.way.unknown": "Sin descubrir",
-  "ui.world.way.unknown_tip": "Activala tocándola con E para poder viajar acá.",
+  "ui.world.way.unknown_tip": "Pasá al lado para descubrirla y poder viajar acá.",
   "ui.world.way.site_entrance": "Entrada de la región",
   "ui.world.way.site_lake": "Lago: {name}",
   "ui.world.way.site_mine": "Boca de mina {n}",
@@ -398,5 +398,14 @@
   "ui.world.veg.save": "GUARDAR PRESET",
   "ui.world.veg.save_tip": "Guarda los presets de vegetación.",
   "ui.world.hud.join_busy": "{name} está en combate o terminando: no se puede unir ahora.",
-  "ui.world.hud.join_off": "No se puede unir desde acá."
+  "ui.world.hud.join_off": "No se puede unir desde acá.",
+  "ui.world.way.site_section": "Claro del sendero {n}",
+  "ui.world.way.site_shrine": "Santuario {n}",
+  "ui.world.way.site_cavern": "Gruta {n}",
+  "ui.world.wild.prompt_chest": "[E] Abrir el cofre",
+  "ui.world.wild.prompt_shrine": "[E] Pedir la bendición",
+  "ui.world.wild.prompt_done": "Ya lo usaste hoy: vuelve mañana",
+  "ui.world.raft.prompt_board": "[E] Subir a la balsa",
+  "ui.world.raft.prompt_leave": "[E] Bajar a la orilla",
+  "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa"
 }

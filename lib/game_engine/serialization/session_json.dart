@@ -258,6 +258,8 @@ class SessionJson {
         if (p.fishLine case final l?) 'fl': l.toJson(),
         // Protocolo 60: Llama errante (lighting.md § 3.1.1).
         if (p.wisp) 'wi': true,
+        // Protocolo 83: balsa de los lagos grandes (fishing.md § 15).
+        if (p.rafting) 'rf': p.raftEpoch,
         // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
         if (p.stashAcks.isNotEmpty)
           'sk': [
@@ -304,6 +306,7 @@ class SessionJson {
         stashAcks: _stashAcks(j['sk']),
         fishLine: FishLine.fromJson(j['fl']),
         wisp: j['wi'] == true,
+        raftEpoch: j.intOrNull('rf') ?? 0,
       );
 
   // ------------------------------------------------------------------

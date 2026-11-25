@@ -30,6 +30,8 @@ import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/waystone_rules.dart';
+import '../../../game_engine/rules/raft_rules.dart';
+import '../../../game_engine/rules/wild_loot_rules.dart';
 import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
@@ -1192,6 +1194,7 @@ class SessionController extends StateNotifier<SessionView?> {
     local.step(engine.mapFor(s), ix, iy, dt,
         canMove: _canMove(s, me),
         gateOpen: s.gateOpen,
+        raft: me.rafting && me.epoch == local.epoch,
         // Viento del Eco (worldgen.md § 11.3).
         speedMult: s.mode == SessionMode.field
             ? ExplorationRules.speedMult(s.mission, s.time)
@@ -2063,6 +2066,44 @@ class SessionController extends StateNotifier<SessionView?> {
     };
   }
 
+  // ---------------- lake rafts (fishing.md § 15) ----------------
+
+  /// The local player is steering a raft.
+  bool get onRaft {
+    final me = _s?.players[localId];
+    return me != null && me.rafting;
+  }
+
+  /// The raft dock in reach of the local player (on foot), or `null`.
+  RaftDock? get nearRaftDock {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby || isRun || onRaft) {
+      return null;
+    }
+    return RaftRules.nearDock(biomeLayout(s.place), local.x, local.y);
+  }
+
+  /// On a raft next to a shore: E gets off there.
+  bool get canLeaveRaft {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby || !onRaft) return false;
+    return RaftRules.landing(engine.mapFor(s), local.x, local.y) != null;
+  }
+
+  /// E at the dock: on the raft (the host places it).
+  bool boardRaft() {
+    if (nearRaftDock == null) return false;
+    stopFishing();
+    return _apply(const RaftAction(true));
+  }
+
+  /// E by the shore on a raft: back on land (nearest free tile).
+  bool leaveRaft() {
+    if (!canLeaveRaft) return false;
+    stopFishing();
+    return _apply(const RaftAction(false));
+  }
+
   // ---------------- region waystones (biome_regions.md § 4) ----------
 
   /// The region waystone in reach of the local player (index), or `null`.
@@ -2094,6 +2135,33 @@ class SessionController extends StateNotifier<SessionView?> {
     closePanel();
     stopFishing();
     return _apply(WaystoneAction(from, to: to));
+  }
+
+  /// The wilds chest / shrine in reach (biome_exploration.md § 3.3–3.4):
+  /// (index, is a shrine), or `null`.
+  (int, bool)? get nearWildLoot {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    for (final (list, shrine) in [(lay.chestSpots, false), (lay.shrines, true)]) {
+      for (var i = 0; i < list.length; i++) {
+        final (x, y) = list[i];
+        final dx = (x + 0.5) * 16 - local.x, dy = (y + 0.5) * 16 - local.y;
+        if (dx * dx + dy * dy <= 26 * 26) return (i, shrine);
+      }
+    }
+    return null;
+  }
+
+  /// E on a wilds chest / shrine.
+  bool useWildLoot(int i, {bool shrine = false}) {
+    final lay = biomeLayout(_s?.place);
+    if (lay != null &&
+        WildLootRules.taken(town, _me, lay.id, i, shrine: shrine)) {
+      addLocalNotice(strings.t('ui.world.wild.prompt_done'));
+      return false;
+    }
+    return _apply(WildLootAction(i, shrine: shrine));
   }
 
   bool forage() {
@@ -3418,6 +3486,16 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     if (s == null || _panel != null) return;
     if (s.mode == SessionMode.lobby) {
+      // On a raft (fishing.md § 15): by a shore E gets off; out on the
+      // water it fishes.
+      if (onRaft) {
+        if (canLeaveRaft) {
+          leaveRaft();
+        } else if (canFish) {
+          startFishing();
+        }
+        return;
+      }
       if (nearCounter) {
         openPanel(WorldPanel.missionBoard);
       } else if (nearArmory) {
@@ -3456,6 +3534,10 @@ class SessionController extends StateNotifier<SessionView?> {
         travelMine(i);
       } else if (nearWaystone case final i?) {
         useWaystone(i);
+      } else if (nearWildLoot case (final i, final shrine)?) {
+        useWildLoot(i, shrine: shrine);
+      } else if (nearRaftDock != null) {
+        boardRaft();
       } else if (nearForage != null) {
         forage();
       } else if (nearMineExit) {
@@ -4651,7 +4733,11 @@ class SessionController extends StateNotifier<SessionView?> {
     final old = {for (final a in before.active) a.uid};
     for (final a in now.active) {
       if (old.contains(a.uid)) continue;
-      final text = kWorldEvents.def(a.def)?.notice.text;
+      final d = kWorldEvents.def(a.def);
+      // Deep actors of the wilds are found by exploring, not announced
+      // (biome_exploration.md § 6).
+      if (d != null && WorldEventRules.isDeep(d)) continue;
+      final text = d?.notice.text;
       if (text == null || text.isEmpty) continue;
       _messages.add(text);
       if (_messages.length > maxMessages) _messages.removeAt(0);
@@ -5140,6 +5226,16 @@ class SessionController extends StateNotifier<SessionView?> {
 
   (WorldPrompt?, String?) _prompt() {
     if (_panel != null || editingTown) return (null, null);
+    // Same order as `interact` (fishing.md § 15).
+    if (onRaft && _s?.mode == SessionMode.lobby) {
+      if (canLeaveRaft) {
+        return (WorldPrompt.poi, strings.t('ui.world.raft.prompt_leave'));
+      }
+      if (mapFishing case final f?) {
+        return (WorldPrompt.fishing, fishingHint(f));
+      }
+      return (WorldPrompt.fishing, strings.t('ui.world.raft.prompt_fish'));
+    }
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearForge) return (WorldPrompt.forge, null);
     if (nearWorkshop) return (WorldPrompt.workshop, null);
@@ -5181,6 +5277,22 @@ class SessionController extends StateNotifier<SessionView?> {
             ? 'ui.world.way.prompt_use'
             : 'ui.world.way.prompt_activate')
       );
+    }
+    if (nearWildLoot case (final i, final shrine)?) {
+      final lay = biomeLayout(_s?.place);
+      final done = lay != null &&
+          WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
+      return (
+        WorldPrompt.poi,
+        strings.t(done
+            ? 'ui.world.wild.prompt_done'
+            : shrine
+                ? 'ui.world.wild.prompt_shrine'
+                : 'ui.world.wild.prompt_chest')
+      );
+    }
+    if (nearRaftDock != null) {
+      return (WorldPrompt.poi, strings.t('ui.world.raft.prompt_board'));
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
     if (nearMineExit) {

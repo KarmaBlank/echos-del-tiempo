@@ -142,6 +142,18 @@ const Map<String, TuningDef> kTuningDefaults = {
     'spotRare': 0.35,
     'spotLoot': 0.25,
     'spotRadius': 2,
+    // Balsas de los lagos grandes (fishing.md § 15): velocidad (× la de
+    // caminar), tiles de agua para que un lago tenga muelle, alcance
+    // (tiles) del muelle y de la orilla para bajar, y lo que suma cada
+    // tile de distancia a la orilla (rareza / tamaño, con tope).
+    'raftSpeed': 0.8,
+    'raftMinLakeTiles': 70,
+    'raftDockReach': 1.5,
+    'raftShoreReach': 1.2,
+    'deepRarePerTile': 0.08,
+    'deepRareMax': 0.5,
+    'deepSizePerTile': 0.05,
+    'deepSizeMax': 0.3,
     // Horarios de los peces (fishing.md § 13): chance de que un pez fuera
     // de su franja entre igual en la tirada.
     'offHoursChance': 0.03,
@@ -747,6 +759,33 @@ const Map<String, TuningDef> kTuningDefaults = {
     // The main path (spawn -> farthest portal) must stay under this many
     // steps (biome_regions.md § 2.1).
     'mainPathMax': 38,
+    // The wilds (biome_exploration.md § 2–6): section cell (tiles),
+    // trail noise, tree density per 100 by section kind, giant lake
+    // chance and radii, caverns with a lake / with beams, hidden nooks,
+    // forage per section, chests, extra trail loops and the mine count.
+    'wildCell': 20,
+    'wildTrailNoise': 2.5,
+    'wildForestDensity': 55,
+    'wildMeadowDensity': 6,
+    'wildDensity': 22,
+    'giantLakeChance': 0.5,
+    'giantLakeRxMin': 8,
+    'giantLakeRxMax': 12,
+    'giantLakeRyMin': 5,
+    'giantLakeRyMax': 7,
+    'cavernLakeChance': 0.5,
+    'cavernShaftChance': 0.4,
+    'hiddenNookChance': 0.45,
+    'wildForagePerSection': 2,
+    'wildChestChance': 0.6,
+    'wildExtraLoops': 4,
+    'minesMin': 2,
+    'minesMax': 3,
+    // Exploration content per biome and day (§ 6): chance of a roll and
+    // the most deep actors at once; shrine gold.
+    'exploreChance': 0.85,
+    'exploreMax': 2,
+    'shrineGold': 40,
     // Forage (§ 5): seed bush rare-seed weight multiplier, echo bloom
     // regrow (s), seasonal XP multiplier, echo bloom XP multiplier.
     'seedBushRareMul': 4,

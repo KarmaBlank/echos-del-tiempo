@@ -303,6 +303,34 @@ RgbaImage _chest() {
   return p.img;
 }
 
+/// Lake raft (fishing.md § 15): four logs tied with rope, seen from above.
+RgbaImage _raft() {
+  final p = _Pen();
+  for (var i = 0; i < 4; i++) {
+    p.rect(2, 3 + i * 3, 12, 2, i.isEven ? _wood : 0x7a4e2a);
+    p.rect(2, 5 + i * 3, 12, 1, _woodDark);
+  }
+  p.rect(4, 3, 1, 12, 0xc8b27a);
+  p.rect(11, 3, 1, 12, 0xc8b27a);
+  p.outline();
+  return p.img;
+}
+
+/// Raft dock on the shore: planks on two posts, a mooring post.
+RgbaImage _raftDock() {
+  final p = _Pen();
+  p.rect(1, 5, 14, 7, _wood);
+  for (var x = 1; x < 15; x += 3) {
+    p.rect(x, 5, 1, 7, _woodDark);
+  }
+  p.rect(2, 12, 2, 3, _woodDark);
+  p.rect(12, 12, 2, 3, _woodDark);
+  p.rect(12, 2, 2, 4, _woodDark);
+  p.rect(12, 2, 2, 1, 0xc8b27a);
+  p.outline();
+  return p.img;
+}
+
 RgbaImage _category(String cat) => switch (cat) {
       'herramienta' => _hoe(_metal),
       'pescado' => _fish('generico', 0xd8d8d8),
@@ -337,6 +365,8 @@ void main() {
     'vida_npc_pescador': _npc(farmer: false, work: false),
     'vida_npc_pescador_trabajo': _npc(farmer: false, work: true),
     'vida_cofre_oficio': _chest(),
+    'vida_balsa': _raft(),
+    'vida_muelle_balsa': _raftDock(),
   };
   for (final e in icons.entries) {
     File('assets/sprites/items/${e.key}.png').writeAsBytesSync(encodePng(e.value));
