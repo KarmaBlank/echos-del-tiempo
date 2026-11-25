@@ -68,6 +68,12 @@ desbloqueo, motivos), `BiomeLayout.ecoPortals`
    de quien lo abrió; free_movement.md § 1). Un amigo que quiera ir abre
    su propio Eco.
 
+ABRIR gris con motivo (`ecoZoneOpenBlocked`): tier cerrado,
+sin Eco del tier, **alguien sin el TUTORIAL** (`TutorialRules.missing`:
+"Primero, todos tienen que hacer el TUTORIAL. Falta: …"; el motor ya lo
+rechazaba con `tutorialLocked`), fuera de misión, votación abierta o
+lejos del portal.
+
 ## 5. Viajar a un portal
 
 - `TravelAction(lugar, ecoZone: n)` (JSON `ez`, protocolo 59): viaja al

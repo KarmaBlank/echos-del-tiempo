@@ -19,7 +19,7 @@ import '../../../game_engine/rules/weapon_weight.dart';
 import 'battle_impact.dart';
 import 'skill_tip.dart';
 import 'weapon_text.dart';
-import 'item_names.dart';
+import 'item_names.dart';
 import 'eco_text.dart';
 
 /// Textos de objetos del loot v2 (ficha / tooltip, requisitos, mods) en
@@ -599,7 +599,7 @@ String ecoTooltipMarkup(ProgressionRules rules, EcoItem e,
       '${players > 1 ? ' ${_c(_dim, '(con el grupo)')}' : ''}');
   l.add(_c(
       _dim,
-      'Se abre en el Portal del Eco (pueblo). Se consume al '
-      'entrar, se complete o no.'));
+      'Se abre en el portal de su zona, en el exterior del bioma. '
+      'Se consume al entrar, se complete o no.'));
   return l.join('<br>');
 }
