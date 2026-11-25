@@ -26,6 +26,7 @@ import '../../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
 import '../../../../game_engine/rules/mining_rules.dart' show SmithCraftRules;
 import '../../../inventory/presentation/item_widgets.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
+import '../../../../game_engine/rules/gear_v2_rules.dart';
 import '../../../../game_engine/rules/profession_gear_rules.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
@@ -1115,10 +1116,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         SizedBox(height: DsSpace.sm),
         Expanded(
           child: _grid([
-            // Fish forge (profession_gear.md § 4.2): a legendary fish in
-            // the bag becomes a unique weapon.
+            // Fish of the other time (profession_gear_v2.md § 4): an Epic
+            // one is taken apart; a Legendary one forged whole or apart.
             for (final f in kFish.values)
-              if (f.rarity == FishRarity.legendario && p.life.count(f.id) > 0)
+              if ((f.rarity == FishRarity.legendario ||
+                      f.rarity == FishRarity.epico) &&
+                  p.life.count(f.id) > 0)
                 _fishForgeCell(c, p, f),
             for (final w in bases) cell(w),
           ], _s.t('ui.town.npc.com.empty')),
@@ -1137,31 +1140,59 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     };
     final gold = GearRules.t.i('fishForgeGold');
     final name = f.text;
+    final legend = f.rarity == FishRarity.legendario;
+    final r = legend ? Rarity.legendario : Rarity.epico;
+    final splitWhy = switch (GearV2Rules.cannotSplit(p, f.id)) {
+      null => null,
+      FishSplitBlock.gold => _s.t('ui.inventory.smith.why.noGold'),
+      FishSplitBlock.level => _s.t('ui.town.forge.fish_split_level',
+          {'lv': GearV2Rules.t.i('fishPartLevel')}),
+      _ => _s.t('ui.town.forge.fish_split_none'),
+    };
+    final aff = fishAffinity(f.id);
     return LifeItemCellData(
       id: 'brann-fish-${f.id}',
       icon: LifeIcon(f.id, LifeIconKind.pescado, size: 32),
-      border: RarityColors.of(Rarity.legendario),
+      border: RarityColors.of(r),
       search: name,
       caption: 'x${p.life.count(f.id)}',
       detail: LifeItemDetail(
         name: name,
-        nameColor: RarityColors.of(Rarity.legendario),
+        nameColor: RarityColors.of(r),
         tags: [
-          (_s.t('ui.town.forge.fish_forge').toUpperCase(),
-              RarityColors.of(Rarity.legendario)),
+          (_s.t('ui.town.forge.fish_other_time').toUpperCase(),
+              RarityColors.of(r)),
         ],
         lines: [
-          _s.t('ui.town.forge.fish_forge_hint', {'gold': gold}),
-          if (whyText != null) whyText,
+          _s.t('ui.town.forge.fish_affinity',
+              {'v': _s.t('data.elements.element.${aff.name}')}),
+          for (final e in GearV2Rules.splitYield(f.id).entries)
+            _s.t('ui.town.forge.fish_split_yield', {
+              'n': e.value,
+              'part': _s.t('data.materials.smith.${e.key}.name')
+            }),
+          _s.t('ui.town.forge.fish_split_hint',
+              {'gold': GearV2Rules.t.i('fishPartGold')}),
+          if (legend) _s.t('ui.town.forge.fish_forge_hint', {'gold': gold}),
+          if (!legend) _s.t('ui.town.forge.fish_parts_only'),
         ],
         actions: [
-          DsButton(_s.t('ui.town.forge.fish_forge'),
-              key: ValueKey('brann-fish-go-${f.id}'),
+          if (legend)
+            DsButton(_s.t('ui.town.forge.fish_forge'),
+                key: ValueKey('brann-fish-go-${f.id}'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.primary,
+                tooltip: whyText,
+                onPressed: whyText == null
+                    ? () => c.smith(SmithAction(SmithOp.fishForge, f.id))
+                    : null),
+          DsButton(_s.t('ui.town.forge.fish_split'),
+              key: ValueKey('brann-fish-split-${f.id}'),
               size: DsButtonSize.compact,
-              kind: DsButtonKind.primary,
-              tooltip: whyText,
-              onPressed: whyText == null
-                  ? () => c.smith(SmithAction(SmithOp.fishForge, f.id))
+              kind: legend ? DsButtonKind.secondary : DsButtonKind.primary,
+              tooltip: splitWhy,
+              onPressed: splitWhy == null
+                  ? () => c.smith(SmithAction(SmithOp.fishSplit, f.id))
                   : null),
         ],
       ),

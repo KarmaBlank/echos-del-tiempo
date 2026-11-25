@@ -1,3 +1,4 @@
+import 'gear_v2_rules.dart';
 import 'profession_gear_rules.dart';
 import 'oficio_storage_rules.dart';
 import 'cooking_rules.dart';

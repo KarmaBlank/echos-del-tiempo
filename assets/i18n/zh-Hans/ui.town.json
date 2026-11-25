@@ -1009,5 +1009,13 @@
   "ui.town.compost.mushroom_compost": {
     "text": "蘑菇堆肥",
     "status": "draft"
-  }
+  },
+  "ui.town.forge.fish_other_time": "异时之鱼",
+  "ui.town.forge.fish_affinity": "亲和：{v}",
+  "ui.town.forge.fish_split": "拆解",
+  "ui.town.forge.fish_split_yield": "获得 {n} {part}",
+  "ui.town.forge.fish_split_hint": "拆解会消耗这条鱼（₵{gold}）；部件用于分件锻造。",
+  "ui.town.forge.fish_parts_only": "史诗鱼只能拆解。",
+  "ui.town.forge.fish_split_level": "需要钓鱼 {lv} 级",
+  "ui.town.forge.fish_split_none": "你没有这条鱼"
 }

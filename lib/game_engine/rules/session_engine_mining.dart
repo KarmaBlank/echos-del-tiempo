@@ -463,6 +463,29 @@ extension _MiningOp on _Op {
         _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
             stashOverflow: true);
         return true;
+      case SmithOp.forgeParts:
+        // profession_gear_v2.md § 3: forge by parts, step by step.
+        final type = a.base;
+        if (type == null) return false;
+        final r = GearV2Rules.forge(rules.loot, _rand, p.profile, type,
+            [a.material, ...a.parts]);
+        if (r == null) return false;
+        _profileChange(p, r.$1);
+        say('${p.name} forjó por piezas: '
+            '${r.$2.rarity.label.toLowerCase()} de nivel ${r.$2.itemLevel}'
+            '${r.$2.masterwork ? ' (obra maestra)' : ''}.');
+        smithXp(p, SmithCraftRules.forgeXp(r.$2.rarity));
+        _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
+            stashOverflow: true);
+        return true;
+      case SmithOp.fishSplit:
+        // profession_gear_v2.md § 4: Brann takes a fish apart (it's gone).
+        final next = GearV2Rules.split(p.profile, a.material);
+        if (next == null) return false;
+        _profileChange(p, next);
+        say('Brann desarmó un ${kFish[a.material]?.name ?? a.material} '
+            'para ${p.name}.');
+        return true;
       case SmithOp.forge || SmithOp.brann:
         if (a.rarity < 0 || a.rarity >= Rarity.values.length) return false;
         final r = Rarity.values[a.rarity];

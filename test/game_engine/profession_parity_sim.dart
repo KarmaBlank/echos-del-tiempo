@@ -7,6 +7,7 @@ import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/farming_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/gear_v2_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/fishing_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/life_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
@@ -22,23 +23,28 @@ import 'session_test_helpers.dart';
 /// vein yield and forge costs) with a seeded RNG; the activity per hour
 /// comes from the `parity*` keys of `kTuning[TuningId.gear]`.
 class ParityResult {
-  ParityResult(this.kind, this.level, this.perHour);
+  ParityResult(this.kind, this.level, this.perHour, this.score,
+      {this.manual = true});
   final LifeSkillKind kind;
   final int level;
+  final bool manual;
 
   /// Weapons per hour by rarity.
   final Map<Rarity, double> perHour;
 
-  /// Σ rate × `parityRarity<R>` weight.
-  double get score {
+  /// v2 (profession_gear_v2.md § 2): Σ weapons/h × `parityRarity<R>` ×
+  /// (1 + expected extra slots × `parityExtraSlotW`).
+  final double score;
+
+  /// Rarity weight of the parity model.
+  static double weight(Rarity r) {
     final t = tuning(TuningId.gear);
-    double w(Rarity r) => switch (r) {
-          Rarity.raro => t.d('parityRarityRaro'),
-          Rarity.epico => t.d('parityRarityEpico'),
-          Rarity.legendario => t.d('parityRarityLegendario'),
-          _ => 0,
-        };
-    return perHour.entries.fold(0.0, (a, e) => a + e.value * w(e.key));
+    return switch (r) {
+      Rarity.raro => t.d('parityRarityRaro'),
+      Rarity.epico => t.d('parityRarityEpico'),
+      Rarity.legendario => t.d('parityRarityLegendario'),
+      _ => 0,
+    };
   }
 
   String row() => '${kind.name.padRight(9)} L${level.toString().padLeft(2)}  '
@@ -121,35 +127,50 @@ PlayerProfile parityProfile(LifeSkillKind kind, int level) {
   return p;
 }
 
-/// [hours] simulated hours of [kind] at [level] (seed [seed]).
+/// [hours] simulated hours of [kind] at [level] (seed [seed]); [manual]
+/// false = the same hour done by helpers (auto-fishing, a farmhand's
+/// harvest, Brann forging the parts).
 ParityResult simulateParity(LifeSkillKind kind, int level,
-    {int hours = 200, int seed = 7}) {
+    {int hours = 200, int seed = 7, bool manual = true}) {
   final rng = math.Random(seed * 1000 + level * 10 + kind.index);
   double rand() => rng.nextDouble();
   final p = parityProfile(kind, level);
   final t = tuning(TuningId.gear);
   const loot = LootRules();
   final got = {Rarity.raro: 0.0, Rarity.epico: 0.0, Rarity.legendario: 0.0};
-  void add(Rarity r) {
-    if (got.containsKey(r)) got[r] = got[r]! + 1;
+  var score = 0.0;
+  final slotW = tuning(TuningId.gearV2).d('parityExtraSlotW');
+  // [q] = the v2 quality of the weapon (null: no v2 touch).
+  void add(Rarity r, [double? q]) {
+    if (!got.containsKey(r)) return;
+    got[r] = got[r]! + 1;
+    score += ParityResult.weight(r) *
+        (1 + (q == null ? 0 : GearV2Rules.extraSlots(r, q)) * slotW);
   }
 
   for (var h = 0; h < hours; h++) {
     switch (kind) {
       case LifeSkillKind.pesca:
-        _fishHour(p, t, rand, add, loot);
+        _fishHour(p, t, rand, add, loot, manual);
       case LifeSkillKind.cultivo:
-        _farmHour(p, t, rand, add, loot);
+        _farmHour(p, t, rand, add, loot, manual);
       case LifeSkillKind.herreria:
-        _smithHour(p, t, rand, add);
+        _smithHour(p, t, rand, add, manual);
     }
   }
-  return ParityResult(
-      kind, level, {for (final e in got.entries) e.key: e.value / hours});
+  return ParityResult(kind, level,
+      {for (final e in got.entries) e.key: e.value / hours}, score / hours,
+      manual: manual);
 }
 
+typedef _Add = void Function(Rarity r, [double? q]);
+
 void _fishHour(PlayerProfile p, TuningDef t, double Function() rand,
-    void Function(Rarity) add, LootRules loot) {
+    _Add add, LootRules loot, bool manual) {
+  final lv = FishingRules.level(p);
+  final qSunken =
+      GearV2Rules.quality(level: lv, materials: 0.8, manual: manual);
+  final qFish = GearV2Rules.quality(level: lv, materials: 1, manual: manual);
   final n = (t.d('parityCatchesPerHour') * (1 - t.d('parityAutoShare')))
       .round();
   final rb = FishingRules.rodBonus(p);
@@ -162,13 +183,13 @@ void _fishHour(PlayerProfile p, TuningDef t, double Function() rand,
     switch (kind) {
       case WaterLootKind.arma:
         if (rand() < GearRules.sunkenChance(p, depth)) {
-          add(GearRules.sunkenRarity(rand, p));
+          add(GearRules.sunkenRarity(rand, p), qSunken);
         } else {
           add(loot.rollRarity(rand, il, LootSource.chest));
         }
       case WaterLootKind.cofre:
         if (rand() < GearRules.sunkenChestChance(p)) {
-          add(GearRules.sunkenRarity(rand, p));
+          add(GearRules.sunkenRarity(rand, p), qSunken);
         }
       case WaterLootKind.fish:
         final c = FishingRules.roll(rand, lake, rareBonus: rb.rare, pity: pity);
@@ -176,9 +197,11 @@ void _fishHour(PlayerProfile p, TuningDef t, double Function() rand,
         // Every legendary goes to the fish forge (gold assumed).
         if (c.rarity == FishRarity.legendario &&
             FishingRules.level(p) >= t.i('fishForgeLevel')) {
-          add(rand() < GearRules.fishForgeLegend(p)
-              ? Rarity.legendario
-              : Rarity.epico);
+          add(
+              rand() < GearRules.fishForgeLegend(p)
+                  ? Rarity.legendario
+                  : Rarity.epico,
+              qFish);
         }
       default:
     }
@@ -186,7 +209,7 @@ void _fishHour(PlayerProfile p, TuningDef t, double Function() rand,
 }
 
 void _farmHour(PlayerProfile p, TuningDef t, double Function() rand,
-    void Function(Rarity) add, LootRules loot) {
+    _Add add, LootRules loot, bool manual) {
   // Weapon seeds of the hour: tree searches, orders, cave chests and the
   // mutations of the crop harvests of the other plots.
   var seeds = 0.0;
@@ -220,12 +243,14 @@ void _farmHour(PlayerProfile p, TuningDef t, double Function() rand,
         waterQ: FarmingRules.personScore(p, FarmingRules.canOf(p)),
         waterings: 4,
         composts: composts);
-    add(GearRules.rarityOf(GearRules.quality(p, plot, rand())));
+    final q = GearV2Rules.quality(
+        level: lv, materials: old ? 1 : 0.5, manual: manual);
+    add(GearRules.rarityOf(GearRules.quality(p, plot, rand())), q);
   }
 }
 
 void _smithHour(PlayerProfile p, TuningDef t, double Function() rand,
-    void Function(Rarity) add) {
+    _Add add, bool manual) {
   final lv = SmithRules.level(p);
   final biome = kBiomeOres.values
       .where((b) => b.tier <= 1 + lv ~/ 8)
@@ -243,19 +268,27 @@ void _smithHour(PlayerProfile p, TuningDef t, double Function() rand,
   final (per, _) = SmithCraftRules.smeltCost(biome.ore)!;
   var ingots = ore ~/ per;
   ingots += (ingots * GearRules.smeltDouble(p)).round();
-  // Forge the best rarity the smith can (Legendary needs a recipe from a
-  // boss: not part of an hour of smithing).
-  var r = SmithCraftRules.maxRarity(lv);
+  // v2 forge by parts (profession_gear_v2.md § 3): base + head + grip of
+  // the best ingot, a biome rare as setting; rarity by quality, capped by
+  // the smith level (Legendary needs a boss recipe: not part of an hour).
+  final v2 = tuning(TuningId.gearV2);
+  final perWeapon = v2.i('partsBaseIngots') + 2;
+  final q = (GearV2Rules.quality(
+              level: lv, materials: biome.tier / 5, manual: manual) +
+          v2.d('settingQ'))
+      .clamp(0.0, 1.0)
+      .toDouble();
+  var r = GearV2Rules.rarityForQ(q);
+  final cap = SmithCraftRules.maxRarity(lv);
+  if (r.index > cap.index) r = cap;
   if (r == Rarity.legendario) r = Rarity.epico;
-  if (r.index < Rarity.raro.index) return;
-  final c = SmithCraftRules.cost(p.level, biome.ingot, r)!;
-  var n = ingots ~/ math.max(1, c.ingots);
-  if (c.rares > 0) n = math.min(n, rares ~/ c.rares);
+  var n = ingots ~/ perWeapon;
+  n = math.min(n, rares);
   for (var i = 0; i < n; i++) {
     // Forja B: sometimes one rarity up (Epic tops it).
     final up = rand() < LifeTreeRules.smith(p, LifeFx.forgeAffix) &&
         rand() < t.d('forgeTierShare') &&
         r.index < Rarity.epico.index;
-    add(up ? Rarity.values[r.index + 1] : r);
+    add(up ? Rarity.values[r.index + 1] : r, q);
   }
 }

@@ -722,7 +722,7 @@ abstract final class SmithCraftRules {
       SmithMatKind.ingot => t.i('ingotPricePerTier') * tier,
       SmithMatKind.rare => t.i('rarePricePerTier') * tier,
       SmithMatKind.special => t.i('specialPrice'),
-      SmithMatKind.tool || SmithMatKind.supply => 0,
+      SmithMatKind.tool || SmithMatKind.supply || SmithMatKind.fishPart => 0,
     };
   }
 }
@@ -800,7 +800,10 @@ abstract final class SmithCollection {
       SmithMatKind.ingot => [('forge', id)],
       SmithMatKind.rare => [('rare', kBiomeOres[d.biome]!.ingot)],
       SmithMatKind.special => [('legend', id)],
-      SmithMatKind.tool || SmithMatKind.supply => const [],
+      SmithMatKind.tool ||
+      SmithMatKind.supply ||
+      SmithMatKind.fishPart =>
+        const [],
     };
   }
 }

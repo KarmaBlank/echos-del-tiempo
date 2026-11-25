@@ -216,7 +216,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
 /// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
 /// (`life.tv`, `life.rf` refund notice).
-/// 93: profession gear v2 (forge by parts, living weapons).
+/// 93: profession gear v2 (profession_gear_v2.md § 7): `SmithOp.forgeParts`
+/// (`b` type, `g` base ingot, `p` parts) and `SmithOp.fishSplit`; items
+/// carry `pt` (parts) and `mw` (masterwork); fish parts `fp_*` in `ore`;
+/// living weapon seeds for every type but the rifle.
 /// 94: biome layout v4 (biome_exploration.md § 7): every world's exteriors
 /// regenerate; wilds / tree-search keys carry `v4`, so a 92 peer would
 /// read today's marks under `v3` and see used spots as fresh.

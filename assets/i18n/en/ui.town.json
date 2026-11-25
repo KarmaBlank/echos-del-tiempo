@@ -835,5 +835,13 @@
   "ui.town.journal.recipe_missing": "Missing harvest for this recipe",
   "ui.town.compost.leaf_mulch": "Leaf mulch",
   "ui.town.compost.herb_compost": "Herb compost",
-  "ui.town.compost.mushroom_compost": "Mushroom compost"
+  "ui.town.compost.mushroom_compost": "Mushroom compost",
+  "ui.town.forge.fish_other_time": "Fish of the other time",
+  "ui.town.forge.fish_affinity": "Affinity: {v}",
+  "ui.town.forge.fish_split": "TAKE APART",
+  "ui.town.forge.fish_split_yield": "Yields {n} {part}",
+  "ui.town.forge.fish_split_hint": "Taking it apart uses up the fish (₵{gold}); the parts go to the forge by parts.",
+  "ui.town.forge.fish_parts_only": "An Epic fish can only be taken apart.",
+  "ui.town.forge.fish_split_level": "Needs Fishing {lv}",
+  "ui.town.forge.fish_split_none": "You don't have that fish"
 }

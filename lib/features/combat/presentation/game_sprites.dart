@@ -87,6 +87,17 @@ class GameSprites {
           catalog.image(e).then((img) {
             if (img != null) ItemIconImages.put(e.key, img);
           }),
+      // Recolour layers (profession_gear_v2.md § 6): kept as pixels.
+      for (final e in catalog.entries)
+        if (e.section == 'items' &&
+            (e.key.endsWith('_head') || e.key.endsWith('_grip')))
+          catalog.image(e).then((img) async {
+            final b =
+                await img?.toByteData(format: ui.ImageByteFormat.rawRgba);
+            if (b != null) {
+              ItemIconImages.putLayer(e.key, b.buffer.asUint8List());
+            }
+          }),
     ]);
     // Procedural trees and bushes (procedural_vegetation.md § 4): cached
     // once; on failure the map keeps its fallback drawing.

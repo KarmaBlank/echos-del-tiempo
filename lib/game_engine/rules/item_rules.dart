@@ -10,6 +10,7 @@ import '../data/uniques_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../data/weapons_catalog.dart' show kWeaponTypeCategory;
 import '../models/item.dart';
+import 'gear_v2_rules.dart' show GearV2Rules;
 import 'break_rules.dart';
 import '../models/skill.dart' show SkillDelivery;
 import '../models/upgrade_stat.dart';
@@ -56,10 +57,10 @@ class ItemRules {
 
   /// Cuántos mods más entran respetando el total y el lado del afijo.
   bool hasRoomFor(ItemInstance i, AffixDef a) {
-    if (i.affixes.length >= i.rarity.maxMods) return false;
+    if (i.affixes.length >= i.modCap) return false;
     if (i.affixes.any((x) => x.affixId == a.id)) return false;
     final side = a.slot == AffixSlot.prefix ? prefixCount(i) : suffixCount(i);
-    return side < i.rarity.affixSideCap;
+    return side < i.sideCap;
   }
 
   /// Afijos que todavía pueden salir en [i] (tipo, lado, cupo y nivel).
@@ -276,6 +277,22 @@ class ItemRules {
       ((kBranchUltWeaponTypes[ultId]?.contains(type) ?? false) ||
           _v2Mod(ultId, type));
 
+  /// Whether [i] is a profession weapon (`gear-` mark in its uid,
+  /// profession_gear.md § 1).
+  static bool isProfessionGear(ItemInstance i) => i.uid.contains('gear-');
+
+  /// ULT a profession weapon may keep (profession_gear_v2.md § 1): any
+  /// path or v2 ULT of its type, a legendary one on a Legendary.
+  static bool gearUltAllowed(Rarity rarity, String type, String? ultId) {
+    if (ultId == null || rarity.index < Rarity.raro.index) return false;
+    if (kBranchUltWeaponTypes[ultId]?.contains(type) ?? false) return true;
+    final u = kUltV2[ultId];
+    return u != null &&
+        u.weapons.contains(type) &&
+        (u.source == UltSource.weaponMod ||
+            (u.source == UltSource.unique && rarity == Rarity.legendario));
+  }
+
   static bool _v2Mod(String id, String type) {
     final u = kUltV2[id];
     return u != null &&
@@ -294,7 +311,11 @@ class ItemRules {
     if (w == null) return null;
     var rarity = raw.rarity;
     final unique = raw.uniqueId == null ? null : kUniques[raw.uniqueId];
+    // Profession weapons (profession_gear.md, `gear-` mark) are Legendary
+    // without a unique: an Epic made Legendary with a weapon passive.
+    final gear = isProfessionGear(raw) && unique == null;
     if (rarity == Rarity.legendario &&
+        !gear &&
         (unique == null || unique.baseId != raw.baseId)) {
       rarity = Rarity.epico;
     }
@@ -304,13 +325,21 @@ class ItemRules {
       rarity: rarity,
       itemLevel: raw.itemLevel.clamp(1, maxItemLevel),
       name: raw.name,
-      uniqueId: rarity == Rarity.legendario ? raw.uniqueId : null,
-      ultId: ultModAllowed(rarity, w.type, raw.ultId) ? raw.ultId : null,
+      uniqueId: rarity == Rarity.legendario && !gear ? raw.uniqueId : null,
+      ultId: ultModAllowed(rarity, w.type, raw.ultId) ||
+              (gear && gearUltAllowed(rarity, w.type, raw.ultId))
+          ? raw.ultId
+          : null,
+      // Profession gear v2 (profession_gear_v2.md § 7): its parts and the
+      // masterwork mod (before the affixes, so the cap counts it).
+      // v1 weapons get `['v1', <affinity>]` (migration, § 8).
+      parts: gear ? GearV2Rules.migrate(raw).parts : raw.parts,
+      masterwork: raw.masterwork && rarity.maxMods > 0,
       quebrarReplaced: raw.quebrarReplaced,
       // Elemento de base (weapon_identity.md § 4): el legendario recibe
       // el de su tema (migración de los guardados sin el campo); Raro y
       // Épico conservan el suyo; Común y Mágico nunca.
-      element: rarity == Rarity.legendario
+      element: rarity == Rarity.legendario && !gear
           ? uniqueWeaponElement(raw.uniqueId!)
           : rarityAllowsElement(rarity)
               ? raw.element
@@ -322,7 +351,10 @@ class ItemRules {
       if (def == null || !def.allows(w.type)) continue;
       final probe = item.copyWith(affixes: kept);
       if (!hasRoomFor(probe, def)) continue;
-      if (a.fixed) {
+      if (a.fixed && gear) {
+        // A profession weapon's signature / compost mods: fixed, kept.
+        kept.add(a);
+      } else if (a.fixed) {
         if (rarity != Rarity.legendario) continue;
         // Del piso escalado al techo de diseño: lo nuevo sale escalado y
         // bajar los viejos es la migración (combo_balance.md § 6b).
@@ -340,7 +372,9 @@ class ItemRules {
     final pdef = passive == null ? null : kWeaponPassives[passive];
     if (!rarity.hasPassive ||
         pdef == null ||
-        (rarity == Rarity.legendario && passive != unique!.passiveId) ||
+        (rarity == Rarity.legendario &&
+            !gear &&
+            passive != unique!.passiveId) ||
         (rarity == Rarity.epico && pdef.unique)) {
       passive = null;
     }

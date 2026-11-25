@@ -11,7 +11,9 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
+import '../../../game_engine/data/smithing_catalog.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../../game_engine/rules/gear_v2_rules.dart';
 import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -207,6 +209,27 @@ String? weaponElementMarkup(ItemInstance it) {
           '+$pct % a habilidades de $name')}';
 }
 
+/// Profession gear v2 (profession_gear_v2.md § 1, § 5–7): where the
+/// weapon comes from, its affinity, parts and masterwork. `null` = not v2.
+String? gearOriginMarkup(ItemInstance it) {
+  final pt = it.parts;
+  if (pt.isEmpty) return null;
+  final aff = GearV2Rules.affinityOf(it);
+  final hex = elementHex(aff);
+  String mat(String id) => _esc(kSmithMaterials[id]?.name ?? id);
+  final origin = switch (pt.first) {
+    'living' => 'Arma viva (crece del abono que más tiene)',
+    'fish' => 'Forjada por Brann de un pez del otro tiempo',
+    'v1' => 'Arma de oficio',
+    _ => 'Forjada por piezas: ${[for (final x in pt) mat(x)].join(' · ')}',
+  };
+  return [
+    _c(_dim, _esc(origin)),
+    _c(hex, 'Afinidad ${_esc(aff.label)} (elige el elemento y el pool de ULT)'),
+    if (it.masterwork) _c(kPassiveHex, 'Obra maestra: +1 mod sobre el máximo'),
+  ].join('<br>');
+}
+
 String tipSubFold(String head, String detail) =>
     '$head\u0001${detail.replaceAll('<br>', '\u0002')}';
 
@@ -359,7 +382,7 @@ String itemTooltipMarkup(
   final element = weaponElementMarkup(it);
   final el = weaponElementOf(it);
   final counts = [
-    if (hasMods) 'Mods ${it.modCount}/${it.rarity.maxMods}',
+    if (hasMods) 'Mods ${it.modCount}/${it.modCap}',
     if (el != null) _c(elementHex(el), _esc(el.label)),
     if (passive != null) _c(kPassiveHex, 'Pasiva'),
     '${skills.length} ${skills.length == 1 ? 'habilidad' : 'habilidades'}',
@@ -371,6 +394,7 @@ String itemTooltipMarkup(
     sections: [
       ('Mods', mods.join('<br>')),
       if (element != null) ('Elemento', element),
+      if (gearOriginMarkup(it) case final g?) ('Oficio', g),
       if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(modShort(passive)))),
       ('Habilidades', _skillFolds(rules, it, stats).join('<br>')),
       ('Peso y forja', weight.join('<br>')),

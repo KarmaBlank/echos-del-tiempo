@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/profession_gear_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/rules/gear_v2_rules.dart';
 import 'package:echos_del_tiempo/game_engine/data/smithing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/uniques_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapon_passives.dart';
@@ -46,6 +47,10 @@ Map<String, Map<String, String>> catalogSource() {
     for (final e in kGearTypeNames.entries)
       'data.items.gear.type.${gearTypeKey(e.key)}': e.value,
     'data.items.gear.fish.name': '{type} de {fish}',
+    // Profession gear v2 (profession_gear_v2.md § 3).
+    'data.items.gear.parts.name': '{type} de {metal}',
+    for (final i in kIngotAffinity.keys)
+      'data.items.gear.metal.$i': GearV2Rules.metalName(i),
   };
   final crafting = <String, String>{
     for (final a in kAffixes.values) ItemKeys.affixName(a.id): a.name,
