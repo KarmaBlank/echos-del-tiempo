@@ -13,6 +13,7 @@ import 'package:echos_del_tiempo/game_engine/data/ascension_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -103,27 +104,71 @@ void main() {
     expect(c.session!.players[c.localId]!.profile.ascension.id, 'cronomante');
   });
 
-  testWidgets('mini-árbol: tomar, puntos y reiniciar', (tester) async {
+  testWidgets('árbol v2: ramas, tomar, prerrequisitos, tooltip y reiniciar',
+      (tester) async {
     final c = await pumpPanel(tester,
         profile: _hero(level: 40, trials: {1, 2}, asc: 'elementalista'),
         engine: sessionEngine(zones: true),
         build: (v, c) => AscensionPanel(view: v, controller: c));
     expect(find.byKey(const ValueKey('asc-tree')), findsOneWidget);
-    expect(plain(tester, 'asc-points'), contains('Puntos libres 4'));
-    await tapVisible(tester, find.byKey(const ValueKey('asc-node-elementalista_b1')));
+    for (var i = 0; i < 5; i++) {
+      expect(find.byKey(ValueKey('asc-branch-$i')), findsOneWidget);
+    }
+    // 51 nodes on the canvas.
+    expect(
+        find.byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key! as ValueKey<String>).value.startsWith('asc-node-elementalista_')),
+        findsNWidgets(51));
+    expect(plain(tester, 'asc-points'), contains('Puntos libres 14'));
+    // Tier 3 of branch 2 needs tiers 1 and 2 first.
+    await tapVisible(
+        tester, find.byKey(const ValueKey('asc-node-elementalista_b1')));
     expect(plain(tester, 'asc-node-detail'), contains('Chispa Compartida'));
+    expect(button(tester, 'asc-take').reason, 'No está conectado');
+    await tapVisible(
+        tester, find.byKey(const ValueKey('asc-node-elementalista_m21')));
+    expect(plain(tester, 'asc-node-detail'), contains('Precisión'));
     await tapVisible(tester, find.byKey(const ValueKey('asc-take')));
     expect(c.session!.players[c.localId]!.profile.ascension.nodes,
-        ['elementalista_b1']);
+        ['elementalista_m21']);
     await tester.pump();
-    expect(plain(tester, 'asc-points'), contains('Puntos libres 3'));
-    // b3 sin b2: no conectado.
-    await tapVisible(tester, find.byKey(const ValueKey('asc-node-elementalista_b3')));
-    expect(button(tester, 'asc-take').reason, 'No está conectado');
+    expect(plain(tester, 'asc-points'), contains('Puntos libres 13'));
+    // A Trades node taken without its condition says it has no effect.
+    await tapVisible(
+        tester, find.byKey(const ValueKey('asc-node-elementalista_of1')));
+    await tapVisible(tester, find.byKey(const ValueKey('asc-take')));
+    await tester.pump();
+    expect(plain(tester, 'asc-node-detail'), contains('Sin efecto ahora'));
     await tapVisible(tester, find.byKey(const ValueKey('asc-reset')));
     expect(c.session!.players[c.localId]!.profile.ascension.nodes, isEmpty);
     await tapVisible(tester, find.byKey(const ValueKey('asc-change')));
     expect(c.session!.players[c.localId]!.profile.ascension.id, isNull);
+  });
+
+  testWidgets('árbol v2: hover muestra el tooltip del nodo', (tester) async {
+    tester.view.physicalSize = const Size(1600, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+      theme: RetroTheme.build(),
+      home: Scaffold(
+        body: AscensionTreeView(
+          def: kAscensions['berserker']!,
+          progress: const AscensionProgress(
+              trials: {1}, id: 'berserker', nodes: ['berserker_m11']),
+        ),
+      ),
+    )));
+    final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await g.addPointer(location: Offset.zero);
+    addTearDown(g.removePointer);
+    await g.moveTo(tester.getCenter(
+        find.byKey(const ValueKey('asc-node-berserker_m12'))));
+    await tester.pumpAndSettle();
+    expect(find.text('Filo'), findsWidgets);
+    expect(find.textContaining('+2% ATQ'), findsWidgets);
   });
 
   Future<void> pumpCine(WidgetTester tester, {int? at, VoidCallback? done}) async {

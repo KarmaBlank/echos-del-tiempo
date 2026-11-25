@@ -57,6 +57,9 @@ class CatalogKeys {
   static String ascMotto(String id) => 'data.passives.asc.${seg(id)}.motto';
   static String ascNodeName(String id) =>
       'data.passives.ascnode.${seg(id)}.name';
+  /// Name of branch [i] (0–4) of ascension [asc] (ascension.md § 3.2).
+  static String ascBranch(String asc, int i) =>
+      'data.passives.ascbranch.${asc}_$i';
   static String ascNodeText(String id) =>
       'data.passives.ascnode.${seg(id)}.text';
   static String element(GameElement e) => 'data.elements.element.${e.name}';
@@ -118,6 +121,9 @@ Map<String, String> sourceCatalogTexts() {
     put(CatalogKeys.ascName(a.id), a.name);
     put(CatalogKeys.ascTheme(a.id), a.theme);
     put(CatalogKeys.ascMotto(a.id), a.motto);
+    for (final (i, b) in branchesOf(a.id).indexed) {
+      put(CatalogKeys.ascBranch(a.id, i), b.name);
+    }
     for (final n in a.nodes) {
       put(CatalogKeys.ascNodeName(n.id), n.name);
       put(CatalogKeys.ascNodeText(n.id), n.text);

@@ -36,7 +36,7 @@ templates:
       - {lvl: 44, node: verdugo_k}
     ascension:
       id: berserker
-      order: [berserker_a1, berserker_a2, berserker_a3, berserker_k]
+      order: [berserker_m11, berserker_m12, berserker_a1, berserker_m14, berserker_m15, berserker_a2, berserker_m17, berserker_m18, berserker_m19, berserker_a3, berserker_m31, berserker_m32, berserker_c1]
     attributes:
       - {from: 2, to: 17, attr: FUE}
       - {from: 18, to: 33, attr: VIT}
@@ -77,7 +77,7 @@ templates:
       - {lvl: 40, node: glaciar_k}
     ascension:
       id: senorGuerra
-      order: [senorGuerra_b1, senorGuerra_b2, senorGuerra_b3, senorGuerra_k]
+      order: [senorGuerra_m21, senorGuerra_m22, senorGuerra_b1, senorGuerra_m24, senorGuerra_m25, senorGuerra_b2, senorGuerra_m27, senorGuerra_m28, senorGuerra_m29, senorGuerra_b3, senorGuerra_m31, senorGuerra_m32, senorGuerra_c1]
     attributes:
       - {from: 2, to: 17, attr: FUE}
       - {from: 18, to: 29, attr: DES}
@@ -121,7 +121,7 @@ templates:
       - {lvl: 45, node: filo_nc}
     ascension:
       id: senorGuerra
-      order: [senorGuerra_a1, senorGuerra_a2, senorGuerra_a3, senorGuerra_k]
+      order: [senorGuerra_m11, senorGuerra_m12, senorGuerra_a1, senorGuerra_m14, senorGuerra_m15, senorGuerra_a2, senorGuerra_m17, senorGuerra_m18, senorGuerra_m19, senorGuerra_a3, senorGuerra_m31, senorGuerra_m32, senorGuerra_c1]
     attributes:
       - {from: 2, to: 17, attr: FUE}
       - {from: 18, to: 27, attr: DES}
@@ -161,7 +161,7 @@ templates:
       - {lvl: 41, node: forja_k}
     ascension:
       id: berserker
-      order: [berserker_b1, berserker_b2, berserker_b3, berserker_k]
+      order: [berserker_m21, berserker_m22, berserker_b1, berserker_m24, berserker_m25, berserker_b2, berserker_m27, berserker_m28, berserker_m29, berserker_b3, berserker_m31, berserker_m32, berserker_c1]
     attributes:
       - {from: 2, to: 3, attr: ESP}
       - {from: 4, to: 19, attr: FUE}
@@ -203,7 +203,7 @@ templates:
       - {lvl: 44, node: vanguardia_nd}
     ascension:
       id: senorGuerra
-      order: [senorGuerra_a1, senorGuerra_a2, senorGuerra_a3, senorGuerra_k]
+      order: [senorGuerra_m11, senorGuerra_m12, senorGuerra_a1, senorGuerra_m14, senorGuerra_m15, senorGuerra_a2, senorGuerra_m17, senorGuerra_m18, senorGuerra_m19, senorGuerra_a3, senorGuerra_m31, senorGuerra_m32, senorGuerra_c1]
     attributes:
       - {from: 2, to: 17, attr: FUE}
       - {from: 18, to: 35, attr: VIT}
@@ -246,7 +246,7 @@ templates:
       - {lvl: 42, node: marea_k}
     ascension:
       id: elementalista
-      order: [elementalista_a1, elementalista_a2, elementalista_a3, elementalista_k]
+      order: [elementalista_m11, elementalista_m12, elementalista_a1, elementalista_m14, elementalista_m15, elementalista_a2, elementalista_m17, elementalista_m18, elementalista_m19, elementalista_a3, elementalista_m31, elementalista_m32, elementalista_c1]
     attributes:
       - {from: 2, to: 17, attr: ESP}
       - {from: 18, to: 29, attr: VIT}
@@ -288,7 +288,7 @@ templates:
       - {lvl: 42, node: alquimia_k}
     ascension:
       id: cronomante
-      order: [cronomante_b1, cronomante_b2, cronomante_b3, cronomante_k]
+      order: [cronomante_m21, cronomante_m22, cronomante_b1, cronomante_m24, cronomante_m25, cronomante_b2, cronomante_m27, cronomante_m28, cronomante_m29, cronomante_b3, cronomante_m31, cronomante_m32, cronomante_c1]
     attributes:
       - {from: 2, to: 17, attr: ESP}
       - {from: 18, to: 29, attr: VIT}
@@ -328,7 +328,7 @@ templates:
       - {lvl: 42, node: galvanica_k}
     ascension:
       id: elementalista
-      order: [elementalista_a1, elementalista_a2, elementalista_a3, elementalista_k]
+      order: [elementalista_m11, elementalista_m12, elementalista_a1, elementalista_m14, elementalista_m15, elementalista_a2, elementalista_m17, elementalista_m18, elementalista_m19, elementalista_a3, elementalista_m31, elementalista_m32, elementalista_c1]
     attributes:
       - {from: 2, to: 17, attr: ESP}
       - {from: 18, to: 29, attr: AGI}
@@ -371,7 +371,7 @@ templates:
       - {lvl: 40, node: forja_k}
     ascension:
       id: elementalista
-      order: [elementalista_b1, elementalista_b2, elementalista_b3, elementalista_k]
+      order: [elementalista_m21, elementalista_m22, elementalista_b1, elementalista_m24, elementalista_m25, elementalista_b2, elementalista_m27, elementalista_m28, elementalista_m29, elementalista_b3, elementalista_m31, elementalista_m32, elementalista_c1]
     attributes:
       - {from: 2, to: 2, attr: AGI}
       - {from: 3, to: 18, attr: ESP}
@@ -413,7 +413,7 @@ templates:
       - {lvl: 40, node: estandarte_nt}
     ascension:
       id: cronomante
-      order: [cronomante_a1, cronomante_a2, cronomante_a3, cronomante_k]
+      order: [cronomante_m11, cronomante_m12, cronomante_a1, cronomante_m14, cronomante_m15, cronomante_a2, cronomante_m17, cronomante_m18, cronomante_m19, cronomante_a3, cronomante_m31, cronomante_m32, cronomante_c1]
     attributes:
       - {from: 2, to: 17, attr: ESP}
       - {from: 18, to: 27, attr: AGI}
@@ -456,7 +456,7 @@ templates:
       - {lvl: 42, node: centella_k}
     ascension:
       id: francotirador
-      order: [francotirador_a1, francotirador_a2, francotirador_a3, francotirador_k]
+      order: [francotirador_m11, francotirador_m12, francotirador_a1, francotirador_m14, francotirador_m15, francotirador_a2, francotirador_m17, francotirador_m18, francotirador_m19, francotirador_a3, francotirador_m31, francotirador_m32, francotirador_c1]
     attributes:
       - {from: 2, to: 17, attr: DES}
       - {from: 18, to: 20, attr: FUE}
@@ -497,7 +497,7 @@ templates:
       - {lvl: 42, node: monteria_k}
     ascension:
       id: trampero
-      order: [trampero_b1, trampero_b2, trampero_b3, trampero_k]
+      order: [trampero_m21, trampero_m22, trampero_b1, trampero_m24, trampero_m25, trampero_b2, trampero_m27, trampero_m28, trampero_m29, trampero_b3, trampero_m31, trampero_m32, trampero_c1]
     attributes:
       - {from: 2, to: 17, attr: DES}
       - {from: 18, to: 28, attr: AGI}
@@ -537,7 +537,7 @@ templates:
       - {lvl: 42, node: centella_k}
     ascension:
       id: francotirador
-      order: [francotirador_b1, francotirador_b2, francotirador_b3, francotirador_k]
+      order: [francotirador_m21, francotirador_m22, francotirador_b1, francotirador_m24, francotirador_m25, francotirador_b2, francotirador_m27, francotirador_m28, francotirador_m29, francotirador_b3, francotirador_m31, francotirador_m32, francotirador_c1]
     attributes:
       - {from: 2, to: 17, attr: DES}
       - {from: 18, to: 28, attr: AGI}
@@ -576,7 +576,7 @@ templates:
       - {lvl: 41, node: eclipse_k}
     ascension:
       id: trampero
-      order: [trampero_a1, trampero_a2, trampero_a3, trampero_k]
+      order: [trampero_m11, trampero_m12, trampero_a1, trampero_m14, trampero_m15, trampero_a2, trampero_m17, trampero_m18, trampero_m19, trampero_a3, trampero_m31, trampero_m32, trampero_c1]
     attributes:
       - {from: 2, to: 17, attr: DES}
       - {from: 18, to: 25, attr: AGI}
@@ -615,7 +615,7 @@ templates:
       - {lvl: 40, node: centinela_n1}
     ascension:
       id: trampero
-      order: [trampero_b1, trampero_b2, trampero_b3, trampero_k]
+      order: [trampero_m21, trampero_m22, trampero_b1, trampero_m24, trampero_m25, trampero_b2, trampero_m27, trampero_m28, trampero_m29, trampero_b3, trampero_m31, trampero_m32, trampero_c1]
     attributes:
       - {from: 2, to: 17, attr: DES}
       - {from: 18, to: 28, attr: AGI}
@@ -658,7 +658,7 @@ templates:
       - {lvl: 41, node: vinculo_nt}
     ascension:
       id: guardian
-      order: [guardian_b1, guardian_b2, guardian_b3, guardian_k]
+      order: [guardian_m21, guardian_m22, guardian_b1, guardian_m24, guardian_m25, guardian_b2, guardian_m27, guardian_m28, guardian_m29, guardian_b3, guardian_m31, guardian_m32, guardian_c1]
     attributes:
       - {from: 2, to: 2, attr: ESP}
       - {from: 3, to: 17, attr: VIT}
@@ -699,7 +699,7 @@ templates:
       - {lvl: 42, node: exorcismo_k}
     ascension:
       id: templario
-      order: [templario_b1, templario_b2, templario_b3, templario_k]
+      order: [templario_m21, templario_m22, templario_b1, templario_m24, templario_m25, templario_b2, templario_m27, templario_m28, templario_m29, templario_b3, templario_m31, templario_m32, templario_c1]
     attributes:
       - {from: 2, to: 2, attr: VIT}
       - {from: 3, to: 18, attr: FUE}
@@ -739,7 +739,7 @@ templates:
       - {lvl: 42, node: pararrayos_k}
     ascension:
       id: guardian
-      order: [guardian_a1, guardian_a2, guardian_a3, guardian_k]
+      order: [guardian_m11, guardian_m12, guardian_a1, guardian_m14, guardian_m15, guardian_a2, guardian_m17, guardian_m18, guardian_m19, guardian_a3, guardian_m31, guardian_m32, guardian_c1]
     attributes:
       - {from: 2, to: 4, attr: FUE}
       - {from: 5, to: 15, attr: ESP}
@@ -779,7 +779,7 @@ templates:
       - {lvl: 41, node: manantial_na}
     ascension:
       id: templario
-      order: [templario_a1, templario_a2, templario_a3, templario_k]
+      order: [templario_m11, templario_m12, templario_a1, templario_m14, templario_m15, templario_a2, templario_m17, templario_m18, templario_m19, templario_a3, templario_m31, templario_m32, templario_c1]
     attributes:
       - {from: 2, to: 17, attr: ESP}
       - {from: 18, to: 33, attr: VIT}
@@ -819,7 +819,7 @@ templates:
       - {lvl: 40, node: manantial_n1}
     ascension:
       id: guardian
-      order: [guardian_a1, guardian_a2, guardian_a3, guardian_k]
+      order: [guardian_m11, guardian_m12, guardian_a1, guardian_m14, guardian_m15, guardian_a2, guardian_m17, guardian_m18, guardian_m19, guardian_a3, guardian_m31, guardian_m32, guardian_c1]
     attributes:
       - {from: 2, to: 2, attr: ESP}
       - {from: 3, to: 17, attr: VIT}

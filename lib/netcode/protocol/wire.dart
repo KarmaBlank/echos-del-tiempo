@@ -190,7 +190,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `qmv` reorders, `qr` in the battle snapshot.
 /// 80: Echo fusion (ecos_atlas.md § 4.2): the `ecoFuse` action.
 /// 81: profession-material gifts (share_materials.md): `giveLife` action.
-const kProtocolVersion = 81;
+/// 82: ascension tree v2 (ascension.md § 3): build `ms` (Echoes Mastery)
+/// and the tree version `v` in `asc`.
+const kProtocolVersion = 82;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -76,7 +76,7 @@ class TrialRules {
       ascension: p.ascension.copyWith(trials: {...p.ascension.trials, n}));
 
   /// Puntos que da cada Prueba.
-  static const points = AscensionProgress.pointsPerTrial;
+  static int get points => AscensionProgress.pointsPerTrial;
 
   // ------------------------------------------------------------------
   // Mazmorra (§ 1)

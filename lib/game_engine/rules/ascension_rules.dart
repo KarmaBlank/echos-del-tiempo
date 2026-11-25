@@ -1,4 +1,5 @@
 import '../data/ascension_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../models/ascension.dart';
 import '../models/player_profile.dart';
 
@@ -25,6 +26,17 @@ class AscensionRules {
   }
 
   int free(AscensionProgress a) => a.earned - spent(a);
+
+  /// Capstones (tier 10) that can be taken (Settings → Ascension, § 3.0).
+  static int get maxCapstones =>
+      kTuning[TuningId.ascension]?.i('maxCapstones') ?? 1;
+
+  /// Capstones taken in [a].
+  int capstones(AscensionProgress a) {
+    final def = kAscensions[a.id];
+    if (def == null) return 0;
+    return a.nodes.where((n) => def.node(n)?.capstone ?? false).length;
+  }
 
   /// Tiene el nodo (la raíz cuenta si eligió esa ascensión).
   bool has(AscensionProgress a, String nodeId) {
@@ -63,6 +75,9 @@ class AscensionRules {
       return 'Faltan puntos (${free(a)}/${node.cost})';
     }
     if (!node.links.any((l) => has(a, l))) return 'No está conectado';
+    if (node.capstone && capstones(a) >= maxCapstones) {
+      return 'Ya tenés tu cúspide';
+    }
     return null;
   }
 
@@ -98,6 +113,7 @@ class AscensionRules {
       if (free(out) < node.cost || !node.links.any((l) => has(out, l))) {
         continue;
       }
+      if (node.capstone && capstones(out) >= maxCapstones) continue;
       out = out.copyWith(nodes: [...out.nodes, n]);
     }
     return out;

@@ -6,7 +6,7 @@ Entrega de endgame.md § 4 (Ascensión), § 8 ("la ascensión tiene que
 Fragmentos, Grietas del Atlas y Temporadas.
 
 Código: `lib/game_engine/models/ascension.dart` (modelo y progreso),
-`data/ascension_catalog.dart` (8 ascensiones, 64 nodos, kit),
+`data/ascension_catalog.dart` (8 ascensiones, 51 nodos cada una, kit),
 `data/ascension_mechanics.dart` (mecánicas de los nodos),
 `rules/ascension_rules.dart` (elegir, tomar, reiniciar),
 `rules/trial_rules.dart` (Pruebas, mazmorra con trampas, recompensas),
@@ -66,11 +66,11 @@ enemigos también: no los afectan).
 ### 1.2 Recompensa y co-op
 
 - Cada jugador presente al vencer al jefe que todavía no tenía esa
-  Prueba, con el nivel pedido y la Prueba anterior hecha, gana **2 puntos
-  de ascensión** (en su perfil). Los demás acompañan (loot normal). Así
+  Prueba, con el nivel pedido y la Prueba anterior hecha, gana **`pointsPerTrial`
+  puntos de ascensión** (Ajustes → Ascensión, 7; en su perfil). Los demás acompañan (loot normal). Así
   en grupo **cada uno gana sus propios puntos**; solo es igual de
   jugable (el escalado de siempre baja vida y quiebre).
-- Puntos: 2 por Prueba → **6 máximo**. Con la primera Prueba se
+- Puntos: 7 por Prueba → **21 máximo** (v0.49; antes 2 → 6). Con la primera Prueba se
   desbloquea la elección de ascensión.
 - Aviso: `<nombre> superó la Prueba del Tiempo I: +2 puntos de
   ascensión`. Si todavía no eligió: `Elegí tu ascensión en la Estatua
@@ -103,145 +103,313 @@ enemigos también: no los afectan).
     (lobby / preparación). Volver a elegir repite la cinemática.
   - Cambiar de clase saca la ascensión (las Pruebas hechas se quedan).
 - JSON del perfil (opcional, perfiles v0.4 cargan sin ascensión):
-  `asc: {tr: [1,2], id: 'cronomante', n: ['cronomante_a1', ...]}`.
+  `asc: {v: 2, tr: [1,2], id: 'cronomante', n: ['cronomante_m11', ...]}`
+  (sin `v`: árbol viejo, se devuelven los puntos, § 3.1b).
   `ProgressionRules.normalize` descarta lo inválido (Pruebas fuera de
   1–3 o sin la anterior, ascensión de otra clase o sin la Prueba I,
   nodos que no se podrían tomar en orden).
 
-## 3. Mini-árbol (8 nodos por ascensión)
+## 3. Árbol de ascensión v2 (10 escalones, 5 ramas)
 
-Forma (igual en las 8; x, y en celdas del lienzo):
+Desde v0.49 (pedido del dueño) el mini-árbol de 8 nodos pasa a un
+**árbol de 51 nodos por ascensión**: la raíz (gratis al elegir) y
+**5 ramas de 10 escalones** cada una. Las 3 primeras ramas son propias de
+la ascensión (crecen desde los nodos de siempre), la 4.ª (**Ecos**) es
+la del tiempo que se repite y la 5.ª (**Oficios**) premia lo que da el
+pueblo: comida, armas forjadas, oficios y la Maestría de los Ecos. La
+rama de Oficios nunca es obligatoria: sus nodos solo valen si se cumple
+su condición, y las otras 4 ramas no la necesitan.
+
+Código: `models/ascension.dart` (`AscensionNode`, `AscNodeKind`,
+`AscCondition`), `data/ascension_catalog.dart` (forma y ramas),
+`data/ascension_mechanics.dart` (mecánicas), `rules/ascension_rules.dart`
+(tomar, tope de cúspides, migración), `rules/stats_calculator.dart`
+(stats y condiciones). Números en **Ajustes → Ascensión**
+(`TuningId.ascension`, `BalanceKind.ascension`); mecánicas en
+**Mecánicas** del admin (como hasta ahora).
+
+### 3.0 Forma (igual en las 8)
 
 ```
-           R (0,0)  raíz, gratis al elegir
-      A1 (-1,1)       B1 (1,1)     costo 1
-      A2 (-1,2)       B2 (1,2)     costo 1
-      A3 (-1,3)       B3 (1,3)     costo 2 (mayor)
-              K (0,4)              costo 2, se une a A3 y a B3
+                         R  (escalón 0)
+      ┌─────────┬─────────┼─────────┬─────────┐
+   rama 1    rama 2    rama 3     Ecos     Oficios
+     1 menor · 2 menor · 3 NOTABLE · 4 menor · 5 menor
+     6 NOTABLE · 7 menor · 8 menor · 9 MAYOR · 10 CÚSPIDE
 ```
 
-Costo total 10, puntos 6: se elige (una rama entera + la final, una rama
-+ media otra, ...). Un nodo se toma si hay puntos libres y está unido a
-uno tomado. Ids: `<asc>_r`, `_a1`, `_a2`, `_a3`, `_b1`, `_b2`, `_b3`,
-`_k`. Cada nodo es una **mecánica** de datos (`PassiveMechanic`, mismo
-sistema de disparadores de passive_tree_v2.md § 5) salvo `Sobrecarga`
-(stats).
+| Escalón | Tipo (`AscNodeKind`) | Costo | Qué da |
+|---|---|---|---|
+| 0 | `root` | 0 | la mecánica de identidad (§ 3.3), gratis al elegir |
+| 1, 2, 4, 5, 7, 8 | `minor` | 1 | el stat de la rama × 1 (§ 3.2) |
+| 3, 6 | `notable` | 2 | una mecánica (tabla de cada ascensión) |
+| 9 | `major` | 2 | stat de la rama × 2 + el segundo stat × 1 |
+| 10 | `capstone` | 3 | la mecánica mayor de la rama |
 
-### Guerrero · Berserker (vida baja = más daño, robo de vida)
+- Costo de una rama entera: 6 × 1 + 2 + 2 + 2 + 3 = **15**; el árbol
+  entero, **75**.
+- **Reglas** (`AscensionRules.cannotTake`): hay puntos libres; el nodo
+  está unido a uno tomado (escalón 1 → raíz; escalón n → escalón n − 1
+  de la misma rama: la progresión es de arriba abajo, sin saltos); y
+  como mucho **`maxCapstones` cúspides** (Ajustes, 1): la cúspide es la
+  identidad del build.
+- Puntos: **`pointsPerTrial` por Prueba** (Ajustes, **7** → 21 con las
+  3). Con 21 alcanza para una rama entera (15) y bajar 4–5 escalones de
+  otra, o repartir tres ramas hasta su primer notable y algo más. Nunca
+  alcanza para todo: cada personaje elige una forma.
+- Ids: raíz `<asc>_r`; menores y mayor `<asc>_m<rama><escalón>`
+  (`berserker_m11`, `berserker_m19`; rama 1–5, escalón 1–9); notables y
+  cúspides de las ramas 1–3 conservan los ids de v0.5 (`_a1`, `_a2`,
+  `_a3`, `_b1`...`_k`) más `_c1`, `_c2`; rama Ecos `_e1`, `_e2`, `_e3`;
+  rama Oficios `_of1`…`_of10` (todos sus nodos son de Oficios).
+- Lienzo: `x` = rama (0–4), `y` = escalón (0–10). La raíz está en
+  `x = 2, y = 0`.
 
-| Nodo | Nombre | Efecto |
+### 3.1b Migración (v0.48 → v0.49)
+
+El JSON del progreso suma `v: 2`. Un progreso sin `v` (árbol de 8
+nodos) **devuelve todos los puntos**: conserva Pruebas y ascensión
+elegida y vacía los nodos (`AscensionProgress.fromJson`). Los ids viejos
+existen en el árbol nuevo pero en otro escalón, así que nunca se
+reinterpretan. Los puntos libres los avisa el badge de siempre
+(`unused_points.dart`).
+
+### 3.2 Stats de las ramas (Ajustes → Ascensión)
+
+Un menor da `minor<Stat>` del stat de su rama; el mayor (escalón 9) da
+el doble de ese stat y uno del segundo stat. Valores por defecto
+(fracción, salvo DEF y VEL que son planos):
+
+| Ajuste | Stat (clave del árbol) | Valor |
 |---|---|---|
-| r | Sed Roja | Con menos de 50% de vida, cada acción que golpea hace que tu próximo turno llegue **50% antes** (turno parcial). |
-| a1 | Furia Creciente | +0.8% de daño por cada 1% de vida que te falta (con 10% de vida: +72%). |
-| a2 | Golpe Desesperado | Con menos de 30% de vida **todos tus golpes son críticos**. |
-| a3 | Carnicero | Al matar: **turno extra inmediato** (uno por acción; un turno extra no da otro). |
-| b1 | Sangre por Sangre | Con menos de 50% de vida robás 30% del daño que hacés. |
-| b2 | Cicatrices | Al recibir un golpe con menos de 50% de vida: escudo del 12% de tu vida máx. (1 turno). |
-| b3 | Inmortal | El primer golpe que te dejaría en 0 te deja en **1 HP** (1 vez por batalla). |
-| k | Berserker Desatado | Con menos de 50% de vida, cada acción que golpea da +15 de carga de ULT. |
+| `minorHp` | vida máx. (`hp`) | 0.02 |
+| `minorAtk` | ATQ (`atk`) | 0.02 |
+| `minorMag` | MAG (`mag`) | 0.02 |
+| `minorDef` | DEF (`def`) | 1 |
+| `minorCrit` | crítico (`crit`) | 0.01 |
+| `minorSpd` | VEL (`spd`) | 0.1 |
+| `minorUlt` | carga de ULT (`ult`) | 0.03 |
+| `minorHeal` | curación (`heal`) | 0.03 |
 
-### Guerrero · Señor de la Guerra (gritos que buffean al grupo)
+Una rama entera de ATQ suma 6 × 2% + 4% = **+16% ATQ**, bastante menos
+que un tramo de loot (combo_balance.md § 2): el salto de la ascensión
+siguen siendo las mecánicas, no los números. Las cargas de ULT nuevas
+(4–8 por disparo) quedan bajo el tope de 15 de combat.md § "Carga de
+ULT extra" y pasan por `_bonusUlt`.
 
-| Nodo | Nombre | Efecto |
+Stats de cada rama (el de los menores / el segundo del mayor):
+
+| Ascensión | Rama 1 | Rama 2 | Rama 3 | Ecos | Oficios |
+|---|---|---|---|---|---|
+| Berserker | Furia: atk / crit | Sangre: hp / def | Rugido: ult / spd | spd / ult | § 3.5 |
+| Señor de la Guerra | Mando: ult / atk | Bandera: def / hp | Tambor: atk / spd | spd / ult | § 3.5 |
+| Cronomante | Retraso: mag / spd | Sincronía: spd / hp | Reloj: ult / mag | spd / ult | § 3.5 |
+| Elementalista | Reacción: mag / ult | Chispa: crit / mag | Tormenta: ult / spd | spd / ult | § 3.5 |
+| Francotirador | Marca: crit / atk | Recarga: atk / ult | Gatillo: spd / crit | spd / ult | § 3.5 |
+| Trampero | Trampa: atk / hp | Área: crit / atk | Cazador: ult / spd | spd / ult | § 3.5 |
+| Templario | Condena: mag / crit | Aura: hp / def | Fervor: ult / mag | spd / ult | § 3.5 |
+| Guardián | Escudo: def / hp | Mártir: hp / heal | Juramento: heal / def | spd / ult | § 3.5 |
+
+Nombres de los menores (por stat, `ui.ascension.minor.<stat>`): Vigor,
+Filo, Arcano, Temple, Precisión, Prisa, Ímpetu, Bálsamo. El mayor se
+llama `Juramento · <rama>` (`ui.ascension.major_name`). Su texto se arma
+de los stats (`+2% ATQ.`), así que siempre muestra el valor de Ajustes.
+
+### 3.3 Notables y cúspides de cada ascensión
+
+Las mecánicas de v0.5 se quedan con sus números (y sus ids); cambian de
+escalón. `c1` / `c2` son nuevas. Rama 1 = escalones 3 / 6 / 10:
+`a1` / `a2` / `a3`; rama 2: `b1` / `b2` / `b3`; rama 3: `c1` / `c2` / `k`.
+
+#### Guerrero · Berserker
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Sed Roja | Con menos de 50% de vida, cada acción que golpea adelanta tu próximo turno 50%. |
+| R1 · 3 | a1 | Furia Creciente | +0.8% de daño por cada 1% de vida que te falta. |
+| R1 · 6 | a2 | Golpe Desesperado | Con menos de 30% de vida todos tus golpes son críticos. |
+| R1 · 10 | a3 | Carnicero | Al matar: turno extra inmediato (uno por acción). |
+| R2 · 3 | b1 | Sangre por Sangre | Con menos de 50% de vida robás 30% del daño que hacés. |
+| R2 · 6 | b2 | Cicatrices | Al recibir un golpe con menos de 50% de vida: escudo del 12% de tu vida máx. (1 turno). |
+| R2 · 10 | b3 | Inmortal | El primer golpe que te dejaría en 0 te deja en 1 HP (1 vez por batalla). |
+| R3 · 3 | c1 | Herida Que Ruge | Al recibir un golpe con menos de 50% de vida: +8 de carga de ULT. |
+| R3 · 6 | c2 | Sangre Hirviente | Con menos de 50% de vida hacés +15% de daño. |
+| R3 · 10 | k | Berserker Desatado | Con menos de 50% de vida, cada acción que golpea da +15 de carga de ULT. |
+
+#### Guerrero · Señor de la Guerra
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Voz de Mando | Tus gritos adelantan a cada aliado 25% de su espera. |
+| R1 · 3 | a1 | Eco del Grito | Tus buffs de grupo duran +1 turno. |
+| R1 · 6 | a2 | Inspiración | Al empezar tu turno, cada aliado gana +6 de carga de ULT. |
+| R1 · 10 | a3 | Estratega | Cuando cualquier aliado quiebra a un enemigo: +20% ATQ al grupo (2 turnos). |
+| R2 · 3 | b1 | Bandera Firme | Mientras estés en pie, el grupo recibe −10% de daño. |
+| R2 · 6 | b2 | Muralla de Voces | Tus gritos dan a cada aliado un escudo del 8% de tu vida máx. (2 turnos). |
+| R2 · 10 | b3 | Último Bastión | Cuando cae un aliado: el resto gana +30% ATQ y −20% de daño recibido (3 turnos). |
+| R3 · 3 | c1 | Tambor de Guerra | Tus gritos dan +8 de carga de ULT a cada aliado. |
+| R3 · 6 | c2 | Orden de Avance | Cuando cualquier aliado quiebra a un enemigo: el grupo se adelanta 15%. |
+| R3 · 10 | k | Señor de la Guerra | Tus buffs de grupo son 50% más fuertes. |
+
+#### Maga · Cronomante
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Bucle Temporal | Al retrasar a un enemigo, el aliado más lento se adelanta 30%. |
+| R1 · 3 | a1 | Ecos del Reloj | Tus retrasos son 50% más largos. |
+| R1 · 6 | a2 | Ancla del Tiempo | Al retrasar a un enemigo con ULT, pierde 20 de carga. |
+| R1 · 10 | a3 | Tiempo Robado | Al retrasar: tu próximo turno llega 35% antes. |
+| R2 · 3 | b1 | Sincronía | Al empezar tu turno, el aliado más lento se adelanta 15%. |
+| R2 · 6 | b2 | Contratiempo | Al recibir un golpe, el atacante se retrasa 30%. |
+| R2 · 10 | b3 | Instante Eterno | Al usar tu ULT, todos los aliados actúan ya. |
+| R3 · 3 | c1 | Arena Que Cae | Al retrasar a un enemigo: +6 de carga de ULT. |
+| R3 · 6 | c2 | Segundo Prestado | Al usar tu ULT: tu próximo turno llega 40% antes. |
+| R3 · 10 | k | Desfase | Los enemigos que retrasás reciben +20% de daño de todos (2 turnos). |
+
+#### Maga · Elementalista
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Catalizadora | Tus reacciones pegan +25%. |
+| R1 · 3 | a1 | Conductora | Al mojar a un enemigo, también queda Cargado. |
+| R1 · 6 | a2 | Sobrecarga | +1 stack a toda Quemadura, Congelación y Veneno que aplicás (Ajustes `overloadStacks`). |
+| R1 · 10 | a3 | Detonación en Cadena | Al detonar una reacción: 40% del golpe a cada otro enemigo. |
+| R2 · 3 | b1 | Chispa Compartida | Cuando una reacción consume un estado que preparaste: +12 de carga de ULT. |
+| R2 · 6 | b2 | Estática | +25% de crítico contra enemigos Cargados. |
+| R2 · 10 | b3 | Eco Elemental | 35% de que una habilidad mágica se repita gratis al 60%. |
+| R3 · 3 | c1 | Afinidad | Al detonar una reacción: +8 de carga de ULT. |
+| R3 · 6 | c2 | Resonancia | Cuando vos o un aliado detonan una reacción: +10% de daño (2 turnos). |
+| R3 · 10 | k | Tormenta Perfecta | Al detonar una reacción: 50% de turno extra. |
+
+#### Tirador · Francotirador
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Un Disparo, Una Baja | En acciones a un solo objetivo tus críticos hacen +0.75 de multiplicador. |
+| R1 · 3 | a1 | Marca Letal | Tu golpe a un solo objetivo lo marca: +15% de daño recibido (3 turnos). |
+| R1 · 6 | a2 | Tiro Seguro | +40% de crítico contra enemigos marcados. |
+| R1 · 10 | a3 | Ejecución | Rematás a enemigos comunes con menos de 20% de vida. |
+| R2 · 3 | b1 | Recarga | Al hacer crítico: +15 de carga de ULT. |
+| R2 · 6 | b2 | Concentración | Al hacer crítico a un solo objetivo: tu próximo turno llega 30% antes. |
+| R2 · 10 | b3 | Disparo Perforante | Tus críticos a un solo objetivo atraviesan al siguiente enemigo (75%). |
+| R3 · 3 | c1 | Pulso Quieto | Al empezar tu turno: +10% de crítico (1 turno). |
+| R3 · 6 | c2 | Ojo Paciente | +15% de daño contra enemigos marcados. |
+| R3 · 10 | k | Leyenda del Gatillo | Al hacer crítico: +0.5 de multiplicador de crítico (2 turnos). |
+
+#### Tirador · Trampero
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Maestro de Trampas | Tus golpes a un solo objetivo le dejan una trampa de ATQ × 0.6. |
+| R1 · 3 | a1 | Púas Envenenadas | Tus trampas aplican 2 Veneno al saltar. |
+| R1 · 6 | a2 | Trampa Persistente | Tus trampas saltan 1 turno más. |
+| R1 · 10 | a3 | Detonador | Al saltar una trampa, explota: 50% de su daño a cada otro enemigo. |
+| R2 · 3 | b1 | Lluvia Constante | Tus habilidades a todos hacen +25% de daño. |
+| R2 · 6 | b2 | Fragmentación | Tus habilidades a todos aplican 1 Veneno a cada golpeado. |
+| R2 · 10 | b3 | Campo de Muerte | Tus habilidades a todos dejan una trampa de ATQ × 0.4. |
+| R3 · 3 | c1 | Cebo | Al saltar una trampa tuya: +5 de carga de ULT. |
+| R3 · 6 | c2 | Red Tensa | Al saltar una trampa tuya: el enemigo atrapado se retrasa 15%. |
+| R3 · 10 | k | Cazador Supremo | Tus trampas hacen +80% de daño. |
+
+#### Paladín · Templario
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Martillo de la Fe | Al aturdir a un enemigo: daño sagrado MAG × 0.8 y +1 Sagrado. |
+| R1 · 3 | a1 | Condena | +35% de daño a enemigos aturdidos. |
+| R1 · 6 | a2 | Fervor | Al aturdir: +12 de carga de ULT. |
+| R1 · 10 | a3 | Sentencia | Tus golpes a aturdidos llenan la barra de quiebre al doble. |
+| R2 · 3 | b1 | Aura Sagrada | Mientras estés en pie, el grupo hace +10% de daño. |
+| R2 · 6 | b2 | Penitencia | Al recibir un golpe, el atacante recibe 2 Sagrado. |
+| R2 · 10 | b3 | Ira Divina | Mientras estés en pie, el Sagrado de los enemigos hace el doble. |
+| R3 · 3 | c1 | Vigilia | Al empezar tu turno: +5 de carga de ULT. |
+| R3 · 6 | c2 | Misericordia | Al usar tu ULT: el grupo se cura 8%. |
+| R3 · 10 | k | Avatar de Luz | Al usar tu ULT: el grupo se cura 20% y gana un escudo del 10% de tu vida máx. (3 turnos). |
+
+#### Paladín · Guardián
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 0 | r | Escudo Viviente | Al empezar tu turno, el aliado con menos vida gana un escudo del 10% de tu vida máx. (2 turnos). |
+| R1 · 3 | a1 | Égida Reflectante | Cuando un escudo tuyo absorbe un golpe, el atacante recibe el 50%. |
+| R1 · 6 | a2 | Escudos Duraderos | Tus escudos son 30% más grandes. |
+| R1 · 10 | a3 | Bastión Inquebrantable | Mientras estés en pie, el grupo recibe −15% de daño. |
+| R2 · 3 | b1 | Represalia del Guardián | Al recibir un golpe dirigido a un aliado: devolvés el 60%. |
+| R2 · 6 | b2 | Muralla Viviente | Al empezar tu turno, el grupo gana un escudo del 6% de tu vida máx. (1 turno). |
+| R2 · 10 | b3 | Mártir | El primer aliado que caería queda en 1 HP (1 vez por batalla). |
+| R3 · 3 | c1 | Centinela | Al recibir un golpe dirigido a un aliado: +8 de carga de ULT. |
+| R3 · 6 | c2 | Piedra Antigua | Al recibir un golpe: escudo del 6% de tu vida máx. (1 turno). |
+| R3 · 10 | k | Juramento Eterno | Mientras estés en pie, recibís el 25% del daño de tus aliados. |
+
+### 3.4 Rama Ecos (igual para las 8, ids `<asc>_e1..e3`)
+
+El tiempo se repite: lo que ya pasó vuelve a ayudarte. Stats: `spd`
+(menores) y `ult` (segundo del mayor).
+
+| Escalón | Nodo | Nombre | Efecto |
+|---|---|---|---|
+| 3 | e1 | Eco Que Persiste | Al empezar tu turno: +4 de carga de ULT. |
+| 6 | e2 | Paso Prestado | Al matar: tu próximo turno llega 30% antes. |
+| 10 | e3 | Lo Que Ya Fue Escrito | Al usar tu ULT: el grupo se adelanta 20% y gana +15% ATQ (2 turnos). |
+
+### 3.5 Rama Oficios (igual para las 8, ids `<asc>_of1..of10`)
+
+Lo que da el pueblo. Cada nodo tiene una **condición**
+(`AscCondition`); sin ella el nodo tomado no da nada (la ficha lo dice:
+`Sin efecto ahora: ...`). La evalúa `StatsCalculator` con el
+`PlayerBuild`:
+
+| Condición | Se cumple si | Ajuste |
 |---|---|---|
-| r | Voz de Mando | Tus gritos (habilidades de grupo y tu ULT) **adelantan a cada aliado 25%** de su espera (solo: tu propio próximo turno). |
-| a1 | Eco del Grito | Tus buffs de grupo duran +1 turno. |
-| a2 | Inspiración | Al empezar tu turno, cada aliado (no vos) gana +6 de carga de ULT. |
-| a3 | Estratega | Cuando **cualquier aliado quiebra** a un enemigo: +20% ATQ a todo el grupo (2 turnos). |
-| b1 | Bandera Firme | Mientras estés en pie, **todo el grupo recibe −10% de daño**. |
-| b2 | Muralla de Voces | Tus gritos dan a cada aliado un escudo del 8% de tu vida máx. (2 turnos). |
-| b3 | Último Bastión | Cuando cae un aliado: el resto gana +30% ATQ y −20% de daño recibido (3 turnos). |
-| k | Señor de la Guerra | Tus buffs de grupo son **50% más fuertes**. |
+| `meal` (comida) | comiste antes de la misión (`PlayerBuild.meal`) | — |
+| `forged` (forja) | el arma equipada tiene ≥ `forgedLevel` mejoras de forja | 3 |
+| `trade` (oficio) | tenés poder de aventurero de algún oficio (`lifeHp` o `lifeAtk` > 0) | — |
+| `mastery` (Ecos) | tu Maestría de los Ecos es ≥ `masteryLevel` (`PlayerBuild.mastery`) | 5 |
+| `town` (todas) | la cúspide: cuenta cuántas de las 4 se cumplen | — |
 
-### Maga · Cronomante (manipula el timeline)
+| Escalón | Nodo | Nombre | Condición | Da |
+|---|---|---|---|---|
+| 1 | of1 | Pan del Camino | comida | `hp` × 2 |
+| 2 | of2 | Filo Templado | forja | `atk` y `mag` × 1 |
+| 3 | of3 | Mesa Compartida | comida | `atk` y `mag` × 2, `ult` × 1 |
+| 4 | of4 | Manos de Oficio | oficio | `hp` × 2 |
+| 5 | of5 | Temple de Fragua | forja | `def` × 2 |
+| 6 | of6 | Memoria del Eco | Maestría | `atk` y `mag` × 2, `crit` × 2 |
+| 7 | of7 | Caldo de Viaje | comida | `ult` × 2 |
+| 8 | of8 | Oficio Paciente | oficio | `heal` × 2, `hp` × 1 |
+| 9 | of9 | Acero con Nombre | forja | `atk` y `mag` × 3 |
+| 10 | of10 | Corazón del Pueblo | todas | por cada condición cumplida, `townPerCondition` (0.03) de vida, ATQ y MAG |
 
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Bucle Temporal | Tus habilidades que **retrasan** también **adelantan al aliado más lento** 30% de su espera (solo: tu próximo turno). |
-| a1 | Ecos del Reloj | Tus retrasos son 50% más largos. |
-| a2 | Ancla del Tiempo | Al retrasar a un enemigo con ULT, pierde 20 de carga (si ya la avisó, no). |
-| a3 | Tiempo Robado | Al retrasar: tu próximo turno llega 35% antes. |
-| b1 | Sincronía | Al empezar tu turno, el aliado más lento se adelanta 15%. |
-| b2 | Contratiempo | Al recibir un golpe, el atacante se retrasa 30%. |
-| b3 | Instante Eterno | Al usar tu ULT, **todos los aliados actúan ya** (pasan al frente del timeline; solo: tu próximo turno llega 50% antes). |
-| k | Desfase | Los enemigos que retrasás reciben +20% de daño de todos (2 turnos). |
+(`× n` = n veces el `minor<Stat>` de Ajustes.) Los ayudantes del pueblo
+todavía no existen dentro de la batalla; cuando existan, entran como una
+condición más sin tocar los ids.
 
-### Maga · Elementalista (prepara y detona reacciones, v0.7)
+`PlayerBuild.mastery` es nuevo (JSON del build `ms`, opcional): por eso
+sube el protocolo (§ 6).
 
-Desde v0.7 (elemental_reactions.md § 4, § 4.1 de abajo) el kit y el
-mini-árbol giran alrededor de las reacciones: Prisma **prepara**,
-Detonar **detona**, y en co-op cualquier aliado puede detonar lo que
-ella preparó. Ids sin cambios.
+### 3.6 Panel del árbol (presentación v0.49)
 
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Catalizadora | Tus reacciones pegan **+25%** (el golpe que detona y, con él, la explosión y el salto). |
-| a1 | Conductora | Al mojar a un enemigo, también queda **Cargado**. |
-| a2 | Sobrecarga | +1 stack a toda Quemadura, Congelación y Veneno que aplicás (Explosiones tóxicas más grandes). |
-| a3 | Detonación en Cadena | Al detonar una reacción: **40% del golpe a cada otro enemigo**. |
-| b1 | Chispa Compartida | Cuando una reacción (tuya o de un aliado) consume un estado que preparaste: +12 de carga de ULT. |
-| b2 | Estática | +25% de crítico contra enemigos **Cargados**. |
-| b3 | Eco Elemental | 35% de que una habilidad mágica (no ULT) se repita gratis al 60%. |
-| k | Tormenta Perfecta | Al detonar una reacción: **50% de turno extra** (un turno extra no da otro). |
-
-### Tirador · Francotirador (críticos enormes a un objetivo)
-
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Un Disparo, Una Baja | En acciones a un solo objetivo tus críticos hacen **+0.75 de multiplicador**. |
-| a1 | Marca Letal | Tu golpe a un solo objetivo lo marca: +15% de daño recibido (3 turnos). |
-| a2 | Tiro Seguro | +40% de crítico contra enemigos marcados. |
-| a3 | Ejecución | Tus golpes a un solo objetivo **rematan** a enemigos (no jefes ni élites) que queden con menos de 20% de vida. |
-| b1 | Recarga | Al hacer crítico: +15 de carga de ULT. |
-| b2 | Concentración | Al hacer crítico a un solo objetivo: tu próximo turno llega 30% antes. |
-| b3 | Disparo Perforante | Al hacer crítico a un solo objetivo: el disparo atraviesa al siguiente enemigo con el 75% del daño. |
-| k | Leyenda del Gatillo | Al hacer crítico: +0.5 de multiplicador de crítico (2 turnos, renueva). |
-
-### Tirador · Trampero (trampas y daño en área)
-
-Una **trampa** es un efecto con duración sobre un enemigo (`BuffStat.trap`,
-valor = daño): salta **al empezar el turno del enemigo** (daño
-secundario del dueño, `DamageEvent.sourceId` = la mecánica) mientras le
-queden turnos (base 1: salta una vez). Trampas de orígenes distintos no
-se pisan; la del mismo origen se renueva. Daño = `ATQ del dueño × poder
-× (1 + Cazador Supremo)`.
-
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Maestro de Trampas | Tus golpes a un solo objetivo le dejan una trampa de ATQ × 0.6. |
-| a1 | Púas Envenenadas | Tus trampas aplican 2 Veneno al saltar. |
-| a2 | Trampa Persistente | Tus trampas saltan 1 turno más (+1 turno). |
-| a3 | Detonador | Al saltar una trampa, explota: 50% de su daño a cada otro enemigo. |
-| b1 | Lluvia Constante | Tus habilidades a todos (no ULT) hacen +25% de daño. |
-| b2 | Fragmentación | Tus habilidades a todos aplican 1 Veneno a cada golpeado. |
-| b3 | Campo de Muerte | Tus habilidades a todos dejan una trampa de ATQ × 0.4 en cada golpeado. |
-| k | Cazador Supremo | Tus trampas hacen +80% de daño. |
-
-### Paladín · Templario (daño sagrado y aturdir)
-
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Martillo de la Fe | Al aturdir a un enemigo: daño sagrado MAG × 0.8 y +1 Sagrado. |
-| a1 | Condena | +35% de daño a enemigos aturdidos. |
-| a2 | Fervor | Al aturdir: +12 de carga de ULT. |
-| a3 | Sentencia | Tus golpes a aturdidos llenan la barra de **quiebre al doble**. |
-| b1 | Aura Sagrada | Mientras estés en pie, **todo el grupo hace +10% de daño**. |
-| b2 | Penitencia | Al recibir un golpe, el atacante recibe 2 Sagrado. |
-| b3 | Ira Divina | Mientras estés en pie, el Sagrado de los enemigos hace el doble por turno. |
-| k | Avatar de Luz | Al usar tu ULT: el grupo se cura 20% y gana un escudo del 10% de tu vida máx. (3 turnos). |
-
-### Paladín · Guardián (escudos y protección del grupo)
-
-| Nodo | Nombre | Efecto |
-|---|---|---|
-| r | Escudo Viviente | Al empezar tu turno, el aliado con menor % de vida (vos incluido) gana un escudo del 10% de tu vida máx. (2 turnos). |
-| a1 | Égida Reflectante | Cuando un escudo tuyo absorbe un golpe, el atacante recibe el 50% de lo absorbido. |
-| a2 | Escudos Duraderos | Tus escudos son 30% más grandes. |
-| a3 | Bastión Inquebrantable | Mientras estés en pie, **todo el grupo recibe −15% de daño**. |
-| b1 | Represalia del Guardián | Al recibir un golpe dirigido a un aliado (Protección): devolvés el 60%. |
-| b2 | Muralla Viviente | Al empezar tu turno, todo el grupo gana un escudo del 6% de tu vida máx. (1 turno). |
-| b3 | Mártir | El primer aliado (o vos) que caería por un golpe queda en **1 HP** (1 vez por batalla por Guardián). |
-| k | Juramento Eterno | Mientras estés en pie, **recibís el 25% del daño** que reciben tus aliados (tus escudos lo absorben). |
+- Lienzo con **5 columnas** (ramas) × **11 filas** (escalones), con el
+  nombre de cada rama arriba (`asc-branch-<i>`) y los números de
+  escalón a la izquierda. Scroll vertical si no entra; los nodos nunca
+  bajan de 26 px.
+- Formas (pixel, sin redondear): menor = cuadrado chico; notable =
+  rombo; mayor = cuadrado grande; cúspide = cuadrado grande con doble
+  marco; raíz = cuadrado grande con el color de la ascensión.
+- Estados: **tomado** (relleno del color de la ascensión), **disponible**
+  (marco del color y el costo adentro), **bloqueado** (gris),
+  **sin efecto** (tomado pero su condición de Oficios no se cumple:
+  relleno a media opacidad). Conexiones: línea de 2 px del color si las
+  dos puntas están tomadas, gris si no.
+- Hover: `DsTooltip` + `DsTooltipCard` (ancho fijo del DS): nombre, tipo
+  y costo, texto y estado; con TEXTOS en RESUMIDO el texto pasa por
+  `plainShort` (por eso cada texto empieza con una oración que se
+  entiende sola y deja el detalle entre paréntesis o en la segunda).
+- Clic: selecciona; la ficha de la derecha (`DsDetailPane`) muestra el
+  nodo (`asc-node-detail`), los puntos (`asc-points`) y los botones
+  REINICIAR · CAMBIAR · TOMAR (deshabilitado en gris con el motivo).
+- Vista previa: `docs/preview/ascension_tree_<id>.png` (test con
+  `ASC_TREE_PREVIEW=1`).
 
 ### 3.1 Reglas del motor (además de passive_tree_v2.md § 5)
 
@@ -395,6 +563,7 @@ cambiar).`
 
 ## 6. Red
 
+- v0.49: `kProtocolVersion` 82 (build `ms` = Maestría, progreso `v`).
 - Protocolo `kProtocolVersion` 5. Acciones `trial`, `ascChoose`,
   `ascNode`, `ascReset`, `devTrial`; eventos `trialDone`, `ascChosen`,
   `trap`; sesión `trial`; perfil `asc`; build del combatiente `asc`;

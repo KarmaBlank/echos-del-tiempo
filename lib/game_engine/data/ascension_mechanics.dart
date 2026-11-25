@@ -8,7 +8,190 @@ import '../models/status.dart';
 /// Mecánicas de ascensión por id.
 final Map<String, PassiveMechanic> kAscensionMechanics = {
   for (final m in _list) m.id: m,
+  for (final m in _treeV2) m.id: m,
+  for (final a in kAscensionIds) ...{
+    for (final m in _echoBranch(a)) m.id: m,
+  },
 };
+
+/// The 8 ascension ids (fixed contract with the art; ascension.md § 2).
+const kAscensionIds = [
+  'berserker',
+  'senorGuerra',
+  'cronomante',
+  'elementalista',
+  'francotirador',
+  'trampero',
+  'templario',
+  'guardian',
+];
+
+/// Echoes branch (ascension.md § 3.4): the same three mechanics for every
+/// ascension, with ids `<asc>_e1..e3`.
+List<PassiveMechanic> _echoBranch(String a) => [
+      PassiveMechanic(
+        id: '${a}_e1',
+        name: 'Eco Que Persiste',
+        trigger: ProcTrigger.onTurnStart,
+        effects: const [ProcEffect(ProcEffectKind.ultCharge, value: 4)],
+        description: 'Al empezar tu turno: +4 de carga de ULT (lo que ya '
+            'pasó vuelve a sonar).',
+      ),
+      PassiveMechanic(
+        id: '${a}_e2',
+        name: 'Paso Prestado',
+        trigger: ProcTrigger.onKill,
+        effects: const [ProcEffect(ProcEffectKind.advanceTurn, value: 0.30)],
+        description: 'Al matar: tu próximo turno llega 30% antes.',
+      ),
+      PassiveMechanic(
+        id: '${a}_e3',
+        name: 'Lo Que Ya Fue Escrito',
+        trigger: ProcTrigger.onUltimate,
+        effects: const [
+          ProcEffect(ProcEffectKind.advanceParty, value: 0.20),
+          ProcEffect(ProcEffectKind.buffParty,
+              value: 0.15, turns: 2, stat: BuffStat.attack),
+        ],
+        description: 'Al usar tu ULT: el grupo se adelanta 20% y gana +15% '
+            'ATQ (2 turnos; solo: tu próximo turno).',
+      ),
+    ];
+
+/// New notables of branch 3 (ascension.md § 3.3, v0.49): `<asc>_c1`, `_c2`.
+const List<PassiveMechanic> _treeV2 = [
+  PassiveMechanic(
+    id: 'berserker_c1',
+    name: 'Herida Que Ruge',
+    trigger: ProcTrigger.onHitTaken,
+    filter: ProcFilter.belowThreshold,
+    threshold: 0.5,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 8)],
+    description: 'Al recibir un golpe con menos de 50% de vida: +8 de carga '
+        'de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'berserker_c2',
+    name: 'Sangre Hirviente',
+    trigger: ProcTrigger.whileLowHealth,
+    threshold: 0.5,
+    effects: [ProcEffect(_fx, value: 0.15, stat: BuffStat.damage)],
+    description: 'Con menos de 50% de vida hacés +15% de daño.',
+  ),
+  PassiveMechanic(
+    id: 'senorGuerra_c1',
+    name: 'Tambor de Guerra',
+    trigger: ProcTrigger.onSkill,
+    filter: ProcFilter.rallySkill,
+    effects: [ProcEffect(ProcEffectKind.ultChargeParty, value: 8)],
+    description: 'Tus gritos dan +8 de carga de ULT a cada aliado (no a vos).',
+  ),
+  PassiveMechanic(
+    id: 'senorGuerra_c2',
+    name: 'Orden de Avance',
+    trigger: ProcTrigger.onBreak,
+    effects: [ProcEffect(ProcEffectKind.advanceParty, value: 0.15)],
+    description: 'Cuando cualquier aliado quiebra a un enemigo: el grupo se '
+        'adelanta 15% (solo: tu próximo turno).',
+  ),
+  PassiveMechanic(
+    id: 'cronomante_c1',
+    name: 'Arena Que Cae',
+    trigger: ProcTrigger.onDelayApplied,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 6)],
+    description: 'Al retrasar a un enemigo: +6 de carga de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'cronomante_c2',
+    name: 'Segundo Prestado',
+    trigger: ProcTrigger.onUltimate,
+    effects: [ProcEffect(ProcEffectKind.advanceTurn, value: 0.40)],
+    description: 'Al usar tu ULT: tu próximo turno llega 40% antes.',
+  ),
+  PassiveMechanic(
+    id: 'elementalista_c1',
+    name: 'Afinidad',
+    trigger: ProcTrigger.onReaction,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 8)],
+    description: 'Al detonar una reacción: +8 de carga de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'elementalista_c2',
+    name: 'Resonancia',
+    trigger: ProcTrigger.onPartyReaction,
+    effects: [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: 0.10, turns: 2, stat: BuffStat.damage)
+    ],
+    description: 'Cuando vos o un aliado detonan una reacción: +10% de daño '
+        '(2 turnos, renueva).',
+  ),
+  PassiveMechanic(
+    id: 'francotirador_c1',
+    name: 'Pulso Quieto',
+    trigger: ProcTrigger.onTurnStart,
+    effects: [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: 0.10, turns: 1, stat: BuffStat.crit)
+    ],
+    description: 'Al empezar tu turno: +10% de crítico (1 turno).',
+  ),
+  PassiveMechanic(
+    id: 'francotirador_c2',
+    name: 'Ojo Paciente',
+    trigger: ProcTrigger.vsMarked,
+    effects: [ProcEffect(_fx, value: 0.15, stat: BuffStat.damage)],
+    description: '+15% de daño contra enemigos marcados.',
+  ),
+  PassiveMechanic(
+    id: 'trampero_c1',
+    name: 'Cebo',
+    trigger: ProcTrigger.onTrap,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 5)],
+    description: 'Al saltar una trampa tuya: +5 de carga de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'trampero_c2',
+    name: 'Red Tensa',
+    trigger: ProcTrigger.onTrap,
+    effects: [ProcEffect(ProcEffectKind.delayTarget, value: 0.15)],
+    description: 'Al saltar una trampa tuya: el enemigo atrapado se retrasa '
+        '15%.',
+  ),
+  PassiveMechanic(
+    id: 'templario_c1',
+    name: 'Vigilia',
+    trigger: ProcTrigger.onTurnStart,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 5)],
+    description: 'Al empezar tu turno: +5 de carga de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'templario_c2',
+    name: 'Misericordia',
+    trigger: ProcTrigger.onUltimate,
+    effects: [ProcEffect(ProcEffectKind.healParty, value: 0.08)],
+    description: 'Al usar tu ULT: el grupo se cura 8% de su vida máx.',
+  ),
+  PassiveMechanic(
+    id: 'guardian_c1',
+    name: 'Centinela',
+    trigger: ProcTrigger.onProtectHit,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 8)],
+    description: 'Al recibir un golpe dirigido a un aliado: +8 de carga de '
+        'ULT.',
+  ),
+  PassiveMechanic(
+    id: 'guardian_c2',
+    name: 'Piedra Antigua',
+    trigger: ProcTrigger.onHitTaken,
+    effects: [
+      ProcEffect(ProcEffectKind.shieldSelf,
+          value: 0.06, turns: 1, stat: BuffStat.shield)
+    ],
+    description: 'Al recibir un golpe: escudo del 6% de tu vida máx. (1 '
+        'turno).',
+  ),
+];
 
 const _fx = ProcEffectKind.statBonus;
 
