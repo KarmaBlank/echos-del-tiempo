@@ -20,6 +20,7 @@ import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/memo.dart';
 import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout, kBiomes;
+import '../../../../game_engine/rules/biome_regions.dart' show BiomeLayout;
 import '../../../../game_engine/rules/map_discovery_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -323,8 +324,33 @@ class WorldHud extends StatelessWidget {
                     LayoutId(
                       id: _TopSlot.minimap,
                       child: Consumer(builder: (context, ref, _) {
-                        final zoom = ref.watch(
+                        // Biome exteriors open close, framed on the way from
+                        // the arrival to the portals; the player's own zoom
+                        // is kept for the session (biome_exploration.md §
+                        // 11.3).
+                        final biome = biomeExteriorOf(view);
+                        final picked = ref.watch(biomeMinimapZoomProvider);
+                        final saved = ref.watch(
                             gameSettingsProvider.select((g) => g.minimapZoom));
+                        final double? biomeCell = biome == null
+                            ? null
+                            : picked == null
+                                ? biomeMinimapCell(biome)
+                                : hudMinimapCell(view, picked);
+                        final zoom = biome == null
+                            ? saved
+                            : picked ?? biomeMinimapLevel(view, biomeCell!);
+                        // From the framed default `-` steps to the level just
+                        // below it (which may share the level number).
+                        final cur = biomeCell ?? hudMinimapCell(view, zoom);
+                        final down = biomeCell != null &&
+                                cur > hudMinimapCell(view, zoom) + 1e-6
+                            ? zoom
+                            : zoom - 1;
+                        void setZoom(int z) => biome == null
+                            ? setMinimapZoom(ref, z)
+                            : ref.read(biomeMinimapZoomProvider.notifier).state =
+                                z.clamp(1, GameSettings.minimapZooms);
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
@@ -336,11 +362,12 @@ class WorldHud extends StatelessWidget {
                               child: Listener(
                                 onPointerSignal: (e) {
                                   if (e is PointerScrollEvent) {
-                                    setMinimapZoom(ref,
+                                    setZoom(
                                         zoom + (e.scrollDelta.dy < 0 ? 1 : -1));
                                   }
                                 },
-                                child: hudMinimap(view, controller, zoom: zoom),
+                                child: hudMinimap(view, controller,
+                                    zoom: zoom, cell: biomeCell),
                               ),
                             ),
                             // Tiempo en la mazmorra bajo el minimapa
@@ -355,7 +382,7 @@ class WorldHud extends StatelessWidget {
                             // Los botones no toman el foco (el teclado sigue en
                             // el juego).
                             Memo(
-                              deps: [zoom],
+                              deps: [zoom, down],
                               builder: (_) => ExcludeFocus(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -365,9 +392,8 @@ class WorldHud extends StatelessWidget {
                                         tooltip: context
                                             .t('ui.world.hud.minimap_out'),
                                         size: DsButtonSize.compact,
-                                        onPressed: zoom > 1
-                                            ? () =>
-                                                setMinimapZoom(ref, zoom - 1)
+                                        onPressed: down >= 1
+                                            ? () => setZoom(down)
                                             : null),
                                     SizedBox(width: DsSpace.xs),
                                     DsButton.icon(const Text('+'),
@@ -378,7 +404,7 @@ class WorldHud extends StatelessWidget {
                                         onPressed: zoom <
                                                 GameSettings.minimapZooms
                                             ? () =>
-                                                setMinimapZoom(ref, zoom + 1)
+                                                setZoom(zoom + 1)
                                             : null),
                                     SizedBox(width: DsSpace.xs),
                                     DsButton(context.t('ui.world.hud.map'),
@@ -1075,21 +1101,77 @@ OverworldOverlay? overworldOverlayFor(
   );
 }
 
-/// El minimapa del HUD con el zoom [zoom]: 1 = el piso entero; 2 y 3 =
-/// ventana de [kMinimapWindow] centrada en el jugador (exploration.md §
-/// "HUD").
-Minimap hudMinimap(SessionView view, SessionController controller,
-    {int zoom = 1}) {
+/// The minimap zoom the player picked in biome exteriors this session
+/// (`null` = the framed default, [biomeMinimapCell]).
+final biomeMinimapZoomProvider = StateProvider<int?>((ref) => null);
+
+/// The biome exterior the party stands in, or `null`.
+BiomeLayout? biomeExteriorOf(SessionView view) {
+  final s = view.session;
+  if (s.mode != SessionMode.lobby) return null;
+  final lay = biomeLayout(s.place);
+  if (lay == null || view.map.place != lay.id) return null;
+  return lay;
+}
+
+/// Cell (px per tile) of zoom level [zoom] on [view]'s map.
+double hudMinimapCell(SessionView view, int zoom) {
   final area = MapGame.currentFloor(view)?.bounds ??
       TileRect(0, 0, view.map.width, view.map.height);
-  // Zoom 1: the whole floor, shrunk to fit the window (§ 11.3).
-  final cell = zoom <= 1
+  return zoom <= 1
       ? [
           Minimap.baseCell,
           kMinimapWindow.width / area.w,
           kMinimapWindow.height / area.h,
         ].reduce((a, b) => a < b ? a : b)
       : Minimap.baseCell * zoom;
+}
+
+/// Default minimap cell in a biome exterior: the box from the arrival to
+/// the zone portals (plus a margin) fills the window, clamped between
+/// the whole-biome fit and the closest level. It does not change as
+/// more is discovered.
+double biomeMinimapCell(BiomeLayout lay, {int margin = 3}) {
+  final pts = <(int, int)>[
+    (lay.mainPath.first.$1, BiomeLayout.height - 3),
+    for (final (_, x, y) in lay.entrances) (x, y),
+  ];
+  var x0 = pts.first.$1, x1 = x0, y0 = pts.first.$2, y1 = y0;
+  for (final (x, y) in pts) {
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  final bw = (x1 - x0 + 1 + 2 * margin).toDouble();
+  final bh = (y1 - y0 + 1 + 2 * margin).toDouble();
+  final need = [kMinimapWindow.width / bw, kMinimapWindow.height / bh]
+      .reduce((a, b) => a < b ? a : b);
+  final fit = [
+    Minimap.baseCell,
+    kMinimapWindow.width / BiomeLayout.width,
+    kMinimapWindow.height / BiomeLayout.height,
+  ].reduce((a, b) => a < b ? a : b);
+  return need.clamp(fit, Minimap.baseCell * GameSettings.minimapZooms);
+}
+
+/// The zoom level a [cell] is closest to (for the `-` / `+` buttons).
+int biomeMinimapLevel(SessionView view, double cell) {
+  var best = 1;
+  for (var z = 1; z <= GameSettings.minimapZooms; z++) {
+    if (hudMinimapCell(view, z) <= cell + 1e-6) best = z;
+  }
+  return best;
+}
+
+/// El minimapa del HUD con el zoom [zoom]: 1 = el piso entero; 2 y 3 =
+/// ventana de [kMinimapWindow] centrada en el jugador (exploration.md §
+/// "HUD").
+Minimap hudMinimap(SessionView view, SessionController controller,
+    {int zoom = 1, double? cell}) {
+  // Zoom 1: the whole floor, shrunk to fit the window (§ 11.3).
+  final fit = hudMinimapCell(view, 1);
+  cell ??= hudMinimapCell(view, zoom);
   return Minimap(
     key: const ValueKey('hud-minimap'),
     map: view.map,
@@ -1109,7 +1191,7 @@ Minimap hudMinimap(SessionView view, SessionController controller,
       null => null,
     },
     cell: cell,
-    view: zoom <= 1
+    view: cell <= fit + 1e-6
         ? null
         : Size(kMinimapWindow.width / cell, kMinimapWindow.height / cell),
   );
