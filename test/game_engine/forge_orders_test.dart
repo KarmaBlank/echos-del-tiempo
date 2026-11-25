@@ -115,6 +115,6 @@ void main() {
     expect(hi.gold, greaterThan(lo.gold));
     expect(lo.gold, greaterThan(small.gold));
     expect(ResidentRules.forgeOrderXp(3), t().i('forgeOrderXp') * 4);
-    expect(QuestTrackRules.itemName(id), contains('Arco'));
+    expect(QuestTrackRules.itemName(id), id, reason: 'the UI localizes it');
   });
 }

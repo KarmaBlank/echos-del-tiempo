@@ -62,9 +62,7 @@ abstract final class QuestTrackRules {
   static String trackKey(QuestTrackKind k, String npc) => '${k.name}:$npc';
 
   static String itemName(String id) {
-    if (ResidentRules.parseForgeOrder(id) case (final type, final il)?) {
-      return '${type[0].toUpperCase()}${type.substring(1)} (nv $il+)';
-    }
+    // Forged weapon orders: the UI names them (`questItemText`).
     return kFish[id]?.name ?? kCrops[id]?.name ?? id;
   }
 

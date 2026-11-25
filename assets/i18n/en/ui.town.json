@@ -566,5 +566,6 @@
   "ui.town.npc.wtype.maza_escudo": "Mace and shield",
   "ui.town.npc.wtype.rifle": "Rifle",
   "ui.town.npc.wtype.tomo": "Tome",
-  "ui.town.npc.wtype.varita": "Wand"
+  "ui.town.npc.wtype.varita": "Wand",
+  "ui.town.npc.forge_journal": "{type} (lv {il}+)"
 }

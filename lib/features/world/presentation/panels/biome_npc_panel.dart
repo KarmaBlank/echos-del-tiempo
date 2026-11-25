@@ -26,6 +26,7 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../hud/tracked_quests_hud.dart' show weaponTypeText;
 import 'cooking_view.dart' show mealTierText;
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
@@ -55,10 +56,6 @@ Widget _forgeOrderIcon(String id, [int q = 0]) {
       procKey: procKeyForType(type),
       size: 32);
 }
-
-/// Localized name of a weapon type (`ui.town.npc.wtype.<key>`).
-String weaponTypeText(Strings s, String type) => s.t(
-    'ui.town.npc.wtype.${type.replaceAll('+', '_').replaceAll('á', 'a')}');
 
 /// Casilla de una orden de arma forjada (mining_smithing.md § 2.2): tipo,
 /// rareza y nivel de objeto mínimos; si varias armas sirven, un botón por
