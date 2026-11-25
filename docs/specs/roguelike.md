@@ -554,3 +554,80 @@ de la sala y de las paradas.
 
 Simulación (`run_balance_sim_test.dart`, ahora con armas sin requisitos
 y exigiendo ganarle al jefe del piso 3): guerrero 9/10, maga 9/10, paladín 5/10, tirador 6/10 (el test exige al menos 5/10 por clase).
+
+## 12.3 Pasada de balance con datos (rama `fix/paradoja-balance`)
+
+**Arnés.** `test/game_engine/run_sim_harness.dart` simula runs solas con
+semilla y una IA simple (ULT llena, poción < 35 %, cura < 50 %, la
+habilidad de daño más fuerte; descansa con < 50 % de vida; primera opción
+de cada fila de recompensa; equipa el arma más fuerte) y mide piso
+alcanzado, muertes por piso y por tipo de pelea, victorias contra cada
+jefe, oro ganado, peleas y segundos de combate. Informe completo bajo
+pedido: `PARADOJA_SIM_SEEDS=120 PARADOJA_SIM_DIFFS=0,5 flutter test
+test/game_engine/run_balance_report_test.dart` (`PARADOJA_SIM_TUNE=clave=valor,...`
+prueba valores del grupo «Travesía» sin tocar código; `grupo.clave=valor`
+para otros grupos). El guard de CI es `run_balance_sim_test.dart`
+(30 semillas × 4 clases × dificultad 0 y 5, ~12 s). Con el quiebre del
+jugador activo (desde v0.48.5 los enemigos solo llenan la barra).
+
+**Objetivos** (los exige el guard):
+
+- Dificultad 0: mediana de victorias por clase entre 65 % y 85 %; la
+  mediana de las runs llega al piso 3.
+- Dificultad 5: mediana entre 25 % y 45 %; cada clase gana menos que en
+  dificultad 0.
+- Cada clase a ±15 puntos de la mediana, en ambas dificultades.
+- Jefes: chequeo, no muro — al menos 80 % (dif. 0) y 60 % (dif. 5) de
+  victorias entre las runs que llegan a cada jefe.
+
+**Hallazgos.**
+
+- El tope por golpe (combo_balance.md § 3.2, regla compartida con el
+  Mundo) hace que en peleas comunes casi todo golpe pegue el tope: el %
+  de daño de clase no mueve nada (se probó +400 %). Lo que decide es el
+  daño recibido.
+- El paladín moría en el piso 1 por veneno de los limos (su
+  `statusWeakness` suma pilas; la DEF no lo frena). La maga y el tirador,
+  por poca vida / DEF.
+- La dificultad casi no afectaba al guerrero: `diffHp` no cambia cuántos
+  golpes hacen falta (el tope es fracción de la vida), solo `diffAtk`.
+- Los jefes ganaban ~100 %: hay un descanso antes; las muertes se
+  amontonaban en el piso 1 (curva cargada al principio).
+- Sin pozos de recompensa sin salida: el oro crece con el piso en todas
+  las clases (columna «oro»).
+
+**Perillas nuevas** (grupo «Travesía», editables en Editor → Balance; el
+Mundo no las lee, así que su combate no cambia): `bossHp`, `bossAtk`
+(× del jefe) y el kit de clase `classDmg<Clase>` (% daño),
+`classDef<Clase>` (DEF) y `classResist<Clase>` (pilas de estados
+resistidas).
+
+| perilla | antes | después |
+|---|---|---|
+| `levelPerFloor` | 4 | 6 |
+| `enemyAtk` | 0.3 | 0.36 |
+| `diffAtk` | 0.08 | 0.12 |
+| `bossHp` / `bossAtk` | — | 1.6 / 1.3 |
+| `classDef` maga / paladín / tirador | — | 10 / −8 / 13 |
+| `classResist` maga / paladín | — | 1 / 1 |
+
+**Antes / después** (120 semillas por fila; antes: 60):
+
+| clase | dif. | victorias antes | después | piso medio antes | después | muertes f1/f2/f3 antes | después | jefes f1/f2/f3 después |
+|---|---|---|---|---|---|---|---|---|
+| guerrero | 0 | 83 % | 78 % | 2.85 | 2.82 | 0/9/1 | 3/16/7 | 100/100/100 |
+| maga | 0 | 80 % | 76 % | 2.77 | 2.73 | 4/6/2 | 8/17/4 | 100/100/99 |
+| paladín | 0 | 47 % | 84 % | 2.17 | 2.76 | 19/12/1 | 12/5/2 | 99/100/100 |
+| tirador | 0 | 50 % | 66 % | 2.30 | 2.48 | 15/12/3 | 22/18/1 | 100/100/100 |
+| guerrero | 5 | 77 % | 37 % | 2.78 | 2.23 | 0/13/1 | 21/51/4 | 100/100/100 |
+| maga | 5 | 43 % | 27 % | 2.18 | 2.12 | 20/9/5 | 38/30/20 | 99/98/82 |
+| paladín | 5 | 30 % | 47 % | 1.77 | 2.12 | 33/8/1 | 43/20/1 | 84/100/100 |
+| tirador | 5 | 28 % | 33 % | 1.75 | 1.98 | 32/11/0 | 46/30/4 | 94/100/100 |
+
+Medianas: dif. 0 de 65 % (rango 47–83, guerrero +18, paladín −18) a 77 %
+(66–84); dif. 5 de 36 % (28–77, guerrero +41) a 35 % (27–47).
+
+**Pendiente.** Los jefes de los pisos 2 y 3 siguen casi seguros (el
+descanso previo cura); un × por piso para el jefe es la próxima perilla
+si se quiere que sean un chequeo real. La IA no usa tienda más allá de
+pociones ni elige recompensas: los números son para una jugada promedio.
