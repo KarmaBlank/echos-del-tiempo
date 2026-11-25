@@ -40,13 +40,20 @@ class ActorPainter {
     void fill(int sx, int sy, Rect dst) => c.drawImageRect(
         img, Rect.fromLTWH(sx.toDouble(), sy.toDouble(), 1, 1), dst, _sprite);
     const outline = (3, 12), pants = (4, 12), boot = (3, 15);
-    // Outlines first, then the fills over them.
-    fill(outline.$1, outline.$2, const Rect.fromLTWH(-4, -4, 10, 4));
-    fill(outline.$1, outline.$2, const Rect.fromLTWH(1, -2, 5, 3));
-    fill(outline.$1, outline.$2, const Rect.fromLTWH(1, 0, 7, 3));
-    fill(pants.$1, pants.$2, const Rect.fromLTWH(-3, -3, 8, 2));
-    fill(pants.$1, pants.$2, const Rect.fromLTWH(2, -1, 3, 2));
-    fill(boot.$1, boot.$2, const Rect.fromLTWH(2, 1, 5, 1));
+    // Two bent legs side by side (3/4 top-down): the far one first, the
+    // near one 1 px lower and 3 px forward, so the outline column between
+    // the shins reads as the gap. Each: thigh forward, shin down, boot.
+    void leg(double x0, double y0) {
+      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 - 1, y0 - 1, 8, 4));
+      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 + 3, y0 + 1, 4, 6));
+      fill(outline.$1, outline.$2, Rect.fromLTWH(x0 + 3, y0 + 4, 5, 3));
+      fill(pants.$1, pants.$2, Rect.fromLTWH(x0, y0, 6, 2));
+      fill(pants.$1, pants.$2, Rect.fromLTWH(x0 + 4, y0 + 2, 2, 3));
+      fill(boot.$1, boot.$2, Rect.fromLTWH(x0 + 4, y0 + 5, 3, 1));
+    }
+
+    leg(-3, -4);
+    leg(0, -3);
     final w = img.width.toDouble();
     c.drawImageRect(img, Rect.fromLTWH(0, 0, w, 12),
         Rect.fromLTWH(-7, -17 + seatDrop, w, 12), _sprite);

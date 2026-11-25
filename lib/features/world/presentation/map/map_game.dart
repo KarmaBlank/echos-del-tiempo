@@ -83,7 +83,7 @@ import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
-import '../../../../game_engine/rules/fishing_minigame.dart';
+import '../../../../game_engine/rules/fishing_minigame.dart';
 
 import '../../../inventory/domain/eco_text.dart';
 import '../../../../game_engine/rules/town_dressing_rules.dart';
@@ -1399,7 +1399,9 @@ class MapGame extends Game {
               text: (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
         }
         // Solo el nombre, un paso más chico (v0.37.3).
-        actors.text(c, p.name, px, py - 22,
+        // Under the raft awning the name rises above the cloth.
+        final lift = nameLift(raft: raft, life: p.profile.life);
+        actors.text(c, p.name, px, py - 22 - lift,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 5);
         // Auto-fishing tag with this session's catches (fishing.md § 6).
         final auto = line != null &&
@@ -1409,7 +1411,7 @@ class MapGame extends Game {
               ? controller.strings.t('ui.world.ctl.autofish.tag',
                   {'n': controller.autoFishCaught})
               : controller.strings.t('ui.world.ctl.autofish.label');
-          actors.text(c, tag, px, py - 29, const Color(0xFF7FD8FF), 4);
+          actors.text(c, tag, px, py - 29 - lift, const Color(0xFF7FD8FF), 4);
         }
       });
     }
@@ -1864,6 +1866,11 @@ class MapGame extends Game {
     // Decorations of its rider (cozy_life.md § 1).
     cozy.drawRaft(c, im, x, y, _bob(t), life);
   }
+
+  /// Px the name label rises so it clears the raft awning; only when the
+  /// rider is on a raft that has one.
+  static double nameLift({required bool raft, LifeSkills? life}) =>
+      raft && life != null && CozyRules.hasRoof(life) ? 8.0 : 0.0;
 
   static double _bob(num t) => (t / 600).floor().isEven ? 0.0 : 1.0;
 
