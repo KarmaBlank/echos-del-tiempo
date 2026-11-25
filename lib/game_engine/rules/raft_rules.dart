@@ -10,6 +10,7 @@ import 'dart:typed_data';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import 'biome_regions.dart';
+import 'waystone_rules.dart';
 import 'world_rules.dart';
 
 /// The raft dock of a big lake: the land tile you press E on and the
@@ -98,6 +99,11 @@ abstract final class RaftRules {
             continue;
           }
           if (x == ax && y == ay) continue;
+          // Never within a waystone's reach: its prompt would win (§ 15).
+          if (WaystoneRules.near(lay, (x + 0.5) * 16, (y + 0.5) * 16) !=
+              null) {
+            continue;
+          }
           if (l.docks.any((d) => (d.$1 - x).abs() + (d.$2 - y).abs() <= 1)) {
             continue;
           }

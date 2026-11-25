@@ -108,7 +108,7 @@ class BiomeLayout {
 
   /// Generator version (biome_exploration.md § 7): worlds saved with
   /// another one drop their layout-indexed state on load.
-  static const version = 2;
+  static const version = 3;
 
   /// The sections of the wilds (§ 2): kind and center tile.
   final List<WildSection> sections;
