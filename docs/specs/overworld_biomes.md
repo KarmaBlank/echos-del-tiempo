@@ -268,8 +268,15 @@ pedidos y órdenes.
   cerrar el panel por otro lado).
 - **Salir del bioma.** El anfitrión marca `ResidentState.leftAt` (`la`,
   reloj de la sala). Desde ahí `ResidentRules.departure` lo lleva del
-  punto de su paseo al camino (x = 17) y por él hasta el borde sur, a
-  `resWalkSpeed` px/s; se desvanece en los últimos 24 px. Sale del reloj
+  punto de su paseo, por la ruta de `BiomeRouteRules.toTown` (v0.48.5),
+  hasta el cartel **CAMINO AL PUEBLO** (`mainPath.first`, el borde sur
+  del sendero) y de ahí sale por el borde, a `resWalkSpeed` px/s. La ruta
+  es A* 4-direcciones sobre los tiles caminables del layout del bioma:
+  nunca agua, pesca, lava, vacío ni sólidos; el sendero (`,`) y los
+  puentes cuestan 1 y el resto del suelo 4, así que sigue el camino
+  aunque sea un poco más largo. Desempate fijo y caché por (bioma,
+  semilla, inicio): todos los pares calculan la misma ruta, sin red
+  nueva. *Antes:* iba en L hasta x = 17 y cruzaba agua y lava; se desvanece en los últimos 24 px. Sale del reloj
   de la sala, así que todos lo ven igual. Al llegar (o si el reloj volvió
   atrás, otra sesión) el anfitrión limpia `leftAt` en cada tick
   (`settleDepartures`).

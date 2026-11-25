@@ -356,11 +356,11 @@
     "status": "draft"
   },
   "ui.world.way.help": {
-    "text": "在本区域已激活的传送石之间旅行。",
+    "text": "在地图上选择已激活的传送石，然后按传送。",
     "status": "draft"
   },
   "ui.world.way.go": {
-    "text": "前往",
+    "text": "传送",
     "status": "draft"
   },
   "ui.world.way.here": {
