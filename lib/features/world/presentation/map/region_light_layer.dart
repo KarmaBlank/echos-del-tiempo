@@ -119,8 +119,10 @@ class RegionLightLayer {
           if (wx + cell < view.left || wx > view.right) continue;
           final dx = cx * cell / rx, dy = cy * cell / ry;
           final d = math.sqrt(dx * dx + dy * dy);
-          final nz = MapSkyLayer.noise(cx / 2.6, cy / 2.6, 57 + i) - 0.5;
-          final v = (1.05 - d + nz * 0.7) / 0.6;
+          // Low-frequency noise only bends the outline (lobes), the body stays
+          // one flat shade: a shadow, not smoke.
+          final nz = MapSkyLayer.noise(cx / 5.0, cy / 5.0, 57 + i) - 0.5;
+          final v = (1.0 - d + nz * 0.45) / 0.22;
           if (v <= 0) continue;
           final step = (v.clamp(0.0, 1.0) * _cloudLevels).ceil();
           if (step <= 0) continue;
@@ -141,7 +143,7 @@ class RegionLightLayer {
     }
   }
 
-  static const _cloudLevels = 4;
+  static const _cloudLevels = 3;
   final _cloudPts = List.generate(_cloudLevels, (_) => <double>[]);
   final _cloudPx = Paint()
     ..isAntiAlias = false
