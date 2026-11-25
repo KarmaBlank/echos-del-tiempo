@@ -550,5 +550,15 @@
   "ui.town.trader.tab_mining": {
     "text": "采矿",
     "status": "draft"
-  }
+  },
+  "ui.town.cook.tier.common": "普通",
+  "ui.town.cook.tier.fine": "精良",
+  "ui.town.cook.tier.excellent": "卓越",
+  "ui.town.cook.tier.legendary": "传说",
+  "ui.town.cook.extra.regen": "传说：每回合开始时恢复 {n}% 生命",
+  "ui.town.cook.extra.breakPower": "传说：破防 +{n}%",
+  "ui.town.cook.extra.shield": "传说：战斗开始时获得 {n}% 生命的护盾",
+  "ui.town.cook.give": "送给 {name}",
+  "ui.town.cook.feast": "盛宴 {q}",
+  "ui.town.cook.feast_line": "盛宴：食材 ×{n}，让镇上全队都吃上"
 }

@@ -262,6 +262,16 @@ const Map<String, TuningDef> kTuningDefaults = {
     'mealBuffBase': 0.05,
     'mealBuffPerQuality': 0.03,
     'mealMissions': 2,
+    // farming.md § 19: misiones extra por escalón, ingredientes del
+    // festín y extras de la comida legendaria.
+    'mealMissionsRaro': 0,
+    'mealMissionsEpico': 1,
+    'mealMissionsLegendario': 1,
+    'mealFeastMult': 2.0,
+    'mealRegen': 0.03,
+    'mealBreak': 0.25,
+    'mealShield': 0.12,
+    'mealShieldTurns': 3,
     // Validación del host: alcance (px) y segundos entre labores.
     'reachPx': 30,
     'minWorkSec': 0.15,
@@ -440,6 +450,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'orderXpPerValue': 2.0,
     'orderXpDayCap': 4000,
     'orderGoldPerValue': 0.6,
+    // farming.md § 19.1: pedidos de comidas cocinadas.
+    'mealOrderPay': 1.8,
+    'mealOrderChance': 0.35,
+    'mealOrderLevel': 5,
+    'mealOrderMin': 1,
+    'mealOrderMax': 2,
     'orderSkillEvery': 5,
     'orderRep': 1,
     'lifeLevelCharXp': 120,

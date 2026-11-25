@@ -230,7 +230,8 @@ class StatsCalculator {
         StatusKind.freeze: tree['frz'].toInt() + m(ModStat.freezeStacks),
       },
       lifeSteal: m(ModStat.lifeSteal) * ModStat.lifeSteal.scale,
-      regenPerTurn: m(ModStat.regen) * ModStat.regen.scale,
+      regenPerTurn: m(ModStat.regen) * ModStat.regen.scale +
+          CookingRules.regen(build.meal),
       statusResist: m(ModStat.statusResist),
       healReceived: m(ModStat.healReceived) * ModStat.healReceived.scale,
       breakdown: breakdown,

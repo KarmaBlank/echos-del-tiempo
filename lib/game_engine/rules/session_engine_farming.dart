@@ -526,6 +526,34 @@ extension _FarmingOp on _Op {
         refresh(p);
         say('${p.name} comió ${parseMealKey(id)!.$1.name}.');
         return true;
+      case FarmShopOp.giveMeal:
+        final to = s.players[a.to ?? ''];
+        if (id == null ||
+            to == null ||
+            to.id == p.id ||
+            to.isCompanion ||
+            !_inTown(to)) {
+          return false;
+        }
+        final g = CookingRules.give(prof, to.profile, id);
+        if (g == null) return false;
+        _profileChange(p, g.$1);
+        _profileChange(to, g.$2);
+        say('${p.name} le dio ${parseMealKey(id)!.$1.name} a ${to.name}.');
+        return true;
+      case FarmShopOp.feast:
+        if (id == null || a.n < 0 || a.n >= CropQuality.values.length) {
+          return false;
+        }
+        final f = CookingRules.feast(prof, id, CropQuality.values[a.n]);
+        if (f == null) return false;
+        _profileChange(p, f.$1);
+        for (final q in s.players.values) {
+          if (q.isCompanion || !_inTown(q)) continue;
+          _profileChange(q, CookingRules.serve(q.profile, f.$2));
+        }
+        say('${p.name} cocinó un festín de ${kMeals[id]!.name} para el grupo.');
+        return true;
       case FarmShopOp.buyAbono:
         return id != null &&
             _profileChange(p, FarmingRules.buyFert(prof, id, a.n));

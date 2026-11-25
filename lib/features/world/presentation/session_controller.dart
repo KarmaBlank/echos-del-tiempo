@@ -2429,6 +2429,14 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Eat the meal bag key [key] (replaces the active meal).
   bool eatMeal(String key) =>
       _apply(FarmShopAction(FarmShopOp.eat, id: key));
+
+  /// Give the meal bag key [key] to the player [to] (farming.md § 19.2).
+  bool giveMeal(String key, String to) =>
+      _apply(FarmShopAction(FarmShopOp.giveMeal, id: key, to: to));
+
+  /// Cook [meal] at [quality] as a feast for everyone in town.
+  bool feastMeal(String meal, int quality) =>
+      _apply(FarmShopAction(FarmShopOp.feast, id: meal, n: quality));
   bool stockFish(String species, [String? lakeId]) =>
       _apply(TownAction(TownOp.stock, id: species, target: lakeId));
   // ---- Ayudantes (farming.md § 8, v0.25.5) ----

@@ -30,7 +30,7 @@ import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/cooking_rules.dart'
-    show CookingRules, MealBuff, MealDef, MealStat;
+    show CookingRules, MealBuff, MealDef, MealStat, mealTierOf;
 import '../../inventory/domain/item_names.dart' show MealDefText;
 import '../../../game_engine/rules/display_names.dart';
 import '../../../game_engine/rules/enemy_combo_rules.dart';
@@ -151,11 +151,20 @@ List<StatusChip> combatantChips(Strings s, Combatant p,
         MealStat.res => s.t('ui.town.cook.effect.res',
             {'n': n, 'el': s.t('ui.town.cook.el.${d.element?.name ?? 'fire'}')}),
       };
+      final tier = mealTierOf(b.quality);
+      final extra = CookingRules.extraOf(b);
+      final x = extra == null
+          ? ''
+          : '${s.t('ui.town.cook.extra.${extra.name}', {
+                  'n': (CookingRules.extraValue(extra) * 100).round()
+                })}<br>';
       chips.add(StatusChip(
           s.t('ui.combat.chip.meal.short'),
           s.t('ui.combat.chip.meal.short'),
           DsColors.reward,
-          '<b>${retroText(d.text)}</b><br>$effect<br>'
+          '<b>${retroText(d.text)} '
+          '(${retroText(s.t('ui.town.cook.tier.${tier.name}'))})</b><br>'
+          '$effect<br>$x'
           '${s.t('ui.town.cook.left', {'n': b.left})}'));
     }
   }
