@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
+import '../../../../game_engine/rules/cozy_rules.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/retro_type.dart';
@@ -126,6 +128,24 @@ class TownBuildPalette extends StatefulWidget {
             h: d.h,
             detail: d.detail,
           ),
+      // Farm decorations (cozy_life.md § 2): 1×1, cheap, cosmetic.
+      for (final d in kFarmDecos.values)
+        TownPiece(
+          id: d.id,
+          category: TownPieceCategory.farm,
+          name: s.t('ui.town.decor.${d.id}.name'),
+          w: 1,
+          h: 1,
+          detail: s.t('ui.town.decor.${d.id}.info'),
+          cost: s.t('ui.town.edit.lamp_detail',
+              {'cost': CozyRules.decorCost(d.id)}),
+          why: p == null
+              ? s.t('ui.town.edit.no_character')
+              : p.credits < CozyRules.decorCost(d.id)
+                  ? s.t('ui.town.edit.missing_gold',
+                      {'have': p.credits, 'need': CozyRules.decorCost(d.id)})
+                  : null,
+        ),
       TownPiece(
         id: kFaroId,
         category: TownPieceCategory.light,

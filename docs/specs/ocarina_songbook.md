@@ -137,6 +137,32 @@ Notation: `note/steps`, one line per bar. A step is a sixteenth note in 4/4 (16 
  24 | rest/6 |
 ```
 
+## Calma (pesca y balsa) (`cozy`)
+
+- Mood: Fishing out on the lake, slow and calm.
+- Key: D major
+- Tempo: 66 bpm, 3 beats per bar, 16 bars
+- Notes used: A4 (low A (subhole note)), B4 (low B (subhole note)), D5 (D), E5 (E), F#5 (F#, accidental: half-hole or alternate fingering (see your ocarina chart)), G5 (G), A5 (A)
+
+```
+  1 | A4/2 D5/2 F#5/2 |
+  2 | E5/4 D5/2 |
+  3 | A4/2 F#5/2 D5/2 |
+  4 | E5/6 |
+  5 | A4/2 D5/2 E5/2 |
+  6 | D5/4 B4/2 |
+  7 | B4/2 E5/2 G5/2 |
+  8 | E5/6 |
+  9 | D5/2 F#5/2 A5/2 |
+ 10 | G5/4 D5/2 |
+ 11 | A4/2 D5/2 F#5/2 |
+ 12 | E5/6 |
+ 13 | B4/2 D5/2 G5/2 |
+ 14 | A5/2 G5/2 E5/2 |
+ 15 | D5/6 |
+ 16 | rest/6 |
+```
+
 ## Town (night) (`townNight`)
 
 - Mood: The town after dark, slow and hushed.

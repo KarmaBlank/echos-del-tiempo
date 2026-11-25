@@ -472,6 +472,19 @@ abstract final class FishingPalette {
   static const zoneOut = Color(0xAAE0A040);
 }
 
+/// Cozy life art (cozy_life.md § 1): fireflies and the raft paints
+/// (index of `RaftDecoDef.paint`).
+abstract final class CozyPalette {
+  static const firefly = Color(0xFFE8F58A);
+  static const fireflyGlow = Color(0x44E8F58A);
+  static const paints = [
+    Color(0xFFE0857A),
+    Color(0xFF8AB4E8),
+    Color(0xFF9AD48A),
+    Color(0xFFF2E6C2),
+  ];
+}
+
 /// Progress bar under a work target (`drawTileTarget`).
 abstract final class TargetPalette {
   static const barBack = Color(0xCC0E0C12);

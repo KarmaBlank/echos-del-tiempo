@@ -16,6 +16,7 @@ const kSongMoods = <String, (String key, String mood)>{
   'title': ('D dorian', 'Epic folk opening: the journey begins.'),
   'town': ('D mixolydian', 'Calm and homely, a gentle 3/4 dance by the hearth.'),
   'fishing': ('G major', 'Quiet afternoon by the water.'),
+  'cozy': ('D major', 'Fishing out on the lake, slow and calm.'),
   'townNight': ('D mixolydian', 'The town after dark, slow and hushed.'),
   'overworld': ('G major', 'The open road, wistful and wide.'),
   'zone1': ('F major', 'Meadow: bright and open.'),

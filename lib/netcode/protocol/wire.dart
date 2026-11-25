@@ -207,7 +207,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// 89: wilds loot `town.daily` keys carry the layout version
 /// (`wx:<player>:<biome>:v<n>:<c|s><i>:<day>`); an 88 peer would read
 /// the marks of a regenerated layout on the wrong spots.
-const kProtocolVersion = 89;
+/// 91: cozy life (cozy_life.md): the `cozy` action (tree search, raft
+/// decorations, compost), `town.dc` farm decorations and `life.rd` /
+/// `life.ro` / `life.ff` / `life.farm.rc` in the profile. (90 is taken by
+/// another branch in flight; this one jumps to 91 so they never clash.)
+const kProtocolVersion = 91;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

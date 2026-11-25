@@ -62,7 +62,8 @@ void main() {
       expect(
           MusicSelector.trackFor(
               mode: SessionMode.lobby, inTown: false, fishing: true),
-          Music.overworld);
+          // Outside the town: the calm piece (cozy_life.md § 1).
+          Music.cozy);
       expect(MusicSelector.trackFor(mode: SessionMode.prep, fishing: true),
           Music.town);
       expect(kMusicCatalog.containsKey(Music.fishing), isTrue);
