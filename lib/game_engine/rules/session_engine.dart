@@ -418,6 +418,8 @@ class SessionEngine {
   static bool companionAction(SessionAction a) => switch (a) {
         BattleAction() ||
         CancelQueuedBattleAction() ||
+        MoveQueuedBattleAction() ||
+        ConfirmBattleQueueAction() ||
         SetBuildWantsAction() ||
         SetLootFilterAction() ||
         ClaimAchievementAction() ||
@@ -1482,7 +1484,19 @@ class _Op {
         if (s.mode != SessionMode.battle || b == null) return false;
         final n = b.queue.length;
         b.queue.removeWhere((q) => q.playerId == p.id);
-        return b.queue.length != n;
+        if (b.queue.length == n) return false;
+        b.queueReady.clear();
+        return true;
+
+      case MoveQueuedBattleAction():
+        final b = s.battle;
+        if (s.mode != SessionMode.battle || b == null) return false;
+        return _moveQueued(b, p.id, a.playerId, a.to);
+
+      case ConfirmBattleQueueAction():
+        final b = s.battle;
+        if (s.mode != SessionMode.battle || b == null) return false;
+        return _confirmQueue(b, p.id);
 
       case PauseAction():
         // Pausa de grupo: cualquiera pausa, cualquiera reanuda.
@@ -4157,15 +4171,11 @@ class _Op {
     }
     // Action queue (turn_modes.md § 3.1): only in the party phase of Por
     // fases / porBando, or the front party block of a Por rondas round, with
-    // 2+ humans; a command that arrives while another one resolves waits
-    // its turn (arrival order). Timeline and solo never queue: the command runs now or is refused.
-    if (queueOpen(b, p.id) &&
-        (b.wait > 0 ||
-            b.queue.isNotEmpty ||
-            !b.state.awaitingGroup ||
-            !b.state.pendingGroup.any((c) => c.id == p.id))) {
-      return _enqueue(b, p.id, cmd);
-    }
+    // 2+ humans. Every command of the block waits in the queue (arrival
+    // order) until the block agrees the order (ConfirmBattleQueueAction);
+    // nobody's action fires on its own. Timeline and solo never queue: the
+    // command runs now or is refused.
+    if (queueOpen(b, p.id)) return _enqueue(b, p.id, cmd);
     if (b.wait > 0) return false;
     return _runBattleCommand(p, cmd);
   }
@@ -4202,9 +4212,41 @@ class _Op {
     if (cur != null && cur.isPlayer) {
       return b.queue.indexWhere((q) => q.playerId == cur.id);
     }
-    if (!st.awaitingGroup) return -1;
+    if (!st.awaitingGroup || !queueAgreed(b)) return -1;
     final block = {for (final c in st.pendingGroup) c.id};
     return b.queue.indexWhere((q) => block.contains(q.playerId));
+  }
+
+  /// Humans of the block still to act (turn_modes.md § 3.1): who must
+  /// agree the queue order.
+  Iterable<String> _blockHumans(SessionBattle b) sync* {
+    for (final c in b.state.pendingGroup) {
+      if (!c.isPlayer || c.isSummon) continue;
+      final p = s.players[c.id];
+      if (p != null && !p.isCompanion) yield c.id;
+    }
+  }
+
+  /// Every pending human of the block agreed the queue order.
+  bool queueAgreed(SessionBattle b) =>
+      b.queue.isNotEmpty && _blockHumans(b).every(b.queueReady.contains);
+
+  /// [playerId] agrees the queue order (`qok`).
+  bool _confirmQueue(SessionBattle b, String playerId) {
+    if (b.queue.isEmpty || !queueOpen(b, playerId)) return false;
+    return b.queueReady.add(playerId);
+  }
+
+  /// Moves [playerId]'s entry to [to] (`qmv`): any block member may.
+  bool _moveQueued(SessionBattle b, String by, String playerId, int to) {
+    if (!queueOpen(b, by)) return false;
+    final i = b.queue.indexWhere((q) => q.playerId == playerId);
+    if (i < 0) return false;
+    final t = to.clamp(0, b.queue.length - 1);
+    if (t == i) return false;
+    b.queue.insert(t, b.queue.removeAt(i));
+    b.queueReady.clear();
+    return true;
   }
 
   /// Adds (or replaces in place) [playerId]'s queued command. A duo needs
@@ -4230,6 +4272,8 @@ class _Op {
     } else {
       b.queue.add(entry);
     }
+    // The queue changed: the block agrees again.
+    b.queueReady.clear();
     return true;
   }
 
@@ -4401,9 +4445,11 @@ class _Op {
       final i = _nextQueued(b);
       if (i >= 0) {
         _drainQueue(b, i);
+        if (b.queue.isEmpty) b.queueReady.clear();
         return;
       }
     }
+    if (b.queue.isEmpty) b.queueReady.clear();
     final cur = b.state.current;
     if (cur != null && cur.isPlayer && !cur.alive) b.state.currentId = null;
 
@@ -4452,6 +4498,12 @@ class _Op {
     b.turnTime += dt;
     final limit = s.turnLimit;
     if (limit != null && b.turnTime > limit) {
+      // Time's up with chosen actions waiting: they resolve in the
+      // current order first; whoever is left then defends (§ 3.1).
+      if (b.queue.isNotEmpty && !queueAgreed(b)) {
+        b.queueReady.addAll(_blockHumans(b));
+        return;
+      }
       final step = e.battles.timeout(b.state);
       if (step != null) _applyBattleStep(b, step);
       if (b.endTimer == null) b.wait = 0.8;

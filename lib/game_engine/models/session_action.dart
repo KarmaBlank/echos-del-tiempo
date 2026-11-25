@@ -285,6 +285,20 @@ class CancelQueuedBattleAction extends SessionAction {
   const CancelQueuedBattleAction();
 }
 
+/// `qmv`: moves [playerId]'s queued command to position [to] of the
+/// block's queue (turn_modes.md § 3.1, protocol 78).
+class MoveQueuedBattleAction extends SessionAction {
+  final String playerId;
+  final int to;
+  const MoveQueuedBattleAction(this.playerId, this.to);
+}
+
+/// `qok`: the player agrees to the queue order; it resolves once every
+/// pending human of the block agreed (turn_modes.md § 3.1, protocol 78).
+class ConfirmBattleQueueAction extends SessionAction {
+  const ConfirmBattleQueueAction();
+}
+
 /// `chat`: un mensaje de texto para la sala. El host lo recorta (espacios
 /// y [maxLength] caracteres) y rechaza los vacíos.
 class ChatAction extends SessionAction {

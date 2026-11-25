@@ -77,6 +77,8 @@ abstract final class ActionJson {
         BuyWeaponAction() => {'t': 'buy', 'w': a.weaponId},
         BattleAction() => {'t': 'cmd', ...commandToJson(a.command)},
         CancelQueuedBattleAction() => {'t': 'uncmd'},
+        MoveQueuedBattleAction() => {'t': 'qmv', 'p': a.playerId, 'to': a.to},
+        ConfirmBattleQueueAction() => {'t': 'qok'},
         ChatAction() => {'t': 'chat', 'txt': a.text},
         PauseAction() => {'t': 'pause', 'on': a.paused},
         BackToLobbyAction() => {'t': 'back'},
@@ -341,6 +343,10 @@ abstract final class ActionJson {
         return BattleAction(commandFromJson(j));
       case 'uncmd':
         return const CancelQueuedBattleAction();
+      case 'qmv':
+        return MoveQueuedBattleAction(j.str('p'), j.integer('to'));
+      case 'qok':
+        return const ConfirmBattleQueueAction();
       case 'chat':
         return ChatAction(j.str('txt'));
       case 'pause':

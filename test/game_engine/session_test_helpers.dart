@@ -109,6 +109,22 @@ GameSession inField(SessionEngine e, String missionId,
   return s;
 }
 
+/// Co-op action queue (turn_modes.md § 3.1): every pending player of the
+/// block agrees the queue order so it resolves.
+GameSession agreeQueue(SessionEngine e, GameSession s,
+    {List<SessionEvent>? log}) {
+  final b = s.battle;
+  if (b == null || b.queue.isEmpty) return s;
+  for (final c in [...b.state.pendingGroup]) {
+    final step = e.apply(s, c.id, const ConfirmBattleQueueAction());
+    if (step != null) {
+      log?.addAll(step.events);
+      s = step.state;
+    }
+  }
+  return s;
+}
+
 /// Avanza la sesión de a 50 ms hasta que [until] sea cierto, atacando
 /// al primer enemigo cada vez que le toca a un jugador.
 GameSession runBattle(SessionEngine e, GameSession s,
@@ -118,13 +134,20 @@ GameSession runBattle(SessionEngine e, GameSession s,
   until ??= (x) => x.mode != SessionMode.battle;
   for (var i = 0; i < maxTicks && !until(s); i++) {
     final b = s.battle;
-    if (b != null && b.waitingForPlayer) {
-      // porBando (Travesía): en el turno del grupo, el primero que falta.
-      final who = b.state.currentId ?? b.state.pendingGroup.first.id;
+    // porBando (Travesía): en el turno del grupo, el primero que falta
+    // (sin acción ya en la cola co-op).
+    final who = b == null
+        ? null
+        : b.state.currentId ??
+            b.state.pendingGroup
+                .where((c) => !b.queued(c.id))
+                .firstOrNull
+                ?.id;
+    if (b != null && b.waitingForPlayer && who != null) {
       final step = e.apply(s, who, const BattleAction(AttackCommand()));
       if (step != null) {
         log?.addAll(step.events);
-        s = step.state;
+        s = agreeQueue(e, step.state, log: log);
         continue;
       }
     }

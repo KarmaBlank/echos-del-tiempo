@@ -1131,6 +1131,15 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final b = s?.battle;
     if (s == null || b == null || s.paused || !b.waitingForPlayer) return;
+    // Action queue (turn_modes.md § 3.1): an AUTO local player agrees the
+    // order on its own so the block is never held waiting for it.
+    if (_auto.contains(localId) &&
+        b.queue.isNotEmpty &&
+        !b.queueReady.contains(localId) &&
+        b.state.pendingGroup.any((c) => c.id == localId) &&
+        b.turnTime >= autoDelay) {
+      if (_apply(const ConfirmBattleQueueAction())) return;
+    }
     // porBando: en el turno del grupo, el primer compañero con AUTO que
     // falta (roguelike.md § 6).
     final cur = b.state.currentId ??
@@ -3839,6 +3848,13 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Withdraws [actorId]'s queued command (turn_modes.md § 3.1).
   bool cancelQueued(String actorId) =>
       _applyFor(actorId, const CancelQueuedBattleAction());
+
+  /// Moves [playerId]'s queued command to position [to] (§ 3.1).
+  bool moveQueued(String playerId, int to) =>
+      _apply(MoveQueuedBattleAction(playerId, to));
+
+  /// The local player agrees the queue order (§ 3.1).
+  bool confirmQueue() => _apply(const ConfirmBattleQueueAction());
 
   /// Comando de batalla de [actorId] (el local o un compañero).
   bool battleCommandFor(String actorId, BattleCommand command) =>

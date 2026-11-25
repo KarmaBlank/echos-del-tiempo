@@ -30,7 +30,15 @@ class SessionBattleScreen extends StatefulWidget {
     this.onAuto,
     this.actionGate,
     this.onCancelQueued,
+    this.onMoveQueued,
+    this.onConfirmQueue,
   });
+
+  /// Moves a queued command to another position (turn_modes.md § 3.1).
+  final void Function(String id, int to)? onMoveQueued;
+
+  /// The local player agrees the queue order (turn_modes.md § 3.1).
+  final void Function()? onConfirmQueue;
 
   /// Withdraws a queued command (turn_modes.md § 3.1).
   final void Function(String id)? onCancelQueued;
@@ -118,6 +126,12 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
           ),
       ],
       onCancelQueued: widget.onCancelQueued,
+      onMoveQueued: view.canAgreeQueue ? widget.onMoveQueued : null,
+      onConfirmQueue: view.canAgreeQueue &&
+              !b.queueReady.contains(view.localId)
+          ? widget.onConfirmQueue
+          : null,
+      queueAgreed: view.queueAgreement,
     );
   }
 

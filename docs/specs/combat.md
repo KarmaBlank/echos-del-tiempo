@@ -988,4 +988,4 @@ ULT tienen un tope de 50% por turno."
   categoría se mantiene si existe y el cursor se acota al último ítem.
 - En Por fases / porBando y Por rondas el menú sigue abierto mientras
   otro anima: el comando confirmado entra a la cola de acciones
-  (turn_modes.md § 3.1).
+  y en coop espera a que el bloque acepte el orden (turn_modes.md § 3.1).

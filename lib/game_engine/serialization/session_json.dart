@@ -559,6 +559,8 @@ class SessionJson {
             for (final q in b.queue)
               {'p': q.playerId, ...ActionJson.commandToJson(q.command)},
           ],
+        // Agreed order (protocol 78).
+        if (b.queueReady.isNotEmpty) 'qr': [...b.queueReady],
       };
 
   SessionBattle battleFromJson(Json j) => SessionBattle(
@@ -579,6 +581,9 @@ class SessionJson {
                   QueuedBattleCommand(asJson(raw).str('p'),
                       ActionJson.commandFromJson(asJson(raw))),
               ],
+        queueReady: j['qr'] == null
+            ? null
+            : {for (final raw in j.list('qr')) raw as String},
       );
 
   Json battleStateToJson(BattleState s) => {

@@ -185,7 +185,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// discovered veins and miner pick tiers.
 /// 78: shared meals (farming.md § 19): `farmShop` ops `giveMeal` (with
 /// `to`) and `feast`; meal orders and legendary meal extras.
-const kProtocolVersion = 78;
+/// 79: co-op action queue agreement (turn_modes.md § 3.1): the block's
+/// commands wait until every pending human agrees the order (`qok`),
+/// `qmv` reorders, `qr` in the battle snapshot.
+const kProtocolVersion = 79;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
