@@ -136,7 +136,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
         SizedBox(width: DsSpace.md),
         Expanded(child: _tree()),
         SizedBox(width: DsSpace.md),
-        SizedBox(width: 260, child: SingleChildScrollView(child: _detail())),
+        SizedBox(width: 300, child: SingleChildScrollView(child: _detail())),
       ],
     );
   }
@@ -191,7 +191,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               label: context.t('ui.town.trades.xp_of', {'skill': k.label}),
               barWidth: 160),
           SizedBox(height: DsSpace.xs),
-          Text(tool, style: DsText.detail()),
+          Text(tool, style: DsText.body()),
         ],
       ),
     );
@@ -214,17 +214,17 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
                 n.root
                     ? context.t('ui.town.trades.root')
                     : context.t('ui.town.trades.cost', {'n': n.cost}),
-                style: DsText.detail())),
+                style: DsText.body())),
         if (n.branch != null)
           Text(
               context.t('ui.town.trades.tier_of',
                   {'branch': lifeBranchName(k, n.branch!), 'n': n.tier}),
-              style: DsText.detail()),
+              style: DsText.body()),
         if (!n.root)
           Text(
               context.t('ui.town.trades.needs_level',
                   {'n': LifeTreeRules.tierLevel(n.tier)}),
-              style: DsText.detail(
+              style: DsText.body(
                   LifeTreeRules.level(p, k) >= LifeTreeRules.tierLevel(n.tier)
                       ? null
                       : DsColors.danger)),
@@ -242,14 +242,14 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
                 style: DsText.body(claimed ? DsColors.textDisabled : null)),
           if (claimed)
             Text(context.t('ui.town.trades.claimed'),
-                key: const ValueKey('life-claimed'), style: DsText.detail()),
+                key: const ValueKey('life-claimed'), style: DsText.body()),
         ],
         if (n.capstone)
-          Text(context.t('ui.town.trades.capstone'), style: DsText.detail()),
+          Text(context.t('ui.town.trades.capstone'), style: DsText.body()),
         SizedBox(height: DsSpace.sm),
         Text(has ? _stateText(k, n) : why ?? _stateText(k, n),
             key: const ValueKey('life-node-state'),
-            style: DsText.detail()),
+            style: DsText.body()),
         SizedBox(height: DsSpace.sm),
         Text(
             context.t('ui.town.trades.points', {
@@ -257,7 +257,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               'earned': LifeTreeRules.earned(p, k)
             }),
             key: const ValueKey('life-points'),
-            style: DsText.detail()),
+            style: DsText.body()),
         SizedBox(height: DsSpace.md),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           DsButton(context.t('ui.town.trades.reset'),
@@ -295,9 +295,9 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       states: {
         for (final n in kLifeTrees[k]!) n.id: _state(k, n),
       },
-      rings: [
+      gates: [
         for (var t = 1; t <= kLifeTiers; t++)
-          SkillTreeRing(lifeTierRadius(t),
+          SkillTreeGate(lifeTierY(t), lifeGateHalf(t),
               open: lvl >= LifeTreeRules.tierLevel(t)),
       ],
       onSelect: (id) => setState(() => _sel = id),
@@ -311,8 +311,8 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
             children: [
               if (text.isNotEmpty)
                 Text(TextDetail.isSummary ? plainShort(text) : text,
-                    style: DsText.detail()),
-              Text(_stateText(k, n), style: DsText.detail()),
+                    style: DsText.body()),
+              Text(_stateText(k, n), style: DsText.body()),
             ]);
       },
     );
@@ -358,11 +358,33 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               : TreeNodeState.locked;
 }
 
-/// Radius (tree units) of tier [t] in the radial layout.
-double lifeTierRadius(int t) => 2.8 + (t - 1) * 1.1;
+/// Height (tree units, up is negative) of tier [t]: the root sits at the
+/// bottom and the tree grows up.
+double lifeTierY(int t) => t == 0 ? 0.0 : -(1.0 + 1.05 * t);
 
-/// Angle of branch [i] (a..e): the middle one points up, 72° apart.
-double _branchAngle(int i) => -math.pi / 2 + (i - 2) * 2 * math.pi / 5;
+/// Horizontal spread of the branches at tier [t]: they leave the root
+/// close together and open like a canopy.
+double _spread(int t) => t == 0 ? 0.0 : 0.7 + 1.15 * math.sqrt(t);
+
+/// Side offset of the two sub-paths of a fork at tier [t].
+double _forkOffset(int t) => t == kLifeForkFrom || t == kLifeForkTo ? 0.5 : 0.7;
+
+/// Position (tree units) of node [n] (life_trees_v2.md § 3).
+Offset lifeNodePos(LifeTreeNode n) {
+  if (n.root) return Offset.zero;
+  final i = kLifeBranches.indexOf(n.branch!) - 2;
+  var x = i * _spread(n.tier);
+  if (n.tier >= kLifeForkFrom && n.tier <= kLifeForkTo) {
+    // The sub-path that leans outward is the second one; the middle
+    // branch forks to the right.
+    final out = i < 0 ? -1.0 : 1.0;
+    x += (isLifeFork(n) ? out : -out) * _forkOffset(n.tier);
+  }
+  return Offset(x, lifeTierY(n.tier));
+}
+
+/// Width (tree units) of the level-gate line of tier [t].
+double lifeGateHalf(int t) => 2 * _spread(t) + 1.2;
 
 /// Profession tree [k] as a skill-tree catalog (life_trees_v2.md § 3):
 /// root → start node, capstones → keystones, major nodes → notables;
@@ -371,13 +393,11 @@ PassiveTreeCatalog lifeTreeCatalog(
     LifeSkillKind k, List<String> branches, List<String> tiers) {
   final nodes = <String, PassiveNode>{};
   for (final n in kLifeTrees[k]!) {
-    final i = n.x + 2;
-    final r = n.root ? 0.0 : lifeTierRadius(n.tier);
-    final a = _branchAngle(i);
+    final o = lifeNodePos(n);
     nodes[n.id] = PassiveNode(
       id: n.id,
-      x: r * math.cos(a),
-      y: r * math.sin(a),
+      x: o.dx,
+      y: o.dy,
       name: n.name,
       effects: const {},
       kind: n.root
@@ -391,9 +411,8 @@ PassiveTreeCatalog lifeTreeCatalog(
       pathId: n.branch == null ? null : 'life_${k.name}_${n.branch}',
     );
   }
-  final outer = lifeTierRadius(kLifeTiers) + 1.6;
-  // Tier labels between branches c and d, where no node sits.
-  final gap = (_branchAngle(2) + _branchAngle(3)) / 2;
+  final top = lifeTierY(kLifeTiers) - 1.1;
+  final left = -lifeGateHalf(kLifeTiers) - 1.0;
   return PassiveTreeCatalog(
     nodes: nodes,
     startNodeByClass: const {},
@@ -406,17 +425,18 @@ PassiveTreeCatalog lifeTreeCatalog(
           theme: '',
           classId: k.name,
           kind: 'grupo',
-          labelX: outer * math.cos(_branchAngle(i)),
-          labelY: outer * math.sin(_branchAngle(i)),
+          labelX: (i - 2) * _spread(kLifeTiers),
+          labelY: top,
         ),
+      // Level gates: a "Nv N" tick at the left end of each tier line.
       for (var t = 1; t <= kLifeTiers; t++)
         'life_tier_$t': PassivePath(
           id: 'life_tier_$t',
           name: tiers[t - 1],
           theme: '',
           classId: k.name,
-          labelX: lifeTierRadius(t) * math.cos(gap),
-          labelY: lifeTierRadius(t) * math.sin(gap),
+          labelX: left,
+          labelY: lifeTierY(t),
         ),
     },
   );

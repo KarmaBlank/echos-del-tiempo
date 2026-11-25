@@ -182,7 +182,7 @@ void main() {
       expect(LifeTreeRules.take(p, LifeSkillKind.cultivo, 'farm_b3'), isNull);
       final back = LifeSkills.fromJson(p.life.toJson());
       expect(back.farm.tree, ['farm_b1']);
-      expect(kLifeTrees[LifeSkillKind.cultivo]!.length, 51);
+      expect(kLifeTrees[LifeSkillKind.cultivo]!.length, 71);
     });
   });
 }

@@ -60,7 +60,7 @@ Future<void> _save(WidgetTester tester, String name) async {
 }
 
 void main() {
-  testWidgets('tree renders 51 nodes with states and takes a node',
+  testWidgets('tree renders every node with states and takes a node',
       (tester) async {
     final c = await pumpPanel(tester,
         profile: _crafter(12),

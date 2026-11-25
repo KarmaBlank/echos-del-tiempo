@@ -13,7 +13,8 @@ nodo y de rama) y `ui.town.trades.fx.*` / `ui.town.trades.grant.*`
 
 ## 1. Idea
 Los oficios **dan cosas**, no solo porcentajes chicos. Cada árbol tiene
-una raíz gratis y **5 ramas de 10 escalones** (51 nodos). Cada rama es
+una raíz gratis y **5 ramas de 10 escalones que se bifurcan** (71
+nodos: § 2.1). Cada rama es
 un estilo de juego; muchos nodos entregan objetos reales una sola vez
 (armas de tu clase, cañas, cebos, materiales de forja, materiales de
 Ecos, comidas con buff de combate, oro, materiales de oficio) y el
@@ -22,8 +23,8 @@ escalón 10 de cada rama es un **remate** notable.
 ## 2. Forma y reglas
 - Raíz (escalón 0, gratis): +5 % XP del oficio. Une con el escalón 1 de
   las 5 ramas `a..e` (izquierda → derecha).
-- Dentro de una rama, el escalón `t` se toma con el `t − 1` tomado
-  (cadena; las ramas no se cruzan).
+- Dentro de una rama, un nodo se toma con algún vecino tomado (las
+  ramas no se cruzan entre sí).
 - **Escalón por nivel:** el escalón `t` pide nivel del oficio ≥
   `tierLevelStep × (t − 1) + 1` (por defecto 3 → el remate a nivel 28;
   el máximo es 30).
@@ -32,6 +33,7 @@ escalón 10 de cada rama es un **remate** notable.
   así que se completan ~2 ramas: hay que elegir.
 - **Un solo remate por árbol** (grupo excluyente `cap`).
 - Reinicio gratis por oficio, como antes: devuelve todos los puntos.
+- **Bifurcación (§ 2.1).**
 - Mensajes de bloqueo, en orden: ya lo tenés, faltan puntos, nivel del
   oficio, no está conectado, ya elegiste otro remate, inventario lleno
   (solo si el nodo entrega un arma que todavía no recibiste).
@@ -44,15 +46,17 @@ Pestaña OFICIOS de PERSONAJE: tarjetas de oficio | árbol | detalle.
   `TreeLabelsPainter` para los nombres en px de pantalla), arrastre,
   rueda y botones de zoom (−, +, VER TODO). Al abrir y al cambiar de
   oficio encuadra el árbol entero.
-- Forma radial (`lifeTreeCatalog`): la raíz en el centro (nodo de
-  inicio, dorado) y las 5 ramas como rayos a 72° (la rama c hacia
-  arriba); el escalón t va a radio `2.8 + 1.1 · (t − 1)` unidades.
-  Remates = hexágono (keystone), nodos mayores = notable (borde dorado),
-  el resto = nodo chico.
-- Compuertas de nivel visibles: un anillo por escalón alrededor del
-  centro (más marcado si el oficio ya llegó a ese nivel) y su etiqueta
-  ("Nv 1", "Nv 4", …) entre las ramas c y d. El nombre de cada rama va
-  al final de su rayo.
+- Forma de árbol (`lifeTreeCatalog`, `lifeNodePos`): la raíz abajo al
+  centro y las 5 ramas que suben abriéndose como una copa
+  (`0.7 + 1.15·√t` unidades entre ramas); en los escalones 4–7 cada rama
+  se separa en sus dos sub-caminos (el segundo hacia afuera; la rama del
+  medio, a la derecha) y se juntan en el 8. Escalón `t` a la altura
+  `1 + 1.05·t`. Remates = hexágono (keystone), nodos mayores = notable
+  (borde dorado), el resto = nodo chico. Sin el anillo central del
+  árbol de clase.
+- Compuertas de nivel discretas: una línea punteada tenue por escalón
+  (más marcada si el oficio ya llegó a ese nivel) con su "Nv N" a la
+  izquierda; el nombre de cada rama arriba de su remate.
 - Estados iguales al árbol principal: tomado = verde (remate tomado =
   rojo keystone), disponible = celeste, bloqueado = gris azulado; enlace
   verde si ambos extremos están tomados. Al pasar el mouse (o con el
@@ -61,7 +65,8 @@ Pestaña OFICIOS de PERSONAJE: tarjetas de oficio | árbol | detalle.
   pisarse): van en el tooltip de ancho fijo (`DsTooltip`: nombre,
   efectos, entregas, estado) y en el detalle de la derecha: nombre,
   rama, escalón, costo, nivel pedido, efectos, entregas ("ya recibido"
-  si se reclamó), estado, puntos, TOMAR y REINICIAR (GRATIS). Botones
+  si se reclamó), estado, puntos, TOMAR y REINICIAR (GRATIS), todo en
+  `DsText.body` (el tamaño del detalle del ÁRBOL). Botones
   deshabilitados en gris.
 - Nada se trunca. Vista previa: `LIFE_TREE_PREVIEW=1 flutter test
   test/features/world/life_tree_view_test.dart` →
@@ -94,11 +99,34 @@ water, forge, sell, xp, hp, atk`, más uno nuevo:
 `hp` y `atk` (poder de aventurero) suman los tres árboles; `forge` tiene
 tope `smithForgeCap`.
 
+### 2.1 Bifurcaciones
+Cada rama es un árbol, no una línea: escalones 1–3 = tronco; en los
+escalones 4–7 (`kLifeForkFrom`..`kLifeForkTo`) se abre en **dos
+sub-caminos** que se vuelven a unir en el escalón 8, que pasa a ser un
+nodo mayor; 9 y el remate 10 siguen únicos.
+- Sub-camino principal: los nodos de siempre (`<rama><t>`).
+- Segundo sub-camino: `<rama><t>s` (p. ej. `fish_a4s`), nombres en
+  `kLifeForkNames` + `data.life_trees.node.<id>.name`. Cada uno es la
+  alternativa hermana del nodo principal de su escalón (mismo costo) y
+  lleva el efecto de la rama del escalón anterior (así un sub-camino
+  alterna el otro sabor de la rama); sin entregas. Veta de Herrería, que
+  solo entrega menas, lleva en su segundo sub-camino XP del oficio
+  (`smith_b4s`..`smith_b7s`).
+- Con un sub-camino alcanza para seguir; si sobran puntos se pueden
+  tomar los dos. El poder total por punto es el mismo (los puntos
+  ganados no cambian: siguen alcanzando ~2 ramas).
+- Se arma en `growLifeTree` a partir de las tablas de 51 nodos: ningún
+  id se borró ni cambió de escalón.
+
 ## 6. Migración
 Los ids v1 (`p_*`, `c_*`, `h_*`) no existen en v2: al cargar el perfil se
 descartan, lo que **devuelve todos los puntos** (los puntos se calculan
 del nivel, no se guardan). `life.lc` vacío en saves viejos.
 Red: el perfil viaja con `life.lc` → protocolo 82.
+Bifurcaciones (§ 2.1): solo se **agregan** nodos y enlaces, el camino
+principal de cada rama sigue entero, así que los saves v0.49 quedan
+válidos tal cual: no hay devolución de puntos ni cambio de protocolo
+(los ids viajan como texto).
 
 ## 7. Árboles (todos los nodos)
 Valores: fracción (0.05 = 5 %) salvo `quality`, `auto` y `meal`

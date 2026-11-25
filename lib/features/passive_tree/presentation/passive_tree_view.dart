@@ -1221,7 +1221,11 @@ class PassiveTreePainter extends CustomPainter {
     this.planned = const {},
     this.zoom = 1,
     this.devicePixelRatio = 1,
+    this.ring = true,
   });
+
+  /// Shared centre ring of the class tree (off for other trees).
+  final bool ring;
 
   /// Zoom del visor y px físicos por px lógico: con zoom alejado
   /// ([farZoom]) la capa fija se dibuja como UNA imagen ya rasterizada a
@@ -1327,15 +1331,7 @@ class PassiveTreePainter extends CustomPainter {
   void _paintBase(Canvas canvas) {
     const center = Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     // Anillo central compartido.
-    final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
-        math.pow(catalog.nodes['p_gue']?.y ?? 2, 2));
-    canvas.drawCircle(
-        center,
-        ringR * PassiveTreeView.scale,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 8
-          ..color = ProtoColors.panelBorder.withValues(alpha: 0.35));
+    if (ring) _paintRing(canvas, center);
 
     final idle = Paint()
       ..strokeWidth = 2
@@ -1361,6 +1357,18 @@ class PassiveTreePainter extends CustomPainter {
     for (final n in catalog.nodes.values) {
       _drawNode(canvas, n);
     }
+  }
+
+  void _paintRing(Canvas canvas, Offset center) {
+    final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
+        math.pow(catalog.nodes['p_gue']?.y ?? 2, 2));
+    canvas.drawCircle(
+        center,
+        ringR * PassiveTreeView.scale,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..color = ProtoColors.panelBorder.withValues(alpha: 0.35));
   }
 
   /// Arista como polilínea por su recorrido (`edgeRoutes`): sigue los

@@ -805,14 +805,89 @@ const kLifeTreeTuning = <String, num>{
   'smith_e10': 0.2,
   'smith_e10_2': 3000,
   'smith_e10_3': 2,
+  // Second sub-path of Veta (its main path only hands out ore).
+  'smith_b4s': 0.03,
+  'smith_b5s': 0.04,
+  'smith_b6s': 0.04,
+  'smith_b7s': 0.05,
 };
 
-/// The nodes of each profession.
-const kLifeTrees = <LifeSkillKind, List<LifeTreeNode>>{
-  LifeSkillKind.pesca: _pesca,
-  LifeSkillKind.cultivo: _cultivo,
-  LifeSkillKind.herreria: _herreria,
+/// Tier where every branch forks and tier where both sub-paths meet
+/// again (life_trees_v2.md § 2).
+const kLifeForkFrom = 4, kLifeForkTo = 7;
+
+/// The nodes of each profession: the main path of each branch plus its
+/// second sub-path ([growLifeTree]).
+final kLifeTrees = <LifeSkillKind, List<LifeTreeNode>>{
+  LifeSkillKind.pesca: growLifeTree(_pesca),
+  LifeSkillKind.cultivo: growLifeTree(_cultivo),
+  LifeSkillKind.herreria: growLifeTree(_herreria),
 };
+
+/// Adds the second sub-path (`<branch><tier>s`, tiers [kLifeForkFrom]..
+/// [kLifeForkTo]) to every branch of [base]: it leaves the tier-3 node,
+/// runs beside the main path and rejoins it at tier 8, which becomes a
+/// major node. Each fork node is a sibling choice of the main node of its
+/// tier, same cost, carrying the branch effect of the tier below (so the
+/// two sub-paths alternate the branch's two flavours); a branch without
+/// effects uses its own `<id>` XP key.
+List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
+  final byId = {for (final n in base) n.id: n};
+  final pre = base.first.id.split('_').first;
+  String main(String b, int t) => '${pre}_$b$t';
+  String fork(String b, int t) => '${pre}_$b${t}s';
+  Map<String, String> fx(String b, int t) {
+    for (var u = t - 1; u >= 1; u--) {
+      final e = byId[main(b, u)]!.effects;
+      if (e.isNotEmpty) return e;
+    }
+    return {LifeFx.xp: fork(b, t)};
+  }
+
+  final extra = <String, List<String>>{};
+  final out = <LifeTreeNode>[];
+  for (final b in kLifeBranches) {
+    extra[main(b, kLifeForkFrom - 1)] = [fork(b, kLifeForkFrom)];
+    extra[main(b, kLifeForkTo + 1)] = [fork(b, kLifeForkTo)];
+  }
+  for (final n in base) {
+    final add = extra[n.id];
+    final rejoin = n.branch != null && n.tier == kLifeForkTo + 1;
+    out.add(add == null
+        ? n
+        : LifeTreeNode(n.id, n.name,
+            x: n.x,
+            y: n.y,
+            cost: n.cost,
+            links: [...n.links, ...add],
+            effects: n.effects,
+            grants: n.grants,
+            branch: n.branch,
+            exclusive: n.exclusive,
+            major: n.major || rejoin,
+            root: n.root));
+  }
+  for (final b in kLifeBranches) {
+    for (var t = kLifeForkFrom; t <= kLifeForkTo; t++) {
+      final id = fork(b, t);
+      final twin = byId[main(b, t)]!;
+      out.add(LifeTreeNode(id, kLifeForkNames[id] ?? id,
+          x: twin.x,
+          y: t,
+          cost: twin.cost,
+          links: [
+            t == kLifeForkFrom ? main(b, t - 1) : fork(b, t - 1),
+            t == kLifeForkTo ? main(b, t + 1) : fork(b, t + 1),
+          ],
+          effects: fx(b, t),
+          branch: b));
+    }
+  }
+  return out;
+}
+
+/// Whether [n] is on the second sub-path of its branch.
+bool isLifeFork(LifeTreeNode n) => n.id.endsWith('s') && n.branch != null;
 
 final _byId = <LifeSkillKind, Map<String, LifeTreeNode>>{
   for (final e in kLifeTrees.entries) e.key: {for (final n in e.value) n.id: n},
@@ -822,3 +897,68 @@ LifeTreeNode? lifeTreeNode(LifeSkillKind k, String id) => _byId[k]![id];
 
 /// Node ids of [k] (save migration drops everything else).
 bool isLifeTreeNode(LifeSkillKind k, String id) => _byId[k]!.containsKey(id);
+
+/// Second sub-path of every branch, tiers 4–7 (life_trees_v2.md § 2):
+/// id → es-AR name. Shape and effects come from [growLifeTree].
+const kLifeForkNames = <String, String>{
+  'fish_a4s': 'Remanso',
+  'fish_a5s': 'Sombra de sauce',
+  'fish_a6s': 'Niebla baja',
+  'fish_a7s': 'Orilla muda',
+  'fish_b4s': 'Pozo oscuro',
+  'fish_b5s': 'Eco del fondo',
+  'fish_b6s': 'Corriente fría',
+  'fish_b7s': 'Abismo manso',
+  'fish_c4s': 'Nudo doble',
+  'fish_c5s': 'Trueque',
+  'fish_c6s': 'Red ancha',
+  'fish_c7s': 'Muelle lleno',
+  'fish_d4s': 'Punta de asta',
+  'fish_d5s': 'Brazo de remo',
+  'fish_d6s': 'Lanza de río',
+  'fish_d7s': 'Ojo de garza',
+  'fish_e4s': 'Sal gruesa',
+  'fish_e5s': 'Fogón de playa',
+  'fish_e6s': 'Sopa de red',
+  'fish_e7s': 'Olla compartida',
+  'farm_a4s': 'Lombriz amiga',
+  'farm_a5s': 'Rocío temprano',
+  'farm_a6s': 'Barro fértil',
+  'farm_a7s': 'Acequia',
+  'farm_b4s': 'Espiga alta',
+  'farm_b5s': 'Brote doble',
+  'farm_b6s': 'Granero',
+  'farm_b7s': 'Semilla terca',
+  'farm_c4s': 'Libro de cuentas',
+  'farm_c5s': 'Peón diestro',
+  'farm_c6s': 'Trato justo',
+  'farm_c7s': 'Capataz',
+  'farm_d4s': 'Mango de fresno',
+  'farm_d5s': 'Hoz curva',
+  'farm_d6s': 'Espalda de arado',
+  'farm_d7s': 'Filo de trigo',
+  'farm_e4s': 'Horno de barro',
+  'farm_e5s': 'Conserva',
+  'farm_e6s': 'Caldo de huerta',
+  'farm_e7s': 'Sobremesa',
+  'smith_a4s': 'Golpe seco',
+  'smith_a5s': 'Chispa fiel',
+  'smith_a6s': 'Forja doble',
+  'smith_a7s': 'Pinza firme',
+  'smith_b4s': 'Pico gastado',
+  'smith_b5s': 'Olfato de mina',
+  'smith_b6s': 'Galería',
+  'smith_b7s': 'Lámpara minera',
+  'smith_c4s': 'Remache',
+  'smith_c5s': 'Guarda cruzada',
+  'smith_c6s': 'Hoja equilibrada',
+  'smith_c7s': 'Vaina de cuero',
+  'smith_d4s': 'Tornillo sinfín',
+  'smith_d5s': 'Muelle tenso',
+  'smith_d6s': 'Biela',
+  'smith_d7s': 'Reloj de pulso',
+  'smith_e4s': 'Banco de trabajo',
+  'smith_e5s': 'Pedido urgente',
+  'smith_e6s': 'Cartel del taller',
+  'smith_e7s': 'Gremio',
+};

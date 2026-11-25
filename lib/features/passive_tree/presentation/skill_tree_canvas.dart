@@ -12,11 +12,11 @@ import '../../../game_engine/models/passive_tree.dart';
 import '../domain/passive_text.dart';
 import 'passive_tree_view.dart';
 
-/// A level gate drawn as a faint ring around the tree centre
-/// (radius in tree units); [open] = already reached.
-class SkillTreeRing {
-  const SkillTreeRing(this.radius, {required this.open});
-  final double radius;
+/// A level gate drawn as a faint horizontal line at height [y] (tree
+/// units), [half] units to each side of the centre; [open] = reached.
+class SkillTreeGate {
+  const SkillTreeGate(this.y, this.half, {required this.open});
+  final double y, half;
   final bool open;
 }
 
@@ -36,7 +36,7 @@ class SkillTreeCanvas extends ConsumerStatefulWidget {
     required this.tooltip,
     this.startId,
     this.selected,
-    this.rings = const [],
+    this.gates = const [],
     this.keyPrefix = 'tree-node',
   });
 
@@ -48,7 +48,7 @@ class SkillTreeCanvas extends ConsumerStatefulWidget {
   final Widget Function(String id) tooltip;
   final String? startId;
   final String? selected;
-  final List<SkillTreeRing> rings;
+  final List<SkillTreeGate> gates;
 
   /// Each node gets a hit box keyed `<keyPrefix>-<id>` with a child keyed
   /// `<keyPrefix>-<id>-<state>` (tests and accessibility).
@@ -172,7 +172,7 @@ class _SkillTreeCanvasState extends ConsumerState<SkillTreeCanvas> {
                         child: Stack(children: [
                           Positioned.fill(
                             child: CustomPaint(
-                                painter: _RingsPainter(widget.rings)),
+                                painter: _GatesPainter(widget.gates)),
                           ),
                           Positioned.fill(
                             child: RepaintBoundary(
@@ -188,6 +188,7 @@ class _SkillTreeCanvasState extends ConsumerState<SkillTreeCanvas> {
                                     states: widget.states,
                                     focus: focus,
                                     highlightPath: cat.nodes[focus]?.pathId,
+                                    ring: false,
                                   ),
                                 ),
                               ),
@@ -257,30 +258,31 @@ class _SkillTreeCanvasState extends ConsumerState<SkillTreeCanvas> {
   }
 }
 
-/// Level-gate rings behind the tree: reached ones in the panel border
+/// Level-gate lines behind the tree: dashed, reached ones in the border
 /// colour, the rest dimmer.
-class _RingsPainter extends CustomPainter {
-  _RingsPainter(this.rings);
-  final List<SkillTreeRing> rings;
+class _GatesPainter extends CustomPainter {
+  _GatesPainter(this.gates);
+  final List<SkillTreeGate> gates;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final c = PassiveTreeView.toCanvas(0, 0);
-    for (final r in rings) {
-      canvas.drawCircle(
-          c,
-          r.radius * PassiveTreeView.scale,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = r.open ? 2 : 1
-            ..color = (r.open ? DsColors.border : DsColors.surfaceSunken)
-                .withValues(alpha: r.open ? 0.6 : 0.8));
+    for (final g in gates) {
+      final a = PassiveTreeView.toCanvas(-g.half, g.y);
+      final b = PassiveTreeView.toCanvas(g.half, g.y);
+      final paint = Paint()
+        ..strokeWidth = 1
+        ..color = (g.open ? DsColors.border : DsColors.surfaceSunken)
+            .withValues(alpha: g.open ? 0.5 : 0.9);
+      for (var x = a.dx; x < b.dx; x += 8) {
+        canvas.drawLine(Offset(x, a.dy), Offset(math.min(x + 4, b.dx), a.dy),
+            paint);
+      }
     }
   }
 
   @override
-  bool shouldRepaint(_RingsPainter old) =>
-      old.rings.length != rings.length ||
-      [for (var i = 0; i < rings.length; i++) rings[i].open != old.rings[i].open]
+  bool shouldRepaint(_GatesPainter old) =>
+      old.gates.length != gates.length ||
+      [for (var i = 0; i < gates.length; i++) gates[i].open != old.gates[i].open]
           .any((d) => d);
 }
