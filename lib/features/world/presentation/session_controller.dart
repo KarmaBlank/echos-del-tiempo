@@ -2448,6 +2448,11 @@ class SessionController extends StateNotifier<SessionView?> {
 
   double get sessionTime => _s?.time ?? 0;
 
+  /// Segundos entre vueltas de los ayudantes (los mismos jugadores que
+  /// cuenta el motor).
+  double get helperPeriod => TownRules.helperPeriod(
+      _s?.playerList.where((p) => !p.isCompanion).map((p) => p.profile) ?? const []);
+
   /// Segundos hasta la próxima vuelta de los ayudantes.
   double get helperRoundIn => TownRules.nextRoundIn(
       sessionTime, _s?.playerList.where((p) => !p.isCompanion).map((p) => p.profile) ?? const []);

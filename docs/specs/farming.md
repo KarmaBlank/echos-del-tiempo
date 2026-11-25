@@ -325,7 +325,24 @@ herramienta de área trabaja menos tiles.
   abajo, después arriba; el sprite se espeja si mira a la izquierda) y,
   trabajando, se dibujan caña, línea y boya en ese tile, con un vaivén
   suave según el tiempo de animación (`MapFishingLayer.drawHelperLine`).
-  Se deriva en cada cliente; no viaja por la red. La posición
+  Se deriva en cada cliente; no viaja por la red.
+- Pescador en pantalla (v0.48.2): sin mover el brazo mientras pesca.
+  Quieto respira (1 px cada `fisherBreathSec`, 1.75 s) con la línea
+  tirada y la boya meciéndose lento. Solo en el momento de la pesca
+  (`fisherCatching`: los primeros `fisherCatchSec`, 0.7 s, después de
+  cada vuelta del motor, `time % helperPeriod`, el mismo reloj que usa
+  `_fisherRound`) usa `vida_npc_pescador_trabajo`, la boya se hunde y
+  hay salpicadura con el pez saltando (`drawHelperCatch`). Bloqueado o
+  caminando, no pesca.
+- Cambio de lugar (v0.48.2): cada `fisherMoveSec` (240 s, tramo
+  `fisherSegment`) todos los pescadores del lago se corren el mismo salto
+  (n / 3) por la lista de lugares válidos (`fisherSpots`, mismas reglas
+  que `fisherSpot`), así nunca comparten lugar; el tramo 0 es el lugar
+  de siempre. Al empezar el tramo caminan por la orilla (`shorePath`, el
+  lado más corto del borde) a `fisherWalkTileSec` (0.45 s) por tile, con
+  el sprite quieto y el vaivén de caminar; llegan y vuelven a pescar
+  mirando al agua (`fisherFacing` con el tiempo). Todo sale del reloj de
+  la sala: igual en todos los clientes, sin cambio de protocolo. La posición
   sale del reloj de la sala (igual en todos). No son sólidos y nunca
   tapan la huerta: E / clic en una parcela sigue siendo del jugador.
 - Mouse encima de un ayudante (jugando o editando): contorno de su área

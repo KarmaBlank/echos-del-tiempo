@@ -635,6 +635,14 @@ abstract final class TownRules {
   /// de otras construcciones, del cartel y del cofre; el primero, el más
   /// cercano al cartel y su cofre, los demás cada vez más lejos.
   static (int, int) fisherSpot(TownState s, TownBuild b, int i) {
+    final ring = fisherSpots(s, b);
+    if (ring.isEmpty) return shoreTiles(b).first;
+    return ring[i % ring.length];
+  }
+
+  /// Todos los lugares de pesca válidos de [b] (ver [fisherSpot]),
+  /// ordenados del más cercano al cartel al más lejano.
+  static List<(int, int)> fisherSpots(TownState s, TownBuild b) {
     final sign = TownPlan.signOf(s, b), chest = chestOf(s, b);
     bool wet(int x, int y) => b.contains(x, y);
     final ring = [
@@ -645,19 +653,101 @@ abstract final class TownRules {
             !s.builds.any((o) => o.contains(x, y)))
           (x, y)
     ];
-    if (ring.isEmpty) return shoreTiles(b).first;
     int d((int, int) p) =>
         (p.$1 - sign.$1).abs() + (p.$2 - sign.$2).abs();
-    ring.sort((a, z) => d(a).compareTo(d(z)));
-    return ring[i % ring.length];
+    ring.sort((a, z) {
+      final c = d(a).compareTo(d(z));
+      if (c != 0) return c;
+      final cy = a.$2.compareTo(z.$2);
+      return cy != 0 ? cy : a.$1.compareTo(z.$1);
+    });
+    return ring;
   }
+
+  /// Tramo de lugares del segundo [time] (farming.md § 8.1): cada
+  /// `fisherMoveSec` los pescadores cambian de lugar en la orilla.
+  static int fisherSegment(double time) =>
+      (time / math.max(1.0, t.d('fisherMoveSec'))).floor();
+
+  /// El lugar del pescador [i] de [b] en el tramo [seg]: todos se corren
+  /// el mismo salto por la lista de [fisherSpots], así nunca comparten
+  /// lugar (si entran). Determinista: igual en todos los clientes.
+  static (int, int) fisherSpotAt(TownState s, TownBuild b, int i, int seg) {
+    final ring = fisherSpots(s, b);
+    if (ring.isEmpty) return shoreTiles(b).first;
+    final n = ring.length;
+    final step = n > 2 ? (n ~/ 3).clamp(1, n - 1) : 1;
+    return ring[(i + seg * step) % n];
+  }
+
+  /// Camino por la orilla (en el orden del borde) de [a] a [z], por el
+  /// lado más corto; incluye los dos extremos.
+  static List<(int, int)> shorePath(TownBuild b, (int, int) a, (int, int) z) {
+    final ring = shoreTiles(b);
+    final ia = ring.indexOf(a), iz = ring.indexOf(z);
+    if (ia < 0 || iz < 0 || ia == iz) return [a, z];
+    final n = ring.length;
+    final fwd = (iz - ia) % n, back = (ia - iz) % n;
+    final dir = fwd <= back ? 1 : -1;
+    final len = math.min(fwd, back);
+    return [for (var k = 0; k <= len; k++) ring[(ia + dir * k) % n]];
+  }
+
+  /// Dónde está el pescador [i] de [b] en el segundo [time] (tiles del
+  /// pueblo base, con decimales): quieto en su lugar del tramo o, al
+  /// empezar un tramo nuevo, caminando por la orilla desde el anterior
+  /// (`fisherWalkTileSec` por tile). `walk`: va caminando; `dx`: hacia
+  /// dónde camina (-1, 0, 1).
+  static ({double x, double y, bool walk, int dx}) fisherAt(
+      TownState s, TownBuild b, int i, double time) {
+    final seg = fisherSegment(time);
+    final z = fisherSpotAt(s, b, i, seg);
+    if (seg > 0) {
+      final a = fisherSpotAt(s, b, i, seg - 1);
+      if (a != z) {
+        final path = shorePath(b, a, z);
+        final per = math.max(0.05, t.d('fisherWalkTileSec'));
+        final local = time - seg * math.max(1.0, t.d('fisherMoveSec'));
+        final k = local / per;
+        if (k < path.length - 1) {
+          final j = k.floor().clamp(0, path.length - 2);
+          final f = k - j;
+          final p = path[j], q = path[j + 1];
+          return (
+            x: p.$1 + (q.$1 - p.$1) * f,
+            y: p.$2 + (q.$2 - p.$2) * f,
+            walk: true,
+            dx: (q.$1 - p.$1).sign,
+          );
+        }
+      }
+    }
+    return (x: z.$1.toDouble(), y: z.$2.toDouble(), walk: false, dx: 0);
+  }
+
+  /// El pescador está en su momento de pesca (farming.md § 8.1): los
+  /// primeros `fisherCatchSec` después de cada vuelta de los ayudantes
+  /// (la misma vuelta del motor, alineada al reloj de la sala con
+  /// [period] = [helperPeriod]).
+  static bool fisherCatching(double time, double period) =>
+      time >= period && time % period < t.d('fisherCatchSec');
+
+  /// Desplazamiento de respiración del pescador quieto en px (0 o -1)
+  /// según el reloj de animación [ms].
+  static double fisherBreath(double ms) =>
+      (ms / (math.max(0.1, t.d('fisherBreathSec')) * 1000)).floor() % 2 == 0
+          ? 0
+          : -1;
 
   /// Hacia dónde mira el pescador [i] de [b] (farming.md § 8.1): el paso
   /// (dx, dy) de su lugar al tile de agua pegado por un lado (primero
   /// izquierda/derecha, después abajo, después arriba). Se calcula en cada
   /// cliente, no viaja por la red.
-  static (int, int) fisherFacing(TownState s, TownBuild b, int i) {
-    final (x, y) = fisherSpot(s, b, i);
+  static (int, int) fisherFacing(TownState s, TownBuild b, int i,
+      [double? time]) {
+    final (x, y) = time == null
+        ? fisherSpot(s, b, i)
+        : fisherSpotAt(s, b, i, fisherSegment(time));
     for (final d in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
       if (b.contains(x + d.$1, y + d.$2)) return d;
     }
@@ -680,8 +770,12 @@ abstract final class TownRules {
     // Bloqueado (§ 8.6): se queda quieto, sin trabajar.
     final stuck = HelperRules.blocked(b, i);
     if (b.kind == BuildKind.lago) {
-      final (x, y) = fisherSpot(s, b, i);
-      return (x: (x + ox + 0.5) * 16, y: (y + oy + 0.5) * 16, work: !stuck);
+      final p = fisherAt(s, b, i, time);
+      return (
+        x: (p.x + ox + 0.5) * 16,
+        y: (p.y + oy + 0.5) * 16,
+        work: !stuck && !p.walk
+      );
     }
     final area = helperArea(b, i);
     if (stuck && area.isNotEmpty) {

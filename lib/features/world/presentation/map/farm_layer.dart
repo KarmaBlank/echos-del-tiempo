@@ -359,8 +359,10 @@ class MapFarmLayer {
   void drawHelpers(Canvas c, TownState town, double time, double t,
       ui.Image? Function(String id) sprite, MapText text,
       {({TownBuild build, int index})? hover,
-      NpcMark Function(BiomeNpcDef n)? markOf}) {
+      NpcMark Function(BiomeNpcDef n)? markOf,
+      double? period}) {
     final (ox, oy) = town.origin;
+    final roundSec = period ?? TownRules.t.d('helperEverySec');
     final paint = SpriteCatalog.pixelPaint();
     Rect? img(String id, double cx, double bottom, [Paint? p]) {
       final im = sprite(id);
@@ -413,31 +415,37 @@ class MapFarmLayer {
       for (var i = 0; i < b.helper; i++) {
         final pos = TownRules.helperPos(town, b, i, time);
         final farm = b.kind == BuildKind.huerta;
-        final work = pos.work && (t ~/ 400) % 2 == 0;
-        final id = farm
-            ? (work ? 'npc_granjero_trabajo' : 'npc_granjero')
-            : (work ? 'npc_pescador_trabajo' : 'npc_pescador');
         final stuck = HelperRules.blocked(b, i);
-        final bob = pos.work || stuck
-            ? 0.0
-            : (math.sin(t / 120) * 1).roundToDouble();
         if (farm) {
-          img(id, pos.x, pos.y + 6 + bob);
+          final work = pos.work && (t ~/ 400) % 2 == 0;
+          final bob = pos.work || stuck
+              ? 0.0
+              : (math.sin(t / 120) * 1).roundToDouble();
+          img(work ? 'npc_granjero_trabajo' : 'npc_granjero', pos.x,
+              pos.y + 6 + bob);
         } else {
-          // Pescador (farming.md § 8.1): mira al agua y, trabajando, tira
-          // la línea con la boya en el tile de agua.
-          final dir = TownRules.fisherFacing(town, b, i);
-          final flip = dir.$1 < 0;
+          // Pescador (farming.md § 8.1): mira al agua y respira quieto con
+          // la línea tirada; solo en el momento de la pesca (tras cada
+          // vuelta) usa el cuadro de trabajo, la boya se hunde y salta el
+          // pez. Al cambiar de lugar camina por la orilla.
+          final f = fisherFrame(town, b, i, time, t, roundSec);
+          final flip = f.flip;
           if (flip) {
             c.save();
             c.translate(pos.x * 2, 0);
             c.scale(-1, 1);
           }
-          img(id, pos.x, pos.y + 6 + bob);
+          img(f.sprite, pos.x, pos.y + 6 + f.dy);
           if (flip) c.restore();
           if (pos.work) {
-            MapFishingLayer.drawHelperLine(c, pos.x, pos.y, dir,
-                (pos.x + dir.$1 * ts, pos.y + dir.$2 * ts), t);
+            final dir = TownRules.fisherFacing(town, b, i, time);
+            final bx = pos.x + dir.$1 * ts, by = pos.y + dir.$2 * ts;
+            MapFishingLayer.drawHelperLine(c, pos.x, pos.y, dir, (bx, by), t,
+                dip: f.catching ? 2 : 0);
+            if (f.catching) {
+              MapFishingLayer.drawHelperCatch(
+                  c, bx, by, (time % roundSec) / TownRules.t.d('fisherCatchSec'));
+            }
           }
         }
         // Bloqueado (farming.md § 8.6): quieto y con el "!" dorado.
@@ -482,12 +490,42 @@ class MapFarmLayer {
             for (final (x, y) in TownRules.helperArea(b, h.index))
               (x + b.anchor.$1, y + b.anchor.$2)
           ]
-        : [TownRules.fisherSpot(town, b, h.index)];
+        : [
+            TownRules.fisherSpotAt(
+                town, b, h.index, TownRules.fisherSegment(time))
+          ];
     for (final (x, y) in tiles) {
       c.drawRect(
           Rect.fromLTWH((x + ox) * ts + 0.5, (y + oy) * ts + 0.5, ts - 1, ts - 1),
           line);
     }
+  }
+
+  /// Cuadro del pescador [i] de [b] (farming.md § 8.1): sprite, si se
+  /// espeja, desplazamiento vertical en px y si está en el momento de la
+  /// pesca. [time]: reloj de la sala (s); [t]: ms de animación;
+  /// [period]: segundos entre vueltas de los ayudantes.
+  static ({String sprite, bool flip, double dy, bool catching}) fisherFrame(
+      TownState town, TownBuild b, int i, double time, double t,
+      double period) {
+    final p = TownRules.fisherAt(town, b, i, time);
+    final stuck = HelperRules.blocked(b, i);
+    if (p.walk) {
+      return (
+        sprite: 'npc_pescador',
+        flip: p.dx < 0,
+        dy: (math.sin(t / 120) * 1).roundToDouble(),
+        catching: false,
+      );
+    }
+    final dir = TownRules.fisherFacing(town, b, i, time);
+    final catching = !stuck && TownRules.fisherCatching(time, period);
+    return (
+      sprite: catching ? 'npc_pescador_trabajo' : 'npc_pescador',
+      flip: dir.$1 < 0,
+      dy: catching ? 0 : TownRules.fisherBreath(t),
+      catching: catching,
+    );
   }
 
   /// Cosecha: el fruto salta del tile hacia quien cosechó.

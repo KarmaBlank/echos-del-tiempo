@@ -1053,7 +1053,8 @@ class MapGame extends Game {
             (id) => sprites.lifeIcon(id, 'herramienta'),
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
             hover: controller.hoverHelper,
-            markOf: _npcMark);
+            markOf: _npcMark,
+            period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');

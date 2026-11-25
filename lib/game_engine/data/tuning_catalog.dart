@@ -299,6 +299,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'fisherTiles': 18,
     'fisherCatch': 2,
     'helperEverySec': 45,
+    // Pescador en pantalla (farming.md § 8.1, v0.48.2): respiración (s
+    // por px), momento de la pesca tras cada vuelta (s), cada cuántos s
+    // cambia de lugar en la orilla y s por tile al caminar.
+    'fisherBreathSec': 1.75,
+    'fisherCatchSec': 0.7,
+    'fisherMoveSec': 240,
+    'fisherWalkTileSec': 0.45,
     'helperXpShare': 0.1,
     'chestMax': 200,
     // Progresión de cada ayudante (farming.md § 8.5, v0.27.0): nivel
