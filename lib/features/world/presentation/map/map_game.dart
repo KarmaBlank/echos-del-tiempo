@@ -134,7 +134,10 @@ class MapGame extends Game {
       weaponTypeOf: (id) => controller.engine.catalog.weapons[id]?.type,
     );
     _events = controller.events.listen(_onEvent);
-    controller.onMineSwing = (x, y) => mine.onSwing(x, y, t);
+    controller.onMineSwing = (x, y, bounced) {
+      final p = controller.session?.players[controller.localId];
+      mine.onSwing(x, y, t, fromX: p?.x, fromY: p?.y, bounced: bounced);
+    };
     // Para la línea de rendimiento de ecos.log (FPS Y PING prendido).
     PerfLog.probes['mapa'] = _perfProbe;
   }
@@ -1427,18 +1430,32 @@ class MapGame extends Game {
         actors.text(c, txt, x, y, col, size);
     if (controller.mineLevel case final lvl? when inMine) {
       final p = controller.session?.players[controller.localId];
-      final k = (controller.mineClock.elapsedMilliseconds -
-              controller.lastSwingMs) /
-          250;
+      final ms = controller.mineClock.elapsedMilliseconds -
+          controller.lastSwingMs;
+      final period = controller.mineSwingPeriodMs;
+      // The pick shows through a swing, and stays raised while held.
+      final swinging = ms < period + 150 || controller.mineHolding;
       mine.drawMine(c, lvl, s.town.mine(map.place!), t,
           cracks: controller.mineCracks,
           playerAt: (id) => _lastDrawn[id],
           minerSprite: sprites.lifeIcon('npc_mina_miner', 'herramienta'),
           text: mineText,
           tr: controller.strings.t,
-          swing: k < 1 && p != null && controller.lastSwingTile != null
-              ? (controller.lastSwingTile!, k, (p.x, p.y))
-              : null);
+          swing: swinging && p != null && controller.lastSwingTile != null
+              ? (controller.lastSwingTile!, ms, period, (p.x, p.y))
+              : null,
+          indicator: switch (controller.mineDigState) {
+            (final tile, final dealt, final hits, final ok) => switch (
+                  MineLayer.digProgress(
+                      dealt: dealt,
+                      hits: hits,
+                      sinceHitMs: ms,
+                      holding: controller.mineHolding)) {
+                final k? => (tile, k, ok),
+                null => null,
+              },
+            null => null,
+          });
     } else if (map.lobby && map.place == null) {
       final (ox, oy) = map.townOrigin;
       for (final l in TownPlan.landmarksOf(s.town)) {

@@ -1717,8 +1717,40 @@ class SessionController extends StateNotifier<SessionView?> {
   (int, int)? lastSwingTile;
   final mineClock = Stopwatch()..start();
 
-  /// Called with each local swing (sparks in the map layer).
-  void Function(int tx, int ty)? onMineSwing;
+  /// Called with each local swing (chips and sparks in the map layer);
+  /// `bounced` = the pick cannot break that tile.
+  void Function(int tx, int ty, bool bounced)? onMineSwing;
+
+  /// Whether E / the click is held in a mine (keeps the pick raised and
+  /// the dig indicator up between hits).
+  bool get mineHolding => _mineHold != null;
+
+  /// Ms between hits of the held pick (the swing animation's period).
+  double get mineSwingPeriodMs {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? 300 : MiningRules.tool(p).swing * 1000;
+  }
+
+  /// The tile last hit, its hits dealt (prediction), its total hits and
+  /// whether the pick can break it; `null` = no breakable tile there (it
+  /// broke, or none hit yet). The map turns it into the dig indicator.
+  ((int, int), int, int, bool)? get mineDigState {
+    final lvl = mineLevel;
+    final p = _s?.players[localId]?.profile;
+    final tile = lastSwingTile;
+    if (lvl == null || p == null || tile == null || !inMine) return null;
+    final (x, y) = tile;
+    final c = MiningRules.tileAt(lvl, mineState, x, y);
+    if (!MineTile.breakable.contains(c) && c != MineTile.bedrock) return null;
+    final ok =
+        MiningRules.cannotBreak(c, lvl.level, MiningRules.tool(p)) == null;
+    return (
+      tile,
+      ok ? mineCracks[lvl.idx(x, y)] ?? 0 : 0,
+      MiningRules.hits(c, lvl.level),
+      ok
+    );
+  }
 
   Timer? _mineHold;
   double _lastSwingT = -1e9;
@@ -1764,7 +1796,7 @@ class SessionController extends StateNotifier<SessionView?> {
         _lastSwingT = st;
         lastSwingMs = now;
         lastSwingTile = (x, y);
-        onMineSwing?.call(x, y);
+        onMineSwing?.call(x, y, true);
         _emit();
       }
       return false;
@@ -1777,7 +1809,7 @@ class SessionController extends StateNotifier<SessionView?> {
         !MineTile.breakable.contains(MiningRules.tileAt(
             lvl, mineState, k % lvl.width, k ~/ lvl.width)));
     mineCracks[i] = (mineCracks[i] ?? 0) + tool.power;
-    onMineSwing?.call(x, y);
+    onMineSwing?.call(x, y, false);
     fishSfx?.call(Sfx.hit);
     return _apply(MineAction(MineOp.dig, x: x, y: y));
   }
