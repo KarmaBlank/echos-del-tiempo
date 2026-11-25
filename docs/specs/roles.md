@@ -181,7 +181,84 @@ Las reglas de órdenes, pedidos y encargos de forja se ven y ajustan por
 habitante en el Editor → NPC → PEDIDOS (npc_editor.md § 4), con
 ejemplos generados para un nivel elegido.
 
-## 9. Pendiente
+## 9. Hitos de relación (recompensas reales)
+
+Subir la relación con un habitante que vive en una casa del pueblo y
+tiene su oficio (todos, no solo Brann) paga cosas concretas, no solo
+"+x %". Lo mismo para los cinco habitantes de bioma.
+
+### 9.1 La pista de hitos
+
+Una pista igual para todos (`kResidentMilestones`,
+`ResidentMilestoneRules`); la relación de cada hito sale de
+`kTuning[town]` y se ajusta en Balance y en Editor → NPC → HITOS DE
+RELACIÓN:
+
+| # | Relación (clave) | Recompensa | Endgame (Ecos abiertos) |
+|---|------------------|------------|-------------------------|
+| 0 | 2 (`msRepChest`) | Cofre de madera (oro + tiradas de cofre) | + `msEndShards` (3) Esquirlas del Eco |
+| 1 | 4 (`msRepMaterial`) | `msMaterialN` (4) productos de su bioma | + `msEndCrystals` (2) Cristales de Era |
+| 2 | 5 (`resSettledRep`) | Asentado: sube el beneficio % (automático) | — |
+| 3 | 7 (`msRepMeal`) | `msMealN` (2) comidas raras (una fija por habitante) | + 2 Cristales de Era |
+| 4 | 10 (`resRootedRep`) | Arraigado: sube el beneficio % (automático) | — |
+| 5 | 14 (`msRepSilver`) | Cofre de plata | + 3 Esquirlas del Eco |
+| 6 | 18 (`msRepWeapon`) | Arma épica de la familia de tu clase | + `msEndAnchors` (1) Ancla Temporal |
+| 7 | 24 (`msRepEco`) | Cofre de oro; con Ecos abiertos, un Eco | — (el Eco es la recompensa) |
+| 8 | 30 (`msRepUnique`) | Arma única (legendaria) de tu clase | + 1 Ancla Temporal |
+
+- Endgame = el personaje tiene los Ecos abiertos
+  (`PlayerProfile.ecosUnlocked`, ecos_atlas.md).
+- Cofres y armas usan las tiradas normales de cofre al nivel del
+  personaje (`_chestDrops`, `LootRules.itemLevelFor`); lo que no entra
+  va al cofre de la cuenta.
+- Los hitos de etapa (Asentado, Arraigado) siguen siendo % y no se
+  reclaman: se aplican solos (§ 10.3 de overworld_biomes.md), pero ahora
+  se llega antes.
+
+### 9.2 Reclamar
+
+- Por personaje: cada jugador reclama su propia recompensa aunque la
+  relación sea del pueblo. JSON del perfil `rcl`: npc → máscara de bits
+  de hitos reclamados.
+- Solo en el pueblo, con el habitante viviendo en una casa
+  (`invited` y `house > 0`). Acción `TownAction(claimMilestone, id: npc,
+  n: índice)`, validada por el anfitrión (protocolo 80).
+- Lo fijo (materiales, comidas, moneda de endgame) lo paga
+  `ResidentMilestoneRules.claim`; lo tirado (cofres, armas, Eco), el
+  motor con sus dados.
+
+### 9.3 Cofre extra en las órdenes
+
+Al entregar una orden (§ 3), con chance `orderChestChance` (12 %) el
+habitante agrega un cofre de madera.
+
+### 9.4 Ritmo de relación (rebalance)
+
+- `orderRep` pasa de 1 a 2; `resRootedRep` de 12 a 10.
+- Fuentes por día del mundo: regalo +1 (uno por día), orden +2 (una por
+  día, `orderEveryDays` = 1), pedidos del pueblo +2 cada
+  `resRequestEveryDays` (2) días, pasos de la cadena +1/+2.
+- Con regalo y orden diarios (≈ 3 por día, ≈ 4 con pedidos): cofre de
+  madera el día 1, Asentado el 2, Arraigado ≈ día 3–4, cofre de plata
+  ≈ día 5, arma épica ≈ día 6, Eco ≈ día 8 y arma única ≈ día 10 por
+  habitante.
+
+### 9.5 Panel
+
+En la ventana del habitante (debajo de la franja de estado, solo en el
+pueblo y si vive ahí) una fila de celdas, una por hito: relación abajo a
+la izquierda, ícono de la recompensa y borde de color — dorado
+`DsColors.reward` = listo para reclamar (clic), verde = reclamado o
+alcanzado, celeste `DsColors.mp` = el próximo, gris = bloqueado. Tooltip
+de tamaño fijo (`DsTooltipCard`) con recompensa, relación necesaria,
+extra de endgame y estado. Vista previa: docs/preview/resident_milestones.png.
+
+### 9.6 Guardados viejos
+
+No hay `rcl` = nada reclamado: todo hito que ya alcanzaste queda listo
+para reclamar en cuanto el habitante tenga casa.
+
+## 10. Pendiente
 
 Ver tech_debt.md v0.31.0 (paridad de XP sin simular, animales, party
 dividida).

@@ -408,6 +408,10 @@ vacío):
 - Valor: `res<rol>Base + res<rol>Step × nivel`. Su pantalla muestra
   "Beneficio: …" y el del nivel siguiente; la fuente, un resumen.
 
+Desde la v0.48.x, Arraigado pide relación 10 (antes 12) y la relación
+también paga hitos concretos (cofres, materiales, comidas, armas, Ecos):
+ver roles.md § 9.
+
 ### 10.4 Pedidos, ánimo y edificio
 - Cada `resRequestEveryDays` (2) días del mundo, si no tiene pedido,
   pide una mejora: primero subir su edificio (hasta `resMaxHouse` 3, oro

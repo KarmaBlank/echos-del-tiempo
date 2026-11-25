@@ -50,6 +50,7 @@ import 'npc_talk_rules.dart';
 import 'custom_npc_rules.dart';
 import '../models/custom_npc.dart' show kCustomNpcs;
 import 'resident_rules.dart' show ResidentRules, kResidentRelics;
+import 'resident_milestone_rules.dart';
 import 'dungeon_rules.dart';
 import 'eco_portal_rules.dart';
 import 'eco_rules.dart';

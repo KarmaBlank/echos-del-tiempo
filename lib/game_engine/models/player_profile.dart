@@ -33,6 +33,7 @@ class PlayerProfile {
     PlayerAttributes? attributes,
     int points = 0,
     int treeBonus = 0,
+    Map<String, int> resClaims = const {},
     List<String> inventory = const [],
     String? equipped,
     int potions = defaultPotions,
@@ -77,6 +78,7 @@ class PlayerProfile {
       attributes: attributes ?? const PlayerAttributes({}),
       points: points,
       treeBonus: treeBonus,
+      resClaims: Map.unmodifiable(resClaims),
       items: List.unmodifiable(list),
       equippedUid: _resolve(list, equipped),
       potions: potions,
@@ -140,6 +142,7 @@ class PlayerProfile {
     required this.attributes,
     required this.points,
     this.treeBonus = 0,
+    this.resClaims = const {},
     required this.items,
     required this.equippedUid,
     required this.potions,
@@ -215,6 +218,11 @@ class PlayerProfile {
   /// Puntos de árbol extra ganados en el pueblo (órdenes de habitantes,
   /// overworld_biomes.md § 10.5; JSON `tb`).
   final int treeBonus;
+
+  /// Resident milestones claimed by this character (roles.md § 9): npc
+  /// id -> bit mask of milestone indices (JSON `rcl`). Missing = none, so
+  /// old saves get every reached milestone as claimable.
+  final Map<String, int> resClaims;
 
   /// Hitos alcanzados sin elegir (10 y/o 20).
   List<int> get pendingMilestones => [
@@ -401,6 +409,7 @@ class PlayerProfile {
     PlayerAttributes? attributes,
     int? points,
     int? treeBonus,
+    Map<String, int>? resClaims,
     List<String>? inventory,
     String? equipped,
     int? potions,
@@ -455,6 +464,7 @@ class PlayerProfile {
       attributes: attributes ?? this.attributes,
       points: points ?? this.points,
       treeBonus: treeBonus ?? this.treeBonus,
+      resClaims: resClaims == null ? this.resClaims : Map.unmodifiable(resClaims),
       items: List.unmodifiable(list),
       equippedUid: eq,
       potions: potions ?? this.potions,
@@ -605,6 +615,7 @@ class PlayerProfile {
         },
         'pts': points,
         if (treeBonus > 0) 'tb': treeBonus,
+        if (resClaims.isNotEmpty) 'rcl': resClaims,
         'items': [for (final i in items) i.toJson()],
         'eq': equippedUid,
         'pot': potions,
@@ -721,6 +732,12 @@ class PlayerProfile {
       attributes: st is Map ? PlayerAttributes(Map.unmodifiable(attrs)) : null,
       points: _int(json['pts']),
       treeBonus: _int(json['tb']),
+      resClaims: {
+        if (json['rcl'] case final Map m)
+          for (final e in m.entries)
+            if (e.key is String && e.value is num && (e.value as num) > 0)
+              e.key as String: (e.value as num).toInt(),
+      },
       inventory: inventory,
       items: items,
       equipped: json['eq'] is String ? json['eq'] as String : null,

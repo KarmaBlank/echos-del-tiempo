@@ -320,6 +320,7 @@ class ProgressionRules {
       attributes: raw.attributes,
       points: raw.points,
       treeBonus: raw.treeBonus.clamp(0, 99),
+      resClaims: raw.resClaims,
       items: list,
       equipped: raw.equippedUid,
       potions: raw.potions.clamp(0, maxItems),

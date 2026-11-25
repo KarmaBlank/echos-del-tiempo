@@ -439,7 +439,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resNightOutBrann': 0.12,
     'resNightOutOren': 0.3,
     'resSettledRep': 5,
-    'resRootedRep': 12,
+    // roles.md § 9.4 (v0.48.x): Rooted is easier to reach (was 12).
+    'resRootedRep': 10,
     'resMaxTier': 5,
     'resMaxHouse': 3,
     'resHouseGold': 800,
@@ -468,7 +469,24 @@ const Map<String, TuningDef> kTuningDefaults = {
     'mealOrderMin': 1,
     'mealOrderMax': 2,
     'orderSkillEvery': 5,
-    'orderRep': 1,
+    // roles.md § 9.4: relationship per delivered order (was 1).
+    'orderRep': 2,
+    // roles.md § 9: resident milestone track (relationship needed per
+    // reward, amounts, endgame extras with Ecos unlocked) and the bonus
+    // chest a delivered order sometimes rolls.
+    'msRepChest': 2,
+    'msRepMaterial': 4,
+    'msRepMeal': 7,
+    'msRepSilver': 14,
+    'msRepWeapon': 18,
+    'msRepEco': 24,
+    'msRepUnique': 30,
+    'msMaterialN': 4,
+    'msMealN': 2,
+    'msEndShards': 3,
+    'msEndCrystals': 2,
+    'msEndAnchors': 1,
+    'orderChestChance': 0.12,
     'lifeLevelCharXp': 120,
     // roles.md § 3 y § 4: dificultad de las órdenes por oficio y encargo
     // de forja de Brann.

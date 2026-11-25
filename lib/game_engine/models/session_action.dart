@@ -896,7 +896,11 @@ enum TownOp {
   /// o le vende [TownAction.n] de [TownAction.target].
   talk,
   nativeInvite,
-  nativeTrade
+  nativeTrade,
+
+  /// Protocol 80 (roles.md § 9): claim milestone [TownAction.n] of the
+  /// resident [TownAction.id] (chest, materials, meal, weapon, Eco...).
+  claimMilestone
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

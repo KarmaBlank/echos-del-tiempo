@@ -41,6 +41,7 @@ import 'item_source_text.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import 'resident_milestone_row.dart';
 import 'seed_text.dart';
 import '../world_strings.dart';
 
@@ -798,8 +799,22 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
       // Grid + detail use the whole body; the detail pins its actions.
       fill: true,
       onClose: back,
-      header: _status(n, r, p,
-          shop: menu == NpcMenu.comprar, inTown: home && r.invited),
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _status(n, r, p,
+              shop: menu == NpcMenu.comprar, inTown: home && r.invited),
+          // roles.md § 9.5: the milestone track, claimed in town.
+          if (home && r.invited) ...[
+            SizedBox(height: DsSpace.xs),
+            ResidentMilestoneRow(
+                resident: r,
+                profile: p,
+                onClaim: (i) => c.claimMilestone(n.id, i)),
+          ],
+        ],
+      ),
       leading: [
         PanelButton(_s.t('ui.town.npc.back'),
             key: const ValueKey('npc-back'), onPressed: back),
