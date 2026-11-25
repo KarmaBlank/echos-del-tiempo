@@ -2072,15 +2072,23 @@ class SessionController extends StateNotifier<SessionView?> {
     if (s == null || s.mode != SessionMode.lobby || lay == null) {
       return null;
     }
+    // Nearest bush in reach, a grown one first: a picked bush never
+    // hides the ripe one beside it.
+    int? best;
+    var bestScore = double.infinity;
     for (var i = 0; i < lay.forage.length; i++) {
       final f = lay.forage[i];
-      if (WorldRules.distance(local.x, local.y, (f.x + 0.5) * 16,
-              (f.y + 0.5) * 16) <
-          24) {
-        return i;
+      final d = WorldRules.distance(
+          local.x, local.y, (f.x + 0.5) * 16, (f.y + 0.5) * 16);
+      if (d >= 24) continue;
+      final score = d +
+          (BiomeRules.regrowIn(town, lay.id, i, s.time) > 0 ? 1e6 : 0);
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
       }
     }
-    return null;
+    return best;
   }
 
   String forageHint(int i) {
@@ -2182,14 +2190,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final lay = biomeLayout(s?.place);
     if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
-    for (final (list, shrine) in [(lay.chestSpots, false), (lay.shrines, true)]) {
-      for (var i = 0; i < list.length; i++) {
-        final (x, y) = list[i];
-        final dx = (x + 0.5) * 16 - local.x, dy = (y + 0.5) * 16 - local.y;
-        if (dx * dx + dy * dy <= 26 * 26) return (i, shrine);
-      }
-    }
-    return null;
+    return WildLootRules.nearest(lay, town, _me, local.x, local.y);
   }
 
   /// E on a wilds chest / shrine.

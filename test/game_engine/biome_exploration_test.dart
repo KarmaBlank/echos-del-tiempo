@@ -397,6 +397,29 @@ void main() {
     expect((p.x - sp.x).abs() < 20 && (p.y - sp.y).abs() < 20, isTrue);
   });
 
+  test('wilds loot resolves to the nearest spot in reach', () {
+    BiomeRegions.bind(5);
+    final lay = BiomeRegions.of(kBosque)!;
+    final (x, y) = lay.shrines.first;
+    expect(
+        WildLootRules.nearest(
+            lay, const TownState(), 'Ana', (x + 0.5) * 16, (y + 0.5) * 16),
+        (0, true));
+    expect(WildLootRules.nearest(lay, const TownState(), 'Ana', -999, -999),
+        isNull);
+    // Marks of other spots, kinds, players or layout versions never make
+    // a fresh shrine read as used.
+    const day = 9;
+    final town = TownState(sky: const SkyState(day: day), daily: {
+      WildLootRules.lootKey('Ana', lay.id, 0, day): 1,
+      WildLootRules.lootKey('Bea', lay.id, 0, day, shrine: true): 1,
+      WildLootRules.lootKey('Ana', lay.id, 1, day, shrine: true): 1,
+      'wx:Ana:${lay.id}:v${BiomeLayout.version - 1}:s0:$day': 1,
+      'wx:Ana:${lay.id}:s0:$day': 1,
+    });
+    expect(WildLootRules.taken(town, 'Ana', lay.id, 0, shrine: true), isFalse);
+  });
+
   test('inside a cave the carried light and the wisp shine by day', () {
     expect(
         LightRules.wispActive(toggled: true, outdoor: true, night: false),
