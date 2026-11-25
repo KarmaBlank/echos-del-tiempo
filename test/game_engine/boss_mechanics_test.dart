@@ -350,7 +350,9 @@ void main() {
       final st = e.enemyTurn(_turnOf(s, 'e0'))!;
       final u = st.events.whereType<EnemyUltEvent>().single;
       expect([u.ultId, u.allTargets], ['eult_juicio', false]);
-      expect(st.state.party[0].stacks(StatusKind.stun), 1);
+      // combat.md § "Control sobre jugadores": the stun fills the break bar.
+      expect(st.state.party[0].stacks(StatusKind.stun), 0);
+      expect(st.state.party[0].breakGauge, greaterThan(0));
       expect(st.state.enemies[0].stance, 2);
     });
   });

@@ -251,6 +251,15 @@ class BattleEngine {
   static int get playerBrokenTurns => math.max(1, _limits.i('pBrokenTurns'));
   static double get playerBrokenMult => _limits.d('pBrokenMult');
 
+  /// Break-bar fill (fraction of the threshold) an enemy stun converts
+  /// into on a player (combat.md § "Control sobre jugadores").
+  static double get playerStunBreak => _limits.d('pStunBreak');
+
+  /// [p] is under a control that costs it a phase: silenced, stunned or
+  /// broken-pending. Enemies can't add silence or stun on top of it.
+  static bool playerControlled(Combatant p) =>
+      p.silenced > 0 || p.stacks(StatusKind.stun) > 0 || p.breakSkip;
+
   /// Current threshold of a player's break bar: base × min(2, 1 + 0.25 ×
   /// breaks), like the enemies'.
   static double playerBreakMax(Combatant p) =>
@@ -512,7 +521,12 @@ class BattleEngine {
     Combatant? pick;
     var best = -1.0;
     for (final p in state.party) {
-      if (!p.alive || p.isSummon || p.silenced != 0) continue;
+      if (!p.alive ||
+          p.isSummon ||
+          p.silenced != 0 ||
+          BattleEngine.playerControlled(p)) {
+        continue;
+      }
       final v = skillPower(p);
       if (v > best) {
         best = v;
@@ -1703,6 +1717,19 @@ class _Turn {
     if (st.chance != null &&
         _rand() >=
             st.chance! + (st.kind == StatusKind.stun ? _duoStun(source) : 0)) {
+      return false;
+    }
+    // Control on players (combat.md § "Control sobre jugadores"): the
+    // break bar is the only way a player gets stunned. A stun from an
+    // enemy (or no player source) becomes break-bar fill instead, and
+    // nothing if the player is already silenced / stunned / broken.
+    if (st.kind == StatusKind.stun &&
+        a.isPlayer &&
+        (source == null || !source.isPlayer)) {
+      if (!a.isSummon && !BattleEngine.playerControlled(a)) {
+        _fillPlayerBreak(
+            a, BattleEngine.playerBreakMax(a) * BattleEngine.playerStunBreak);
+      }
       return false;
     }
     // Recién descongelado: resiste la Congelación (§ 7).
@@ -3534,8 +3561,24 @@ class _Turn {
         p.breakSkip) {
       return;
     }
-    var amount = BattleEngine.playerBreakHit +
-        (p.maxHp <= 0 ? 0 : dmg / p.maxHp * 100) * BattleEngine.playerBreakHp;
+    _fillPlayerBreak(
+        p,
+        BattleEngine.playerBreakHit +
+            (p.maxHp <= 0 ? 0 : dmg / p.maxHp * 100) *
+                BattleEngine.playerBreakHp);
+  }
+
+  /// Adds [amount] to [p]'s break bar (half while defending); full:
+  /// broken. A break landing on a silenced player clears the Silence (it
+  /// goes to its cooldown), so the two never cost back-to-back phases.
+  void _fillPlayerBreak(Combatant p, double amount) {
+    if (!BattleEngine.playerBreakOn ||
+        !p.isPlayer ||
+        p.isSummon ||
+        p.vulnerable > 0 ||
+        p.breakSkip) {
+      return;
+    }
     if (p.defending) amount *= 0.5;
     if (amount <= 0) return;
     final max = BattleEngine.playerBreakMax(p);
@@ -3549,6 +3592,10 @@ class _Turn {
       ..breakSkip = true
       ..vulnerable = BattleEngine.playerBrokenTurns;
     events.add(BreakEvent(p.id, BreakPhase.broken, max, max));
+    if (p.silenced > 0) {
+      p.silenced = -BattleEngine.silenceCooldown;
+      _notes.add(_l('silence_ends', {'a': p.name}));
+    }
     _notes.add(_l('player_break', {
       'a': p.name,
       'p': jsRound((BattleEngine.playerBrokenMult - 1) * 100),

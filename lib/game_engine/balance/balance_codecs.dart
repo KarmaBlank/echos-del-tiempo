@@ -1280,6 +1280,7 @@ final combatLimitsCodec = _tuningCodec(BalanceKind.combatLimits, const [
   BalanceField('pBreakDecay', 'Quiebre de jugador: baja al empezar su turno (fracción del umbral)', _frac, max: 1, step: 0.05),
   BalanceField('pBrokenTurns', 'Quiebre de jugador: turnos propios vulnerable', _int, min: 1, max: 9),
   BalanceField('pBrokenMult', 'Quiebre de jugador: × daño recibido quebrado', _dec, min: 1, max: 3, step: 0.05),
+  BalanceField('pStunBreak', 'Aturdir enemigo a jugador: llena la barra de quiebre (fracción del umbral)', _frac, max: 1, step: 0.05),
   BalanceField('eConvOn', 'Convergencias enemigas activas (1 = sí)', _int, max: 1),
   BalanceField('eConvCapPlayer', 'Convergencia contra jugador: tope (fracción de vida)', _frac, max: 1, step: 0.01),
   BalanceField('eComboFocus', 'Combo enemigo: chance de ir al jugador preparado', _frac, max: 1, step: 0.05),

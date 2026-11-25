@@ -467,7 +467,8 @@ void main() {
       expect(hit.critical, isFalse);
       // 16 × 2 × (1 − 9%) = 29.12.
       expect(hit.amount, 29);
-      expect(step.state.party.single.stacks(StatusKind.stun), 1);
+      // combat.md § "Control sobre jugadores": break fill, not a stun.
+      expect(step.state.party.single.stacks(StatusKind.stun), 0);
     });
 
     test('Defender reduce a la mitad', () {
