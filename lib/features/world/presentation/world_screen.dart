@@ -51,6 +51,7 @@ import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
 import 'panels/fountain_panel.dart';
+import 'panels/house_assign_panel.dart';
 import 'panels/biome_npc_panel.dart';
 import 'panels/biome_fisher_panel.dart';
 import 'panels/custom_npc_panel.dart';
@@ -1124,6 +1125,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return WorldEventPanel(view: view, controller: controller);
       case WorldPanel.questLog:
         return QuestLogPanel(view: view, controller: controller);
+      case WorldPanel.houses:
+        return HouseAssignPanel(controller: controller);
       case WorldPanel.helper:
         return HelperPanel(view: view, controller: controller);
       case WorldPanel.offering:

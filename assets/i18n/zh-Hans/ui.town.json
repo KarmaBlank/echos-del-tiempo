@@ -550,5 +550,14 @@
   "ui.town.trader.tab_mining": {
     "text": "采矿",
     "status": "draft"
-  }
+  },
+  "ui.town.fountain.houses": "分配房屋",
+  "ui.town.fountain.houses_line": "选择一栋空房和入住的人。",
+  "ui.town.houses.title": "分配房屋",
+  "ui.town.houses.empty": "没有可分配的人",
+  "ui.town.houses.no_houses": "没有空房",
+  "ui.town.houses.who": "可以住在这里：",
+  "ui.town.houses.assign": "分配",
+  "ui.town.houses.cell": "房屋 {n}",
+  "ui.town.houses.level": "等级 {n}"
 }

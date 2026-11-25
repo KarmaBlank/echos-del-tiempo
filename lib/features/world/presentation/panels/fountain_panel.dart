@@ -42,6 +42,10 @@ class FountainPanel extends StatelessWidget {
       ('fountain-travel', context.t('ui.town.fountain.travel'),
           context.t('ui.town.fountain.travel_line'), null,
           () => c.openPanel(WorldPanel.travel)),
+      // Free houses and who can move in (town_editor.md § 1.1).
+      ('fountain-houses', context.t('ui.town.fountain.houses'),
+          context.t('ui.town.fountain.houses_line'), null,
+          () => c.openPanel(WorldPanel.houses)),
       // Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
       ('fountain-quests', context.t('ui.town.fountain.quests'),
           context.t('ui.town.fountain.quests_line'), null,

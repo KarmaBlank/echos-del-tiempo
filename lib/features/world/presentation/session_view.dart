@@ -75,6 +75,9 @@ enum WorldPanel {
 
   /// Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
   questLog,
+
+  /// ASIGNAR CASAS from the rune fountain (town_editor.md § 1.1).
+  houses,
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
   /// (farming.md § 8, v0.25.5).
   helper,

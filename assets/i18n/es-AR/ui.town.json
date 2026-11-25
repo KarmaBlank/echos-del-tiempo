@@ -538,5 +538,14 @@
   "ui.town.trader.kind.mine_goods": "Minerales",
   "ui.town.trader.kind.mine_supplies": "Insumos",
   "ui.town.trader.kind.mine_tools": "Picos",
-  "ui.town.trader.tab_mining": "MINERÍA"
+  "ui.town.trader.tab_mining": "MINERÍA",
+  "ui.town.fountain.houses": "ASIGNAR CASAS",
+  "ui.town.fountain.houses_line": "Elegí una casa libre y quién va a vivir ahí.",
+  "ui.town.houses.title": "ASIGNAR CASAS",
+  "ui.town.houses.empty": "No hay nadie para asignar",
+  "ui.town.houses.no_houses": "No hay casas libres",
+  "ui.town.houses.who": "Pueden vivir acá:",
+  "ui.town.houses.assign": "ASIGNAR",
+  "ui.town.houses.cell": "CASA {n}",
+  "ui.town.houses.level": "Nivel {n}"
 }
