@@ -1,6 +1,7 @@
 import '../../../inventory/domain/item_names.dart';
 import '../../domain/town_names.dart';
 import 'package:material_ui/material_ui.dart';
+import '../../../../core/i18n/game_text.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
@@ -44,8 +45,8 @@ String residentItemName(String id, [Strings? s]) {
   if (kFish[id] case final f?) return f.text;
   if (kCrops[id] case final c?) return c.text;
   final key = 'data.materials.smith.$id.name';
-  final txt = s?.t(key);
-  if (txt != null && txt != key) return txt;
+  final txt = (s ?? GameText.strings).t(key);
+  if (txt != key) return txt;
   return QuestTrackRules.itemName(id);
 }
 
@@ -872,7 +873,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           _s.t('ui.town.npc.cost_line', {
             'cost': HelperRules.costText(cost.cost),
             'n': cost.lootN,
-            'item': residentItemName(cost.loot)
+            'item': residentItemName(cost.loot, _s)
           }),
           _s.t('ui.town.npc.commission_rarity'),
           if (why != null) why,
@@ -900,10 +901,11 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             id: 'gift-$id',
             icon: residentItemIcon(id),
             border: DsColors.border,
-            search: residentItemName(id),
+            search: residentItemName(id, _s),
             count: have,
             detail: LifeItemDetail(
-              name: residentItemName(id),
+              itemId: id,
+              name: residentItemName(id, _s),
               nameColor: DsColors.textTitle,
               tags: [(_s.t('ui.town.npc.gift'), DsColors.textSecondary)],
               lines: [
@@ -961,7 +963,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               _s.t('ui.town.npc.upgrade_line', {
                 'cost': HelperRules.costText(cost.cost),
                 'n': cost.lootN,
-                'item': residentItemName(cost.loot)
+                'item': residentItemName(cost.loot, _s)
               }),
             if (h != null && why != null && cost != null) why,
             _s.t('ui.town.npc.house_levels'),

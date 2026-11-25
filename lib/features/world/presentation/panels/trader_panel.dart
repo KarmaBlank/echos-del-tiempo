@@ -329,6 +329,7 @@ class _TraderPanelState extends State<TraderPanel> {
                   ? context.t('ui.town.trader.owned')
                   : context.t('ui.town.trader.price_short', {'n': r.price}),
               detail: LifeItemDetail(
+                itemId: r.id,
                 name: r.name,
                 nameColor: fishRarityColor(r.rarity),
                 tags: [
@@ -362,6 +363,7 @@ class _TraderPanelState extends State<TraderPanel> {
               caption: context.t('ui.town.trader.price_short',
                   {'n': BaitRules.price(b.id)}),
               detail: LifeItemDetail(
+                itemId: b.id,
                 name: CatalogText.of(baitNameKey(b.id), b.name),
                 nameColor: fishRarityColor(b.rarity),
                 tags: [
@@ -409,6 +411,7 @@ class _TraderPanelState extends State<TraderPanel> {
               count: bag[f.id],
               caption: context.t('ui.town.trader.price_short', {'n': f.price}),
               detail: LifeItemDetail(
+                itemId: f.id,
                 name: f.text,
                 nameColor: fishRarityColor(f.rarity),
                 tags: [
@@ -488,6 +491,7 @@ class _TraderPanelState extends State<TraderPanel> {
               count: (f?.seedCount(s.id) ?? 0) > 0 ? f!.seedCount(s.id) : null,
               caption: context.t('ui.town.trader.price_short', {'n': s.seedPrice}),
               detail: LifeItemDetail(
+                itemId: 'semilla_${s.id}',
                 name: s.seedText,
                 nameColor: fishRarityColor(s.rarity),
                 tags: [
@@ -525,6 +529,7 @@ class _TraderPanelState extends State<TraderPanel> {
               count: (f?.fertCount(d.id) ?? 0) > 0 ? f!.fertCount(d.id) : null,
               caption: context.t('ui.town.trader.price_short', {'n': d.price}),
               detail: LifeItemDetail(
+                itemId: d.id,
                 name: d.name,
                 nameColor: fishRarityColor(d.rarity),
                 tags: [
@@ -562,6 +567,7 @@ class _TraderPanelState extends State<TraderPanel> {
                     ? context.t('ui.town.trader.owned')
                     : context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
+                  itemId: d.id,
                   name: d.name,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
@@ -598,6 +604,7 @@ class _TraderPanelState extends State<TraderPanel> {
               caption:
                   context.t('ui.town.trader.price_short', {'n': p == null ? crop.price : FarmingRules.unitPrice(p, crop, quality, WeatherRules.season(c.town.sky.day))}),
               detail: LifeItemDetail(
+                itemId: crop.id,
                 name: crop.text,
                 nameColor: fishRarityColor(crop.rarity),
                 tags: [
@@ -659,6 +666,7 @@ class _TraderPanelState extends State<TraderPanel> {
                   : context.t('ui.town.trader.price_short',
                       {'n': MiningRules.price(id)}),
               detail: LifeItemDetail(
+                itemId: id,
                 name: name(id),
                 nameColor: DsColors.textPrimary,
                 tags: [
@@ -695,6 +703,7 @@ class _TraderPanelState extends State<TraderPanel> {
                 caption: context.t('ui.town.trader.price_short',
                     {'n': SmithCraftRules.sellPrice(d.id)}),
                 detail: LifeItemDetail(
+                  itemId: d.id,
                   name: name(d.id),
                   nameColor: DsColors.textPrimary,
                   tags: [

@@ -17,7 +17,8 @@ import '../../../../game_engine/models/session_event.dart';
 import '../../../../game_engine/rules/loot_filter_rules.dart';
 import '../map/loot_painter.dart';
 import '../session_controller.dart';
-import '../world_strings.dart';
+import '../world_strings.dart';
+import '../../../inventory/domain/eco_text.dart';
 
 /// Una línea del registro de loot: `Ana encontró: <objeto>` con el
 /// objeto en el color de su rareza.
@@ -222,7 +223,7 @@ final lootFeedProvider = Provider.autoDispose<LootFeed>((ref) {
     localId: c.localId,
     playerName: (id) => c.session?.players[id]?.name ?? id,
     itemName: (d) => lootDropName(c.engine.progression.items.displayName, d,
-        ecoName: c.engine.progression.ecos.fullName),
+        ecoName: (e) => ecoFullText(c.engine.progression.ecos, e)),
     verdictFor: c.lootVerdictFor,
     strings: () => c.strings,
   );

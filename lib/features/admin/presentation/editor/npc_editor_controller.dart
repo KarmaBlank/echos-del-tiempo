@@ -15,11 +15,12 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../../game_engine/rules/npc_talk_rules.dart';
-import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/serialization/npc_data_json.dart';
 import '../admin_controller.dart';
 import 'events_editor_controller.dart';
+import '../../../world/presentation/panels/biome_npc_panel.dart'
+    show residentItemName;
 
 /// Un habitante en la grilla del editor NPC (npc_editor.md § 2).
 class NpcEntry {
@@ -417,7 +418,7 @@ class NpcEditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  static String _name(String id) => QuestTrackRules.itemName(id);
+  static String _name(String id) => residentItemName(id);
 
   static List<NpcSample> _roll(NpcEntry e, int lv) {
     final out = <NpcSample>[];

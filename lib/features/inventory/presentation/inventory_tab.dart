@@ -44,7 +44,8 @@ import 'item_grid.dart';
 import 'item_hover_tip.dart';
 import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
-import 'weapon_compare_view.dart';
+import 'weapon_compare_view.dart';
+import '../domain/eco_text.dart';
 
 /// Pestaña INVENTARIO del personaje (tecla I): grilla de 8 × 5 con la
 /// equipada aparte, mover arrastrando o con MOVER, ficha y comparación,
@@ -1136,7 +1137,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final name = it != null
         ? localItemName(shop.rules.items, it)
         : c.eco != null
-            ? shop.rules.ecos.fullName(c.eco!)
+            ? ecoFullText(shop.rules.ecos, c.eco!)
             : '$count ${c.stack!.label}';
     final confirmCraft = _confirmCraft;
     if (it != null && confirmCraft != null) {
@@ -1396,7 +1397,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final title = c.item != null
         ? itemNameMarkup(shop.rules, c.item!)
         : c.eco != null
-            ? protoEsc(shop.rules.ecos.fullName(c.eco!))
+            ? protoEsc(ecoFullText(shop.rules.ecos, c.eco!))
             : protoEsc(c.stack!.label);
     InventoryContextMenu.show(context, at,
         title: title, entries: _menuEntries(p, me, mates, c), avoid: avoid);

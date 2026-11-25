@@ -6,15 +6,23 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
+import '../panels/biome_npc_panel.dart' show residentItemName;
 import '../world_strings.dart';
+
+/// Localized title of [a]: item steps and orders are rebuilt from the
+/// item id (the engine's title is es-AR source text).
+String questTitleText(Strings s, ActiveQuest a) => a.item == null
+    ? a.title
+    : s.t('ui.world.quests.item_title',
+        {'n': a.need, 'item': residentItemName(a.item!, s)});
 
 /// Texto de avance de un encargo: "Tenés 1/2 Helecho dulce" o su título.
 String questProgressText(Strings s, ActiveQuest a) => a.item == null
-    ? a.title
+    ? questTitleText(s, a)
     : s.t('ui.world.quests.progress', {
         'have': a.have,
         'need': a.need,
-        'item': QuestTrackRules.itemName(a.item!)
+        'item': residentItemName(a.item!, s)
       });
 
 /// Encargos seguidos en el HUD (roles.md § 8.2): compacto, debajo del

@@ -78,7 +78,8 @@ import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
-import '../../../../game_engine/rules/fishing_minigame.dart';
+import '../../../../game_engine/rules/fishing_minigame.dart';
+import '../../../inventory/domain/eco_text.dart';
 
 /// Lee la entrada de movimiento (-1..1 en cada eje). Por defecto, el
 /// estado del teclado físico (WASD / flechas).
@@ -381,7 +382,7 @@ class MapGame extends Game {
   /// Nombre para mostrar de un drop (arma o pila).
   static String lootName(SessionController c, LootDrop d) =>
       lootDropName(c.engine.progression.items.displayName, d,
-          ecoName: c.engine.progression.ecos.fullName);
+          ecoName: (e) => ecoFullText(c.engine.progression.ecos, e));
 
   /// Veredicto del filtro del jugador local para [g].
   FilterVerdict verdictFor(GroundLoot g) {
