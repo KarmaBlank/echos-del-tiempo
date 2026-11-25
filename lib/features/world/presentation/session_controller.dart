@@ -1580,7 +1580,8 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Frase del habitante (cambia con el día del mundo).
   String npcLine(BiomeNpcDef n) =>
-      NpcTalkRules.dayLine(n.id, town.sky.day) ?? '…';
+      NpcTalkRules.dayLine(n.id, town.sky.day,
+          inTown: town.resident(n.id).invited) ?? '…';
 
   bool travelPlace(String id) {
     if (cannotTravel != null || id == place) return false;

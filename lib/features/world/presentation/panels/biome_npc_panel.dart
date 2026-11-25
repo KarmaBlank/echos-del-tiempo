@@ -9,7 +9,11 @@ import '../../../../game_engine/rules/renown_rules.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/cooking_catalog.dart' show kMeals;
 import '../../../../game_engine/data/fishing_catalog.dart';
+import '../../../../game_engine/data/mine_catalog.dart'
+    show kMineSupplies, kMineTools;
 import '../../../../game_engine/data/npc_talk_catalog.dart';
+import '../../../../game_engine/data/smithing_catalog.dart'
+    show kSmithMaterials;
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/session_action.dart' show TownOp;
 import '../../../../game_engine/models/world_save.dart';
@@ -31,15 +35,32 @@ import 'npc_talk.dart';
 import 'seed_text.dart';
 import '../world_strings.dart';
 
-/// Nombre de un producto, cultivo o pez.
-String residentItemName(String id) =>
-    kMeals[id]?.text ?? kFish[id]?.text ?? kCrops[id]?.text ?? id;
+/// Player-facing name of an item a resident asks for (quest step or
+/// order, roles.md § 3): meal, fish, crop / forage, or a mining / smithing
+/// item (`data.materials.smith.<id>.name`). Never shows the raw id.
+String residentItemName(String id, [Strings? s]) {
+  if (kMeals[id] case final m?) return m.text;
+  if (kFish[id] case final f?) return f.text;
+  if (kCrops[id] case final c?) return c.text;
+  final key = 'data.materials.smith.$id.name';
+  final txt = s?.t(key);
+  if (txt != null && txt != key) return txt;
+  return QuestTrackRules.itemName(id);
+}
 
-/// Ícono de un producto, cultivo o pez.
+/// Whether [id] is a mining / smithing item (icon `vida_<id>`).
+bool _isSmithItem(String id) =>
+    kSmithMaterials.containsKey(id) ||
+    kMineTools.any((t) => t.id == id) ||
+    kMineSupplies.contains(id);
+
+/// Icon of an item a resident asks for (see [residentItemName]).
 Widget residentItemIcon(String id) => kMeals.containsKey(id)
     ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
     : kFish.containsKey(id)
         ? LifeIcon(id, LifeIconKind.pescado, size: 32)
+        : _isSmithItem(id)
+            ? LifeIcon(id, LifeIconKind.herramienta, size: 32)
         : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
 
 /// Botón SEGUIR / DEJAR DE SEGUIR de un encargo activo (roles.md § 8).
@@ -84,7 +105,7 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
   final what = switch (q.kind) {
     QuestKind.mazmorra => s.t('ui.town.npc.quest_zone', {'zone': q.target}),
     QuestKind.elite => s.t('ui.town.npc.quest_elite', {'zone': q.target}),
-    _ => '${q.n} × ${residentItemName(q.target)}',
+    _ => '${q.n} × ${residentItemName(q.target, s)}',
   };
   final relic = kResidentRelics[q.reward];
   return LifeItemCellData(
@@ -145,7 +166,7 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
     id: 'order-${n.id}',
     icon: residentItemIcon(o),
     border: DsColors.reward,
-    search: residentItemName(o),
+    search: residentItemName(o, s),
     count: r.orderN,
     caption: s.t('ui.town.npc.order'),
     detail: LifeItemDetail(
@@ -165,13 +186,13 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
       ],
       lines: [
         r.orderQ <= 0
-            ? '${r.orderN} × ${residentItemName(o)}'
+            ? '${r.orderN} × ${residentItemName(o, s)}'
             : fish
                 ? s.t('ui.town.npc.order_line_cm',
-                    {'n': r.orderN, 'item': residentItemName(o), 'cm': cm})
+                    {'n': r.orderN, 'item': residentItemName(o, s), 'cm': cm})
                 : s.t('ui.town.npc.order_line_q', {
                     'n': r.orderN,
-                    'item': residentItemName(o),
+                    'item': residentItemName(o, s),
                     'q': meal ? mealTierText(q) : q.label
                   }),
         if (fish && cm > 0)
@@ -274,7 +295,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         q.text
       else
         NpcTalk.greet(n.id, extra: [
-          ...?npcTalk(n.id)?.ambient,
+          ...NpcTalkRules.ambient(n.id, inTown: r.invited),
           // Recognition (renown_town_growth.md § 4.2).
           if (RenownRules.recognition(n.id, RenownRules.score(c.town))
               case final l?)
@@ -285,7 +306,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
             {'what': r.request!.label.toLowerCase()}),
       if (fresh && r.order != null)
         _s.t('ui.town.npc.line_order',
-            {'n': r.orderN, 'item': residentItemName(r.order!)}),
+            {'n': r.orderN, 'item': residentItemName(r.order!, _s)}),
     ];
     return parts.join(' ');
   }

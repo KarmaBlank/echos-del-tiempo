@@ -15,6 +15,7 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../../game_engine/rules/npc_talk_rules.dart';
+import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/serialization/npc_data_json.dart';
 import '../admin_controller.dart';
@@ -416,7 +417,7 @@ class NpcEditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  static String _name(String id) => kFish[id]?.name ?? kCrops[id]?.name ?? id;
+  static String _name(String id) => QuestTrackRules.itemName(id);
 
   static List<NpcSample> _roll(NpcEntry e, int lv) {
     final out = <NpcSample>[];

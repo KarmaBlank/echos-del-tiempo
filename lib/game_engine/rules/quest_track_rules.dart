@@ -1,6 +1,8 @@
 import '../data/biomes_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
+import '../data/mine_catalog.dart' show kMineTools;
+import '../data/smithing_catalog.dart' show kSmithMaterials;
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'resident_rules.dart';
@@ -61,8 +63,19 @@ abstract final class QuestTrackRules {
 
   static String trackKey(QuestTrackKind k, String npc) => '${k.name}:$npc';
 
-  static String itemName(String id) =>
-      kFish[id]?.name ?? kCrops[id]?.name ?? id;
+  /// es-AR source name of an item a resident asks for: fish, crop /
+  /// forage, or a mining / smithing item (ore, ingot, rare, tool). Never
+  /// the raw id: unknown ids become readable (`ingot_x` → `Ingot x`).
+  static String itemName(String id) {
+    if (kFish[id]?.name case final n?) return n;
+    if (kCrops[id]?.name case final n?) return n;
+    if (kSmithMaterials[id]?.name case final n?) return n;
+    for (final t in kMineTools) {
+      if (t.id == id) return t.name;
+    }
+    final w = id.split('_').where((x) => x.isNotEmpty).join(' ');
+    return w.isEmpty ? id : '${w[0].toUpperCase()}${w.substring(1)}';
+  }
 
   /// Huella de "lo que tiene para decir" un habitante: cambia con un paso
   /// nuevo de su cadena, un pedido nuevo o una orden nueva.
