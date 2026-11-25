@@ -94,12 +94,9 @@ Widget? worldEventBadge(BuildContext context, WorldEventsState s, String place) 
   final titles = [
     for (final a in here) kWorldEvents.def(a.def)?.title.text ?? a.def
   ];
-  return DsBadge(
-    here.length == 1
-        ? context.t('ui.town.events.badge')
-        : context.t('ui.town.events.badge_n', {'n': here.length}),
-    key: ValueKey('travel-event-$place'),
-  ).tip(titles.join(' · '));
+  // Marca "!" compacta (§ 6); los títulos en el tooltip.
+  return DsMark(key: ValueKey('travel-event-$place'))
+      .tip(titles.join(' · '));
 }
 
 /// RUMOR badge on the travel map: a place an event NPC told [player]

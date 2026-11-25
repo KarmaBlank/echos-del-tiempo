@@ -50,6 +50,20 @@ class DsBadge extends StatelessWidget {
   }
 }
 
+/// Marca de aviso compacta: el "!" dorado de los NPC con novedades
+/// (DsColors.reward), como átomo de UI (mapa de viaje, avisos). El
+/// motivo va en el tooltip de quien la usa.
+class DsMark extends StatelessWidget {
+  const DsMark({super.key, this.glyph = '!'});
+
+  final String glyph;
+
+  @override
+  Widget build(BuildContext context) => Text(glyph,
+      textAlign: TextAlign.center,
+      style: DsText.title(DsColors.reward).copyWith(height: 1));
+}
+
 /// Una pestaña: texto y, opcional, [badge] adentro a la derecha.
 class DsTab {
   const DsTab(this.label, {this.badge, this.key, this.badgeKey});

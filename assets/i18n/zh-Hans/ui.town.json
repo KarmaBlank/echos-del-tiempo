@@ -471,8 +471,6 @@
   "ui.town.events.quest": "{npc} 的任务：{objective}",
   "ui.town.events.quest_reward": "奖励：{gold} 金币 · 友好 +{rep}",
   "ui.town.events.discount": "价格 −{n}%",
-  "ui.town.events.badge": "事件",
-  "ui.town.events.badge_n": "事件 ×{n}",
   "ui.town.events.cat.visitor": "访客",
   "ui.town.events.cat.overworldNpc": "旅人",
   "ui.town.events.cat.echoPortal": "回声裂隙",

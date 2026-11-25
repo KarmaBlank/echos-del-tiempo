@@ -1,4 +1,6 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:flutter/gestures.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
@@ -125,9 +127,14 @@ void main() {
     for (final p in st) {
       expect(find.byKey(ValueKey('full-map-stone-${p.id}')), findsOneWidget);
     }
-    expect(find.byKey(ValueKey('full-map-travel-${st[0].id}')), findsOneWidget);
-    expect(find.byKey(ValueKey('full-map-travel-${st[1].id}')), findsOneWidget);
-    expect(find.byKey(ValueKey('full-map-travel-${st.last.id}')), findsNothing);
+    // No numbered TRAVEL buttons any more: click the stone.
+    expect(find.byKey(ValueKey('full-map-travel-${st[0].id}')), findsNothing);
+    // The stone you stand at: click does nothing.
+    await tester.tap(find.byKey(ValueKey('full-map-stone-${st.last.id}')),
+        warnIfMissed: false);
+    c.advance(0.05);
+    await tester.pump();
+    expect(c.view!.panel, WorldPanel.map);
 
     // Clic en la piedra 1 (no es "la siguiente"): viaja y cierra.
     await tester.tap(find.byKey(ValueKey('full-map-stone-${st[0].id}')));
@@ -139,11 +146,16 @@ void main() {
             c.local.x, c.local.y, st[0].center.x, st[0].center.y),
         lessThan(20));
 
-    // Teclado: M junto a una piedra activada también elige; tecla 2.
+    // Teclado: M junto a una piedra activada también elige; los
+    // números ya no viajan.
     await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
     await tester.pump();
     expect(find.byKey(const ValueKey('full-map-choose-hint')), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.digit2);
+    c.advance(0.05);
+    await tester.pump();
+    expect(c.view!.panel, WorldPanel.map);
+    await tester.tap(find.byKey(ValueKey('full-map-stone-${st[1].id}')));
     c.advance(0.05);
     await tester.pump();
     expect(c.view!.panel, isNull);
@@ -193,19 +205,49 @@ void main() {
       final c = await _field(tester, reduceMotion: reduce);
       final st = _stones(c);
       await _useStone(tester, c, st[0]);
+      await _useStone(tester, c, st[1]);
+      // Standing at st[1]: M opens the map choosing from it.
       await tester.sendKeyEvent(LogicalKeyboardKey.keyM);
       await tester.pump();
-      final fade = tester.widget<FadeTransition>(find.descendant(
-          of: find.byKey(ValueKey('full-map-stone-${st[0].id}')),
-          matching: find.byType(FadeTransition)));
-      final a = fade.opacity.value;
+      FadeTransition fadeOf(MapPoi p) => tester.widget<FadeTransition>(
+          find.descendant(
+              of: find.byKey(ValueKey('full-map-stone-${p.id}')),
+              matching: find.byType(FadeTransition)));
+      final other = fadeOf(st[0]);
+      final here = fadeOf(st[1]);
+      final a = other.opacity.value;
       await tester.pump(FullMap.blinkPeriod ~/ 2);
-      final b = fade.opacity.value;
+      final b = other.opacity.value;
       if (reduce) {
         expect((a, b), (1.0, 1.0));
       } else {
         expect(a, isNot(b));
       }
+      // The stone you stand at never pulses and wears the gold frame.
+      expect(here.opacity.value, 1.0);
+      final box = tester.widget<Container>(find
+          .descendant(
+              of: find.byKey(ValueKey('full-map-stone-${st[1].id}')),
+              matching: find.byType(Container))
+          .last);
+      final border = (box.decoration! as BoxDecoration).border! as Border;
+      expect(border.top.color, DsColors.reward);
+      // No numbers on the markers.
+      for (final p in st) {
+        expect(
+            find.descendant(
+                of: find.byKey(ValueKey('full-map-stone-${p.id}')),
+                matching: find.byType(Text)),
+            findsNothing);
+      }
+      // Hover names the stone.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester
+          .getCenter(find.byKey(ValueKey('full-map-stone-${st[0].id}'))));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('full-map-stone-tip')), findsOneWidget);
     });
   }
 }
