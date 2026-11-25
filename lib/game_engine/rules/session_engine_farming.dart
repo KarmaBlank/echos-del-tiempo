@@ -626,6 +626,61 @@ extension _FarmingOp on _Op {
     }
   }
 
+  /// Chest of [tier] from a resident: gold and the usual loot rolls at
+  /// the player's level (roles.md § 9).
+  void _residentChest(SessionPlayer p, ChestTier tier) {
+    final def = kChestTiers[tier]!;
+    final cr = ((20 + (_rand() * 31).floor()) * def.creditMult).round();
+    p.profile = p.profile.copyWith(credits: p.profile.credits + cr);
+    _deliver(p, _chestDrops(p, def, p.profile.level), LootSource.chest,
+        p.x, p.y,
+        stashOverflow: true);
+  }
+
+  /// The rolled part of a milestone (the static part is already paid by
+  /// [ResidentMilestoneRules.claim]).
+  void _payMilestone(SessionPlayer p, MilestoneReward r) {
+    final il = LootRules.itemLevelFor(p.profile.level, LootSource.chest,
+        cap: _lootCap());
+    switch (r) {
+      case MilestoneReward.chestWood:
+        _residentChest(p, ChestTier.madera);
+      case MilestoneReward.chestSilver:
+        _residentChest(p, ChestTier.plata);
+      case MilestoneReward.ecoOrGold:
+        if (p.profile.ecosUnlocked) {
+          _deliver(
+              p,
+              [
+                LootDrop.eco(ecos.generate(_ecoRand,
+                    tier: EcoRules.dropTier(_ecoRand, _eco),
+                    source: LootSource.chest,
+                    atlas: _eco == null ? AtlasEffects.none : _atlas))
+              ],
+              LootSource.chest,
+              p.x,
+              p.y,
+              stashOverflow: true);
+        } else {
+          _residentChest(p, ChestTier.oro);
+        }
+      case MilestoneReward.weapon || MilestoneReward.unique:
+        final item = rules.loot.generate(_rand,
+            itemLevel: il,
+            rarity: r == MilestoneReward.unique
+                ? Rarity.legendario
+                : Rarity.epico,
+            family: p.profile.classId,
+            source: LootSource.chest);
+        _deliver(p, [LootDrop.item(item)], LootSource.chest, p.x, p.y,
+            stashOverflow: true);
+      case MilestoneReward.material ||
+            MilestoneReward.meal ||
+            MilestoneReward.perk:
+        break;
+    }
+  }
+
   /// Habitantes (overworld_biomes.md § 10). Invitar, regalar y entregar
   /// encargos también en su bioma; lo demás, en el pueblo.
   bool _residentAction(SessionPlayer p, TownAction a) {
@@ -713,6 +768,22 @@ extension _FarmingOp on _Op {
         grantCharXp(p, r.$3);
         say('${p.name} entregó la orden de ${n.name} (+${r.$3} XP'
             '${pts > 0 ? ', +1 punto de árbol' : ''}).');
+        // roles.md § 9.3: sometimes the order comes with a bonus chest.
+        if (_rand() < ResidentMilestoneRules.orderChestChance) {
+          _residentChest(p, ChestTier.madera);
+          say('${n.name} agregó un cofre de regalo.');
+        }
+        return true;
+      case TownOp.claimMilestone:
+        // roles.md § 9: one milestone of the track, once per character.
+        if (!home || p.isCompanion) return false;
+        final i = a.n;
+        final paid = ResidentMilestoneRules.claim(p.profile, s.town, npc, i);
+        if (paid == null) return false;
+        _profileChange(p, paid, gain: true);
+        _payMilestone(p, kResidentMilestones[i].reward);
+        say('${p.name} recibió el regalo de ${n.name} '
+            '(relación ${kResidentMilestones[i].rep}).');
         return true;
       case TownOp.commission:
         // Encargo de forja de Brann (roles.md § 4): un arma de tu clase,
@@ -845,7 +916,8 @@ extension _FarmingOp on _Op {
             TownOp.fulfil ||
             TownOp.invest ||
             TownOp.order ||
-            TownOp.commission:
+            TownOp.commission ||
+            TownOp.claimMilestone:
         return _residentAction(p, a);
       case TownOp.fisherReq:
         // Pescador nativo (fishing.md § 12): solo en su bioma.

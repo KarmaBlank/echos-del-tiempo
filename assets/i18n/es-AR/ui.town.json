@@ -566,5 +566,21 @@
   "ui.town.npc.com.extra": "Su trabajo: +{gold} de oro sobre forjarlo vos",
   "ui.town.npc.com.random": "Modificadores: al azar, según la rareza",
   "ui.town.npc.com.special": "Brann pone el oficio: la rareza tope sale de su encargo (tu mejor oficio y tu relación con él), no de tu nivel de Herrería. Los materiales son los mismos; cobra más oro.",
-  "ui.town.npc.com.empty": "Ninguna base de arma con ese lingote para tu nivel."
+  "ui.town.npc.com.empty": "Ninguna base de arma con ese lingote para tu nivel.",
+  "ui.town.npc.ms.chest_wood": "Cofre de madera",
+  "ui.town.npc.ms.chest_silver": "Cofre de plata",
+  "ui.town.npc.ms.chest_gold": "Cofre de oro",
+  "ui.town.npc.ms.eco": "Un Eco",
+  "ui.town.npc.ms.material": "{n} productos de su bioma",
+  "ui.town.npc.ms.meal": "{n} comidas raras",
+  "ui.town.npc.ms.weapon": "Arma épica de tu clase",
+  "ui.town.npc.ms.unique": "Arma única de tu clase",
+  "ui.town.npc.ms.perk": "Mejora su beneficio (%)",
+  "ui.town.npc.ms.need": "Relación {n}",
+  "ui.town.npc.ms.endgame_extra": "Endgame: +{n} {what}",
+  "ui.town.npc.ms.state_claimed": "Reclamado",
+  "ui.town.npc.ms.state_claimable": "Listo: tocá para reclamar",
+  "ui.town.npc.ms.state_reached": "Alcanzado",
+  "ui.town.npc.ms.state_next": "Próximo hito",
+  "ui.town.npc.ms.state_locked": "Bloqueado"
 }

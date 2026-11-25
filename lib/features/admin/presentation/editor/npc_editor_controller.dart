@@ -370,6 +370,22 @@ class NpcEditorController extends ChangeNotifier {
             ('resUnhappyDays', 'Días hasta descontento'),
             ('resRequestRep', 'Relación al cumplir'),
           ]),
+          // roles.md § 9: milestone track (same for every resident).
+          const NpcGenerator('HITOS DE RELACIÓN', BalanceKind.town, [
+            ('msRepChest', 'Relación: cofre de madera'),
+            ('msRepMaterial', 'Relación: productos del bioma'),
+            ('msRepMeal', 'Relación: comidas'),
+            ('msRepSilver', 'Relación: cofre de plata'),
+            ('msRepWeapon', 'Relación: arma épica'),
+            ('msRepEco', 'Relación: Eco (cofre de oro antes)'),
+            ('msRepUnique', 'Relación: arma única'),
+            ('msMaterialN', 'Productos que da'),
+            ('msMealN', 'Comidas que da'),
+            ('msEndShards', 'Endgame: Esquirlas por cofre'),
+            ('msEndCrystals', 'Endgame: Cristales por material o comida'),
+            ('msEndAnchors', 'Endgame: Anclas por arma'),
+            ('orderChestChance', 'Chance de cofre extra por orden'),
+          ]),
         ],
         if (e.id == 'brann')
           const NpcGenerator('ENCARGO DE FORJA', BalanceKind.town, [

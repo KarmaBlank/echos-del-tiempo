@@ -566,5 +566,21 @@
   "ui.town.npc.com.extra": "His work: +{gold} gold over forging it yourself",
   "ui.town.npc.com.random": "Modifiers: random, by rarity",
   "ui.town.npc.com.special": "Brann brings the craft: the rarity cap comes from his commission (your best trade and your bond with him), not your Smithing level. Same materials; he charges more gold.",
-  "ui.town.npc.com.empty": "No weapon base with that ingot for your level."
+  "ui.town.npc.com.empty": "No weapon base with that ingot for your level.",
+  "ui.town.npc.ms.chest_wood": "Wooden chest",
+  "ui.town.npc.ms.chest_silver": "Silver chest",
+  "ui.town.npc.ms.chest_gold": "Golden chest",
+  "ui.town.npc.ms.eco": "An Eco",
+  "ui.town.npc.ms.material": "{n} products of their biome",
+  "ui.town.npc.ms.meal": "{n} rare meals",
+  "ui.town.npc.ms.weapon": "Epic weapon of your class",
+  "ui.town.npc.ms.unique": "Unique weapon of your class",
+  "ui.town.npc.ms.perk": "Raises their benefit (%)",
+  "ui.town.npc.ms.need": "Relationship {n}",
+  "ui.town.npc.ms.endgame_extra": "Endgame: +{n} {what}",
+  "ui.town.npc.ms.state_claimed": "Claimed",
+  "ui.town.npc.ms.state_claimable": "Ready: tap to claim",
+  "ui.town.npc.ms.state_reached": "Reached",
+  "ui.town.npc.ms.state_next": "Next milestone",
+  "ui.town.npc.ms.state_locked": "Locked"
 }

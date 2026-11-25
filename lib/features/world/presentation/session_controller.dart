@@ -2391,6 +2391,10 @@ class SessionController extends StateNotifier<SessionView?> {
   bool residentOp(TownOp op, String npc, {String? target}) =>
       _apply(TownAction(op, id: npc, target: target));
 
+  /// Claims milestone [i] of resident [npc] (roles.md § 9). Host-validated.
+  bool claimMilestone(String npc, int i) =>
+      _apply(TownAction(TownOp.claimMilestone, id: npc, n: i));
+
   /// El pueblo de la sala (habitantes, casas).
   TownState get townState => _s?.town ?? const TownState();
   bool buyFarmTool(String id) =>

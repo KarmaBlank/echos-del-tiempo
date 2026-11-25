@@ -188,7 +188,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 79: co-op action queue agreement (turn_modes.md § 3.1): the block's
 /// commands wait until every pending human agrees the order (`qok`),
 /// `qmv` reorders, `qr` in the battle snapshot.
-const kProtocolVersion = 79;
+/// 80: resident milestones (roles.md § 9): `town` op `claimMilestone`
+/// and the `rcl` claimed mask in the profile.
+const kProtocolVersion = 80;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
