@@ -3919,6 +3919,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool give(String toPlayerId, String token, {int count = 1}) =>
       _applyFor(actingId, GiveItemAction(toPlayerId, token, count: count));
 
+  /// Give [count] of the profession cell [cell] to [toPlayerId]
+  /// (share_materials.md).
+  bool giveLife(String toPlayerId, String cell, int count) =>
+      _apply(GiveLifeAction(toPlayerId, cell, count: count));
+
   /// Soltar al piso (compartido).
   bool dropItem(String token, {int count = 1}) =>
       _applyFor(actingId, DropItemAction(token, count: count));

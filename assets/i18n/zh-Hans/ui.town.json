@@ -569,5 +569,12 @@
   "ui.town.houses.who": "可以住在这里：",
   "ui.town.houses.assign": "分配",
   "ui.town.houses.cell": "房屋 {n}",
-  "ui.town.houses.level": "等级 {n}"
+  "ui.town.houses.level": "等级 {n}",
+  "ui.town.bag.give_all": "全部",
+  "ui.town.bag.give_to": "送给 {name}",
+  "ui.town.bag.give_nobody": "送给...",
+  "ui.town.bag.give_full": "{name} 没有空间放这个",
+  "ui.town.bag.give_none": "城镇里没有队友",
+  "ui.town.bag.filter.materials": "材料",
+  "ui.town.bag.filter.ores": "矿石"
 }

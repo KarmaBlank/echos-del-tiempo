@@ -23,6 +23,8 @@ import 'cooking_view.dart';
 import 'life_collection.dart';
 import 'smith_collection.dart';
 import '../../../../game_engine/rules/bait_rules.dart';
+import '../../../../game_engine/rules/life_give_rules.dart';
+import '../../../../game_engine/data/smithing_catalog.dart' show kSmithMaterials;
 import '../world_strings.dart';
 
 /// OFICIOS → INVENTARIO de PERSONAJE (docs/specs/oficio_storage.md,
@@ -35,11 +37,16 @@ class LifeItemsView extends StatefulWidget {
       {super.key,
       required this.profile,
       required this.controller,
-      required this.inTown});
+      required this.inTown,
+      this.mates});
 
   final PlayerProfile profile;
   final SessionController controller;
   final bool inTown;
+
+  /// Teammates in town (id, name, profile) for DAR A... (share_materials.md);
+  /// `null` reads them from the session.
+  final List<(String, String, PlayerProfile)>? mates;
 
   @override
   State<LifeItemsView> createState() => _LifeItemsViewState();
@@ -52,7 +59,8 @@ enum LifeItemsCategory {
   semillas,
   cosechas,
   cebos,
-  materiales
+  materiales,
+  minerales
 }
 
 /// Filtros de cada bolsa: (id, clave del rótulo, prefijos de id de celda).
@@ -77,7 +85,9 @@ const _filters = <OficioBag, List<(String, String, List<String>)>>{
     ('cocina', 'ui.town.bag.filter.cooking', <String>[]),
   ],
   OficioBag.herreria: [
-    ('todo', 'ui.town.bag.filter.all', ['life-craft-']),
+    ('todo', 'ui.town.bag.filter.all', ['life-craft-', 'life-ore-']),
+    ('materiales', 'ui.town.bag.filter.materials', ['life-craft-']),
+    ('minerales', 'ui.town.bag.filter.ores', ['life-ore-']),
     // COLECCIÓN (mining_smithing.md § 2.1): the shared template.
     ('coleccion', 'ui.town.bag.filter.collection', <String>[]),
   ],
@@ -95,6 +105,67 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   var _bag = OficioBag.pesca;
   final _filter = <OficioBag, String>{};
   var _query = '';
+
+  /// Amount preset for DAR A...: 0 = 1, 1 = [LifeGiveRules.step], 2 = all.
+  var _amount = 0;
+
+  List<(String, String, PlayerProfile)> get _mates {
+    if (widget.mates case final m?) return m;
+    final c = widget.controller;
+    final s = c.session;
+    if (s == null) return const [];
+    return [
+      for (final q in s.players.values)
+        if (q.id != c.localId && !q.isCompanion) (q.id, q.name, q.profile)
+    ];
+  }
+
+  int _amountOf(int have) => switch (_amount) {
+        0 => 1,
+        1 => LifeGiveRules.step,
+        _ => have,
+      };
+
+  /// The amount selector plus one DAR A <name> per teammate for [cell].
+  List<Widget> _give(String cell, String key) {
+    final p = widget.profile;
+    final have = LifeGiveRules.have(p, cell);
+    final n = _amountOf(have);
+    final mates = _mates;
+    final labels = [
+      '\u00d71',
+      '\u00d7${LifeGiveRules.step}',
+      context.t('ui.town.bag.give_all'),
+    ];
+    return [
+      for (final (i, label) in labels.indexed)
+        DsButton(label,
+            key: ValueKey('life-give-amt-$key-$i'),
+            size: DsButtonSize.compact,
+            selected: _amount == i,
+            onPressed: i == 1 && have < LifeGiveRules.step
+                ? null
+                : () => setState(() => _amount = i)),
+      if (mates.isEmpty)
+        DsButton(context.t('ui.town.bag.give_nobody'),
+            key: ValueKey('life-give-$key-none'),
+            size: DsButtonSize.compact,
+            tooltip: context.t('ui.town.bag.give_none'),
+            onPressed: null),
+      for (final (id, name, mp) in mates)
+        if (LifeGiveRules.block(p, mp, cell, n) case final b)
+          DsButton(
+              context.t('ui.town.bag.give_to', {'name': name.toUpperCase()}),
+              key: ValueKey('life-give-$key-$id'),
+              size: DsButtonSize.compact,
+              tooltip: b == LifeGiveBlock.recipientFull
+                  ? context.t('ui.town.bag.give_full', {'name': name})
+                  : null,
+              onPressed: b == null
+                  ? () => widget.controller.giveLife(id, cell, n)
+                  : null),
+    ];
+  }
 
   String _biomeLabel(String id) => lifeBiomeLabel(context, id);
 
@@ -271,6 +342,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
                   actions: [
+                    ..._give('fish:${d.id}', 'fish-${d.id}'),
                     DsButton(context.t('ui.town.bag.release'),
                         key: ValueKey('life-fish-stock-${d.id}'),
                         size: DsButtonSize.compact,
@@ -312,6 +384,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     context.t('ui.town.trader.have', {'n': life.count(d.id)}),
                     context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
+                  actions: _give('fish:${d.id}', 'junk-${d.id}'),
                 ),
               ),
         ];
@@ -396,6 +469,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                             key: ValueKey('life-seed-pick-${d.id}'),
                             size: DsButtonSize.compact,
                             onPressed: () => c.selectSeed(d.id)),
+                    ..._give('seed:${d.id}', 'seed-${d.id}'),
                   ],
                 ),
               ),
@@ -413,6 +487,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   tags: [(context.t('ui.town.trader.tag_fert'), DsColors.textSecondary)],
                   lines: [context.t('ui.town.trader.have', {'n': e.value})],
                   description: context.t('ui.town.bag.fert_desc'),
+                  actions: _give('fert:${d.id}', 'fert-${d.id}'),
                 ),
               ),
         ];
@@ -442,8 +517,34 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     ],
                     lines: [context.t('ui.town.trader.have', {'n': life.craft(id)})],
                     description: d.description,
+                    actions: _give('craft:$id', 'craft-$id'),
                   ),
                 ),
+        ];
+      case LifeItemsCategory.minerales:
+        // Smithing materials (ores, ingots, rare finds): listed here so
+        // they can be given; they use no bag slots (share_materials.md).
+        return [
+          for (final e in life.ores.entries)
+            if (kSmithMaterials[e.key] case final d?)
+              LifeItemCellData(
+                id: 'life-ore-${d.id}',
+                icon: LifeIcon('mat_${d.id}', LifeIconKind.herramienta,
+                    size: _icon),
+                border: DsColors.border,
+                search: '${context.t(d.textKey)} ${d.name}',
+                count: e.value,
+                detail: LifeItemDetail(
+                  name: context.t(d.textKey),
+                  nameColor: DsColors.textTitle,
+                  tags: [
+                    (context.t('ui.town.bag.tag_material'),
+                        DsColors.textSecondary)
+                  ],
+                  lines: [context.t('ui.town.trader.have', {'n': e.value})],
+                  actions: _give('ore:${d.id}', 'ore-${d.id}'),
+                ),
+              ),
         ];
       case LifeItemsCategory.cosechas:
         return [
@@ -469,6 +570,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                     context.t('ui.town.bag.quality', {'q': q.label}),
                     context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
+                  actions: _give('crop:${e.key}', 'crop-${d.id}-${q.index}'),
                 ),
               ),
         ];

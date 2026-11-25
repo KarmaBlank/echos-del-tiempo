@@ -557,5 +557,12 @@
   "ui.town.houses.who": "Pueden vivir acá:",
   "ui.town.houses.assign": "ASIGNAR",
   "ui.town.houses.cell": "CASA {n}",
-  "ui.town.houses.level": "Nivel {n}"
+  "ui.town.houses.level": "Nivel {n}",
+  "ui.town.bag.give_all": "TODO",
+  "ui.town.bag.give_to": "DAR A {name}",
+  "ui.town.bag.give_nobody": "DAR A...",
+  "ui.town.bag.give_full": "{name} no tiene lugar para eso",
+  "ui.town.bag.give_none": "No hay compañeros en el pueblo",
+  "ui.town.bag.filter.materials": "MATERIALES",
+  "ui.town.bag.filter.ores": "MINERALES"
 }
