@@ -395,7 +395,7 @@ class TilePainter {
         _tree(c, th, px, py, h, themeId);
       case Tile.rock when terrainDetailTheme(themeId):
         _grassDetail(c, th, px, py, tx, ty, h, at);
-        _rockDetail(c, th, px, py, h);
+        _rockDetail(c, th, px, py, tx, ty, h, at);
       case Tile.rock:
         _grass(c, th, px, py, h);
         _rock(c, th, px, py, h);

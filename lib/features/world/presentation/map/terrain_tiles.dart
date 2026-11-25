@@ -6,10 +6,10 @@ part of 'tile_painter.dart';
 /// knob.
 class TerrainRamp {
   TerrainRamp._(this.base, Color alt)
-      : deep = Color.lerp(base, const Color(0xFF000000), 0.34)!,
-        shade = Color.lerp(base, const Color(0xFF000000), 0.16)!,
+      : deep = Color.lerp(base, const Color(0xFF000000), 0.45)!,
+        shade = Color.lerp(base, const Color(0xFF000000), 0.22)!,
         mid = alt,
-        lit = Color.lerp(alt, const Color(0xFFFFFFFF), 0.22)!;
+        lit = Color.lerp(alt, const Color(0xFFFFFFFF), 0.32)!;
 
   final Color deep, shade, base, mid, lit;
 
@@ -59,27 +59,56 @@ extension _TerrainTiles on TilePainter {
     }
   }
 
-  /// Grass: base, a shaded patch, tufts with dark root and lit tip, lit
-  /// specks, a rare flower; shade under the mountain, lip toward water.
+  /// A clump [s] px wide (2-4): deep base, mid body, lit top edge and a
+  /// lit pixel up-left — the cave boulder at grass scale.
+  void _clump(Canvas c, TerrainRamp r, double x, double y, int s) {
+    final w = s.toDouble();
+    _rect(c, r.deep, x - 1, y + w - 1, w + 2, 1);
+    _rect(c, r.mid, x, y, w, w - 1);
+    _rect(c, r.lit, x, y, w - 1, 1);
+    _rect(c, r.lit, x, y + 1, 1, 1);
+  }
+
+  /// A small stone in the mountain colours: deep foot, body, lit top.
+  void _stone(Canvas c, MapTheme th, double x, double y, int s) {
+    final w = s.toDouble();
+    _rect(
+        c, Color.lerp(th.rock, const Color(0xFF000000), 0.4)!, x, y + 2, w, 1);
+    _rect(c, th.rock, x, y, w, 2);
+    _rect(c, th.rock2, x, y, w - 1, 1);
+  }
+
+  /// A darker patch of 6-9 px with a deep lower rim.
+  void _patchOf(Canvas c, TerrainRamp r, double px, double py, int h) {
+    final w = 6.0 + _b(h, 9, 4),
+        x = px + _b(h, 2, 17 - w.toInt()),
+        y = py + 1 + _b(h, 6, 9);
+    _rect(c, r.shade, x + 1, y, w - 2, 5);
+    _rect(c, r.shade, x, y + 1, w, 3);
+    _rect(c, r.deep, x + 1, y + 5, w - 2, 1);
+  }
+
+  /// Grass: base, a darker patch, 1-2 clumps (2-4 px), a blade tuft, a
+  /// small stone, a rare flower; shade under the mountain, lip by water.
   void _grassDetail(Canvas c, MapTheme th, double px, double py, int tx, int ty,
       int h, TileAt? at) {
     final r = TerrainRamp.of(th.grass, th.grass2);
     _rect(c, r.base, px, py, _ts, _ts);
-    if (h % 3 == 0) {
-      final x = px + _b(h, 2, 9), y = py + _b(h, 6, 9);
-      _rect(c, r.shade, x, y + 1, 7, 4);
-      _rect(c, r.shade, x + 1, y, 5, 6);
+    if (h % 3 == 0) _patchOf(c, r, px, py, h);
+    for (var k = 0; k < 1 + (h >> 20) % 2; k++) {
+      final s = 2 + _b(h, 3 + k * 7, 3);
+      _clump(c, r, px + 1 + _b(h, 5 + k * 6, 14 - s),
+          py + 1 + _b(h, 11 + k * 6, 14 - s), s);
     }
-    for (var k = 0; k < 2 + h % 2; k++) {
-      final x = px + 1 + _b(h, 4 + k * 5, 12),
-          y = py + 3 + _b(h, 8 + k * 5, 11);
+    if (h % 2 == 1) {
+      final x = px + 2 + _b(h, 13, 11), y = py + 3 + _b(h, 17, 10);
       _rect(c, r.deep, x, y + 2, 3, 1);
       _rect(c, r.mid, x, y, 1, 2);
-      _rect(c, r.mid, x + 2, y - 1, 1, 3);
-      _rect(c, r.lit, x + 2, y - 1, 1, 1);
+      _rect(c, r.lit, x + 2, y - 1, 1, 3);
     }
-    if (h % 7 == 2) {
-      _rect(c, r.lit, px + _b(h, 12, 14), py + _b(h, 15, 14), 1, 1);
+    if (h % 11 == 3) {
+      _stone(c, th, px + 2 + _b(h, 7, 10), py + 2 + _b(h, 15, 10),
+          2 + _b(h, 4, 2));
     }
     if (h % 17 == 0) {
       final x = px + 2 + _b(h, 5, 11), y = py + 2 + _b(h, 13, 11);
@@ -95,16 +124,19 @@ extension _TerrainTiles on TilePainter {
     }
   }
 
-  /// Open ground: two tones, faceted pebbles, a crack, a lit speck.
+  /// Open ground: a darker patch, 1-2 clumps of earth, small stones, a
+  /// crack, a lit speck.
   void _groundDetail(Canvas c, MapTheme th, double px, double py, int h) {
     final r = TerrainRamp.of(th.ground, th.ground2);
     _rect(c, r.base, px, py, _ts, _ts);
-    if (h % 4 == 0) {
-      _rect(c, r.shade, px + _b(h, 3, 10), py + _b(h, 7, 11), 6, 4);
+    if (h % 3 == 1) _patchOf(c, r, px, py, h);
+    for (var k = 0; k < 1 + (h >> 21) % 2; k++) {
+      final s = 2 + _b(h, 4 + k * 7, 2);
+      _clump(c, r, px + 1 + _b(h, 5 + k * 6, 14 - s),
+          py + 1 + _b(h, 9 + k * 6, 14 - s), s);
     }
-    for (var k = 0; k < 1 + h % 3; k++) {
-      _pebble(c, r, px + 1 + _b(h, 5 + k * 4, 12),
-          py + 1 + _b(h, 9 + k * 4, 13), 2 + (k % 2).toDouble());
+    if (h % 4 == 2) {
+      _pebble(c, r, px + 1 + _b(h, 12, 12), py + 1 + _b(h, 16, 13), 2);
     }
     if (h % 5 == 1) {
       final x = px + 3 + _b(h, 11, 9), y = py + 3 + _b(h, 14, 8);
@@ -178,34 +210,82 @@ extension _TerrainTiles on TilePainter {
     _edgeBumps(c, r.lit, px, py, h, 5 + s * 3, side: s, maxDepth: 1);
   }
 
-  /// Mountain: a stepped pixel peak with a lit and a shaded face, strata,
-  /// a crack, a shaded snow cap and a dark foot — the cave boulder's
-  /// facets at peak scale.
-  void _rockDetail(Canvas c, MapTheme th, double px, double py, int h) {
-    final r = TerrainRamp.of(th.rock2, th.rock);
-    final apex = px + 8 + (h % 3 - 1);
-    for (var row = 0; row < 15; row++) {
-      final half = ((row + 1) * 8 / 15).roundToDouble();
-      // Clamped to the cell: the peak never leaves its 16 px.
-      final l = math.max(apex - half, px);
-      final rt = math.min(apex + half, px + _ts);
-      _rect(c, r.base, l, py + row, apex - l, 1);
-      _rect(c, th.rock, apex, py + row, rt - apex, 1);
-      if (row % 3 == 2) _rect(c, r.lit, l, py + row, 1, 1);
+  /// Mountain (tile_detail.md § 3.1): one of four peak shapes by hash
+  /// (tall, low and wide, double, shoulder), a lit left face and a shaded
+  /// right face, optional snow; joined to rock neighbours as one mass
+  /// (a body fill toward rock sides, no foot line inside the range) and
+  /// boulders at the foot of the range.
+  void _rockDetail(Canvas c, MapTheme th, double px, double py, int tx, int ty,
+      int h, TileAt? at) {
+    bool rk(int dx, int dy) => at?.call(tx + dx, ty + dy) == Tile.rock;
+    final up = rk(0, -1), lf = rk(-1, 0), rt = rk(1, 0), dn = rk(0, 1);
+    const black = Color(0xFF000000), white = Color(0xFFFFFFFF);
+    final lit = th.rock2,
+        shaded = th.rock,
+        hi = Color.lerp(th.rock2, white, 0.35)!,
+        body = Color.lerp(th.rock, black, 0.25)!,
+        deep = Color.lerp(th.rock, black, 0.5)!;
+    // The mass: a body fill toward rock neighbours.
+    if (up) {
+      _rect(c, body, px, py, _ts, _ts);
+      _rect(c, deep, px + 2 + _b(h, 3, 9), py + 3 + _b(h, 7, 4), 4, 1);
+    } else if (lf || rt) {
+      final x0 = lf ? px : px + 3, x1 = rt ? px + _ts : px + 13;
+      _rect(c, body, x0, py + 9, x1 - x0, 7);
     }
-    _rect(c, r.deep, apex + 1, py + 8, 3, 1);
-    _rect(c, r.shade, apex - 5, py + 11, 3, 1);
-    if (h % 2 == 0) {
-      _rect(c, r.deep, apex + 2, py + 5 + h % 3, 1, 3);
-      _rect(c, r.deep, apex + 3, py + 8 + h % 3, 1, 2);
+    if (dn && (lf || rt || up)) {
+      final x0 = lf ? px : px + 2, x1 = rt ? px + _ts : px + 14;
+      _rect(c, body, x0, py + 12, x1 - x0, 4);
     }
-    const snow = Color(0xFFE8F0FF), snowShade = Color(0xFFB8C4D8);
-    _rect(c, snow, apex - 1, py, 2, 2);
-    _rect(c, snow, apex - 2, py + 2, 3, 1);
-    _rect(c, snowShade, apex + 1, py + 2, 1, 1);
-    _rect(c, snowShade, apex - 3, py + 3, 1, 1);
-    _rect(c, snowShade, apex + 1, py + 3, 1, 1);
-    _rect(c, r.deep, px, py + 15, _ts, 1);
+    void peak(double ax, double top, double slope, {required bool snow}) {
+      for (var y = top; y < py + _ts; y++) {
+        final half = ((y - top) * slope + 0.6).roundToDouble();
+        final l = math.max(ax - half, px), rr = math.min(ax + half, px + _ts);
+        if (ax > l) _rect(c, lit, l, y, ax - l, 1);
+        if (rr > ax) _rect(c, shaded, ax, y, rr - ax, 1);
+        if (((y - top) % 3) == 1 && ax - half >= px) {
+          _rect(c, hi, l, y, 1, 1);
+        }
+        if (ax + half <= px + _ts && rr > ax) {
+          _rect(c, deep, rr - 1, y, 1, 1);
+        }
+      }
+      // Strata on the shaded face.
+      final sy = top + ((py + _ts - top) * 0.55).roundToDouble();
+      _rect(c, deep, ax + 1, sy, 2, 1);
+      _rect(c, hi, ax - 3 >= px ? ax - 3 : px, sy + 2, 2, 1);
+      if (snow) {
+        _rect(c, white.withValues(alpha: 0.92), ax - 1, top, 2, 2);
+        _rect(c, white.withValues(alpha: 0.92), ax - 2, top + 2, 2, 1);
+        _rect(c, const Color(0xFFB8C4D8), ax, top + 2, 2, 1);
+        _rect(c, const Color(0xFFB8C4D8), ax + 1, top + 3, 1, 1);
+      }
+    }
+
+    final snowy = !up && h % 3 != 0;
+    switch (h % 4) {
+      case 0: // tall
+        peak(px + 6 + _b(h, 3, 5), py + _b(h, 6, 2), 0.55, snow: snowy);
+      case 1: // low and wide
+        peak(px + 7 + _b(h, 3, 3), py + 5 + _b(h, 6, 3), 0.95, snow: false);
+      case 2: // double
+        peak(px + 4 + _b(h, 3, 2), py + 1 + _b(h, 6, 2), 0.6, snow: snowy);
+        peak(px + 11 + _b(h, 8, 2), py + 4 + _b(h, 10, 3), 0.6, snow: false);
+      default: // shoulder: offset apex
+        final left = h & 16 == 0;
+        peak(left ? px + 4 : px + 12, py + 2 + _b(h, 6, 2), 0.75, snow: snowy);
+    }
+    if (!dn) {
+      // Boulders at the foot, dark contact line.
+      for (var k = 0; k < 1 + h % 2; k++) {
+        final x = px + 1 + _b(h, 12 + k * 5, 11), y = py + 12.0;
+        _rect(c, shaded, x, y, 4, 2);
+        _rect(c, lit, x, y, 3, 1);
+        _rect(c, hi, x, y, 1, 1);
+        _rect(c, deep, x, y + 2, 4, 1);
+      }
+      _rect(c, deep, px, py + 15, _ts, 1);
+    }
   }
 
   /// Tilled soil: clods with a lit top and a dark underside.
