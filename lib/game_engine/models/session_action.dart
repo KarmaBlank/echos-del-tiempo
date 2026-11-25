@@ -145,21 +145,26 @@ class MineAction extends SessionAction {
 }
 
 /// Smithing operation (mining_smithing.md § 3–5).
-enum SmithOp { smelt, forge, brann, fishForge }
+enum SmithOp { smelt, forge, brann, fishForge, forgeParts, fishSplit }
 
 /// `smith` (protocol 69): [SmithOp.smelt] smelts [n] ingots from the ore
 /// [material]; [SmithOp.forge] / [SmithOp.brann] forge [base] with the
 /// ingot [material] at rarity index [rarity] (by yourself or by Brann).
 /// [SmithOp.fishForge] (protocol 92, profession_gear.md § 4.2): Brann
 /// forges the legendary fish [material] into a weapon.
+/// Protocol 93 (profession_gear_v2.md § 7): [SmithOp.forgeParts] forges
+/// the weapon type [base] from [parts] (`[base ingot, head, grip,
+/// setting?]`; [material] = the base ingot); [SmithOp.fishSplit] has
+/// Brann take the fish [material] apart.
 class SmithAction extends SessionAction {
   final SmithOp op;
   final String material;
   final String? base;
   final int rarity;
   final int n;
+  final List<String> parts;
   const SmithAction(this.op, this.material,
-      {this.base, this.rarity = 0, this.n = 1});
+      {this.base, this.rarity = 0, this.n = 1, this.parts = const []});
 }
 
 /// Pausa de grupo (docs/specs/settings.md § "Pausa"): cualquier jugador

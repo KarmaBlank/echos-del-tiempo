@@ -7,6 +7,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 void main() {
+  group('CRT por defecto y migración', () {
+    test('instalación nueva: SUAVE', () {
+      expect(const GameSettings().crt, CrtLevel.soft);
+      expect(GameSettings.fromJson(const {}).crt, CrtLevel.soft);
+    });
+    test('game.json viejo pasa una vez a SUAVE, con cualquier nivel', () {
+      expect(GameSettings.fromJson(const {'version': 2, 'crt': 'strong'}).crt,
+          CrtLevel.soft);
+      expect(GameSettings.fromJson(const {'crt': 'strong'}).crt, CrtLevel.soft);
+      expect(GameSettings.fromJson(const {'version': 2, 'crt': 'normal'}).crt,
+          CrtLevel.soft);
+      expect(GameSettings.fromJson(const {'version': 2, 'crt': 'off'}).crt,
+          CrtLevel.soft);
+      expect(GameSettings.fromJson(const {'version': 3, 'crt': 'off'}).crt,
+          CrtLevel.off);
+    });
+    test('después de migrar, un FUERTE manual se respeta', () {
+      final migrated =
+          GameSettings.fromJson(const {'version': 2, 'crt': 'strong'});
+      final manual = migrated.copyWith(crt: CrtLevel.strong);
+      final round = GameSettings.fromJson(manual.toJson());
+      expect(round.crt, CrtLevel.strong);
+    });
+  });
+
   group('CrtParams', () {
     test('APAGADO no tiene parámetros; el resto sube de SUAVE a FUERTE', () {
       expect(CrtParams.of(CrtLevel.off), isNull);
@@ -25,7 +50,12 @@ void main() {
       // La curva remuestrea la UI y ensucia la fuente pixel: ningún nivel
       // curva (v0.8.2: FUERTE es el por defecto); FUERTE tiene bisel.
       expect(n.curve, 0, reason: 'NORMAL no curva');
-      expect(f.curve, 0, reason: 'FUERTE (por defecto) no remuestrea');
+      expect(f.curve, 0, reason: 'FUERTE no remuestrea');
+      // SUAVE (por defecto desde v0.49.9) es de verdad sutil.
+      expect(s.scan, lessThanOrEqualTo(0.1));
+      expect(s.mask, lessThanOrEqualTo(0.04));
+      expect(s.vignette, lessThanOrEqualTo(0.08), reason: 'casi no oscurece');
+      expect(s.bezel, 0);
       expect(f.bezel, greaterThan(0));
       expect(n.bezel, 0);
       // Legible: la scanline de NORMAL oscurece como mucho un 24%.
@@ -100,7 +130,7 @@ void main() {
       await tester.runAsync(() => CrtShaders.load());
       await tester.pump();
       final state = tester.state<CrtFilterState>(find.byType(CrtFilter));
-      expect(state.widget.level, CrtLevel.strong);
+      expect(state.widget.level, CrtLevel.soft);
       expect(state.mode, isNot('off'));
       expect(state.mode, 'overlay', reason: 'flutter test no usa Impeller');
       // Sin Impeller (flutter test): capa encima, o nada si no cargó.

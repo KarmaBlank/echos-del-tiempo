@@ -362,5 +362,6 @@ String dropLabelText(ProgressionRules rules, LootDrop d) {
   if (it != null) return localItemName(rules.items, it);
   final eco = d.eco;
   if (eco != null) return ecoFullText(rules.ecos, eco);
+  if (d.isGoods) return localGoodsName(d);
   return d.count > 1 ? '${d.count} ${d.stack!.label}' : d.stack!.label;
 }

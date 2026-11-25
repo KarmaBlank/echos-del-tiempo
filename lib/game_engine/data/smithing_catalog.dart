@@ -1,10 +1,11 @@
 import 'biomes_catalog.dart';
+import 'fishing_catalog.dart';
 
 /// Kind of a smithing material (docs/specs/mining_smithing.md § 2).
 ///
 /// v2 (§ 1.6): [tool] = a mining tool you own (amount 1); [supply] = a
 /// mine consumable (torch, bomb, booster).
-enum SmithMatKind { ore, ingot, rare, special, tool, supply }
+enum SmithMatKind { ore, ingot, rare, special, tool, supply, fishPart }
 
 /// A smithing material. [name] is the es-AR source text; the UI resolves
 /// `data.materials.smith.<id>.name`. [tier] is the ore level (1..5) of
@@ -53,8 +54,29 @@ const kBiomeOres = <String, BiomeOres>{
       ore: 'ore_echo', ingot: 'ingot_echo', rare: 'rare_sand'),
 };
 
-/// Every smithing material by id.
-const kSmithMaterials = <String, SmithMaterialDef>{
+/// Every smithing material by id (fish parts generated, § v2).
+final kSmithMaterials = <String, SmithMaterialDef>{
+  ..._kSmithBase,
+  ...kFishPartMaterials,
+};
+
+/// Parts Brann takes out of Epic / Legendary fish
+/// (profession_gear_v2.md § 4): `fp_<species>_<scale|bone|essence>`, tier
+/// 4 (Epic) or 5 (Legendary).
+final kFishPartMaterials = <String, SmithMaterialDef>{
+  for (final f in kFish.values)
+    if (f.rarity == FishRarity.epico || f.rarity == FishRarity.legendario)
+      for (final (part, noun) in const [
+        ('scale', 'Escamas'),
+        ('bone', 'Espinazo'),
+        ('essence', 'Esencia'),
+      ])
+        'fp_${f.id}_$part': SmithMaterialDef('fp_${f.id}_$part',
+            '$noun de ${f.name}', SmithMatKind.fishPart,
+            tier: f.rarity == FishRarity.legendario ? 5 : 4),
+};
+
+const _kSmithBase = <String, SmithMaterialDef>{
   'ore_copper': SmithMaterialDef('ore_copper', 'Mena de cobre',
       SmithMatKind.ore, biome: kBosque, tier: 1),
   'ingot_copper': SmithMaterialDef('ingot_copper', 'Lingote de cobre',

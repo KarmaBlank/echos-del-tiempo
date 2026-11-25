@@ -65,30 +65,46 @@ class LootDrop {
   const LootDrop.item(ItemInstance this.item)
       : stack = null,
         eco = null,
+        goods = null,
         count = 1;
   const LootDrop.stack(StackKind this.stack, this.count)
       : item = null,
-        eco = null;
+        eco = null,
+        goods = null;
   const LootDrop.eco(EcoItem this.eco)
       : item = null,
         stack = null,
+        goods = null,
         count = 1;
+
+  /// Overworld goods (loot.md § 4c): gold, ore, crops, seeds… that land
+  /// in the profile's life bags, not in the inventory grid. [goods] is
+  /// `kind:id` (`gold`, `ore:ore_copper`, `crop:nabo_claro@0`…), see
+  /// `GoodsRules`.
+  const LootDrop.goods(String this.goods, this.count)
+      : item = null,
+        stack = null,
+        eco = null;
 
   final ItemInstance? item;
   final StackKind? stack;
 
   /// Eco (docs/specs/ecos_atlas.md § 2).
   final EcoItem? eco;
+  final String? goods;
   final int count;
 
   bool get isItem => item != null;
   bool get isEco => eco != null;
+  bool get isGoods => goods != null;
 
   Map<String, Object?> toJson() => item != null
       ? {'it': item!.toJson()}
       : eco != null
           ? {'eco': eco!.toJson()}
-          : {'st': stack!.token, 'n': count};
+          : goods != null
+              ? {'gd': goods, 'n': count}
+              : {'st': stack!.token, 'n': count};
 
   /// `null` si no tiene la forma esperada.
   static LootDrop? fromJson(Object? raw) {
@@ -97,6 +113,10 @@ class LootDrop {
     if (it != null) return LootDrop.item(it);
     final eco = EcoItem.fromJson(raw['eco']);
     if (eco != null) return LootDrop.eco(eco);
+    final gd = raw['gd'], gn = raw['n'];
+    if (gd is String && gd.isNotEmpty && gn is num && gn > 0) {
+      return LootDrop.goods(gd, gn.toInt());
+    }
     final st = raw['st'], n = raw['n'];
     final k = st is String ? StackKind.byToken(st) : null;
     if (k == null || n is! num || n <= 0) return null;

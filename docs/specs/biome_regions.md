@@ -106,6 +106,9 @@ Elipse con borde irregular (dos armónicos), radios entre
 
 ## 4. Piedras de paso
 
+> v0.49.9: `BiomeLayout.version` 4 regenera los exteriores de todo mundo
+> guardado; las piedras activadas se pierden (ver biome_exploration.md § 7).
+
 - Una en la **entrada** (junto al camino principal, cerca de la llegada),
   una por **lago** (junto a su `approach`) y una por **boca de mina**.
   Tile `W` de siempre; activada se le prende la runa (solo para quien la
@@ -189,6 +192,12 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - Bajo techo en una región de día: sombra de cueva (imagen cacheada).
 
 ### 7.2.1 Grutas techadas (exteriores)
+
+- (v0.49.9) En un exterior de región solo hay haces en los tragaluces
+  bajo techo (`skylights` con `isIndoor`); las aberturas por hash del
+  tema (`kLightShaftThemes`, p. ej. `cavernas_ext`) ya no se aplican a
+  las regiones: ponían luces de haz sobre pasto abierto y de noche un
+  punto del claro se iluminaba "como una cueva".
 - **Caverna del lago de cueva** (v0.48.2): el sitio del lago se une con
   el sitio del medio de arriba; la caverna es una mancha orgánica (tres
   armónicos + ruido por tile) de `caveScaleX/Y` × los radios del lago,

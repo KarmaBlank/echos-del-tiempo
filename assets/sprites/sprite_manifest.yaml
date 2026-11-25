@@ -246,6 +246,58 @@ items:
   esencia: { idle: items/esencia.png, size: [16, 16] }
   esencia_acento: { idle: items/esencia_acento.png, size: [16, 16] }
   # items:fin
+  # capas:inicio — capas de recoloreo (tool/export_weapon_part_layers.dart)
+  espada_head: { idle: items/espada_head.png, size: [16, 16] }
+  espada_grip: { idle: items/espada_grip.png, size: [16, 16] }
+  hacha_head: { idle: items/hacha_head.png, size: [16, 16] }
+  hacha_grip: { idle: items/hacha_grip.png, size: [16, 16] }
+  lanza_head: { idle: items/lanza_head.png, size: [16, 16] }
+  lanza_grip: { idle: items/lanza_grip.png, size: [16, 16] }
+  baculo_head: { idle: items/baculo_head.png, size: [16, 16] }
+  baculo_grip: { idle: items/baculo_grip.png, size: [16, 16] }
+  tomo_head: { idle: items/tomo_head.png, size: [16, 16] }
+  tomo_grip: { idle: items/tomo_grip.png, size: [16, 16] }
+  varita_head: { idle: items/varita_head.png, size: [16, 16] }
+  varita_grip: { idle: items/varita_grip.png, size: [16, 16] }
+  arco_head: { idle: items/arco_head.png, size: [16, 16] }
+  arco_grip: { idle: items/arco_grip.png, size: [16, 16] }
+  rifle_head: { idle: items/rifle_head.png, size: [16, 16] }
+  rifle_grip: { idle: items/rifle_grip.png, size: [16, 16] }
+  ballesta_head: { idle: items/ballesta_head.png, size: [16, 16] }
+  ballesta_grip: { idle: items/ballesta_grip.png, size: [16, 16] }
+  dagas_head: { idle: items/dagas_head.png, size: [16, 16] }
+  dagas_grip: { idle: items/dagas_grip.png, size: [16, 16] }
+  escudo_head: { idle: items/escudo_head.png, size: [16, 16] }
+  escudo_grip: { idle: items/escudo_grip.png, size: [16, 16] }
+  espada_escudo_head: { idle: items/espada_escudo_head.png, size: [16, 16] }
+  espada_escudo_grip: { idle: items/espada_escudo_grip.png, size: [16, 16] }
+  maza_escudo_head: { idle: items/maza_escudo_head.png, size: [16, 16] }
+  maza_escudo_grip: { idle: items/maza_escudo_grip.png, size: [16, 16] }
+  martillo_escudo_head: { idle: items/martillo_escudo_head.png, size: [16, 16] }
+  martillo_escudo_grip: { idle: items/martillo_escudo_grip.png, size: [16, 16] }
+  maza_head: { idle: items/maza_head.png, size: [16, 16] }
+  maza_grip: { idle: items/maza_grip.png, size: [16, 16] }
+  martillo_head: { idle: items/martillo_head.png, size: [16, 16] }
+  martillo_grip: { idle: items/martillo_grip.png, size: [16, 16] }
+  pocion_head: { idle: items/pocion_head.png, size: [16, 16] }
+  pocion_grip: { idle: items/pocion_grip.png, size: [16, 16] }
+  cofre_head: { idle: items/cofre_head.png, size: [16, 16] }
+  cofre_grip: { idle: items/cofre_grip.png, size: [16, 16] }
+  esquirla_head: { idle: items/esquirla_head.png, size: [16, 16] }
+  esquirla_grip: { idle: items/esquirla_grip.png, size: [16, 16] }
+  cristal_head: { idle: items/cristal_head.png, size: [16, 16] }
+  cristal_grip: { idle: items/cristal_grip.png, size: [16, 16] }
+  prisma_head: { idle: items/prisma_head.png, size: [16, 16] }
+  prisma_grip: { idle: items/prisma_grip.png, size: [16, 16] }
+  eco_head: { idle: items/eco_head.png, size: [16, 16] }
+  eco_grip: { idle: items/eco_grip.png, size: [16, 16] }
+  ancla_head: { idle: items/ancla_head.png, size: [16, 16] }
+  ancla_grip: { idle: items/ancla_grip.png, size: [16, 16] }
+  fragmento_head: { idle: items/fragmento_head.png, size: [16, 16] }
+  fragmento_grip: { idle: items/fragmento_grip.png, size: [16, 16] }
+  esencia_head: { idle: items/esencia_head.png, size: [16, 16] }
+  esencia_grip: { idle: items/esencia_grip.png, size: [16, 16] }
+  # capas:fin
   # vida:inicio — íconos de oficio (tool/export_life_icons.dart)
   vida_cana_rama: { idle: items/vida_cana_rama.png, size: [16, 16] }
   vida_cana_roble: { idle: items/vida_cana_roble.png, size: [16, 16] }
@@ -437,6 +489,22 @@ items:
   vida_semilla_ws_arco_old: { idle: items/vida_semilla_ws_arco_old.png, size: [16, 16] }
   vida_semilla_ws_varita_old: { idle: items/vida_semilla_ws_varita_old.png, size: [16, 16] }
   vida_semilla_ws_lanza_old: { idle: items/vida_semilla_ws_lanza_old.png, size: [16, 16] }
+  vida_semilla_ws_espada: { idle: items/vida_semilla_ws_espada.png, size: [16, 16] }
+  vida_semilla_ws_espada_old: { idle: items/vida_semilla_ws_espada_old.png, size: [16, 16] }
+  vida_semilla_ws_hacha: { idle: items/vida_semilla_ws_hacha.png, size: [16, 16] }
+  vida_semilla_ws_hacha_old: { idle: items/vida_semilla_ws_hacha_old.png, size: [16, 16] }
+  vida_semilla_ws_dagas: { idle: items/vida_semilla_ws_dagas.png, size: [16, 16] }
+  vida_semilla_ws_dagas_old: { idle: items/vida_semilla_ws_dagas_old.png, size: [16, 16] }
+  vida_semilla_ws_ballesta: { idle: items/vida_semilla_ws_ballesta.png, size: [16, 16] }
+  vida_semilla_ws_ballesta_old: { idle: items/vida_semilla_ws_ballesta_old.png, size: [16, 16] }
+  vida_semilla_ws_tomo: { idle: items/vida_semilla_ws_tomo.png, size: [16, 16] }
+  vida_semilla_ws_tomo_old: { idle: items/vida_semilla_ws_tomo_old.png, size: [16, 16] }
+  vida_semilla_ws_espada_escudo: { idle: items/vida_semilla_ws_espada_escudo.png, size: [16, 16] }
+  vida_semilla_ws_espada_escudo_old: { idle: items/vida_semilla_ws_espada_escudo_old.png, size: [16, 16] }
+  vida_semilla_ws_maza_escudo: { idle: items/vida_semilla_ws_maza_escudo.png, size: [16, 16] }
+  vida_semilla_ws_maza_escudo_old: { idle: items/vida_semilla_ws_maza_escudo_old.png, size: [16, 16] }
+  vida_semilla_ws_martillo_escudo: { idle: items/vida_semilla_ws_martillo_escudo.png, size: [16, 16] }
+  vida_semilla_ws_martillo_escudo_old: { idle: items/vida_semilla_ws_martillo_escudo_old.png, size: [16, 16] }
   vida_vivo_0: { idle: items/vida_vivo_0.png, size: [16, 16] }
   vida_vivo_1: { idle: items/vida_vivo_1.png, size: [16, 16] }
   vida_vivo_2: { idle: items/vida_vivo_2.png, size: [16, 16] }
@@ -445,6 +513,14 @@ items:
   vida_gear_vivo_arco: { idle: items/vida_gear_vivo_arco.png, size: [16, 16] }
   vida_gear_vivo_varita: { idle: items/vida_gear_vivo_varita.png, size: [16, 16] }
   vida_gear_vivo_lanza: { idle: items/vida_gear_vivo_lanza.png, size: [16, 16] }
+  vida_gear_vivo_espada: { idle: items/vida_gear_vivo_espada.png, size: [16, 16] }
+  vida_gear_vivo_hacha: { idle: items/vida_gear_vivo_hacha.png, size: [16, 16] }
+  vida_gear_vivo_dagas: { idle: items/vida_gear_vivo_dagas.png, size: [16, 16] }
+  vida_gear_vivo_ballesta: { idle: items/vida_gear_vivo_ballesta.png, size: [16, 16] }
+  vida_gear_vivo_tomo: { idle: items/vida_gear_vivo_tomo.png, size: [16, 16] }
+  vida_gear_vivo_espada_escudo: { idle: items/vida_gear_vivo_espada_escudo.png, size: [16, 16] }
+  vida_gear_vivo_maza_escudo: { idle: items/vida_gear_vivo_maza_escudo.png, size: [16, 16] }
+  vida_gear_vivo_martillo_escudo: { idle: items/vida_gear_vivo_martillo_escudo.png, size: [16, 16] }
   vida_gear_hundido_sable: { idle: items/vida_gear_hundido_sable.png, size: [16, 16] }
   vida_gear_hundido_tomo: { idle: items/vida_gear_hundido_tomo.png, size: [16, 16] }
   vida_gear_hundido_ballesta: { idle: items/vida_gear_hundido_ballesta.png, size: [16, 16] }

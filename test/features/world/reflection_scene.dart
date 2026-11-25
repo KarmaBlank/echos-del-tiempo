@@ -147,3 +147,30 @@ ui.Image record(int w, int h, void Function(Canvas c) draw) {
   pic.dispose();
   return img;
 }
+
+/// A lake (rows 12+) with a 1-tile inlet going up at column 10 (rows
+/// 6..11); trees: right above the inlet top (adjacent), and two tiles
+/// above the lake at column 20 with grass between.
+GameMap inletLake() {
+  final rows = <String>[];
+  for (var y = 0; y < 24; y++) {
+    final b = StringBuffer();
+    for (var x = 0; x < 32; x++) {
+      if (y >= 12 || (x == 10 && y >= 6)) {
+        b.write(Tile.water);
+      } else if ((x == 10 && y == 5) || (x == 20 && y == 10)) {
+        b.write(Tile.tree);
+      } else {
+        b.write(Tile.grass);
+      }
+    }
+    rows.add(b.toString());
+  }
+  return GameMap(
+      width: 32,
+      height: 24,
+      rows: rows,
+      theme: 'bosque_ext',
+      spawn: const WorldPoint(0, 0),
+      lobby: true);
+}

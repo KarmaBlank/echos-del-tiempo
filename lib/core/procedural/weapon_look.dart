@@ -6,6 +6,7 @@ import '../../game_engine/models/battle_state.dart';
 import '../../game_engine/models/elements.dart';
 import '../../game_engine/models/item.dart';
 import '../../game_engine/rules/loot_filter_rules.dart';
+import 'weapon_parts.dart';
 
 /// Identidad visual de un arma concreta (docs/specs/weapon_identity.md
 /// § 3, aprobado): todo sale de datos que ya viajan con el arma
@@ -17,15 +18,27 @@ class WeaponLook {
     this.rarity = Rarity.comun,
     this.hasUlt = false,
     this.variant = 0,
+    this.headColor,
+    this.gripColor,
   });
 
   /// Aspecto de [i] (`null` = el genérico del tipo).
-  factory WeaponLook.of(ItemInstance i) => WeaponLook(
-        element: weaponElementOf(i),
-        rarity: i.rarity,
-        hasUlt: i.ultId != null || kUniques[i.uniqueId]?.ultId != null,
-        variant: variantOf(i.uid),
-      );
+  factory WeaponLook.of(ItemInstance i) {
+    final (head, grip) = partMaterials(i);
+    return WeaponLook(
+      element: weaponElementOf(i),
+      rarity: i.rarity,
+      hasUlt: i.ultId != null || kUniques[i.uniqueId]?.ultId != null,
+      variant: variantOf(i.uid),
+      headColor: head == null ? null : materialColor(head),
+      gripColor: grip == null ? null : materialColor(grip),
+    );
+  }
+
+  /// Material colours of the head / grip (profession_gear_v2.md § 6;
+  /// `null` = the icon's own colours).
+  final int? headColor;
+  final int? gripColor;
 
   final GameElement? element;
   final Rarity rarity;
@@ -63,10 +76,13 @@ class WeaponLook {
       other.element == element &&
       other.rarity == rarity &&
       other.hasUlt == hasUlt &&
-      other.variant == variant;
+      other.variant == variant &&
+      other.headColor == headColor &&
+      other.gripColor == gripColor;
 
   @override
-  int get hashCode => Object.hash(element, rarity, hasUlt, variant);
+  int get hashCode =>
+      Object.hash(element, rarity, hasUlt, variant, headColor, gripColor);
 }
 
 /// Color del aura de cada elemento (arte; mismos tonos que los FX).

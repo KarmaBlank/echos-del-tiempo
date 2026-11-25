@@ -328,7 +328,7 @@
   "ui.world.way.site_lake": "Lago: {name}",
   "ui.world.way.site_mine": "Boca de mina {n}",
   "ui.world.way.close": "CERRAR",
-  "ui.world.forage.prompt": "[Mantené E] Recolectar {name}",
+  "ui.world.forage.prompt": "[Mantené E/Clic] Recolectar {name}",
   "ui.world.forage.regrow": "{name}: vuelve a crecer en {n} s",
   "ui.world.forage.seed_bush": "Mata de semillas",
   "ui.world.forage.echo_bloom": "Flor del eco",
@@ -410,12 +410,14 @@
   "ui.world.way.site_section": "Claro del sendero {n}",
   "ui.world.way.site_shrine": "Santuario {n}",
   "ui.world.way.site_cavern": "Gruta {n}",
-  "ui.world.wild.prompt_chest": "[E] Abrir el cofre",
-  "ui.world.wild.prompt_shrine": "[E] Pedir la bendición",
-  "ui.world.wild.prompt_done": "Ya lo usaste hoy: volvé mañana",
+  "ui.world.wild.prompt_chest": "[E/Clic] Abrir el cofre",
+  "ui.world.wild.prompt_shrine": "[E/Clic] Recibir bendición (oro + material raro)",
+  "ui.world.wild.prompt_done": "Ya lo usaste hoy · se renueva mañana",
   "ui.world.raft.prompt_board": "[E] Subir a la balsa",
   "ui.world.raft.prompt_leave": "[E] Bajar a la orilla",
   "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa",
-  "ui.world.cozy.search_prompt": "[Mantené E] Buscar en el árbol",
-  "ui.world.cozy.searched": "Ya buscaste en este árbol hoy"
+  "ui.world.cozy.search_prompt": "[Mantené E/Clic] Buscar en el árbol",
+  "ui.world.cozy.searched": "Ya buscaste en este árbol hoy",
+  "ui.world.prompt.spent": "Ya lo usaste",
+  "ui.world.loot.gold": "{n} de oro"
 }

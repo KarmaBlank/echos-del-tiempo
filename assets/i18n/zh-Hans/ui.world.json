@@ -401,7 +401,7 @@
     "status": "draft"
   },
   "ui.world.forage.prompt": {
-    "text": "[按住 E] 采集 {name}",
+    "text": "[按住 E/点击] 采集 {name}",
     "status": "draft"
   },
   "ui.world.forage.regrow": {
@@ -645,26 +645,34 @@
     "status": "draft"
   },
   "ui.world.wild.prompt_chest": {
-    "text": "[E] 打开宝箱",
+    "text": "[E/点击] 打开宝箱",
     "status": "draft"
   },
   "ui.world.wild.prompt_shrine": {
-    "text": "[E] 祈求祝福",
+    "text": "[E/点击] 接受祝福（金币 + 稀有材料）",
     "status": "draft"
   },
   "ui.world.wild.prompt_done": {
-    "text": "今天已经用过了：明天会恢复",
+    "text": "今天已经用过了 · 明天刷新",
     "status": "draft"
   },
   "ui.world.raft.prompt_board": "[E] 登上木筏",
   "ui.world.raft.prompt_leave": "[E] 上岸",
   "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼",
   "ui.world.cozy.search_prompt": {
-    "text": "[按住 E] 搜索树木",
+    "text": "[按住 E/点击] 搜索树木",
     "status": "draft"
   },
   "ui.world.cozy.searched": {
     "text": "今天已经搜索过这棵树",
+    "status": "draft"
+  },
+  "ui.world.prompt.spent": {
+    "text": "已经用过了",
+    "status": "draft"
+  },
+  "ui.world.loot.gold": {
+    "text": "{n} 金币",
     "status": "draft"
   }
 }

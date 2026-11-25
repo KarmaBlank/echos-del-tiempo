@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:typed_data';
 
 import 'battle_command.dart';
 import 'battle_state.dart';
@@ -389,7 +390,10 @@ class MissionRun {
     Set<int>? questsFailed,
     this.blessing,
     this.windUntil = 0,
-  })  : eliteDrops = eliteDrops ?? [],
+    Uint8List? discovery,
+    this.discoveryRev = 0,
+  })  : discovery = discovery ?? Uint8List(0),
+        eliteDrops = eliteDrops ?? [],
         floorGoals = List.unmodifiable(floorGoals ?? const <int>[]),
         levels = List.unmodifiable(levels ?? const <int>[]),
         opened = {...?opened},
@@ -397,6 +401,13 @@ class MissionRun {
         poiSeen = {...?poiSeen},
         questsDone = {...?questsDone},
         questsFailed = {...?questsFailed};
+
+  /// Dungeon map discovery (biome_exploration.md § 11.8): one byte per
+  /// 4 × 4 tile cell of the whole map; host-authoritative, shared.
+  Uint8List discovery;
+
+  /// Goes up whenever [discovery] gains a cell (cache key of the mask).
+  int discoveryRev;
 
   // ---- exploración v0.6 (worldgen.md § 11) ----
 
@@ -521,6 +532,8 @@ class MissionRun {
         questsFailed: questsFailed,
         blessing: blessing,
         windUntil: windUntil,
+        discovery: Uint8List.fromList(discovery),
+        discoveryRev: discoveryRev,
       );
 }
 

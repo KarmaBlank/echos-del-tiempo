@@ -868,7 +868,7 @@ class MapGame extends Game {
               ..color = color);
         c.drawOval(Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
             Paint()..color = color.withValues(alpha: 0.25));
-        _rankedText(c, d.title.text.toUpperCase(), x, y - 18, TownPalette.label,
+        _placeText(c, d.title.text.toUpperCase(), x, y - 18, TownPalette.label,
             6, 899);
         continue;
       }
@@ -893,7 +893,7 @@ class MapGame extends Game {
             Rect.fromLTWH(x - w / 2, bottom - h, w, h),
             SpriteCatalog.pixelPaint());
       }
-      _rankedText(c, d.title.text.toUpperCase(), x, bottom - 20,
+      _placeText(c, d.title.text.toUpperCase(), x, bottom - 20,
           TownPalette.label, 6, 899);
       // Same mark and place as residents (world_events.md § 3.6).
       drawNpcMark(
@@ -913,21 +913,10 @@ class MapGame extends Game {
     return QuestTrackRules.mark(p, controller.town, n);
   }
 
-  /// Distancia (en tiles) hasta la que se ven los carteles de lugares
-  /// del pueblo y los exteriores (town_loop.md § 2.1, v0.37.3).
-  static const placeLabelRange = 4.5;
-
-  /// Franja (en tiles) en la que el cartel aparece / se apaga suave.
-  static const placeLabelFade = 1.0;
-
-  /// Opacidad del cartel de lugar en ([x], [y]) según lo cerca que esté
-  /// el jugador local: 1 adentro de [placeLabelRange], 0 pasando la franja.
-  double _placeAlpha(double x, double y) {
-    final dx = (x - controller.local.x) / ts,
-        dy = (y - controller.local.y) / ts;
-    final d = math.sqrt(dx * dx + dy * dy);
-    return (1 - (d - placeLabelRange) / placeLabelFade).clamp(0.0, 1.0);
-  }
+  /// Opacidad de una etiqueta del mundo en ([x], [y]) según lo cerca que
+  /// esté el jugador local ([worldLabelAlpha]).
+  double _placeAlpha(double x, double y) =>
+      worldLabelAlpha(x - controller.local.x, y - controller.local.y, ts);
 
   /// Cartel de un lugar: solo cerca del jugador, con fundido.
   void _placeText(Canvas c, String s, double x, double y, Color color,
@@ -1044,12 +1033,10 @@ class MapGame extends Game {
     if (map.lobby && map.place != null) {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
-      // Labels stay inside the view (a pond at the edge was clipped).
-      double inView(double x) => x.clamp(worldView.left + 36,
-          math.max(worldView.left + 36, worldView.right - 36));
+      // Signs show only near the player (never pinned to the view edge).
       for (final (txt, x, y)
           in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
-        _placeText(c, txt, inView((x + 0.5) * ts), y * ts - 4,
+        _placeText(c, txt, (x + 0.5) * ts, y * ts - 4,
             TownPalette.label, 6, rank++);
       }
       final lay = biomeLayout(map.place);
@@ -1118,7 +1105,7 @@ class MapGame extends Game {
             s.time,
             t,
             (id) => sprites.lifeIcon(id, 'herramienta'),
-            (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
+            (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900),
             hover: controller.hoverHelper,
             markOf: _npcMark,
             period: controller.helperPeriod);
@@ -1155,7 +1142,7 @@ class MapGame extends Game {
           ));
         }
         if (at.busy) _drawSparks(c, lay.npc, cx, bottom, t);
-        _rankedText(c, lay.npc.name.toUpperCase(), cx, bottom - ts - 4,
+        _placeText(c, lay.npc.name.toUpperCase(), cx, bottom - ts - 4,
             TownPalette.label, 6, 899);
         drawNpcMark(
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 901),
@@ -1197,7 +1184,7 @@ class MapGame extends Game {
             _refl.add(
                 (x: fx, y: fy + 8, moving: true, onWater: false, draw: draw));
           }
-          _rankedText(
+          _placeText(
               c, f.name.toUpperCase(), fx, fy - 12, TownPalette.label, 6, 898);
         }
       }
@@ -1219,7 +1206,7 @@ class MapGame extends Game {
           _refl.add(
               (x: n.x, y: bottom, moving: false, onWater: false, draw: draw));
         }
-        _rankedText(c, n.def.name.text.toUpperCase(), n.x, bottom - ts - 6,
+        _placeText(c, n.def.name.text.toUpperCase(), n.x, bottom - ts - 6,
             TownPalette.label, 6, 897);
       }
       // PNJ de la mina (mining_smithing.md § 1.2): quieto, con su nombre.
@@ -1234,7 +1221,7 @@ class MapGame extends Game {
               Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
         }
-        _rankedText(
+        _placeText(
             c,
             controller.strings.t('ui.world.mine.npc.$id.name').toUpperCase(),
             cx,
@@ -1615,8 +1602,10 @@ class MapGame extends Game {
       cozy.drawFireflies(c, controller.local.x, controller.local.y, t);
     }
     // Mines and the town cart station (mining_smithing.md § 1.7–1.9).
-    void mineText(String txt, double x, double y, Color col, double size) =>
-        actors.text(c, txt, x, y, col, size);
+    void mineText(String txt, double x, double y, Color col, double size) {
+      final a = _placeAlpha(x, y);
+      if (a > 0) actors.text(c, txt, x, y, col.withValues(alpha: col.a * a), size);
+    }
     if (controller.mineLevel case final lvl? when inMine) {
       final p = controller.session?.players[controller.localId];
       final ms =

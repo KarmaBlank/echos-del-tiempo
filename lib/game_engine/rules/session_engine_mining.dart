@@ -223,24 +223,22 @@ extension _MiningOp on _Op {
         final def = kChestTiers[relic ? ChestTier.oro : ChestTier.madera]!;
         final lvlP = math.max(1, p.profile.level);
         final cr = ((15 + (_rand() * 26).floor()) * def.creditMult).round();
-        _profileChange(p, p.profile.copyWith(credits: p.profile.credits + cr));
-        final drops = _chestDrops(p, def, lvlP);
-        events.add(MineDugEvent(p.id, x, y, code, '+$cr'));
+        final drops = <LootDrop>[
+          GoodsRules.goldDrop(cr),
+          ..._chestDrops(p, def, lvlP),
+        ];
+        events.add(MineDugEvent(p.id, x, y, code, ''));
         // profession_gear.md § 3.1: cave chests may hold a weapon seed.
         if (_rand() < GearRules.t.d('seedMineChestChance')) {
           final ws = GearRules.rollSeed(_rand, ancientBonus: relic ? 0.25 : 0);
-          final f = p.profile.life.farm;
-          _profileChange(
-              p,
-              p.profile.copyWith(
-                  life: p.profile.life.copyWith(farm: f.addWseed(ws))),
-              gain: true);
-          say('${p.name} encontró ${kWeaponSeedNames[ws]} en el cofre.');
+          drops.add(GoodsRules.wseed(ws));
         }
         say(relic
-            ? '${p.name} abrió un cofre reliquia magitec (+$cr de oro).'
-            : '${p.name} abrió un cofre de la mina (+$cr de oro).');
-        _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
+            ? '${p.name} abrió un cofre reliquia magitec.'
+            : '${p.name} abrió un cofre de la mina.');
+        // Spills on the ground like a dungeon chest (mining_smithing.md
+        // § 1.3, loot.md § 4c).
+        _spill(p, drops, (x + 0.5) * 16, (y + 0.5) * 16);
         return true;
       case MineTile.mushroom:
         s.town = s.town.withMine(place, st.copyWith(opened: {...st.opened, i}));
@@ -464,6 +462,29 @@ extension _MiningOp on _Op {
         smithXp(p, SmithRules.t.i('smithXpCommission'));
         _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
             stashOverflow: true);
+        return true;
+      case SmithOp.forgeParts:
+        // profession_gear_v2.md § 3: forge by parts, step by step.
+        final type = a.base;
+        if (type == null) return false;
+        final r = GearV2Rules.forge(rules.loot, _rand, p.profile, type,
+            [a.material, ...a.parts]);
+        if (r == null) return false;
+        _profileChange(p, r.$1);
+        say('${p.name} forjó por piezas: '
+            '${r.$2.rarity.label.toLowerCase()} de nivel ${r.$2.itemLevel}'
+            '${r.$2.masterwork ? ' (obra maestra)' : ''}.');
+        smithXp(p, SmithCraftRules.forgeXp(r.$2.rarity));
+        _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
+            stashOverflow: true);
+        return true;
+      case SmithOp.fishSplit:
+        // profession_gear_v2.md § 4: Brann takes a fish apart (it's gone).
+        final next = GearV2Rules.split(p.profile, a.material);
+        if (next == null) return false;
+        _profileChange(p, next);
+        say('Brann desarmó un ${kFish[a.material]?.name ?? a.material} '
+            'para ${p.name}.');
         return true;
       case SmithOp.forge || SmithOp.brann:
         if (a.rarity < 0 || a.rarity >= Rarity.values.length) return false;

@@ -27,14 +27,16 @@ class CrtParams {
   /// `null` = APAGADO.
   static CrtParams? of(CrtLevel level) => switch (level) {
         CrtLevel.off => null,
+        // SUAVE (por defecto desde v0.49.9): apenas un toque retro,
+        // scanlines tenues, sin curvatura ni bisel y casi sin oscurecer.
         CrtLevel.soft => const CrtParams(
-            scan: 0.14, mask: 0.05, bloom: 0.15, vignette: 0.15, curve: 0),
+            scan: 0.08, mask: 0.03, bloom: 0.10, vignette: 0.06, curve: 0),
         // Sin curvatura: la curva remuestrea toda la UI y la fuente pixel
         // pierde nitidez (columnas duplicadas o salteadas; settings.md §
         // 3.2).
         CrtLevel.normal => const CrtParams(
             scan: 0.24, mask: 0.09, bloom: 0.25, vignette: 0.25, curve: 0),
-        // FUERTE (por defecto desde v0.8.2): el look marcado sin
+        // FUERTE (por defecto de v0.8.2 a v0.49.8): el look marcado sin
         // remuestrear; la "pantalla curva" la dan las esquinas
         // redondeadas del bisel y la viñeta.
         CrtLevel.strong => const CrtParams(

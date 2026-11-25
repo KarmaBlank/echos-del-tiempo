@@ -150,7 +150,8 @@ abstract final class ItemSourceRules {
             ItemSource(ItemSourceKind.smithing),
           ],
         SmithMatKind.tool ||
-        SmithMatKind.supply =>
+        SmithMatKind.supply ||
+        SmithMatKind.fishPart =>
           const [ItemSource(ItemSourceKind.smithing)],
       };
     }

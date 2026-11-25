@@ -144,10 +144,8 @@ void main() {
     for (final zoom in const [3, 2, 1]) {
       final container =
           ProviderScope.containerOf(tester.element(find.byType(WorldScreen)));
-      final s = container.read(gameSettingsProvider);
-      await container
-          .read(gameSettingsProvider.notifier)
-          .update(s.copyWith(minimapZoom: zoom));
+      // Biome exteriors keep their own (session) zoom.
+      container.read(biomeMinimapZoomProvider.notifier).state = zoom;
       await tester.pump();
       final size = tester.getSize(find.byKey(const ValueKey('hud-minimap')));
       expect(size.width, lessThanOrEqualTo(kMinimapWindow.width + 0.01),
@@ -157,6 +155,49 @@ void main() {
     }
     expect(kMinimapWindow.width, lessThan(200));
     expect(kMinimapWindow.height, lessThan(140));
+  });
+
+  testWidgets('biome minimap opens framed on arrival + goals; zoom kept',
+      (tester) async {
+    final c = await _biome(tester);
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(WorldScreen)));
+    container.read(biomeMinimapZoomProvider.notifier).state = null;
+    await tester.pump();
+    final lay = biomeLayout(c.place)!;
+    final mm = tester.widget<Minimap>(find.byKey(const ValueKey('hud-minimap')));
+    final def = biomeMinimapCell(lay);
+    expect(mm.cell, closeTo(def, 1e-6));
+    // Not the whole biome: closer than the fit-everything zoom.
+    final fit = [
+      Minimap.baseCell,
+      kMinimapWindow.width / BiomeLayout.width,
+      kMinimapWindow.height / BiomeLayout.height,
+    ].reduce((a, b) => a < b ? a : b);
+    expect(def, greaterThan(fit));
+    // The framed box (arrival + portals + margin) fits the window.
+    final xs = [lay.mainPath.first.$1, for (final e in lay.entrances) e.$2];
+    final ys = [BiomeLayout.height - 3, for (final e in lay.entrances) e.$3];
+    final bw = xs.reduce((a, b) => a > b ? a : b) -
+        xs.reduce((a, b) => a < b ? a : b) + 7;
+    final bh = ys.reduce((a, b) => a > b ? a : b) -
+        ys.reduce((a, b) => a < b ? a : b) + 7;
+    if (def < Minimap.baseCell * 3 - 1e-6) {
+      expect(bw * def, lessThanOrEqualTo(kMinimapWindow.width + 0.01));
+      expect(bh * def, lessThanOrEqualTo(kMinimapWindow.height + 0.01));
+    }
+    // Discovering more does not change the default.
+    expect(biomeMinimapCell(lay), def);
+    // The player's choice sticks across rebuilds.
+    await tester.tap(find.byKey(const ValueKey('minimap-zoom-out')));
+    await tester.pump();
+    final picked = container.read(biomeMinimapZoomProvider);
+    expect(picked, isNotNull);
+    await tester.pump(const Duration(seconds: 1));
+    expect(container.read(biomeMinimapZoomProvider), picked);
+    final after =
+        tester.widget<Minimap>(find.byKey(const ValueKey('hud-minimap')));
+    expect(after.cell, lessThan(def));
   });
 
   // `OVERWORLD_MAP_PREVIEW=1 flutter test <this file>` writes

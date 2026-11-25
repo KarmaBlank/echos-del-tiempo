@@ -4,9 +4,11 @@ import '../../../app/design/design.dart';
 import '../../../core/procedural/item_icons.dart' show procKeyForType;
 import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/data/smithing_catalog.dart';
-import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/models/session_action.dart';
+import '../../../game_engine/rules/gear_v2_rules.dart';
 import '../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
+import '../../../game_engine/rules/profession_gear_rules.dart' show gearTypeKey;
 import '../../../game_engine/rules/mining_rules.dart';
 import '../../world/presentation/panels/life_icon.dart';
 import '../domain/item_names.dart';
@@ -16,7 +18,8 @@ import 'shop_sections.dart';
 
 /// FORJA → HERRERÍA (mining_smithing.md § 3–5): the workshop template
 /// (grid like the INVENTORY, detail on the right) with the recipes as
-/// sub-tabs: SMELT, FORGE and MINE. Brann's commissions live in his own
+/// sub-tabs: SMELT, the forge-by-parts steps (TYPE, BASE, HEAD, GRIP,
+/// SETTING; profession_gear_v2.md § 3) and MINE. Brann's commissions live in his own
 /// NPC menu (mining_smithing.md § 5.1). The host validates everything.
 class SmithBench extends StatefulWidget {
   const SmithBench({super.key, required this.shop});
@@ -28,8 +31,9 @@ class SmithBench extends StatefulWidget {
 }
 
 class _SmithBenchState extends State<SmithBench> {
-  String? _ingot;
-  Rarity _rarity = Rarity.comun;
+  /// Forge by parts: the chosen type and part per step.
+  String? _type;
+  final _parts = <PartSlot, String>{};
 
   ShopContext get shop => widget.shop;
 
@@ -38,10 +42,8 @@ class _SmithBenchState extends State<SmithBench> {
     final s = invStrings(context);
     final p = shop.profile;
     final session = shop.view.session;
-    final ingots = [for (final b in kBiomeOres.values) b.ingot];
-    final ingot = _ingot ??
-        ingots.lastWhere((i) => p.life.ore(i) > 0, orElse: () => ingots.first);
     String name(String id) => s.t(kSmithMaterials[id]!.textKey);
+    String typeName(String t) => s.t('data.items.gear.type.${gearTypeKey(t)}');
     String? why(SmithBlock? b) =>
         b == null ? null : s.t('ui.inventory.smith.why.${b.name}');
     final inWorld = session.run == null;
@@ -93,74 +95,157 @@ class _SmithBenchState extends State<SmithBench> {
       );
     }
 
-    DsCraftItem forge(String id) {
-      final w = shop.rules.catalog.weapons[id]!;
-      final cap = SmithCraftRules.maxRarity(smithLv);
-      final c = SmithCraftRules.cost(p.level, ingot, _rarity)!;
-      final block = !inWorld
-          ? s.t('ui.inventory.smith.world_only')
-          : why(SmithCraftRules.cannotForge(p, w, ingot, _rarity,
-              maxRarity: cap));
-      const tag = 'forge';
-      final mark = RarityColors.of(_rarity);
-      return DsCraftItem(
-        id: '$tag-$id',
-        icon: PixelIcon(iconKeyForType(w.type),
-            accent: RarityColors.of(_rarity), procKey: procKeyForType(w.type)),
-        border: mark,
-        name: w.text,
-        tag: tag,
-        search: '${w.text} ${w.type}',
-        description: s.t('ui.inventory.smith.forge_desc',
-            {'type': w.type, 'il': c.itemLevel}),
-        body: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          for (final i in ingots)
-            DsButton(name(i),
-                key: ValueKey('smith-ingot-$i'),
-                size: DsButtonSize.compact,
-                selected: i == ingot,
-                onPressed: () => setState(() => _ingot = i)),
-          for (final r in Rarity.values)
-            DsButton(r.text,
-                key: ValueKey('smith-rarity-${r.name}'),
-                size: DsButtonSize.compact,
-                selected: r == _rarity,
-                onPressed: () => setState(() => _rarity = r)),
-        ]),
-        lines: [
-          s.t('ui.inventory.smith.cost_ingots',
-              {'n': c.ingots, 'ingot': name(ingot), 'have': p.life.ore(ingot)}),
-          if (c.rares > 0)
-            s.t('ui.inventory.smith.cost_rare', {
-              'n': c.rares,
-              'rare': name(c.rare),
-              'have': p.life.ore(c.rare)
+    // Forge by parts (profession_gear_v2.md § 3): one sub-tab per step,
+    // the grid shows what fits that step, the detail the weapon so far.
+    final type = _type;
+    final full = type != null &&
+        _parts[PartSlot.base] != null &&
+        _parts[PartSlot.head] != null &&
+        _parts[PartSlot.grip] != null;
+    final parts = full
+        ? [
+            _parts[PartSlot.base]!,
+            _parts[PartSlot.head]!,
+            _parts[PartSlot.grip]!,
+            if (_parts[PartSlot.setting] case final st?) st,
+          ]
+        : const <String>[];
+    final plan = full ? GearV2Rules.plan(p, type, parts) : null;
+    final partsBlock = !inWorld
+        ? s.t('ui.inventory.smith.world_only')
+        : !full
+            ? s.t('ui.inventory.smith.parts.why.badPart')
+            : switch (GearV2Rules.cannotForge(p, type, parts)) {
+                null => null,
+                final b => s.t('ui.inventory.smith.parts.why.${b.name}'),
+              };
+    String partName(String? id) => id == null
+        ? '—'
+        : kSmithMaterials[id] == null
+            ? id
+            : name(id);
+    String elementName(GameElement e) =>
+        s.t('data.elements.element.${e.name}');
+    List<String> summary() => [
+          s.t('ui.inventory.smith.parts.line.type',
+              {'v': type == null ? '—' : typeName(type)}),
+          for (final sl in PartSlot.values)
+            s.t('ui.inventory.smith.parts.line.${sl.name}',
+                {'v': partName(_parts[sl])}),
+          if (plan != null) ...[
+            s.t('ui.inventory.smith.parts.line.affinity',
+                {'v': elementName(plan.affinity)}),
+            s.t('ui.inventory.smith.parts.line.quality',
+                {'q': (plan.quality * 100).round()}),
+            s.t('ui.inventory.smith.parts.line.rarity', {
+              'r': plan.rarity.text,
+              'cap': SmithCraftRules.maxRarity(smithLv).text
             }),
-          if (c.recipe) s.t('ui.inventory.smith.cost_recipe'),
-          s.t('ui.inventory.smith.cost_gold', {'gold': c.gold}),
-          // Who forges, the cap, the price and the wait (§ 5): the two
-          // tabs must not read the same.
-          ...[
-            s.t('ui.inventory.smith.who_self',
-                {'xp': SmithCraftRules.forgeXp(_rarity)}),
-            s.t('ui.inventory.smith.cap_self',
-                {'lv': smithLv, 'rarity': cap.text}),
+            s.t('ui.inventory.smith.forge_desc',
+                {'type': typeName(type!), 'il': plan.itemLevel}),
+            if (plan.masterwork)
+              s.t('ui.inventory.smith.parts.line.masterwork'),
+            for (final e in plan.need.entries)
+              s.t('ui.inventory.smith.cost_ingots', {
+                'n': e.value,
+                'ingot': partName(e.key),
+                'have': p.life.ore(e.key)
+              }),
+            s.t('ui.inventory.smith.cost_gold', {'gold': plan.gold}),
           ],
-        ],
+        ];
+    Widget forgeButton() => DsButton(s.t('ui.inventory.smith.go_forge'),
+        key: const ValueKey('smith-parts-go'),
+        size: DsButtonSize.compact,
+        kind: DsButtonKind.primary,
+        tooltip: partsBlock,
+        onPressed: partsBlock == null
+            ? () => shop.controller.smith(SmithAction(
+                SmithOp.forgeParts, parts.first,
+                base: type, parts: parts.sublist(1)))
+            : null);
+    DsCraftItem typeCell(String t) => DsCraftItem(
+          id: 'type-${gearTypeKey(t)}',
+          icon: PixelIcon(iconKeyForType(t),
+              accent: DsColors.textSecondary, procKey: procKeyForType(t)),
+          border: t == _type ? DsColors.selected : DsColors.border,
+          name: typeName(t),
+          tag: 'type',
+          lines: summary(),
+          actions: [
+            DsButton(s.t('ui.inventory.smith.parts.pick'),
+                key: ValueKey('smith-parts-pick-type-${gearTypeKey(t)}'),
+                size: DsButtonSize.compact,
+                selected: t == _type,
+                onPressed: () => setState(() => _type = t)),
+            forgeButton(),
+          ],
+        );
+    GameElement affinityOf(PartSlot sl, String id) => switch (sl) {
+          PartSlot.base => GearV2Rules.partsAffinity([id]),
+          PartSlot.setting =>
+            GearV2Rules.partsAffinity(['ingot_copper', '', '', id]),
+          _ => GearV2Rules.partsAffinity([id]),
+        };
+    DsCraftItem partCell(PartSlot sl, String id) {
+      final have = p.life.ore(id);
+      final fish = parseFishPart(id);
+      final mine = _parts[sl] == id;
+      return DsCraftItem(
+        id: '${sl.name}-$id',
+        icon: fish != null
+            ? LifeIcon(fish.$1, LifeIconKind.pescado, size: 32)
+            : LifeIcon(id, LifeIconKind.herramienta, size: 32),
+        border: mine ? DsColors.selected : DsColors.border,
+        name: partName(id),
+        tag: sl.name,
+        count: have,
+        search: partName(id),
+        description: sl == PartSlot.base || sl == PartSlot.setting
+            ? s.t('ui.inventory.smith.parts.affinity_of',
+                {'v': elementName(affinityOf(sl, id))})
+            : s.t('ui.inventory.smith.parts.colour_of'),
+        lines: summary(),
         actions: [
-          DsButton(s.t('ui.inventory.smith.go_forge'),
-              key: ValueKey('smith-go-$tag-$id'),
+          DsButton(
+              mine
+                  ? s.t('ui.inventory.smith.parts.drop')
+                  : s.t('ui.inventory.smith.parts.pick'),
+              key: ValueKey('smith-parts-pick-${sl.name}-$id'),
               size: DsButtonSize.compact,
-              kind: DsButtonKind.primary,
-              tooltip: block,
-              onPressed: block == null
-                  ? () => shop.controller.smith(SmithAction(
-                      SmithOp.forge, ingot,
-                      base: id, rarity: _rarity.index))
-                  : null),
+              selected: mine,
+              tooltip:
+                  have <= 0 ? s.t('ui.inventory.smith.why.noIngots') : null,
+              onPressed: have <= 0 && !mine
+                  ? null
+                  : () => setState(() {
+                        if (mine) {
+                          _parts.remove(sl);
+                        } else {
+                          _parts[sl] = id;
+                        }
+                      })),
+          forgeButton(),
         ],
       );
     }
+
+    final owned = [
+      for (final e in p.life.ores.entries)
+        if (e.value > 0) e.key
+    ];
+    final stepItems = [
+      for (final t in kForgeWeaponTypes) typeCell(t),
+      for (final sl in PartSlot.values)
+        for (final id in {
+          if (sl != PartSlot.setting)
+            for (final b in kBiomeOres.values) b.ingot,
+          if (sl == PartSlot.setting)
+            for (final b in kBiomeOres.values) b.rare,
+          ...owned,
+        })
+          if (GearV2Rules.fits(sl, id)) partCell(sl, id),
+    ];
 
     DsCraftItem tool(String id) {
       final ores = [for (final b in kBiomeOres.values) b.ore];
@@ -219,8 +304,6 @@ class _SmithBenchState extends State<SmithBench> {
       );
     }
 
-    final bases = SmithCraftRules.bases(
-        shop.rules.catalog.weapons.values, p.level, ingot);
     return DsCraftGridTemplate(
       key: const ValueKey('smith-grid'),
       keyPrefix: 'smith',
@@ -228,12 +311,15 @@ class _SmithBenchState extends State<SmithBench> {
       empty: s.t('ui.inventory.smith.empty'),
       filters: [
         DsTransferFilter(s.t('ui.inventory.smith.tab.smelt'), 'smelt'),
-        DsTransferFilter(s.t('ui.inventory.smith.tab.forge'), 'forge'),
+        DsTransferFilter(s.t('ui.inventory.smith.tab.type'), 'type'),
+        for (final sl in PartSlot.values)
+          DsTransferFilter(
+              s.t('ui.inventory.smith.tab.${sl.name}'), sl.name),
         DsTransferFilter(s.t('ui.inventory.smith.tab.mine'), 'mine'),
       ],
       items: [
         for (final b in kBiomeOres.values) smelt(b.ore),
-        for (final w in bases) forge(w.id),
+        ...stepItems,
         for (final t in kMineTools)
           if (t.ingot != null) tool(t.id),
         for (final id in kMineSupplies) tool(id),

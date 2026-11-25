@@ -238,7 +238,7 @@ class GameSettings {
     this.damageNumbers = true,
     this.confirmDrop = true,
     this.scale = ScaleMode.fit,
-    this.crt = CrtLevel.strong,
+    this.crt = CrtLevel.soft,
     this.particles = ParticleLevel.high,
     this.reflections = ReflectionLevel.high,
     this.fpsLimit = FpsLimit.fps60,
@@ -289,8 +289,10 @@ class GameSettings {
   /// Escalado del mundo pixelado (mapa y batalla).
   final ScaleMode scale;
 
-  /// Filtro retro CRT sobre toda la pantalla. FUERTE por defecto desde
-  /// v0.8.2 (antes NORMAL); un `game.json` con `crt` guardado lo conserva.
+  /// Filtro retro CRT sobre toda la pantalla. SUAVE por defecto desde
+  /// v0.49.9 (FUERTE desde v0.8.2, antes NORMAL). Un `game.json` de
+  /// versión < 3 pasa una sola vez a SUAVE (sea cual sea el nivel
+  /// guardado); desde la versión 3 se respeta cualquier valor guardado.
   final CrtLevel crt;
 
   /// Cantidad de partículas.
@@ -492,7 +494,7 @@ class GameSettings {
   /// Versión del formato guardado. v2 (v0.13.1): `readingTitles` pasó a SÍ
   /// por defecto; un archivo sin versión (v1) que lo tenga en NO lo tenía
   /// por el default viejo (v1 no distingue "elegido"), así que migra a SÍ.
-  static const formatVersion = 2;
+  static const formatVersion = 3;
 
   Map<String, Object?> toJson() => {
         'version': formatVersion,
@@ -552,7 +554,8 @@ class GameSettings {
       damageNumbers: flag(json['damageNumbers'], d.damageNumbers),
       confirmDrop: flag(json['confirmDrop'], d.confirmDrop),
       scale: ScaleMode.fromName(json['scale'], d.scale),
-      crt: CrtLevel.fromName(json['crt'], d.crt),
+      // v0.49.9: todo `game.json` anterior pasa una vez a SUAVE.
+      crt: version < 3 ? CrtLevel.soft : CrtLevel.fromName(json['crt'], d.crt),
       particles: ParticleLevel.fromName(json['particles'], d.particles),
       reflections:
           ReflectionLevel.fromName(json['reflections'], d.reflections),

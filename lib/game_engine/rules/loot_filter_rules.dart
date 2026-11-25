@@ -146,9 +146,14 @@ Ocultar # Mágicos de nivel bajo
             ? rarityColor(d.item!.rarity)
             : d.eco != null
                 ? rarityColor(d.eco!.rarity)
-                : const FilterColor(120, 230, 220),
+                : d.isGoods
+                    ? goodsColor
+                    : const FilterColor(120, 230, 220),
         size: FilterStyle.defaultSize,
       );
+
+  /// Overworld goods (gold, ore, crops…): warm gold, loot.md § 4c.
+  static const goodsColor = FilterColor(240, 200, 90);
 
   // ------------------------------------------------------------------
   // Evaluación
@@ -158,6 +163,8 @@ Ocultar # Mágicos de nivel bajo
   /// estilo por defecto.
   FilterVerdict evaluate(LootFilter f, LootDrop d, FilterContext ctx) {
     final base = defaultStyle(d);
+    // Goods are never filtered out (loot.md § 4c).
+    if (d.isGoods) return FilterVerdict(true, base);
     final build = buildMatches(d, ctx);
     for (var i = 0; i < f.rules.length; i++) {
       final r = f.rules[i];
@@ -214,7 +221,7 @@ Ocultar # Mágicos de nivel bajo
             ? LootKind.arma
             : eco != null
                 ? LootKind.eco
-                : d.stack!.material != null
+                : d.stack?.material != null
                     ? LootKind.material
                     : LootKind.pocion;
         return kinds.contains(k);

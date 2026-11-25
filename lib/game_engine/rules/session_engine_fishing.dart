@@ -401,14 +401,15 @@ extension _FishingOp on _Op {
         final tier = _rand() < 0.15 ? ChestTier.plata : ChestTier.madera;
         final def = kChestTiers[tier]!;
         final cr = ((20 + (_rand() * 31).floor()) * def.creditMult).round();
-        p.profile = p.profile.copyWith(credits: p.profile.credits + cr);
+        drops.add(GoodsRules.goldDrop(cr));
         drops.addAll(_chestDrops(p, def, lvl));
         label = 'un cofre hundido (+$cr de oro)';
         rarity = tier == ChestTier.plata ? Rarity.epico : Rarity.raro;
         // profession_gear.md § 4.1: sometimes a sunken echo weapon inside.
         if (_rand() < GearRules.sunkenChestChance(p.profile)) {
           final w = GearRules.sunken(rules.loot, _rand, p.profile,
-              LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap()));
+              LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap()),
+              manual: !_f.auto.containsKey(p.id));
           drops.add(LootDrop.item(w));
           if (w.rarity.index > rarity.index) rarity = w.rarity;
         }
@@ -418,7 +419,8 @@ extension _FishingOp on _Op {
         // profession_gear.md § 4.1: a sunken echo weapon (fishing only).
         if (_rand() <
             GearRules.sunkenChance(p.profile, fishDepth(e.mapFor(s), p))) {
-          final item = GearRules.sunken(rules.loot, _rand, p.profile, il);
+          final item = GearRules.sunken(rules.loot, _rand, p.profile, il,
+              manual: !_f.auto.containsKey(p.id));
           final d = LootDrop.item(item);
           drops.add(d);
           label = _dropText(d);
@@ -454,6 +456,18 @@ extension _FishingOp on _Op {
         life: marked.life.copyWith(fishXp: marked.life.fishXp + 10));
     events.add(WaterLootEvent(p.id, label, rarity.index));
     say('${p.name} sacó del agua $label.');
+    if (kind == WaterLootKind.cofre && !p.rafting) {
+      // A sunken chest fished from land spills at the angler's feet
+      // (loot.md § 4c).
+      _spill(p, drops, p.x, p.y + 6);
+      return;
+    }
+    // On a raft there is no floor: goods go straight in, with notice.
+    for (final d in drops.where((d) => d.isGoods)) {
+      _giveGoods(p, d);
+      events.add(LootDropEvent(p.id, d, LootSource.chest));
+    }
+    drops.removeWhere((d) => d.isGoods);
     _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
   }
 
