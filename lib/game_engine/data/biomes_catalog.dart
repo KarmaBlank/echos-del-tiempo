@@ -170,6 +170,17 @@ class NightOuting {
   final BuildKind? build;
 }
 
+/// One trade good of a resident (overworld_biomes.md § 9.1.1): an id of
+/// `kSmithMaterials`, sold from relationship tier [tier] (or always in
+/// the resident's own biome when [home] is true). The price comes from
+/// `ResidentRules.warePrice` (tunable).
+class NpcWare {
+  const NpcWare(this.id, {this.tier = 0, this.home = false});
+  final String id;
+  final int tier;
+  final bool home;
+}
+
 /// Un habitante de bioma (§ 9): vende las semillas de su bioma y se
 /// puede invitar al pueblo.
 class BiomeNpcDef {
@@ -178,7 +189,12 @@ class BiomeNpcDef {
       required this.tile,
       required this.seeds,
       required this.benefit,
+      this.wares = const [],
       this.nightOutings = const []});
+
+  /// Trade goods beyond seeds (overworld_biomes.md § 9.1.1): smithing
+  /// materials and mine supplies by role, each from a relationship tier.
+  final List<NpcWare> wares;
 
   final String id;
 
@@ -212,6 +228,7 @@ class BiomeNpcDef {
       tile: t,
       seeds: seeds,
       benefit: benefit,
+      wares: wares,
       nightOutings: nightOutings);
 
   @override
@@ -353,6 +370,17 @@ const _brann = BiomeNpcDef('brann', 'Brann', NpcRole.forjador,
     tile: (21, 16),
     seeds: {'chile_volcan': 110, 'flor_brasa': 300},
     benefit: 'Forja: mejoras {v} % más baratas.',
+    wares: [
+      NpcWare('mine_torch'),
+      NpcWare('ore_copper'),
+      NpcWare('ingot_copper'),
+      NpcWare('mine_bomb', tier: 1),
+      NpcWare('ingot_bronze', tier: 1),
+      NpcWare('vein_oil', tier: 2),
+      NpcWare('ingot_frost', tier: 2),
+      NpcWare('ore_ember', tier: 3, home: true),
+      NpcWare('ingot_ember', tier: 3),
+    ],
     nightOutings: [
       NightOuting('brann_embers', spot: TownSpot.forge),
       NightOuting('brann_stock', spot: TownSpot.armory),

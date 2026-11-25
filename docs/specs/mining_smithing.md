@@ -331,6 +331,16 @@ legendaria solo arraigado, con su objeto y el oficio en
 `smithXpCommission` / 2 de Herrería a quien lo pide. Es la extensión
 del encargo de forja de siempre, que sigue igual.
 
+### 5.1 Dónde se pide
+
+Desde el menú de Brann (**Encargar arma → ENCARGOS DE FORJA**), solo con
+Brann viviendo en una casa; la HERRERÍA de la Forja ya no tiene filtro
+BRANN. Arriba: lingote y rareza (hasta su tope). Grilla de bases de arma
+(casillas de inventario, tooltip al pasar) y detalle: base, tipo, nivel de
+objeto, costo, tiempo (al instante), su tope de rareza contra el propio,
+la XP de Herrería que da, el oro extra y los modificadores **al azar**
+(no se muestran tiradas).
+
 ## 6. Red
 
 - Protocolo 71: `ore` y `ol` en `LifeSkills`, acciones `mine` y `smith`
