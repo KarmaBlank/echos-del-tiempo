@@ -1369,6 +1369,9 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearTrader => townSpot == TownSpot.trader;
   bool get nearSign => townSpot == TownSpot.sign;
 
+  /// In front of the player's own stall (player_shop.md § 5).
+  bool get nearStall => townSpot == TownSpot.stall;
+
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
     final p = _s?.players[localId]?.profile;
@@ -3719,6 +3722,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
+      } else if (nearStall) {
+        openPanel(WorldPanel.stall);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
@@ -5467,6 +5472,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearEcoPortal != null) return (WorldPrompt.ecoZone, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
+    if (nearStall) return (WorldPrompt.stall, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));

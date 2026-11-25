@@ -58,7 +58,7 @@ enum WorldPanel {
   /// Puesto del agropecuario (fishing.md § 5).
   trader,
 
-  /// The player's own stall (player_shop.md § 5), from the trader.
+  /// The player's own stall (player_shop.md § 5), from its town spot.
   stall,
 
   /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
@@ -130,6 +130,9 @@ enum WorldPrompt {
 
   /// Puesto del agropecuario (fishing.md § 5).
   trader('[E] Agropecuario'),
+
+  /// The player's own stall in town (player_shop.md § 5).
+  stall('[E] Mi puesto'),
 
   /// Cartel del lago.
   sign('[E] Leer cartel'),

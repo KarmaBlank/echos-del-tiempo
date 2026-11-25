@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/app/design/design.dart';
+import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/player_stall_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -93,5 +95,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stall-empty')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+  testWidgets('E at the MI PUESTO town spot opens the stall', (tester) async {
+    final c = await pumpPanel(tester,
+        profile: PlayerProfile(name: 'Ana', classId: 'guerrero', level: 5),
+        build: (v, c) => const SizedBox());
+    final l = TownLayout.byId('@stall')!;
+    c.teleport(l.center.x, (l.y + l.h) * 16 + 4.0);
+    expect(c.nearStall, isTrue);
+    expect(c.view!.prompt, WorldPrompt.stall);
+    c.interact();
+    expect(c.view!.panel, WorldPanel.stall);
   });
 }
