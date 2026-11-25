@@ -217,7 +217,7 @@ abstract final class ActionJson {
             'y': a.ty,
             if (a.seed != null) 'sd': a.seed,
           },
-        // Protocol 85: player stall (player_shop.md § 4).
+        // Protocol 88: player stall (player_shop.md § 4).
         StallAction() => {
             't': 'stall',
             'o': a.op.name,
