@@ -10,9 +10,11 @@ String plainShort(String full, {bool sentence = true}) {
   // Paréntesis: casi siempre reglas finas o el detalle de la fórmula.
   t = t.replaceAll(RegExp(r'\s*\([^()]*\)'), '');
   // Fórmulas: "MAG × 0.8", "ATQ × 1.2", "= 31", "× 2.0".
-  t = t.replaceAll(RegExp(r'\s*(ATQ|MAG|Curación|DEF)\s*×\s*[\d.,]+'), '');
+  t = t.replaceAll(
+      RegExp(r'\s*(ATQ|MAG|Curación|DEF)\s*×\s*\d+(?:[.,]\d+)?'), '');
   t = t.replaceAll(RegExp(r'\s*=\s*[\d.,]+'), '');
-  t = t.replaceAllMapped(RegExp(r'×\s*([\d.,]+)'), (m) {
+  // The number must not swallow a trailing "," ("×2.0, pero").
+  t = t.replaceAllMapped(RegExp(r'×\s*(\d+(?:[.,]\d+)?)'), (m) {
     final v = double.tryParse(m[1]!.replaceAll(',', '.'));
     if (v == null) return '';
     if (v == 2) return 'el doble';

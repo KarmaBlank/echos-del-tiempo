@@ -48,6 +48,12 @@ void main() {
   tearDown(() => TextDetail.current = TextDetail.full);
 
   group('generador RESUMIDO', () {
+    test('un multiplicador seguido de coma no se pierde (Ojo de Halcón)', () {
+      expect(
+          plainShort(
+              'tus críticos hacen ×2.0 (en vez de ×1.5), pero −15% ATQ.'),
+          'tus críticos hacen el doble, pero −15% ataque.');
+    });
     test('habilidades representativas: 1-2 líneas cortas, sin fórmulas', () {
       final sample = [
         skills.firstWhere((s) => s.kind == SkillKind.physical && s.power > 0),
