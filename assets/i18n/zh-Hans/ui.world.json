@@ -11,7 +11,7 @@
   "ui.world.hud.minimap_in": "",
   "ui.world.hud.map": "",
   "ui.world.players_here.title": "",
-  "ui.world.hud.join": "",
+  "ui.world.hud.join": "加入",
   "ui.world.hud.leave_dungeon": "",
   "ui.world.hud.away": "",
   "ui.world.hud.pick_up": "",
@@ -621,5 +621,7 @@
   "ui.world.veg.outline": "轮廓",
   "ui.world.veg.palette": "调色板",
   "ui.world.veg.save": "保存预设",
-  "ui.world.veg.save_tip": "保存植被预设。"
+  "ui.world.veg.save_tip": "保存植被预设。",
+  "ui.world.hud.join_busy": "{name} 正在战斗或即将结束：现在无法加入。",
+  "ui.world.hud.join_off": "无法从这里加入。"
 }

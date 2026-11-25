@@ -821,6 +821,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     'maxFloors': 3,
     'groupScale': 0.7,
     'areaScale': 0.7,
+    // free_movement.md § 2.1.1: seconds a gathering waits before the
+    // proposer (and whoever joined) enters on their own.
+    'gatherSeconds': 20,
   }),
   // ultimates_v2.md § 2.4: +6% por nivel sobre el 1.
   TuningId.ultLevel: TuningDef('Escalado de ULT por nivel', {

@@ -11,7 +11,7 @@
   "ui.world.hud.minimap_in": "Acercar el minimapa",
   "ui.world.hud.map": "MAPA [M]",
   "ui.world.players_here.title": "Jugadores acá",
-  "ui.world.hud.join": "IR CON {name}",
+  "ui.world.hud.join": "UNIRSE",
   "ui.world.hud.leave_dungeon": "SALIR DE LA MAZMORRA",
   "ui.world.hud.away": "En otro lugar: {names}",
   "ui.world.hud.pick_up": "[E] Recoger {item}",
@@ -396,5 +396,7 @@
   "ui.world.veg.outline": "CONTORNO",
   "ui.world.veg.palette": "PALETA",
   "ui.world.veg.save": "GUARDAR PRESET",
-  "ui.world.veg.save_tip": "Guarda los presets de vegetación."
+  "ui.world.veg.save_tip": "Guarda los presets de vegetación.",
+  "ui.world.hud.join_busy": "{name} está en combate o terminando: no se puede unir ahora.",
+  "ui.world.hud.join_off": "No se puede unir desde acá."
 }

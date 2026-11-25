@@ -108,5 +108,9 @@
   "ui.missions.hud.stairs_open": "",
   "ui.missions.hud.stairs_closed": "",
   "ui.missions.hud.go_boss": "",
-  "ui.missions.hud.boss_locked": ""
+  "ui.missions.hud.boss_locked": "",
+  "ui.missions.gather.waiting": "等待其他人加入…",
+  "ui.missions.gather.countdown": "{s} 秒后进入",
+  "ui.missions.gather.enter_now": "立即进入",
+  "ui.missions.gather.ignore": "忽略"
 }

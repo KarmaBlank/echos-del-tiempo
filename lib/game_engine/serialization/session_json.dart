@@ -116,6 +116,8 @@ class SessionJson {
             'j': [
               for (final a in g.joined) [a.id, a.name]
             ],
+            // protocol 82: seconds until it enters on its own.
+            if (g.leftSeconds > 0) 'lf': g.leftSeconds,
           },
       };
 
@@ -135,6 +137,7 @@ class SessionJson {
             if (e is List && e.length >= 2)
               AwayPlayer('${e[0]}', '${e[1]}', ''),
       ],
+      left: (raw['lf'] as num?)?.toDouble() ?? 0,
     );
   }
 

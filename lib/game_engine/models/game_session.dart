@@ -1022,7 +1022,7 @@ class AwayPlayer {
 }
 
 /// What a gathering starts (free_movement.md § 2.1).
-enum GatherKind { mission, trial, abyss, rift, tourney }
+enum GatherKind { mission, trial, abyss, rift, tourney, eco }
 
 /// An open gathering ("convocatoria", free_movement.md § 2.1): someone
 /// proposed a mission / Trial / Abyss Boss and waits for friends before
@@ -1036,7 +1036,15 @@ class Gathering {
     required this.target,
     required this.label,
     this.joined = const [],
+    this.left = 0,
   });
+
+  /// Seconds until it enters on its own (protocol 82,
+  /// free_movement.md § 2.1.1); 0 = no timer (old host).
+  final double left;
+
+  /// Whole seconds left, for the countdown and the snapshot.
+  int get leftSeconds => left <= 0 ? 0 : left.ceil();
 
   /// Who proposed it (only they can press IR or cancel).
   final String byId;
@@ -1063,9 +1071,22 @@ class Gathering {
       kind: kind,
       target: target,
       label: label,
-      joined: List.unmodifiable(joined));
+      joined: List.unmodifiable(joined),
+      left: left);
+
+  Gathering withLeft(double left) => Gathering(
+      byId: byId,
+      byName: byName,
+      kind: kind,
+      target: target,
+      label: label,
+      joined: joined,
+      left: left);
+
+  /// Identity without the countdown (for a local IGNORAR).
+  String get id => '$byId|${kind.name}|$target';
 
   /// Stable text for change detection.
   String get signature =>
-      '$byId|$byName|${kind.name}|$target|$label|${joined.map((j) => j.id).join(',')}';
+      '$byId|$byName|${kind.name}|$target|$label|${joined.map((j) => j.id).join(',')}|$leftSeconds';
 }
