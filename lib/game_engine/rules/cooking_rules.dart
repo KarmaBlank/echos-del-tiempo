@@ -4,6 +4,7 @@ import '../data/cooking_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/meal_buff.dart';
 import '../models/player_profile.dart';
+import 'life_tree_rules.dart' show LifeTreeRules;
 
 export '../data/cooking_catalog.dart';
 export '../models/meal_buff.dart';
@@ -136,8 +137,11 @@ abstract final class CookingRules {
   }
 
   /// [p] with [b] as their active meal (replaces the old one).
+  /// The eater's life trees add `meal` missions (life_trees_v2.md § 5).
   static PlayerProfile serve(PlayerProfile p, MealBuff b) => p.copyWith(
-      life: p.life.copyWith(farm: p.life.farm.copyWith(meal: b)));
+      life: p.life.copyWith(
+          farm: p.life.farm.copyWith(
+              meal: b.withLeft(b.left + LifeTreeRules.mealMissions(p)))));
 
   /// [from] gives the meal [key] of their bag to [to] (farming.md § 19.2):
   /// [to] eats it right away (replaces their active meal).
@@ -159,7 +163,8 @@ abstract final class CookingRules {
     if (pm == null || f.mealCount(key) < 1) return null;
     final farm = f.copyWith(
         meals: {...f.meals, key: f.mealCount(key) - 1},
-        meal: MealBuff(pm.$1.id, pm.$2, missionsFor(pm.$1, pm.$2)));
+        meal: MealBuff(pm.$1.id, pm.$2,
+            missionsFor(pm.$1, pm.$2) + LifeTreeRules.mealMissions(p)));
     return p.copyWith(life: p.life.copyWith(farm: farm));
   }
 

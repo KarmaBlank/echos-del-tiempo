@@ -4,7 +4,10 @@
 // lee siempre [kTuning], que `BalanceRegistries.install` cambia en el
 // lugar y `restore` devuelve a estos valores.
 
+import 'life_tree_catalog.dart' show kLifeTreeTuning;
+
 /// Un grupo de números con nombre (los valores del código o del parche).
+
 class TuningDef {
   const TuningDef(this.name, this.values);
 
@@ -515,15 +518,8 @@ const Map<String, TuningDef> kTuningDefaults = {
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {
     'pointsPerLevel': 1,
-    // Poder de aventurero (roles.md § 5).
-    'p_v': 0.04,
-    'p_d': 0.04,
-    'p_g': 0.04,
-    'p_g_2': 0.04,
-    'c_v': 0.04,
-    'c_d': 0.04,
-    'c_g': 0.04,
-    'c_g_2': 0.04,
+    // life_trees_v2.md § 2: tier t asks for level step × (t − 1) + 1.
+    'tierLevelStep': 3,
     // Herrería (roles.md § 6): nivel = curva de Pesca con estos números.
     'smithMaxLevel': 30,
     'smithXpBase': 40,
@@ -532,47 +528,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'smithXpCommission': 60,
     'smithXpCondense': 4,
     'smithForgeCap': 0.4,
-    'h_r': 0.05,
-    'h_a1': 0.05,
-    'h_b1': 0.04,
-    'h_a2': 0.08,
-    'h_b2': 0.04,
-    'h_c': 0.15,
-    'h_m': 0.05,
-    'h_m_2': 0.05,
-    'h_f': 0.08,
-    'h_f_2': 0.15,
-    'p_r': 0.05,
-    'p_a1': 0.06,
-    'p_a2': 0.08,
-    'p_a3': 0.1,
-    'p_a4': 0.1,
-    'p_a4_2': 0.1,
-    'p_m': 0.1,
-    'p_b1': 0.15,
-    'p_b2': 0.2,
-    'p_b3': 0.1,
-    'p_b4': 0.2,
-    'p_k1': 1,
-    'p_k2': 0.15,
-    'p_f': 0.1,
-    'p_f_2': 0.15,
-    'c_r': 0.05,
-    'c_a1': 0.08,
-    'c_a2': 0.3,
-    'c_a3': 0.12,
-    'c_a4': 0.12,
-    'c_a4_2': 0.1,
-    'c_m': 0.1,
-    'c_b1': 0.1,
-    'c_b2': 0.1,
-    'c_b3': 0.25,
-    'c_b4': 0.2,
-    'c_b4_2': 0.15,
-    'c_k1': 0.5,
-    'c_k2': 0.15,
-    'c_f': 0.1,
-    'c_f_2': 0.15,
+    // Every node effect and grant amount (life_trees_v2.md § 7).
+    ...kLifeTreeTuning,
   }),
   // world.md § "Colisión y movimiento": px/s del jugador en el campo
   // (v0.20.19: 78 → 98, +25 %).

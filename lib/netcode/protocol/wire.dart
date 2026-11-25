@@ -195,6 +195,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 83: dungeon-entry gatherings (free_movement.md § 2.1.1): `lf` countdown
 /// in `gat`, gathering kind `eco`.
 const kProtocolVersion = 83;
+/// 84: life trees v2 (life_trees_v2.md): new node ids, claimed rewards
+/// `life.lc` in the profile.
+const kProtocolVersion = 84;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

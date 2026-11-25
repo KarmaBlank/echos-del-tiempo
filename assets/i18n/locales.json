@@ -35,6 +35,7 @@
     "data.zones",
     "data.missions",
     "data.enemies",
-    "data.achievements"
+    "data.achievements",
+    "data.life_trees"
   ]
 }
