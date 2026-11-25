@@ -113,7 +113,9 @@ abstract final class TownLayout {
     TownLandmark(TownSpot.workshop, 'TALLER DE OFICIOS', Tile.workshop, 6, 6,
         w: 3, h: 3),
     TownLandmark(TownSpot.armory, 'ARMERÍA', Tile.shop, 26, 6, w: 3, h: 3),
-    TownLandmark(TownSpot.carts, 'VAGONETAS', Tile.counter, 20, 13, w: 2, h: 2),
+    // Small station just west of the south exit (mining_smithing.md
+    // § 1.8): its rail stub runs one tile south into the map edge.
+    TownLandmark(TownSpot.carts, 'VAGONETAS', Tile.counter, 14, 19, w: 2),
   ];
 
   /// Lugares que llegaron después del editor (v0.32.3): en un pueblo

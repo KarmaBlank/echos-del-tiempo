@@ -151,4 +151,81 @@ void main() {
     expect(pos(TownPlan.landmarksOf(odd)), pos(TownLayout.landmarks));
     expect(TownPlan.rearranged(odd), isFalse);
   });
+
+  group('estación de vagonetas (mining_smithing.md § 1.8)', () {
+    /// Every rail tile of [s] is bare and off every build, plot,
+    /// landmark, tree and light.
+    void railClear(TownState s) {
+      final plan = TownPlan.of(s);
+      final (ox, oy) = s.origin;
+      final st = TownPlan.landmarkOf(s, TownSpot.carts);
+      final rail = plan.cartRail(st, s.lights);
+      for (final (x, y) in rail) {
+        final bx = x - ox, by = y - oy;
+        expect(plan.at(x, y), Tile.grass, reason: '($x,$y)');
+        for (final b in s.builds) {
+          expect(b.contains(bx, by), isFalse, reason: '${b.id} ($bx,$by)');
+        }
+        expect(s.plots.containsKey('$bx,$by'), isFalse);
+        for (final l in TownPlan.landmarksOf(s)) {
+          expect(TownRect(l.x, l.y, l.w, l.h).contains(bx, by), isFalse,
+              reason: l.id);
+        }
+        expect(TownLayout.trees.contains((bx, by)), isFalse);
+        expect(s.lights.contains((bx, by)), isFalse);
+      }
+      expect(rail.length, lessThanOrEqualTo(TownPlan.cartRailMax * st.w));
+    }
+
+    test('chica y al lado de la salida, con un tramo corto de riel', () {
+      const s = TownState();
+      final st = TownPlan.landmarkOf(s, TownSpot.carts);
+      final m = MapGenerator.townOf(s);
+      // The exit: the south-axis path at the bottom edge.
+      expect(m.tileAt(16, m.height - 1), Tile.path);
+      expect(st.w * st.h, lessThanOrEqualTo(2));
+      expect(st.x + st.w, 16, reason: 'right next to the exit path');
+      expect(st.y + st.h, m.height - 2);
+      // Its default spot is free: no late-spot relocation.
+      expect((st.x, st.y), (TownLayout.landmark(TownSpot.carts).x,
+          TownLayout.landmark(TownSpot.carts).y));
+      final rail = TownPlan.of(s).cartRail(st);
+      // One row, straight into the map edge.
+      expect(rail, [(14, 20), (15, 20)]);
+      railClear(s);
+      // Reserved: nothing can be built on the station nor its rail.
+      expect(TownRules.place(s, 'huerta_chica', 12, 18).error, isNotNull);
+    });
+
+    test('pueblo lleno de construcciones: el riel no pisa nada', () {
+      var s = const TownState();
+      for (final side in TownSide.values) {
+        s = s.copyWith(sides: {...s.sides, side: 1});
+      }
+      for (final id in ['casa', 'huerta_chica', 'lago_chico', 'huerta']) {
+        for (var y = -6; y < 30; y += 2) {
+          for (var x = -6; x < 42; x += 2) {
+            final r = TownRules.place(s, id, x, y);
+            if (r.error == null) s = r.town!;
+          }
+        }
+      }
+      expect(s.builds.length, greaterThan(8));
+      railClear(s);
+    });
+
+    test('pueblo guardado con una construcción ahí: la estación se corre',
+        () {
+      final s = const TownState().copyWith(builds: [
+        ...kDefaultBuilds,
+        const TownBuild('h9', BuildKind.huerta, [TownRect(12, 18, 4, 3)]),
+      ]);
+      final st = TownPlan.landmarkOf(s, TownSpot.carts);
+      expect((st.x, st.y), isNot((14, 19)));
+      expect(s.build('h9'), isNotNull);
+      final r = TownRect(st.x, st.y, st.w, st.h);
+      expect(s.build('h9')!.parts.single.overlaps(r), isFalse);
+      railClear(s);
+    });
+  });
 }

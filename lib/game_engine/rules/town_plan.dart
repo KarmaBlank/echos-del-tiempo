@@ -24,6 +24,34 @@ class TownPlan {
   String at(int x, int y) =>
       x < 0 || y < 0 || x >= width || y >= height ? Tile.tree : tiles[y][x];
 
+  /// Longest rail stub of the cart station (mining_smithing.md § 1.8).
+  static const cartRailMax = 2;
+
+  /// The rail stub of the cart [station] (map tiles, top row first): the
+  /// rows straight south of it, at most [cartRailMax], while every tile
+  /// under the station is bare grass (never over plots, builds, lakes,
+  /// trees, lights or paths). It ends at the map edge (the exit side) or
+  /// at the first occupied row, whichever comes first.
+  /// [lights] (town lights, base-town coordinates) are not plan tiles,
+  /// so they are passed in.
+  List<(int, int)> cartRail(TownLandmark station,
+      [Iterable<(int, int)> lights = const []]) {
+    final lit = {for (final (x, y) in lights) (x + ox, y + oy)};
+    final out = <(int, int)>[];
+    final x0 = station.x + ox;
+    for (var k = 0; k < cartRailMax; k++) {
+      final y = station.y + station.h + oy + k;
+      final row = [
+        for (var x = x0; x < x0 + station.w; x++) (x, y),
+      ];
+      if (row.any((p) => at(p.$1, p.$2) != Tile.grass || lit.contains(p))) {
+        break;
+      }
+      out.addAll(row);
+    }
+    return out;
+  }
+
   static int widthOf(TownState s) =>
       TownLayout.width +
       kTownStrip * (s.side(TownSide.este) + s.side(TownSide.oeste));
