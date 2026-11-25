@@ -1462,6 +1462,14 @@ const _farmLabels = {
 };
 
 const _townLabels = {
+  'stallSlots': 'Puesto: lugares para publicar',
+  'stallMaxMarkup': 'Puesto: precio máximo × referencia',
+  'stallVisitors': 'Puesto: visitantes por día',
+  'stallBaseChance': 'Puesto: chance de compra a precio de referencia',
+  'stallElasticity': 'Puesto: sensibilidad al precio',
+  'stallMaxChance': 'Puesto: tope de chance de compra',
+  'stallMaxBuy': 'Puesto: unidades máximas por visitante',
+  'stallLogCap': 'Puesto: ventas que guarda el registro',
   'maxExpansions': 'Ampliaciones máximas',
   'expGoldBase': 'Oro de la primera ampliación',
   'expGoldMult': 'Oro × por ampliación',

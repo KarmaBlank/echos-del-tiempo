@@ -202,7 +202,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// wilds, `town.lv`, the `wx` action and deep exploration events.
 /// 87: lake rafts (fishing.md § 15): the `raft` action and `rf` in the
 /// player snapshot.
-const kProtocolVersion = 87;
+/// 88: player stall (player_shop.md): `stall` action (StallAction) and
+/// `life.ps` in the profile.
+const kProtocolVersion = 88;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

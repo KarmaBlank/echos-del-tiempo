@@ -4111,6 +4111,14 @@ class SessionController extends StateNotifier<SessionView?> {
   bool giveLife(String toPlayerId, String cell, int count) =>
       _apply(GiveLifeAction(toPlayerId, cell, count: count));
 
+  /// Player stall (player_shop.md): list [qty] of [cell] at [price]
+  /// (qty 0 = only the price), take it back, or buy from [owner].
+  bool stallList(String cell, int qty, int price) =>
+      _apply(StallAction(StallOp.list, cell, qty: qty, price: price));
+  bool stallUnlist(String cell) => _apply(StallAction(StallOp.unlist, cell));
+  bool stallBuy(String owner, String cell, int qty) =>
+      _apply(StallAction(StallOp.buy, cell, qty: qty, owner: owner));
+
   /// Soltar al piso (compartido).
   bool dropItem(String token, {int count = 1}) =>
       _applyFor(actingId, DropItemAction(token, count: count));
@@ -5153,6 +5161,7 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
             _panel == WorldPanel.trader ||
+            _panel == WorldPanel.stall ||
             _panel == WorldPanel.fountain ||
             _panel == WorldPanel.travel ||
             _panel == WorldPanel.biomeNpc ||

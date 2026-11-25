@@ -141,6 +141,7 @@ extension _FarmingOp on _Op {
           if (e.key.endsWith(':${sky.day}')) e.key: e.value,
       });
       _worldEventsDay(sky.day);
+      _stallDay(sky.day);
     }
     if (SkyRules.now(sky) != Weather.tormenta) {
       _fa.boltAcc = 0;
@@ -165,6 +166,21 @@ extension _FarmingOp on _Op {
         say('Un rayo cayó en la huerta: se perdió '
             '${kCrops[hit.seed]?.name.toLowerCase() ?? 'un cultivo'}.');
       }
+    }
+  }
+
+  /// Stall visitors of the new world [day] (player_shop.md § 3): every
+  /// human of the room, host only.
+  void _stallDay(int day) {
+    for (final h in humans) {
+      final (next, sales) =
+          StallRules.visitDay(h.profile, day, _fa.bgRand.nextDouble);
+      if (identical(next, h.profile)) continue;
+      _profileChange(h, next);
+      if (sales.isEmpty) continue;
+      final gold = sales.fold(0, (a, x) => a + x.gold);
+      say('Los vecinos le compraron a ${h.name} en su puesto: '
+          '$gold de oro.');
     }
   }
 

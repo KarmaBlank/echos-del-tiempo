@@ -98,6 +98,7 @@ extension _RunOp on _Op {
             FarmTileAction() ||
             FarmShopAction() ||
             GiveLifeAction() ||
+            StallAction() ||
             TownAction() ||
             LifeTreeAction() ||
             UseStairsAction() ||
