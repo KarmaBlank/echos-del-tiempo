@@ -114,13 +114,12 @@ void main() {
       expect(await file.load(), s);
     });
 
-    test('por defecto: CRT FUERTE (v0.8.2), partículas ALTA, 60 FPS, AJUSTAR',
+    test('por defecto: CRT SUAVE (v0.49.9), partículas ALTA, 60 FPS, AJUSTAR',
         () {
       const d = GameSettings();
-      expect(d.crt, CrtLevel.strong);
-      // Un game.json con el nivel guardado lo conserva (siempre se
-      // escribe entero: quien ya guardó NORMAL sigue en NORMAL).
-      expect(GameSettings.fromJson(const {'crt': 'normal'}).crt,
+      expect(d.crt, CrtLevel.soft);
+      // Desde el formato 3, el nivel guardado se conserva.
+      expect(GameSettings.fromJson(const {'version': 3, 'crt': 'normal'}).crt,
           CrtLevel.normal);
       expect(const GameSettings(crt: CrtLevel.normal).toJson()['crt'],
           'normal');
@@ -145,12 +144,12 @@ void main() {
               screenShake: false,
               flashes: FlashLevel.reduced,
               confirmDrop: false));
-      // Los gráficos nuevos, por defecto (CRT prendido, FUERTE).
-      expect(s!.crt, CrtLevel.strong);
+      // Los gráficos nuevos, por defecto (CRT prendido, SUAVE).
+      expect(s!.crt, CrtLevel.soft);
       await store.save(s);
       final raw = await store.file.readAsString();
       expect(raw, isNot(contains('battleSpeed')));
-      expect(raw, contains('"crt":"strong"'));
+      expect(raw, contains('"crt":"soft"'));
     });
 
     test('el controlador aplica el límite de FPS (al crear, cargar y cambiar)',
