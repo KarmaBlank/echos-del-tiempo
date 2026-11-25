@@ -51,6 +51,17 @@ vecinos (±1) (`MiningRules.canTravel`). E frente a la salida (`<`) sube
 (o sale al bioma, frente a la misma boca); E frente al **pozo** (`>`)
 baja.
 
+**Prioridad de E (v0.48.1):** la piedra de paso de cada mina
+(`WaystoneSite.mine`) queda a un tile de la boca y su alcance
+(`waystoneReach`, 26 px) cubre todo el frente de la boca. Por eso
+`nearMineEntrance` va **antes** que `nearWaystone`, tanto en `interact`
+como en el texto del prompt: frente a la boca, E entra a la mina; la
+piedra se usa parada frente a ella (su tile de acceso queda fuera del
+alcance de la boca). Antes (v0.47.0–v0.48.0) la piedra ganaba y E solo
+la activaba: nunca se podía entrar. El layout no cambia (sale de la
+semilla del mundo), así que partidas viejas no necesitan migración.
+Cubierto por `test/features/world/mine_entry_test.dart`.
+
 ### 1.2 Niveles (`mineLevels`, 3–5)
 
 `MineGenerator.generate(bioma, i, nivel, semilla, params)`:
