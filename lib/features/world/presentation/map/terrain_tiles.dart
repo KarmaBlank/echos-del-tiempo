@@ -92,6 +92,7 @@ extension _TerrainTiles on TilePainter {
   /// small stone, a rare flower; shade under the mountain, lip by water.
   void _grassDetail(Canvas c, MapTheme th, double px, double py, int tx, int ty,
       int h, TileAt? at) {
+    if (noGround) return;
     final r = TerrainRamp.of(th.grass, th.grass2);
     _rect(c, r.base, px, py, _ts, _ts);
     if (h % 3 == 0) _patchOf(c, r, px, py, h);
@@ -127,6 +128,7 @@ extension _TerrainTiles on TilePainter {
   /// Open ground: a darker patch, 1-2 clumps of earth, small stones, a
   /// crack, a lit speck.
   void _groundDetail(Canvas c, MapTheme th, double px, double py, int h) {
+    if (noGround) return;
     final r = TerrainRamp.of(th.ground, th.ground2);
     _rect(c, r.base, px, py, _ts, _ts);
     if (h % 3 == 1) _patchOf(c, r, px, py, h);

@@ -42,6 +42,21 @@ enum ParticleLevel {
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
+/// Water reflection quality (water_reflections.md § 6).
+enum ReflectionLevel {
+  /// No reflections at all.
+  off,
+
+  /// Shore props, lights and sky only; fewer actors, 2 px strips.
+  low,
+
+  /// Everything, 1 px strips.
+  high;
+
+  static ReflectionLevel fromName(Object? v, ReflectionLevel def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Tope de cuadros por segundo (§ 3.4).
 enum FpsLimit {
   fps30(30),

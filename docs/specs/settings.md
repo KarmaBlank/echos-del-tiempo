@@ -512,11 +512,12 @@ está abierto:
 - `game.json` (misma carpeta que el perfil, escritura atómica):
   `{"fullscreen":false,"shake":true,"flashes":"normal",
   "damageNumbers":true,"confirmDrop":true,"scale":"fit","crt":"normal",
-  "particles":"high","fpsLimit":60,"textSize":"normal",
+  "particles":"high","reflections":"high","fpsLimit":60,"textSize":"normal",
   "readingFont":"vt323","buildNotices":true,"colorVision":"off",
   "reduceMotion":false,"turnTimer":"normal","perfOverlay":false,
   "perfCorner":"topRight"}` (`fpsLimit` 0 = sin límite; `textSize`
-  `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
+  `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`;
+  `reflections` `off` / `low` / `high`, water_reflections.md § 6).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
 - **v0.8.1 (TEXTO)**: `readingTitles` (por defecto `false`),
   `letterSpacing` (`normal` / `wide`), `noticeDuration` (`normal` /
