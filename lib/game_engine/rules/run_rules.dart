@@ -229,6 +229,28 @@ class RunRules {
           ...?RunBoon.byName(id)?.mods(eliteFight: eliteFight),
       ];
 
+  /// Class kit of the Travesía (roguelike.md § 12.3): per-class damage %,
+  /// flat DEF and status resistance (stacks) from the «Travesía» tuning
+  /// group (`classDmg<Id>` / `classDef<Id>` / `classResist<Id>`, missing
+  /// = 0). Only the Travesía reads it, so the
+  /// world mode keeps its class numbers.
+  static List<ItemMod> classMods(String classId) {
+    if (classId.isEmpty) return const [];
+    final t = tuning(TuningId.travesia).values;
+    final key = classId[0].toUpperCase() + classId.substring(1);
+    final dmg = (t['classDmg$key'] ?? 0).round();
+    final def = (t['classDef$key'] ?? 0).round();
+    final res = (t['classResist$key'] ?? 0).round();
+    return [
+      if (res != 0) ItemMod(ModStat.statusResist, res),
+      if (dmg != 0) ...[
+        ItemMod(ModStat.atkPct, dmg),
+        ItemMod(ModStat.magPct, dmg),
+      ],
+      if (def != 0) ItemMod(ModStat.defense, def),
+    ];
+  }
+
   /// Poder × de cada habilidad mejorada ([ups]: un id por nivel).
   static Map<String, double> skillScale(List<String> ups) {
     final out = <String, double>{};

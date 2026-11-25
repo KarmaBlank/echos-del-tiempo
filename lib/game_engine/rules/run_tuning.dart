@@ -46,6 +46,11 @@ abstract final class RunTuning {
   static const eliteLevelBonus = 1;
   static const bossLevelBonus = 2;
 
+  /// Boss HP / ATQ multipliers on top of the curve and the difficulty
+  /// (grupo «Travesía», § 12.3).
+  static double get bossHp => tuning(TuningId.travesia).d('bossHp');
+  static double get bossAtk => tuning(TuningId.travesia).d('bossAtk');
+
   // ---------------- Personaje de la run ----------------
 
   /// Oro con el que arranca cada personaje.

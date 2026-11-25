@@ -296,6 +296,17 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Dar materiales de oficio (share_materials.md § 3): el botón del
     // medio del selector de cantidad (1 / giveStep / todo).
     'giveStep': 5,
+    // Player stall (player_shop.md § 3): listings, top price over the
+    // reference, visitors per world day and their buy chance / amount,
+    // and how many sales the log keeps.
+    'stallSlots': 6,
+    'stallMaxMarkup': 3,
+    'stallVisitors': 3,
+    'stallBaseChance': 0.6,
+    'stallElasticity': 2,
+    'stallMaxChance': 0.95,
+    'stallMaxBuy': 3,
+    'stallLogCap': 20,
     // Ampliaciones (town_editor.md § 2: cada una suma una franja de 8 a un
     // lado): tope total, tope por lado y costo de la n-ésima (oro = base ×
     // mult^(n−1); Esquirlas × n; Cristales desde la 2.ª).
@@ -964,7 +975,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Élites: niveles extra por cada vez que ya se venció a esa élite.
     'eliteRepeatLevel': 2,
     // Dificultad: + por nivel a ATQ y vida enemigos (acumulativo).
-    'diffAtk': 0.08,
+    'diffAtk': 0.12,
     'diffHp': 0.10,
     'diffMax': 5,
     // Sin niveles (v0.3.0): el personaje crece solo con recompensas.
@@ -986,14 +997,30 @@ const Map<String, TuningDef> kTuningDefaults = {
     'shopUlts': 2,
     'ultPrice': 260,
     'weaponLevelAhead': 2,
+    // Balance pass (§ 12.3): boss HP / ATQ multipliers and the class kit
+    // (% damage, flat DEF and status resist per class; world mode never reads these).
+    'bossHp': 1.6,
+    'bossAtk': 1.3,
+    'classDmgGuerrero': 0,
+    'classDmgMaga': 0,
+    'classDmgPaladin': 0,
+    'classDmgTirador': 0,
+    'classDefGuerrero': 0,
+    'classDefMaga': 10,
+    'classDefPaladin': -8,
+    'classDefTirador': 13,
+    'classResistGuerrero': 0,
+    'classResistMaga': 1,
+    'classResistPaladin': 1,
+    'classResistTirador': 0,
     // Nivel de los enemigos: 1 + piso × levelPerFloor + capa ×
     // levelPerLayer (+ élite / jefe).
-    'levelPerFloor': 4,
+    'levelPerFloor': 6,
     'levelPerLayer': 0.25,
     // Vida y ATQ de los enemigos de la Travesía (× sobre la curva del
     // Mundo, antes de la dificultad).
     'enemyHp': 0.4,
-    'enemyAtk': 0.3,
+    'enemyAtk': 0.36,
   }),
   // combat.md § "Límites": efectos encadenados por acción, tope de daño
   // por golpe de jefes y élites, "aguanta una ronda" de los comunes y

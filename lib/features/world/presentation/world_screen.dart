@@ -50,6 +50,7 @@ import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
+import 'panels/player_stall_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/house_assign_panel.dart';
 import 'panels/biome_npc_panel.dart';
@@ -1112,6 +1113,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return LostLootPanel(view: view, controller: controller);
       case WorldPanel.trader:
         return TraderPanel(view: view, controller: controller);
+      case WorldPanel.stall:
+        return PlayerStallPanel(view: view, controller: controller);
       case WorldPanel.fountain:
         return FountainPanel(view: view, controller: controller);
       case WorldPanel.travel:

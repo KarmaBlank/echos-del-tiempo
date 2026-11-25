@@ -98,6 +98,7 @@ extension _RunOp on _Op {
             FarmTileAction() ||
             FarmShopAction() ||
             GiveLifeAction() ||
+            StallAction() ||
             TownAction() ||
             LifeTreeAction() ||
             UseStairsAction() ||
@@ -483,7 +484,12 @@ extension _RunOp on _Op {
     ZoneRules.scaleBattle(step.state, level, curve: catalog.curve);
     // Curva de la Travesía y dificultad (§ 8.2): vida y ATQ enemigos.
     {
-      final (hp, atk) = MetaProgressRules.difficultyMults(r.difficulty);
+      var (hp, atk) = MetaProgressRules.difficultyMults(r.difficulty);
+      // Boss fights (§ 12.3): own HP / ATQ multipliers.
+      if (n.type == RunNodeType.jefe) {
+        hp *= RunTuning.bossHp;
+        atk *= RunTuning.bossAtk;
+      }
       for (final en in step.state.enemies) {
         en
           ..maxHp = (en.maxHp * hp).round()
@@ -516,8 +522,11 @@ extension _RunOp on _Op {
   /// La entrada al combate de [p] con sus mejoras directas (§ 4).
   BattlePartyMember _runMember(RunState r, SessionPlayer p, RunNode n) {
     final m = e.partyMember(p);
-    final mods = RunRules.boonMods(r.boons[p.id] ?? const [],
-        eliteFight: n.type != RunNodeType.combate);
+    final mods = [
+      ...RunRules.boonMods(r.boons[p.id] ?? const [],
+          eliteFight: n.type != RunNodeType.combate),
+      ...RunRules.classMods(p.profile.classId),
+    ];
     final skills = r.loadout[p.id] ?? const <String>[];
     final scale = RunRules.skillScale(r.skillUps[p.id] ?? const []);
     if (mods.isEmpty && skills.isEmpty && scale.isEmpty) return m;

@@ -551,6 +551,17 @@ tiles:
   punto_pesca: { procedural: true, size: [16, 16] }
   cartel_lago: { procedural: true, size: [16, 16] }
   puesto_comerciante: { procedural: true, size: [32, 16] }
+  # Town tier and festival dressing (renown_town_growth.md § 5.2, § 6.4):
+  # drawn by TownDressingLayer; decoration only, never solid.
+  town_lamp_post: { procedural: true, size: [16, 16] }
+  town_well: { procedural: true, size: [16, 16] }
+  town_notice_board: { procedural: true, size: [16, 16] }
+  town_fence: { procedural: true, size: [16, 16] }
+  festival_garland: { procedural: true, size: [16, 16] }
+  festival_stall: { procedural: true, size: [32, 16] }
+  festival_bonfire: { procedural: true, size: [32, 16] }
+  festival_stage: { procedural: true, size: [32, 16] }
+  festival_sky_lantern: { procedural: true, size: [8, 8] }
   # Procedural vegetation (procedural_vegetation.md § 5): one slot per
   # biome x species. Procedural unless a PNG is set here or overridden in
   # the Editor; a PNG replaces every variant of that species.

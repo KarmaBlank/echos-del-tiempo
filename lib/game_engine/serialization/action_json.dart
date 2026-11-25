@@ -217,6 +217,15 @@ abstract final class ActionJson {
             'y': a.ty,
             if (a.seed != null) 'sd': a.seed,
           },
+        // Protocol 88: player stall (player_shop.md § 4).
+        StallAction() => {
+            't': 'stall',
+            'o': a.op.name,
+            'c': a.cell,
+            if (a.qty != 0) 'n': a.qty,
+            if (a.price != 0) 'p': a.price,
+            if (a.owner != null) 'ow': a.owner,
+          },
         GiveLifeAction() => {
             't': 'giveLife',
             'to': a.toPlayerId,
@@ -532,6 +541,11 @@ abstract final class ActionJson {
         return FarmTileAction(j.enumByName('o', FarmOp.values),
             j.integer('x'), j.integer('y'),
             seed: j.strOrNull('sd'));
+      case 'stall':
+        return StallAction(j.enumByName('o', StallOp.values), j.str('c'),
+            qty: j.intOrNull('n') ?? 0,
+            price: j.intOrNull('p') ?? 0,
+            owner: j.strOrNull('ow'));
       case 'giveLife':
         return GiveLifeAction(j.str('to'), j.str('c'),
             count: j.intOrNull('n') ?? 1);
