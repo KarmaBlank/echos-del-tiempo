@@ -28,6 +28,7 @@ import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
 import 'fishing_ambience.dart';
 import 'hud/loot_feed.dart';
+import 'cozy_ambience.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
 
@@ -52,7 +53,14 @@ final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   final ambience = FishingAmbiencePlayer(sfx.service,
       fishing: () => controller.mapFishing != null);
   final removeAmbience = controller.addListener(ambience.onView);
+  // Cozy ambience: water, birds, crickets, rain (cozy_life.md § 1-2).
+  final cozy = CozyAmbiencePlayer(sfx.service,
+      water: () => controller.mapFishing != null || controller.onRaft,
+      farm: () => controller.nearFarm);
+  final removeCozy = controller.addListener(cozy.onView);
   ref.onDispose(() {
+    removeCozy();
+    cozy.stop();
     removeAmbience();
     ambience.stop();
     unawaited(sub.cancel());

@@ -51,6 +51,17 @@ enum MapMark {
 
   /// Contorno de los íconos y marco de las entradas.
   outline,
+
+  /// Marco de los objetivos del exterior (biome_exploration.md § 11.2).
+  goal,
+
+  /// Portal de Eco del exterior.
+  echo,
+
+  /// Mina, muelle y habitante del exterior (§ 11.1).
+  mine,
+  dock,
+  resident,
 }
 
 /// Colores del minimapa y del mapa en grande según el tema de interfaz
@@ -143,6 +154,11 @@ abstract final class MapPalette {
       0xFFFFB347, // relic
       0xFF6C707A, // spent
       0xFF000000, // outline
+      0xFFFFE066, // goal
+      0xFFFF7AD9, // echo
+      0xFFC49A6C, // mine
+      0xFF7FD1FF, // dock
+      0xFF9BE27A, // resident
     ],
     // Grises + un solo acento (el jugador); el resto, tonos distintos.
     InterfaceTheme.dark: [
@@ -168,6 +184,11 @@ abstract final class MapPalette {
       0xFFE0A262,
       0xFF525252,
       0xFF000000,
+      0xFFE8D27A,
+      0xFFE070C8,
+      0xFFB08A60,
+      0xFF7CC8F0,
+      0xFF9AD47A,
     ],
     // Íconos brillantes sobre negro / gris.
     InterfaceTheme.highContrast: [
@@ -193,6 +214,11 @@ abstract final class MapPalette {
       0xFFFFC040,
       0xFF6E6E6E,
       0xFF000000,
+      0xFFFFE600,
+      0xFFFF40FF,
+      0xFFFFB060,
+      0xFF00E5FF,
+      0xFF60FF60,
     ],
   };
 }

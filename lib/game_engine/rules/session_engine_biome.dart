@@ -209,9 +209,21 @@ extension _BiomeOp on _Op {
     }
   }
 
+  /// The party draws the overworld map by walking (biome_exploration.md
+  /// § 11.4): host-authoritative, shared, saved with the world.
+  void mapRevealTick() {
+    final lay = biomeLayout(s.place);
+    if (lay == null) return;
+    s.town = MapDiscoveryRules.reveal(s.town, lay, [
+      for (final q in players)
+        if (!q.isCompanion) (q.x, q.y)
+    ]);
+  }
+
   /// Regrowth out of view (biome_regions.md § 5.2), every lobby tick.
   void forageHoldTick() {
     waystoneTouchTick();
+    mapRevealTick();
     final lay = biomeLayout(s.place);
     if (lay == null || s.town.wild.isEmpty) return;
     s.town = BiomeRules.holdInView(s.town, lay.id, lay.forage,

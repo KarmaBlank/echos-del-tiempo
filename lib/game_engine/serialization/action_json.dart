@@ -261,6 +261,14 @@ abstract final class ActionJson {
             if (a.ecoZone != null) 'ez': a.ecoZone,
           },
         ForageAction() => {'t': 'forage', 'i': a.spot},
+        // Protocol 91: cozy life (cozy_life.md).
+        CozyAction() => {
+            't': 'cozy',
+            'op': a.op.index,
+            if (a.id != null) 'id': a.id,
+            if (a.x != null) 'x': a.x,
+            if (a.y != null) 'y': a.y,
+          },
         // Protocol 73: region waystones (biome_regions.md § 4).
         WaystoneAction() => {
             't': 'way',
@@ -569,6 +577,13 @@ abstract final class ActionJson {
             ecoZone: j['ez'] is num ? (j['ez'] as num).toInt() : null);
       case 'forage':
         return ForageAction(j.integer('i'));
+      case 'cozy':
+        final op = j.integer('op');
+        if (op < 0 || op >= CozyOp.values.length) {
+          throw FormatException('JSON inválido: cozy', op);
+        }
+        return CozyAction(CozyOp.values[op],
+            id: j.strOrNull('id'), x: j.intOrNull('x'), y: j.intOrNull('y'));
       case 'way':
         return WaystoneAction(j.integer('i'), to: j.intOrNull('to'));
       case 'wx':

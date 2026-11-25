@@ -18,10 +18,11 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import 'raft_deco_cells.dart';
 import '../world_strings.dart';
 
 /// Las ventanas del arraigado.
-enum _FisherMenu { pedido, puesto }
+enum _FisherMenu { pedido, puesto, balsa }
 
 /// Pescador nativo del bioma, un arraigado (fishing.md § 12,
 /// overworld_biomes.md § 12): el mismo cuadro de diálogo que los
@@ -140,6 +141,10 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
                       DsChoice(context.t('ui.town.fisher.menu_stall'),
                           key: const ValueKey('fisher-choice-puesto'),
                           onSelected: () => open(_FisherMenu.puesto)),
+                    // Raft decorations (cozy_life.md § 1).
+                    DsChoice(context.t('ui.town.raft.menu'),
+                        key: const ValueKey('fisher-choice-balsa'),
+                        onSelected: () => open(_FisherMenu.balsa)),
                     if (canInvite)
                       DsChoice(context.t('ui.town.npc.invite'),
                           key: const ValueKey('fisher-invite'), onSelected: () {
@@ -200,6 +205,11 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
           context.t('ui.town.fisher.stall_title'),
           _stall(c, f, p, town),
           context.t('ui.town.fisher.no_stall')
+        ),
+      _FisherMenu.balsa => (
+          context.t('ui.town.raft.title'),
+          raftDecoCells(context, p, c.raftDeco),
+          context.t('ui.town.raft.title')
         ),
     };
     return PanelFrame(

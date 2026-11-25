@@ -1502,6 +1502,33 @@ Map<String, SfxDef> buildProcSfx() {
       _t(1500, 0.12, w: _sin, to: 700, v: 0.18),
       _t(2200, 0.08, w: _sin, to: 1200, v: 0.08, at: 0.14),
     ]),
+    // Cozy life (cozy_life.md): soft, low and short; placeholders until
+    // recorded ambience exists.
+    Sfx.ambWater: proc([
+      _n(700, 0.9, to: 500, lp: 450, a: 0.25, v: 0.16, seed: 31),
+      _t(320, 0.18, w: _sin, to: 260, v: 0.05, at: 0.3),
+    ]),
+    Sfx.ambBird: proc([
+      _t(2600, 0.07, w: _sin, to: 3400, v: 0.12),
+      _t(3000, 0.06, w: _sin, to: 3800, v: 0.1, at: 0.11),
+      _t(2800, 0.09, w: _sin, to: 2200, v: 0.08, at: 0.22),
+    ]),
+    Sfx.ambCricket: proc([
+      for (var i = 0; i < 6; i++)
+        _t(4200, 0.025, w: _sq, v: 0.04, at: i * 0.05, lp: 5000),
+    ]),
+    Sfx.ambRain: proc([
+      _n(5000, 1.6, lp: 2500, a: 0.5, v: 0.12, seed: 37),
+      _n(3000, 1.4, lp: 1200, a: 0.4, v: 0.08, seed: 41),
+    ]),
+    Sfx.farmHoe: proc([
+      _n(1800, 0.08, to: 600, lp: 1400, v: 0.35, seed: 43),
+      _t(140, 0.08, w: _tri, to: 90, v: 0.3),
+    ]),
+    Sfx.farmWater: proc([
+      _n(6000, 0.35, to: 4000, lp: 3500, a: 0.05, v: 0.18, seed: 47),
+      _t(900, 0.05, w: _sin, to: 600, v: 0.08, at: 0.12),
+    ]),
     // Eco Arcano: cada firma de habilidad con eco.
     for (final e in kSkillVoices.entries)
       Sfx.echo(e.key): SfxDef(_echo(e.value), peak: SfxLevel.status),

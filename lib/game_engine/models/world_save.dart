@@ -52,7 +52,9 @@ class TownState {
       this.wild = const {},
       this.waystones = const {},
       this.layoutVersion = 0,
+      this.discovery = const {},
       this.lights = const [],
+      this.decor = const [],
       this.sky = const SkyState(),
       this.residents = const {},
       this.daily = const {},
@@ -125,6 +127,21 @@ class TownState {
   /// 1×1 en coordenadas del pueblo base. No son sólidos ni cortan caminos.
   final List<(int, int)> lights;
 
+  /// Farm decorations (cozy_life.md § 2): `(id of kFarmDecos, x, y)` in
+  /// base-town coordinates, 1×1, not solid. JSON `dc`.
+  final List<(String, int, int)> decor;
+
+  /// Stable id of the decoration at ([x], [y]).
+  static String decorId(int x, int y) => 'deco@$x,$y';
+
+  static (int, int)? parseDecorId(String? id) {
+    if (id == null || !id.startsWith('deco@')) return null;
+    final p = id.substring(5).split(',');
+    if (p.length != 2) return null;
+    final x = int.tryParse(p[0]), y = int.tryParse(p[1]);
+    return x == null || y == null ? null : (x, y);
+  }
+
   /// Reloj y clima del mundo (day_night_weather.md § 1).
   final SkyState sky;
 
@@ -157,6 +174,10 @@ class TownState {
   /// (`wild`, `waystones`) belongs to (biome_exploration.md § 7). JSON `lv`;
   /// 0 = before v2.
   final int layoutVersion;
+
+  /// Overworld map discovery shared by the party (biome_exploration.md
+  /// § 11.4): biome id → `w,h,base64` cell bits. JSON `md`.
+  final Map<String, String> discovery;
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
   /// zona 1 (`kTownLakeDefault`). Valen para todos los lagos.
@@ -253,10 +274,12 @@ class TownState {
     Map<String, FarmPlot>? plots,
     Map<String, (int, int)>? marks,
     List<(int, int)>? lights,
+    List<(String, int, int)>? decor,
     SkyState? sky,
     Map<String, int>? wild,
     Set<String>? waystones,
     int? layoutVersion,
+    Map<String, String>? discovery,
     Map<String, ResidentState>? residents,
     Map<String, int>? daily,
     Map<String, NpcBond>? bonds,
@@ -274,10 +297,12 @@ class TownState {
         builds: builds ?? this.builds,
         marks: marks ?? this.marks,
         lights: lights ?? this.lights,
+        decor: decor ?? this.decor,
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
         waystones: waystones ?? this.waystones,
         layoutVersion: layoutVersion ?? this.layoutVersion,
+        discovery: discovery ?? this.discovery,
         residents: residents ?? this.residents,
         daily: daily ?? this.daily,
         bonds: bonds ?? this.bonds,
@@ -292,7 +317,10 @@ class TownState {
 
   /// Lo del pueblo que ven todos en la sala (protocolo 46, `town` del
   /// estado): sin el pozo (viaja aparte) ni las mejoras sin efecto.
-  Map<String, Object?> farmJson() => {
+  ///
+  /// [allMaps] false: only the discovery of [place] (the room snapshot,
+  /// biome_exploration.md § 11.4); the save keeps every biome.
+  Map<String, Object?> farmJson({String? place, bool allMaps = true}) => {
         if (lake != null) 'lake': lake,
         if (expansions > 0)
           'sides': {
@@ -303,11 +331,17 @@ class TownState {
         if (wild.isNotEmpty) 'wild': wild,
         if (waystones.isNotEmpty) 'ws': (waystones.toList()..sort()),
         if (layoutVersion != 0) 'lv': layoutVersion,
+        if (allMaps && discovery.isNotEmpty)
+          'md': discovery
+        else if (!allMaps && place != null && discovery.containsKey(place))
+          'md': {place: discovery[place]},
         if (marks.isNotEmpty)
           'marks': {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
           },
         if (lights.isNotEmpty) 'lt': [for (final l in lights) [l.$1, l.$2]],
+        if (decor.isNotEmpty)
+          'dc': [for (final d in decor) [d.$1, d.$2, d.$3]],
         if (sky.started) 'sky': sky.toJson(),
         if (residents.isNotEmpty)
           'res': [
@@ -404,12 +438,25 @@ class TownState {
           ? {for (final v in raw['ws'] as List) if (v is String) v}
           : const {},
       layoutVersion: raw['lv'] is num ? (raw['lv'] as num).round() : 0,
+      discovery: raw['md'] is Map
+          ? {
+              for (final e in (raw['md'] as Map).entries)
+                if (e.value is String) '${e.key}': e.value as String,
+            }
+          : const {},
       marks: _marks(raw['marks']),
       lights: raw['lt'] is List
           ? {
               for (final v in raw['lt'] as List)
                 if (v case [final num x, final num y, ...]) (x.round(), y.round()),
             }.toList()
+          : const [],
+      decor: raw['dc'] is List
+          ? [
+              for (final v in raw['dc'] as List)
+                if (v case [final String id, final num x, final num y, ...])
+                  (id, x.round(), y.round()),
+            ]
           : const [],
       sky: SkyState.fromJson(raw['sky']),
       events: WorldEventsState.fromJson(raw['wev']),

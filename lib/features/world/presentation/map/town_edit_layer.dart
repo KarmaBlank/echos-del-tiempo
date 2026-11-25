@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -135,9 +136,11 @@ abstract final class TownEditLayer {
     final g = e.ghost;
     if (g == null) return;
     final List<TownRect> parts;
-    if (e.step == TownEditStep.placing && e.placeDef == kFaroId ||
+    if (e.step == TownEditStep.placing &&
+            (e.placeDef == kFaroId || kFarmDecos.containsKey(e.placeDef)) ||
         e.step == TownEditStep.moving &&
-            TownState.parseLightId(e.selected) != null) {
+            (TownState.parseLightId(e.selected) != null ||
+                TownState.parseDecorId(e.selected) != null)) {
       parts = [TownRect(g.$1, g.$2, 1, 1)];
     } else if (e.step == TownEditStep.placing) {
       final d = construction(e.placeDef ?? '');

@@ -31,6 +31,14 @@
   "ui.world.map.legend.shrine": "Shrine",
   "ui.world.map.legend.waystone": "Waystone",
   "ui.world.map.legend.enemy": "Enemies",
+  "ui.world.map.legend.portal": "Dungeon portal",
+  "ui.world.map.legend.echo": "Echo portal",
+  "ui.world.map.legend.mine": "Mine",
+  "ui.world.map.legend.dock": "Dock",
+  "ui.world.map.legend.resident": "Resident",
+  "ui.world.map.legend.group_goals": "GOALS",
+  "ui.world.map.legend.group_optional": "OPTIONAL",
+  "ui.world.map.legend.group_party": "PARTY",
   "ui.world.map.travel_to_stone": "Travel to stone {n}",
   "ui.world.map.title": "MAP · {name}",
   "ui.world.map.center": "CENTER [C]",
@@ -320,7 +328,7 @@
   "ui.world.way.site_lake": "Lake: {name}",
   "ui.world.way.site_mine": "Mine mouth {n}",
   "ui.world.way.close": "CLOSE",
-  "ui.world.forage.prompt": "[E] Gather {name}",
+  "ui.world.forage.prompt": "[Hold E] Gather {name}",
   "ui.world.forage.regrow": "{name}: grows back in {n} s",
   "ui.world.forage.seed_bush": "Seed bush",
   "ui.world.forage.echo_bloom": "Echo bloom",
@@ -407,5 +415,7 @@
   "ui.world.wild.prompt_done": "Already used today: it returns tomorrow",
   "ui.world.raft.prompt_board": "[E] Board the raft",
   "ui.world.raft.prompt_leave": "[E] Step onto the shore",
-  "ui.world.raft.prompt_fish": "[E] Fish from the raft"
+  "ui.world.raft.prompt_fish": "[E] Fish from the raft",
+  "ui.world.cozy.search_prompt": "[Hold E] Search the tree",
+  "ui.world.cozy.searched": "You already searched this tree today"
 }

@@ -26,6 +26,11 @@ import '../../../../game_engine/data/biomes_catalog.dart'
 import '../../../../game_engine/rules/light_shaft_rules.dart';
 import '../../../../game_engine/rules/waystone_rules.dart';
 import 'ambient_life_layer.dart';
+import 'cozy_layer.dart';
+import 'tile_target.dart';
+import '../../../../game_engine/data/cozy_catalog.dart';
+import '../../../../game_engine/models/life_skills.dart';
+import '../../../../game_engine/rules/cozy_rules.dart';
 import 'region_light_layer.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -183,6 +188,9 @@ class MapGame extends Game {
   /// Huerta del pueblo (farming.md § 2.3).
   final farm = MapFarmLayer();
 
+  /// Cozy life art (cozy_life.md): fireflies, raft and farm decorations.
+  late final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
+
   /// Ground marks of the seasons and the weather.
   final ground = MapGroundLayer();
   /// Mines: cracks, debris, bombs, carts (mining_smithing.md § 1.9).
@@ -304,8 +312,13 @@ class MapGame extends Game {
   double editZoom = 1;
   static const editZooms = [1.0, 1.5, 2.0];
 
-  /// El zoom en uso (solo en la edición del pueblo).
-  double get zoom => controller.editingTown ? editZoom : 1;
+  /// El zoom en uso: el de la edición del pueblo, o el acercamiento suave
+  /// mientras se pesca (cozy_life.md § 1).
+  double get zoom => controller.editingTown ? editZoom : cozyZoom;
+
+  /// Map fraction shown outside the editor: eases toward
+  /// `cozyFishZoom` while fishing and back to 1.
+  double cozyZoom = 1;
 
   /// Rueda del mouse en la edición: [dir] > 0 aleja.
   void zoomBy(int dir) {
@@ -729,6 +742,10 @@ class MapGame extends Game {
       fx = fall.x;
       fy = fall.y;
     }
+    final zt = controller.isFishing ? CozyRules.fishZoom : 1.0;
+    cozyZoom += (zt - cozyZoom) * smoothing(0.06, dt);
+    if ((cozyZoom - zt).abs() < 0.002) cozyZoom = zt;
+    final vw = MapGame.vw * cozyZoom, vh = MapGame.vh * cozyZoom;
     final tx =
         mw < vw ? bx + (mw - vw) / 2 : (fx - vw / 2).clamp(bx, bx + mw - vw);
     final ty =
@@ -1249,6 +1266,26 @@ class MapGame extends Game {
         placed.add((fx + ox + 0.5, fy + oy + 0.3));
         add(py + 15, () => tiles.faro(c, px, py, t, lit: night));
       }
+      // Farm decorations (cozy_life.md § 2); the little lamps glow at
+      // night like the lighthouses.
+      for (final (id, dx, dy) in s.town.decor) {
+        final px = (dx + ox) * ts, py = (dy + oy) * ts;
+        if (!worldView.inflate(_lampReach).contains(Offset(px, py))) continue;
+        if (id == 'lamp') {
+          lights.add(Offset(px + 8, py + 3));
+          placed.add((dx + ox + 0.5, dy + oy + 0.2));
+        }
+        final d = kFarmDecos[id];
+        final im = d == null ? null : sprites.lifeIcon(d.sprite, '');
+        if (im == null) continue;
+        add(id == 'stone_path' ? py : py + 14,
+            () => c.drawImageRect(
+                im,
+                Rect.fromLTWH(
+                    0, 0, im.width.toDouble(), im.height.toDouble()),
+                Rect.fromLTWH(px, py, ts, ts),
+                SpriteCatalog.pixelPaint()));
+      }
     }
 
     final grace = s.mode == SessionMode.field &&
@@ -1350,8 +1387,11 @@ class MapGame extends Game {
       ));
       add(py, () {
         // On a raft (fishing.md § 15): the logs under the hero.
-        if (raft) _drawRaft(c, px, py + 3, t);
+        if (raft) _drawRaft(c, px, py + 3, t, life: p.profile.life);
         hero(px, py);
+        if (raft) {
+          cozy.drawRaftRoof(c, px, py + 3, _bob(t), p.profile.life);
+        }
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
         if (line == null && toolOut) {
           final face = mine ? controller.local.fx : p.dir;
@@ -1540,6 +1580,15 @@ class MapGame extends Game {
       e.$3();
     }
     if (_dressing case final d?) dressing.drawOverhead(c, d, night: night);
+    // Hold-to-gather bar (cozy_life.md § 3), like the mine dig bar.
+    if (controller.gatherProgress case (final tile, final k)?) {
+      drawTileTarget(c, [tile], true, progress: k);
+    }
+    // Fireflies at night around the local player fishing or on a raft
+    // (cozy_life.md § 1).
+    if (night && (controller.isFishing || controller.onRaft)) {
+      cozy.drawFireflies(c, controller.local.x, controller.local.y, t);
+    }
     // Mines and the town cart station (mining_smithing.md § 1.7–1.9).
     void mineText(String txt, double x, double y, Color col, double size) =>
         actors.text(c, txt, x, y, col, size);
@@ -1928,16 +1977,14 @@ class MapGame extends Game {
   }
 
   /// One raft centered on (x, y) px, bobbing 1 px with the time [t] (ms).
-  void _drawRaft(Canvas c, double x, double y, num t) {
+  void _drawRaft(Canvas c, double x, double y, num t, {LifeSkills? life}) {
     final im = sprites.lifeIcon('balsa', '');
     if (im == null) return;
-    final bob = (t / 600).floor().isEven ? 0.0 : 1.0;
-    c.drawImageRect(
-        im,
-        Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
-        Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts),
-        SpriteCatalog.pixelPaint());
+    // Decorations of its rider (cozy_life.md § 1).
+    cozy.drawRaft(c, im, x, y, _bob(t), life);
   }
+
+  static double _bob(num t) => (t / 600).floor().isEven ? 0.0 : 1.0;
 
   _Wisp _wispFollow(String id, double px, double py) {
     final ph = (id.hashCode % 628) / 100.0;

@@ -117,8 +117,10 @@ Elipse con borde irregular (dos armónicos), radios entre
   entrada está activa siempre.
 - Menú (v0.48.5): el **mapa grande de la región** (`FullMap`, el mismo
   de las piedras de paso de las mazmorras, worldgen.md § 11.4) en *modo
-  elegir* (`FullMapPick`): todas las piedras marcadas con su número
-  (activas en cian, las otras grises "Sin descubrir"); pasar el mouse
+  elegir* (`FullMapPick`): las piedras marcadas con su número
+  (activas en cian; desde el protocolo 90 las no activadas solo aparecen, en
+  gris "Sin descubrir", si están en terreno ya descubierto:
+  biome_exploration.md § 11.4); pasar el mouse
   muestra su nombre (tooltip), clic la elige (no viaja todavía) y a la
   derecha va su detalle con **VIAJAR** (gris si es la de acá o no está
   activa; Tab / número eligen, Enter viaja). Abre con la piedra de acá
@@ -230,7 +232,10 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 ### 7.2.3 Ambiente al pescar
 - Mientras el jugador local pesca fuera del pueblo, la música del bioma
   baja casi a silencio (`ambMusicLevel`, en `ambDuckSec`) y vuelve al
-  terminar. En el pueblo sigue la pieza de pesca.
+  terminar. En el pueblo sigue la pieza de pesca. **Desde cozy_life.md
+  § 1:** fuera del pueblo (pescando o en balsa) suena `Music.cozy` a
+  `cozyMusicLevel` en vez del silencio; se suman agua, pájaros, grillos y
+  luciérnagas.
 - Suenan cada tanto (`ambGapMinSec`–`ambGapMaxSec`, volumen `ambVolume`)
   sonidos muy suaves según el lugar (`BiomeRegionStyle.fishingAmbience`):
   brisa (`amb.breeze`) al aire libre, goteo (`amb.drip`) bajo techo y en
