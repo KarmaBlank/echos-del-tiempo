@@ -97,6 +97,7 @@ import '../../../game_engine/rules/fishing_rules.dart';
 import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
 import '../../../game_engine/rules/farming_rules.dart';
+import '../../../game_engine/rules/life_time_rules.dart';
 import '../../../game_engine/rules/life_tree_rules.dart';
 import '../../../game_engine/models/fish_line.dart';
 import '../../../core/audio/sfx_catalog.dart';
@@ -2354,6 +2355,12 @@ class SessionController extends StateNotifier<SessionView?> {
   static String _pct(double v) =>
       v >= 0.1 ? '${(v * 100).round()} %' : '${(v * 100).toStringAsFixed(1)} %';
 
+  /// The crop does not grow right now (out of season, farming.md § 15).
+  bool _cropPaused(FarmPlot pl) =>
+      pl.seed != null &&
+      FarmingRules.growthPaused(
+          pl, LifeTimeRules.cropGrowth(pl.seed!, townState.sky));
+
   /// Lo que se sabe de una parcela (aviso y tooltip): quién plantó, quién
   /// regó, el abono y las chances si la cosechás vos.
   String plotInfo(int x, int y) {
@@ -2370,6 +2377,7 @@ class SessionController extends StateNotifier<SessionView?> {
         'pct': (r * 100).round(),
         'watered': pl.watered ? 'yes' : 'no'
       }),
+      if (_cropPaused(pl)) strings.t('ui.world.ctl.farm.paused_season'),
       if (pl.planter != null) strings.t('ui.world.ctl.farm.planted_by', {'name': pl.planter}),
       if (pl.waterer != null)
         strings.t('ui.world.ctl.farm.watered_by', {'name': pl.waterer, 'n': pl.waterings}),
@@ -2414,7 +2422,10 @@ class SessionController extends StateNotifier<SessionView?> {
     if (pl == null) return strings.t('ui.world.ctl.farm.till');
     if (!pl.planted) return strings.t('ui.world.ctl.farm.plant', {'crop': kCrops[seed]!.name});
     final r = (FarmingRules.ratio(pl) * 100).round();
-    return '${strings.t('ui.world.ctl.farm.water', {'pct': r})}$fert';
+    final paused = _cropPaused(pl)
+        ? ' · ${strings.t('ui.world.ctl.farm.paused_season')}'
+        : '';
+    return '${strings.t('ui.world.ctl.farm.water', {'pct': r})}$paused$fert';
   }
 
   bool buySeed(String id, [int n = 1]) =>

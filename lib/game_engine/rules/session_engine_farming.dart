@@ -80,8 +80,9 @@ extension _FarmingOp on _Op {
 
   /// Corre siempre (pueblo, campo y batalla): la huerta crece mientras la
   /// sala está abierta. De a 1 s para no mover el estado en cada cuadro.
+  /// Runs whenever the room is open, also during missions, runs and
+  /// dungeons (farming.md § 2.3): only a paused session stops it.
   void farmTick(double dt) {
-    if (s.run != null) return;
     _fa.acc += dt;
     if (_fa.acc < 1) return;
     final step = _fa.acc;
@@ -184,20 +185,10 @@ extension _FarmingOp on _Op {
     if (!identical(rn, s.town.renown)) s.town = s.town.copyWith(renown: rn);
   }
 
-  /// Misión ganada: los cultivos dan un salto y los peces pueden criar.
+  /// Mission won: the fish may breed. Crops get no extra jump: they
+  /// already grew in real time during the mission (farming.md § 2.3).
   void farmMissionWon() {
-    final t = s.town;
-    s.town = TownRules.breed(
-        _rand,
-        t.copyWith(plots: {
-          for (final e in t.plots.entries)
-            e.key: e.value.seed != null &&
-                    !LifeTimeRules.cropInSeason(
-                        e.value.seed!, WeatherRules.season(t.sky.day))
-                ? e.value
-                : FarmingRules.missionGrow(e.value,
-                    season: WeatherRules.season(t.sky.day)),
-        }));
+    s.town = TownRules.breed(_rand, s.town);
   }
 
   /// Una vuelta de los ayudantes (farming.md § 8): cada granjero atiende

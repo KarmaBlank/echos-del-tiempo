@@ -118,10 +118,18 @@ clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
   durante las misiones (el host la avanza de a 1 s): regada a ritmo del
   riego (`waterRate`), seca a `dryRate` (0.5 desde v0.45.0; antes 0.35). Cada riego dura
   `waterSec` (240 s, más con la regadera y el árbol).
-- Cada misión ganada suma `missionGrowSec` (600 s desde v0.45.0; antes
-  420) a todo lo plantado (× `seasonGrowMult` si es de estación, § 16).
-  Así una expedición de 10–12 min deja la huerta lista aunque nadie
-  riegue.
+- El reloj de la huerta (y el del cielo: día, clima, estación) corre
+  **siempre** que la sala esté abierta: en el pueblo, en el overworld, en
+  mazmorras, misiones y Travesía, aunque un compañero esté en misión y
+  otro en el pueblo. Solo lo frena la sala en pausa. (Hasta v0.48.3
+  `farmTick` cortaba con `s.run != null` y la huerta quedaba trabada en
+  brote mientras alguien jugaba una run.)
+- Desde v0.48.4 ya no hay salto por misión ganada (`missionGrowSec` se
+  quitó): el tiempo real de la misión ya hace crecer la huerta y el salto
+  lo contaba dos veces.
+- Si un cultivo no crece (fuera de estación, § 15), el aviso y el tooltip
+  de la parcela lo dicen: "frenado: fuera de estación"
+  (`FarmingRules.growthPaused`, `ui.world.ctl.farm.paused_season`).
 - Con el juego cerrado no crece nada (sin reloj real: nadie pierde ni
   gana por no conectarse, town_loop.md § 1).
 - Etapas visibles: semilla (< 20 %), brote, crecido (≥ 55 %), maduro
@@ -548,8 +556,7 @@ Visión del dueño; nombres propuestos, esperan su OK (lore.md):
     (`FarmingRules.unitPrice(..., season)` / `sell(season:)`); el
     detalle muestra "De estación: +30 % de precio";
   - crece × `seasonGrowMult` (1.2): en el reloj de la huerta
-    (`LifeTimeRules.cropGrowth`) y en el salto de cada misión ganada
-    (`missionGrow(season:)`).
+    (`LifeTimeRules.cropGrowth`).
 - Los cultivos de todo el año (nabo de escarcha, flor de cristal, lirio
   del eco) no tienen bonus. Fuera de estación sigue § 15 (se frena).
 - Helpers: `LifeTimeRules.cropSeasonal`, `seasonGrow`, `seasonPrice`.

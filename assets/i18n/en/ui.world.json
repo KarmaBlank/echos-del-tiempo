@@ -145,6 +145,7 @@
   "ui.world.ctl.farm.fert_generic": "fertilizer",
   "ui.world.ctl.farm.till": "[E or click] Till",
   "ui.world.ctl.farm.plant": "[E or click] Plant {crop}",
+  "ui.world.ctl.farm.paused_season": "paused: out of season",
   "ui.world.ctl.farm.water": "[E or click] Water · {pct} %",
   "ui.world.ctl.helper.fisher_title": "FISHER {n} · LEVEL {level}",
   "ui.world.ctl.helper.fisher_line": "Fishes from the lakeshore and stores the catch in the chest.",

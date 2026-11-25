@@ -145,6 +145,7 @@
   "ui.world.ctl.farm.fert_generic": "abono",
   "ui.world.ctl.farm.till": "[E o clic] Arar",
   "ui.world.ctl.farm.plant": "[E o clic] Plantar {crop}",
+  "ui.world.ctl.farm.paused_season": "frenado: fuera de estación",
   "ui.world.ctl.farm.water": "[E o clic] Regar · {pct} %",
   "ui.world.ctl.helper.fisher_title": "PESCADOR {n} · NIVEL {level}",
   "ui.world.ctl.helper.fisher_line": "Pesca en la orilla del lago y guarda en el cofre.",
