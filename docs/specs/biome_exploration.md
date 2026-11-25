@@ -247,3 +247,56 @@ snapshot solo del bioma actual), `test/features/world/overworld_map_test.dart`
 (leyenda por modo, minimapa dentro de la ventana, piedras sin descubrir
 ocultas) y la vista `docs/preview/overworld_map_fog.png` con
 `OVERWORLD_MAP_PREVIEW=1`.
+
+### 11.8 Mapa de mazmorra por descubrir (protocolo 95)
+Lo mismo que § 11.4, igualito, en **todo mapa de mazmorra**: pisos de
+misión, mazmorras persistentes, Ecos, Atlas, Pruebas, Jefes del Abismo y
+la Travesía (todo lo que tiene `MissionRun`).
+
+- **Celdas**: las mismas de 4 × 4 tiles (`MapDiscoveryRules.cell`), sobre
+  el mapa entero de la misión (en un atlas cada piso es su rectángulo, así
+  que la máscara ya es "por piso"). `DungeonDiscoveryRules` reusa
+  `MapDiscoveryRules.revealCells`: no hay otra lógica de revelado.
+- **Al llegar** solo se conoce el área a `dungeonMapStartRadius` tiles de
+  la llegada de cada piso (y del punto de vuelta subiendo) y de sus
+  **objetivos**: la escalera de bajada (`stairsDown`) y la sala del jefe
+  (el jefe del último piso, centro de su arena). No se guarda: sale del mapa.
+- **Objetivos siempre visibles**: cuadro de 3 tiles con el marco dorado de
+  los objetivos del exterior (§ 11.2), color escalera / jefe. Fragmentos,
+  sellos, la estrella del jefe y la salida de la mazmorra se ven siempre,
+  como antes.
+- **El resto se descubre caminando**: el anfitrión, en cada tick de campo
+  (`_explorationTick`), marca las celdas a `dungeonMapRevealRadius` tiles
+  de cada jugador (no compañeros). Lo no descubierto se tapa con el color
+  del vacío; salas, rejas, cofres, PdI, enemigos y loot solo se dibujan en
+  lo descubierto. **Secretos**: siguen las reglas de antes (PdI solo si
+  `poiSeen`, cofres de sala secreta solo con la sala abierta) **y** además
+  la celda tiene que estar descubierta.
+- Convive con la niebla de mazmorra oscura (lighting.md § 5.4, local del
+  cliente): se dibuja solo lo que pasa las dos.
+- **Compartido**: va en la misión (`MissionRun.discovery`, JSON `md` =
+  `FogOfWar.pack` de 1 bit por celda como `n,1,base64`, y `mdr` = revisión
+  que sube con cada celda nueva). Viaja en cada snapshot de la sala; lo que
+  descubre cualquiera se dibuja para todos.
+- **Guardado**: mazmorras persistentes (persistent_dungeons.md § 2) lo
+  guardan con el `run` de `DungeonSave` (por piso, en su rectángulo); el
+  resto vive solo en la misión en curso.
+- **Leyenda**: sigue siendo la de mazmorra, pero solo lista lo que se
+  dibuja: yo siempre, aliados con compañía, escalera y jefe (objetivos, con
+  marco dorado) y el resto solo si hay uno descubierto en el piso.
+- **Minimapa**: misma niebla. Con zoom 1 (por defecto) se ve el piso
+  entero, que encuadra la llegada y los objetivos.
+- **Rendimiento**: la unión inicio ∪ descubierto se cachea por mapa y
+  revisión; la máscara se graba como `Picture` y se rehace solo cuando
+  cambia la revisión (misma caché que el exterior).
+
+| Clave (`TuningId.regions`) | Default | Qué |
+|---|---|---|
+| `dungeonMapRevealRadius` | 7 | Radio (tiles) que revela cada jugador en la mazmorra. |
+| `dungeonMapStartRadius` | 4 | Radio (tiles) conocido al llegar alrededor de la llegada y de cada objetivo del piso. |
+
+Tests: `test/game_engine/dungeon_map_discovery_test.dart` (inicio,
+objetivos siempre, secretos ocultos, revelado, persistencia JSON, sync
+cooperativo), `test/features/world/dungeon_map_fog_test.dart` (leyenda
+recortada, minimapa) y la vista `docs/preview/dungeon_map_fog.png` con
+`DUNGEON_MAP_PREVIEW=1`.

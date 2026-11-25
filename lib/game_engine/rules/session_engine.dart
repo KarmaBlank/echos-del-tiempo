@@ -3860,6 +3860,12 @@ class _Op {
   /// Cada tick de campo: descubrir PdI, levantar reliquias, cofres
   /// custodiados y misiones opcionales.
   void _explorationTick(GameMap map, MissionRun m) {
+    // The party draws the dungeon map by walking (biome_exploration.md
+    // § 11.8): host-authoritative, shared in the snapshot.
+    DungeonDiscoveryRules.reveal(m, map, [
+      for (final q in players)
+        if (!q.isCompanion) (q.x, q.y)
+    ]);
     final f = map.floor(m.floor);
     if (f == null) return;
     for (final poi in f.pois) {

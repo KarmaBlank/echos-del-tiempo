@@ -164,7 +164,10 @@ void main() {
     expect(c.view!.panel, WorldPanel.map);
     expect(find.byKey(const ValueKey('panel-map')), findsOneWidget);
     expect(find.byKey(const ValueKey('full-map-legend')), findsOneWidget);
-    expect(find.textContaining('Piedra de paso'), findsOneWidget);
+    // biome_exploration.md § 11.8: the dungeon legend lists only what is
+    // drawn (no waystone found yet on arrival); goals always.
+    expect(find.textContaining('Escalera'), findsWidgets);
+    expect(find.textContaining('Piedra de paso'), findsNothing);
 
     // Con el mapa abierto las flechas y WASD mueven el mapa, no al
     // jugador.

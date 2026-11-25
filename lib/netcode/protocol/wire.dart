@@ -216,7 +216,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// weapon plots (`cp` composts, `it` held item), `farm.ws` weapon seeds,
 /// meal `b` / `a` boosts, `gear-` uid marks and life tree v2 forks
 /// (`life.tv`, `life.rf` refund notice).
-const kProtocolVersion = 92;
+/// 95: dungeon map discovery (biome_exploration.md § 11.8): `mission.md`
+/// (packed cell bits of the mission map) and `mission.mdr` (revision).
+/// 93 / 94 are taken by other in-flight changes.
+const kProtocolVersion = 95;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

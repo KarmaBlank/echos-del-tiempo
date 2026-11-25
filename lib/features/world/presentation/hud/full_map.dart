@@ -14,7 +14,7 @@ import '../../../../game_engine/models/fog_of_war.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/map_discovery_rules.dart'
-    show OverworldMarkKind;
+    show DungeonGoalKind, OverworldMarkKind;
 import 'map_hover_tip.dart';
 import 'minimap.dart';
 import '../world_strings.dart';
@@ -45,7 +45,16 @@ class FullMap extends StatefulWidget {
     this.fog,
     this.pick,
     this.overworld,
+    this.dungeon,
+    this.exit = false,
   });
+
+  /// Dungeon discovery layer (biome_exploration.md § 11.8); `null` =
+  /// everything drawn (world map, old callers).
+  final DungeonOverlay? dungeon;
+
+  /// The dungeon exit is marked (stairs entry of the legend).
+  final bool exit;
 
   /// Overworld biome layer (biome_exploration.md § 11): discovery, goal
   /// marks and its own legend. `null` = dungeon / world map.
@@ -176,6 +185,62 @@ class FullMap extends StatefulWidget {
         if (items.where((i) => drawn(i.$2)).toList() case final keep
             when keep.isNotEmpty)
           (g, keep),
+    ];
+  }
+
+  /// The dungeon legend trimmed to what is drawn (§ 11.8): the goals
+  /// (stairs, boss) always and with the gold frame, the rest only once
+  /// one is discovered on this floor, allies only with company. Without
+  /// [dg] the whole legend. Entries: (label key, colour, is a goal).
+  static List<(String, Color, bool)> dungeonLegendFor(
+      GameSession s, GameMap map, DungeonOverlay? dg,
+      {bool allies = true, bool exit = false}) {
+    if (dg == null) {
+      return [for (final (l, c) in legend) (l, c, false)];
+    }
+    final m = s.mission;
+    final f = m?.floor ?? 0;
+    bool at(double px, double py) =>
+        dg.mask.knownTile((px / 16).floor(), (py / 16).floor());
+    bool goal(MapMark k) => dg.goals.any((g) =>
+        (g.kind == DungeonGoalKind.stairs ? MapMark.stairs : MapMark.boss) ==
+        k);
+    final pois = m == null
+        ? const <MapPoi>[]
+        : [
+            for (final (poi, _) in minimapPois(map.floor(f), m))
+              if (at(poi.center.x, poi.center.y)) poi
+          ];
+    bool drawn(MapMark k) => switch (k) {
+          MapMark.me => true,
+          MapMark.ally => allies,
+          MapMark.stairs => goal(k) || exit,
+          MapMark.boss => goal(k) ||
+              (m?.enemies.any((e) => e.boss && e.alive && e.floor == f) ??
+                  false),
+          MapMark.chest => m?.items.any((it) =>
+                  it.floor == f &&
+                  it.kind == MissionItemKind.chest &&
+                  !it.done &&
+                  (it.secret == null || m.poiUsed.contains(it.secret)) &&
+                  at(it.x, it.y)) ??
+              false,
+          MapMark.secret => pois.any((p) => p.kind == PoiKind.secret),
+          MapMark.shrine => pois.any((p) => p.kind == PoiKind.shrine),
+          MapMark.waystone => pois.any((p) => p.kind == PoiKind.waystone),
+          MapMark.enemy => m?.enemies.any((e) =>
+                  e.floor == f && e.alive && !e.boss && at(e.x, e.y)) ??
+              false,
+          _ => true,
+        };
+    return [
+      for (final (l, k) in legendMarks)
+        if (drawn(k))
+          (
+            l,
+            k == MapMark.waystone ? waystoneColor : MapPalette.mark(k),
+            k == MapMark.stairs || k == MapMark.boss
+          ),
     ];
   }
 
@@ -583,6 +648,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                           center: _center ?? _player,
                           fog: widget.fog,
                           overworld: widget.overworld,
+                          dungeon: widget.dungeon,
                         ),
                         ..._stoneMarks(context,
                             Minimap.viewRect(a, _view, _center ?? _player)),
@@ -603,8 +669,12 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               if (widget.mode == FullMapMode.dungeon)
-                for (final (label, color) in FullMap.legend)
-                  _LegendItem(label: context.t(label), color: color)
+                for (final (label, color, goal) in FullMap.dungeonLegendFor(
+                    widget.session, widget.map, widget.dungeon,
+                    allies: widget.session.players.length > 1,
+                    exit: widget.exit))
+                  _LegendItem(
+                      label: context.t(label), color: color, goal: goal)
               else
                 for (final (group, items) in FullMap.overworldLegendFor(
                     widget.overworld!,

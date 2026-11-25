@@ -115,6 +115,8 @@ En este orden:
 1. Fragmentos: un jugador vivo a menos de 14 px lo recoge (+1 al objetivo).
 2. Cofres: un jugador vivo a menos de 14 px lo abre (ver abajo).
 3. Regeneración y IA de enemigos (world.md). El contacto empieza una batalla.
+4. Mapa por descubrir (biome_exploration.md § 11.8): las celdas alrededor
+   de cada jugador quedan descubiertas para todo el grupo.
 
 `ActivateSealAction(id)`: el jugador debe estar a menos de 30 px del
 sello (la UI lo ofrece a menos de 26 px).

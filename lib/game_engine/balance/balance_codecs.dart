@@ -1976,6 +1976,10 @@ const _regionsLabels = {
   'waystoneReach': 'Piedra de paso: distancia (px)',
   'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',
   'mapStartRadius': 'Mapa del exterior: radio conocido al llegar (tiles)',
+  'dungeonMapRevealRadius':
+      'Mapa de mazmorra: radio que revela cada jugador (tiles)',
+  'dungeonMapStartRadius':
+      'Mapa de mazmorra: radio conocido al llegar (tiles)',
   'caveScaleX': 'Caverna: × ancho del lago',
   'caveScaleY': 'Caverna: × alto del lago',
   'caveWallTiles': 'Caverna: grosor de la pared (tiles)',

@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:typed_data';
 
 import '../data/enemy_families.dart';
 import '../data/game_catalog.dart';
@@ -8,6 +9,7 @@ import '../models/battle_state.dart';
 import '../models/combat_mode.dart';
 import '../models/eco.dart';
 import '../models/fish_line.dart';
+import '../models/fog_of_war.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
@@ -349,7 +351,19 @@ class SessionJson {
         if (m.questsFailed.isNotEmpty) 'qf': (m.questsFailed.toList()..sort()),
         if (m.blessing != null) 'bl': m.blessing!.name,
         if (m.windUntil != 0) 'wind': m.windUntil,
+        // Protocol 95 (biome_exploration.md § 11.8): dungeon map discovery
+        // as packed cell bits (`n,1,` + base64) and its revision.
+        if (m.discovery.contains(1)) ...{
+          'md': FogOfWar.pack(m.discovery, m.discovery.length, 1),
+          'mdr': m.discoveryRev,
+        },
       };
+
+  static Uint8List? _discovery(Object? raw) {
+    if (raw is! String) return null;
+    final n = int.tryParse(raw.split(',').first);
+    return n == null ? null : FogOfWar.unpack(raw, n, 1);
+  }
 
   static List<int> _ints(Json j, String k) {
     final v = j[k];
@@ -398,6 +412,8 @@ class SessionJson {
         questsFailed: _ints(j, 'qf').toSet(),
         blessing: j.enumOrNull('bl', BlessingKind.values),
         windUntil: j.dblOrNull('wind') ?? 0,
+        discovery: _discovery(j['md']),
+        discoveryRev: j.intOrNull('mdr') ?? 0,
       );
 
   Json dropToJson(WeaponDrop d) => {
