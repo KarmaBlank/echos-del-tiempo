@@ -71,6 +71,7 @@ class WaterReflectionLayer {
     ..strokeCap = StrokeCap.square
     ..strokeWidth = 1;
   final _fill = Paint()..isAntiAlias = false;
+  final _fadeLayer = Paint();
   double _tintK = -1;
   Color? _tintWater;
   ColorFilter? _tintFilter;
@@ -100,6 +101,9 @@ class WaterReflectionLayer {
 
   /// Cloud cells reflected last frame, per step (tests).
   final debugCloudCells = List.generate(3, (_) => <double>[]);
+
+  /// Prop tiles reflected by the last shore build (tests).
+  final debugShoreProps = <(int, int)>[];
 
   /// Quality in use this frame.
   bool get high => level == ReflectionLevel.high && !autoLow;
@@ -187,6 +191,7 @@ class WaterReflectionLayer {
           ..add(k);
       }
     }
+    debugShoreProps.clear();
     _shore = _buildShore(map, rows, lamps);
     return true;
   }
@@ -213,7 +218,8 @@ class WaterReflectionLayer {
         final line = y * ts;
         c
           ..save()
-          ..clipRect(Rect.fromLTWH(x * ts, line, ts, rows * ts))
+          ..clipRect(Rect.fromLTWH(
+              x * ts, line, ts, math.min(rows * ts, r.d('reflMaxLen'))))
           ..translate(0, 2 * line)
           ..scale(1, -1);
         // The plain bank: only a short, faded lip right at the water line.
@@ -238,6 +244,7 @@ class WaterReflectionLayer {
                 _plain.contains(ch)) {
               continue;
             }
+            if (sy == y - 1) debugShoreProps.add((sx, sy));
             tiles.tiles.noGround = true;
             tiles.drawTileAt(c, map, sx, sy);
             tiles.tiles.noGround = false;
@@ -247,7 +254,8 @@ class WaterReflectionLayer {
           }
         }
         c.restore();
-        _fadeBands(c, x * ts, ts, line, rows * ts, water);
+        _fadeBands(c, x * ts, ts, line, math.min(rows * ts, r.d('reflMaxLen')),
+            water);
         drew = true;
       }
     }
@@ -332,45 +340,62 @@ class WaterReflectionLayer {
     final ih = box.height.ceil() + 2 * _pad + 1;
     final rec = ui.PictureRecorder();
     final p = Canvas(rec)..translate(-ox.toDouble(), -oy.toDouble());
+    final maxLen = r.d('reflMaxLen');
+    // Actors near the water, capped (§ 1.1).
+    final cands = <ReflectionCandidate>[];
+    final lines = <double>[];
+    final fades = <double>[];
+    final keep = <ReflectedActor>[];
+    for (final a in actors) {
+      if (a.x < view.left - 24 || a.x > view.right + 24) continue;
+      if (a.y < view.top - 48 || a.y > view.bottom + 8) continue;
+      final hit = ReflectionRules.actorLine(a.x, a.y, kindAt);
+      if (hit == null) continue;
+      final (l0, fade) = hit;
+      final l = a.onWater ? l0 + ReflectionRules.floatDrop() : l0;
+      final k = kindAt((a.x / ts).floor(), (l / ts).floor());
+      if (k == WaterKind.cave || k == WaterKind.none) continue;
+      cands.add((x: a.x, y: a.y, moving: a.moving));
+      lines.add(l);
+      fades.add(fade);
+      keep.add(a);
+    }
+    final picked = ReflectionRules.pick(
+        cands, view.center.dx, view.center.dy, ReflectionRules.actorCap(high: hi));
+    for (final i in picked) {
+      final a = keep[i], l = lines[i], fade = fades[i];
+      final clip = Rect.fromLTWH(a.x - 24, l, 48, maxLen);
+      // Fades in/out with the foot-to-water gap (§ 1.1): no popping.
+      if (fade < 1) {
+        _fadeLayer.color = Color.fromRGBO(255, 255, 255, fade);
+        p.saveLayer(clip, _fadeLayer);
+      }
+      // Capped length, from the water line down.
+      p
+        ..save()
+        ..clipRect(clip)
+        ..translate(0, (l + a.y).roundToDouble())
+        ..scale(1, -1);
+      a.draw(p);
+      p.restore();
+      _fadeBands(p, a.x - 24, 48, l, maxLen, water);
+      if (fade < 1) p.restore();
+    }
+    lastActors = picked.length;
+    // The shore texture BEHIND the actors (dstOver): the actor fades only
+    // touch actor pixels, never a rectangle of the shore (§ 3).
     if (_shore case final img?) {
       final dst = Rect.fromLTWH(
           ox.toDouble(), oy.toDouble(), iw.toDouble(), ih.toDouble());
       final src = dst.shift(Offset(-_wx0 * ts, -_wy0 * ts)).intersect(
           Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()));
       if (!src.isEmpty) {
+        _atlas.blendMode = BlendMode.dstOver;
         p.drawImageRect(
             img, src, src.shift(Offset(_wx0 * ts, _wy0 * ts)), _atlas);
+        _atlas.blendMode = BlendMode.srcOver;
       }
     }
-    // Actors near the water, capped (§ 1.1).
-    final cands = <ReflectionCandidate>[];
-    final lines = <double>[];
-    final keep = <ReflectedActor>[];
-    for (final a in actors) {
-      if (a.x < view.left - 24 || a.x > view.right + 24) continue;
-      if (a.y < view.top - 48 || a.y > view.bottom + 8) continue;
-      final l0 = ReflectionRules.anchor(a.x, a.y, kindAt);
-      if (l0 == null) continue;
-      final l = a.onWater ? l0 + ReflectionRules.floatDrop() : l0;
-      final k = kindAt((a.x / ts).floor(), (l / ts).floor());
-      if (k == WaterKind.cave || k == WaterKind.none) continue;
-      cands.add((x: a.x, y: a.y, moving: a.moving));
-      lines.add(l);
-      keep.add(a);
-    }
-    final picked = ReflectionRules.pick(
-        cands, view.center.dx, view.center.dy, ReflectionRules.actorCap(high: hi));
-    for (final i in picked) {
-      final a = keep[i], l = lines[i];
-      p
-        ..save()
-        ..translate(0, (l + a.y).roundToDouble())
-        ..scale(1, -1);
-      a.draw(p);
-      p.restore();
-      _fadeBands(p, a.x - 16, 32, l, 48, water);
-    }
-    lastActors = picked.length;
     // Sky and clouds behind everything (§ 1.3).
     if (sky) _sky(p, view, t, darkness, cover, field);
     _fill.blendMode = BlendMode.srcOver;

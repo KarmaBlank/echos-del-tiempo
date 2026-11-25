@@ -7,6 +7,7 @@ import '../models/inventory_sort.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/player_profile.dart';
+import 'goods_rules.dart';
 import 'item_rules.dart';
 
 /// Inventario de casillas por personaje (loot.md § 4b): grilla de
@@ -276,6 +277,8 @@ class InventoryRules {
 
   /// Motivo por el que [p] no puede recibir [d], o `null` si puede.
   static String? cannotReceive(PlayerProfile p, LootDrop d) {
+    // Goods go to their own bags: they always fit (loot.md § 4c).
+    if (d.isGoods) return GoodsRules.give(p, d) == null ? 'No válido' : null;
     final st = d.stack;
     if (st != null) {
       // Las pilas tienen su sección: solo cuenta el tope.
@@ -355,6 +358,7 @@ class InventoryRules {
     if (it != null) return mark(addItem(p, it));
     final eco = d.eco;
     if (eco != null) return mark(addEco(p, eco));
+    if (d.isGoods) return GoodsRules.give(p, d);
     final st = d.stack!;
     return relayout(withStack(p, st, stackCount(p, st) + d.count));
   }

@@ -471,8 +471,6 @@
   "ui.town.events.quest": "{npc} quest: {objective}",
   "ui.town.events.quest_reward": "Reward: {gold} gold · +{rep} friendship",
   "ui.town.events.discount": "Prices −{n}%",
-  "ui.town.events.badge": "EVENT",
-  "ui.town.events.badge_n": "EVENTS ×{n}",
   "ui.town.events.cat.visitor": "VISITOR",
   "ui.town.events.cat.overworldNpc": "WANDERER",
   "ui.town.events.cat.echoPortal": "ECHO RIFT",
@@ -488,6 +486,7 @@
   "ui.town.events.enter": "ENTER",
   "ui.town.events.close": "CLOSE",
   "ui.town.events.prompt_rift": "[E] Echo rift",
+  "ui.town.events.prompt_fight": "[E/Click] Fight · {name}",
   "ui.town.events.progress": "Progress: {have}/{need}",
   "ui.town.events.trade_banner": "{name}: purchases cost {n}% less (refunded at checkout).",
   "ui.town.season.spring": "Spring",
@@ -834,5 +833,13 @@
   "ui.town.journal.recipe_missing": "Missing harvest for this recipe",
   "ui.town.compost.leaf_mulch": "Leaf mulch",
   "ui.town.compost.herb_compost": "Herb compost",
-  "ui.town.compost.mushroom_compost": "Mushroom compost"
+  "ui.town.compost.mushroom_compost": "Mushroom compost",
+  "ui.town.forge.fish_other_time": "Fish of the other time",
+  "ui.town.forge.fish_affinity": "Affinity: {v}",
+  "ui.town.forge.fish_split": "TAKE APART",
+  "ui.town.forge.fish_split_yield": "Yields {n} {part}",
+  "ui.town.forge.fish_split_hint": "Taking it apart uses up the fish (₵{gold}); the parts go to the forge by parts.",
+  "ui.town.forge.fish_parts_only": "An Epic fish can only be taken apart.",
+  "ui.town.forge.fish_split_level": "Needs Fishing {lv}",
+  "ui.town.forge.fish_split_none": "You don't have that fish"
 }

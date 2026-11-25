@@ -58,7 +58,7 @@ enum WorldPanel {
   /// Puesto del agropecuario (fishing.md § 5).
   trader,
 
-  /// The player's own stall (player_shop.md § 5), from the trader.
+  /// The player's own stall (player_shop.md § 5), from its town spot.
   stall,
 
   /// Fuente rúnica: mejoras del pueblo (farming.md § 6).
@@ -131,6 +131,9 @@ enum WorldPrompt {
   /// Puesto del agropecuario (fishing.md § 5).
   trader('[E] Agropecuario'),
 
+  /// The player's own stall in town (player_shop.md § 5).
+  stall('[E] Mi puesto'),
+
   /// Cartel del lago.
   sign('[E] Leer cartel'),
 
@@ -157,7 +160,11 @@ enum WorldPrompt {
 
   /// Frente a un punto de interés del piso (worldgen.md § 11.3). El texto
   /// real va en [SessionView.promptText].
-  poi('[E] Usar');
+  poi('[E] Usar'),
+
+  /// Something already used (a wilds chest or shrine today): grey, no
+  /// key; the text goes in [SessionView.promptText].
+  spent('Ya lo usaste');
 
   const WorldPrompt(this.label);
 

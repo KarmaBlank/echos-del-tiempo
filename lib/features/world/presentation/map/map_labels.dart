@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
@@ -6,7 +7,20 @@ import '../../../../app/theme/pixel_label.dart';
 import '../../../../app/theme/ui_theme.dart';
 import '../../../../core/settings/game_settings.dart' show MapLabelBackdrop;
 
+import '../../../../game_engine/data/tuning_catalog.dart';
+
 export '../../../../core/settings/game_settings.dart' show MapLabelBackdrop;
+
+/// Opacity of a world label (NPC, place, sign or object name) whose anchor
+/// is ([dx], [dy]) px from the local player, with [tile] px per tile: 1
+/// within `labelRevealTiles` (Balance › Pueblo), fading to 0 over one more
+/// tile (ui_style.md § "Etiquetas en el mundo"). Players' names do not use
+/// it: they always show.
+double worldLabelAlpha(double dx, double dy, double tile) {
+  final d = math.sqrt(dx * dx + dy * dy) / tile;
+  final range = tuning(TuningId.town).d('labelRevealTiles');
+  return (1 - (d - range)).clamp(0.0, 1.0);
+}
 
 /// Una etiqueta del mapa (nombre, cartel, aviso o loot del piso) anotada
 /// mientras se dibuja el mundo en el lienzo virtual y dibujada después en

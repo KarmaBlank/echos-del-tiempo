@@ -1913,6 +1913,7 @@ const _regionsLabels = {
   'reflTint': 'Reflejos: tinte hacia el color del agua',
   'reflRows': 'Reflejos: filas de orilla reflejadas',
   'reflActorReach': 'Reflejos: distancia al agua de actores y luces (tiles)',
+  'reflActorFadeTiles': 'Reflejos: fundido de actores al alejarse del agua (tiles)',
   'reflActorsHigh': 'Reflejos: actores como máximo (ALTA)',
   'reflActorsLow': 'Reflejos: actores como máximo (BAJA)',
   'reflWaveAmp': 'Reflejos: amplitud de la onda (px)',
@@ -1927,6 +1928,7 @@ const _regionsLabels = {
   'reflGlowLen': 'Reflejos: largo del brillo de una luz (px)',
   'reflGlowAlpha': 'Reflejos: opacidad del brillo de una luz',
   'reflBankAlpha': 'Reflejos: opacidad de la orilla reflejada',
+  'reflMaxLen': 'Reflejos: largo máximo de un reflejo (px)',
   'reflBankLip': 'Reflejos: alto de la orilla lisa reflejada (px)',
   'reflFloatDrop': 'Reflejos: bajada del reflejo de la balsa (px)',
   'reflDuskTint': 'Reflejos: tinte cálido del agua al atardecer',
@@ -1976,6 +1978,10 @@ const _regionsLabels = {
   'waystoneReach': 'Piedra de paso: distancia (px)',
   'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',
   'mapStartRadius': 'Mapa del exterior: radio conocido al llegar (tiles)',
+  'dungeonMapRevealRadius':
+      'Mapa de mazmorra: radio que revela cada jugador (tiles)',
+  'dungeonMapStartRadius':
+      'Mapa de mazmorra: radio conocido al llegar (tiles)',
   'caveScaleX': 'Caverna: × ancho del lago',
   'caveScaleY': 'Caverna: × alto del lago',
   'caveWallTiles': 'Caverna: grosor de la pared (tiles)',

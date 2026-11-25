@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import '../data/biomes_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/fog_of_war.dart';
+import '../models/game_map.dart';
+import '../models/game_session.dart';
 import '../models/world_save.dart';
 
 /// What the overworld map marks (biome_exploration.md § 11).
@@ -92,7 +94,13 @@ abstract final class MapDiscoveryRules {
 
   /// Marks the cells whose center is within [r] tiles of ([tx], [ty]);
   /// true if any was new.
-  static bool _reveal(Uint8List bits, double tx, double ty, double r) {
+  static bool _reveal(Uint8List bits, double tx, double ty, double r) =>
+      revealCells(bits, cols, rows, tx, ty, r);
+
+  /// [_reveal] on any [w] × [h] cell grid (overworld and dungeons).
+  static bool revealCells(
+      Uint8List bits, int w, int h, double tx, double ty, double r) {
+    final cols = w, rows = h;
     var changed = false;
     final c0 = ((tx - r) / cell).floor().clamp(0, cols - 1);
     final c1 = ((tx + r) / cell).floor().clamp(0, cols - 1);
@@ -162,5 +170,120 @@ abstract final class MapDiscoveryRules {
       out[i] = a[i] | b[i];
     }
     return out;
+  }
+}
+
+/// A floor goal of a dungeon map (biome_exploration.md § 11.8): always
+/// drawn, with the gold frame of the overworld goals.
+enum DungeonGoalKind { stairs, boss }
+
+class DungeonGoal {
+  const DungeonGoal(this.kind, this.x, this.y);
+  final DungeonGoalKind kind;
+
+  /// Tile.
+  final int x, y;
+}
+
+/// Dungeon map discovery (biome_exploration.md § 11.8): the same 4 × 4
+/// cells as the overworld, over the whole map (atlas: every floor lives in
+/// its own rectangle). Saved in `MissionRun.discovery`: per run, and with
+/// the dungeon for the persistent ones (persistent_dungeons.md § 2).
+abstract final class DungeonDiscoveryRules {
+  static TuningDef get t => MapDiscoveryRules.t;
+  static const cell = MapDiscoveryRules.cell;
+
+  static int cols(GameMap map) => (map.width + cell - 1) ~/ cell;
+  static int rows(GameMap map) => (map.height + cell - 1) ~/ cell;
+
+  /// Goals of floor [f] of [map] (stairs down, boss room).
+  static List<DungeonGoal> goals(GameMap map, int f) {
+    final fl = map.floor(f);
+    if (fl == null) return const [];
+    return [
+      if (fl.stairsDown case final p?)
+        DungeonGoal(
+            DungeonGoalKind.stairs, (p.x / 16).floor(), (p.y / 16).floor()),
+      // The boss room: only the boss floor (the other floors' arena
+      // strip holds the stairs).
+      if (fl.boss case final p?)
+        DungeonGoal(
+            DungeonGoalKind.boss, (p.x / 16).floor(), (p.y / 16).floor()),
+    ];
+  }
+
+  static final _start = Expando<(double, Uint8List)>('dungeon-start');
+
+  /// Cells known from the start (not saved): around each floor's arrival
+  /// and its goals, `dungeonMapStartRadius` tiles.
+  static Uint8List startCells(GameMap map) {
+    final r = t.d('dungeonMapStartRadius');
+    final hit = _start[map];
+    if (hit != null && hit.$1 == r) return hit.$2;
+    final w = cols(map), h = rows(map);
+    final out = Uint8List(w * h);
+    void at(double tx, double ty) =>
+        MapDiscoveryRules.revealCells(out, w, h, tx, ty, r);
+    if (map.floors.isEmpty) {
+      at(map.spawn.x / 16, map.spawn.y / 16);
+    }
+    for (final f in map.floors) {
+      at(f.spawn.x / 16, f.spawn.y / 16);
+      if (f.returnPoint case final p?) at(p.x / 16, p.y / 16);
+      for (final g in goals(map, f.index)) {
+        at(g.x + 0.5, g.y + 0.5);
+      }
+    }
+    _start[map] = (r, out);
+    return out;
+  }
+
+  /// The saved cells of [m] (all zero if none / another map).
+  static Uint8List saved(MissionRun m, GameMap map) {
+    final n = cols(map) * rows(map);
+    if (m.discovery.length != n) m.discovery = Uint8List(n);
+    return m.discovery;
+  }
+
+  /// Reveals around [players] (px) into [m]; true if any cell was new
+  /// (then `discoveryRev` goes up).
+  static bool reveal(
+      MissionRun m, GameMap map, Iterable<(double, double)> players) {
+    final r = t.d('dungeonMapRevealRadius');
+    final bits = saved(m, map);
+    final w = cols(map), h = rows(map);
+    var changed = false;
+    for (final (x, y) in players) {
+      if (MapDiscoveryRules.revealCells(bits, w, h, x / 16, y / 16, r)) {
+        changed = true;
+      }
+    }
+    if (changed) m.discoveryRev++;
+    return changed;
+  }
+
+  static final _known = Expando<(Object, Uint8List)>('dungeon-known');
+
+  /// Start area ∪ discovered, one byte per cell (for the map mask);
+  /// cached by the run's revision.
+  static Uint8List known(MissionRun m, GameMap map) {
+    final key = (m.missionId, m.seed, m.discoveryRev, m.discovery.length);
+    final hit = _known[map];
+    if (hit != null && hit.$1 == key) return hit.$2;
+    final a = startCells(map), b = saved(m, map);
+    final out = Uint8List(a.length);
+    for (var i = 0; i < out.length; i++) {
+      out[i] = a[i] | b[i];
+    }
+    _known[map] = (key, out);
+    return out;
+  }
+
+  /// Tile ([tx], [ty]) is known.
+  static bool knownTile(MissionRun m, GameMap map, int tx, int ty) {
+    final w = cols(map), h = rows(map);
+    final cx = tx ~/ cell, cy = ty ~/ cell;
+    if (tx < 0 || ty < 0 || cx >= w || cy >= h) return false;
+    return known(m, map)[cy * w + cx] != 0;
   }
 }

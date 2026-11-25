@@ -471,8 +471,6 @@
   "ui.town.events.quest": "Misión de {npc}: {objective}",
   "ui.town.events.quest_reward": "Premio: {gold} oro · +{rep} relación",
   "ui.town.events.discount": "Precios −{n}%",
-  "ui.town.events.badge": "EVENTO",
-  "ui.town.events.badge_n": "EVENTOS ×{n}",
   "ui.town.events.cat.visitor": "VISITANTE",
   "ui.town.events.cat.overworldNpc": "VIAJERO",
   "ui.town.events.cat.echoPortal": "GRIETA DE ECO",
@@ -488,6 +486,7 @@
   "ui.town.events.enter": "ENTRAR",
   "ui.town.events.close": "CERRAR",
   "ui.town.events.prompt_rift": "[E] Grieta de eco",
+  "ui.town.events.prompt_fight": "[E/Clic] Enfrentar · {name}",
   "ui.town.events.progress": "Progreso: {have}/{need}",
   "ui.town.events.trade_banner": "{name}: lo que compres sale {n}% menos (se devuelve al pagar).",
   "ui.town.season.spring": "Primavera",
@@ -834,5 +833,13 @@
   "ui.town.journal.recipe_missing": "Faltan cosechas para esta receta",
   "ui.town.compost.leaf_mulch": "Mantillo de hojas",
   "ui.town.compost.herb_compost": "Compost de hierbas",
-  "ui.town.compost.mushroom_compost": "Compost de hongos"
+  "ui.town.compost.mushroom_compost": "Compost de hongos",
+  "ui.town.forge.fish_other_time": "Pez del otro tiempo",
+  "ui.town.forge.fish_affinity": "Afinidad: {v}",
+  "ui.town.forge.fish_split": "DESARMAR",
+  "ui.town.forge.fish_split_yield": "Rinde {n} {part}",
+  "ui.town.forge.fish_split_hint": "Desarmar consume el pez (₵{gold}); las piezas van a la forja por piezas.",
+  "ui.town.forge.fish_parts_only": "Un pez Épico solo se desarma.",
+  "ui.town.forge.fish_split_level": "Pide Pesca {lv}",
+  "ui.town.forge.fish_split_none": "No tenés ese pez"
 }

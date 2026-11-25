@@ -39,10 +39,8 @@
   "ui.world.map.legend.group_goals": "目标",
   "ui.world.map.legend.group_optional": "可选",
   "ui.world.map.legend.group_party": "队伍",
-  "ui.world.map.travel_to_stone": "",
   "ui.world.map.title": "",
   "ui.world.map.center": "",
-  "ui.world.map.travel_button": "",
   "ui.world.map.close": "",
   "ui.world.map.choose_hint": "",
   "ui.world.map.controls": "",
@@ -210,6 +208,7 @@
   "ui.world.prompt.lostLoot": "",
   "ui.world.prompt.fishing": "",
   "ui.world.prompt.trader": "",
+  "ui.world.prompt.stall": "[E] 我的摊位",
   "ui.world.prompt.sign": "",
   "ui.world.prompt.helper": "",
   "ui.world.prompt.chest": "",
@@ -364,24 +363,8 @@
     "text": "传送石",
     "status": "draft"
   },
-  "ui.world.way.help": {
-    "text": "在地图上选择已激活的传送石，然后按传送。",
-    "status": "draft"
-  },
-  "ui.world.way.go": {
-    "text": "传送",
-    "status": "draft"
-  },
-  "ui.world.way.here": {
-    "text": "此处",
-    "status": "draft"
-  },
   "ui.world.way.unknown": {
     "text": "尚未发现",
-    "status": "draft"
-  },
-  "ui.world.way.unknown_tip": {
-    "text": "从旁边经过即可发现它，之后就能传送到这里。",
     "status": "draft"
   },
   "ui.world.way.site_entrance": {
@@ -401,7 +384,7 @@
     "status": "draft"
   },
   "ui.world.forage.prompt": {
-    "text": "[按住 E] 采集 {name}",
+    "text": "[按住 E/点击] 采集 {name}",
     "status": "draft"
   },
   "ui.world.forage.regrow": {
@@ -645,26 +628,34 @@
     "status": "draft"
   },
   "ui.world.wild.prompt_chest": {
-    "text": "[E] 打开宝箱",
+    "text": "[E/点击] 打开宝箱",
     "status": "draft"
   },
   "ui.world.wild.prompt_shrine": {
-    "text": "[E] 祈求祝福",
+    "text": "[E/点击] 接受祝福（金币 + 稀有材料）",
     "status": "draft"
   },
   "ui.world.wild.prompt_done": {
-    "text": "今天已经用过了：明天会恢复",
+    "text": "今天已经用过了 · 明天刷新",
     "status": "draft"
   },
   "ui.world.raft.prompt_board": "[E] 登上木筏",
   "ui.world.raft.prompt_leave": "[E] 上岸",
   "ui.world.raft.prompt_fish": "[E] 在木筏上钓鱼",
   "ui.world.cozy.search_prompt": {
-    "text": "[按住 E] 搜索树木",
+    "text": "[按住 E/点击] 搜索树木",
     "status": "draft"
   },
   "ui.world.cozy.searched": {
     "text": "今天已经搜索过这棵树",
+    "status": "draft"
+  },
+  "ui.world.prompt.spent": {
+    "text": "已经用过了",
+    "status": "draft"
+  },
+  "ui.world.loot.gold": {
+    "text": "{n} 金币",
     "status": "draft"
   }
 }

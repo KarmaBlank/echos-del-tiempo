@@ -106,6 +106,9 @@ Elipse con borde irregular (dos armónicos), radios entre
 
 ## 4. Piedras de paso
 
+> v0.49.9: `BiomeLayout.version` 4 regenera los exteriores de todo mundo
+> guardado; las piedras activadas se pierden (ver biome_exploration.md § 7).
+
 - Una en la **entrada** (junto al camino principal, cerca de la llegada),
   una por **lago** (junto a su `approach`) y una por **boca de mina**.
   Tile `W` de siempre; activada se le prende la runa (solo para quien la
@@ -115,17 +118,19 @@ Elipse con borde irregular (dos armónicos), radios entre
 - E frente a una (a `waystoneReach` px): si no está activa, se activa
   (acción `way {i}`) y se abre el menú **PIEDRAS DE PASO**. La de la
   entrada está activa siempre.
-- Menú (v0.48.5): el **mapa grande de la región** (`FullMap`, el mismo
-  de las piedras de paso de las mazmorras, worldgen.md § 11.4) en *modo
-  elegir* (`FullMapPick`): las piedras marcadas con su número
-  (activas en cian; desde el protocolo 90 las no activadas solo aparecen, en
+- Menú (v0.48.5; v0.49.11 sin detalle ni botón): el **mapa grande de
+  la región** (`FullMap`, el mismo de las piedras de paso de las
+  mazmorras, worldgen.md § 11.4) con `FullMapPick` (solo da el nombre):
+  las piedras sin número (activas en cian, las otras activas laten y la
+  de acá queda fija con marco dorado: exploration.md § Piedras de paso
+  en el mapa; desde el protocolo 90 las no activadas solo aparecen, en
   gris "Sin descubrir", si están en terreno ya descubierto:
-  biome_exploration.md § 11.4); pasar el mouse
-  muestra su nombre (tooltip), clic la elige (no viaja todavía) y a la
-  derecha va su detalle con **VIAJAR** (gris si es la de acá o no está
-  activa; Tab / número eligen, Enter viaja). Abre con la piedra de acá
-  elegida. Vista previa: `docs/preview/waystone_map.png`
-  (`WAYSTONE_MAP_PREVIEW=1`). VIAJAR manda
+  biome_exploration.md § 11.4). Pasar el mouse muestra su nombre
+  (tooltip). **Clic en otra piedra activa viaja enseguida** (no hay paso
+  de elegir y después VIAJAR, ni panel de detalle); clic en la de acá o
+  en una sin descubrir no hace nada; Tab rota el resaltado y Enter
+  viaja. Vista previa: `docs/preview/waystone_map.png`
+  (`WAYSTONE_MAP_PREVIEW=1`). El clic manda (como antes VIAJAR)
   `way {i: desde, to: hasta}`; el anfitrión valida que estés junto a una
   piedra activa y que el destino esté activo, y mueve **solo a ese
   jugador** al camino junto a la piedra destino.
@@ -189,6 +194,12 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - Bajo techo en una región de día: sombra de cueva (imagen cacheada).
 
 ### 7.2.1 Grutas techadas (exteriores)
+
+- (v0.49.9) En un exterior de región solo hay haces en los tragaluces
+  bajo techo (`skylights` con `isIndoor`); las aberturas por hash del
+  tema (`kLightShaftThemes`, p. ej. `cavernas_ext`) ya no se aplican a
+  las regiones: ponían luces de haz sobre pasto abierto y de noche un
+  punto del claro se iluminaba "como una cueva".
 - **Caverna del lago de cueva** (v0.48.2): el sitio del lago se une con
   el sitio del medio de arriba; la caverna es una mancha orgánica (tres
   armónicos + ruido por tile) de `caveScaleX/Y` × los radios del lago,

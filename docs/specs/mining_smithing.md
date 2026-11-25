@@ -91,7 +91,9 @@ FNV de `<mundo>|<bioma>|<i>|<nivel>`; **ya no cambia por semana**).
   que lo hondo sea más rico.
 - **Hallazgos ocultos**: gruta secreta sellada (`secretChance`) con gemas
   y, con `relicChance`, un **cofre reliquia magitec** (`U`); en las
-  cámaras, cofres (`$`), hongos (`y`, dan fibra) y la **piedra con
+  cámaras, cofres (`$`; al abrirlos el oro, el botín y a veces una
+  semilla de arma **caen al piso** sobre el cofre, loot.md § 4c), hongos
+  (`y`, dan fibra) y la **piedra con
   inscripción** (`&`; frases `ui.world.mine.lore.<n>`, **BORRADOR**).
 - PNJ ocasional como en v1. **Sin enemigos**: la mina es un mapa lobby.
 - Arte: tiles auto-ajustados (borde según vecinos) en

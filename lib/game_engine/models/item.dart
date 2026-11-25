@@ -420,6 +420,8 @@ class ItemInstance {
     this.name,
     this.ultId,
     this.element,
+    this.parts = const [],
+    this.masterwork = false,
   });
 
   /// Común sin nada: lo que era un id de arma en el inventario viejo.
@@ -479,6 +481,20 @@ class ItemInstance {
   /// (`weaponElementOf`). JSON `el`.
   final GameElement? element;
 
+  /// Profession gear v2 (profession_gear_v2.md § 7): the materials it was
+  /// made of (`[base, head, grip, setting?]`, or `['living', <element>]`,
+  /// `['fish', <species>]`, `['v1', <element>]`). Empty = not v2. JSON `pt`.
+  final List<String> parts;
+
+  /// Masterwork (§ 2): one mod over the rarity's maximum. JSON `mw`.
+  final bool masterwork;
+
+  /// Mods this item can hold: the rarity's maximum (+1 if masterwork).
+  int get modCap => rarity.maxMods + (masterwork ? 1 : 0);
+
+  /// Mods per side (prefix / suffix) for [modCap].
+  int get sideCap => (modCap + 1) ~/ 2;
+
   static const maxPassiveLevel = 5;
 
   int get forgeLevel => forge.total;
@@ -505,6 +521,8 @@ class ItemInstance {
     bool clearUlt = false,
     GameElement? element,
     bool clearElement = false,
+    List<String>? parts,
+    bool? masterwork,
   }) =>
       ItemInstance(
         uid: uid ?? this.uid,
@@ -521,6 +539,8 @@ class ItemInstance {
         name: name ?? this.name,
         ultId: clearUlt ? null : ultId ?? this.ultId,
         element: clearElement ? null : element ?? this.element,
+        parts: parts ?? this.parts,
+        masterwork: masterwork ?? this.masterwork,
       );
 
   // ------------------------------------------------------------------
@@ -542,6 +562,8 @@ class ItemInstance {
         if (name != null) 'n': name,
         if (ultId != null) 'ul': ultId,
         if (element != null) 'el': element!.name,
+        if (parts.isNotEmpty) 'pt': parts,
+        if (masterwork) 'mw': 1,
       };
 
   /// Lectura tolerante: `null` si falta lo esencial (uid y base). No
@@ -583,6 +605,10 @@ class ItemInstance {
       name: raw['n'] is String ? raw['n'] as String : null,
       ultId: raw['ul'] is String ? raw['ul'] as String : null,
       element: _elementByName(raw['el']),
+      parts: raw['pt'] is List
+          ? [for (final x in raw['pt'] as List) if (x is String) x]
+          : const [],
+      masterwork: raw['mw'] == 1 || raw['mw'] == true,
     );
   }
 
@@ -613,7 +639,9 @@ class ItemInstance {
       other.uniqueId == uniqueId &&
       other.name == name &&
       other.ultId == ultId &&
-      other.element == element;
+      other.element == element &&
+      _listEq(other.parts, parts) &&
+      other.masterwork == masterwork;
 
   @override
   int get hashCode => Object.hash(uid, baseId, rarity, itemLevel,

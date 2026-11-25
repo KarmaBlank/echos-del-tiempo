@@ -118,14 +118,14 @@ class OverworldOverlay {
   final bool Function(int zone)? entranceOpen;
   final bool Function(int stone)? waystoneActive;
 
-  bool knownTile(int tx, int ty) {
-    final cx = tx ~/ MapDiscoveryRules.cell, cy = ty ~/ MapDiscoveryRules.cell;
-    if (tx < 0 || ty < 0) return false;
-    if (cx >= MapDiscoveryRules.cols || cy >= MapDiscoveryRules.rows) {
-      return false;
-    }
-    return known[cy * MapDiscoveryRules.cols + cx] != 0;
-  }
+  /// The shared discovery mask (same fog drawing as the dungeons).
+  DiscoveryMask get mask => DiscoveryMask(
+      known: known,
+      cols: MapDiscoveryRules.cols,
+      rows: MapDiscoveryRules.rows,
+      cacheKey: cacheKey);
+
+  bool knownTile(int tx, int ty) => mask.knownTile(tx, ty);
 
   /// Colour of an optional mark.
   static Color color(OverworldMarkKind k) => MapPalette.mark(switch (k) {
@@ -138,6 +138,41 @@ class OverworldOverlay {
         OverworldMarkKind.dock => MapMark.dock,
         OverworldMarkKind.resident => MapMark.resident,
       });
+}
+
+/// A map discovery mask (biome_exploration.md § 11.4 / § 11.8): one byte
+/// per [MapDiscoveryRules.cell] cell over a [cols] × [rows] grid, 1 =
+/// known. Overworld and dungeons draw their fog from it.
+class DiscoveryMask {
+  const DiscoveryMask(
+      {required this.known,
+      required this.cols,
+      required this.rows,
+      required this.cacheKey});
+
+  final Uint8List known;
+  final int cols, rows;
+
+  /// Changes whenever [known] changes (the fog picture is cached by it;
+  /// compared with `==`).
+  final Object cacheKey;
+
+  bool knownTile(int tx, int ty) {
+    if (tx < 0 || ty < 0) return false;
+    final cx = tx ~/ MapDiscoveryRules.cell, cy = ty ~/ MapDiscoveryRules.cell;
+    if (cx >= cols || cy >= rows) return false;
+    return known[cy * cols + cx] != 0;
+  }
+}
+
+/// The dungeon layer of the minimap / big map (biome_exploration.md
+/// § 11.8): discovery mask and the floor goals (always drawn, gold frame).
+class DungeonOverlay {
+  const DungeonOverlay({required this.mask, required this.goals});
+  final DiscoveryMask mask;
+
+  /// Goals of the current floor.
+  final List<DungeonGoal> goals;
 }
 
 /// Vacío en el minimapa con el tema AZUL (como el fondo fuera del mapa).
@@ -167,7 +202,11 @@ class Minimap extends StatelessWidget {
     this.fog,
     this.exit,
     this.overworld,
+    this.dungeon,
   });
+
+  /// Dungeon discovery layer (§ 11.8); `null` outside mission floors.
+  final DungeonOverlay? dungeon;
 
   /// Overworld biome layer (biome_exploration.md § 11); `null` elsewhere.
   final OverworldOverlay? overworld;
@@ -261,8 +300,8 @@ final _fogCache = Expando<(int, ui.Picture)>('niebla');
 
 final _bossStar = <(bool, double), TextPainter>{};
 
-/// Overworld discovery mask (1 px per cell) by its key.
-(Object, ui.Picture)? _overworldMask;
+/// Discovery fog picture (1 px per cell) by its mask key.
+(Object, ui.Picture)? _discoveryFogCache;
 
 class _MinimapPainter extends CustomPainter {
   _MinimapPainter(this.w, this.v);
@@ -362,10 +401,11 @@ class _MinimapPainter extends CustomPainter {
       canvas.restore();
     }
     final ow = w.overworld;
-    if (ow != null) {
+    final dg = w.dungeon;
+    if ((ow?.mask ?? dg?.mask) case final mask?) {
       canvas.save();
       canvas.scale(cell * MapDiscoveryRules.cell);
-      canvas.drawPicture(_overworldFog(ow));
+      canvas.drawPicture(_discoveryFog(mask));
       canvas.restore();
     }
     canvas.restore();
@@ -373,10 +413,13 @@ class _MinimapPainter extends CustomPainter {
     // Con niebla: lo no explorado no se marca y los enemigos (no los
     // jefes) solo se ven si están a la vista en este cuadro.
     int tile(double px) => (px / _ts).floor();
+    // Dungeon discovery (§ 11.8): only discovered cells show content.
+    bool mapped(double px, double py) =>
+        dg == null || dg.mask.knownTile(tile(px), tile(py));
     bool known(double px, double py) =>
-        fog == null || fog.explored(tile(px), tile(py));
+        mapped(px, py) && (fog == null || fog.explored(tile(px), tile(py)));
     bool inSight(double px, double py) =>
-        fog == null || fog.visible(tile(px), tile(py));
+        mapped(px, py) && (fog == null || fog.visible(tile(px), tile(py)));
 
     final p = Paint()..isAntiAlias = false;
     final x0 = math.max(b.x, v.left.floor());
@@ -387,6 +430,7 @@ class _MinimapPainter extends CustomPainter {
       for (var x = x0; x < x1; x++) {
         if (map.tileAt(x, y) != Tile.gate) continue;
         if (fog != null && !fog.explored(x, y)) continue;
+        if (dg != null && !dg.mask.knownTile(x, y)) continue;
         p.color = s.gateOpen ? MapPalette.good : MapPalette.bad;
         canvas.drawRect(Rect.fromLTWH(x * cell, y * cell, cell, cell), p);
       }
@@ -462,6 +506,7 @@ class _MinimapPainter extends CustomPainter {
             break;
         }
       }
+      if (dg != null) _dungeonGoals(canvas, p, dg, dk);
       if (w.exit case final ex?) {
         dot(ex.dx, ex.dy, MapPalette.mark(MapMark.stairs), 3);
       }
@@ -546,17 +591,35 @@ class _MinimapPainter extends CustomPainter {
     }
   }
 
-  /// Unknown overworld cells covered with the void colour (1 px per
-  /// cell), rebuilt only when the discovery changes.
-  ui.Picture _overworldFog(OverworldOverlay ow) {
-    final cached = _overworldMask;
+  /// Dungeon goals (§ 11.8): a 3-tile square with the gold frame of the
+  /// overworld goals, always drawn (the way on is never hidden).
+  void _dungeonGoals(Canvas canvas, Paint p, DungeonOverlay dg, double dk) {
+    const cell = Minimap.baseCell;
+    final f = math.max(1.0, 1.5 * dk);
+    for (final g in dg.goals) {
+      final r = Rect.fromLTWH(
+          (g.x - 1) * cell, (g.y - 1) * cell, cell * 3, cell * 3);
+      p.color = MapPalette.mark(MapMark.outline);
+      canvas.drawRect(r.inflate(f * 2), p);
+      p.color = MapPalette.mark(MapMark.goal);
+      canvas.drawRect(r.inflate(f), p);
+      p.color = MapPalette.mark(
+          g.kind == DungeonGoalKind.stairs ? MapMark.stairs : MapMark.boss);
+      canvas.drawRect(r, p);
+    }
+  }
+
+  /// Unknown cells covered with the void colour (1 px per cell), rebuilt
+  /// only when the discovery changes (overworld and dungeons).
+  ui.Picture _discoveryFog(DiscoveryMask ow) {
+    final cached = _discoveryFogCache;
     if (cached != null && cached.$1 == ow.cacheKey) return cached.$2;
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     final p = Paint()
       ..isAntiAlias = false
       ..color = kMinimapVoid;
-    final w = MapDiscoveryRules.cols, h = MapDiscoveryRules.rows;
+    final w = ow.cols, h = ow.rows;
     for (var y = 0; y < h; y++) {
       var x = 0;
       while (x < w) {
@@ -575,7 +638,7 @@ class _MinimapPainter extends CustomPainter {
       }
     }
     final pic = rec.endRecording();
-    _overworldMask = (ow.cacheKey, pic);
+    _discoveryFogCache = (ow.cacheKey, pic);
     return pic;
   }
 

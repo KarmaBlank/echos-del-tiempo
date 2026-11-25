@@ -55,8 +55,11 @@ SessionEngine sessionEngine({
   // las prenden.
   bool achievements = false,
   bool freeMovement = false,
+  // Botín en el piso (loot.md § 4): el juego real lo prende.
+  bool groundLoot = false,
 }) =>
     SessionEngine(
+      groundLoot: groundLoot,
       maxPlayers: maxPlayers,
       achievementsEnabled: achievements,
       battles: BattleEngine(stats: statsCalc, random: rolls(battleRolls)),

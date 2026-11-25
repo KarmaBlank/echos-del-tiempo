@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -6,6 +7,7 @@ import '../../game_engine/models/item.dart' show Rarity;
 import 'item_icon_rows.dart';
 import 'procedural_art.dart';
 import 'weapon_look.dart';
+import 'weapon_parts.dart';
 
 export 'item_icon_rows.dart';
 
@@ -48,6 +50,7 @@ class ItemIconPainter extends CustomPainter {
       return;
     }
     paintItemIconPng(canvas, r, png, ItemIconImages.accent(pngKey!), accent);
+    if (look != null) paintPartColors(canvas, r, pngKey!, look!);
     // Identidad del arma (aura, destello, ULT) encima del PNG.
     if (look != null) {
       paintItemIcon(canvas, r, rows, accent, p, look: look, base: false);
@@ -85,10 +88,25 @@ abstract final class ItemIconImages {
       ? _accent[key.substring(0, key.length - 7)] = img
       : _base[key] = img;
 
+  static final _head = <String, Uint8List>{};
+  static final _grip = <String, Uint8List>{};
+
+  /// Registers the RGBA pixels (16 × 16) of the recolour layer [key]
+  /// (`<shape>_head` / `<shape>_grip`, profession_gear_v2.md § 6).
+  static void putLayer(String key, Uint8List rgba) {
+    if (key.endsWith('_head')) _head[key.substring(0, key.length - 5)] = rgba;
+    if (key.endsWith('_grip')) _grip[key.substring(0, key.length - 5)] = rgba;
+  }
+
+  static Uint8List? head(String key) => _head[key];
+  static Uint8List? grip(String key) => _grip[key];
+
   static void clear() {
     _base.clear();
     _accent.clear();
     _gear.clear();
+    _head.clear();
+    _grip.clear();
   }
 
   static ui.Image? base(String key) => _base[key];
@@ -96,6 +114,33 @@ abstract final class ItemIconImages {
 
   /// Clave del PNG de una forma (`báculo` → `baculo`).
   static String keyOf(String shape) => shape.replaceAll('á', 'a');
+}
+
+/// Recolours the head / grip of the PNG icon [key] already drawn in [r]
+/// with the material colours of [look] (profession_gear_v2.md § 6). With
+/// default materials (no colour) nothing is drawn: the PNG stays exact.
+void paintPartColors(Canvas canvas, Rect r, String key, WeaponLook look) {
+  if (look.headColor == null && look.gripColor == null) return;
+  final side = r.shortestSide;
+  final px = side / 16;
+  final ox = r.center.dx - side / 2, oy = r.center.dy - side / 2;
+  final paint = Paint()..isAntiAlias = false;
+  void layer(Uint8List? l, int? color) {
+    if (l == null || color == null) return;
+    final ramp = rampOf(color);
+    for (var i = 0; i < 256 && i * 4 + 3 < l.length; i++) {
+      if (l[i * 4 + 3] == 0) continue;
+      final t = toneOfGrey(l[i * 4]);
+      if (t == null) continue;
+      paint.color = Color(0xFF000000 | ramp[t]);
+      canvas.drawRect(
+          Rect.fromLTWH(ox + (i % 16) * px, oy + (i ~/ 16) * px, px, px),
+          paint);
+    }
+  }
+
+  layer(ItemIconImages.head(key), look.headColor);
+  layer(ItemIconImages.grip(key), look.gripColor);
 }
 
 /// Dibuja el PNG [base] en [r] sin difuminado y encima el acento [mask]

@@ -76,7 +76,12 @@ parche de balance puede tocar.
 
 ## 5. UI
 
-Botón **MI PUESTO** en el AGROPECUARIO (abre `WorldPanel.stall`). Panel
+Lugar **MI PUESTO** del pueblo (`TownSpot.stall`, mostrador de 2 tiles
+sobre el camino sur, en (19, 15) del pueblo base; lugar tardío:
+en un pueblo guardado antes va al hueco libre más cercano). Cerca
+aparece `[E] Mi puesto` y E abre `WorldPanel.stall`. Desde v0.49.12 el
+panel del vendedor ya no tiene botón MI PUESTO (salía con cualquier
+vendedor y confundía). Panel
 con pestañas (nunca secciones apiladas):
 
 - **MI PUESTO:** grilla con lo publicado (cantidad y precio) y, con un

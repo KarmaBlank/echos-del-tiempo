@@ -24,6 +24,11 @@ discretos.
    reflejo de la balsa y su jinete se lee debajo. Se
    reflejan como mucho `reflActorsHigh` (ALTA) o `reflActorsLow` (BAJA),
    los más cercanos al centro de la vista.
+   **Fundido por distancia**: la opacidad del reflejo es un smoothstep de
+   la distancia continua (px, sin redondear a tile) del pie a la línea
+   del agua: 1 en la orilla, 0 a `reflActorReach` + `reflActorFadeTiles`
+   tiles (`ReflectionRules.actorFade`). Al acercarse aparece de a poco y
+   al alejarse se desvanece; nunca se prende ni se apaga de golpe.
 2. **Orilla**: los tiles de tierra de las `reflRows` filas sobre el agua
    (árboles y matas procedurales, casas, faroles, piedras de paso,
    rocas, y la propia orilla), volteados respecto de la línea del agua
@@ -55,6 +60,19 @@ discretos.
    agua (o de la balsa) las tiras se rompen: más desplazamiento
    (`reflWakeAmp`) dentro de `reflWakeRadius` px, más espuma de 1 px en
    la estela de la balsa.
+
+### 1.6 Anclaje a la orilla (v0.49.9)
+
+- Solo se reflejan props y actores cuya base está JUSTO sobre el agua
+  (`reflRows` = `reflActorReach` = 1): un árbol a 2 tiles del agua no
+  se refleja (antes aparecía "flotando" en el medio del lago).
+- El reflejo se voltea sobre la base y la base reflejada cae en la
+  primera fila de agua de esa columna: sin hueco. Largo máximo
+  `reflMaxLen` (24 px = 1.5 tiles), desvanecido rápido.
+- Los desvanecidos de cada actor solo tocan píxeles del actor: la
+  textura de la orilla se dibuja detrás (`dstOver`), así no queda un
+  rectángulo de agua más clara alrededor del actor. El borde de la
+  orilla lisa es de `reflBankLip` = 2 px.
 
 ## 2. Tipos de agua
 

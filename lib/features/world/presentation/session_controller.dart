@@ -1369,6 +1369,9 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearTrader => townSpot == TownSpot.trader;
   bool get nearSign => townSpot == TownSpot.sign;
 
+  /// In front of the player's own stall (player_shop.md § 5).
+  bool get nearStall => townSpot == TownSpot.stall;
+
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
     final p = _s?.players[localId]?.profile;
@@ -2072,15 +2075,23 @@ class SessionController extends StateNotifier<SessionView?> {
     if (s == null || s.mode != SessionMode.lobby || lay == null) {
       return null;
     }
+    // Nearest bush in reach, a grown one first: a picked bush never
+    // hides the ripe one beside it.
+    int? best;
+    var bestScore = double.infinity;
     for (var i = 0; i < lay.forage.length; i++) {
       final f = lay.forage[i];
-      if (WorldRules.distance(local.x, local.y, (f.x + 0.5) * 16,
-              (f.y + 0.5) * 16) <
-          24) {
-        return i;
+      final d = WorldRules.distance(
+          local.x, local.y, (f.x + 0.5) * 16, (f.y + 0.5) * 16);
+      if (d >= 24) continue;
+      final score = d +
+          (BiomeRules.regrowIn(town, lay.id, i, s.time) > 0 ? 1e6 : 0);
+      if (score < bestScore) {
+        bestScore = score;
+        best = i;
       }
     }
-    return null;
+    return best;
   }
 
   String forageHint(int i) {
@@ -2182,14 +2193,20 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final lay = biomeLayout(s?.place);
     if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
-    for (final (list, shrine) in [(lay.chestSpots, false), (lay.shrines, true)]) {
-      for (var i = 0; i < list.length; i++) {
-        final (x, y) = list[i];
-        final dx = (x + 0.5) * 16 - local.x, dy = (y + 0.5) * 16 - local.y;
-        if (dx * dx + dy * dy <= 26 * 26) return (i, shrine);
-      }
-    }
-    return null;
+    return WildLootRules.nearest(lay, town, _me, local.x, local.y);
+  }
+
+  /// Click on tile ([tx], [ty]): uses the wilds chest / shrine there if
+  /// it is the one in reach (same as E).
+  bool clickWildLoot(int tx, int ty) {
+    final near = nearWildLoot;
+    final lay = biomeLayout(_s?.place);
+    if (near == null || lay == null) return false;
+    final (i, shrine) = near;
+    final spot = (shrine ? lay.shrines : lay.chestSpots)[i];
+    if (spot != (tx, ty)) return false;
+    useWildLoot(i, shrine: shrine);
+    return true;
   }
 
   /// E on a wilds chest / shrine.
@@ -2292,6 +2309,33 @@ class SessionController extends StateNotifier<SessionView?> {
         }
       }
     });
+  }
+
+  /// A mouse press on [tile] (no tool in hand): hold-to-gather the bush
+  /// in reach on / next to it or the tree faced there, or harvest a ripe
+  /// plot (cozy_life.md § 3). Releasing ends it ([gatherHoldEnd]).
+  /// Returns whether the press was used.
+  bool gatherPress((int, int) tile) {
+    final s = _s;
+    if (s == null || _panel != null || s.mode != SessionMode.lobby) {
+      return false;
+    }
+    final lay = biomeLayout(s.place);
+    if (lay != null) {
+      if (nearForage case final i?) {
+        final f = lay.forage[i];
+        if ((f.x - tile.$1).abs() <= 1 && (f.y - tile.$2).abs() <= 1) {
+          gatherHoldStart(forage: i);
+          return true;
+        }
+      }
+      if (facingTree case final t? when t == tile) {
+        gatherHoldStart(tree: t);
+        return true;
+      }
+    }
+    if (farmTile == tile && farmOp == FarmOp.harvest) return farmWork();
+    return false;
   }
 
   void gatherHoldEnd() {
@@ -3678,6 +3722,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
+      } else if (nearStall) {
+        openPanel(WorldPanel.stall);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
@@ -3687,7 +3733,13 @@ class SessionController extends StateNotifier<SessionView?> {
         // quien la protagoniza (npc_editor.md § 6.4).
         openCustomNpc(n.def.id);
       } else if (nearWorldEvent case final a?) {
-        openWorldEvent(a);
+        final d = kWorldEvents.def(a.def);
+        // A roaming foe fights on E, no talk (biome_exploration.md § 6).
+        if (d != null && !WorldEventRules.talks(d)) {
+          enterRift(a.uid);
+        } else {
+          openWorldEvent(a);
+        }
       } else if (nearNpc case final n?) {
         talkNpc = n;
         openPanel(WorldPanel.biomeNpc);
@@ -4709,6 +4761,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final it = d.item;
     if (it != null) return localItemName(engine.progression.items, it);
     if (d.eco != null) return 'Eco';
+    if (d.isGoods) return localGoodsName(d);
     return '${d.count} ${d.stack!.label}';
   }
 
@@ -5419,6 +5472,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearEcoPortal != null) return (WorldPrompt.ecoZone, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
+    if (nearStall) return (WorldPrompt.stall, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));
@@ -5432,7 +5486,10 @@ class SessionController extends StateNotifier<SessionView?> {
         WorldPrompt.poi,
         d?.category == WorldEventCategory.echoPortal
             ? strings.t('ui.town.events.prompt_rift')
-            : strings.t('ui.world.ctl.prompt_talk',
+            : d != null && !WorldEventRules.talks(d)
+                ? strings.t('ui.town.events.prompt_fight',
+                    {'name': d.title.text})
+                : strings.t('ui.world.ctl.prompt_talk',
                 {'name': d?.title.text ?? a.def})
       );
     }
@@ -5458,8 +5515,9 @@ class SessionController extends StateNotifier<SessionView?> {
       final lay = biomeLayout(_s?.place);
       final done = lay != null &&
           WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
+      // Used today: a grey line, no key (biome_exploration.md § 3.4).
       return (
-        WorldPrompt.poi,
+        done ? WorldPrompt.spent : WorldPrompt.poi,
         strings.t(done
             ? 'ui.world.wild.prompt_done'
             : shrine

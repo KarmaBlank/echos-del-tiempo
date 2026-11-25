@@ -356,6 +356,70 @@ void main() {
     expect(s.town.waystones, isEmpty);
   });
 
+  test('v3 save: layouts regenerate, progress stays, party relocated', () {
+    expect(BiomeLayout.version, 4, reason: 'v0.49.9 forced regeneration');
+    const day = 7;
+    const v3 = TownState(
+        layoutVersion: 3,
+        sky: SkyState(day: day),
+        waystones: {'Ana|bosque:2'},
+        wild: {'bosque:4': 30},
+        discovery: {kBosque: '1,1,AA=='},
+        cycle: 3,
+        upgrades: {'garden': 2},
+        daily: {
+          'wx:Ana:$kBosque:v3:c1:$day': 1,
+          'wx:Ana:$kBosque:v3:t4.5:$day': 1,
+          'com:Ana:$day': 0,
+        });
+    final m = BiomeRegions.migrate(v3);
+    expect(m.layoutVersion, 4);
+    expect(m.waystones, isEmpty);
+    expect(m.wild, isEmpty);
+    expect(m.discovery, isEmpty);
+    expect(m.daily, {'com:Ana:$day': 0});
+    expect(m.cycle, 3, reason: 'progress stays');
+    expect(m.upgrades, v3.upgrades);
+    expect(m.builds, v3.builds);
+    expect(m.mines, v3.mines);
+    // Standing in a biome on load: moved to its arrival point.
+    final e = sessionEngine(zones: true);
+    var s = e.addPlayer(e.create(), 'Ana', newProfile('Ana', 'guerrero'))!
+        .state;
+    s = s.copy()..place = kBosque;
+    s.players.values.first
+      ..x = 1
+      ..y = 1;
+    s = e.setWorld(s, 'w', 'W', town: v3).state;
+    expect(s.place, kBosque);
+    final sp = e.mapFor(s).spawn;
+    final p = s.players.values.first;
+    expect((p.x - sp.x).abs() < 20 && (p.y - sp.y).abs() < 20, isTrue);
+  });
+
+  test('wilds loot resolves to the nearest spot in reach', () {
+    BiomeRegions.bind(5);
+    final lay = BiomeRegions.of(kBosque)!;
+    final (x, y) = lay.shrines.first;
+    expect(
+        WildLootRules.nearest(
+            lay, const TownState(), 'Ana', (x + 0.5) * 16, (y + 0.5) * 16),
+        (0, true));
+    expect(WildLootRules.nearest(lay, const TownState(), 'Ana', -999, -999),
+        isNull);
+    // Marks of other spots, kinds, players or layout versions never make
+    // a fresh shrine read as used.
+    const day = 9;
+    final town = TownState(sky: const SkyState(day: day), daily: {
+      WildLootRules.lootKey('Ana', lay.id, 0, day): 1,
+      WildLootRules.lootKey('Bea', lay.id, 0, day, shrine: true): 1,
+      WildLootRules.lootKey('Ana', lay.id, 1, day, shrine: true): 1,
+      'wx:Ana:${lay.id}:v${BiomeLayout.version - 1}:s0:$day': 1,
+      'wx:Ana:${lay.id}:s0:$day': 1,
+    });
+    expect(WildLootRules.taken(town, 'Ana', lay.id, 0, shrine: true), isFalse);
+  });
+
   test('inside a cave the carried light and the wisp shine by day', () {
     expect(
         LightRules.wispActive(toggled: true, outdoor: true, night: false),

@@ -401,6 +401,18 @@ Test: `test/app/label_scale_test.dart`.
 
 ## Etiquetas en el mundo (v0.5.1)
 
+- **Solo de cerca (v0.49.9)**: todo texto flotante sobre algo o alguien
+  del mundo (nombres de PNJ, peregrinos y visitantes, pescadores y
+  habitantes de bioma, ayudantes, PNJ de mina y de datos, lugares del
+  pueblo, carteles de exteriores, minas) aparece solo cerca del jugador
+  local: opacidad 1 dentro de `labelRevealTiles` tiles (Balance › Pueblo,
+  4.5) y fundido a 0 en el tile siguiente (`worldLabelAlpha`). Nunca se
+  fijan al borde de la pantalla (se quitó el ajuste de los carteles de
+  bioma hacia adentro de la vista). Excepciones: el nombre propio y los
+  de los otros jugadores (grupo) se ven siempre; las marcas de misión
+  (`!` / `?`) sobre PNJ siguen visibles; los textos de mazmorra
+  (ÉLITE, JEFE, OFRENDA) no cambian.
+
 Nombres sobre los personajes, carteles del pueblo (`MOSTRADOR DE
 MISIONES`, `ARMERÍA`, `PORTAL`, `ESTATUA DEL TIEMPO`, `TIENDA`), puertas
 de zona, `★ÉLITE` / `JEFE` / `!`, avisos (`floor`, caída) y las

@@ -471,8 +471,6 @@
   "ui.town.events.quest": "{npc} 的任务：{objective}",
   "ui.town.events.quest_reward": "奖励：{gold} 金币 · 友好 +{rep}",
   "ui.town.events.discount": "价格 −{n}%",
-  "ui.town.events.badge": "事件",
-  "ui.town.events.badge_n": "事件 ×{n}",
   "ui.town.events.cat.visitor": "访客",
   "ui.town.events.cat.overworldNpc": "旅人",
   "ui.town.events.cat.echoPortal": "回声裂隙",
@@ -488,6 +486,7 @@
   "ui.town.events.enter": "进入",
   "ui.town.events.close": "关闭",
   "ui.town.events.prompt_rift": "[E] 回声裂隙",
+  "ui.town.events.prompt_fight": "[E/点击] 迎战 · {name}",
   "ui.town.events.progress": "进度：{have}/{need}",
   "ui.town.events.trade_banner": "{name}：购买价格降低 {n}%（结账时返还）。",
   "ui.town.season.spring": "春",
@@ -1008,5 +1007,13 @@
   "ui.town.compost.mushroom_compost": {
     "text": "蘑菇堆肥",
     "status": "draft"
-  }
+  },
+  "ui.town.forge.fish_other_time": "异时之鱼",
+  "ui.town.forge.fish_affinity": "亲和：{v}",
+  "ui.town.forge.fish_split": "拆解",
+  "ui.town.forge.fish_split_yield": "获得 {n} {part}",
+  "ui.town.forge.fish_split_hint": "拆解会消耗这条鱼（₵{gold}）；部件用于分件锻造。",
+  "ui.town.forge.fish_parts_only": "史诗鱼只能拆解。",
+  "ui.town.forge.fish_split_level": "需要钓鱼 {lv} 级",
+  "ui.town.forge.fish_split_none": "你没有这条鱼"
 }
