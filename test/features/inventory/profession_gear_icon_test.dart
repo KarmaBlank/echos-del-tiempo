@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/core/procedural/item_icons.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
-import 'package:echos_del_tiempo/game_engine/data/profession_gear_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/rules/profession_gear_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,7 +36,7 @@ void main() {
     final out = await r2.endRecording().toImage(32, 32);
     final bytes = (await out.toByteData())!;
     // Center pixel is the sprite's green.
-    final o = (16 * 32 + 16) * 4;
+    const o = (16 * 32 + 16) * 4;
     expect([bytes.getUint8(o), bytes.getUint8(o + 1), bytes.getUint8(o + 2)],
         [0, 255, 0]);
     ItemIconImages.clear();
