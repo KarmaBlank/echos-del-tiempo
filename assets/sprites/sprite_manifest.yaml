@@ -459,7 +459,7 @@ items:
   # Cozy life (cozy_life.md § 1-2): raft and farm decorations, 8-bit
   # placeholder art (16 x 16).
   vida_raft_lantern: { idle: items/vida_raft_lantern.png, size: [16, 16] }
-  vida_raft_roof: { idle: items/vida_raft_roof.png, size: [16, 16] }
+  vida_raft_roof: { idle: items/vida_raft_roof.png, size: [16, 32] }
   vida_decor_fence: { idle: items/vida_decor_fence.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }

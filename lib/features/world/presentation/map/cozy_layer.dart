@@ -59,7 +59,8 @@ class CozyLayer {
           BlendMode.modulate);
     }
     _img(c, raft, Rect.fromLTWH(x - ts / 2, y - ts / 2 + bob, ts, ts), p);
-    if (life == null) return;
+    // With a roof the lantern hangs from its post ([drawRaftRoof]).
+    if (life == null || CozyRules.hasRoof(life)) return;
     if (CozyRules.hasLantern(life)) {
       if (icon('raft_lantern') case final im?) {
         _img(c, im, Rect.fromLTWH(x + 2, y - ts + 2 + bob, ts / 2, ts / 2),
@@ -68,13 +69,22 @@ class CozyLayer {
     }
   }
 
-  /// The little roof, drawn over the hero (after it).
+  /// The roof of the raft centred on (x, y), drawn after the rider so
+  /// they sit under it. The sprite is 16 x 32: the slab on top and two
+  /// posts that stand on the deck's front corners, so roof and deck read
+  /// as one object; the lantern hangs from the right post.
   void drawRaftRoof(
       Canvas c, double x, double y, double bob, LifeSkills? life) {
     if (life == null || !CozyRules.hasRoof(life)) return;
     if (icon('raft_roof') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - ts / 2, y - ts * 1.6 + bob, ts, ts),
+      _img(c, im, Rect.fromLTWH(x - ts / 2, y + 5 - ts * 2 + bob, ts, ts * 2),
           SpriteCatalog.pixelPaint());
+    }
+    if (CozyRules.hasLantern(life)) {
+      if (icon('raft_lantern') case final im?) {
+        _img(c, im, Rect.fromLTWH(x + 3, y - 18 + bob, ts / 2, ts / 2),
+            SpriteCatalog.pixelPaint());
+      }
     }
   }
 

@@ -1834,6 +1834,7 @@ class MapGame extends Game {
     final lay = biomeLayout(place);
     if (lay == null || lay.raftDocks.isEmpty) return;
     final dock = sprites.lifeIcon('muelle_balsa', '');
+    final life = controller.view?.me?.profile.life;
     for (final d in lay.raftDocks) {
       if (dock != null) {
         c.drawImageRect(
@@ -1842,7 +1843,11 @@ class MapGame extends Game {
             Rect.fromLTWH(d.x * ts, d.y * ts, ts, ts),
             SpriteCatalog.pixelPaint());
       }
-      _drawRaft(c, (d.wx + 0.5) * ts, (d.wy + 0.5) * ts, t);
+      // The moored raft shows its owner's decorations (roof, lantern,
+      // paint) so it looks the same docked as when ridden.
+      final x = (d.wx + 0.5) * ts, y = (d.wy + 0.5) * ts;
+      _drawRaft(c, x, y, t, life: life);
+      cozy.drawRaftRoof(c, x, y, _bob(t), life);
     }
   }
 

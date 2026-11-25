@@ -8,6 +8,7 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/cozy_hud_dim.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/actor_painter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/cozy_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/map_themes.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
@@ -143,6 +144,46 @@ void main() {
     expect(CozyRules.hasRoof(life), isTrue);
   });
 
+  testWidgets('map: roofed raft is one object, with and without rider',
+      (tester) async {
+    final sprites = await _sprites(tester);
+    if (sprites == null) return;
+    final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
+    final actors = ActorPainter(sprites);
+    final raft = sprites.lifeIcon('balsa', '')!;
+    final roof = sprites.lifeIcon('raft_roof', '')!;
+    expect((roof.width, roof.height), (16, 32));
+    // Water strip, then four rafts: bare, docked (roof + lantern + paint),
+    // ridden (same decorations) and ridden while moving.
+    const w = 160.0, h = 56.0, scale = 6.0;
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec)..scale(scale);
+    c.drawRect(const Rect.fromLTWH(0, 0, w, h),
+        Paint()..color = const Color(0xFF2B5D8A));
+    final life = LifeSkills(
+        raftDecos: const {'lantern', 'roof', 'paint_blue'},
+        raftOn: const {'lantern', 'roof', 'paint_blue'});
+    const y = 38.0;
+    void ride(double x, {LifeSkills? deco, bool rider = false,
+        bool moving = false}) {
+      cozy.drawRaft(c, raft, x, y, 0, deco);
+      if (rider) {
+        actors.hero(c,
+            classId: 'guerrero', weaponType: null, x: x, y: y - 3, t: 140,
+            dir: 1, moving: moving, dead: false, blink: false,
+            showWeapon: false);
+      }
+      cozy.drawRaftRoof(c, x, y, 0, deco);
+    }
+    ride(20);
+    ride(60, deco: life);
+    ride(100, deco: life, rider: true);
+    ride(140, deco: life, rider: true, moving: true);
+    await _picShot(tester, rec.endRecording(), (w * scale).round(),
+        (h * scale).round(), 'cozy_raft_decor');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('map: farm decorations around the base farm', (tester) async {
     final sprites = await _sprites(tester);
     final cozy = CozyLayer((id) => sprites?.lifeIcon(id, ''));
@@ -243,7 +284,7 @@ void main() {
     expect(find.byKey(const ValueKey('raft-deco-roof')), findsOneWidget);
     expect(c.view!.me!.profile.life.raftOn, {'lantern'});
     await tapVisible(tester, find.byKey(const ValueKey('raft-deco-roof')));
-    await _panelShot(tester, 'panel-raft-decor', 'cozy_raft_decor');
+    await _panelShot(tester, 'panel-raft-decor', 'cozy_raft_decor_panel');
     await tapVisible(tester, find.byKey(const ValueKey('raft-deco-act-roof')));
     expect(c.view!.me!.profile.life.raftOn, {'lantern', 'roof'});
     expect(tester.takeException(), isNull);
