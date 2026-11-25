@@ -219,29 +219,67 @@ class MapSkyLayer {
     _fogPaint.color = SkyPalette.fog.withValues(alpha: 0.08);
     c.drawRect(view, _fogPaint);
     const cell = 8.0;
-    for (var layer = 0; layer < 2; layer++) {
-      final scale = layer == 0 ? 7.0 : 4.0;
-      final dx = motion ? t / (layer == 0 ? 260 : 170) : 0.0;
-      final dy = motion ? t / (layer == 0 ? 900 : 640) : 0.0;
-      final maxA = layer == 0 ? 0.16 : 0.10;
-      final x0 = (view.left / cell).floor(), x1 = (view.right / cell).ceil();
-      final y0 = (view.top / cell).floor(), y1 = (view.bottom / cell).ceil();
-      for (var cy = y0; cy < y1; cy++) {
-        for (var cx = x0; cx < x1; cx++) {
-          final n = noise((cx + dx / cell) / scale,
-              (cy + dy / cell) / scale, 31 + layer);
-          final k = ((n - 0.45) / 0.55).clamp(0.0, 1.0);
-          if (k <= 0) continue;
-          // Quantised alpha keeps the pixel look (no smooth gradient).
-          final a = (k * 3).round() / 3 * maxA;
-          if (a <= 0) continue;
-          _fogPaint.color = SkyPalette.fog.withValues(alpha: a);
-          c.drawRect(Rect.fromLTWH(cx * cell, cy * cell, cell, cell),
-              _fogPaint);
+    final x0 = (view.left / cell).floor(), x1 = (view.right / cell).ceil();
+    final y0 = (view.top / cell).floor(), y1 = (view.bottom / cell).ceil();
+    // Perf (v0.48.3): the cell grid is rebuilt only when the visible cells
+    // change or every [fogRefreshMs] (the drift is a few px/s), and drawn
+    // as one point batch per alpha step instead of one rect per cell.
+    final stale = x0 != _fogX0 ||
+        y0 != _fogY0 ||
+        x1 != _fogX1 ||
+        y1 != _fogY1 ||
+        (motion && (t - _fogT).abs() >= fogRefreshMs);
+    if (stale) {
+      _fogX0 = x0;
+      _fogY0 = y0;
+      _fogX1 = x1;
+      _fogY1 = y1;
+      _fogT = t;
+      for (final b in _fogBuckets) {
+        b.clear();
+      }
+      for (var layer = 0; layer < 2; layer++) {
+        final scale = layer == 0 ? 7.0 : 4.0;
+        final dx = motion ? t / (layer == 0 ? 260 : 170) : 0.0;
+        final dy = motion ? t / (layer == 0 ? 900 : 640) : 0.0;
+        for (var cy = y0; cy < y1; cy++) {
+          for (var cx = x0; cx < x1; cx++) {
+            final n = noise((cx + dx / cell) / scale,
+                (cy + dy / cell) / scale, 31 + layer);
+            final k = ((n - 0.45) / 0.55).clamp(0.0, 1.0);
+            // Quantised alpha keeps the pixel look (no smooth gradient).
+            final step = (k * 3).round();
+            if (step <= 0) continue;
+            _fogBuckets[layer * 3 + step - 1]
+              ..add(cx * cell + cell / 2)
+              ..add(cy * cell + cell / 2);
+          }
         }
       }
+      for (var i = 0; i < 6; i++) {
+        _fogPts[i] = Float32List.fromList(_fogBuckets[i]);
+      }
+    }
+    _fogPtPaint.strokeWidth = cell;
+    for (var i = 0; i < 6; i++) {
+      final pts = _fogPts[i];
+      if (pts == null || pts.isEmpty) continue;
+      final maxA = i < 3 ? 0.16 : 0.10;
+      _fogPtPaint.color =
+          SkyPalette.fog.withValues(alpha: (i % 3 + 1) / 3 * maxA);
+      c.drawRawPoints(ui.PointMode.points, pts, _fogPtPaint);
     }
   }
+
+  /// How often the fog grid is resampled while drifting (ms).
+  static const fogRefreshMs = 200.0;
+  int _fogX0 = 0, _fogY0 = 0, _fogX1 = -1, _fogY1 = -1;
+  double _fogT = -1e9;
+  final _fogBuckets = List.generate(6, (_) => <double>[]);
+  final _fogPts = List<Float32List?>.filled(6, null);
+  static final _fogPtPaint = Paint()
+    ..isAntiAlias = false
+    ..strokeCap = StrokeCap.square;
 
   // Smooth value noise in 0–1 from the integer lattice hash.
   /// Smooth value noise in 0–1 (shared with the cavern mist).

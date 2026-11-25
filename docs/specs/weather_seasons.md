@@ -159,3 +159,5 @@ ni líneas cortadas.
   bandas sólidas.
 - Cada construcción del pueblo dibuja el poste de su cartel en el tile que
   responde al mouse.
+
+- **Niebla, rendimiento (v0.48.3):** la grilla de celdas se recalcula solo si cambian las celdas visibles o cada 200 ms (`fogRefreshMs`), y se dibuja en un lote de puntos por escalón de alfa (6 llamadas) en vez de un rect por celda.
