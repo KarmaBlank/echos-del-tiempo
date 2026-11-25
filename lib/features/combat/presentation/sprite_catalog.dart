@@ -7,6 +7,8 @@ import 'package:yaml/yaml.dart';
 
 import '../../../core/procedural/npc_variants.dart';
 import '../../../core/procedural/procedural_art.dart';
+import '../../../core/procedural/vegetation_atlas.dart';
+import '../../../game_engine/procedural/vegetation.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../domain/sprite_entry.dart';
 
@@ -62,6 +64,7 @@ class SpriteCatalog {
         bundle: b, overrides: overrides ?? defaultOverrides);
     await c.loadProcedural();
     await c.loadNpcVariants();
+    await c.loadVegetation();
     return c;
   }
 
@@ -94,6 +97,53 @@ class SpriteCatalog {
       npcVariants = NpcVariantsDoc();
     }
   }
+
+  /// Path of the vegetation presets (procedural_vegetation.md § 6).
+  static const vegetationPath = 'assets/sprites/vegetation_presets.yaml';
+
+  /// Effective vegetation presets: local override (if any) or the repo's.
+  VegetationDoc vegetation = VegetationDoc();
+  Future<VegetationAtlas>? _vegetationAtlas;
+
+  /// Reads `vegetation_presets.yaml` (override → repo). Broken data = no
+  /// procedural vegetation (the map keeps its fallback drawing).
+  Future<void> loadVegetation() async {
+    _vegetationAtlas = null;
+    final o = overrides;
+    if (o is VegetationOverrideSource) {
+      try {
+        final raw = await (o as VegetationOverrideSource).readVegetation();
+        if (raw != null) {
+          vegetation = VegetationDoc.parse(raw);
+          return;
+        }
+      } catch (_) {}
+    }
+    try {
+      vegetation = VegetationDoc.parse(await _bundle.loadString(vegetationPath));
+    } catch (_) {
+      vegetation = VegetationDoc();
+    }
+  }
+
+  /// The vegetation atlas, built ONCE (generated images, or the PNG of
+  /// `tiles.veg_<biome>_<species>` when the manifest or an override has
+  /// one).
+  Future<VegetationAtlas> vegetationAtlas([VegetationDoc? doc]) {
+    Future<VegetationAtlas> make(VegetationDoc d) => VegetationAtlas.build(d,
+        override: (key) async {
+          final e = entry('tiles.$key.idle');
+          return e == null ? null : image(e);
+        },
+        toImage: vegetationImage);
+    if (doc != null) return make(doc);
+    return _vegetationAtlas ??= make(vegetation);
+  }
+
+  /// `ui.Image` of a generated vegetation sprite.
+  static Future<ui.Image> vegetationImage(
+          VegetationSprite s, VegetationPalette p) =>
+      rgbaImage(Rgba(s.width, s.height, s.rgba(p)));
 
   /// Píxeles RGBA del cuerpo base [baseId] de las variantes, o `null`.
   Future<Rgba?> npcBasePixels(String baseId, [NpcVariantsDoc? doc]) async {
@@ -250,10 +300,12 @@ class SpriteCatalog {
   /// nuevo (override → asset).
   Future<void> reload([String? id]) async {
     await overrides?.refresh();
+    _vegetationAtlas = null;
     if (id == null) {
       _cache.clear();
       await loadProcedural();
       await loadNpcVariants();
+      await loadVegetation();
     } else {
       _cache.remove(id);
     }

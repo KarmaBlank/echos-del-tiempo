@@ -595,5 +595,31 @@
   "ui.world.miners.max_text": {
     "text": "镐已满级：什么都能开采。",
     "status": "draft"
-  }
+  },
+  "ui.world.veg.tab": "植被",
+  "ui.world.veg.saved": "预设已保存。",
+  "ui.world.veg.biome.meadow": "草原",
+  "ui.world.veg.biome.forest": "森林",
+  "ui.world.veg.biome.ruins": "废墟",
+  "ui.world.veg.biome.frost": "霜原",
+  "ui.world.veg.biome.ash": "灰烬",
+  "ui.world.veg.biome.void": "虚空",
+  "ui.world.veg.species.deciduous": "阔叶树",
+  "ui.world.veg.species.conifer": "针叶树",
+  "ui.world.veg.species.dead": "枯树",
+  "ui.world.veg.species.bush": "灌木",
+  "ui.world.veg.png_override": "使用 PNG（覆盖）。在 SPRITES 中移除即可恢复程序生成。",
+  "ui.world.veg.seed": "种子 {n}",
+  "ui.world.veg.regenerate": "重新生成",
+  "ui.world.veg.regenerate_tip": "新种子。",
+  "ui.world.veg.width": "宽度 {n}",
+  "ui.world.veg.height": "高度 {n}",
+  "ui.world.veg.density": "密度 {n}%",
+  "ui.world.veg.trunk": "树干 {n}%",
+  "ui.world.veg.variants": "变体 {n}",
+  "ui.world.veg.weight": "权重 {n}",
+  "ui.world.veg.outline": "轮廓",
+  "ui.world.veg.palette": "调色板",
+  "ui.world.veg.save": "保存预设",
+  "ui.world.veg.save_tip": "保存植被预设。"
 }

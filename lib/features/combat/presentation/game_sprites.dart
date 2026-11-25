@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/procedural/item_icons.dart';
+import '../../../core/procedural/vegetation_atlas.dart';
 import 'sprite_catalog.dart';
 
 /// Los sprites del juego, cargados una vez por app (los tests lo pisan
@@ -24,6 +25,9 @@ class GameSprites {
   final Map<String, double> _scales;
   final Set<String> _floats;
   final Map<String, ui.Image> _life;
+
+  /// Cached procedural vegetation, or `null` (fallback drawing).
+  VegetationAtlas? vegetation;
 
   static Future<GameSprites> load(SpriteCatalog catalog) async {
     final heroes = <String, Sprite>{};
@@ -79,7 +83,14 @@ class GameSprites {
             if (img != null) ItemIconImages.put(e.key, img);
           }),
     ]);
-    return GameSprites._(heroes, enemies, scales, floats, life);
+    // Procedural trees and bushes (procedural_vegetation.md § 4): cached
+    // once; on failure the map keeps its fallback drawing.
+    VegetationAtlas? vegetation;
+    try {
+      vegetation = await catalog.vegetationAtlas();
+    } catch (_) {}
+    return GameSprites._(heroes, enemies, scales, floats, life)
+      ..vegetation = vegetation;
   }
 
   /// Frame `idle` de una clase, o `null` si el manifest no la tiene.

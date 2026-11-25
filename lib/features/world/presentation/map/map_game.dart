@@ -130,6 +130,9 @@ class MapGame extends Game {
         _showAll = showAllLoot ?? altHeld,
         _pickKey = pickupKey ?? pickupHeld,
         actors = ActorPainter(sprites) {
+    // Procedural trees and bushes (procedural_vegetation.md § 4).
+    tiles.vegetation = sprites.vegetation;
+    sway.vegetation = sprites.vegetation;
     loot = LootPainter(
       nameOf: (d) => lootName(controller, d),
       weaponTypeOf: (id) => controller.engine.catalog.weapons[id]?.type,
@@ -944,7 +947,8 @@ class MapGame extends Game {
         pulse: pulse);
     // Wind in the vegetation (biome_regions.md § 7.2.2).
     if (map.lobby && !controller.editingTown) {
-      sway.draw(c, map, x0, y0, x1, y1, t / 1000, motion: !reduceMotion);
+      sway.draw(c, map, x0, y0, x1, y1, t / 1000,
+          motion: !reduceMotion, themeId: map.theme);
     }
     // Season and weather marks on the ground (weather_seasons.md § 6.3).
     if (map.lobby && s.town.sky.started && !controller.editingTown) {

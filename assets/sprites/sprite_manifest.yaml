@@ -536,6 +536,28 @@ tiles:
   punto_pesca: { procedural: true, size: [16, 16] }
   cartel_lago: { procedural: true, size: [16, 16] }
   puesto_comerciante: { procedural: true, size: [32, 16] }
+  # Procedural vegetation (procedural_vegetation.md § 5): one slot per
+  # biome x species. Procedural unless a PNG is set here or overridden in
+  # the Editor; a PNG replaces every variant of that species.
+  veg_meadow_deciduous: { procedural: true, size: [16, 16] }
+  veg_meadow_conifer: { procedural: true, size: [16, 16] }
+  veg_meadow_bush: { procedural: true, size: [16, 16] }
+  veg_forest_deciduous: { procedural: true, size: [16, 16] }
+  veg_forest_conifer: { procedural: true, size: [16, 16] }
+  veg_forest_dead: { procedural: true, size: [16, 16] }
+  veg_forest_bush: { procedural: true, size: [16, 16] }
+  veg_ruins_deciduous: { procedural: true, size: [16, 16] }
+  veg_ruins_dead: { procedural: true, size: [16, 16] }
+  veg_ruins_bush: { procedural: true, size: [16, 16] }
+  veg_frost_conifer: { procedural: true, size: [16, 16] }
+  veg_frost_dead: { procedural: true, size: [16, 16] }
+  veg_frost_bush: { procedural: true, size: [16, 16] }
+  veg_ash_dead: { procedural: true, size: [16, 16] }
+  veg_ash_conifer: { procedural: true, size: [16, 16] }
+  veg_ash_bush: { procedural: true, size: [16, 16] }
+  veg_void_deciduous: { procedural: true, size: [16, 16] }
+  veg_void_dead: { procedural: true, size: [16, 16] }
+  veg_void_bush: { procedural: true, size: [16, 16] }
 ui:
   # Pesca v0.22.0 (fishing.md § 4): escena del lago y pez de la barra,
   # procedurales de la pesca (en el mapa desde v0.22.2).

@@ -1,0 +1,52 @@
+# Procedural trees and bushes (docs/specs/procedural_vegetation.md).
+# Edited from the Editor: VISUALES > VEGETACION.
+# palette: outline, leaf dark, leaf mid, leaf light, trunk, trunk dark.
+# weight: share of the tree tiles of the biome (bush: forage bushes).
+themes:
+  pradera: meadow
+  pueblo: meadow
+  mundo: meadow
+  bosque: forest
+  bosque_ext: forest
+  ruinas_ext: ruins
+  cavernas_ext: frost
+  grieta_ext: ash
+  abismo_ext: void
+biomes:
+  meadow:
+    palette: ['#14101e', '#2e6b30', '#3f8a3e', '#6cb84f', '#5a3a20', '#3a2414']
+    species:
+      deciduous: { weight: 6, seed: 11, variants: 3, size: [16, 16], density: 0.60, trunk: 0.40, outline: true }
+      conifer: { weight: 2, seed: 23, variants: 2, size: [16, 16], density: 0.50, trunk: 0.40, outline: true }
+      bush: { weight: 1, seed: 37, variants: 2, size: [16, 16], density: 0.50, trunk: 0.00, outline: true }
+  forest:
+    palette: ['#0b1a10', '#1d4a26', '#2c6a34', '#4f9445', '#4a2f1a', '#2c1a0e']
+    species:
+      deciduous: { weight: 3, seed: 41, variants: 3, size: [16, 16], density: 0.80, trunk: 0.30, outline: true }
+      conifer: { weight: 5, seed: 53, variants: 3, size: [16, 16], density: 0.70, trunk: 0.30, outline: true }
+      dead: { weight: 1, seed: 59, variants: 2, size: [16, 16], density: 0.40, trunk: 0.50, outline: true }
+      bush: { weight: 1, seed: 61, variants: 2, size: [16, 16], density: 0.70, trunk: 0.00, outline: true }
+  ruins:
+    palette: ['#16121a', '#4a5a2a', '#6a7a36', '#94a04a', '#5e4a36', '#3c2e22']
+    species:
+      deciduous: { weight: 3, seed: 71, variants: 2, size: [16, 16], density: 0.40, trunk: 0.50, outline: true }
+      dead: { weight: 2, seed: 73, variants: 2, size: [16, 16], density: 0.50, trunk: 0.50, outline: true }
+      bush: { weight: 1, seed: 79, variants: 2, size: [16, 16], density: 0.40, trunk: 0.00, outline: true }
+  frost:
+    palette: ['#101828', '#2a5a5e', '#3e7e80', '#d8f0f4', '#4a3a34', '#2c2220']
+    species:
+      conifer: { weight: 5, seed: 83, variants: 3, size: [16, 16], density: 0.70, trunk: 0.40, outline: true }
+      dead: { weight: 1, seed: 89, variants: 2, size: [16, 16], density: 0.30, trunk: 0.50, outline: true }
+      bush: { weight: 1, seed: 97, variants: 2, size: [16, 16], density: 0.40, trunk: 0.00, outline: true }
+  ash:
+    palette: ['#120c0c', '#3a3434', '#5a5050', '#ff8a3c', '#2a2222', '#161010']
+    species:
+      dead: { weight: 5, seed: 101, variants: 3, size: [16, 16], density: 0.60, trunk: 0.50, outline: true }
+      conifer: { weight: 1, seed: 103, variants: 2, size: [16, 16], density: 0.30, trunk: 0.40, outline: true }
+      bush: { weight: 1, seed: 107, variants: 2, size: [16, 16], density: 0.30, trunk: 0.00, outline: true }
+  void:
+    palette: ['#0a0816', '#3a2a6a', '#5a3e96', '#9c7cf0', '#3a3050', '#221c34']
+    species:
+      deciduous: { weight: 2, seed: 109, variants: 2, size: [16, 16], density: 0.50, trunk: 0.50, outline: true }
+      dead: { weight: 2, seed: 113, variants: 2, size: [16, 16], density: 0.50, trunk: 0.50, outline: true }
+      bush: { weight: 1, seed: 127, variants: 2, size: [16, 16], density: 0.50, trunk: 0.00, outline: true }
