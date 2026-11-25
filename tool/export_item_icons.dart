@@ -43,8 +43,8 @@ String fileKey(String shape) => shape.replaceAll('á', 'a');
   const n = 14;
   String at(int x, int y) {
     if (x < 0 || y < 0 || x >= n || y >= n) return '.';
-    final r = rows[(y * 8) ~/ n];
-    final c = r[(x * 8) ~/ n];
+    final r = rows[(y * rows.length) ~/ n];
+    final c = r[(x * r.length) ~/ n];
     return _palette.containsKey(c) ? c : '.';
   }
 

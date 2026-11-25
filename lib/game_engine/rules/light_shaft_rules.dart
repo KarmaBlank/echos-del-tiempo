@@ -82,7 +82,7 @@ abstract final class LightShaftRules {
       'lluvia' => 0.75,
       'fog' => 0.5,
       'snow' => 0.55,
-      _ => 0.35,
+      _ => 0.5,
     };
     return base * (1 - dark / 0.6);
   }

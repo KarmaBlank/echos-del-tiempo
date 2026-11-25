@@ -335,6 +335,39 @@ class SessionView {
         st.pendingGroup.any((c) => c.id == id);
   }
 
+  /// Humans of the block who must agree the queue order (mirrors
+  /// `SessionEngine.queueAgreed`, turn_modes.md § 3.1).
+  List<String> get _blockHumans {
+    final st = session.battle?.state;
+    if (st == null) return const [];
+    return [
+      for (final c in st.pendingGroup)
+        if (c.isPlayer &&
+            !c.isSummon &&
+            session.players[c.id] != null &&
+            session.players[c.id]!.isCompanion != true)
+          c.id,
+    ];
+  }
+
+  /// The local player may reorder / agree the queue: it is a pending
+  /// human of the block and there is something queued.
+  bool get canAgreeQueue {
+    final b = session.battle;
+    return b != null &&
+        b.queue.isNotEmpty &&
+        b.endTimer == null &&
+        _blockHumans.contains(localId);
+  }
+
+  /// (agreed, needed) of the queue order; `null` without a queue.
+  (int, int)? get queueAgreement {
+    final b = session.battle;
+    if (b == null || b.queue.isEmpty) return null;
+    final need = _blockHumans;
+    return (need.where(b.queueReady.contains).length, need.length);
+  }
+
   /// Entries of the action queue, in resolution order for Por fases.
   List<QueuedBattleCommand> get battleQueue =>
       session.battle?.queue ?? const [];

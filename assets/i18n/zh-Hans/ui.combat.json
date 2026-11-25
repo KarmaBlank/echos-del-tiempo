@@ -241,6 +241,8 @@
   "ui.combat.queue.title": "",
   "ui.combat.queue.cancel": "",
   "ui.combat.queue.queued": "",
+  "ui.combat.queue.confirm": "",
+  "ui.combat.queue.move_up": "",
   "ui.combat.target.line": "",
   "ui.combat.end.victory": "",
   "ui.combat.end.defeat": "",

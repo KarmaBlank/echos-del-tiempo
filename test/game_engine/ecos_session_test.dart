@@ -110,15 +110,22 @@ GameSession winBattle(SessionEngine e, GameSession s,
       if (c.alive) c.hp = c.maxHp;
     }
     final b = s.battle;
-    if (b != null && b.waitingForPlayer) {
+    final who = b == null
+        ? null
+        : b.state.currentId ??
+            b.state.pendingGroup
+                .where((c) => !b.queued(c.id))
+                .firstOrNull
+                ?.id;
+    if (b != null && b.waitingForPlayer && who != null) {
       // Primero las invocaciones (el Devorador las protege), después el jefe.
       final alive = b.state.enemies.where((x) => x.alive).toList()
         ..sort((x, y) => (x.boss ? 1 : 0) - (y.boss ? 1 : 0));
-      final step = e.apply(s, b.state.currentId ?? b.state.pendingGroup.first.id,
+      final step = e.apply(s, who,
           BattleAction(AttackCommand(targetId: alive.firstOrNull?.id)));
       if (step != null) {
         log?.addAll(step.events);
-        s = step.state;
+        s = agreeQueue(e, step.state, log: log);
         continue;
       }
     }

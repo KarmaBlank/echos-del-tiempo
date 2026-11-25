@@ -45,7 +45,10 @@ void main() {
           final list = actedBy.putIfAbsent(b.state.round, () => []);
           expect(list, isNot(contains(who)));
           list.add(who);
-          s = step.state;
+          s = agreeQueue(e, step.state);
+          for (var k = 0; k < 200 && s.battle!.queued(who); k++) {
+            s = e.tick(s, 0.05).state;
+          }
           // Lo que recibe el cliente.
           final seen = j.fromJson(asJson(jsonDecode(jsonEncode(j.toJson(s)))));
           expect(seen.battle!.state.turnRule, TurnRule.porRonda);

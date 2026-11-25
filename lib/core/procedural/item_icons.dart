@@ -158,6 +158,11 @@ Color _tone(Color c, double shine) => shine == 0
 /// [time] (segundos) anima el aura y el destello; con 0 queda quieto.
 void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
     ProcParams p, {WeaponLook? look, double time = 0, bool base = true}) {
+  // Grilla cuadrada de n × n (8 o 14). Encima de un PNG ([base] false)
+  // la grilla va sobre los 14 px internos (margen de 1 para el contorno),
+  // alineada con el dibujo exportado (tool/export_item_icons.dart).
+  final n = rows.length;
+  if (!base) r = r.deflate(r.shortestSide / 16);
   final vary = look != null && p.flag('variation') ? look.variant : 0;
   final shine = (p.number('shine') +
           switch (vary) { 1 => 0.12, 2 => -0.12, _ => 0.0 })
@@ -174,14 +179,14 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
     'w': col('glass'),
   };
   final scale = p.number('scale');
-  final px = r.width * scale / 8;
-  final ox = r.left + (r.width - px * 8) / 2;
-  final oy = r.top + (r.height - px * 8) / 2;
+  final px = r.width * scale / n;
+  final ox = r.left + (r.width - px * n) / 2;
+  final oy = r.top + (r.height - px * n) / 2;
   final mirror = p.flag('mirror');
   final paint = Paint()..isAntiAlias = false;
   void cell(int x, int y, Color c) {
     paint.color = c;
-    final cx = mirror ? 7 - x : x;
+    final cx = mirror ? n - 1 - x : x;
     canvas.drawRect(Rect.fromLTWH(ox + cx * px, oy + y * px, px, px), paint);
   }
 
@@ -191,8 +196,8 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
 
   if (base && p.flag('outline')) {
     final oc = _hex(p.color('outline_color'));
-    for (var y = 0; y < 8; y++) {
-      for (var x = 0; x < 8; x++) {
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
         if (filled(x, y)) continue;
         if (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1)) {
           cell(x, y, oc);
@@ -205,8 +210,8 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
   final auraK = p.number('aura');
   if (aura != null && auraK > 0) {
     final ac = aura.withValues(alpha: (auraK * 0.7).clamp(0.0, 1.0));
-    for (var y = 0; y < 8; y++) {
-      for (var x = 0; x < 8; x++) {
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
         if (filled(x, y)) continue;
         if (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) ||
             filled(x, y + 1)) {
@@ -239,8 +244,8 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
     final pc = aura.withValues(alpha: (auraK * 0.9).clamp(0.0, 1.0));
     for (var k = 0; k < 2; k++) {
       final ph = time * 1.2 + k * 4 + look.variant;
-      final y = 7 - (ph % 8).floor();
-      final x = (k * 5 + 1 + (ph / 8).floor() * 3) % 8;
+      final y = n - 1 - (ph % n).floor();
+      final x = (k * 5 + 1 + (ph / n).floor() * 3) % n;
       if (!filled(x, y)) cell(x, y, pc);
     }
   }

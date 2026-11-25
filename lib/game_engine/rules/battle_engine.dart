@@ -441,6 +441,7 @@ class BattleEngine {
                   ? _l('start_first_strike')
                   : _l('start_ambush'),
     );
+    applyMealShields(state);
     assignCombatantTags(state);
     if (encounter != null) _applyInitiative(state, encounter, triggeredBy);
     // After the initiative: opening wards read the opening order.
@@ -2576,6 +2577,7 @@ class _Turn {
         (_act?.skill?.breakBonus ?? 0) +
         SummonRules.affix(a.build, ModStat.breakPower) *
             ModStat.breakPower.scale +
+        CookingRules.breakBonus(a.build?.meal) +
         (kHeavyWeaponTypes.contains(a.weaponType) ? combo.heavyBreak : 0);
     return pts * (1 + bonus);
   }
@@ -6411,6 +6413,28 @@ class _Turn {
 
 /// Id del escudo que deja revivir con Curación (Velo del Retorno).
 const kReviveVeilId = 'veloRetorno';
+
+/// Source id of the opening shield of a legendary meal (farming.md § 19.3).
+const kMealShieldId = 'comidaEscudo';
+
+/// Opening shield of legendary resistance meals (farming.md § 19.3).
+void applyMealShields(BattleState state) {
+  for (final p in state.party) {
+    final f = CookingRules.shield(p.build?.meal);
+    if (f <= 0 || !p.alive) continue;
+    final v = (p.maxHp * f).round();
+    if (v <= 0) continue;
+    p.effects = [
+      ...p.effects,
+      TimedEffect(
+          sourceId: kMealShieldId,
+          stat: BuffStat.shield,
+          value: v.toDouble(),
+          turns: CookingRules.shieldTurns,
+          ownerId: p.id),
+    ];
+  }
+}
 
 /// Nombre de la postura del Caballero Hueco (`Combatant.stance`).
 LogLine stanceName(int stance) => stance == 1

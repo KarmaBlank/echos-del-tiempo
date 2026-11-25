@@ -538,5 +538,15 @@
   "ui.town.trader.kind.mine_goods": "Minerales",
   "ui.town.trader.kind.mine_supplies": "Insumos",
   "ui.town.trader.kind.mine_tools": "Picos",
-  "ui.town.trader.tab_mining": "MINERÍA"
+  "ui.town.trader.tab_mining": "MINERÍA",
+  "ui.town.cook.tier.common": "Común",
+  "ui.town.cook.tier.fine": "Fina",
+  "ui.town.cook.tier.excellent": "Excelente",
+  "ui.town.cook.tier.legendary": "Legendaria",
+  "ui.town.cook.extra.regen": "Legendaria: recupera {n}% de vida al empezar cada turno",
+  "ui.town.cook.extra.breakPower": "Legendaria: +{n}% de quiebre",
+  "ui.town.cook.extra.shield": "Legendaria: escudo de {n}% de vida al empezar la batalla",
+  "ui.town.cook.give": "DAR A {name}",
+  "ui.town.cook.feast": "FESTÍN {q}",
+  "ui.town.cook.feast_line": "Festín: ingredientes ×{n}, alimenta a todo el grupo en el pueblo"
 }

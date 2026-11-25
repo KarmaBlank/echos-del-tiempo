@@ -285,6 +285,20 @@ class CancelQueuedBattleAction extends SessionAction {
   const CancelQueuedBattleAction();
 }
 
+/// `qmv`: moves [playerId]'s queued command to position [to] of the
+/// block's queue (turn_modes.md § 3.1, protocol 78).
+class MoveQueuedBattleAction extends SessionAction {
+  final String playerId;
+  final int to;
+  const MoveQueuedBattleAction(this.playerId, this.to);
+}
+
+/// `qok`: the player agrees to the queue order; it resolves once every
+/// pending human of the block agreed (turn_modes.md § 3.1, protocol 78).
+class ConfirmBattleQueueAction extends SessionAction {
+  const ConfirmBattleQueueAction();
+}
+
 /// `chat`: un mensaje de texto para la sala. El host lo recorta (espacios
 /// y [maxLength] caracteres) y rechaza los vacíos.
 class ChatAction extends SessionAction {
@@ -791,7 +805,12 @@ enum FarmShopOp {
   // Cocina (farming.md § 17, protocol 73): cook recipe [id] with crops of
   // quality index [n] at the town pot, and eat the meal key [id].
   cook,
-  eat
+  eat,
+  // Comidas compartidas (farming.md § 19.2, protocol 78): give the meal
+  // key [id] to the player [FarmShopAction.to], or cook recipe [id] at
+  // quality [n] as a feast for everyone in town.
+  giveMeal,
+  feast
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.
@@ -800,7 +819,11 @@ class FarmShopAction extends SessionAction {
   final String? id;
   final int n;
   final bool materials;
-  const FarmShopAction(this.op, {this.id, this.n = 1, this.materials = false});
+
+  /// Recipient player id ([FarmShopOp.giveMeal]).
+  final String? to;
+  const FarmShopAction(this.op,
+      {this.id, this.n = 1, this.materials = false, this.to});
 }
 
 /// Mejoras del pueblo en la fuente rúnica.

@@ -93,6 +93,12 @@ void main() {
 
     // The host acts: its action animates.
     expect(host.battleCommand(const DefendCommand()), isTrue);
+    await net();
+    // Nothing fires until both agree the order (protocol 78).
+    expect(host.session!.battle!.state.acted, isNot(contains(host.view!.localId)));
+    expect(host.confirmQueue(), isTrue);
+    await net();
+    expect(ana.confirmQueue(), isTrue);
     // (If the phase opening still animated, it queued first: arrival order.)
     final hostId = host.view!.localId;
     for (var i = 0;
@@ -112,7 +118,9 @@ void main() {
     // The client sees its entry and its menu closes (queued).
     expect(ana.session!.battle!.queued(anaId), isTrue);
     expect(ana.view!.myTurn, isFalse);
-    // Then it resolves in order.
+    // Then it resolves in order, once agreed (the client's agreement
+    // travels too).
+    expect(ana.confirmQueue(), isTrue);
     for (var i = 0;
         i < 200 && !host.session!.battle!.state.acted.contains(anaId);
         i++) {

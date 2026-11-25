@@ -170,7 +170,8 @@ class MapFishingLayer {
   /// (px, py) tirando hacia [dir] (paso al tile de agua). La boya cae en
   /// el tile de agua [bobber] (px del mapa) y flota suave según [t] (ms).
   static void drawHelperLine(Canvas c, double px, double py, (int, int) dir,
-      (double, double) bobber, double t) {
+      (double, double) bobber, double t,
+      {double dip = 0}) {
     final face = dir.$1 < 0 ? -1.0 : 1.0;
     final hand = Offset(px + face * 4, py - 6);
     final tip = dir.$1 == 0
@@ -182,15 +183,35 @@ class MapFishingLayer {
         Paint()
           ..color = FishingPalette.rod
           ..strokeWidth = 1.5);
-    final bo = Offset(bobber.$1, bobber.$2 + helperBob(t));
+    final bo = Offset(bobber.$1, bobber.$2 + helperBob(t) + dip);
     c.drawLine(tip, bo, Paint()..color = FishingPalette.line);
     c.drawCircle(bo, 2, Paint()..color = FishingPalette.bobber);
     c.drawCircle(
         bo.translate(0, -1.5), 1, Paint()..color = FishingPalette.foam);
   }
 
-  /// Vaivén de la boya del ayudante en px según [t] (ms).
-  static double helperBob(double t) => math.sin(t / 400) * 1.2;
+  /// Vaivén de la boya del ayudante en px según [t] (ms): lento y suave.
+  static double helperBob(double t) => math.sin(t / 900) * 1.0;
+
+  /// Momento de la pesca del ayudante (farming.md § 8.1) en la boya
+  /// ([bx], [by]): salpicadura y el pez que salta. [k]: avance 0..1.
+  static void drawHelperCatch(Canvas c, double bx, double by, double k) {
+    final f = k.clamp(0.0, 1.0);
+    final ring = Paint()
+      ..color = FishingPalette.foam.withValues(alpha: 1 - f)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    c.drawOval(
+        Rect.fromCenter(
+            center: Offset(bx, by + 2), width: 4 + f * 10, height: 2 + f * 4),
+        ring);
+    // El pez salta en arco sobre la boya.
+    final h = math.sin(f * math.pi) * 8;
+    final fish = Offset(bx, by - h);
+    c.drawOval(Rect.fromCenter(center: fish, width: 5, height: 3),
+        Paint()..color = FishingPalette.shimmer);
+    c.drawCircle(fish.translate(0, -1), 0.8, Paint()..color = FishingPalette.foam);
+  }
 
   /// Caña, línea y boya de un jugador en (px, py) mirando [dir]. [mine]:
   /// la pesca local (medidor, barra y boya en vuelo).

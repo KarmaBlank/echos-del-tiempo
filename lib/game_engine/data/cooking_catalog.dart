@@ -19,6 +19,25 @@ enum MealStat {
   res,
 }
 
+/// Tier of a cooked meal, from the quality of its crops (farming.md
+/// § 19.3): normal → common, rara → fine, épica → excellent, legendaria
+/// → legendary.
+enum MealTier { common, fine, excellent, legendary }
+
+MealTier mealTierOf(CropQuality q) => MealTier.values[q.index];
+
+/// Extra effect of a legendary-tier meal (farming.md § 19.3).
+enum MealExtra {
+  /// Heals a share of max HP at the start of each turn.
+  regen,
+
+  /// More break points.
+  breakPower,
+
+  /// Shield at the start of the battle.
+  shield,
+}
+
 /// A cooking recipe: crops (by id, any quality chosen at cook time) and
 /// optionally one fish species. Fish recipes last one more mission.
 class MealDef {
@@ -47,6 +66,13 @@ class MealDef {
   final String lore;
 
   bool get hasFish => fish.isNotEmpty;
+
+  /// Legendary-tier extra, by recipe kind.
+  MealExtra get extra => switch (stat) {
+        MealStat.hp => MealExtra.regen,
+        MealStat.atk => MealExtra.breakPower,
+        MealStat.res => MealExtra.shield,
+      };
 
   /// Rarity of the rarest crop (for the cell border).
   FishRarity get rarity {

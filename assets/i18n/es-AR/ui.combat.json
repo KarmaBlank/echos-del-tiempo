@@ -241,6 +241,8 @@
   "ui.combat.queue.title": "En cola",
   "ui.combat.queue.cancel": "Sacar de la cola",
   "ui.combat.queue.queued": "Tu acción está en cola",
+  "ui.combat.queue.confirm": "Vamos en este orden",
+  "ui.combat.queue.move_up": "Adelantar",
   "ui.combat.target.line": "Objetivo: <b style=\"color:#ff6b81\">{name}</b>",
   "ui.combat.end.victory": "¡VICTORIA!",
   "ui.combat.end.defeat": "DERROTA",

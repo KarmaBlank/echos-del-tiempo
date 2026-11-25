@@ -538,5 +538,15 @@
   "ui.town.trader.kind.mine_goods": "Ores and ingots",
   "ui.town.trader.kind.mine_supplies": "Supplies",
   "ui.town.trader.kind.mine_tools": "Picks",
-  "ui.town.trader.tab_mining": "MINING"
+  "ui.town.trader.tab_mining": "MINING",
+  "ui.town.cook.tier.common": "Common",
+  "ui.town.cook.tier.fine": "Fine",
+  "ui.town.cook.tier.excellent": "Excellent",
+  "ui.town.cook.tier.legendary": "Legendary",
+  "ui.town.cook.extra.regen": "Legendary: heals {n}% of HP at the start of each turn",
+  "ui.town.cook.extra.breakPower": "Legendary: +{n}% break",
+  "ui.town.cook.extra.shield": "Legendary: {n}% HP shield when the battle starts",
+  "ui.town.cook.give": "GIVE TO {name}",
+  "ui.town.cook.feast": "FEAST {q}",
+  "ui.town.cook.feast_line": "Feast: ingredients ×{n}, feeds the whole party in town"
 }

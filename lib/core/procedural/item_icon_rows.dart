@@ -1,11 +1,11 @@
-// Formas 8 × 8 del generador `item_icon`. Dart puro: las usan el pintor
+// Formas 8 × 8 (y alguna 14 × 14) del generador `item_icon`. Dart puro: las usan el pintor
 // (item_icons.dart) y tool/export_item_icons.dart.
 
 /// Generador `item_icon` (docs/specs/game_editor.md § 7.5): íconos pixel
 /// 8 × 8 de armas e ítems. Catálogo único de formas; el pintor lee sus
 /// perillas de [ProceduralArt] (valores por defecto = aspecto de siempre).
 ///
-/// Bitmaps 8 × 8: `.` vacío; `m` metal; `h` mango; `g` acento (gema,
+/// Bitmaps cuadrados de 8 × 8 (o 14 × 14, uno por píxel del PNG): `.` vacío; `m` metal; `h` mango; `g` acento (gema,
 /// color de la rareza o del material); `s` cuerda; `p` papel; `c` tapa;
 /// `w` vidrio.
 const kItemIconRows = <String, List<String>>{
@@ -120,17 +120,25 @@ const kItemIconRows = <String, List<String>>{
     '........',
   ],
   // Íconos de inventario de las armas con escudo (weapon_identity.md
-  // § 3.1): el escudo a la izquierda y el arma de pie a la derecha, con
-  // una columna libre entre ambos para que se lean a 32 px.
+  // § 3.1). Espada y escudo va a 14 × 14 (1 celda = 1 px del PNG): la
+  // espada en diagonal detrás de un escudo de heráldica (cara = acento,
+  // se tiñe con la rareza), la punta arriba a la derecha y la empuñadura
+  // abajo a la izquierda; a 8 × 8 no se leía.
   'espada_escudo': [
-    '......m.',
-    '......m.',
-    'mmmm..m.',
-    'mggm..m.',
-    'mggm.hhh',
-    'mggm..h.',
-    '.mm...h.',
-    '......h.',
+    '............mm',
+    '...........mm.',
+    '..........mm..',
+    '.........mm...',
+    '..mmmmmmmmmm..',
+    '..mggggggggm..',
+    '..mggggggggm..',
+    '..mgggmmgggm..',
+    '.hmgggmmgggm..',
+    '..hmggggggm...',
+    '...mggggggm...',
+    '..h.mggggm....',
+    '.h...mggm.....',
+    'm.....mm......',
   ],
   'maza_escudo': [
     '......g.',

@@ -32,7 +32,7 @@ void _legacyPaint(Canvas canvas, Size size, List<String> rows, Color accent) {
   const paper = Color(0xFFE8DCC0);
   const cover = Color(0xFF8E3B46);
   const glass = Color(0xFFDDE6FF);
-  final px = size.width / 8;
+  final px = size.width / rows.length;
   final paint = Paint()..isAntiAlias = false;
   for (var y = 0; y < rows.length; y++) {
     for (var x = 0; x < rows[y].length; x++) {

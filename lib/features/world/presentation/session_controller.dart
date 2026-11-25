@@ -1131,6 +1131,15 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final b = s?.battle;
     if (s == null || b == null || s.paused || !b.waitingForPlayer) return;
+    // Action queue (turn_modes.md § 3.1): an AUTO local player agrees the
+    // order on its own so the block is never held waiting for it.
+    if (_auto.contains(localId) &&
+        b.queue.isNotEmpty &&
+        !b.queueReady.contains(localId) &&
+        b.state.pendingGroup.any((c) => c.id == localId) &&
+        b.turnTime >= autoDelay) {
+      if (_apply(const ConfirmBattleQueueAction())) return;
+    }
     // porBando: en el turno del grupo, el primer compañero con AUTO que
     // falta (roguelike.md § 6).
     final cur = b.state.currentId ??
@@ -2429,6 +2438,14 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Eat the meal bag key [key] (replaces the active meal).
   bool eatMeal(String key) =>
       _apply(FarmShopAction(FarmShopOp.eat, id: key));
+
+  /// Give the meal bag key [key] to the player [to] (farming.md § 19.2).
+  bool giveMeal(String key, String to) =>
+      _apply(FarmShopAction(FarmShopOp.giveMeal, id: key, to: to));
+
+  /// Cook [meal] at [quality] as a feast for everyone in town.
+  bool feastMeal(String meal, int quality) =>
+      _apply(FarmShopAction(FarmShopOp.feast, id: meal, n: quality));
   bool stockFish(String species, [String? lakeId]) =>
       _apply(TownAction(TownOp.stock, id: species, target: lakeId));
   // ---- Ayudantes (farming.md § 8, v0.25.5) ----
@@ -2447,6 +2464,11 @@ class SessionController extends StateNotifier<SessionView?> {
       TownAction(TownOp.helperTasks, target: buildId, x: index, n: mask));
 
   double get sessionTime => _s?.time ?? 0;
+
+  /// Segundos entre vueltas de los ayudantes (los mismos jugadores que
+  /// cuenta el motor).
+  double get helperPeriod => TownRules.helperPeriod(
+      _s?.playerList.where((p) => !p.isCompanion).map((p) => p.profile) ?? const []);
 
   /// Segundos hasta la próxima vuelta de los ayudantes.
   double get helperRoundIn => TownRules.nextRoundIn(
@@ -3826,6 +3848,13 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Withdraws [actorId]'s queued command (turn_modes.md § 3.1).
   bool cancelQueued(String actorId) =>
       _applyFor(actorId, const CancelQueuedBattleAction());
+
+  /// Moves [playerId]'s queued command to position [to] (§ 3.1).
+  bool moveQueued(String playerId, int to) =>
+      _apply(MoveQueuedBattleAction(playerId, to));
+
+  /// The local player agrees the queue order (§ 3.1).
+  bool confirmQueue() => _apply(const ConfirmBattleQueueAction());
 
   /// Comando de batalla de [actorId] (el local o un compañero).
   bool battleCommandFor(String actorId, BattleCommand command) =>

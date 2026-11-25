@@ -28,7 +28,25 @@ Color mealQualityColor(CropQuality q) => fishRarityColor(switch (q) {
 String _qualityText(CropQuality q) =>
     CatalogText.of('ui.town.crop_quality.${q.name}', q.label);
 
-String _withQuality(String name, CropQuality q) => '$name (${_qualityText(q)})';
+const _tierEs = ['Común', 'Fina', 'Excelente', 'Legendaria'];
+
+/// Tier name of a meal cooked at [q] (farming.md § 19.3).
+String mealTierText(CropQuality q) {
+  final t = mealTierOf(q);
+  return CatalogText.of('ui.town.cook.tier.${t.name}', _tierEs[t.index]);
+}
+
+String _withQuality(String name, CropQuality q) => '$name (${mealTierText(q)})';
+
+/// Display name of a meal with its tier (`Sopa de nabo (Fina)`).
+String mealTierName(MealDef m, CropQuality q) => _withQuality(m.text, q);
+
+/// The legendary extra line of [m] at [q], or `null`.
+String? mealExtraText(BuildContext context, MealDef m, CropQuality q) {
+  if (q != CropQuality.legendario) return null;
+  final n = (CookingRules.extraValue(m.extra) * 100).round();
+  return context.t('ui.town.cook.extra.${m.extra.name}', {'n': n});
+}
 
 String _elementText(BuildContext context, DamageTag? t) =>
     context.t('ui.town.cook.el.${t?.name ?? 'fire'}');
@@ -51,16 +69,23 @@ List<String> activeMealLines(BuildContext context, MealBuff b) {
   return [
     _withQuality(d.text, b.quality),
     mealEffectText(context, d, b.quality),
+    if (mealExtraText(context, d, b.quality) case final x?) x,
     context.t('ui.town.cook.left', {'n': b.left}),
   ];
 }
 
 class CookingView extends StatefulWidget {
   const CookingView(
-      {super.key, required this.profile, required this.controller});
+      {super.key,
+      required this.profile,
+      required this.controller,
+      this.mates});
 
   final PlayerProfile profile;
   final SessionController controller;
+
+  /// Teammates in town (id, name) for DAR A…; `null` reads the session.
+  final List<(String, String)>? mates;
 
   @override
   State<CookingView> createState() => _CookingViewState();
@@ -72,6 +97,17 @@ class _CookingViewState extends State<CookingView> {
   var _tab = _CookTab.recetas;
 
   PlayerProfile get p => widget.profile;
+
+  List<(String, String)> get _mates {
+    if (widget.mates case final m?) return m;
+    final c = widget.controller;
+    final s = c.session;
+    if (s == null) return const [];
+    return [
+      for (final q in s.players.values)
+        if (q.id != c.localId && !q.isCompanion) (q.id, q.name)
+    ];
+  }
 
   Widget _icon(String id) => LifeIcon('comida_$id', LifeIconKind.cosecha,
       size: DsCollectionTemplate.iconSize);
@@ -125,8 +161,11 @@ class _CookingViewState extends State<CookingView> {
       description: m.loreText.isEmpty ? null : m.loreText,
       lines: [
         mealEffectText(context, m, q),
-        context.t('ui.town.cook.lasts', {'n': CookingRules.missionsFor(m)}),
+        if (mealExtraText(context, m, q) case final x?) x,
+        context.t('ui.town.cook.lasts', {'n': CookingRules.missionsFor(m, q)}),
         if (m.hasFish) context.t('ui.town.cook.fish_bonus'),
+        context.t('ui.town.cook.feast_line',
+            {'n': CookingRules.feastMult.toStringAsFixed(0)}),
         ..._ingredients(context, m, q),
       ],
       actions: [
@@ -141,6 +180,14 @@ class _CookingViewState extends State<CookingView> {
                 onPressed: CookingRules.cookBlock(p, m.id, cq) == null
                     ? () => widget.controller.cookMeal(m.id, cq.index)
                     : null),
+        DsButton(
+            context.t('ui.town.cook.feast',
+                {'q': mealTierText(q).toUpperCase()}),
+            key: ValueKey('feast-${m.id}'),
+            size: DsButtonSize.compact,
+            onPressed: CookingRules.feastBlock(p, m.id, q) == null
+                ? () => widget.controller.feastMeal(m.id, q.index)
+                : null),
       ],
     );
   }
@@ -157,7 +204,8 @@ class _CookingViewState extends State<CookingView> {
       count: n,
       lines: [
         mealEffectText(context, m, q),
-        context.t('ui.town.cook.lasts', {'n': CookingRules.missionsFor(m)}),
+        if (mealExtraText(context, m, q) case final x?) x,
+        context.t('ui.town.cook.lasts', {'n': CookingRules.missionsFor(m, q)}),
         if (p.life.farm.meal != null) context.t('ui.town.cook.replaces'),
       ],
       actions: [
@@ -165,7 +213,13 @@ class _CookingViewState extends State<CookingView> {
             key: ValueKey('eat-$key'),
             size: DsButtonSize.compact,
             kind: DsButtonKind.primary,
-            onPressed: () => widget.controller.eatMeal(key)),
+            onPressed: n > 0 ? () => widget.controller.eatMeal(key) : null),
+        for (final (id, name) in _mates)
+          DsButton(context.t('ui.town.cook.give', {'name': name.toUpperCase()}),
+              key: ValueKey('give-$key-$id'),
+              size: DsButtonSize.compact,
+              onPressed:
+                  n > 0 ? () => widget.controller.giveMeal(key, id) : null),
       ],
     );
   }

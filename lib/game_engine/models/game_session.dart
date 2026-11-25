@@ -529,11 +529,18 @@ class SessionBattle {
     this.endHold = 0,
     this.level = 0,
     List<QueuedBattleCommand>? queue,
-  }) : queue = queue ?? [];
+    Set<String>? queueReady,
+  })  : queue = queue ?? [],
+        queueReady = queueReady ?? {};
 
   /// Action queue of the party phase (turn_modes.md § 3.1): confirmed
   /// commands in arrival order at the host; resolved one by one.
   final List<QueuedBattleCommand> queue;
+
+  /// Players of the block who agreed to the [queue] order (turn_modes.md
+  /// § 3.1, protocol 78): the queue resolves once every pending human of
+  /// the block is here. Any change to the queue clears it.
+  final Set<String> queueReady;
 
   /// [playerId] has a command waiting in [queue].
   bool queued(String playerId) => queue.any((q) => q.playerId == playerId);
@@ -586,6 +593,7 @@ class SessionBattle {
         endHold: endHold,
         level: level,
         queue: [...queue],
+        queueReady: {...queueReady},
       );
 }
 

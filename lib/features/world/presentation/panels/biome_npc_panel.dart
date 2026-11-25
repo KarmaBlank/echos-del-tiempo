@@ -7,6 +7,7 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/renown_catalog.dart';
 import '../../../../game_engine/rules/renown_rules.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
+import '../../../../game_engine/data/cooking_catalog.dart' show kMeals;
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/data/npc_talk_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
@@ -22,6 +23,7 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import 'cooking_view.dart' show mealTierText;
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
@@ -30,12 +32,15 @@ import 'seed_text.dart';
 import '../world_strings.dart';
 
 /// Nombre de un producto, cultivo o pez.
-String residentItemName(String id) => kFish[id]?.text ?? kCrops[id]?.text ?? id;
+String residentItemName(String id) =>
+    kMeals[id]?.text ?? kFish[id]?.text ?? kCrops[id]?.text ?? id;
 
 /// Ícono de un producto, cultivo o pez.
-Widget residentItemIcon(String id) => kFish.containsKey(id)
-    ? LifeIcon(id, LifeIconKind.pescado, size: 32)
-    : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
+Widget residentItemIcon(String id) => kMeals.containsKey(id)
+    ? LifeIcon('comida_$id', LifeIconKind.cosecha, size: 32)
+    : kFish.containsKey(id)
+        ? LifeIcon(id, LifeIconKind.pescado, size: 32)
+        : LifeIcon('cosecha_$id', LifeIconKind.cosecha, size: 32);
 
 /// Botón SEGUIR / DEJAR DE SEGUIR de un encargo activo (roles.md § 8).
 Widget trackButton(
@@ -135,6 +140,7 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
   final q = CropQuality.values[r.orderQ];
   final cm = ResidentRules.orderCm(o, r.orderQ);
   final fish = kFish.containsKey(o);
+  final meal = kMeals.containsKey(o);
   return LifeItemCellData(
     id: 'order-${n.id}',
     icon: residentItemIcon(o),
@@ -151,7 +157,9 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
           (
             fish
                 ? s.t('ui.town.npc.from_cm', {'cm': cm})
-                : q.label.toUpperCase(),
+                : meal
+                    ? mealTierText(q).toUpperCase()
+                    : q.label.toUpperCase(),
             DsColors.textSecondary
           ),
       ],
@@ -161,8 +169,11 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
             : fish
                 ? s.t('ui.town.npc.order_line_cm',
                     {'n': r.orderN, 'item': residentItemName(o), 'cm': cm})
-                : s.t('ui.town.npc.order_line_q',
-                    {'n': r.orderN, 'item': residentItemName(o), 'q': q.label}),
+                : s.t('ui.town.npc.order_line_q', {
+                    'n': r.orderN,
+                    'item': residentItemName(o),
+                    'q': meal ? mealTierText(q) : q.label
+                  }),
         if (fish && cm > 0)
           s.t('ui.town.npc.record', {'cm': p?.life.log[o] ?? 0}),
         s.t('ui.town.npc.have', {'n': have}),

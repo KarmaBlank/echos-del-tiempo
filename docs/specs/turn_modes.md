@@ -69,10 +69,23 @@ Es la fase de grupo de `porBando` con los enemigos primero:
 ### 3.1 Cola de acciones (protocolo Mundo 65)
 
 - En la fase de jugadores cada uno elige y confirma su acción cuando
-  quiera, aunque otra acción se esté animando. Si el host está en una
-  pausa (animación, cinemática) o ya hay cola, el comando entra a la
-  **cola de acciones** (`SessionBattle.queue`) en orden de llegada al
-  host; si no, se resuelve en el acto como siempre.
+  quiera, aunque otra acción se esté animando. Todo comando del bloque
+  entra a la **cola de acciones** (`SessionBattle.queue`) en orden de
+  llegada al host; ninguno se resuelve solo, venga del host o de un
+  cliente.
+- **Orden acordado (protocolo Mundo 78):** la cola espera hasta que
+  todos los humanos del bloque que faltan actuar aceptan el orden
+  (`ConfirmBattleQueueAction`, botón "Vamos en este orden", contador
+  `✓ n/m`; en la red `{"t":"qok"}` y `qr` en la batalla del snapshot).
+  Cualquiera del bloque puede reordenar (`MoveQueuedBattleAction`, ◀
+  adelanta una posición; `{"t":"qmv","p":id,"to":i}`). Cualquier cambio
+  de la cola (entra, cambia, sale o se mueve una acción) borra los
+  acuerdos. Aceptar sin acción propia vale ("vayan sin mí"). Un jugador
+  con AUTO acepta solo. Si se agota el tiempo con acciones elegidas, se
+  resuelven en el orden actual y después los que faltan se defienden.
+  (Antes de v0.48.3 la primera acción se resolvía en el acto y solo
+  esperaba lo que llegaba durante una animación: el compañero "lanzaba
+  de una".)
 - El host resuelve la cola de a uno, cada acción con su pausa. El que
   está en cola puede cambiar su acción (se reemplaza en su lugar) o
   sacarla (`CancelQueuedBattleAction`, vuelve al final si confirma de
@@ -82,7 +95,7 @@ Es la fase de grupo de `porBando` con los enemigos primero:
   `ui.battle_log.queue_skipped`.
 - Dúo: el compañero tiene que estar libre (sin actuar y sin acción en
   cola, tampoco como compañero del dúo de otro).
-- Si la fase se cierra (tiempo agotado, fin de la pelea), la cola se
+- Si la fase se cierra (fin de la pelea, K.O.), la cola se
   vacía. Nadie solo en una fase y el Pulso no cambian: cada acción se
   resuelve como un comando normal.
 - **Alcance (v0.42.2):** la cola existe solo en Por fases (y porBando,
@@ -96,8 +109,8 @@ Es la fase de grupo de `porBando` con los enemigos primero:
   la party quedan seguidos al frente de lo que falta de la ronda, sin
   enemigo entre ellos (el bloque `roundBlock`), la cola aplica a ese
   bloque (recalculado al instante si un retraso o Congelación saca a un
-  enemigo de entre medio, § 4): confirman en cualquier orden y se resuelven en orden de
-  llegada, de a uno con su animación. Si hay un enemigo entre medio, el
+  enemigo de entre medio, § 4): confirman en cualquier orden, acuerdan
+  el orden (arriba) y se resuelven en ese orden, de a uno con su animación. Si hay un enemigo entre medio, el
   de atrás no está en el bloque: su comando se rechaza hasta su turno.
   La cola solo contiene y espera a miembros de la party en su fase;
   nunca espera el turno de un enemigo.

@@ -156,6 +156,9 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - Al aire libre con cielo (`WeatherRules.hasSky`) y de día: sombras
   suaves que derivan despacio. Más gruesas con lluvia y tormenta
   (`LightShaftRules.cloudCover`); nada de noche.
+- v0.48.3: con cielo despejado la cobertura es 0.5 y cada disco llega a
+  alfa 0.18 × cobertura (antes 0.055: no se veían). El centro de una nube
+  oscurece ~25% en un día despejado.
 
 ### 7.2 Haces de luz
 - Interiores: grutas de lago, cuevas cortas, exteriores sin cielo,
@@ -172,6 +175,22 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - Bajo techo en una región de día: sombra de cueva (imagen cacheada).
 
 ### 7.2.1 Grutas techadas (exteriores)
+- **Caverna del lago de cueva** (v0.48.2): el sitio del lago se une con
+  el sitio del medio de arriba; la caverna es una mancha orgánica (tres
+  armónicos + ruido por tile) de `caveScaleX/Y` × los radios del lago,
+  con un borde de roca de `caveWallTiles` tiles y **una sola boca**
+  (tallada hasta salir del borde). Aberturas de luz: 0..`caveSkylightsMax`.
+- Roca natural (bloques irregulares en tonos, facetas, grietas; pie roto
+  contra el piso), piso oscuro, orilla de piedra mojada junto al agua,
+  estalagmitas contra la pared y hongos con brillo (`caveSpecks`).
+  Paleta por bioma (`CavePalette.of(tema)`).
+- Oscuridad `caveDark` + viñeta hacia las paredes (`caveVignette`,
+  `caveVignetteTiles`) en celdas de 8 px (imagen cacheada). Encima: brillo
+  frío del agua (`caveWaterGlow`) y de los hongos (cacheado), niebla baja con
+  el estilo de la niebla del clima (celdas de 8 px ancladas al mundo,
+  ruido suave, alfa cuantizada; `caveMistBands` capas, deriva
+  `caveMistSpeed` px/s) y ondas de gotas (`caveDripSec`).
+- La boca: alero irregular con estalactitas, encima de los personajes.
 - Toda la gruta de un lago de cueva (y las cuevas cortas) es una **zona
   techada**: la roca que la rodea (roca a ≤ 2 tiles de un tile techado,
   `RegionAmbienceRules.caveWall`) se dibuja como **pared de cueva**

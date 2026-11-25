@@ -1053,7 +1053,8 @@ class MapGame extends Game {
             (id) => sprites.lifeIcon(id, 'herramienta'),
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
             hover: controller.hoverHelper,
-            markOf: _npcMark);
+            markOf: _npcMark,
+            period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
@@ -1481,8 +1482,10 @@ class MapGame extends Game {
             map.height * ts);
       }
       if (region != null) {
-        regionLight.drawCaveShade(
-            c, region, outdoor ? 0.6 * (1 - dayDark) : 0.35);
+        regionLight
+          ..drawCaveShade(c, region, outdoor ? 1 - 0.5 * dayDark : 0.6)
+          // Water glow, specks, mist and drips (biome_regions.md § 7.2.1).
+          ..drawCaveLife(c, region, secs, motion: !reduceMotion);
       }
       // Roof edge at the cave mouths (biome_regions.md § 7.2.1).
       if (region != null) regionLight.drawRoofEdges(c, region, map.tileAt);

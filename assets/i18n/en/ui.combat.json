@@ -241,6 +241,8 @@
   "ui.combat.queue.title": "Queued",
   "ui.combat.queue.cancel": "Remove from queue",
   "ui.combat.queue.queued": "Your action is queued",
+  "ui.combat.queue.confirm": "Go in this order",
+  "ui.combat.queue.move_up": "Move earlier",
   "ui.combat.target.line": "Target: <b style=\"color:#ff6b81\">{name}</b>",
   "ui.combat.end.victory": "VICTORY!",
   "ui.combat.end.defeat": "DEFEAT",

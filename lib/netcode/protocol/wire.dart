@@ -183,7 +183,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// 77: mining v2 (mining_smithing.md § 1): dig-first levels (`mn` in the
 /// town farm block), `mine` action ops, `mDug`/`mBomb`/`mBlast` events,
 /// discovered veins and miner pick tiers.
-const kProtocolVersion = 77;
+/// 78: shared meals (farming.md § 19): `farmShop` ops `giveMeal` (with
+/// `to`) and `feast`; meal orders and legendary meal extras.
+/// 79: co-op action queue agreement (turn_modes.md § 3.1): the block's
+/// commands wait until every pending human agrees the order (`qok`),
+/// `qmv` reorders, `qr` in the battle snapshot.
+const kProtocolVersion = 79;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
