@@ -354,5 +354,20 @@
   "ui.world.tools.torch": "Antorcha",
   "ui.world.tools.torch_tip": "Antorcha: ilumina la mina y queda puesta · [2]",
   "ui.world.mine.need_tier": "Necesitás un pico mejor (nivel {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})"
+  "ui.world.mine.prompt_miner_up": "[U] Mejorar pico de minero a nivel {tier} ({gold} de oro, {n} × {ingot})",
+  "ui.world.mine.prompt_open_miners": "[E] Mineros",
+  "ui.world.miners.title": "MINEROS",
+  "ui.world.miners.gone": "Acá no hay estación de mineros.",
+  "ui.world.miners.none": "Todavía no contrataste mineros en este nivel. [G] en la estación contrata uno.",
+  "ui.world.miners.count": "Mineros en este nivel: {n}/{max}",
+  "ui.world.miners.have": "Tenés {gold} de oro",
+  "ui.world.miners.name": "Minero {n}",
+  "ui.world.miners.tier_short": "N{tier}",
+  "ui.world.miners.rock": "Roca y vetas de este nivel",
+  "ui.world.miners.deep": "Vetas profundas y gemas",
+  "ui.world.miners.breaks_yes": "las rompe (pide nivel {tier})",
+  "ui.world.miners.breaks_no": "las rodea (pide nivel {tier})",
+  "ui.world.miners.yield": "Rinde el {pct}% de lo que picás vos",
+  "ui.world.miners.next": "Siguiente: {name} (nivel {tier})",
+  "ui.world.miners.max_text": "Pico al máximo: rompe todo."
 }
