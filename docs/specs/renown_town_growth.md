@@ -135,13 +135,32 @@ de avance.
 En la FUENTE RÚNICA: "Pueblo: Aldea · Renombre: Conocidos en la zona
 (42)" y una barra (`DsPercent`) hacia el próximo nivel del pueblo.
 
-### 5.2 Fase C (pendiente)
+### 5.2 Vestido del pueblo por nivel (fase C, implementado)
 
-- Cada nivel suma detalles: aldea = estandartes en la entrada, pueblo =
-  más faroles en el camino, ciudad = plaza empedrada alrededor de la
-  fuente. Solo arte nuevo en el manifest, sin cambiar el mapa jugable.
-- Desbloqueos sugeridos: aldea = festival, pueblo = torneo (hoy el
-  torneo pide renombre), ciudad = visitantes raros con más peso.
+Datos en `kTownTierDressing` (`game_engine/data/town_dressing_catalog.dart`),
+una entrada por nivel de `townTiers`. Solo decoración: no cambia el mapa
+jugable ni es sólida; va sobre pasto, nunca sobre camino.
+
+| Nivel | Camino | Cercas | Faroles | Pozo / tablón | Plaza | Techos | Estandartes |
+|---|---|---|---|---|---|---|---|
+| Caserío | tierra | no | 0 | no | no | lisos | 0 |
+| Aldea | grava | sí | 2 | no | no | chimenea | 2 |
+| Pueblo | grava | sí | 4 | sí | no | + cumbrera | 2 |
+| Ciudad | empedrado | sí | 6 | sí | empedrada (radio 2 de la fuente) | + veleta | 4 |
+
+- `TownDressingRules.select(town, día)` = nivel del pueblo (§ 5.1) +
+  evento de hoy (§ 6.4). `layout(map, dressing)` elige los lugares en el
+  rectángulo del pueblo base (26 × 14 desde `townOrigin`): faroles en
+  pasto junto al camino, repartidos; cercas en el borde (con huecos junto
+  a los caminos); estandartes junto a los caminos que salen; pozo y tablón
+  lo más cerca posible de la fuente; techos sobre cada grupo de tiles de
+  casa.
+- `TownDressingLayer` graba la parte fija en dos `Picture` (suelo y por
+  encima de los actores) por mapa + vestido; por cuadro solo dibuja lo
+  animado. Sprites procedurales en el manifest (`tiles.town_*`,
+  `tiles.festival_*`). Arte pixel 8-bit, paleta apagada.
+- Desbloqueos sugeridos (pendiente): aldea = festival, pueblo = torneo,
+  ciudad = visitantes raros con más peso.
 
 ## 6. Eventos del pueblo propuestos por amistad
 
@@ -193,6 +212,25 @@ jugador).
 - Premios por puesto (oro y un objeto de decoración), `festival` suma al
   renombre (peso propio). Coop: cada jugador compite por su cuenta.
 
+### 6.4 Vestido del día del evento (implementado)
+
+Mientras un evento está en curso (`scheduled[id] == día`; si hay dos, gana
+el festival), `kTownEventDressing[kind]` suma al vestido del nivel:
+
+| Tipo | Centro | Guirnaldas | Puestos | Gente | Farolillos al cielo |
+|---|---|---|---|---|---|
+| festival | fogata | 4 | 3 | 8 | 10 (solo de noche) |
+| torneo | tarima con banderas | 2 | 1 | 10 | 0 |
+
+- Guirnaldas con banderines entre las casas más cercanas (≤ 12 tiles);
+  de noche llevan farolillos encendidos. Fogata y banderas animadas; la
+  gente se balancea y a veces levanta un brazo.
+- Farolillos al cielo: suben desde el centro y se desvanecen; encima del
+  tinte de la noche para que brillen.
+- Movimiento reducido: todo queda en un cuadro fijo (`secs = 0`).
+- `ambience` (`festival` / `tournament`) es el gancho para la música:
+  hoy no cambia la pieza del pueblo (pendiente: variante festiva).
+
 ## 7. Red y guardado
 
 - `RenownState` viaja en `TownState.farmJson` (`rn`: `z`, `r`, `l`, `t`,
@@ -229,3 +267,9 @@ nivel, fichas, temas y eventos con renombre, nivel del pueblo, ida y
 vuelta JSON (catálogo y estado), validación del editor.
 `test/game_engine/tourney_session_test.dart`: proponer, programar,
 inscribirse, tres peleas, premio.
+`test/game_engine/rules/town_dressing_rules_test.dart`: vestido por nivel,
+evento de hoy, lugares sin tapar caminos. `test/features/world/
+town_dressing_layer_test.dart`: render por nivel y evento, movimiento
+reducido, presupuesto (caché de capas fijas, < 2 ms por cuadro).
+`TOWN_DRESSING_PREVIEW=1` escribe `docs/preview/town_tier_<n>.png` y
+`docs/preview/festival_<kind>.png` (noche; `_day` de día).

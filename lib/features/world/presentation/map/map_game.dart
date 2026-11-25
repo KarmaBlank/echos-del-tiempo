@@ -80,6 +80,8 @@ import '../panels/town_edit_overlay.dart' show TownEditOverlay;
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/rules/fishing_minigame.dart';
 import '../../../inventory/domain/eco_text.dart';
+import '../../../../game_engine/rules/town_dressing_rules.dart';
+import 'town_dressing_layer.dart';
 
 /// Lee la entrada de movimiento (-1..1 en cada eje). Por defecto, el
 /// estado del teclado físico (WASD / flechas).
@@ -205,6 +207,10 @@ class MapGame extends Game {
 
   /// Carteles de subida de nivel de oficio (farming.md § 2.6).
   final lifeLevels = MapLifeLevelLayer();
+
+  /// Town tier and event dressing (renown_town_growth.md § 5.2, § 6.4).
+  final dressing = TownDressingLayer();
+  TownDressing? _dressing;
   final _lastBobber = <String, (double, double)>{};
 
   /// Lo último dibujado: en [update] se graba de antemano un bloque de la
@@ -1043,11 +1049,19 @@ class MapGame extends Game {
       _seen.putIfAbsent(l.ground.id, () => t);
       loot.drawItem(c, l, t);
     }
+    _dressing = null;
     if (map.lobby) {
       fishing.drawShadows(c);
       if (map.place case final place?) {
         fishing.drawHiddenSpot(
             c, map, place, math.max(1, s.town.sky.day), t / 1000);
+      }
+      if (map.place == null && !controller.editingTown) {
+        // Tier and event dressing (renown_town_growth.md § 5.2, § 6.4).
+        _dressing = TownDressingRules.select(s.town, s.town.sky.day);
+        dressing.drawGround(c, map, _dressing!, map.townOrigin,
+            reduceMotion ? 0.0 : t / 1000,
+            night: SkyRules.darkness(s.town.sky) > 0.25);
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
@@ -1430,6 +1444,7 @@ class MapGame extends Game {
     for (final e in ents) {
       e.$3();
     }
+    if (_dressing case final d?) dressing.drawOverhead(c, d, night: night);
     // Mines and the town cart station (mining_smithing.md § 1.7–1.9).
     void mineText(String txt, double x, double y, Color col, double size) =>
         actors.text(c, txt, x, y, col, size);
@@ -1601,6 +1616,10 @@ class MapGame extends Game {
             tint: false,
             weather: SkyRules.nowIn(s.town.sky, s.place),
             precipitation: climateOf(s.place).showsPrecipitation);
+      }
+      if (_dressing case final d?) {
+        dressing.drawSky(c, d, reduceMotion ? 0.0 : t / 1000,
+            night: SkyRules.darkness(s.town.sky) > 0.5);
       }
     }
 
