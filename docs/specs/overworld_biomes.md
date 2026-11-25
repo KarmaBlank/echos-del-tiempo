@@ -76,7 +76,9 @@ derecha de cada entrada, el portal de Ecos de esa zona (ecos_zone.md § 2).
   **Hongos**, que dan Moras del bosque, Hierba de rocío y Hongo ámbar
   (productos silvestres, bioma `silvestre`: van a la bolsa de cosechas
   con calidad normal y se venden al comerciante como cualquier cosecha).
-- E a menos de 26 px del centro de la mata. El host valida distancia y
+- E a menos de 26 px del centro de la mata (**desde cozy_life.md § 3 se
+  mantiene E** hasta llenar una barrita; más rápido con nivel de Cultivo;
+  los árboles comunes también se revisan). El host valida distancia y
   rebrote; otorga y marca `TownState.wild["bosque:<i>"] = ahora +
   forageRespawnSec` (240 s). La mata se ve pelada (`Q`) hasta rebrotar.
 - Cuenta como **Cultivo**: `forageXp × (rareza + 1)` de XP de Cultivo.

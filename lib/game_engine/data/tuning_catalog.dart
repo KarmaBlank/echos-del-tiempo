@@ -808,8 +808,46 @@ const Map<String, TuningDef> kTuningDefaults = {
     // checked again after forageRecheckSec.
     'forageHideRadius': 360,
     'forageRecheckSec': 6,
+    // Cozy life (cozy_life.md § 1): while fishing the camera shows this
+    // fraction of the map (< 1 = closer), the HUD fades / shrinks, up to
+    // cozyFireflies fireflies at night, the cozy music level and the gap
+    // between ambience sounds (s).
+    'cozyFishZoom': 0.85,
+    'cozyHudOpacity': 0.45,
+    'cozyHudScale': 0.9,
+    'cozyFireflies': 10,
+    'cozyMusicLevel': 0.6,
+    'cozyAmbGapMinSec': 5,
+    'cozyAmbGapMaxSec': 14,
+    // Raft decorations (§ 1), gold.
+    'raftLanternCost': 60,
+    'raftRoofCost': 120,
+    'raftPaintCost': 40,
+    // Farm decorations (§ 2), gold; scarecrow quality bias and reach.
+    'decorFenceCost': 10,
+    'decorScarecrowCost': 80,
+    'decorPotCost': 20,
+    'decorPathCost': 5,
+    'decorLampCost': 40,
+    'scarecrowQualityBias': 0.05,
+    'scarecrowRadius': 4,
+    // Hold-to-gather (§ 3): base hold (s), speed per Cultivo level, floor.
+    'gatherHoldSec': 1.2,
+    'gatherSpeedPerLevel': 0.03,
+    'gatherHoldMinSec': 0.4,
+    // Tree search (§ 3): chance of each find (rest = nothing) and XP.
+    'searchSeedChance': 0.3,
+    'searchMushroomChance': 0.2,
+    'searchNestChance': 0.12,
+    'searchRecipeChance': 0.05,
+    'searchXp': 3,
     // Waystones (§ 4): reach (px) to activate / use one.
     'waystoneReach': 26,
+    // Overworld map discovery (biome_exploration.md § 11.4): tiles each
+    // player reveals around them, and tiles known from the start around
+    // the arrival and the story goals.
+    'mapRevealRadius': 9,
+    'mapStartRadius': 5,
     // Caverns (§ 3.1): × of the lake radii, thickness of the rock rim
     // (tiles) and the most openings above (0 = none).
     'caveScaleX': 2.0,

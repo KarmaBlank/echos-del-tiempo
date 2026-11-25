@@ -14,6 +14,7 @@ import 'biome_npc_panel.dart'
     show orderCell, questCells, residentItemIcon, trackButton;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'profession_journal.dart';
 import 'world_event_cells.dart';
 import '../world_strings.dart';
 
@@ -47,7 +48,10 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
         for (final n in kBiomeNpcs)
           if (QuestTrackRules.met(p, n.id)) n
     ];
-    final tab = _tab.clamp(0, npcs.length + 1);
+    // Last tab: the profession journals (cozy_life.md § 4).
+    final profTab = npcs.length + 2;
+    final tab = _tab.clamp(0, profTab);
+    final prof = tab == profTab;
     final events = tab == 1;
     final tracked = p == null
         ? const <ActiveQuest>[]
@@ -55,7 +59,7 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
             for (final a in QuestTrackRules.active(p, town))
               if (a.tracked) a
           ];
-    final n = tab <= 1 ? null : npcs[tab - 2];
+    final n = tab <= 1 || prof ? null : npcs[tab - 2];
     final r = n == null ? null : town.resident(n.id);
     return PanelFrame(
       key: const ValueKey('panel-quest-log'),
@@ -93,6 +97,8 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                       },
                       key: ValueKey('quest-log-tab-${npcs[i].id}'));
                 }(),
+              DsTab(context.t('ui.town.journal.professions'),
+                  key: const ValueKey('quest-log-tab-oficios')),
             ],
             index: tab,
             onChanged: (i) => setState(() => _tab = i),
@@ -105,9 +111,8 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                       {'role': n.role.label, 'rep': r.rep}),
                   r.invited
                       ? ResidentRules.stage(r).label
-                      : context.t('ui.town.journal.status_lives', {
-                          'place': biomeDef(n.biome)?.name ?? n.biome
-                        }),
+                      : context.t('ui.town.journal.status_lives',
+                          {'place': biomeDef(n.biome)?.name ?? n.biome}),
                   if (r.request != null)
                     context.t('ui.town.journal.status_asks',
                         {'what': requestText(r.request!).toLowerCase()}),
@@ -116,31 +121,37 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                 softWrap: true,
                 style: DsText.detail(DsColors.textSecondary)),
           SizedBox(height: DsSpace.xs),
-          LifeItemGrid(
-            key: ValueKey(
-                'quest-log-grid-${n?.id ?? (events ? 'eventos' : 'seguidos')}'),
-            groups: [
-              LifeItemGroup(null, [
-                if (events)
-                  for (final a in town.events.active)
-                    worldEventCell(context, a, town),
-                if (n == null && !events)
-                  for (final a in tracked) _trackedCell(a, p),
-                if (n != null && r != null) ...[
-                  if (orderCell(worldStrings(context), c, n, r, p,
-                          home: c.place == kPueblo)
-                      case final o?)
-                    o,
-                  ...questCells(worldStrings(context), c, n, r, p),
-                ],
-              ]),
-            ],
-            empty: events
-                ? context.t('ui.town.journal.no_events')
-                : n == null
-                ? context.t('ui.town.journal.none_tracked')
-                : context.t('ui.town.journal.no_quests'),
-          ),
+          if (prof && p != null)
+            ProfessionJournalView(
+                key: const ValueKey('quest-log-professions'),
+                profile: p,
+                onCompost: c.compost)
+          else
+            LifeItemGrid(
+              key: ValueKey(
+                  'quest-log-grid-${n?.id ?? (events ? 'eventos' : 'seguidos')}'),
+              groups: [
+                LifeItemGroup(null, [
+                  if (events)
+                    for (final a in town.events.active)
+                      worldEventCell(context, a, town),
+                  if (n == null && !events)
+                    for (final a in tracked) _trackedCell(a, p),
+                  if (n != null && r != null) ...[
+                    if (orderCell(worldStrings(context), c, n, r, p,
+                            home: c.place == kPueblo)
+                        case final o?)
+                      o,
+                    ...questCells(worldStrings(context), c, n, r, p),
+                  ],
+                ]),
+              ],
+              empty: events
+                  ? context.t('ui.town.journal.no_events')
+                  : n == null
+                      ? context.t('ui.town.journal.none_tracked')
+                      : context.t('ui.town.journal.no_quests'),
+            ),
         ],
       ),
     );

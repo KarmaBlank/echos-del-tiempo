@@ -57,6 +57,8 @@ import 'eco_portal_rules.dart';
 import 'eco_rules.dart';
 import 'exploration_rules.dart';
 import 'wild_loot_rules.dart';
+import 'cozy_rules.dart';
+import '../data/cozy_catalog.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
@@ -97,6 +99,7 @@ import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
+import 'map_discovery_rules.dart';
 import 'waystone_rules.dart';
 import 'world_event_rules.dart';
 import '../data/world_events_catalog.dart';
@@ -112,6 +115,7 @@ part 'session_engine_fishing.dart';
 part 'session_engine_farming.dart';
 part 'session_engine_biome.dart';
 part 'session_engine_mining.dart';
+part 'session_engine_cozy.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -1505,6 +1509,8 @@ class _Op {
         return false;
       case OfferBossAction():
         return _offerBoss(p);
+      case CozyAction():
+        return cozyAction(p, a);
       case TravelAction() ||
             ForageAction() ||
             WaystoneAction() ||

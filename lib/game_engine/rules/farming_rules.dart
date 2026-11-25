@@ -233,7 +233,8 @@ abstract final class FarmingRules {
 
   /// Puntaje S de la cosecha si la levanta [harvester]: lo que puso quien
   /// plantó, los riegos, el abono y (lo que más pesa) quien cosecha.
-  static double score(PlayerProfile harvester, FarmPlot plot) {
+  static double score(PlayerProfile harvester, FarmPlot plot,
+      {double bias = 0}) {
     final wetFrac =
         plot.grow <= 0 ? 0.0 : (plot.wetGrow / plot.grow).clamp(0.0, 1.0);
     return math.max(
@@ -241,12 +242,14 @@ abstract final class FarmingRules {
         plot.potential * t.d('sPlant') +
             plot.waterQ * wetFrac * t.d('sWater') +
             fertBias(plot.fert) +
+            bias +
             personScore(harvester, hoeOf(harvester)) * t.d('sHarvest'));
   }
 
   /// Chances de cada calidad si cosecha [harvester] (suman 1).
-  static Map<CropQuality, double> odds(PlayerProfile harvester, FarmPlot plot) {
-    final s = score(harvester, plot);
+  static Map<CropQuality, double> odds(PlayerProfile harvester, FarmPlot plot,
+      {double bias = 0}) {
+    final s = score(harvester, plot, bias: bias);
     final w = {
       for (final q in CropQuality.values)
         q: t.d('wQ${q.key}') * math.pow(1 + s, q.index).toDouble(),
@@ -258,9 +261,10 @@ abstract final class FarmingRules {
   }
 
   static CropQuality quality(
-      PlayerProfile harvester, FarmPlot plot, double roll) {
+      PlayerProfile harvester, FarmPlot plot, double roll,
+      {double bias = 0}) {
     var x = roll.clamp(0.0, 0.999999);
-    for (final e in odds(harvester, plot).entries) {
+    for (final e in odds(harvester, plot, bias: bias).entries) {
       if (x < e.value) return e.key;
       x -= e.value;
     }
@@ -296,10 +300,10 @@ abstract final class FarmingRules {
   /// La cosecha de [plot] (madura) por [p]. [helper]: la levanta el
   /// ayudante (calidad normal, sin hallazgos).
   static Harvest? harvest(double Function() rand, PlayerProfile p, FarmPlot plot,
-      {bool helper = false}) {
+      {bool helper = false, double bias = 0}) {
     if (!ripe(plot)) return null;
     final crop = kCrops[plot.seed]!;
-    final q = helper ? CropQuality.normal : quality(p, plot, rand());
+    final q = helper ? CropQuality.normal : quality(p, plot, rand(), bias: bias);
     final extra = helper
         ? 0.0
         : toolBonus(p, hoeOf(p)).extra + LifeTreeRules.farm(p, LifeFx.extra);
