@@ -317,7 +317,7 @@ class WorldHud extends StatelessWidget {
                     ),
                   // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
                   // `MAPA [M]` (v0.8.1).
-                  if (showMinimap)
+                  if (showMinimap || s.mode == SessionMode.lobby)
                     LayoutId(
                       id: _TopSlot.minimap,
                       child: Consumer(builder: (context, ref, _) {
@@ -327,6 +327,8 @@ class WorldHud extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // Town has no minimap but still shows the clock (v0.48.4).
+                            if (showMinimap) ...[
                             RetroPanel(
                               padding: const EdgeInsets.all(4),
                               child: Listener(
@@ -385,6 +387,7 @@ class WorldHud extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            ],
                             // Reloj del día (day_night_weather.md § 1.1):
                             // arriba, lejos de la barra de herramientas.
                             if (s.mode == SessionMode.lobby &&
