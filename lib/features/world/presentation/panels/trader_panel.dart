@@ -20,13 +20,14 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
-import 'life_tool_text.dart';
 import 'world_event_cells.dart' show eventSaleText;
 import 'seed_text.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import '../world_strings.dart';
 
-/// Puesto del AGROPECUARIO (fishing.md § 5, v0.23.2): primero COMPRAR o
+/// Puesto del AGROPECUARIO (fishing.md § 5, v0.23.2): solo consumibles e
+/// insumos (las herramientas, en el TALLER DE OFICIOS desde v0.48.5).
+/// Primero COMPRAR o
 /// VENDER, después PESCA o CULTIVO. Buscador y filtro por tipo siempre a
 /// la vista; "Cobrar en" (oro o materiales) solo al VENDER.
 class TraderPanel extends StatefulWidget {
@@ -79,11 +80,13 @@ class _TraderPanelState extends State<TraderPanel> {
       });
 
   List<String> get _kinds => switch ((_mode, _tab)) {
+        // Tools are sold at the crafts workshop (town_loop.md § 2.1,
+        // v0.48.5): the farm shop only sells consumables and inputs.
         (_, 2) => _mode == 0
-            ? const ['mine_tools', 'mine_supplies']
+            ? const ['mine_supplies']
             : const ['mine_goods'],
-        (0, 0) => const ['cañas', 'cebos'],
-        (0, _) => const ['semillas', 'abonos', 'azadas', 'regaderas'],
+        (0, 0) => const ['cebos'],
+        (0, _) => const ['semillas', 'abonos'],
         (_, 0) => const ['peces', 'basura', 'legendarios'],
         _ => const ['cultivos', 'legendarios'],
       };
@@ -309,44 +312,12 @@ class _TraderPanelState extends State<TraderPanel> {
   List<_Row> _fishing() {
     final p = widget.view.me?.profile;
     final bag = p?.life.bag ?? const <String, int>{};
-    final lvl = p == null ? 1 : FishingRules.level(p);
     final t = FishingRules.t;
     final species = [
       for (final f in kFish.values)
         if ((bag[f.id] ?? 0) > 0) f
     ];
     return [
-      for (final r in kRods.values)
-        _Row(
-            'cañas',
-            LifeItemCellData(
-              id: 'trade-rod-${r.id}',
-              icon: LifeIcon(r.id, LifeIconKind.herramienta, size: _icon),
-              border: fishRarityColor(r.rarity),
-              search: r.name,
-              equipped: p?.life.rod == r.id,
-              caption: p?.life.rods.contains(r.id) ?? false
-                  ? context.t('ui.town.trader.owned')
-                  : context.t('ui.town.trader.price_short', {'n': r.price}),
-              detail: LifeItemDetail(
-                name: r.name,
-                nameColor: fishRarityColor(r.rarity),
-                tags: [
-                  (context.t('ui.town.trader.tag_rod'), DsColors.textSecondary),
-                  (r.rarity.label.toUpperCase(), fishRarityColor(r.rarity)),
-                ],
-                lines: [
-                  ...rodLines(r, lvl),
-                  context.t('ui.town.trader.price', {'n': r.price}),
-                ],
-                hoverTip: true,
-                compare: p == null
-                    ? null
-                    : rodCompare(
-                        r, kRods[p.life.rod] ?? kRods[kStarterRod]!, lvl),
-                actions: [_rodButton(r)],
-              ),
-            )),
       // Cebos (fishing.md § 14.4).
       for (final b in kBaits.values)
         _Row(
@@ -437,33 +408,11 @@ class _TraderPanelState extends State<TraderPanel> {
     ];
   }
 
-  Widget _rodButton(RodDef r) {
-    final p = widget.view.me?.profile;
-    final owned = p?.life.rods.contains(r.id) ?? false;
-    if (p?.life.rod == r.id) {
-      return DsButton(context.t('ui.town.trader.equipped'),
-          key: ValueKey('trade-rod-eq-${r.id}'),
-          size: DsButtonSize.compact,
-          onPressed: null);
-    }
-    if (owned) {
-      return DsButton(context.t('ui.town.trader.equip'),
-          key: ValueKey('trade-rod-eq-${r.id}'),
-          size: DsButtonSize.compact,
-          onPressed: () => c.equipRod(r.id));
-    }
-    return DsButton(context.t('ui.town.trader.buy_price', {'n': r.price}),
-        key: ValueKey('trade-rod-buy-${r.id}'),
-        size: DsButtonSize.compact,
-        onPressed: (p?.credits ?? 0) >= r.price ? () => c.buyRod(r.id) : null);
-  }
-
   // ---------------- CULTIVO ----------------
 
   List<_Row> _farming() {
     final p = widget.view.me?.profile;
     final f = p?.life.farm;
-    final lvl = p == null ? 1 : FarmingRules.level(p);
     final gold = p?.credits ?? 0;
     final t = FarmingRules.t;
     final seeds = [
@@ -547,43 +496,6 @@ class _TraderPanelState extends State<TraderPanel> {
                 ],
               ),
             )),
-      for (final d in kFarmTools.values)
-        if (d.price > 0 || _owned(d))
-          _Row(
-              d.kind == FarmToolKind.azada ? 'azadas' : 'regaderas',
-              LifeItemCellData(
-                id: 'trade-tool-${d.id}',
-                icon: LifeIcon(d.id, LifeIconKind.herramienta, size: _icon),
-                border: fishRarityColor(d.rarity),
-                search: d.name,
-                equipped:
-                    (d.kind == FarmToolKind.azada ? f?.hoe : f?.can) == d.id,
-                caption: _owned(d)
-                    ? context.t('ui.town.trader.owned')
-                    : context.t('ui.town.trader.price_short', {'n': d.price}),
-                detail: LifeItemDetail(
-                  name: d.name,
-                  nameColor: fishRarityColor(d.rarity),
-                  tags: [
-                    (d.kind.label.toUpperCase(), DsColors.textSecondary),
-                    (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
-                  ],
-                  lines: [
-                    ...farmToolLines(d, lvl),
-                    context.t('ui.town.trader.price', {'n': d.price}),
-                  ],
-                  hoverTip: true,
-                  compare: p == null
-                      ? null
-                      : farmToolCompare(
-                          d,
-                          d.kind == FarmToolKind.azada
-                              ? FarmingRules.hoeOf(p)
-                              : FarmingRules.canOf(p),
-                          lvl),
-                  actions: [_toolButton(d)],
-                ),
-              )),
       for (final (key, crop, quality, n) in crops)
         _Row(
             crop.rarity == FishRarity.legendario ? 'legendarios' : 'cultivos',
@@ -640,8 +552,6 @@ class _TraderPanelState extends State<TraderPanel> {
     String name(String id) =>
         context.t('data.materials.smith.$id.name');
     final buy = [
-      for (final t in kMineTools)
-        if (t.tier > 0) (t.id, 'mine_tools'),
       for (final id in kMineSupplies) (id, 'mine_supplies'),
     ];
     return [
@@ -720,33 +630,6 @@ class _TraderPanelState extends State<TraderPanel> {
     ];
   }
 
-  bool _owned(FarmToolDef d) {
-    final f = widget.view.me?.profile.life.farm;
-    return (d.kind == FarmToolKind.azada ? f?.hoes : f?.cans)?.contains(d.id) ??
-        false;
-  }
-
-  Widget _toolButton(FarmToolDef d) {
-    final f = widget.view.me?.profile.life.farm;
-    final gold = widget.view.me?.profile.credits ?? 0;
-    final equipped = d.kind == FarmToolKind.azada ? f?.hoe : f?.can;
-    if (equipped == d.id) {
-      return DsButton(context.t('ui.town.trader.equipped'),
-          key: ValueKey('trade-tool-eq-${d.id}'),
-          size: DsButtonSize.compact,
-          onPressed: null);
-    }
-    if (_owned(d)) {
-      return DsButton(context.t('ui.town.trader.equip'),
-          key: ValueKey('trade-tool-eq-${d.id}'),
-          size: DsButtonSize.compact,
-          onPressed: () => c.equipFarmTool(d.id));
-    }
-    return DsButton(context.t('ui.town.trader.buy_price', {'n': d.price}),
-        key: ValueKey('trade-tool-buy-${d.id}'),
-        size: DsButtonSize.compact,
-        onPressed: gold >= d.price ? () => c.buyFarmTool(d.id) : null);
-  }
 }
 
 /// Una casilla del puesto: tipo (filtro), modo y la casilla.

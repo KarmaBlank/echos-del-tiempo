@@ -76,7 +76,7 @@ void main() {
     final sfx = w == 1280 ? '' : '_1024';
 
     for (final (mode, tab, cell, name) in const [
-      (0, 0, 'trade-rod-cana_roble', 'agro_comprar_pesca'),
+      (0, 0, 'trade-bait-lombriz', 'agro_comprar_pesca'),
       (0, 1, 'trade-seed-trigo_dorado', 'agro_comprar_cultivo'),
       (1, 1, 'trade-crop-nabo_claro@1', 'agro_vender_cultivo'),
     ]) {

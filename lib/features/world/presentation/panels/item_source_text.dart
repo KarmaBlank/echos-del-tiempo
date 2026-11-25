@@ -30,6 +30,7 @@ String lifeItemText(String id) {
       kBaits[id]?.name ??
       kFertilizers[id]?.text ??
       kFarmTools[id]?.text ??
+      kRods[id]?.text ??
       id;
 }
 
@@ -68,6 +69,7 @@ List<String> itemSourceLines(BuildContext context, String id) => [
       for (final s in ItemSourceRules.of(id))
         switch (s.kind) {
           ItemSourceKind.farmShop => context.t('ui.town.source.farm_shop'),
+          ItemSourceKind.toolShop => context.t('ui.town.source.tool_shop'),
           ItemSourceKind.crop => context.t('ui.town.source.crop', {
               'place': _place(context, s.biome),
               'seasons': seasonsText(s.seasons ?? const {}),

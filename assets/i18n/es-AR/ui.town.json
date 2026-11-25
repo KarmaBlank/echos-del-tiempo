@@ -580,5 +580,6 @@
   "ui.town.source.cooking": "Se cocina en la COCINA",
   "ui.town.source.bait_craft": "Se prepara en la mesa de CEBOS",
   "ui.town.source.have_need": "Tenés {have} de {need}",
-  "ui.town.source.requires": "REQUIERE"
+  "ui.town.source.requires": "REQUIERE",
+  "ui.town.source.tool_shop": "Se compra en el TALLER DE OFICIOS › HERRAMIENTAS"
 }

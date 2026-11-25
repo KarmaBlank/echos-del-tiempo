@@ -580,5 +580,6 @@
   "ui.town.source.cooking": "Cooked at the KITCHEN",
   "ui.town.source.bait_craft": "Prepared at the BAIT bench",
   "ui.town.source.have_need": "You have {have} of {need}",
-  "ui.town.source.requires": "REQUIRES"
+  "ui.town.source.requires": "REQUIRES",
+  "ui.town.source.tool_shop": "Bought at the CRAFTS WORKSHOP › TOOLS"
 }

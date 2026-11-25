@@ -8,8 +8,11 @@ import '../models/player_profile.dart';
 
 /// Un material de oficio (farming.md § 8.5, v0.27.0).
 class LifeMaterialDef {
-  const LifeMaterialDef(this.id, this.name, this.description);
+  const LifeMaterialDef(this.id, this.name, this.description, {this.tier = 1});
   final String id, name, description;
+
+  /// Crafting tier shown in the workshop (tabla is made from fibra: 2).
+  final int tier;
 }
 
 const kLifeMaterials = <String, LifeMaterialDef>{
@@ -18,7 +21,8 @@ const kLifeMaterials = <String, LifeMaterialDef>{
   'cebo': LifeMaterialDef('cebo', 'Cebo prensado',
       'Pescado curado en tiras. Lo piden los pescadores.'),
   'tabla': LifeMaterialDef('tabla', 'Tabla tratada',
-      'Fibra trenzada y endurecida con Esquirlas. Para mejoras grandes.'),
+      'Fibra trenzada y endurecida con Esquirlas. Para mejoras grandes.',
+      tier: 2),
 };
 
 /// Lo que pide condensar una unidad de un material de oficio.

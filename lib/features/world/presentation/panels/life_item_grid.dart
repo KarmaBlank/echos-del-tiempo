@@ -106,9 +106,14 @@ class LifeItemGrid extends StatefulWidget {
     required this.empty,
     this.emptyKey,
     this.extra,
+    this.maxDetail = detailWidth,
   });
 
   final List<LifeItemGroup> groups;
+
+  /// Widest the detail column gets (wide panels with few cells give it
+  /// more room so there is no big empty area).
+  final double maxDetail;
 
   /// Text shown when there are no cells.
   final String empty;
@@ -124,8 +129,8 @@ class LifeItemGrid extends StatefulWidget {
   static const wideFrom = 420.0;
 
   /// Detail column width for a given available width.
-  static double detailFor(double maxWidth) =>
-      (maxWidth * 0.45).clamp(180.0, detailWidth);
+  static double detailFor(double maxWidth, [double max = detailWidth]) =>
+      (maxWidth * 0.45).clamp(180.0, max);
 
   @override
   State<LifeItemGrid> createState() => _LifeItemGridState();
@@ -208,7 +213,8 @@ class _LifeItemGridState extends State<LifeItemGrid> {
               if (sel != null) ...[
                 SizedBox(width: DsSpace.sm),
                 SizedBox(
-                    width: LifeItemGrid.detailFor(box.maxWidth),
+                    width: LifeItemGrid.detailFor(
+                        box.maxWidth, widget.maxDetail),
                     child: lifeDetailPane(context, sel)),
               ],
             ]);
