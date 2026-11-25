@@ -54,6 +54,12 @@ Cada habitante que vive en el pueblo pide una orden por día del mundo
   `orderSkillEvery` órdenes del habitante, +1 punto de árbol
   (`PlayerProfile.treeBonus`, JSON `tb`). El detalle de la orden muestra
   todo eso antes de entregar.
+- Nombre del ítem pedido (encargo u orden, también en el diario y el
+  HUD): pescado, cultivo / silvestre, o material de minería y forja
+  (mena, lingote, raro, herramienta, insumo: `data.materials.smith.<id>.name`).
+  Nunca se muestra el id crudo; un id sin texto se muestra legible
+  (`ingot_x` → "Ingot x"). Ícono: el `vida_<id>` de minería si es de
+  forja. `residentItemName` / `QuestTrackRules.itemName`.
 - Valor = precio de venta × cantidad × (1 + calidad pedida).
 - Pescados con tamaño (v0.31.0): desde `orderSizeLevel` de Pesca, a veces
   piden "de N cm o más" (un cuarto, la mitad o tres cuartos del rango).

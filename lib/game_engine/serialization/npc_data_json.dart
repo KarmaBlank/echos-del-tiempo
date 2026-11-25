@@ -84,6 +84,7 @@ class NpcData {
       topics(id, t.topics, '');
       lines(id, 'al invitarlo', t.decline);
       lines(id, 'frase suelta', t.ambient);
+      lines(id, 'frase suelta (en el pueblo)', t.homeAmbient);
       for (final MapEntry(key: k, value: v) in t.night.entries) {
         check(id, 'noche $k', v);
       }
@@ -166,6 +167,8 @@ class NpcData {
         if (t.decline.isNotEmpty) 'decline': _textsToJson(t.decline),
         if (t.gift.isNotEmpty) 'gift': t.gift,
         if (t.ambient.isNotEmpty) 'ambient': _textsToJson(t.ambient),
+        if (t.homeAmbient.isNotEmpty)
+          'home_ambient': _textsToJson(t.homeAmbient),
         if (t.night.isNotEmpty)
           'night': {
             for (final e in t.night.entries) e.key: e.value.toJson(),
@@ -189,6 +192,7 @@ class NpcData {
       decline: _texts(v['decline']),
       gift: v['gift'] as String? ?? '',
       ambient: _texts(v['ambient']),
+      homeAmbient: _texts(v['home_ambient']),
       night: {
         if (v['night'] case final Map n)
           for (final e in n.entries)

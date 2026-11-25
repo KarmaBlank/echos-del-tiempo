@@ -76,6 +76,7 @@ class NpcTalkDef {
       this.decline = const [],
       this.gift = '',
       this.ambient = const [],
+      this.homeAmbient = const [],
       this.night = const {},
       this.inviteAccept = LocalizedText.empty,
       this.thanksDay = LocalizedText.empty,
@@ -93,6 +94,12 @@ class NpcTalkDef {
   /// Loose lines: the resident's line of the day (one per world day, in
   /// order) or the rooted fisher's shore lines.
   final List<LocalizedText> ambient;
+
+  /// Loose lines of a resident once they live in town (invited). When
+  /// non-empty they replace [ambient] there, so the recruit pitch
+  /// ("take me to your town") never plays after moving
+  /// (overworld_biomes.md § 12.1).
+  final List<LocalizedText> homeAmbient;
 
   /// Night outing reasons by outing id (`BiomeNpcDef.nightOutings`).
   final Map<String, LocalizedText> night;
@@ -124,6 +131,13 @@ const kNpcTalksDefaults = <String, NpcTalkDef>{
             'acordara de algo.'),
         _L('Hay ecos que bajan por el río. Yo no los pesco: los dejo pasar.'),
         _L('Si un día tu pueblo necesita quien cure, avisame.'),
+      ],
+      // BORRADOR (draft) for the owner.
+      homeAmbient: [
+        _L('Las moras de acá saben distinto cada mañana. Como si el bosque se '
+            'acordara de algo.'),
+        _L('Hay ecos que bajan por el río. Yo no los pesco: los dejo pasar.'),
+        _L('Si alguien del pueblo se lastima, que venga. Para eso me mudé.'),
       ],
       night: {
         'ilda_garden': _L(
@@ -297,6 +311,13 @@ const kNpcTalksDefaults = <String, NpcTalkDef>{
         _L('Este calor viene de abajo, de un mecanismo viejo que sigue andando.'),
         _L('Forjo con lo que deja el pasado. Nada se pierde del todo.'),
         _L('Llevame a tu pueblo y tus mejoras van a salir más baratas.'),
+      ],
+      // BORRADOR (draft) for the owner.
+      homeAmbient: [
+        _L('Este calor viene de abajo, de un mecanismo viejo que sigue andando.'),
+        _L('Forjo con lo que deja el pasado. Nada se pierde del todo.'),
+        _L('La forja del pueblo ya agarró temperatura. Traeme lingotes y te hago algo.'),
+        _L('Acá el fuego es más chico, pero es mío. Me gusta despertarme al lado.'),
       ],
       night: {
         'brann_embers': _L(
