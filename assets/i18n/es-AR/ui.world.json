@@ -404,7 +404,7 @@
   "ui.world.way.site_cavern": "Gruta {n}",
   "ui.world.wild.prompt_chest": "[E] Abrir el cofre",
   "ui.world.wild.prompt_shrine": "[E] Pedir la bendición",
-  "ui.world.wild.prompt_done": "Ya lo usaste hoy: vuelve mañana",
+  "ui.world.wild.prompt_done": "Ya lo usaste hoy: volvé mañana",
   "ui.world.raft.prompt_board": "[E] Subir a la balsa",
   "ui.world.raft.prompt_leave": "[E] Bajar a la orilla",
   "ui.world.raft.prompt_fish": "[E] Pescar desde la balsa"

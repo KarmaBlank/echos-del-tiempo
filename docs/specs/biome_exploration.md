@@ -71,12 +71,14 @@ agregan después (más matas por sección, `wildForagePerSection`).
 Cofres en grutas y zonas ocultas (`chestSpots`, tile `$` de las minas,
 sólido). E abre: oro y botín de cofre de madera (como los de mina) más 2
 del mineral del bioma; uno por jugador por día. Se anota en
-`town.daily` (`wx:<jugador>:<bioma>:c<i>:<día>`, se poda al cambiar el
-día): mañana vuelven a llenarse.
+`town.daily` (`wx:<jugador>:<bioma>:v<versión de plano>:c<i>:<día>`, se
+poda al cambiar el día): mañana vuelven a llenarse. `<i>` es el índice del
+plano generado, por eso la clave lleva `BiomeLayout.version`: al
+regenerarse el plano, una marca vieja no cae sobre un cofre nuevo.
 
 ### 3.4 Santuarios y fuentes
 E da, una vez por jugador por día, `shrineGold` de oro y 1 del material
-raro del bioma. Mismo guardado (`wx:<jugador>:<bioma>:s<i>:<día>`).
+raro del bioma. Mismo guardado (`wx:<jugador>:<bioma>:v<versión>:s<i>:<día>`).
 
 ## 4. Luz en grutas
 
@@ -129,7 +131,9 @@ mundo (world_events.md § 3.6), no se duplica nada:
   0 si falta).
 - En `setWorld`, `BiomeRegions.migrate`: si `lv` ≠ versión se borran las
   piedras activadas (`town.ws`; la de la entrada siempre está activa) y
-  las matas recolectadas (`town.wild`), y se guarda `lv`. Construcciones del pueblo, estado de
+  las matas recolectadas (`town.wild`) y las marcas de cofres / santuarios
+  del día (claves `wx:` de `town.daily`), y se guarda `lv`. Las marcas sin
+  versión de guardados previos a v0.49.5 ya no coinciden con ninguna clave. Construcciones del pueblo, estado de
   minas y todo lo demás no dependen del plano y quedan.
 
 ## 8. Mapa y rendimiento

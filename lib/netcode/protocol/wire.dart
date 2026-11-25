@@ -204,7 +204,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// player snapshot.
 /// 88: player stall (player_shop.md): `stall` action (StallAction) and
 /// `life.ps` in the profile.
-const kProtocolVersion = 88;
+/// 89: wilds loot `town.daily` keys carry the layout version
+/// (`wx:<player>:<biome>:v<n>:<c|s><i>:<day>`); an 88 peer would read
+/// the marks of a regenerated layout on the wrong spots.
+const kProtocolVersion = 89;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
