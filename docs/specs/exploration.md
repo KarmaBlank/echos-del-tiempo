@@ -552,7 +552,7 @@ build, chat plegado) como `DsToast`. Mismo orden, mismas teclas, misma
   sigue. - **Piedras de paso en el mapa** (v0.20.6, worldgen.md § 11.4): las
   piedras descubiertas (`poiSeen`) se marcan con un cuadro de color vivo
   (`FullMap.waystoneColor` = `#00F0FF`; sin activar, al 45%; lado
-  `max(22, celda × 1.6)` px) **sin número** (desde v0.49.10: los números
+  `max(22, celda × 1.6)` px) **sin número** (desde v0.49.11: los números
   no se leían ni decían nada). Las piedras activadas que no son la de
   acá **laten** suave (opacidad 0.4 ↔ 1, curva ease-in-out, ciclo de
   `FullMap.blinkPeriod` = 900 ms ida y vuelta); son widgets encima del
