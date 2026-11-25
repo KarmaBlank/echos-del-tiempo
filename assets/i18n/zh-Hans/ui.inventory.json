@@ -404,8 +404,8 @@
   "ui.inventory.workshop.filter.farming": "",
   "ui.inventory.workshop.filter.fishing": "",
   "ui.inventory.workshop.have": "",
-  "ui.inventory.workshop.help": "",
-  "ui.inventory.workshop.hint": "",
+  "ui.inventory.workshop.help": "<b>手艺工坊</b><br>制作:收成和鱼(不含传说;先用价值最低的)可制成手艺材料,用于雇用和升级帮手。选择配方后,右侧显示材料、数量和制作按钮。<br>工具:鱼竿、锄头、水壶和镐在这里购买和装备(农用品店只卖耗材)。武器在军械库处理。",
+  "ui.inventory.workshop.hint": "选择配方和数量,然后制作。没有随机性。",
   "ui.inventory.workshop.max": "",
   "ui.inventory.workshop.not_enough": "",
   "ui.inventory.workshop.recipe": "",
@@ -723,5 +723,23 @@
   "ui.inventory.smith.who_self": {
     "text": "由你亲自锻造：锻造经验 +{xp}",
     "status": "draft"
-  }
+  },
+  "ui.inventory.workshop.tab.craft": "制作",
+  "ui.inventory.workshop.tab.tools": "工具",
+  "ui.inventory.workshop.tools_hint": "鱼竿、锄头、水壶和镐在这里购买和装备。",
+  "ui.inventory.workshop.tier": "等级 {n}",
+  "ui.inventory.workshop.ingredients": "材料",
+  "ui.inventory.workshop.result": "获得 {n} × {item}",
+  "ui.inventory.workshop.qty": "数量:{n}",
+  "ui.inventory.workshop.craft": "制作",
+  "ui.inventory.workshop.ing.crops": "收成",
+  "ui.inventory.workshop.ing.crops_src": "在菜园收获(不会使用传说品质)",
+  "ui.inventory.workshop.ing.crops_desc": "任何收成都可以;先消耗价值最低的。",
+  "ui.inventory.workshop.ing.fish": "鱼",
+  "ui.inventory.workshop.ing.fish_src": "在湖中钓到(不会使用传说品质)",
+  "ui.inventory.workshop.ing.fish_desc": "任何鱼都可以;先消耗价值最低的。",
+  "ui.inventory.workshop.ing.shard": "碎片",
+  "ui.inventory.workshop.ing.shard_src": "远征战利品",
+  "ui.inventory.workshop.ing.gold": "金币",
+  "ui.inventory.workshop.ing.gold_src": "在农用品店出售或远征中获得"
 }

@@ -680,5 +680,7 @@
   "ui.town.npc.ms.state_claimable": "Ready: tap to claim",
   "ui.town.npc.ms.state_reached": "Reached",
   "ui.town.npc.ms.state_next": "Next milestone",
-  "ui.town.npc.ms.state_locked": "Locked"
+  "ui.town.npc.ms.state_locked": "Locked",
+  "ui.town.source.tool_shop": "Bought at the CRAFTS WORKSHOP › TOOLS",
+  "ui.town.trader.kind.picks": "PICKS"
 }

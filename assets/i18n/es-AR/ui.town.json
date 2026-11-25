@@ -680,5 +680,7 @@
   "ui.town.npc.ms.state_claimable": "Listo: tocá para reclamar",
   "ui.town.npc.ms.state_reached": "Alcanzado",
   "ui.town.npc.ms.state_next": "Próximo hito",
-  "ui.town.npc.ms.state_locked": "Bloqueado"
+  "ui.town.npc.ms.state_locked": "Bloqueado",
+  "ui.town.source.tool_shop": "Se compra en el TALLER DE OFICIOS › HERRAMIENTAS",
+  "ui.town.trader.kind.picks": "PICOS"
 }

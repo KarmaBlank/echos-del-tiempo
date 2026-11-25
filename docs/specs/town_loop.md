@@ -94,6 +94,41 @@ Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
   recetas son las de materials_economy.md § 4.4; las recetas nuevas de
   oficio van acá, nunca en la armería.
 
+##### Casa de los oficios: CRAFTEO y HERRAMIENTAS (v0.48.5)
+
+Pedido del dueño: el AGROPECUARIO vende solo consumibles e insumos de
+oficio; las herramientas se compran en el taller (la casa de los
+oficios), al lado del crafteo.
+
+- El panel tiene dos subpestañas (nunca secciones apiladas):
+  **CRAFTEO** (`workshop-tab-craft`) y **HERRAMIENTAS**
+  (`workshop-tab-tools`).
+- **CRAFTEO**: grilla de casillas de INVENTARIO (44 px,
+  `LifeItemCell`, ficha estándar al pasar el mouse) en una columna
+  angosta de ancho fijo y el detalle ocupando TODO el resto a la
+  derecha (`workshop-detail`): ícono grande (64 px), nombre, NIVEL
+  (`LifeMaterialDef.tier`: fibra y cebo 1, tabla 2), descripción,
+  INGREDIENTES como grilla de costo (`DsCostGrid`, tenés/necesitás por
+  la cantidad elegida; nunca texto plano), resultado ("Obtenés N ×"),
+  selector de cantidad (− / + / ×1 / ×5 / MÁX, `workshop-qty-*`) y
+  **CRAFTEAR** (`workshop-craft`), gris con motivo si no alcanza o fuera
+  del Mundo. Chips TODOS / CULTIVO / PESCA filtran la grilla.
+  Ingredientes genéricos: "cosechas" (cualquiera no legendaria, primero
+  las de menos valor), "pescados" (ídem), fibra, Esquirlas y oro.
+- **HERRAMIENTAS**: grilla con chips CAÑAS / AZADAS / REGADERAS / PICOS
+  y el detalle a la derecha (rinde, comparación con la equipada,
+  COMPRAR / EQUIPAR). Las mismas acciones de siempre (`BuyRodAction`,
+  `FarmToolAction`, `MineAction` de compra): el host no mira en qué
+  puesto se compró (no hay op por vendedor), así que no cambia el
+  protocolo.
+- Toda referencia a un objeto (ingrediente, resultado, herramienta) es
+  una casilla con la ficha estándar: qué es, dónde se consigue
+  (`itemSourceLines`, item_sources.md) y MÁS DETALLE plegado.
+- Las herramientas figuran en item_sources.md como
+  `ItemSourceKind.toolShop` ("Se compra en el TALLER DE OFICIOS").
+- Capturas: `docs/preview/oficio_house_craft.png`,
+  `oficio_house_tools.png`, `agropecuario.png` (con `PREVIEW_SHOTS=1`).
+
 #### Carteles en el mundo (v0.37.3)
 
 - Todas las etiquetas del mundo en el pueblo y los exteriores (lugares,

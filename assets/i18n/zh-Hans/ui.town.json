@@ -692,5 +692,7 @@
   "ui.town.npc.ms.state_claimable": "就绪：点击领取",
   "ui.town.npc.ms.state_reached": "已达成",
   "ui.town.npc.ms.state_next": "下一个里程碑",
-  "ui.town.npc.ms.state_locked": "未解锁"
+  "ui.town.npc.ms.state_locked": "未解锁",
+  "ui.town.source.tool_shop": "在手艺工坊 › 工具 购买",
+  "ui.town.trader.kind.picks": "镐"
 }

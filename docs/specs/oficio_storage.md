@@ -76,3 +76,11 @@ ver share_materials.md (protocolo 78).
 - `I` abre PERSONAJE en EQUIPAMIENTO. `J` DIARIO y `O` objetivos, igual.
 - Escribiendo en el chat o en un campo, `Tab` no es atajo.
 - La herramienta de la huerta pasa de `Tab` a `R` (o la rueda).
+
+## 7. Dónde se compra cada cosa (v0.48.5)
+
+- AGROPECUARIO: consumibles e insumos (semillas, abonos, cebos, insumos
+  de mina) y la venta de lo producido.
+- TALLER DE OFICIOS (casa de los oficios): CRAFTEO de materiales de
+  oficio y HERRAMIENTAS (cañas, azadas, regaderas, picos). Ver
+  town_loop.md § 2.1. Las herramientas no ocupan casillas de bolsa.
