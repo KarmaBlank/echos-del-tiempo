@@ -252,45 +252,36 @@ replantada; filtro "Vivas" en el inventario.
 `items.vida_gear_<tipo>_<bioma>` en `sprite_manifest.yaml` (8 bits).
 i18n: `data.items.gear2.*` en es-AR, en, zh-Hans.
 
-### 6.5 Íconos modulares por piezas
+### 6.5 Íconos: misma forma, color por material
 Hoy (sprites.md "Íconos" e "Identidad del arma";
 `lib/core/procedural/item_icon_rows.dart`, `WeaponLook` /
 `paintItemIcon`, `tool/export_item_icons.dart`, `WeaponOverlay.kGrips`)
-hay un PNG 16×16 por forma (25) + un acento gris teñido por rareza; la
-variación por uid solo cambia tono de metal / gema. La forja por piezas
-necesita **silueta por piezas**:
-- **Ranuras visuales por tipo** (`kIconPartSlots[type]`): hoja/cabeza,
-  guarda, mango/asta, pomo/remate, ligadura/vendaje, gema/núcleo
-  (opcional). Cada tipo usa las que le corresponden (arco: palas,
-  empuñadura, cuerda, puntas; tomo: tapa, lomo, cierre, gema).
-- **Variantes**: cada ranura tiene varias variantes pixel art 16×16 en
-  escala de grises con **puntos de anclaje** (`anchor` en el manifest:
-  dónde se une a la pieza vecina). Cada variante es un PNG del manifest
-  (`items.part_<tipo>_<ranura>_<variante>`), generado por
-  `tool/export_item_icons.dart` y reemplazable desde el Editor de
-  Sprites; nunca dibujado a mano en Dart.
-- **Paletas por material** (`kMaterialRamps`, rampa de 4 tonos): metales
-  por tier (§ 2.3), maderas, hueso, escama, madera viva, cristal,
-  esencia. Cada pieza se pinta con la rampa de su material.
-- **Encima, en este orden**: acento de afinidad (1–2 píxeles), y los
-  efectos de rareza que ya existen (aura, destello, marca de ULT).
-- **Peces**: escama → hoja/chapado (rampa irisada por especie), hueso →
-  mango. **Vivas**: madera viva con hojas/enredadera como variantes de
-  ligadura y remate; el tono de hoja sigue el bioma (§ 4.2).
-- **Composición y caché**: `ItemIconComposer.compose(type, parts,
-  materials, aff, rarity)` → imagen cacheada por clave
-  `type|parte:variante:material…|aff|rarity`. La usan inventario,
-  tooltips, retratos y el sprite en mano del mapa/batalla (vía
-  `WeaponOverlay.kGrips`, que suma el anclaje de empuñadura por tipo).
-- **Retrocompatibilidad**: cada forma actual se recorta en piezas
-  "default" (`<tipo>_default`) y materiales por defecto que reproducen
-  píxel a píxel el ícono de hoy; un arma sin `pt` usa ese set. Test de
-  píxeles: compuesto default == PNG actual para las 25 formas.
-- **Vista previa**: `docs/preview/weapon_parts/` (generado por el export
-  tool): por tipo, una grilla variantes × materiales, más una fila de
-  rarezas y una de afinidades; se revisa antes de mergear arte.
-- Coste: ~6 ranuras × ~4 variantes × 25 tipos ≈ 600 PNG chicos en
-  escala de grises; las rampas de color no multiplican archivos.
+hay un PNG 16×16 por forma (25) + `<forma>_acento.png` gris teñido por
+rareza. **Decisión del dueño: no hay variantes de silueta.** Cada tipo
+conserva su única forma (los 25 PNG, editables en el Editor de Sprites);
+solo cambian los **colores** según los materiales elegidos.
+- **Capas de recoloreo por región** (escala de grises, mismo 16×16):
+  `<forma>_head.png` (hoja/cabeza/metal), `<forma>_grip.png`
+  (mango/asta/madera/hueso) y el `<forma>_acento.png` existente
+  (gema/acento). Las genera `tool/export_item_icons.dart` a partir del
+  arte actual; todas van al manifest y se pueden reemplazar en el Editor.
+- **Tinte**: cada capa usa la rampa de 4 tonos (`kMaterialRamps`) del
+  material elegido para esa pieza: cabeza → material de base/hoja,
+  mango → material del mango, acento → afinidad/rareza. Encima, como hoy:
+  aura, destello y marca de ULT por rareza.
+- **Peces**: rampa de escama (por especie) en cabeza, rampa de hueso en
+  mango. **Vivas**: rampa de madera viva teñida por bioma (§ 4.2).
+- **Caché**: ícono compuesto por clave `(forma, materiales, afinidad,
+  rareza)`; lo usan inventario, tooltips, retratos y el sprite en mano
+  del mapa/batalla (vía `WeaponOverlay.kGrips`).
+- **Retrocompatibilidad**: los materiales por defecto reproducen el
+  ícono actual píxel a píxel (test de píxeles sobre las 25 formas); un
+  arma sin `pt` usa esos materiales.
+- **Vista previa**: `docs/preview/weapon_parts/` (export tool): por
+  forma, grilla material de cabeza × material de mango, más filas de
+  rareza y afinidad.
+- Tamaño: 25 formas × 2 capas nuevas = **50 PNG chicos** (el acento ya
+  existe); las rampas son datos, no archivos.
 
 ## 7. Guardado y red (protocolo 93)
 - `ItemInstance` suma campos opcionales: `aff` (afinidad), `pt` (piezas:
