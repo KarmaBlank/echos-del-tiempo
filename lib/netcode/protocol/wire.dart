@@ -209,7 +209,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// the marks of a regenerated layout on the wrong spots.
 /// 90: overworld map discovery (biome_exploration.md § 11.4): `town.md`
 /// (biome → cell bits; the room snapshot carries only the current biome).
-const kProtocolVersion = 90;
+/// 91: cozy life (cozy_life.md): the `cozy` action (tree search, raft
+/// decorations, compost), `town.dc` farm decorations and `life.rd` /
+/// `life.ro` / `life.ff` / `life.farm.rc` in the profile.
+const kProtocolVersion = 91;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

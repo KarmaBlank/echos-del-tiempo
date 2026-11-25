@@ -758,5 +758,221 @@
   "ui.town.stall.seller": "卖家：{name}",
   "ui.town.stall.visitor": "访客",
   "ui.town.stall.log_day": "第 {n} 天",
-  "ui.town.stall.log_sold": "卖出 {n} 个，获得 {gold} 金币"
+  "ui.town.stall.log_sold": "卖出 {n} 个，获得 {gold} 金币",
+  "ui.town.decor.text": {
+    "text": "农田装饰。不阻挡通行。",
+    "status": "draft"
+  },
+  "ui.town.decor.fence.name": {
+    "text": "篱笆",
+    "status": "draft"
+  },
+  "ui.town.decor.fence.info": {
+    "text": "一段木篱笆，用来围起农田。",
+    "status": "draft"
+  },
+  "ui.town.decor.scarecrow.name": {
+    "text": "稻草人",
+    "status": "draft"
+  },
+  "ui.town.decor.scarecrow.info": {
+    "text": "守护附近的地块：收获品质略微提升。",
+    "status": "draft"
+  },
+  "ui.town.decor.pot.name": {
+    "text": "花盆",
+    "status": "draft"
+  },
+  "ui.town.decor.pot.info": {
+    "text": "一盆花。",
+    "status": "draft"
+  },
+  "ui.town.decor.stone_path.name": {
+    "text": "石板小路",
+    "status": "draft"
+  },
+  "ui.town.decor.stone_path.info": {
+    "text": "铺在地块之间的石板小路。",
+    "status": "draft"
+  },
+  "ui.town.decor.lamp.name": {
+    "text": "小灯",
+    "status": "draft"
+  },
+  "ui.town.decor.lamp.info": {
+    "text": "夜晚会亮起的小灯。",
+    "status": "draft"
+  },
+  "ui.town.raft.menu": {
+    "text": "装饰木筏",
+    "status": "draft"
+  },
+  "ui.town.raft.title": {
+    "text": "木筏",
+    "status": "draft"
+  },
+  "ui.town.raft.tag": {
+    "text": "木筏",
+    "status": "draft"
+  },
+  "ui.town.raft.on": {
+    "text": "已装上",
+    "status": "draft"
+  },
+  "ui.town.raft.owned": {
+    "text": "已拥有",
+    "status": "draft"
+  },
+  "ui.town.raft.price": {
+    "text": "价格：{n} 金币",
+    "status": "draft"
+  },
+  "ui.town.raft.buy": {
+    "text": "购买",
+    "status": "draft"
+  },
+  "ui.town.raft.put_on": {
+    "text": "装上",
+    "status": "draft"
+  },
+  "ui.town.raft.take_off": {
+    "text": "取下",
+    "status": "draft"
+  },
+  "ui.town.raft.no_gold": {
+    "text": "金币不足（{have}/{need}）",
+    "status": "draft"
+  },
+  "ui.town.raft.lantern.name": {
+    "text": "灯笼",
+    "status": "draft"
+  },
+  "ui.town.raft.lantern.info": {
+    "text": "挂在木筏一角的灯笼。",
+    "status": "draft"
+  },
+  "ui.town.raft.roof.name": {
+    "text": "小顶棚",
+    "status": "draft"
+  },
+  "ui.town.raft.roof.info": {
+    "text": "布做的小顶棚，在阴凉里钓鱼。",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_red.name": {
+    "text": "红色油漆",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_red.info": {
+    "text": "把木筏漆成红色。",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_blue.name": {
+    "text": "蓝色油漆",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_blue.info": {
+    "text": "把木筏漆成蓝色。",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_green.name": {
+    "text": "绿色油漆",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_green.info": {
+    "text": "把木筏漆成绿色。",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_cream.name": {
+    "text": "奶油色油漆",
+    "status": "draft"
+  },
+  "ui.town.raft.paint_cream.info": {
+    "text": "把木筏漆成奶油色。",
+    "status": "draft"
+  },
+  "ui.town.journal.professions": {
+    "text": "职业",
+    "status": "draft"
+  },
+  "ui.town.journal.prof_none": {
+    "text": "你还没有从事任何职业。去钓鱼、种地或挖矿，发现的东西会记录在这里。",
+    "status": "draft"
+  },
+  "ui.town.journal.prof_empty": {
+    "text": "尚无记录",
+    "status": "draft"
+  },
+  "ui.town.journal.prof_fishing": {
+    "text": "钓鱼",
+    "status": "draft"
+  },
+  "ui.town.journal.prof_mining": {
+    "text": "采矿与锻造",
+    "status": "draft"
+  },
+  "ui.town.journal.prof_farming": {
+    "text": "种植",
+    "status": "draft"
+  },
+  "ui.town.journal.first_where": {
+    "text": "首次钓到：{place}",
+    "status": "draft"
+  },
+  "ui.town.journal.first_day": {
+    "text": "第 {n} 天",
+    "status": "draft"
+  },
+  "ui.town.journal.times": {
+    "text": "记录次数：{n}",
+    "status": "draft"
+  },
+  "ui.town.journal.crop_tag": {
+    "text": "收获",
+    "status": "draft"
+  },
+  "ui.town.journal.seed_tag": {
+    "text": "种子",
+    "status": "draft"
+  },
+  "ui.town.journal.seeds_have": {
+    "text": "种子：{n}",
+    "status": "draft"
+  },
+  "ui.town.journal.seed_from": {
+    "text": "野生于：{place}",
+    "status": "draft"
+  },
+  "ui.town.journal.recipe_tag": {
+    "text": "堆肥配方",
+    "status": "draft"
+  },
+  "ui.town.journal.recipe_input": {
+    "text": "{n} × {item}（拥有 {have}）",
+    "status": "draft"
+  },
+  "ui.town.journal.recipe_gives": {
+    "text": "产出 {n} × {item}",
+    "status": "draft"
+  },
+  "ui.town.journal.recipe_make": {
+    "text": "制作",
+    "status": "draft"
+  },
+  "ui.town.journal.recipe_missing": {
+    "text": "缺少此配方所需的收获物",
+    "status": "draft"
+  },
+  "ui.town.compost.leaf_mulch": {
+    "text": "落叶覆盖物",
+    "status": "draft"
+  },
+  "ui.town.compost.herb_compost": {
+    "text": "草本堆肥",
+    "status": "draft"
+  },
+  "ui.town.compost.mushroom_compost": {
+    "text": "蘑菇堆肥",
+    "status": "draft"
+  }
 }

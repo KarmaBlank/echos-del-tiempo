@@ -236,6 +236,17 @@ class TownEditOverlay extends StatelessWidget {
                 style: DsText.detail(why == null ? null : DsColors.textDisabled)),
           ]);
     }
+    if (TownState.parseDecorId(e.hoverBuild) case (final x, final y)?) {
+      final id = town.decor.where((d) => d.$2 == x && d.$3 == y).firstOrNull?.$1;
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSectionHeader(s.t('ui.town.decor.${id ?? 'fence'}.name')),
+            Text(s.t('ui.town.decor.text'), style: DsText.detail()),
+            Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
+          ]);
+    }
     if (TownState.parseLightId(e.hoverBuild) != null) {
       return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -352,10 +363,19 @@ class TownEditOverlay extends StatelessWidget {
           ]),
         ]);
       case TownEditStep.options:
-        if (TownState.parseLightId(e.selected) != null) {
+        final decor = TownState.parseDecorId(e.selected);
+        final decorId = decor == null
+            ? null
+            : town.decor.where((d) => (d.$2, d.$3) == decor).firstOrNull?.$1;
+        if (TownState.parseLightId(e.selected) != null || decorId != null) {
           return col([
-            DsSectionHeader(s.t('ui.town.edit.lamp')),
-            Text(s.t('ui.town.edit.lamp_text'),
+            DsSectionHeader(decorId != null
+                ? s.t('ui.town.decor.$decorId.name')
+                : s.t('ui.town.edit.lamp')),
+            Text(
+                decorId != null
+                    ? s.t('ui.town.decor.text')
+                    : s.t('ui.town.edit.lamp_text'),
                 key: const ValueKey('town-edit-info'), style: DsText.detail()),
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [

@@ -232,7 +232,10 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 ### 7.2.3 Ambiente al pescar
 - Mientras el jugador local pesca fuera del pueblo, la música del bioma
   baja casi a silencio (`ambMusicLevel`, en `ambDuckSec`) y vuelve al
-  terminar. En el pueblo sigue la pieza de pesca.
+  terminar. En el pueblo sigue la pieza de pesca. **Desde cozy_life.md
+  § 1:** fuera del pueblo (pescando o en balsa) suena `Music.cozy` a
+  `cozyMusicLevel` en vez del silencio; se suman agua, pájaros, grillos y
+  luciérnagas.
 - Suenan cada tanto (`ambGapMinSec`–`ambGapMaxSec`, volumen `ambVolume`)
   sonidos muy suaves según el lugar (`BiomeRegionStyle.fishingAmbience`):
   brisa (`amb.breeze`) al aire libre, goteo (`amb.drip`) bajo techo y en

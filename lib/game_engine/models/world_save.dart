@@ -54,6 +54,7 @@ class TownState {
       this.layoutVersion = 0,
       this.discovery = const {},
       this.lights = const [],
+      this.decor = const [],
       this.sky = const SkyState(),
       this.residents = const {},
       this.daily = const {},
@@ -125,6 +126,21 @@ class TownState {
   /// Faros puestos en EDITAR PUEBLO (day_night_weather.md § 5): tiles de
   /// 1×1 en coordenadas del pueblo base. No son sólidos ni cortan caminos.
   final List<(int, int)> lights;
+
+  /// Farm decorations (cozy_life.md § 2): `(id of kFarmDecos, x, y)` in
+  /// base-town coordinates, 1×1, not solid. JSON `dc`.
+  final List<(String, int, int)> decor;
+
+  /// Stable id of the decoration at ([x], [y]).
+  static String decorId(int x, int y) => 'deco@$x,$y';
+
+  static (int, int)? parseDecorId(String? id) {
+    if (id == null || !id.startsWith('deco@')) return null;
+    final p = id.substring(5).split(',');
+    if (p.length != 2) return null;
+    final x = int.tryParse(p[0]), y = int.tryParse(p[1]);
+    return x == null || y == null ? null : (x, y);
+  }
 
   /// Reloj y clima del mundo (day_night_weather.md § 1).
   final SkyState sky;
@@ -258,6 +274,7 @@ class TownState {
     Map<String, FarmPlot>? plots,
     Map<String, (int, int)>? marks,
     List<(int, int)>? lights,
+    List<(String, int, int)>? decor,
     SkyState? sky,
     Map<String, int>? wild,
     Set<String>? waystones,
@@ -280,6 +297,7 @@ class TownState {
         builds: builds ?? this.builds,
         marks: marks ?? this.marks,
         lights: lights ?? this.lights,
+        decor: decor ?? this.decor,
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
         waystones: waystones ?? this.waystones,
@@ -322,6 +340,8 @@ class TownState {
             for (final e in marks.entries) e.key: [e.value.$1, e.value.$2]
           },
         if (lights.isNotEmpty) 'lt': [for (final l in lights) [l.$1, l.$2]],
+        if (decor.isNotEmpty)
+          'dc': [for (final d in decor) [d.$1, d.$2, d.$3]],
         if (sky.started) 'sky': sky.toJson(),
         if (residents.isNotEmpty)
           'res': [
@@ -430,6 +450,13 @@ class TownState {
               for (final v in raw['lt'] as List)
                 if (v case [final num x, final num y, ...]) (x.round(), y.round()),
             }.toList()
+          : const [],
+      decor: raw['dc'] is List
+          ? [
+              for (final v in raw['dc'] as List)
+                if (v case [final String id, final num x, final num y, ...])
+                  (id, x.round(), y.round()),
+            ]
           : const [],
       sky: SkyState.fromJson(raw['sky']),
       events: WorldEventsState.fromJson(raw['wev']),

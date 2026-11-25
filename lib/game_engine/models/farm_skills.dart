@@ -1,4 +1,5 @@
 import '../data/cooking_catalog.dart';
+import '../data/cozy_catalog.dart' show kCompostRecipes;
 import '../data/farming_catalog.dart';
 import '../data/life_tree_catalog.dart';
 import 'meal_buff.dart';
@@ -26,7 +27,9 @@ class FarmSkills {
     Map<String, int> meals = const {},
     Map<String, int> mealLog = const {},
     this.meal,
-  })  : meals = Map.unmodifiable({
+    Set<String> recipes = const {},
+  })  : recipes = Set.unmodifiable(recipes.where(kCompostRecipes.containsKey)),
+        meals = Map.unmodifiable({
           for (final e in meals.entries)
             if (e.value > 0 && parseMealKey(e.key) != null) e.key: e.value,
         }),
@@ -77,6 +80,9 @@ class FarmSkills {
 
   /// Todo personaje nuevo o migrado: azada de rama y regadera de lata y
   /// un puñado de nabos para arrancar.
+  /// Compost recipes found searching trees (cozy_life.md § 3). JSON `rc`.
+  final Set<String> recipes;
+
   static final initial = FarmSkills(seeds: const {'nabo_claro': 6});
 
   final int xp;
@@ -152,8 +158,10 @@ class FarmSkills {
     Map<String, int>? meals,
     Map<String, int>? mealLog,
     Object? meal = _keep,
+    Set<String>? recipes,
   }) =>
       FarmSkills(
+          recipes: recipes ?? this.recipes,
           xp: xp ?? this.xp,
           hoes: hoes ?? this.hoes,
           hoe: hoe ?? this.hoe,
@@ -195,6 +203,7 @@ class FarmSkills {
         if (meals.isNotEmpty) 'ml': meals,
         if (mealLog.isNotEmpty) 'mlg': mealLog,
         if (meal != null) 'mb': meal!.toJson(),
+        if (recipes.isNotEmpty) 'rc': [...recipes]..sort(),
       };
 
   /// Tolerante; sin `farm` (saves de antes de v0.23.0) → [initial].
@@ -227,6 +236,7 @@ class FarmSkills {
       meals: m(raw['ml']),
       mealLog: m(raw['mlg']),
       meal: MealBuff.fromJson(raw['mb']),
+      recipes: {...l(raw['rc'])},
     );
   }
 
@@ -251,7 +261,9 @@ class FarmSkills {
       _mapEq(other.cropLog, cropLog) &&
       _mapEq(other.meals, meals) &&
       _mapEq(other.mealLog, mealLog) &&
-      other.meal == meal;
+      other.meal == meal &&
+      other.recipes.length == recipes.length &&
+      other.recipes.containsAll(recipes);
 
   @override
   int get hashCode => Object.hash(xp, hoe, can, seeds.length, crops.length);

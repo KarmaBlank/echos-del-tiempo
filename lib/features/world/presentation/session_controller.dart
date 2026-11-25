@@ -32,6 +32,8 @@ import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/waystone_rules.dart';
 import '../../../game_engine/rules/raft_rules.dart';
 import '../../../game_engine/rules/wild_loot_rules.dart';
+import '../../../game_engine/rules/cozy_rules.dart';
+import '../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
@@ -991,6 +993,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void dispose() {
     _disposing = true;
     _townSaveTimer?.cancel();
+    _gatherTimer?.cancel();
     _saveWorld();
     fog.reset();
     _saveFog();
@@ -1831,6 +1834,8 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   void mineHoldEnd() {
+    // The same release ends a hold-to-gather (cozy_life.md § 3).
+    gatherHoldEnd();
     _mineHold?.cancel();
     _mineHold = null;
     _mineAim = null;
@@ -2169,6 +2174,106 @@ class SessionController extends StateNotifier<SessionView?> {
     return i != null && _apply(ForageAction(i));
   }
 
+  // ---------------- hold to gather (cozy_life.md § 3) ----------------
+
+  /// The ordinary tree in front in a biome exterior (tile), or `null`.
+  (int, int)? get facingTree {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null || onRaft) {
+      return null;
+    }
+    var fx = local.fx, fy = local.fy;
+    if (fx == 0 && fy == 0) fy = 1;
+    final horiz = fx.abs() >= fy.abs();
+    final tx = (local.x / 16).floor() + (horiz ? fx.sign.toInt() : 0);
+    final ty = (local.y / 16).floor() + (horiz ? 0 : fy.sign.toInt());
+    final map = engine.mapFor(s);
+    if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return null;
+    return map.tileAt(tx, ty) == Tile.tree ? (tx, ty) : null;
+  }
+
+  /// I already searched the tree [t] today.
+  bool searchedToday((int, int) t) {
+    final lay = biomeLayout(_s?.place);
+    return lay != null &&
+        CozyRules.searched(town, _me, lay.id, t.$1, t.$2);
+  }
+
+  /// Seconds the local player holds E to gather (by Cultivo level).
+  double get gatherSec {
+    final p = _s?.players[localId]?.profile;
+    return CozyRules.gatherHoldSec(p == null ? 1 : FarmingRules.level(p));
+  }
+
+  Timer? _gatherTimer;
+  final _gatherClock = Stopwatch();
+  int? _gatherForage;
+  (int, int)? _gatherTree;
+
+  /// The hold in progress: (tile, 0..1), or `null`.
+  ((int, int), double)? get gatherProgress {
+    if (_gatherTimer == null) return null;
+    final at = _gatherTree ??
+        switch (_gatherForage) {
+          final i? => switch (biomeLayout(_s?.place)) {
+              final lay? when i < lay.forage.length => (
+                  lay.forage[i].x,
+                  lay.forage[i].y
+                ),
+              _ => null,
+            },
+          null => null,
+        };
+    if (at == null) return null;
+    final k = _gatherClock.elapsedMilliseconds / (gatherSec * 1000);
+    return (at, k.clamp(0.0, 1.0));
+  }
+
+  /// E / click held on a forage spot or a tree: fills a bar, then
+  /// gathers (cozy_life.md § 3). Repeats while held are ignored.
+  void gatherHoldStart({int? forage, (int, int)? tree}) {
+    if (_gatherTimer != null) return;
+    if (tree != null && searchedToday(tree)) {
+      addLocalNotice(strings.t('ui.world.cozy.searched'));
+      return;
+    }
+    _gatherForage = forage;
+    _gatherTree = tree;
+    _gatherClock
+      ..reset()
+      ..start();
+    _gatherTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      final still = _gatherTree != null
+          ? facingTree == _gatherTree
+          : nearForage == _gatherForage && _gatherForage != null;
+      if (!still) return gatherHoldEnd();
+      if (_gatherClock.elapsedMilliseconds >= gatherSec * 1000) {
+        final f = _gatherForage, t = _gatherTree;
+        gatherHoldEnd();
+        if (t != null) {
+          _apply(CozyAction(CozyOp.search, x: t.$1, y: t.$2));
+        } else if (f != null) {
+          _apply(ForageAction(f));
+        }
+      }
+    });
+  }
+
+  void gatherHoldEnd() {
+    _gatherTimer?.cancel();
+    _gatherTimer = null;
+    _gatherClock.stop();
+  }
+
+  bool get gathering => _gatherTimer != null;
+
+  /// Buy / toggle a raft decoration (cozy_life.md § 1).
+  bool raftDeco(String id) => _apply(CozyAction(CozyOp.raftDeco, id: id));
+
+  /// Prepare a compost recipe (cozy_life.md § 3).
+  bool compost(String id) => _apply(CozyAction(CozyOp.compost, id: id));
+
   /// El pueblo de la sala (huerta, ampliaciones, lago).
   TownState get town => _s?.town ?? const TownState();
 
@@ -2388,9 +2493,10 @@ class SessionController extends StateNotifier<SessionView?> {
                 : null));
     if (ok) {
       fishSfx?.call(switch (op) {
-        FarmOp.till => Sfx.whump,
+        // Cozy farm sounds (cozy_life.md § 2).
+        FarmOp.till => Sfx.farmHoe,
         FarmOp.plant => Sfx.turnTick,
-        FarmOp.water => Sfx.potion,
+        FarmOp.water => Sfx.farmWater,
         FarmOp.fert => Sfx.potion,
         FarmOp.harvest => Sfx.lootPickup,
       });
@@ -2888,15 +2994,14 @@ class SessionController extends StateNotifier<SessionView?> {
     if (e == null) return;
     if (e.step != TownEditStep.moving && e.step != TownEditStep.placing) {
       final side = editSideAt(tx, ty);
-      final light = TownRules.lightAt(town, tx, ty);
+      final light = _pinAt(tx, ty);
       final b = side != null
           ? null
-          : light != null
-              ? TownState.lightId(light)
-              : (TownRules.buildAt(town, tx, ty) ??
-                          TownRules.buildAtSign(town, tx, ty))
-                      ?.id ??
-                  TownRules.landmarkAt(town, tx, ty)?.id;
+          : light ??
+              (TownRules.buildAt(town, tx, ty) ??
+                      TownRules.buildAtSign(town, tx, ty))
+                  ?.id ??
+              TownRules.landmarkAt(town, tx, ty)?.id;
       if (side == e.hoverSide && b == e.hoverBuild) return;
       e
         ..hoverSide = side
@@ -2915,6 +3020,19 @@ class SessionController extends StateNotifier<SessionView?> {
     final g = e?.ghost;
     if (e == null || g == null) return null;
     final (ox, oy) = town.origin;
+    // Farm decorations (cozy_life.md § 2): 1×1 like the lighthouse.
+    if (e.step == TownEditStep.placing && kFarmDecos.containsKey(e.placeDef)) {
+      final p = _s?.players[localId]?.profile;
+      final cost = CozyRules.decorCost(e.placeDef!);
+      if (p != null && p.credits < cost) {
+        return 'Falta oro (${p.credits}/$cost)';
+      }
+      return CozyRules.decorError(town, g.$1 - ox, g.$2 - oy);
+    }
+    if (TownState.parseDecorId(e.selected) case final from?
+        when e.step == TownEditStep.moving) {
+      return CozyRules.decorError(town, g.$1 - ox, g.$2 - oy, ignore: from);
+    }
     if (e.step == TownEditStep.placing && e.placeDef == kFaroId) {
       final p = _s?.players[localId]?.profile;
       if (p != null && p.credits < TownRules.faroCost) {
@@ -2968,7 +3086,7 @@ class SessionController extends StateNotifier<SessionView?> {
         }
       default:
         final side = editSideAt(tx, ty);
-        final light = TownRules.lightAt(town, tx, ty);
+        final light = _pinAt(tx, ty);
         final b = light != null
             ? null
             : TownRules.buildAt(town, tx, ty) ??
@@ -2981,7 +3099,7 @@ class SessionController extends StateNotifier<SessionView?> {
         if (light != null) {
           e
             ..step = TownEditStep.options
-            ..selected = TownState.lightId(light);
+            ..selected = light;
         } else if (side != null && TownRules.sideFull(town, side) != null) {
           // nada
         } else if (side != null) {
@@ -3034,7 +3152,8 @@ class SessionController extends StateNotifier<SessionView?> {
     final e = _edit;
     final b = e?.selected == null ? null : town.build(e!.selected!);
     final l = editLandmark;
-    final f = TownState.parseLightId(e?.selected);
+    final f = TownState.parseLightId(e?.selected) ??
+        TownState.parseDecorId(e?.selected);
     if (e == null || (b == null && l == null && f == null)) return;
     final (ox, oy) = town.origin;
     final (ax, ay) = f ?? b?.anchor ?? (l!.x, l.y);
@@ -3056,6 +3175,18 @@ class SessionController extends StateNotifier<SessionView?> {
     if (e == null) return;
     e.step = step;
     _emit();
+  }
+
+  /// The id of the 1×1 piece on map tile ([tx], [ty]): a lighthouse or a
+  /// farm decoration (cozy_life.md § 2), or `null`.
+  String? _pinAt(int tx, int ty) {
+    if (TownRules.lightAt(town, tx, ty) case final l?) {
+      return TownState.lightId(l);
+    }
+    if (CozyRules.decorAt(town, tx, ty) case (_, final x, final y)?) {
+      return TownState.decorId(x, y);
+    }
+    return null;
   }
 
   bool editRemove() {
@@ -3538,8 +3669,10 @@ class SessionController extends StateNotifier<SessionView?> {
         useWildLoot(i, shrine: shrine);
       } else if (nearRaftDock != null) {
         boardRaft();
-      } else if (nearForage != null) {
-        forage();
+      } else if (nearForage case final i?) {
+        gatherHoldStart(forage: i);
+      } else if (facingTree case final t?) {
+        gatherHoldStart(tree: t);
       } else if (nearMineExit) {
         travelMine(null);
       } else if (nearShaft) {
@@ -5304,6 +5437,14 @@ class SessionController extends StateNotifier<SessionView?> {
       return (WorldPrompt.poi, strings.t('ui.world.raft.prompt_board'));
     }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
+    if (facingTree case final t?) {
+      return (
+        WorldPrompt.poi,
+        strings.t(searchedToday(t)
+            ? 'ui.world.cozy.searched'
+            : 'ui.world.cozy.search_prompt')
+      );
+    }
     if (nearMineExit) {
       return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit'));
     }
