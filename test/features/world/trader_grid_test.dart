@@ -45,6 +45,11 @@ Future<void> _open(WidgetTester tester, Size size) async {
 }
 
 void main() {
+  testWidgets('the trader panel has no MI PUESTO button', (tester) async {
+    await _open(tester, const Size(1280, 720));
+    expect(find.byKey(const ValueKey('trade-stall')), findsNothing);
+  });
+
   for (final size in const [Size(1280, 720), Size(1920, 1080)]) {
     testWidgets('seed grid fits at ${size.width.toInt()}', (tester) async {
       await _open(tester, size);

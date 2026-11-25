@@ -208,6 +208,7 @@
   "ui.world.prompt.lostLoot": "[E] Loot perdido",
   "ui.world.prompt.fishing": "[E o clic] Pescar",
   "ui.world.prompt.trader": "[E] Agropecuario",
+  "ui.world.prompt.stall": "[E] Mi puesto",
   "ui.world.prompt.sign": "[E] Leer cartel",
   "ui.world.prompt.helper": "[G] Ayudante",
   "ui.world.prompt.chest": "[E] Recoger cofre",
