@@ -256,8 +256,10 @@ Líneas es-AR (BORRADOR):
 
 - **Aviso:** cuando aparece un evento nuevo en el pueblo recibido, cada
   par agrega al chat su `notice` en su idioma.
-- **Mapa de viaje:** en cada lugar con eventos activos, una insignia
-  `EVENTO` (o `EVENTOS ×n`) con tooltip de los títulos.
+- **Mapa de viaje:** en cada lugar con eventos activos, una marca
+  compacta `!` dorada (átomo `DsMark`, el mismo aviso de los NPC con
+  novedades) con tooltip de los títulos (uno o varios, separados por
+  ` · `). Ya no se muestra el texto `EVENTO`/`EVENTOS ×n`.
 - **DIARIO → EVENTOS:** subpestaña nueva del DIARIO (J): grilla de los
   eventos activos con el detalle a la derecha (título, categoría, lugar,
   días que quedan, cuerpo y, si corresponde, la grieta, la misión con su

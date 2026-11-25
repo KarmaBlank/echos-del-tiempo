@@ -90,7 +90,7 @@ class FullMap extends StatefulWidget {
   static const waystoneColor = Color(0xFF00F0FF);
 
   /// Período del parpadeo.
-  static const blinkPeriod = Duration(milliseconds: 700);
+  static const blinkPeriod = Duration(milliseconds: 900);
 
   bool get choosing =>
       (destinations.isNotEmpty || pick != null) && onTravel != null;
@@ -273,6 +273,10 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
 
   late final AnimationController _blink =
       AnimationController(vsync: this, duration: FullMap.blinkPeriod);
+
+  /// Smooth alpha pulse of the other activated stones (0.4 ↔ 1).
+  late final Animation<double> _pulse = Tween(begin: 0.4, end: 1.0)
+      .animate(CurvedAnimation(parent: _blink, curve: Curves.easeInOut));
 
   /// Destino resaltado con Tab (Enter viaja).
   int _sel = 0;
@@ -485,51 +489,64 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
       final picking = _pick != null;
       final dest = picking ||
           (widget.choosing && widget.destinations.any((d) => d.id == poi.id));
-      final origin = poi.id == widget.originId;
       final selected = picking
           ? _pickedPoi?.id == poi.id
           : dest && widget.destinations[_sel].id == poi.id;
-      final hi = selected || origin;
+      // The stone you stand at: steady, gold frame (the goal frame).
+      final here = _isHere(poi);
       final color = on
           ? FullMap.waystoneColor
           : picking
               ? DsColors.textDisabled
               : FullMap.waystoneColor.withValues(alpha: 0.45);
+      // No number (exploration.md § Piedras de paso en el mapa): only the
+      // other activated stones pulse; the name is in the hover tooltip.
       Widget mark = FadeTransition(
-        opacity: Tween(begin: 0.25, end: 1.0).animate(_blink),
+        opacity: on && !here ? _pulse : const AlwaysStoppedAnimation(1.0),
         child: Container(
           width: size,
           height: size,
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: color,
             border: Border.all(
-                color: hi ? ProtoColors.ink : ProtoColors.panelBorder,
-                width: hi ? 2 : 1),
+                color: here
+                    ? DsColors.reward
+                    : selected
+                        ? ProtoColors.ink
+                        : ProtoColors.panelBorder,
+                width: here ? 3 : (selected ? 2 : 1)),
           ),
-          child: Text(retroText(_number(poi).toString()),
-              style: const TextStyle(color: Color(0xFF001014))),
         ),
       );
+      if (selected && here) {
+        // Selected and here: an ink ring outside the gold frame.
+        mark = Container(
+            decoration: BoxDecoration(
+                border: Border.all(color: ProtoColors.ink, width: 1)),
+            child: mark);
+      }
+      final name = _stoneName(context, poi);
+      Widget hover(Widget child) => MouseRegion(
+            cursor:
+                dest ? SystemMouseCursors.click : MouseCursor.defer,
+            onEnter: (_) => setState(() => _hoverId = poi.id),
+            onExit: (_) => setState(() {
+              if (_hoverId == poi.id) _hoverId = null;
+            }),
+            child: child,
+          );
       if (dest) {
         mark = Semantics(
           button: true,
-          label: context.t('ui.world.map.travel_to_stone', {'n': _number(poi)}),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: picking ? (_) => setState(() => _hoverId = poi.id) : null,
-            onExit: picking
-                ? (_) => setState(() {
-                      if (_hoverId == poi.id) _hoverId = null;
-                    })
-                : null,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => picking ? _select(poi) : _travel(poi),
-              child: mark,
-            ),
-          ),
+          label: name,
+          child: hover(GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => picking ? _select(poi) : _travel(poi),
+            child: mark,
+          )),
         );
+      } else {
+        mark = Semantics(label: name, child: hover(mark));
       }
       out.add(Positioned(
           key: ValueKey('full-map-stone-${poi.id}'),
@@ -540,11 +557,19 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
     return out;
   }
 
-  /// Pick mode: the hovered stone's name next to the cursor.
-  List<Widget> _hoverTip() {
-    final pick = _pick;
+  /// The stone the player stands at: the origin of the trip, or (pick
+  /// mode) the one the menu opened on.
+  bool _isHere(MapPoi p) =>
+      p.id == widget.originId || (_pick != null && p.id == _pick!.initial);
+
+  /// Hover name: the pick label, or the generic stone name (dungeons).
+  String _stoneName(BuildContext context, MapPoi p) =>
+      _pick?.label(p) ?? context.t('ui.world.map.legend.waystone');
+
+  /// The hovered stone's name next to the cursor.
+  List<Widget> _hoverTip(BuildContext context) {
     final id = _hoverId;
-    if (pick == null || id == null) return const [];
+    if (id == null) return const [];
     final p = widget.waystones.where((w) => w.$1.id == id).firstOrNull;
     if (p == null) return const [];
     return [
@@ -554,7 +579,8 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
           child: MapHoverTip(
             cursor: _cursor,
             bottomReserve: 0,
-            child: DsTooltipCard(title: pick.label(p.$1), children: const []),
+            child: DsTooltipCard(
+                title: _stoneName(context, p.$1), children: const []),
           ),
         ),
       ),
@@ -628,7 +654,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                     child: GestureDetector(
                       onPanUpdate: (d) => _pan(-d.delta / _cell),
                       child: MouseRegion(
-                       onHover: _pick == null
+                       onHover: widget.waystones.isEmpty
                           ? null
                           : (e) => setState(() => _cursor = e.localPosition),
                        child: Stack(clipBehavior: Clip.hardEdge, children: [
@@ -652,7 +678,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                         ),
                         ..._stoneMarks(context,
                             Minimap.viewRect(a, _view, _center ?? _player)),
-                        ..._hoverTip(),
+                        ..._hoverTip(context),
                       ]),
                       ),
                     ),
