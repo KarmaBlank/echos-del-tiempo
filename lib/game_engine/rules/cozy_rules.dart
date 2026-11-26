@@ -200,6 +200,9 @@ abstract final class CozyRules {
   /// Seconds between repeats of a held E / click (§ 3, hold = repeat).
   static double get holdRepeatSec => t.d('holdRepeatSec');
 
+  /// Reach of the action cursor in tiles (controls.md § Cursor de acción).
+  static int get actionReach => t.i('actionReachTiles').clamp(1, 3);
+
   // ---------------- tree search (§ 3) ----------------
 
   /// `town.daily` key of [player] searching tree ([x], [y]) of [biome] on

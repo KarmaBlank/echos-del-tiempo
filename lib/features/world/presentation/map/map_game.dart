@@ -1157,6 +1157,7 @@ class MapGame extends Game {
             (id) => sprites.lifeIcon(id, 'herramienta'),
             (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900),
             hover: controller.hoverHelper,
+            selectedNpc: controller.nearNpc?.id,
             markOf: _npcMark,
             period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
@@ -1182,6 +1183,11 @@ class MapGame extends Game {
               Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh),
               SpriteCatalog.pixelPaint());
+          // Selected for E / click: 1 px white outline (controls.md).
+          if (controller.nearNpc?.id == lay.npc.id) {
+            drawSpriteOutline(c, im,
+                Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh));
+          }
           draw(c);
           _refl.add((
             x: cx,
@@ -1648,6 +1654,9 @@ class MapGame extends Game {
     // Hold-to-gather bar (cozy_life.md § 3), like the mine dig bar.
     if (controller.gatherProgress case (final tile, final k)?) {
       drawTileTarget(c, [tile], true, progress: k);
+    } else if (controller.gatherTarget case final g?) {
+      // The action cursor on the selected bush / tree (controls.md).
+      drawTileTarget(c, [g.tile], g.ok);
     }
     // Fireflies at night around the local player fishing or on a raft
     // (cozy_life.md § 1).
