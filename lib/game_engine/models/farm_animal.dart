@@ -5,7 +5,12 @@ import '../data/farming_catalog.dart' show CropQuality;
 /// Immutable; travels inside its `TownBuild` (JSON `an`).
 class FarmAnimal {
   const FarmAnimal(this.uid, this.species,
-      {this.aff = 0, this.fed = 0, this.pet = 0, this.cycle = 0, this.ready});
+      {this.aff = 0,
+      this.fed = 0,
+      this.pet = 0,
+      this.cycle = 0,
+      this.ready,
+      this.drops = const []});
 
   /// Number of the animal in its building (stable; picks its name).
   final int uid;
@@ -23,6 +28,13 @@ class FarmAnimal {
   /// Product waiting to be collected (its quality), or `null`.
   final CropQuality? ready;
 
+  /// Parts and legendary products waiting on the floor of its home
+  /// (animals.md § 9, § 10): part ids (`ap_*`) or goods keys. JSON `d`.
+  final List<String> drops;
+
+  /// Anything to pick up with E (product or a drop).
+  bool get hasPickup => ready != null || drops.isNotEmpty;
+
   AnimalDef get def => kAnimals[species]!;
 
   int get hearts => aff ~/ 100;
@@ -33,13 +45,15 @@ class FarmAnimal {
           int? pet,
           int? cycle,
           CropQuality? ready,
+          List<String>? drops,
           bool clearReady = false}) =>
       FarmAnimal(uid, species,
           aff: aff ?? this.aff,
           fed: fed ?? this.fed,
           pet: pet ?? this.pet,
           cycle: cycle ?? this.cycle,
-          ready: clearReady ? null : (ready ?? this.ready));
+          ready: clearReady ? null : (ready ?? this.ready),
+          drops: drops ?? this.drops);
 
   Map<String, Object?> toJson() => {
         'u': uid,
@@ -49,6 +63,7 @@ class FarmAnimal {
         if (pet > 0) 'p': pet,
         if (cycle > 0) 'c': cycle,
         if (ready != null) 'r': ready!.index,
+        if (drops.isNotEmpty) 'd': drops,
       };
 
   /// Tolerant: unknown species → `null` (dropped on load).
@@ -59,6 +74,7 @@ class FarmAnimal {
     int n(Object? v, [int max = 1 << 30]) =>
         v is num && v.isFinite ? v.round().clamp(0, max) : 0;
     final r = raw['r'];
+    final d = raw['d'];
     return FarmAnimal(n(raw['u'], 9999), s,
         aff: n(raw['a'], 100000),
         fed: n(raw['f']),
@@ -67,7 +83,15 @@ class FarmAnimal {
         // Never legendary (animals.md § 1).
         ready: r is num && r >= 0 && r < CropQuality.legendario.index
             ? CropQuality.values[r.round()]
-            : null);
+            : null,
+        drops: [
+          if (d is List)
+            for (final x in d.take(kMaxAnimalDrops))
+              if (x is String &&
+                  (parseAnimalPart(x) != null ||
+                      parseAnimalGoodsKey(x) != null))
+                x
+        ]);
   }
 
   @override
@@ -79,11 +103,16 @@ class FarmAnimal {
       other.fed == fed &&
       other.pet == pet &&
       other.cycle == cycle &&
-      other.ready == ready;
+      other.ready == ready &&
+      other.drops.join(',') == drops.join(',');
 
   @override
-  int get hashCode => Object.hash(uid, species, aff, fed, pet, cycle, ready);
+  int get hashCode =>
+      Object.hash(uid, species, aff, fed, pet, cycle, ready, drops.join(','));
 }
+
+/// Most drops waiting under one animal (older ones are kept).
+const kMaxAnimalDrops = 4;
 
 /// Bag key of an animal product: `<product>@<quality index>`.
 String animalGoodsKey(String product, CropQuality q) => '$product@${q.index}';
@@ -97,5 +126,8 @@ String animalGoodsKey(String product, CropQuality q) => '$product@${q.index}';
   if (d == null || q == null || q < 0 || q >= CropQuality.values.length) {
     return null;
   }
+  // Legendary products always carry the legendary quality; the rest
+  // never do (animals.md § 1, § 10).
+  if (d.legend != (q == CropQuality.legendario.index)) return null;
   return (d, CropQuality.values[q]);
 }

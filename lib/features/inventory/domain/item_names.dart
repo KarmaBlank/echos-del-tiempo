@@ -227,6 +227,14 @@ String? _gearName(ItemInstance i) {
           GearV2Rules.metalName(base)),
     });
   }
+  // Forged by Brann from a legendary animal product (animals.md § 10).
+  if (kAnimals[GearRules.animalOf(i)] case final a?) {
+    return CatalogText.of('data.items.gear.ranch.name', '{type} de {item}', {
+      'type': CatalogText.of('data.items.gear.type.${gearTypeKey(a.weapon)}',
+          kGearTypeNames[a.weapon] ?? a.weapon),
+      'item': kAnimalProducts[a.legend]!.text,
+    });
+  }
   final fish = GearRules.fishOf(i);
   if (fish == null) return null;
   final type = fishForgeType(fish);

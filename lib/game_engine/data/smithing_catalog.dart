@@ -1,3 +1,4 @@
+import 'animals_catalog.dart';
 import 'biomes_catalog.dart';
 import 'fishing_catalog.dart';
 
@@ -5,7 +6,18 @@ import 'fishing_catalog.dart';
 ///
 /// v2 (§ 1.6): [tool] = a mining tool you own (amount 1); [supply] = a
 /// mine consumable (torch, bomb, booster).
-enum SmithMatKind { ore, ingot, rare, special, tool, supply, fishPart }
+enum SmithMatKind {
+  ore,
+  ingot,
+  rare,
+  special,
+  tool,
+  supply,
+  fishPart,
+
+  /// A part an animal left through care (animals.md § 9).
+  animalPart
+}
 
 /// A smithing material. [name] is the es-AR source text; the UI resolves
 /// `data.materials.smith.<id>.name`. [tier] is the ore level (1..5) of
@@ -58,6 +70,22 @@ const kBiomeOres = <String, BiomeOres>{
 final kSmithMaterials = <String, SmithMaterialDef>{
   ..._kSmithBase,
   ...kFishPartMaterials,
+  ...kAnimalPartMaterials,
+};
+
+/// Parts the farm animals leave through care (animals.md § 9):
+/// `ap_<species>_<part>_<q>`, tier 3 / 4 / 5 by quality (normal, rara,
+/// épica).
+final kAnimalPartMaterials = <String, SmithMaterialDef>{
+  for (final id in kAnimalPartIds)
+    id: () {
+      final (sp, part, q) = parseAnimalPart(id)!;
+      const quality = ['', ' rara', ' épica'];
+      return SmithMaterialDef(id,
+          '${part.sourceName} de ${kAnimals[sp]!.name.toLowerCase()}${quality[q]}',
+          SmithMatKind.animalPart,
+          tier: 3 + q);
+    }(),
 };
 
 /// Parts Brann takes out of Epic / Legendary fish

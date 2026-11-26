@@ -196,7 +196,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'legendPrismas': 1,
   }),
   // farming.md (v0.23.0): Cultivo, herramientas, huerta y agropecuario.
-  TuningId.farming: TuningDef('Cultivo', {
+  TuningId.farming: TuningDef('Granjero: cultivos', {
     // Afinidad de los cultivos con la hora y el clima (farming.md § 14).
     'affinityBonus': 0.25,
     'affinityMalus': 0.1,
@@ -204,7 +204,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'maxLevel': 30,
     'xpBase': 40,
     'xpExp': 1.5,
-    // × de XP de Cultivo por rareza del cultivo.
+    // × de XP de Granjero por rareza del cultivo.
     'xpComun': 1,
     'xpRaro': 2.5,
     'xpEpico': 6,
@@ -462,7 +462,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'autoXpMult': 0.5,
     'faroCost': 300,
     // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
-    // de cada recolectable (s), chance de semilla del bioma, XP de Cultivo
+    // de cada recolectable (s), chance de semilla del bioma, XP de Granjero
     // por recolectar, turnos de espera del refuerzo que llega a una pelea
     // (en intervalos propios) y peso de cada ausente en la dificultad.
     'forageRespawnSec': 240,
@@ -559,7 +559,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resvidenteStep': 2,
   }),
   // animals.md: farm animals of Cultivo (values in animals_catalog.dart).
-  TuningId.animals: TuningDef('Animales', kAnimalTuning),
+  TuningId.animals: TuningDef('Granjero: animales', kAnimalTuning),
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {
     'pointsPerLevel': 1,
@@ -822,6 +822,23 @@ const Map<String, TuningDef> kTuningDefaults = {
     'parityRarityRaro': 1,
     'parityRarityEpico': 2.5,
     'parityRarityLegendario': 8,
+    // Income parity (animals.md § 7, test granjero_parity_test): what one
+    // hour of each profession looks like, for XP/h and gold/h. Fishing:
+    // catches per hour (bite, fight and walking). Mining: veins and other
+    // tiles broken per hour (ore smelted and sold as ingots). Crops:
+    // plots of the town's common crops and the seconds a round adds to
+    // the grow time (walk, plant, water, harvest). Animals: seconds of
+    // care per animal and world day (walk, feed, pet, collect, hay),
+    // their average hearts, and the band (± share of crops) both
+    // Granjero branches must stay in.
+    'incomeCatchesPerHour': 60,
+    'incomeVeinsPerHour': 100,
+    'incomeDigPerHour': 300,
+    'incomePlots': 12,
+    'incomeCropLoopSec': 75,
+    'incomeAnimalCareSec': 30,
+    'incomeHearts': 4,
+    'incomeBand': 0.15,
   }),
   // profession_gear_v2.md: forge by parts, fish taken apart, living
   // weapons of every type; quality, slots and the manual edge.

@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import '../data/animals_catalog.dart';
 import '../data/construction_catalog.dart';
 import '../data/farming_catalog.dart';
+import '../data/life_tree_catalog.dart' show LifeFx;
 import '../data/tuning_catalog.dart';
 import '../models/farm_animal.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'farming_rules.dart' show FarmingRules;
+import 'life_tree_rules.dart' show LifeTreeRules;
 
 export '../data/animals_catalog.dart';
 export '../models/farm_animal.dart';
@@ -19,8 +21,28 @@ enum AnimalCare { collect, feed, pet, done }
 /// Why a care step cannot happen (the grey button's reason).
 enum AnimalBlock { noTool, noHay, fedToday, pettedToday, nothingReady }
 
-/// Farm animals of the Cultivo profession (docs/specs/animals.md). Pure:
-/// the host applies the results; numbers in `kTuning['animals']`.
+/// Why a machine cannot run (animals.md § 11).
+enum MachineBlock { noMachine, level, nothing, notProcessable }
+
+/// The ANIMALES tree bonuses that act on a building when no single
+/// player does the action (the new world day): the best of the players
+/// in town (animals.md § 8).
+typedef AnimalBonus = ({double part, double quality, double legend});
+
+const AnimalBonus kNoAnimalBonus = (part: 0, quality: 0, legend: 0);
+
+/// What one collect gave (animals.md § 4.2, § 9, § 10): bag keys of
+/// products (and legendary products), smithing part ids and the XP.
+typedef AnimalPickup = ({
+  TownBuild build,
+  List<String> goods,
+  List<String> parts,
+  int xp,
+});
+
+/// Farm animals of the Granjero profession, ANIMALES branch
+/// (docs/specs/animals.md). Pure: the host applies the results; numbers
+/// in `kTuning['animals']`.
 abstract final class AnimalRules {
   static TuningDef get t => tuning(TuningId.animals);
 
@@ -28,6 +50,34 @@ abstract final class AnimalRules {
   static int get maxHearts => affMax ~/ 100;
 
   static int hearts(int aff) => aff.clamp(0, affMax) ~/ 100;
+
+  // ---------------- tree (§ 8) ----------------
+
+  /// The ANIMALES bonuses of [p].
+  static AnimalBonus bonusOf(PlayerProfile p) => (
+        part: LifeTreeRules.farm(p, LifeFx.partDrop),
+        quality: LifeTreeRules.farm(p, LifeFx.animalQuality),
+        legend: LifeTreeRules.farm(p, LifeFx.animalLegend),
+      );
+
+  /// The best bonuses among [players] (the new world day).
+  static AnimalBonus bestBonus(Iterable<PlayerProfile> players) {
+    var out = kNoAnimalBonus;
+    for (final p in players) {
+      final b = bonusOf(p);
+      out = (
+        part: math.max(out.part, b.part),
+        quality: math.max(out.quality, b.quality),
+        legend: math.max(out.legend, b.legend),
+      );
+    }
+    return out;
+  }
+
+  /// Hay store size of a building for [p] (`siloMax` + the tree).
+  static int siloMax([PlayerProfile? p]) =>
+      t.i('siloMax') +
+      (p == null ? 0 : LifeTreeRules.farm(p, LifeFx.haySilo).round());
 
   // ---------------- quality (§ 4.3) ----------------
 
@@ -53,6 +103,12 @@ abstract final class AnimalRules {
     return CropQuality.normal;
   }
 
+  /// [q] one step up with chance [chance] (never past épica).
+  static CropQuality bump(CropQuality q, double chance, double r) =>
+      r < chance && q.index < CropQuality.epico.index
+          ? CropQuality.values[q.index + 1]
+          : q;
+
   /// Expected price multiplier of [h] hearts (parity and the panel).
   static double expectedMult(int h) => odds(h)
       .entries
@@ -60,6 +116,39 @@ abstract final class AnimalRules {
 
   static double qualityMult(CropQuality q) =>
       FarmingRules.t.d('qualityMult${q.key}');
+
+  // ---------------- parts and legends (§ 9, § 10) ----------------
+
+  /// Chance of a part per event for an animal with [h] hearts and the
+  /// tree bonus [bonus] (× 1 + bonus).
+  static double partChance(int h, [double bonus = 0]) =>
+      ((t.d('partBase') + t.d('partPerHeart') * h) * (1 + bonus))
+          .clamp(0.0, 1.0)
+          .toDouble();
+
+  /// Chance of a legendary product per production at full hearts.
+  static double legendChance([double bonus = 0]) =>
+      (t.d('legendChance') + bonus).clamp(0.0, 1.0).toDouble();
+
+  /// The part [a] sheds on the floor of its home (feathers in the coop,
+  /// horn in the barn), or `null` (sheep leave theirs to the shears).
+  static AnimalPart? floorPart(AnimalDef a) => a.parts.contains(
+          AnimalPart.feather)
+      ? AnimalPart.feather
+      : a.parts.contains(AnimalPart.horn)
+          ? AnimalPart.horn
+          : null;
+
+  /// Quality (0..1) of a part as a forge material.
+  static double partQ(int q) => switch (q) {
+        0 => t.d('partQNormal'),
+        1 => t.d('partQRaro'),
+        _ => t.d('partQEpico'),
+      };
+
+  static String _part(
+          AnimalDef d, AnimalPart part, int h, double quality, double Function() r) =>
+      animalPartId(d.id, part, bump(roll(r(), h), quality, r()).index);
 
   // ---------------- buildings (§ 3) ----------------
 
@@ -150,7 +239,7 @@ abstract final class AnimalRules {
   }
 
   /// The nest tile of [a] (town coordinates): where its egg / jug / wool
-  /// waits on the floor of the yard.
+  /// and its drops wait on the floor of the yard.
   static (int, int) nestOf(TownBuild b, FarmAnimal a) {
     final yard = pastureTiles(b);
     if (yard.isEmpty) {
@@ -165,7 +254,7 @@ abstract final class AnimalRules {
     final h = animalHomeById(defId);
     if (h == null) return null;
     final lv = FarmingRules.level(p);
-    if (lv < h.level) return 'Necesitás Cultivo nivel ${h.level}';
+    if (lv < h.level) return 'Necesitás Granjero nivel ${h.level}';
     if (p.credits < h.price) return 'Falta oro (${p.credits}/${h.price})';
     return null;
   }
@@ -206,7 +295,7 @@ abstract final class AnimalRules {
     }
     if (homeFor(s, species) == null) return 'No hay lugar: construí otro';
     if (FarmingRules.level(p) < d.level) {
-      return 'Necesitás Cultivo nivel ${d.level}';
+      return 'Necesitás Granjero nivel ${d.level}';
     }
     if (p.credits < d.price) return 'Falta oro (${p.credits}/${d.price})';
     return null;
@@ -237,12 +326,13 @@ abstract final class AnimalRules {
 
   /// What E does on [a] for [p] today.
   static AnimalCare next(PlayerProfile p, TownBuild b, FarmAnimal a, int day) {
-    if (a.ready != null) return AnimalCare.collect;
+    if (a.hasPickup && collectBlock(p, a) == null) return AnimalCare.collect;
     if (a.fed != day && (p.life.farm.hay > 0 || b.hay > 0)) {
       return AnimalCare.feed;
     }
     if (a.pet != day) return AnimalCare.pet;
     if (a.fed != day) return AnimalCare.feed;
+    if (a.hasPickup) return AnimalCare.collect;
     return AnimalCare.done;
   }
 
@@ -256,10 +346,15 @@ abstract final class AnimalRules {
   static AnimalBlock? petBlock(FarmAnimal a, int day) =>
       a.pet == day ? AnimalBlock.pettedToday : null;
 
+  /// Drops can always be picked up; the product may need its tool.
   static AnimalBlock? collectBlock(PlayerProfile p, FarmAnimal a) {
-    if (a.ready == null) return AnimalBlock.nothingReady;
+    if (!a.hasPickup) return AnimalBlock.nothingReady;
     final tool = a.def.tool;
-    if (tool != null && !p.life.farm.hasTool(tool)) return AnimalBlock.noTool;
+    if (a.drops.isEmpty &&
+        tool != null &&
+        !p.life.farm.hasTool(tool)) {
+      return AnimalBlock.noTool;
+    }
     return null;
   }
 
@@ -291,21 +386,43 @@ abstract final class AnimalRules {
     return (prof, build, t.i('feedXp'));
   }
 
+  /// Pets [uid] (no tree, no brushing: tests and the helpers' model).
   static (TownBuild, int)? pet(TownBuild b, int uid, int day) {
+    final r = petBy(null, b, uid, day, () => 1);
+    return r == null ? null : (r.$1, r.$2);
+  }
+
+  /// [p] pets [uid] (animals.md § 4.2): affection × (1 + Mano tibia);
+  /// a cow or a goat is brushed and may leave shed fur (§ 9). Returns the
+  /// building, the XP and the part ids for [p].
+  static (TownBuild, int, List<String>)? petBy(PlayerProfile? p, TownBuild b,
+      int uid, int day, double Function() rand) {
     final a = b.animal(uid);
     if (a == null || petBlock(a, day) != null) return null;
+    final care = p == null ? 0.0 : LifeTreeRules.farm(p, LifeFx.petCare);
+    final gain = (t.i('petGain') * (1 + care)).round();
+    final parts = <String>[];
+    if (p != null && a.def.parts.contains(AnimalPart.fur)) {
+      final bonus = bonusOf(p);
+      if (rand() < partChance(a.hearts, bonus.part)) {
+        parts.add(_part(a.def, AnimalPart.fur, a.hearts, bonus.quality, rand));
+      }
+    }
     return (
-      _with(b, a.copyWith(pet: day, aff: _gain(a.aff, t.i('petGain')))),
-      t.i('petXp')
+      _with(b, a.copyWith(pet: day, aff: _gain(a.aff, gain))),
+      t.i('petXp'),
+      parts,
     );
   }
 
   /// Collects the product of [uid]: the goods key, the building and the
-  /// XP (product XP × quality).
+  /// XP (product XP × quality). No tree, no drops (helpers and tests).
   static (TownBuild, String, int)? collect(
       PlayerProfile p, TownBuild b, int uid) {
     final a = b.animal(uid);
-    if (a == null || collectBlock(p, a) != null) return null;
+    if (a == null || a.ready == null || collectBlock(p, a) != null) {
+      return null;
+    }
     final q = a.ready!;
     final d = a.def.productDef;
     return (
@@ -315,32 +432,98 @@ abstract final class AnimalRules {
     );
   }
 
-  /// XP left under the daily cap: [used] XP already earned today.
-  static int capXp(int used, int xp) =>
-      math.max(0, math.min(xp, t.i('xpDayCap') - used));
+  /// [p] picks up everything [uid] left (animals.md § 4.2, § 9, § 10):
+  /// the product (if [p] has its tool; Ojo de pastor may raise its
+  /// quality and the second sub-path may double it), the drops on the
+  /// floor and, shearing a sheep with `woolHearts` hearts, fine wool.
+  static AnimalPickup? collectBy(
+      PlayerProfile p, TownBuild b, int uid, double Function() rand) {
+    final a = b.animal(uid);
+    if (a == null || collectBlock(p, a) != null) return null;
+    final goods = <String>[];
+    final parts = <String>[];
+    var xp = 0;
+    var next = a.copyWith(drops: const []);
+    final tool = a.def.tool;
+    final q0 = a.ready;
+    if (q0 != null && (tool == null || p.life.farm.hasTool(tool))) {
+      final bonus = bonusOf(p);
+      final q = bump(q0, bonus.quality, rand());
+      final d = a.def.productDef;
+      final n =
+          rand() < LifeTreeRules.farm(p, LifeFx.animalDouble) ? 2 : 1;
+      for (var i = 0; i < n; i++) {
+        goods.add(animalGoodsKey(d.id, q));
+      }
+      xp += (d.xp * qualityMult(q)).round() * n;
+      next = next.copyWith(clearReady: true);
+      if (a.def.parts.contains(AnimalPart.wool) &&
+          a.hearts >= t.i('woolHearts') &&
+          rand() < partChance(a.hearts, bonus.part)) {
+        parts.add(_part(a.def, AnimalPart.wool, a.hearts, bonus.quality, rand));
+      }
+    }
+    for (final x in a.drops) {
+      if (parseAnimalPart(x) != null) {
+        parts.add(x);
+      } else {
+        goods.add(x);
+      }
+    }
+    return (build: _with(b, next), goods: goods, parts: parts, xp: xp);
+  }
 
-  static PlayerProfile grantXp(PlayerProfile p, int xp) => _xp(p, xp);
+  /// XP left under the daily cap: [used] XP already earned today
+  /// (`xpDayCap` 0 = no cap).
+  static int capXp(int used, int xp) {
+    final cap = t.i('xpDayCap');
+    if (cap <= 0) return math.max(0, xp);
+    return math.max(0, math.min(xp, cap - used));
+  }
+
+  /// Grants [xp] Granjero XP with the tree's XP bonus (like a harvest).
+  static PlayerProfile grantXp(PlayerProfile p, int xp) =>
+      _xp(p, (xp * (1 + LifeTreeRules.farm(p, LifeFx.xp))).round());
 
   /// The world day turned to [day] (animals.md § 4.2): what happened on
-  /// `day − 1` makes the product and the affection decay. [rand] rolls
-  /// the quality.
-  static TownBuild onDay(TownBuild b, int day, double Function() rand) {
+  /// `day − 1` makes the product, the floor drops (§ 9, § 10) and the
+  /// affection decay. [rand] rolls; [bonus] = the best ANIMALES tree of
+  /// the players in town.
+  static TownBuild onDay(TownBuild b, int day, double Function() rand,
+      {AnimalBonus bonus = kNoAnimalBonus}) {
     if (!b.kind.ranch || b.animals.isEmpty) return b;
     final y = day - 1;
     return b.copyWith(animals: [
-      for (final a in b.animals) _dayOf(a, y, rand),
+      for (final a in b.animals) _dayOf(a, y, rand, bonus),
     ]);
   }
 
-  static FarmAnimal _dayOf(FarmAnimal a, int y, double Function() rand) {
+  static FarmAnimal _dayOf(
+      FarmAnimal a, int y, double Function() rand, AnimalBonus bonus) {
     var aff = a.aff;
     var cycle = a.cycle;
     var ready = a.ready;
+    final drops = [...a.drops];
+    void drop(String x) {
+      if (drops.length < kMaxAnimalDrops) drops.add(x);
+    }
+
+    final h = hearts(aff);
     if (a.fed == y) {
       cycle++;
       if (cycle >= a.def.every) {
         cycle = 0;
-        ready ??= roll(rand(), hearts(aff));
+        ready ??= roll(rand(), h);
+        // § 10: at full hearts, sometimes a legendary product.
+        if (h >= maxHearts && rand() < legendChance(bonus.legend)) {
+          drop(animalGoodsKey(a.def.legend, CropQuality.legendario));
+        }
+      }
+      // § 9: a fed animal sheds on the floor of its home.
+      if (floorPart(a.def) case final part?) {
+        if (rand() < partChance(h, bonus.part)) {
+          drop(_part(a.def, part, h, bonus.quality, rand));
+        }
       }
     } else {
       aff -= t.i('unfedDecay');
@@ -351,16 +534,17 @@ abstract final class AnimalRules {
         fed: a.fed,
         pet: a.pet,
         cycle: cycle,
-        ready: ready);
+        ready: ready,
+        drops: drops);
   }
 
   /// Puts every bale of [p]'s bag into the store of [id] (up to
-  /// `siloMax`).
+  /// [siloMax] of [p]).
   static (PlayerProfile, TownState)? depositHay(
       PlayerProfile p, TownState s, String id) {
     final b = s.build(id);
     if (b == null || !b.kind.ranch) return null;
-    final room = math.max(0, t.i('siloMax') - b.hay);
+    final room = math.max(0, siloMax(p) - b.hay);
     final n = math.min(room, p.life.farm.hay);
     if (n <= 0) return null;
     return (
@@ -381,8 +565,8 @@ abstract final class AnimalRules {
       (t.i('helperHeartCap') * 100).clamp(0, affMax);
 
   /// One helper round on [b] during [day]: feeds from the store, pets
-  /// (capped) and collects to the chest. [chestRoom] keys added go
-  /// through [addToChest].
+  /// (capped) and collects the product to the chest. The drops stay on
+  /// the floor for the players (§ 9). [addToChest] adds a key.
   static TownBuild helperCare(TownBuild b, int day,
       TownBuild Function(TownBuild b, String key) addToChest) {
     if (!b.kind.ranch || b.helper <= 0) return b;
@@ -428,6 +612,9 @@ abstract final class AnimalRules {
 
   static String? cannotBuyTool(PlayerProfile p, RanchTool tool) {
     if (p.life.farm.hasTool(tool)) return 'Ya la tenés';
+    if (tool.machine && FarmingRules.level(p) < t.i('machineLevel')) {
+      return 'Necesitás Granjero nivel ${t.i('machineLevel')}';
+    }
     if (p.credits < tool.price) return 'Falta oro (${p.credits}/${tool.price})';
     return null;
   }
@@ -459,6 +646,7 @@ abstract final class AnimalRules {
   }
 
   /// Sells [key] (all of it) or, with `null`, every product of the bag.
+  /// Legendary products are never sold (§ 10).
   static ({PlayerProfile profile, int sold, int gold})? sell(
       PlayerProfile p, String? key) {
     final f = p.life.farm;
@@ -467,7 +655,8 @@ abstract final class AnimalRules {
     final goods = {...f.goods};
     for (final k in keys) {
       final n = goods[k] ?? 0;
-      if (n <= 0 || parseAnimalGoodsKey(k) == null) continue;
+      final pk = parseAnimalGoodsKey(k);
+      if (n <= 0 || pk == null || pk.$1.legend) continue;
       sold += n;
       gold += unitPrice(k) * n;
       goods.remove(k);
@@ -479,6 +668,39 @@ abstract final class AnimalRules {
           life: p.life.copyWith(farm: f.copyWith(goods: goods))),
       sold: sold,
       gold: gold,
+    );
+  }
+
+  // ---------------- machines (§ 11) ----------------
+
+  /// Why [p] cannot put [key] through its machine (`null` = can).
+  static MachineBlock? cannotProcess(PlayerProfile p, String key, int n) {
+    final pk = parseAnimalGoodsKey(key);
+    final out = pk == null ? null : processedOf(pk.$1.id);
+    if (out == null) return MachineBlock.notProcessable;
+    if (!p.life.farm.hasTool(machineFor(out)!)) return MachineBlock.noMachine;
+    if (FarmingRules.level(p) < t.i('machineLevel')) return MachineBlock.level;
+    if (n <= 0 || p.life.farm.goodsCount(key) < n) return MachineBlock.nothing;
+    return null;
+  }
+
+  /// The bag key a machine makes from [key] (same quality).
+  static String? processedKey(String key) {
+    final pk = parseAnimalGoodsKey(key);
+    final out = pk == null ? null : processedOf(pk.$1.id);
+    return out == null ? null : animalGoodsKey(out.id, pk!.$2);
+  }
+
+  /// [n] of [key] through the machine: the profile and the XP.
+  static (PlayerProfile, int)? process(PlayerProfile p, String key, int n) {
+    if (cannotProcess(p, key, n) != null) return null;
+    final f = p.life.farm;
+    final out = processedKey(key)!;
+    final goods = {...f.goods, key: f.goodsCount(key) - n};
+    goods[out] = (goods[out] ?? 0) + n;
+    return (
+      p.copyWith(life: p.life.copyWith(farm: f.copyWith(goods: goods))),
+      t.i('processXp') * n,
     );
   }
 

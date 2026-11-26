@@ -16,12 +16,32 @@ extension _AnimalOp on _Op {
 
   int get _animalDay => math.max(1, s.town.sky.day);
 
-  /// A new world day (animals.md § 4.2): products and affection decay.
+  /// A new world day (animals.md § 4.2): products, floor drops (§ 9,
+  /// § 10, with the best ANIMALES tree in the room) and affection decay.
   void animalsDay(int day) {
+    final bonus = AnimalRules.bestBonus([
+      for (final p in s.players.values)
+        if (!p.isCompanion) p.profile
+    ]);
     for (final b in s.town.builds) {
       if (!b.kind.ranch || b.animals.isEmpty) continue;
-      s.town = s.town.withBuild(AnimalRules.onDay(b, day, _fa.bgRand.nextDouble));
+      s.town = s.town.withBuild(
+          AnimalRules.onDay(b, day, _fa.bgRand.nextDouble, bonus: bonus));
     }
+  }
+
+  /// Gives [parts] (animal part ids) to [p] as smithing materials.
+  void _animalParts(SessionPlayer p, List<String> parts) {
+    if (parts.isEmpty) return;
+    final delta = <String, int>{};
+    for (final x in parts) {
+      delta[x] = (delta[x] ?? 0) + 1;
+    }
+    _profileChange(
+        p, MiningRules.give(p.profile, delta, source: 'ranch', day: _animalDay),
+        gain: true);
+    say('${p.name} encontró '
+        '${parts.map((x) => kSmithMaterials[x]?.name ?? x).join(', ')}.');
   }
 
   /// One ranch helper round on [b] (animals.md § 6).
@@ -50,7 +70,7 @@ extension _AnimalOp on _Op {
     _profileChange(p, AnimalRules.grantXp(p.profile, n), gain: true);
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
-      say('${p.name} subió Cultivo a nivel $lvl1.');
+      say('${p.name} subió Granjero a nivel $lvl1.');
       lifeLevelXp(p, lvl1);
     }
   }
@@ -90,21 +110,31 @@ extension _AnimalOp on _Op {
             s.town = s.town.withBuild(r.$2);
             _animalXp(p, r.$3);
           case TownOp.animalPet:
-            final r = AnimalRules.pet(b, uid, day);
+            final r = AnimalRules.petBy(
+                p.profile, b, uid, day, _fa.bgRand.nextDouble);
             if (r == null) return false;
             s.town = s.town.withBuild(r.$1);
             _animalXp(p, r.$2);
+            _animalParts(p, r.$3);
           default:
-            final r = AnimalRules.collect(p.profile, b, uid);
+            final r = AnimalRules.collectBy(
+                p.profile, b, uid, _fa.bgRand.nextDouble);
             if (r == null) return false;
-            s.town = s.town.withBuild(r.$1);
+            s.town = s.town.withBuild(r.build);
             final (ox, oy) = s.town.origin;
             final (nx, ny) = AnimalRules.nestOf(b, an);
             // Pops out like a harvest; the short magnet brings it
             // (animals.md § 4.2, loot.md § 4c).
-            _spill(p, [GoodsRules.animal(r.$2, 1)], (nx + ox + 0.5) * 16,
-                (ny + oy + 0.5) * 16);
-            _animalXp(p, r.$3);
+            final drops = <String, int>{};
+            for (final k in r.goods) {
+              drops[k] = (drops[k] ?? 0) + 1;
+            }
+            if (drops.isNotEmpty) {
+              _spill(p, [for (final e in drops.entries) GoodsRules.animal(e.key, e.value)],
+                  (nx + ox + 0.5) * 16, (ny + oy + 0.5) * 16);
+            }
+            _animalParts(p, r.parts);
+            _animalXp(p, r.xp);
         }
         return true;
       default:
@@ -129,6 +159,15 @@ extension _AnimalOp on _Op {
         final id = a.id;
         return id != null &&
             _profileChange(p, AnimalRules.makeHay(prof, id, a.n));
+      case FarmShopOp.processGoods:
+        // animals.md § 11: cheese / mayonnaise, same quality.
+        final id = a.id;
+        if (id == null) return false;
+        final r = AnimalRules.process(prof, id, a.n);
+        if (r == null) return false;
+        _profileChange(p, r.$1);
+        _animalXp(p, r.$2);
+        return true;
       case FarmShopOp.sellGoods:
         final r = AnimalRules.sell(prof, a.id);
         if (r == null) return false;

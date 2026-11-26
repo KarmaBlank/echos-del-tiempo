@@ -145,7 +145,18 @@ class MineAction extends SessionAction {
 }
 
 /// Smithing operation (mining_smithing.md § 3–5).
-enum SmithOp { smelt, forge, brann, fishForge, forgeParts, fishSplit }
+enum SmithOp {
+  smelt,
+  forge,
+  brann,
+  fishForge,
+  forgeParts,
+  fishSplit,
+
+  /// Protocol 101 (animals.md § 10): Brann forges the legendary animal
+  /// product [SmithAction.material] into a unique weapon.
+  animalForge
+}
 
 /// `smith` (protocol 69): [SmithOp.smelt] smelts [n] ingots from the ore
 /// [material]; [SmithOp.forge] / [SmithOp.brann] forge [base] with the
@@ -877,7 +888,10 @@ enum FarmShopOp {
   buyHay,
   buyRanchTool,
   makeHay,
-  sellGoods
+  sellGoods,
+  // Protocol 101 (animals.md § 11): [n] of the animal product key [id]
+  // through its workshop machine (cheese / mayonnaise, same quality).
+  processGoods
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.

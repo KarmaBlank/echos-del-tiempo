@@ -649,6 +649,24 @@ items:
   vida_corazon: { idle: items/vida_corazon.png, size: [8, 8] }
   vida_corazon_vacio: { idle: items/vida_corazon_vacio.png, size: [8, 8] }
   vida_comedero: { idle: items/vida_comedero.png, size: [16, 16] }
+  vida_ap_gallina_pluma: { idle: items/vida_ap_gallina_pluma.png, size: [16, 16] }
+  vida_ap_pato_pluma: { idle: items/vida_ap_pato_pluma.png, size: [16, 16] }
+  vida_ap_vaca_cuerno: { idle: items/vida_ap_vaca_cuerno.png, size: [16, 16] }
+  vida_ap_vaca_pelaje: { idle: items/vida_ap_vaca_pelaje.png, size: [16, 16] }
+  vida_ap_cabra_cuerno: { idle: items/vida_ap_cabra_cuerno.png, size: [16, 16] }
+  vida_ap_cabra_pelaje: { idle: items/vida_ap_cabra_pelaje.png, size: [16, 16] }
+  vida_ap_oveja_lana_fina: { idle: items/vida_ap_oveja_lana_fina.png, size: [16, 16] }
+  vida_huevo_dorado: { idle: items/vida_huevo_dorado.png, size: [16, 16] }
+  vida_huevo_marea: { idle: items/vida_huevo_marea.png, size: [16, 16] }
+  vida_cuerno_ancestral: { idle: items/vida_cuerno_ancestral.png, size: [16, 16] }
+  vida_cuerno_risco: { idle: items/vida_cuerno_risco.png, size: [16, 16] }
+  vida_vellon_eco: { idle: items/vida_vellon_eco.png, size: [16, 16] }
+  vida_queso: { idle: items/vida_queso.png, size: [16, 16] }
+  vida_queso_cabra: { idle: items/vida_queso_cabra.png, size: [16, 16] }
+  vida_mayonesa: { idle: items/vida_mayonesa.png, size: [16, 16] }
+  vida_mayonesa_pato: { idle: items/vida_mayonesa_pato.png, size: [16, 16] }
+  vida_quesera: { idle: items/vida_quesera.png, size: [16, 16] }
+  vida_mayonesera: { idle: items/vida_mayonesera.png, size: [16, 16] }
   # animales:fin
   # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1): casa de entramado
   # con techo de pizarra, martillo y serrucho, barriles y yunque, en el

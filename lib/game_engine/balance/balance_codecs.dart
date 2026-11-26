@@ -89,10 +89,10 @@ enum BalanceKind {
   exploration('exploration', 'Exploración', 'Ajustes de exploración'),
 
   /// Cultivo, huerta y agropecuario (farming.md, v0.23.0).
-  farming('farming', 'Cultivo', 'Ajustes de Cultivo'),
+  farming('farming', 'Granjero: cultivos', 'Ajustes de cultivos del Granjero'),
 
   /// Animales de granja (animals.md).
-  animals('animals', 'Animales', 'Ajustes de animales'),
+  animals('animals', 'Granjero: animales', 'Ajustes de animales del Granjero'),
 
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).
   town('town', 'Pueblo', 'Ajustes del pueblo'),
@@ -1594,7 +1594,7 @@ const _townLabels = {
   'faroCost': 'Faro: oro',
   'forageRespawnSec': 'Biomas: segundos de rebrote de una mata',
   'forageSeedChance': 'Biomas: chance de semilla al recolectar',
-  'forageXp': 'Biomas: XP de Cultivo por recolectar',
+  'forageXp': 'Biomas: XP de Granjero por recolectar',
   'reinforceDelay': 'Refuerzo: turnos de espera al entrar a una pelea',
   'absentWeight': 'Dificultad: peso de cada ausente de la sala',
   'resInviteRep': 'Habitantes: relación para invitarlo al pueblo',
@@ -1625,7 +1625,7 @@ const _townLabels = {
   'orderGoldPerValue': 'Órdenes: oro × valor',
   'mealOrderPay': 'Órdenes de comida: × del valor crudo',
   'mealOrderChance': 'Órdenes de comida: probabilidad por día',
-  'mealOrderLevel': 'Órdenes de comida: nivel de Cultivo',
+  'mealOrderLevel': 'Órdenes de comida: nivel de Granjero',
   'mealOrderMin': 'Órdenes de comida: cantidad mínima',
   'mealOrderMax': 'Órdenes de comida: cantidad máxima',
   'orderSkillEvery': 'Órdenes: punto de árbol cada N',
@@ -1646,7 +1646,7 @@ const _townLabels = {
   'lifeLevelCharXp': 'Oficios: XP de personaje × nivel de oficio',
   'orderRarityLevels': 'Órdenes: niveles de oficio por rareza',
   'orderAnyBiomeLevel': 'Órdenes: nivel para pedir de otros biomas',
-  'orderQualityLevel': 'Órdenes: nivel de Cultivo para pedir calidad',
+  'orderQualityLevel': 'Órdenes: nivel de Granjero para pedir calidad',
   'orderSizeLevel': 'Órdenes: nivel de Pesca para pedir tamaño',
   'comGold': 'Forja de Brann: oro × nivel',
   'comMat': 'Forja de Brann: materiales',
@@ -1693,10 +1693,10 @@ final animalsCodec = _tuningCodec(
 
 const _animalLabels = {
   'coopPrice': 'Gallinero: precio (oro)',
-  'coopLevel': 'Gallinero: nivel de Cultivo',
+  'coopLevel': 'Gallinero: nivel de Granjero',
   'coopCap': 'Gallinero: cupo de animales',
   'barnPrice': 'Establo: precio (oro)',
-  'barnLevel': 'Establo: nivel de Cultivo',
+  'barnLevel': 'Establo: nivel de Granjero',
   'barnCap': 'Establo: cupo de animales',
   'hayPrice': 'Heno: precio del fardo',
   'hayPerCrop': 'Heno: fardos por cultivo picado',
@@ -1709,11 +1709,11 @@ const _animalLabels = {
   'helperPetGain': 'Ayudante: cariño por caricia',
   'helperHeartCap': 'Ayudante: tope de corazones',
   'helperPerHome': 'Ayudante: cuántos por construcción',
-  'helperLevel': 'Ayudante: nivel de Cultivo para contratar',
+  'helperLevel': 'Ayudante: nivel de Granjero para contratar',
   'qRaroPerHeart': 'Calidad rara por corazón',
   'qEpicoPerHeart': 'Calidad épica por corazón (desde el 3.º)',
-  'feedXp': 'XP de Cultivo al dar de comer',
-  'petXp': 'XP de Cultivo al acariciar',
+  'feedXp': 'XP de Granjero al dar de comer',
+  'petXp': 'XP de Granjero al acariciar',
   'xpDayCap': 'Tope de XP de animales por día del mundo',
 };
 
@@ -2006,7 +2006,7 @@ const _regionsLabels = {
   'scarecrowQualityBias': 'Espantapájaros: sesgo de calidad',
   'scarecrowRadius': 'Espantapájaros: alcance (tiles)',
   'gatherHoldSec': 'Recolectar: segundos manteniendo E',
-  'gatherSpeedPerLevel': 'Recolectar: más rápido por nivel de Cultivo',
+  'gatherSpeedPerLevel': 'Recolectar: más rápido por nivel de Granjero',
   'gatherHoldMinSec': 'Recolectar: segundos mínimos',
   'holdRepeatSec': 'Mantener E/clic: segundos entre repeticiones',
   'actionReachTiles': 'Cursor de acción: alcance (tiles alrededor)',
@@ -2015,7 +2015,7 @@ const _regionsLabels = {
   'searchNestChance': 'Buscar en árboles: chance de nido',
   'searchRecipeChance': 'Buscar en árboles: chance de receta de abono',
   'treeSearchFraction': 'Buscar en árboles: fracción de árboles buscables por día',
-  'searchXp': 'Buscar en árboles: XP de Cultivo',
+  'searchXp': 'Buscar en árboles: XP de Granjero',
   'waystoneReach': 'Piedra de paso: distancia (px)',
   'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',
   'mapStartRadius': 'Mapa del exterior: radio conocido al llegar (tiles)',

@@ -48,6 +48,8 @@ Map<String, Map<String, String>> catalogSource() {
     for (final e in kGearTypeNames.entries)
       'data.items.gear.type.${gearTypeKey(e.key)}': e.value,
     'data.items.gear.fish.name': '{type} de {fish}',
+    // Legendary animal forge (animals.md § 10).
+    'data.items.gear.ranch.name': '{type} de {item}',
     // Profession gear v2 (profession_gear_v2.md § 3).
     'data.items.gear.parts.name': '{type} de {metal}',
     for (final i in kIngotAffinity.keys)

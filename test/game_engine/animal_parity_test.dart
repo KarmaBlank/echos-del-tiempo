@@ -92,14 +92,6 @@ void main() {
     expect(m / h, greaterThanOrEqualTo(edge));
   });
 
-  test('a full coop stays a side income of Cultivo (daily XP cap)', () {
-    // Six hens cared for by hand for a day: under the daily cap.
-    final perHen = simulate('gallina', manual: true, days: 30,
-            aff0: AnimalRules.affMax)
-        .xp /
-        30;
-    final careXp = AnimalRules.t.i('feedXp') + AnimalRules.t.i('petXp');
-    final day = 6 * (perHen + careXp);
-    expect(day, lessThan(AnimalRules.t.i('xpDayCap')));
-  });
+  // The old daily XP cap is gone (v0.50, animals.md § 7): the hourly
+  // parity with crops lives in granjero_parity_test.
 }

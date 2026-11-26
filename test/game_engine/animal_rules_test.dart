@@ -213,11 +213,11 @@ void main() {
       expect(b.chestTotal, chest + 1, reason: 'only the product of day 40');
     });
 
-    test('ranch helper hire asks for its own Cultivo level', () {
+    test('ranch helper hire asks for its own Granjero level', () {
       final s = const TownState().copyWith(builds: [coop()]);
       final low = farmer(level: AnimalRules.helperLevel - 1);
       expect(TownRules.cannotHire(low, s, 'g0'),
-          'Necesitás subir tu oficio de Cultivo a nivel ${AnimalRules.helperLevel} '
+          'Necesitás subir tu oficio de Granjero a nivel ${AnimalRules.helperLevel} '
           '(ahora: nivel ${AnimalRules.helperLevel - 1})');
       final ok = farmer(level: AnimalRules.helperLevel);
       final h = TownRules.hire(ok.copyWith(life: ok.life.copyWith(
@@ -242,7 +242,7 @@ void main() {
       var s = const TownState();
       final (x, y) = spot(s, 'gallinero');
       expect(AnimalRules.cannotBuild(farmer(level: 1), 'gallinero'),
-          'Necesitás Cultivo nivel ${t.i('coopLevel')}');
+          'Necesitás Granjero nivel ${t.i('coopLevel')}');
       var p = AnimalRules.payBuild(farmer(gold: 3000), 'gallinero')!;
       expect(p.credits, 3000 - t.i('coopPrice'));
       s = TownRules.place(s, 'gallinero', x, y).town!;
@@ -365,7 +365,7 @@ void main() {
       return s;
     }
 
-    test('E on a hen: collect pops an egg, feed, pet; XP for Cultivo', () {
+    test('E on a hen: collect pops an egg, feed, pet; XP for Granjero', () {
       final e = sessionEngine();
       var s = room();
       final id = s.town.builds.firstWhere((b) => b.kind.ranch).id;
@@ -378,8 +378,9 @@ void main() {
           isNull);
       final prof = s.players['p0']!.profile;
       expect(prof.life.farm.hay, 1);
+      // Each grant carries the tree's XP bonus, rounded (§ 7).
       expect(prof.life.farm.xp,
-          xp0 + t.i('huevoXp') + t.i('feedXp') + t.i('petXp'));
+          closeTo(xp0 + t.i('huevoXp') + t.i('feedXp') + t.i('petXp'), 3));
     });
 
     test('too far from the coop: the host rejects the care', () {

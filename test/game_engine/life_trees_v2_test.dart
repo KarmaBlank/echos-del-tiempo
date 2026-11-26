@@ -63,12 +63,15 @@ void main() {
 
   group('shape', () {
     for (final k in LifeSkillKind.values) {
-      test('${k.name}: root + 5 forking branches × 10 tiers, one capstone group', () {
+      test('${k.name}: root + forking branches × 10 tiers, one capstone group', () {
         final nodes = kLifeTrees[k]!;
         const forks = kLifeForkTo - kLifeForkFrom + 1;
-        expect(nodes.length, 1 + kLifeBranches.length * (kLifeTiers + forks));
+        final branches = lifeBranchesOf(k);
+        // Granjero adds ANIMALES (animals.md § 8) to the five shared ones.
+        expect(branches.length, k == LifeSkillKind.cultivo ? 6 : 5);
+        expect(nodes.length, 1 + branches.length * (kLifeTiers + forks));
         expect(nodes.where((n) => n.root).length, 1);
-        for (final b in kLifeBranches) {
+        for (final b in branches) {
           final br = nodes.where((n) => n.branch == b).toList();
           // Every tier present; the fork tiers offer two sibling nodes.
           for (var t = 1; t <= kLifeTiers; t++) {

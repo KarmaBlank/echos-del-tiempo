@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
+import '../data/animals_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/profession_gear_catalog.dart';
 import '../data/tuning_catalog.dart';
+import '../models/farm_animal.dart' show animalGoodsKey;
 import '../models/item.dart';
 import '../models/loot.dart' show LootSource;
 import '../models/player_profile.dart';
@@ -50,12 +52,21 @@ abstract final class GearRules {
     return id != null && id.startsWith('fish_') ? id.substring(5) : null;
   }
 
+  /// Species whose legendary product an animal-forged weapon was made
+  /// from (animals.md § 10).
+  static String? animalOf(ItemInstance i) {
+    final id = gearIdOf(i);
+    return id != null && id.startsWith('ranch_') ? id.substring(6) : null;
+  }
+
   /// Profession that makes [i].
   static LifeSkillKind? professionOf(ItemInstance i) => fishOf(i) != null
       ? LifeSkillKind.pesca
-      : (gearIdOf(i)?.startsWith(kPartsGearPrefix) ?? false)
-          ? LifeSkillKind.herreria
-          : defOf(i)?.source.profession;
+      : animalOf(i) != null
+          ? LifeSkillKind.cultivo
+          : (gearIdOf(i)?.startsWith(kPartsGearPrefix) ?? false)
+              ? LifeSkillKind.herreria
+              : defOf(i)?.source.profession;
 
   // ---------------- making (§ 1) ----------------
 
@@ -369,6 +380,73 @@ abstract final class GearRules {
       1,
       t.d('fishForgeLegend') +
           LifeTreeRules.fish(p, LifeFx.legend) * t.d('fishForgeLegendTree'));
+
+  // ---------------- legendary animal forge (animals.md § 10) ----------------
+
+  static TuningDef get _at => tuning(TuningId.animals);
+
+  /// Bag key of the legendary product [id].
+  static String animalLegendKey(String id) =>
+      animalGoodsKey(id, CropQuality.legendario);
+
+  /// Why Brann can't forge the legendary product [id] for [p] (`null` =
+  /// can).
+  static FishForgeBlock? animalForgeBlock(PlayerProfile p, String id) {
+    if (animalOfLegend(id) == null) return FishForgeBlock.notLegend;
+    if (p.life.farm.goodsCount(animalLegendKey(id)) < 1) {
+      return FishForgeBlock.noFish;
+    }
+    if (FarmingRules.level(p) < _at.i('animalForgeLevel')) {
+      return FishForgeBlock.level;
+    }
+    if (p.credits < _at.i('animalForgeGold')) return FishForgeBlock.gold;
+    return null;
+  }
+
+  /// Chance the animal forge comes out Legendary for [p].
+  static double animalForgeLegend(PlayerProfile p) => math.min(
+      1,
+      _at.d('animalForgeLegend') +
+          LifeTreeRules.farm(p, LifeFx.animalLegend) *
+              _at.d('animalForgeLegendTree'));
+
+  /// es-AR name of the weapon forged from the legendary product [id].
+  static String animalForgeName(String id) {
+    final a = animalOfLegend(id)!;
+    return '${kGearTypeNames[a.weapon] ?? 'Arma'} de '
+        '${kAnimalProducts[id]?.name ?? id}';
+  }
+
+  /// Brann forges the legendary product [id] into a unique weapon for [p]
+  /// (animals.md § 10): the product and `animalForgeGold` gold. Epic,
+  /// Legendary with [animalForgeLegend]; affinity of the species.
+  static (PlayerProfile, ItemInstance)? animalForge(
+      LootRules loot, RandomSource rng, PlayerProfile p, String id) {
+    if (animalForgeBlock(p, id) != null) return null;
+    final a = animalOfLegend(id)!;
+    final r = rng() < animalForgeLegend(p) ? Rarity.legendario : Rarity.epico;
+    final il = LootRules.itemLevelFor(p.level, LootSource.chest);
+    final (affix, lo, hi) = a.signature;
+    final item = make(loot, rng,
+        gearId: 'ranch_${a.id}',
+        type: a.weapon,
+        signature: UniqueMod(affix, lo, hi),
+        rarity: r,
+        itemLevel: il,
+        name: animalForgeName(id));
+    final touched = GearV2Rules.touch(loot, rng, item, a.weapon,
+        parts: ['ranch', a.id],
+        aff: a.affinity,
+        q: GearV2Rules.quality(
+            level: FarmingRules.level(p), materials: 1, manual: false));
+    final f = p.life.farm;
+    final key = animalLegendKey(id);
+    final paid = p.copyWith(
+        credits: p.credits - _at.i('animalForgeGold'),
+        life: p.life.copyWith(
+            farm: f.copyWith(goods: {...f.goods, key: f.goodsCount(key) - 1})));
+    return (paid, touched);
+  }
 
   /// es-AR name of the weapon forged from [species].
   static String fishForgeName(String species) =>

@@ -28,6 +28,7 @@
   "data.items.gear.metal.ingot_ember": "ember steel",
   "data.items.gear.metal.ingot_frost": "frost iron",
   "data.items.gear.parts.name": "{metal} {type}",
+  "data.items.gear.ranch.name": "{item} {type}",
   "data.items.gear.seed.ws_arco": "Living bow seed",
   "data.items.gear.seed.ws_arco_old": "Ancient living bow seed",
   "data.items.gear.seed.ws_ballesta": "Living crossbow seed",

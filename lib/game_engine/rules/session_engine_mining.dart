@@ -478,6 +478,18 @@ extension _MiningOp on _Op {
         _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
             stashOverflow: true);
         return true;
+      case SmithOp.animalForge:
+        // animals.md § 10: Brann forges a legendary animal product.
+        final r =
+            GearRules.animalForge(rules.loot, _rand, p.profile, a.material);
+        if (r == null) return false;
+        _profileChange(p, r.$1);
+        say('Brann forjó para ${p.name} un arma de '
+            '${kAnimalProducts[a.material]?.name ?? a.material}.');
+        smithXp(p, SmithRules.t.i('smithXpCommission'));
+        _deliver(p, [LootDrop.item(r.$2)], LootSource.mission, p.x, p.y,
+            stashOverflow: true);
+        return true;
       case SmithOp.fishSplit:
         // profession_gear_v2.md § 4: Brann takes a fish apart (it's gone).
         final next = GearV2Rules.split(p.profile, a.material);

@@ -313,6 +313,101 @@ RgbaImage _trough() {
   return p.img;
 }
 
+/// Animal part for the forge (16 × 16): feather, horn, fur or wool.
+RgbaImage _part(String part, int c, int d) {
+  final p = _Pen(16, 16);
+  switch (part) {
+    case 'pluma':
+      for (var i = 0; i < 10; i++) {
+        p.px(4 + i ~/ 2 + 1, 13 - i, _shade);
+        p.rect(5 + i ~/ 2, 12 - i, 3, 1, i.isEven ? c : d);
+      }
+      p.px(5, 14, _brownDark);
+    case 'cuerno':
+      for (var i = 0; i < 9; i++) {
+        p.rect(4 + i ~/ 2, 13 - i, 3 - i ~/ 4, 1, i < 3 ? d : c);
+      }
+      p.px(9, 4, _white);
+    case 'pelaje':
+      p.rect(3, 6, 10, 6, c);
+      for (var x = 4; x < 13; x += 2) {
+        p.px(x, 7, d);
+        p.px(x + 1, 10, d);
+      }
+      p.rect(4, 12, 2, 1, d);
+      p.rect(10, 12, 2, 1, d);
+    default: // lana_fina
+      p.rect(4, 5, 8, 7, c);
+      p.rect(3, 7, 10, 3, c);
+      p.px(6, 7, d);
+      p.px(9, 9, d);
+      p.px(7, 10, d);
+      p.px(5, 6, _white);
+  }
+  p.outline();
+  return p.img;
+}
+
+/// Legendary product: the base shape in gold with a glint (16 × 16).
+RgbaImage _legend(String kind, int c, int d) {
+  final p = _Pen(16, 16);
+  switch (kind) {
+    case 'egg':
+      p.rect(5, 4, 6, 9, c);
+      p.rect(4, 6, 8, 6, c);
+      p.rect(5, 11, 6, 2, d);
+    case 'horn':
+      for (var i = 0; i < 10; i++) {
+        p.rect(3 + i, 12 - i ~/ 2 - i ~/ 3, 2, 2, i.isEven ? c : d);
+      }
+    default:
+      p.rect(3, 5, 10, 7, c);
+      p.rect(4, 4, 8, 9, c);
+      p.px(6, 7, d);
+      p.px(9, 9, d);
+  }
+  p.px(6, 5, _white);
+  p.px(12, 2, _white);
+  p.px(13, 3, _yellow);
+  p.px(11, 3, _yellow);
+  p.outline();
+  return p.img;
+}
+
+/// Cheese wedge or mayonnaise jar (16 × 16).
+RgbaImage _processed(bool cheese, int c, int d) {
+  final p = _Pen(16, 16);
+  if (cheese) {
+    p.rect(2, 8, 12, 5, c);
+    for (var i = 0; i < 6; i++) {
+      p.rect(2 + i * 2, 7 - i ~/ 2, 12 - i * 2, 1, c);
+    }
+    p.px(5, 10, d);
+    p.px(9, 11, d);
+    p.px(11, 9, d);
+  } else {
+    p.rect(4, 5, 8, 9, c);
+    p.rect(4, 3, 8, 2, _red);
+    p.rect(5, 8, 6, 3, _white);
+    p.px(6, 9, d);
+  }
+  p.outline();
+  return p.img;
+}
+
+/// Workshop machine (16 × 16): a press or a churn with a crank.
+RgbaImage _machine(bool cheese) {
+  final p = _Pen(16, 16);
+  p.rect(3, 6, 10, 8, _brown);
+  p.rect(3, 6, 10, 1, _brownDark);
+  p.rect(5, 8, 6, 4, cheese ? _yellow : _cream);
+  p.rect(7, 2, 2, 4, _metal);
+  p.rect(cheese ? 4 : 9, 2, 4, 1, _greyDark);
+  p.rect(2, 14, 12, 1, _brownDark);
+  p.outline();
+  return p.img;
+}
+
 void main() {
   final sprites = <String, RgbaImage>{
     'vida_animal_gallina': _bird(duck: false),
@@ -336,6 +431,25 @@ void main() {
     'vida_corazon': _heart(full: true),
     'vida_corazon_vacio': _heart(full: false),
     'vida_comedero': _trough(),
+    // Granjero reform (animals.md § 9–11).
+    'vida_ap_gallina_pluma': _part('pluma', _white, _shade),
+    'vida_ap_pato_pluma': _part('pluma', _blue, 0x2f6fb0),
+    'vida_ap_vaca_cuerno': _part('cuerno', _cream, _shade),
+    'vida_ap_vaca_pelaje': _part('pelaje', _brown, _brownDark),
+    'vida_ap_cabra_cuerno': _part('cuerno', _grey, _greyDark),
+    'vida_ap_cabra_pelaje': _part('pelaje', _shade, _wallDark),
+    'vida_ap_oveja_lana_fina': _part('lana_fina', _cream, _shade),
+    'vida_huevo_dorado': _legend('egg', _yellow, _orange),
+    'vida_huevo_marea': _legend('egg', _blue, 0x2f6fb0),
+    'vida_cuerno_ancestral': _legend('horn', _yellow, _orange),
+    'vida_cuerno_risco': _legend('horn', 0xc8d0dc, _grey),
+    'vida_vellon_eco': _legend('wool', 0xf8e8a8, _yellow),
+    'vida_queso': _processed(true, _yellow, _orange),
+    'vida_queso_cabra': _processed(true, _white, _shade),
+    'vida_mayonesa': _processed(false, _cream, _yellow),
+    'vida_mayonesa_pato': _processed(false, 0xf0e0a0, _blue),
+    'vida_quesera': _machine(true),
+    'vida_mayonesera': _machine(false),
   };
   for (final e in sprites.entries) {
     File('assets/sprites/items/${e.key}.png')

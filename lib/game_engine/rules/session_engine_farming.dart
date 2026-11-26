@@ -502,7 +502,7 @@ extension _FarmingOp on _Op {
     }
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
-      say('${p.name} subió Cultivo a nivel $lvl1.');
+      say('${p.name} subió Granjero a nivel $lvl1.');
       lifeLevelXp(p, lvl1);
     }
   }
@@ -528,7 +528,7 @@ extension _FarmingOp on _Op {
     _deliver(p, [d], LootSource.mission, p.x, p.y, stashOverflow: true);
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
-      say('${p.name} subió Cultivo a nivel $lvl1.');
+      say('${p.name} subió Granjero a nivel $lvl1.');
       lifeLevelXp(p, lvl1);
     }
   }
@@ -714,7 +714,8 @@ extension _FarmingOp on _Op {
       case FarmShopOp.buyHay ||
             FarmShopOp.buyRanchTool ||
             FarmShopOp.makeHay ||
-            FarmShopOp.sellGoods:
+            FarmShopOp.sellGoods ||
+            FarmShopOp.processGoods:
         return animalShop(p, a);
       case FarmShopOp.exchange:
         if (id == null ||

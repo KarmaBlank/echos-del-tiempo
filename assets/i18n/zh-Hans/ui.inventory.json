@@ -401,7 +401,7 @@
   "ui.inventory.sort.weapon_type": "",
   "ui.inventory.workshop.credits": "",
   "ui.inventory.workshop.filter.all": "",
-  "ui.inventory.workshop.filter.farming": "",
+  "ui.inventory.workshop.filter.farming": "农夫",
   "ui.inventory.workshop.filter.fishing": "",
   "ui.inventory.workshop.have": "",
   "ui.inventory.workshop.help": "<b>手艺工坊</b><br>制作:收成和鱼(不含传说;先用价值最低的)可制成手艺材料,用于雇用和升级帮手。选择配方后,右侧显示材料、数量和制作按钮。<br>工具:鱼竿、锄头、水壶和镐在这里购买和装备(农用品店只卖耗材)。武器在军械库处理。",

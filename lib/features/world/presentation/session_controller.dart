@@ -3382,6 +3382,14 @@ class SessionController extends StateNotifier<SessionView?> {
   bool sellGoods([String? key]) =>
       _apply(FarmShopAction(FarmShopOp.sellGoods, id: key));
 
+  /// Cheese / mayonnaise machine (animals.md § 11): [n] of [key].
+  bool processGoods(String key, int n) =>
+      _apply(FarmShopAction(FarmShopOp.processGoods, id: key, n: n));
+
+  /// Brann forges the legendary animal product [id] (animals.md § 10).
+  bool animalForge(String id) =>
+      _apply(SmithAction(SmithOp.animalForge, id));
+
   /// Opens the panel of the coop / barn [buildId] (animal [uid] picked).
   void openAnimals(String buildId, {int? uid}) {
     animalPanelBuild = buildId;

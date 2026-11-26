@@ -241,7 +241,13 @@ import '../../game_engine/serialization/session_json.dart';
 /// `hy` hay, `TownOp.buyAnimal / animalFeed / animalPet / animalCollect /
 /// depositHay` and `FarmShopOp.buyHay / buyRanchTool / makeHay /
 /// sellGoods`, and `agood:` ground goods; a 99 peer would drop them.
-const kProtocolVersion = 100;
+/// 101: Granjero reform (animals.md § 9–12): `FarmAnimal.d` drops on the
+/// floor (animal parts `ap_*` and legendary products `<id>@3`), animal
+/// parts as smithing materials in `ore`, the ANIMALES tree nodes
+/// (`farm_f*`), the machines in `at` (`quesera`, `mayonesera`) and the
+/// processed products in `ag`, `FarmShopOp.processGoods` and
+/// `SmithOp.animalForge`; a 100 peer would drop them.
+const kProtocolVersion = 101;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
