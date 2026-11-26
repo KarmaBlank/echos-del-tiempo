@@ -60,6 +60,11 @@ void main() {
           // The tile in front of the mouth is open and reached on foot.
           expect(walk, contains((mx, my + 1)), reason: why);
           final f = MiningRules.entranceFront(id, i);
+          // Walking up into the mouth: the cursor picks it over its
+          // waystone (controls.md § Cursor de acción).
+          c.local
+            ..fx = 0
+            ..fy = -1;
           c.teleport(f.x, f.y);
           expect(c.nearMineEntrance, i, reason: why);
           expect(c.view!.promptText,

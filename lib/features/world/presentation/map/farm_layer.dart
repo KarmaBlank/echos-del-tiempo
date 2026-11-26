@@ -405,6 +405,7 @@ class MapFarmLayer {
       ui.Image? Function(String id) sprite, MapText text,
       {({TownBuild build, int index})? hover,
       String? selectedNpc,
+      String? selectedChest,
       NpcMark Function(BiomeNpcDef n)? markOf,
       double? period}) {
     final (ox, oy) = town.origin;
@@ -441,6 +442,14 @@ class MapFarmLayer {
       }
       // Vacío: opaco y oscurecido (modulate). Con transparencia se
       // fundía con el pasto y parecía que no había cofre (v0.36.4).
+      // Selected for E / click: 1 px white outline (controls.md).
+      if (b.id == selectedChest) {
+        if (sprite('cofre_oficio') case final im?) {
+          final w = im.width.toDouble(), hh = im.height.toDouble();
+          drawSpriteOutline(c, im,
+              Rect.fromLTWH((px - w / 2).roundToDouble(), py - hh, w, hh));
+        }
+      }
       final r = img(
           'cofre_oficio',
           px,

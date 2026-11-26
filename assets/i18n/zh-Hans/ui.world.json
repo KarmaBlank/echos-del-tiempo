@@ -192,6 +192,7 @@
   "ui.world.ctl.achievement": "",
   "ui.world.ctl.save_failed": "",
   "ui.world.ctl.prompt_travel": "",
+  "ui.world.ctl.prompt_read": "",
   "ui.world.ctl.prompt_talk": "",
   "ui.world.ctl.chest_empty": "",
   "ui.world.ctl.chest_collect": "",

@@ -466,8 +466,14 @@ class TilePainter {
         _shrine(c, px, py, t, used: ch == Tile.shrineUsed);
       case Tile.waystone || Tile.waystoneOn:
         // Region waystones stand on grass (biome_regions.md § 4).
+        // The same grass as a Tile.grass cell, so the outline's ground
+        // shot (MapGame._drawObjectOutline) matches it pixel for pixel.
         if (themeId.endsWith('_ext')) {
-          _grass(c, th, px, py, h);
+          if (terrainDetailTheme(themeId)) {
+            _grassDetail(c, th, px, py, tx, ty, h, at);
+          } else {
+            _grass(c, th, px, py, h);
+          }
         } else {
           floor();
         }

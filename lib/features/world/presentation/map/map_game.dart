@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/custom_npc.dart';
+import '../../../../game_engine/rules/action_targeting.dart';
+import 'object_outline.dart';
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
@@ -947,6 +949,14 @@ class MapGame extends Game {
               ..color = color);
         c.drawOval(Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
             Paint()..color = color.withValues(alpha: 0.25));
+        if (controller.selectedOf('event:') == a.uid) {
+          c.drawOval(
+              Rect.fromCenter(center: Offset(x, y), width: 21, height: 27),
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1
+                ..color = const Color(0xFFFFFFFF));
+        }
         _placeText(c, d.title.text.toUpperCase(), x, y - 18, TownPalette.label,
             6, 899);
         continue;
@@ -966,11 +976,12 @@ class MapGame extends Game {
       final bottom = y + 8;
       if (im != null) {
         final w = im.width.toDouble(), h = im.height.toDouble();
+        final dst = Rect.fromLTWH(x - w / 2, bottom - h, w, h);
+        if (controller.selectedOf('event:') == a.uid) {
+          drawSpriteOutline(c, im, dst);
+        }
         c.drawImageRect(
-            im,
-            Rect.fromLTWH(0, 0, w, h),
-            Rect.fromLTWH(x - w / 2, bottom - h, w, h),
-            SpriteCatalog.pixelPaint());
+            im, Rect.fromLTWH(0, 0, w, h), dst, SpriteCatalog.pixelPaint());
       }
       _placeText(c, d.title.text.toUpperCase(), x, bottom - 20,
           TownPalette.label, 6, 899);
@@ -1112,6 +1123,13 @@ class MapGame extends Game {
       tiles.entrance(c, e.tx, e.ty, e.zone,
           open: open(e.zone), t: t, density: particleDensity);
     }
+    // The selected object painted into its tiles: its outline, under the
+    // actors (controls.md § Cursor de acción).
+    _drawObjectOutline(c, map, t);
+    // The mine cart track: rail tiles on the floor, under the actors.
+    if (controller.mineLevel case final lvl? when map.lobby) {
+      mine.drawTrack(c, MiningRules.track(lvl, controller.mineState));
+    }
     final merchant = map.merchant;
     if (merchant != null) {
       _placeText(c, 'TIENDA', merchant.x, merchant.y - 34,
@@ -1209,7 +1227,8 @@ class MapGame extends Game {
             (id) => sprites.lifeIcon(id, 'herramienta'),
             (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900),
             hover: controller.hoverHelper,
-            selectedNpc: controller.nearNpc?.id,
+            selectedNpc: controller.selectedOf('npc:'),
+            selectedChest: controller.selectedOf('chest:'),
             markOf: _npcMark,
             period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
@@ -1237,7 +1256,7 @@ class MapGame extends Game {
               Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh),
               SpriteCatalog.pixelPaint());
           // Selected for E / click: 1 px white outline (controls.md).
-          if (controller.nearNpc?.id == lay.npc.id) {
+          if (controller.selectedOf('npc:') == lay.npc.id) {
             drawSpriteOutline(c, im,
                 Rect.fromLTWH(cx - w / 2, bottom - dh - hop, w, dh));
           }
@@ -1289,6 +1308,10 @@ class MapGame extends Game {
                 Rect.fromLTWH(0, 0, w, h),
                 Rect.fromLTWH(fx - w / 2, fy + 8 - h, w, h),
                 SpriteCatalog.pixelPaint());
+            if (controller.selectedOf('fisher:') != null) {
+              drawSpriteOutline(
+                  c, im, Rect.fromLTWH(fx - w / 2, fy + 8 - h, w, h));
+            }
             draw(c);
             _refl.add(
                 (x: fx, y: fy + 8, moving: true, onWater: false, draw: draw));
@@ -1311,6 +1334,10 @@ class MapGame extends Game {
               Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(n.x - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
+          if (controller.selectedOf('custom:') == n.def.id) {
+            drawSpriteOutline(
+                c, im, Rect.fromLTWH(n.x - w / 2, bottom - h, w, h));
+          }
           draw(c);
           _refl.add(
               (x: n.x, y: bottom, moving: false, onWater: false, draw: draw));
@@ -1324,11 +1351,12 @@ class MapGame extends Game {
         final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
+          final dst = Rect.fromLTWH(cx - w / 2, bottom - h, w, h);
+          if (controller.selectedOf('minenpc:') == id) {
+            drawSpriteOutline(c, im, dst);
+          }
           c.drawImageRect(
-              im,
-              Rect.fromLTWH(0, 0, w, h),
-              Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
-              SpriteCatalog.pixelPaint());
+              im, Rect.fromLTWH(0, 0, w, h), dst, SpriteCatalog.pixelPaint());
         }
         _placeText(
             c,
@@ -1340,7 +1368,7 @@ class MapGame extends Game {
             897);
       }
       // Objetivo del próximo E / clic (solo el jugador local).
-      if (controller.farmTarget case final ft?) {
+      if (controller.farmTarget case final ft? when controller.toolCursor) {
         farm.drawTarget(c, ft.tiles, ft.ok);
       }
     }
@@ -1713,8 +1741,12 @@ class MapGame extends Game {
     // Hold-to-gather bar (cozy_life.md § 3), like the mine dig bar.
     if (controller.gatherProgress case (final tile, final k)?) {
       drawTileTarget(c, [tile], true, progress: k);
-    } else if (controller.gatherTarget case final g?) {
-      // The action cursor on the selected bush / tree (controls.md).
+    } else if (controller.actionTarget case final g?
+        when !g.outline &&
+            g.kind != ActionTargetKind.plot &&
+            g.kind != ActionTargetKind.rock) {
+      // The tile cursor only on ground work targets (controls.md); the
+      // farm and the mine draw their own marker.
       drawTileTarget(c, [g.tile], g.ok);
     }
     // Fireflies at night around the local player fishing or on a raft
@@ -1744,7 +1776,9 @@ class MapGame extends Game {
               ? (controller.lastSwingTile!, ms, period,
                   (controller.local.x, controller.local.y))
               : null,
-          indicator: switch (controller.mineDigState) {
+          indicator: !controller.toolCursor
+              ? null
+              : switch (controller.mineDigState) {
             (final tile, final dealt, final hits, final ok) => switch (
                   MineLayer.digProgress(
                       dealt: dealt,
@@ -2273,6 +2307,77 @@ class MapGame extends Game {
   /// Haces de Legendarios recién caídos al inventario en curso (tests).
   int get activeBeams => _beams.length;
 
+  /// Outlines of objects painted into the tiles (portals, waystones,
+  /// shrines, fountain, mine mouths, signs, stations, wilds chests…).
+  final outlines = ObjectOutlineCache();
+
+  static const _spriteKeys = [
+    'npc:',
+    'custom:',
+    'fisher:',
+    'minenpc:',
+    'chest:',
+    'event:',
+    'spot:armory',
+    'spot:forge',
+    'spot:workshop',
+  ];
+
+  void _drawObjectOutline(Canvas c, GameMap map, double t) {
+    final g = controller.actionTarget;
+    if (g == null || !g.outline) return;
+    if (_spriteKeys.any(g.key.startsWith)) return;
+    final blank = controller.actionTiles.toSet();
+    if (blank.isEmpty) return;
+    var x0 = 1 << 30, y0 = 1 << 30, x1 = -1, y1 = -1;
+    for (final (x, y) in blank) {
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+    // Objects stand out of their tiles upward and to the sides.
+    final tx0 = x0 - 1, ty0 = y0 - 3, tx1 = x1 + 1, ty1 = y1 + 1;
+    final region = Rect.fromLTRB(
+        tx0 * ts, ty0 * ts, (tx1 + 1) * ts, (ty1 + 1) * ts);
+    final live = controller.liveTileCode;
+    final codes = [
+      for (final (x, y) in blank)
+        live(x, y) ?? (map.contains(x, y) ? map.tileAt(x, y) : '')
+    ].join();
+    final entrance = map.entrances
+        .where((e) => blank.contains((e.tx, e.ty)))
+        .firstOrNull;
+    final key = '${map.place}|${g.key}|$x0,$y0,$x1,$y1|$codes';
+    // The plain ground under each object tile: grass under an outdoor
+    // waystone (tile_painter draws it on grass), floor elsewhere.
+    String ground(int x, int y) {
+      final ch = live(x, y) ?? map.tileAt(x, y);
+      return (ch == Tile.waystone || ch == Tile.waystoneOn) &&
+              map.theme.endsWith('_ext')
+          ? Tile.grass
+          : Tile.floor;
+    }
+
+    void paint(Canvas cc, bool object) {
+      for (var y = ty0; y <= ty1; y++) {
+        for (var x = tx0; x <= tx1; x++) {
+          tileLayer.drawTileAt(cc, map, x, y,
+              code: !object && blank.contains((x, y)) ? ground(x, y) : null,
+              codeAt: live);
+        }
+      }
+      if (object && entrance != null) {
+        tiles.entrance(cc, entrance.tx, entrance.ty, entrance.zone,
+            open: true, t: 0, density: 0);
+      }
+    }
+
+    outlines.ring(key, region, (cc) => paint(cc, true),
+        (cc) => paint(cc, false));
+    outlines.draw(c, key, region);
+  }
+
   /// Lugares dibujados con sprite (v0.32.3: TALLER DE OFICIOS y
   /// ARMERÍA): `items.vida_<id>` del manifest, apoyado en su rectángulo.
   void _drawLandmarkSprite(Canvas c, GameMap map, TownSpot spot, String id) {
@@ -2285,11 +2390,12 @@ class MapGame extends Game {
     final (ox, oy) = map.townOrigin;
     final w = im.width.toDouble(), h = im.height.toDouble();
     final cx = (l.x + ox + l.w / 2) * ts, bottom = (l.y + oy + l.h) * ts;
+    final dst = Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h);
+    if (controller.selectedOf('spot:') == spot.name) {
+      drawSpriteOutline(c, im, dst);
+    }
     c.drawImageRect(
-        im,
-        Rect.fromLTWH(0, 0, w, h),
-        Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h),
-        SpriteCatalog.pixelPaint());
+        im, Rect.fromLTWH(0, 0, w, h), dst, SpriteCatalog.pixelPaint());
   }
 
   final Paint _campPaint = Paint();
