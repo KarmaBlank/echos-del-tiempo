@@ -242,7 +242,7 @@ class CleanSelectionPanel extends StatelessWidget {
         SizedBox(height: DsSpace.sm),
         Text(retroText(s.t('ui.inventory.clean.picked_count', {'n': n})),
             key: const ValueKey('inv-clean-count'),
-            style: const TextStyle(color: ProtoColors.sky)),
+            style: const TextStyle(color: DsColors.textMuted)),
         const SizedBox(height: 4),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)

@@ -366,7 +366,7 @@ class LifeItemCell extends StatelessWidget {
                 style: const TextStyle(
                     fontFamily: RetroType.pixelFamily,
                     fontSize: RetroType.label,
-                    color: ProtoColors.ink,
+                    color: DsColors.textPrimary,
                     shadows: [Shadow(offset: Offset(1, 1))])),
           ),
       ]),

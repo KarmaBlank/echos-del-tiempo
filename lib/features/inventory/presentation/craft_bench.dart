@@ -1394,7 +1394,7 @@ class _CraftBenchState extends State<CraftBench> {
                   children: [
                     Flexible(
                         child: Text(retroText(label),
-                            style: const TextStyle(color: ProtoColors.sky))),
+                            style: const TextStyle(color: DsColors.textSubtitle))),
                     if (extra != null) ...[const SizedBox(width: 4), extra],
                   ],
                 ),
@@ -1462,7 +1462,7 @@ class _CraftBenchState extends State<CraftBench> {
         extra: RetroTooltip(
           key: const ValueKey('craft-tier-help'),
           message: '${tierHelp(_s)}<br><br>${affixSidesHelp(shown.rarity)}',
-          child: const Text('[?]', style: TextStyle(color: ProtoColors.sky)),
+          child: const Text('[?]', style: TextStyle(color: DsColors.textSubtitle)),
         )));
     out.add(cmp(
         '',
@@ -1479,10 +1479,10 @@ class _CraftBenchState extends State<CraftBench> {
     if (pBefore != null || pAfter != null) {
       out.add(cmp(
           _s.t('ui.inventory.craft.row.passive'),
-          '<span style="color:$kPassiveHex">${protoEsc(pBefore ?? '—')}</span>',
+          protoEsc(pBefore ?? '—'),
           pBefore == pAfter
               ? same
-              : '<b style="color:$kPassiveHex">${protoEsc(pAfter ?? '—')}</b>',
+              : '<key>${protoEsc(pAfter ?? '—')}</key>',
           key: const ValueKey('craft-passive')));
     }
     final sBefore = rules.items.skillsOf(target);
@@ -1542,7 +1542,7 @@ class _CraftBenchState extends State<CraftBench> {
       out.add(const SizedBox(height: 6));
       out.add(
           Text(_s.t('ui.inventory.craft.can_drop'),
-              style: const TextStyle(color: ProtoColors.gold)));
+              style: const TextStyle(color: DsColors.textKey)));
       out.add(ProtoText(
           key: const ValueKey('craft-outcomes'),
           protoColor(ProtoColors.sky, protoEsc(r.outcomes.join(' · ')))));

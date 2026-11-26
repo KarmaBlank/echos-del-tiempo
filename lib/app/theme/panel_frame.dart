@@ -183,7 +183,7 @@ class _HelpChip extends StatelessWidget {
             style: TextStyle(
                 fontFamily: RetroType.titleFamily,
                 fontSize: RetroType.label,
-                color: ProtoColors.sky)),
+                color: DsColors.textSubtitle)),
       ),
     );
   }
@@ -413,7 +413,7 @@ class PanelSection extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 8),
                 color: ProtoColors.panelBorder),
           Text(retroText(title),
-              style: const TextStyle(color: ProtoColors.title)),
+              style: const TextStyle(color: DsColors.textTitle)),
           SizedBox(height: UiTheme.space(8)),
           child,
         ],

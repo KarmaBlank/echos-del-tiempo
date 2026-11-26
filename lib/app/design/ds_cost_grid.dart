@@ -65,7 +65,7 @@ class DsCostGrid extends StatelessWidget {
                   DsItemCell(
                       icon: Opacity(
                           opacity: e.enough ? 1 : 0.45, child: e.icon),
-                      border: e.enough ? DsColors.success : e.border,
+                      border: e.enough ? DsColors.statusOk : e.border,
                       dimension: size),
                   Positioned(
                     right: 2,
@@ -74,7 +74,7 @@ class DsCostGrid extends StatelessWidget {
                         key: ValueKey('cost-${e.id}-count'),
                         textScaler: fixed,
                         style: DsText.meta(e.enough
-                                ? DsColors.success
+                                ? DsColors.statusOk
                                 : DsColors.textDisabled)
                             .copyWith(
                                 fontSize: RetroType.small,
@@ -88,7 +88,7 @@ class DsCostGrid extends StatelessWidget {
                       child: Icon(Icons.check,
                           key: ValueKey('cost-${e.id}-done'),
                           size: 12,
-                          color: DsColors.success),
+                          color: DsColors.statusOk),
                     ),
                 ]),
               ),

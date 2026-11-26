@@ -326,7 +326,7 @@ class ClassDetail extends StatelessWidget {
         Text(retroText(def.description)),
         const SizedBox(height: 10),
         Text(s.t('ui.characters.create.base_attributes'),
-            style: const TextStyle(color: ProtoColors.sky)),
+            style: const TextStyle(color: DsColors.textSubtitle)),
         for (final a in Attribute.values)
           Padding(
             padding: const EdgeInsets.only(top: 2),
@@ -339,7 +339,7 @@ class ClassDetail extends StatelessWidget {
                 SizedBox(
                   width: RetroType.em(context, 4, size: RetroType.small),
                   child: Text('${def.baseAttributes[a] ?? 0}',
-                      style: const TextStyle(color: ProtoColors.gold)),
+                      style: const TextStyle(color: DsColors.textKey)),
                 ),
                 Expanded(
                   child: FractionallySizedBox(
@@ -480,11 +480,10 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 'name': protoEsc(retroText(name)),
                 'cls': protoEsc(retroText(widget.className)),
                 'level': widget.slot.profile.level,
-              }),
-              boldColor: ProtoColors.gold),
+              })),
           const SizedBox(height: 8),
           Text(s.t('ui.characters.delete.loss'),
-              style: const TextStyle(color: ProtoColors.red)),
+              style: const TextStyle(color: DsColors.textKey)),
           const SizedBox(height: 12),
           Text(
               retroText(

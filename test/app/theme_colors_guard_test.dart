@@ -26,7 +26,8 @@ const _allow = <String, (int, String)>{
   // Fuentes de los tokens.
   'lib/app/theme/proto_colors.dart': (12, 'define los tokens'),
   'lib/app/design/ds_tokens.dart':
-      (1, 'Instante: celeste fijo del sistema de diseño (design_system.md)'),
+      (3, 'Instante y requisito cumplido / pendiente: fijos del sistema de '
+          'diseño (design_system.md § 3.4)'),
   // Arte.
   'lib/features/combat/presentation/weapon_overlay.dart':
       (40, 'arte: armas dibujadas sobre los sprites'),

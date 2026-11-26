@@ -155,7 +155,7 @@ class _DsQuestTemplateState extends State<DsQuestTemplate> {
           DsListRow(
             key: ValueKey(e.id),
             title: e.title,
-            titleColor: e.done ? DsColors.success : DsColors.textPrimary,
+            titleColor: e.done ? DsColors.statusOk : DsColors.textPrimary,
             subtitle: e.status,
             subtitleColor: e.statusColor,
             wrap: true,
@@ -242,7 +242,7 @@ class _Tick extends StatelessWidget {
   Widget build(BuildContext context) => Icon(
         done ? Icons.check_box : Icons.check_box_outline_blank,
         size: 14,
-        color: done ? DsColors.success : DsColors.textDisabled,
+        color: done ? DsColors.statusOk : DsColors.textDisabled,
       );
 }
 
@@ -264,7 +264,7 @@ class DsChecklistLine extends StatelessWidget {
           child: Text(o.label,
               softWrap: true,
               style: DsText.body(
-                  o.done ? DsColors.success : DsColors.textPrimary)),
+                  o.done ? DsColors.statusOk : DsColors.textPrimary)),
         ),
       ]),
     );

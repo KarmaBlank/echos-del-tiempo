@@ -84,7 +84,7 @@ DsQuestEntry? orderEntry(Strings s, SessionController c, BiomeNpcDef n,
     return _fromCell(cell,
         giver: _giver(s, n),
         status: '${have.clamp(0, 1)}/1',
-        statusColor: have > 0 ? DsColors.success : DsColors.textDisabled,
+        statusColor: have > 0 ? DsColors.statusOk : DsColors.textDisabled,
         objectives: [
           DsQuestObjective(cell.detail.lines.first,
               done: have > 0, key: ValueKey('quest-obj-$o')),
@@ -96,7 +96,7 @@ DsQuestEntry? orderEntry(Strings s, SessionController c, BiomeNpcDef n,
   return _fromCell(cell,
       giver: _giver(s, n),
       status: '$have/$need',
-      statusColor: have >= need ? DsColors.success : DsColors.textDisabled,
+      statusColor: have >= need ? DsColors.statusOk : DsColors.textDisabled,
       objectives: [itemObjective(s, o, have, need)],
       items: [questItem(s, o, have, need)],
       // The quality / size condition ("5 × trucha desde 30 cm").
@@ -122,7 +122,7 @@ List<DsQuestEntry> questEntries(Strings s, SessionController c, BiomeNpcDef n,
               giver: _giver(s, n),
               status: done ? s.t('ui.town.npc.done') : '$h/$need',
               statusColor:
-                  done || h >= need ? DsColors.success : DsColors.textDisabled,
+                  done || h >= need ? DsColors.statusOk : DsColors.textDisabled,
               done: done,
               objectives: [itemObjective(s, q.target, h, need)],
               items: [questItem(s, q.target, h, need)]);
@@ -131,7 +131,7 @@ List<DsQuestEntry> questEntries(Strings s, SessionController c, BiomeNpcDef n,
         return _fromCell(cells[i],
             giver: _giver(s, n),
             status: done ? s.t('ui.town.npc.done') : '$n0/${q.n}',
-            statusColor: done ? DsColors.success : DsColors.textDisabled,
+            statusColor: done ? DsColors.statusOk : DsColors.textDisabled,
             done: done,
             objectives: [
               DsQuestObjective(
@@ -165,7 +165,7 @@ DsQuestEntry? requestEntry(Strings s, SessionController c, BiomeNpcDef n,
       statusColor: r.unhappy
           ? DsColors.danger
           : why == null
-              ? DsColors.success
+              ? DsColors.statusOk
               : DsColors.textDisabled,
       objectives: [
         DsQuestObjective(why ?? requestText(req),
@@ -194,7 +194,7 @@ DsQuestEntry trackedEntry(Strings s, ActiveQuest a, List<Widget> actions) {
     id: 'tracked-${a.key}',
     title: activeQuestWho(a),
     status: a.ready ? s.t('ui.town.journal.ready') : trackKindText(a.kind),
-    statusColor: a.ready ? DsColors.success : DsColors.textDisabled,
+    statusColor: a.ready ? DsColors.statusOk : DsColors.textDisabled,
     giver: s.t('ui.town.quest.giver', {'name': a.npc.name}),
     objectives: [
       if (item != null)

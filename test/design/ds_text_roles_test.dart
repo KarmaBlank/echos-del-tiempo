@@ -111,6 +111,43 @@ void main() {
     }
   });
 
+  test('met / unmet status colours never look like an element / rarity',
+      () {
+    final res = reserved();
+    for (final (name, c) in [
+      ('statusOk', DsColors.statusOk),
+      ('statusBad', DsColors.statusBad),
+    ]) {
+      for (final r in res.entries) {
+        final d = deltaE(c, r.value);
+        expect(d, greaterThanOrEqualTo(chromaticMin),
+            reason: '$name too close to ${r.key}: ΔE ${d.toStringAsFixed(1)}');
+      }
+      for (final t in InterfaceTheme.values) {
+        for (final role in DsTextRole.values) {
+          expect(deltaE(c, DsTextColor.inTheme(t, role)),
+              greaterThanOrEqualTo(chromaticMin),
+              reason: '$name vs ${role.name} (${t.name})');
+        }
+      }
+    }
+    expect(deltaE(DsColors.statusOk, DsColors.statusBad), greaterThan(60));
+  });
+
+  test('a bare <b> is Title at line start and KEY elsewhere, never gold', () {
+    ProtoSpanCache.clear();
+    final span = protoSpan('<b>Name</b> deals <b>120</b> damage');
+    expect(_find(span, 'Name')?.style?.color?.toARGB32(),
+        DsColors.textTitle.toARGB32());
+    expect(_find(span, '120')?.style?.color?.toARGB32(),
+        DsColors.textKey.toARGB32());
+  });
+
+  test('effect lines put numbers in the Muted role', () {
+    expect(DsRichText.mutedNumbers('+12 % ATQ, 3 golpes'),
+        '<muted>+12 %</muted> ATQ, <muted>3</muted> golpes');
+  });
+
   test('**…** in markup is drawn in the KEY colour', () {
     ProtoSpanCache.clear();
     final span = protoSpan('Only tends **12 plots**, marked in green.');

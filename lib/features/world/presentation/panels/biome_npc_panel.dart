@@ -195,7 +195,7 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
         ? residentItemIcon(q.target)
         : const LifeIcon('cofre_oficio', LifeIconKind.herramienta, size: 32),
     border: done
-        ? DsColors.success
+        ? DsColors.statusOk
         : now
             ? DsColors.selected
             : DsColors.border,
@@ -208,7 +208,7 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
       nameColor: DsColors.textTitle,
       tags: [
         (questKindText(q.kind).toUpperCase(), DsColors.textSecondary),
-        if (done) (s.t('ui.town.npc.fulfilled'), DsColors.success),
+        if (done) (s.t('ui.town.npc.fulfilled'), DsColors.statusOk),
       ],
       // Essential: what and how far; rewards as chips, flavor behind "?"
       // (quest_audit.md § 8).
@@ -1034,7 +1034,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                     key: const ValueKey('npc-shop-total'),
                     style: DsText.body(gold >= price * qty
                         ? DsColors.reward
-                        : DsColors.danger)),
+                        : DsColors.statusBad)),
               ),
             ]),
             SizedBox(height: DsSpace.sm),

@@ -43,7 +43,7 @@ class WeaponTooltip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DsTooltipCard(
         title: 'Espada del Alba',
-        titleColor: DsColors.reward,
+        subtitle: 'Una mano · Nv **12**',
         tags: const [DsTag.isNew()],
         shortcuts: const [
           DsShortcut('E', 'equipar'),
@@ -51,8 +51,6 @@ class WeaponTooltip extends StatelessWidget {
           DsShortcut('Supr', 'tirar'),
         ],
         children: [
-          Text('Una mano · Nv 12', style: DsText.detail()),
-          SizedBox(height: DsSpace.xs),
           const DsStatLine('ATQ', 15, 50),
           const DsStatLine('VEL', 12, 10),
           SizedBox(height: DsSpace.xs),

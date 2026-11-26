@@ -30,8 +30,8 @@ final _classAttr = RegExp('class=["\']([^"\']*)["\']');
 /// El subconjunto de HTML que arma el prototipo → [TextSpan]. Ver
 /// docs/specs/ui_style.md § "Texto rico".
 ///
-/// Etiquetas: `b` (resaltado SOLO con color, sin peso: [boldColor] o
-/// `gold` si no trae color propio),
+/// Etiquetas: `b` (resaltado SOLO con color, sin peso: [boldColor], o
+/// sin color propio el rol Título al abrir la línea y KEY en el resto),
 /// `span`/`b` con `style="color:#hex"`, `class="k"` (rol Subtítulo),
 /// `class="sys"` (`green`), `small` (`sky`), `br`, y los roles de texto
 /// `title`, `sub`, `muted`, `key` (`**…**` = `key`; design_system.md
@@ -181,14 +181,21 @@ TextSpan _parseProtoSpan(String markup,
     if (c == null && cls.contains('sys')) c = ProtoColors.green;
     if (name == 'small') c ??= ProtoColors.sky;
     final bold = name == 'b';
-    if (bold) c ??= boldColor ?? ProtoColors.gold;
-    if (roles && c != null && !isLabel) {
+    // A bare `<b>` is never gold (gold = money / rare): it is the Title
+    // role when it opens the line (a name) and KEY elsewhere (the number
+    // or rule that matters). design_system.md § 3.4.
+    final bareBold = bold && c == null && boldColor == null;
+    if (bold) c ??= boldColor;
+    if (roles && c != null && !isLabel && !bareBold) {
       final inBold = stack.any((e) => e.$1 == 'b');
       c = UiTheme.role(c, bold: bold || inBold, lineStart: lineStart);
     }
     // Text-role tags: their own role colour, never remapped
     // (design_system.md § 3.4).
     if (_roleTags[name] case final role?) c = DsTextColor(role);
+    if (bareBold) {
+      c = DsTextColor(lineStart ? DsTextRole.title : DsTextRole.key);
+    }
     // Sin peso (las fuentes pixel se "engordan" con negrita sintética):
     // `<b>` resalta solo con el color (ui_style.md).
     final TextStyle? st = c == null ? null : TextStyle(color: c);
@@ -284,7 +291,7 @@ class ProtoText extends StatelessWidget {
     this.markup, {
     super.key,
     this.style,
-    this.boldColor = ProtoColors.gold,
+    this.boldColor,
     this.maxLines,
     this.overflow,
     this.textAlign,
@@ -293,7 +300,7 @@ class ProtoText extends StatelessWidget {
   final String markup;
   final TextStyle? style;
 
-  /// Color de `<b>` sin color propio (dorado como `#tip b` / `#menu b`).
+  /// Color de `<b>` sin color propio; `null` = Título / KEY (§ 3.4).
   final Color? boldColor;
   final int? maxLines;
   final TextOverflow? overflow;

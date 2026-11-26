@@ -164,7 +164,7 @@ class _TrackedQuestsHudState extends State<TrackedQuestsHud> {
                             TextSpan(
                                 text: activeQuestWho(a),
                                 style: DsText.detail(a.ready
-                                    ? DsColors.success
+                                    ? DsColors.statusOk
                                     : DsColors.textTitle)),
                             TextSpan(
                                 text: a.item == null

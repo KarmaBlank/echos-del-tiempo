@@ -241,7 +241,8 @@ void main() {
 
     test('COMPLETO: cada uno con su color (como v0.8.0)', () {
       final c = colors(m);
-      expect(c['Paladín Creyente'], ProtoColors.gold);
+      expect(c['Paladín Creyente'], DsColors.textTitle);
+      expect(c['120'], DsColors.textKey);
       // `class="k"` is the Subtitle role (design_system.md § 3.4).
       expect(c['KEYSTONE · Cluster Fe'], DsColors.textSubtitle);
       expect(c['Pasiva viva']!.toARGB32(), 0xFFC39BFF);
@@ -252,9 +253,9 @@ void main() {
       UiTheme.kind = InterfaceTheme.dark;
       UiTheme.textColors = TextColorMode.reduced;
       final c = colors(m);
-      expect(c['Paladín Creyente'], ProtoColors.title);
+      expect(c['Paladín Creyente'], DsColors.textTitle);
       expect(c['KEYSTONE · Cluster Fe'], DsColors.textSubtitle);
-      expect(c['120'], ProtoColors.gold);
+      expect(c['120'], DsColors.textKey);
       expect(c['Pasiva viva'], ProtoColors.ink);
       expect(c['+12% crítico'], ProtoColors.ink);
       expect(c['ULT: Juicio'], ProtoColors.ink);

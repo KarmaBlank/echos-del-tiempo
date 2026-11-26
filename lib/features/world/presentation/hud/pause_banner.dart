@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/ds_tokens.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_panel.dart';
@@ -62,7 +63,7 @@ class PauseBanner extends StatelessWidget {
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: 16,
-                      color: ProtoColors.gold)),
+                      color: DsColors.textTitle)),
               const SizedBox(height: 8),
               Text(context.t('ui.world.pause.anyone'),
                   style: TextStyle(

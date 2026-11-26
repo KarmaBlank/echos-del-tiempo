@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import '../theme/panel_frame.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_text.dart';
@@ -79,7 +80,7 @@ class SectionPanel extends StatelessWidget {
                         if (subtitle != null)
                           TextSpan(
                               text: retroText('  $subtitle'),
-                              style: const TextStyle(color: ProtoColors.sky)),
+                              style: const TextStyle(color: DsColors.textSubtitle)),
                       ])),
                 ),
                 if (trailing != null) ...[const SizedBox(width: 8), trailing!],

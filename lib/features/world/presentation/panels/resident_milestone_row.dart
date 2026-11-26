@@ -56,7 +56,7 @@ class ResidentMilestoneRow extends StatelessWidget {
       Strings s, MilestoneDef m, MilestoneState st, bool endgame) {
     final color = switch (st) {
       MilestoneState.claimable => DsColors.reward,
-      MilestoneState.claimed || MilestoneState.reached => DsColors.success,
+      MilestoneState.claimed || MilestoneState.reached => DsColors.statusOk,
       MilestoneState.next => DsColors.mp,
       MilestoneState.locked => DsColors.textDisabled,
     };
@@ -85,7 +85,7 @@ class ResidentMilestoneRow extends StatelessWidget {
           const Positioned(
               right: 1,
               top: 0,
-              child: Icon(Icons.check, size: 12, color: DsColors.success)),
+              child: Icon(Icons.check, size: 12, color: DsColors.statusOk)),
       ]),
     );
     final tip = DsTooltipCard(

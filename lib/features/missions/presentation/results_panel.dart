@@ -129,7 +129,7 @@ class ResultsPanel extends ConsumerWidget {
               style: TextStyle(
                   fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.title,
-                  color: ProtoColors.gold,
+                  color: DsColors.textTitle,
                   shadows: shadow)),
         ),
       if (othersUnlocked case final o?) line(o, color: ProtoColors.gold),
@@ -153,7 +153,7 @@ class ResultsPanel extends ConsumerWidget {
           child: Text(
               retroText(ref.t('ui.missions.results.you_got',
                   {'weapon': weaponName(mine)})),
-              style: const TextStyle(color: ProtoColors.orange)),
+              style: const TextStyle(color: DsColors.reward)),
         ),
       if (r.drops.isNotEmpty)
         line(
@@ -187,7 +187,7 @@ class ResultsPanel extends ConsumerWidget {
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.title,
-                      color: ProtoColors.gold,
+                      color: DsColors.textTitle,
                       shadows: shadow)),
               const SizedBox(height: 4),
               Wrap(spacing: 8, runSpacing: 8, children: [
@@ -256,17 +256,17 @@ class ResultsPanel extends ConsumerWidget {
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.title,
-                      color: ProtoColors.gold,
+                      color: DsColors.textTitle,
                       shadows: shadow)),
             ),
             Text(retroText(ref.t('ui.missions.results.final_subtitle')),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: ProtoColors.sky)),
+                style: const TextStyle(color: DsColors.textSubtitle)),
             const SizedBox(height: 8),
           ],
           // Qué misión: nombre y zona / piso.
           Text(retroText(r.missionName),
-              style: const TextStyle(color: ProtoColors.sky)),
+              style: const TextStyle(color: DsColors.textSubtitle)),
           if (zoneProgress case final z?)
             line(z,
                 color: ProtoColors.dim, key: const ValueKey('results-zone')),

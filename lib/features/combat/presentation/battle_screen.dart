@@ -1956,7 +1956,7 @@ class _EndOverlay extends StatelessWidget {
                 Text(
                     retroText(combatStrings(context).t('ui.combat.end.reward',
                         {'xp': outcome.xp, 'credits': outcome.credits})),
-                    style: const TextStyle(color: ProtoColors.gold)),
+                    style: const TextStyle(color: DsColors.reward)),
               ],
             ],
           ),

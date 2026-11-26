@@ -227,7 +227,7 @@ class _MenuLayer extends StatelessWidget {
                               RetroTheme.minButtonInset,
                               4),
                           child: DefaultTextStyle.merge(
-                              style: const TextStyle(color: ProtoColors.gold),
+                              style: const TextStyle(color: DsColors.selected),
                               child: ProtoText(title!)),
                         ),
                         Container(

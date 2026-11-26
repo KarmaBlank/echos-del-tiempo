@@ -1554,7 +1554,7 @@ class _ControlsTab extends StatelessWidget {
                       SizedBox(
                         width: 200,
                         child: Text(retroText(k),
-                            style: const TextStyle(color: ProtoColors.sky)),
+                            style: const TextStyle(color: DsColors.textSubtitle)),
                       ),
                       Expanded(child: Text(retroText(what))),
                     ],

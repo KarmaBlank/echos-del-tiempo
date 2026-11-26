@@ -232,7 +232,7 @@ class ItemCard extends StatelessWidget {
         if (describe) ...[
           const SizedBox(height: 8),
           Text(invStrings(context).t('ui.inventory.shop.what_they_do'),
-              style: const TextStyle(color: ProtoColors.sky)),
+              style: const TextStyle(color: DsColors.textSubtitle)),
           for (final id in rules.items.skillsOf(item))
             if (cat.skills[id] case final s?)
               Padding(
@@ -265,7 +265,7 @@ class StatsCompare extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProtoText(title, style: const TextStyle(color: ProtoColors.sky)),
+          ProtoText(title, style: const TextStyle(color: DsColors.textSubtitle)),
           Wrap(
             spacing: 16,
             children: [
@@ -365,7 +365,7 @@ class ListHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 4),
         child: Text(retroText(text),
-            style: const TextStyle(color: ProtoColors.gold)),
+            style: const TextStyle(color: DsColors.textSubtitle)),
       );
 }
 
@@ -526,7 +526,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                     back: s.t('ui.inventory.shop.keys.close')),
                 if (owned)
                   Text(s.t('ui.inventory.shop.buy.already_have'),
-                      style: const TextStyle(color: ProtoColors.green))
+                      style: const TextStyle(color: DsColors.statusOk))
                 else
                   ConfirmButton(s.t('ui.inventory.shop.tab.buy.label'),
                       key: ValueKey('buy-${w.id}'),
@@ -689,9 +689,9 @@ String passiveForgeNote(Strings s, ItemInstance it) {
         s.t('ui.inventory.shop.forge.passive_capped', {'rarity': it.rarity.text}));
   }
   final next = WeaponPassiveDef.roman(l + 1);
-  return '<span style="color:$kPassiveHex">'
+  return '<key>'
       '${s.t('ui.inventory.shop.forge.passive_next', {'level': next, 'n': need})}'
-      '</span>';
+      '</key>';
 }
 
 /// Herrería sobre instancias: lista de tus armas y, por estadística,
@@ -1012,7 +1012,7 @@ class _ForgePassiveLine extends StatelessWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Flexible(
         child: ProtoText(
-            '<span style="color:$kPassiveHex">${protoEsc(name)}</span>',
+            '<key>${protoEsc(name)}</key>',
             style: DsText.body()),
       ),
       SizedBox(width: DsSpace.sm),
@@ -1052,7 +1052,7 @@ class _ForgeDetail extends StatelessWidget {
         if (passiveUp && def != null)
           ProtoText(
             key: ValueKey('forge-passive-up-${stat.key}'),
-            '<span style="color:$kPassiveHex">'
+            '<key>'
             '${s.t('ui.inventory.shop.forge.passive_up', {
                   'name': protoEsc(def.name),
                   'from': WeaponPassiveDef.roman(item.effectivePassiveLevel),
@@ -1060,7 +1060,7 @@ class _ForgeDetail extends StatelessWidget {
                   'to': WeaponPassiveDef.roman(c.after.effectivePassiveLevel),
                   'desc': protoEsc(
                       def.descriptionAt(c.after.effectivePassiveLevel)),
-                })}</span>',
+                })}</key>',
           ),
         if (!c.atMax)
           if (battleImpactMarkup(rules, c.b, c.a, weapon: c.after)

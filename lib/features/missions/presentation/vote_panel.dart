@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/ds_tokens.dart';
-import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_panel.dart';
@@ -51,7 +50,7 @@ class VotePanel extends ConsumerWidget {
             TextSpan(children: [
               TextSpan(
                   text: ref.t('ui.missions.vote.title'),
-                  style: const TextStyle(color: ProtoColors.gold)),
+                  style: const TextStyle(color: DsColors.textTitle)),
               TextSpan(
                   text: retroText(ref.t('ui.missions.vote.proposes',
                       {'name': proposedBy}))),
@@ -65,7 +64,7 @@ class VotePanel extends ConsumerWidget {
                     'yes': players.where((p) => p.yes).length,
                     'total': players.length,
                   }),
-                  style: const TextStyle(color: ProtoColors.green)),
+                  style: const TextStyle(color: DsColors.statusOk)),
             ]),
             textAlign: TextAlign.center,
           ),

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import '../theme/proto_colors.dart';
 import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
@@ -319,7 +320,7 @@ class ConfirmButton extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(retroText('No se puede: $reason'),
                 textAlign: TextAlign.right,
-                style: const TextStyle(color: ProtoColors.red)),
+                style: const TextStyle(color: DsColors.textKey)),
           ),
         button,
       ],

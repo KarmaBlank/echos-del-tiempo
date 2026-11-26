@@ -66,10 +66,10 @@ class CostChip extends StatelessWidget {
       border = ProtoColors.panelBorder;
       child = Text(retroText(note ?? 'Gratis'),
           style: TextStyle(
-              color: note == null ? ProtoColors.green : ProtoColors.sky));
+              color: note == null ? DsColors.statusOk : DsColors.textKey));
     } else {
       final ok = parts.every((p) => p.ok);
-      border = ok ? ProtoColors.green : ProtoColors.red;
+      border = ok ? DsColors.statusOk : DsColors.statusBad;
       child = Wrap(
         spacing: 10,
         runSpacing: 2,
@@ -84,7 +84,7 @@ class CostChip extends StatelessWidget {
                 Flexible(
                   child: Text(retroText(p.text),
                       style: TextStyle(
-                          color: p.ok ? ProtoColors.green : ProtoColors.red)),
+                          color: p.ok ? DsColors.statusOk : DsColors.statusBad)),
                 ),
               ],
             ),

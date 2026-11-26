@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../domain/account.dart';
 import 'character_strings.dart';
@@ -70,7 +69,7 @@ class PartyPicker extends StatelessWidget {
       children: [
         Text(s.t('ui.characters.party.count', {'n': selected.length}),
             key: const ValueKey('party-count'),
-            style: const TextStyle(color: ProtoColors.gold)),
+            style: const TextStyle(color: DsColors.textSubtitle)),
         const SizedBox(height: 4),
         Text(
             retroText(candidates.isEmpty

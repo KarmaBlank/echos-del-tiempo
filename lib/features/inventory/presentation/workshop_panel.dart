@@ -226,7 +226,7 @@ class _WorkshopGridState extends State<WorkshopGrid> {
               invStrings(context).t(
                   'ui.town.source.have_need', {'have': i.have, 'need': i.need}),
               style: DsText.body(
-                  i.have >= i.need ? DsColors.success : DsColors.danger)),
+                  i.have >= i.need ? DsColors.statusOk : DsColors.statusBad)),
           for (final l in i.sources) Text(l, style: DsText.body()),
         ],
       );

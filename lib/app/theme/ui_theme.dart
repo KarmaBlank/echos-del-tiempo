@@ -206,6 +206,8 @@ abstract final class UiTheme {
     0xFF81ECEC, // Congelación súbita / Quebradizo
     0xFFFF7675, // Provoca
     0xFFDCDCDC, // rareza Común
+    0xFF9CFF2E, // requisito cumplido (DsColors.statusOk)
+    0xFFFF2E63, // requisito pendiente (DsColors.statusBad)
   };
 
   /// Rol de un color de markup con los colores por roles

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/ui_theme.dart';
@@ -957,14 +958,19 @@ class _PassiveTreeViewState extends ConsumerState<PassiveTreeView> {
     final path = route ??
         widget.rules.pathTo(p.classId, p.passiveProgress, id) ??
         const <String>[];
-    final keyNode = node.kind == 'n' || node.kind == 'k';
     final box = SizedBox(
       key: const ValueKey('tree-tooltip'),
       width: w,
       child: DsTooltipCard(
         key: pinned ? const ValueKey('tree-info') : null,
         title: retroText(node.name),
-        titleColor: keyNode ? DsColors.textTitle : null,
+        // Name = title, path (branch) = subtitle (design_system.md § 3.4).
+        subtitle: (kind.isNotEmpty || pathText != null)
+            ? protoEsc(retroText([
+                if (kind.isNotEmpty) kind,
+                if (pathText != null) pathText,
+              ].join(' · ')))
+            : null,
         tags: [
           if (_milestoneOf(id) case final ms?)
             DsTag(ms.toUpperCase(),
@@ -991,18 +997,10 @@ class _PassiveTreeViewState extends ConsumerState<PassiveTreeView> {
                 style: DsText.detail(s.step == 1
                     ? DsColors.reward
                     : PassiveTreePainter.planColor)),
-          if (kind.isNotEmpty || pathText != null)
-            Text(
-                retroText([
-                  if (kind.isNotEmpty) kind,
-                  if (pathText != null) pathText,
-                ].join(' · ')),
-                style: DsText.detail()),
           for (final line in passiveEffectsText(node))
-            Text(retroText(line), style: DsText.body()),
+            DsRichText.effect(retroText(line)),
           SizedBox(height: DsSpace.xs),
-          if (cost != null)
-            Text(retroText(cost), style: DsText.body(DsColors.reward)),
+          if (cost != null) Text(retroText(cost), style: DsText.muted()),
           Text(retroText(stateText), style: DsText.body(stateColor)),
           if (pinned) ..._actions(node, st, path),
         ],
@@ -1087,7 +1085,7 @@ class _PassiveTreeViewState extends ConsumerState<PassiveTreeView> {
                   {'name': node.name, 'what': what})),
           key: const ValueKey('tree-untake-text'),
           style: DsText.body(
-              reason == null ? DsColors.textPrimary : RetroPalette.red)),
+              reason == null ? DsColors.textPrimary : DsColors.textKey)),
       SizedBox(height: DsSpace.xs),
       Row(mainAxisSize: MainAxisSize.min, children: [
         if (reason == null) ...[
@@ -1109,19 +1107,20 @@ class _PassiveTreeViewState extends ConsumerState<PassiveTreeView> {
   (String, Color) _stateText(TreeNodeStatus st) => switch (st.state) {
         TreeNodeState.start => (
             ref.t('ui.passive_tree.state.start'),
-            RetroPalette.muted
+            DsColors.textMuted
           ),
         TreeNodeState.taken => (
             ref.t('ui.passive_tree.state.taken'),
-            RetroPalette.green
+            DsColors.statusOk
           ),
         TreeNodeState.available => (
             ref.t('ui.passive_tree.state.available'),
-            ProtoColors.sky
+            DsColors.textMuted
           ),
+        // Why it is blocked is KEY INFO (design_system.md § 3.4).
         TreeNodeState.locked => (
             st.reason ?? ref.t('ui.passive_tree.state.locked'),
-            RetroPalette.red
+            DsColors.textKey
           ),
       };
 
@@ -1634,11 +1633,12 @@ class TreeLabelsPainter extends CustomPainter {
                   text: retroText(path.name.toUpperCase()),
                   style: RetroType.smallStyle.copyWith(
                     fontSize: (RetroType.smallStyle.fontSize ?? 10) * labelScale,
+                    // Branch labels: subtitle role, title when lit.
                     color: lit
-                        ? ProtoColors.gold
+                        ? DsColors.textTitle
                         : path.kind == 'clase'
-                            ? ProtoColors.dim
-                            : ProtoColors.sky,
+                            ? DsColors.textMuted
+                            : DsColors.textSubtitle,
                     shadows: const [
                       Shadow(color: ProtoColors.shadow, offset: Offset(1, 1)),
                     ],

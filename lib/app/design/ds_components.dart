@@ -890,6 +890,19 @@ class _DsFoldState extends State<DsFold> {
 class DsRichText extends StatelessWidget {
   const DsRichText(this.markup, {super.key, this.style});
 
+  /// An effect line (plain text): body, with every number in the Muted
+  /// role (skill / passive tree tooltips, design_system.md § 3.4).
+  DsRichText.effect(String text, {Key? key})
+      : this(mutedNumbers(text), key: key);
+
+  static final _number = RegExp(r'[+\-−]?\d+(?:[.,]\d+)?(?: ?%)?');
+
+  /// [text] escaped, with its numbers wrapped in `<muted>`.
+  static String mutedNumbers(String text) => protoEsc(text).splitMapJoin(
+      _number,
+      onMatch: (m) => '<muted>${m[0]}</muted>',
+      onNonMatch: (s) => s);
+
   /// Markup, already escaped where it holds free text.
   final String markup;
 

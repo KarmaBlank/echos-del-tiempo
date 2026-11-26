@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -172,7 +173,7 @@ class _AtlasViewState extends ConsumerState<AtlasView> {
                           '${protoColor(atlasBranchColor(b), b.tr)} ${ref.t('ui.endgame.atlas.dir.$where')}',
                       ].join(' · ')}',
                   child: Text(ref.t('ui.endgame.atlas.legend'),
-                      style: const TextStyle(color: ProtoColors.sky)),
+                      style: const TextStyle(color: DsColors.textSubtitle)),
                 ),
               ),
             ],

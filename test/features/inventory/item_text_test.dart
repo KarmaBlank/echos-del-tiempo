@@ -36,8 +36,8 @@ void main() {
     expect(t, contains(protoPlain('Épico · espada · nivel de objeto 10')));
     expect(t, contains(protoPlain('Espada Ígnea')));
     // Requisitos: Nv 2 y FUE 14 cumplidos (verde), DES 8 cumplido.
-    expect(m, contains('<span style="color:#7bed9f">Nv 2</span>'));
-    expect(m, contains('<span style="color:#7bed9f">FUE 14</span>'));
+    expect(m, contains('<span style="color:#9cff2e">Nv 2</span>'));
+    expect(m, contains('<span style="color:#9cff2e">FUE 14</span>'));
     expect(t, contains('ATQ '));
     expect(t, contains('Mods 4/6'));
     expect(t, contains('+7% ATQ (T5)'));
@@ -53,8 +53,8 @@ void main() {
     final staff = p.itemByUid('c1')!.copyWith(extraSkills: const ['sismo']);
     final m = itemTooltipMarkup(progression, staff,
         level: 1, attributes: p.attributes);
-    expect(m, contains('<span style="color:#ff6b81">Nv 2</span>'));
-    expect(m, contains('<span style="color:#ff6b81">ESP 14</span>'));
+    expect(m, contains('<span style="color:#ff2e63">Nv 2</span>'));
+    expect(m, contains('<span style="color:#ff2e63">ESP 14</span>'));
     expect(protoPlain(m), contains('(trasladada)'));
     expect(missingRequirements(
             progression.catalog.weapons['baculo_fuego']!, p.attributes),

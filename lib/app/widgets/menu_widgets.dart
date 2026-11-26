@@ -251,7 +251,7 @@ class MenuHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 2, bottom: 2),
         child: ProtoText(text,
-            style: const TextStyle(color: ProtoColors.title),
+            style: const TextStyle(color: DsColors.textTitle),
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
       );
@@ -349,7 +349,7 @@ class ChoiceCycler<T> extends StatelessWidget {
             child: Text(retroText(display(value)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: ProtoColors.gold)),
+                style: const TextStyle(color: DsColors.selected)),
           ),
         ),
         const SizedBox(width: 4),

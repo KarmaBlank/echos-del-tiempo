@@ -6,6 +6,7 @@ import '../../../../core/text/text_detail.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../app/theme/proto_markup.dart';
 import '../../../../game_engine/data/bait_catalog.dart' show kBaits;
 import '../../../../game_engine/data/cooking_catalog.dart' show kMeals;
 import '../../../../game_engine/data/fishing_catalog.dart' show kRods;
@@ -322,12 +323,15 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
         final text = lifeNodeText(context, n);
         return DsTooltipCard(
             title: lifeNodeName(n),
-            titleColor: n.capstone ? DsColors.reward : null,
+            subtitle: n.branch == null
+                ? null
+                : protoEsc(context.t('ui.town.trades.tier_of',
+                    {'branch': lifeBranchName(k, n.branch!), 'n': n.tier})),
             detail: text,
             children: [
               if (text.isNotEmpty)
-                Text(TextDetail.isSummary ? plainShort(text) : text,
-                    style: DsText.body()),
+                DsRichText.effect(
+                    TextDetail.isSummary ? plainShort(text) : text),
               // Why it can't be taken is KEY INFO (design_system.md § 3.4).
               Text(_stateText(k, n),
                   style: _why(k, n) != null && !LifeTreeRules.has(p, k, n.id)

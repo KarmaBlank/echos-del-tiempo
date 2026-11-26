@@ -18,7 +18,7 @@ class DsStatusMark extends StatelessWidget {
 
   final bool done;
 
-  static Color colorOf(bool done) => done ? DsColors.success : DsColors.reward;
+  static Color colorOf(bool done) => done ? DsColors.statusOk : DsColors.reward;
 
   @override
   Widget build(BuildContext context) {

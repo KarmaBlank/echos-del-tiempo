@@ -46,12 +46,12 @@ String _plus(String label, String text) =>
 String _minus(String label, String text) =>
     '${protoColor(ProtoColors.red, '- $label:')} $text';
 String _mods(List<String> l) => l
-    .map((m) => '<span style="color:$kModHex">${protoEsc(m)}</span>')
+    .map((m) => protoEsc(m))
     .join(', ');
 String _weightTag(WeightClass c) =>
     '<b style="color:${weightClassHex(c)}">${c.label}</b>';
 String _passive(String t) =>
-    '<span style="color:$kPassiveHex">${protoEsc(t)}</span>';
+    '<key>${protoEsc(t)}</key>';
 
 String _weightLine(Strings s, WeaponComparison cmp) =>
     s.t('ui.inventory.compare.weight', {
@@ -129,7 +129,7 @@ class ComparisonDelta extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (title != null)
-          ProtoText(title!, style: const TextStyle(color: ProtoColors.sky)),
+          ProtoText(title!, style: const TextStyle(color: DsColors.textSubtitle)),
         if (cmp.same)
           ProtoText(protoColor(
               ProtoColors.dim, str.t('ui.inventory.compare.same_weapon')))

@@ -43,7 +43,7 @@ class WorldPicker extends ConsumerWidget {
           if (groups[l]!.isNotEmpty) ...[
             Text(l.tr.toUpperCase(),
                 key: ValueKey('world-group-${l.name}'),
-                style: DsText.detail(ProtoColors.dim)),
+                style: DsText.muted()),
             const SizedBox(height: 4),
             Wrap(
               spacing: 8,
@@ -170,7 +170,7 @@ class _CreateWorldDialogState extends State<_CreateWorldDialog> {
           ]),
           const SizedBox(height: 8),
           Text(retroText(s.t('ui.lobby.world.label_note')),
-              style: DsText.detail(ProtoColors.dim)),
+              style: DsText.muted()),
         ],
       ),
     );
@@ -244,7 +244,7 @@ class _DeleteWorldDialog extends StatelessWidget {
       ],
       child: Text(
           retroText(s.t('ui.lobby.world.delete_body', {'name': world.name})),
-          style: const TextStyle(color: ProtoColors.red)),
+          style: const TextStyle(color: DsColors.textKey)),
     );
   }
 }

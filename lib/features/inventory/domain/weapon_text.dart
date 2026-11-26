@@ -24,8 +24,9 @@ String fmtNum(num v) {
   return r == r.roundToDouble() ? r.round().toString() : r.toString();
 }
 
-const _green = '#7bed9f';
-const _red = '#ff6b81';
+/// Met / unmet (DsColors.statusOk / statusBad, design_system.md § 3.4).
+const _green = '#9cff2e';
+const _red = '#ff2e63';
 const _ice = '#74b9ff';
 const _orange = '#ff9f43';
 const _pink = '#e84393';

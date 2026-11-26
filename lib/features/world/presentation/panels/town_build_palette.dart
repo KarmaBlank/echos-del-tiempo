@@ -100,6 +100,15 @@ class TownBuildPalette extends StatefulWidget {
         (box.height - 48).clamp(240.0, 680.0),
       );
 
+  /// Description of a building: localized markup with its KEY INFO in
+  /// `**…**` (design_system.md § 3.4); the catalog's plain text is the
+  /// fallback.
+  static String constructionDetail(Strings s, ConstructionDef d) {
+    final key = 'ui.town.construction.${d.id}.detail';
+    final t = s.t(key);
+    return t.isEmpty || t == key ? d.detail : t;
+  }
+
   /// Las piezas que se pueden poner, con su costo y motivo.
   static List<TownPiece> pieces(Strings s, SessionController c) {
     final p = c.view?.me?.profile;
@@ -112,7 +121,7 @@ class TownBuildPalette extends StatefulWidget {
             name: d.name,
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: constructionDetail(s, d),
             cost: HelperRules.costText(ResidentRules.placeCost()),
             costItems: ResidentRules.placeCost().mats,
             why: p == null
@@ -126,7 +135,7 @@ class TownBuildPalette extends StatefulWidget {
             name: d.name,
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: constructionDetail(s, d),
           ),
       // Farm decorations (cozy_life.md § 2): 1×1, cheap, cosmetic.
       for (final d in kFarmDecos.values)

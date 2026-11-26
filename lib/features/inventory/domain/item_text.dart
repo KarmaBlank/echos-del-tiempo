@@ -28,16 +28,19 @@ import 'eco_text.dart';
 /// el markup del prototipo (`ProtoMarkup`). Ver docs/specs/panels.md §
 /// "Ficha de objeto".
 
-const _green = '#7bed9f';
-const _red = '#ff6b81';
+/// Met / unmet (DsColors.statusOk / statusBad, design_system.md § 3.4).
+const _green = '#9cff2e';
+const _red = '#ff2e63';
 const _orange = '#ff9f43';
 const _dim = '#7d8bc4';
 
-/// Azul claro de los mods (como los de los ARPG, legible sobre el panel).
-const kModHex = '#9fc4ff';
+/// Mod lines: Body role (plain text). The old sky blue read as Ice and
+/// the unique orange as Fire / Legendary (design_system.md § 3.4).
+String _mod(String text) => '<span>$text</span>';
 
-/// Violeta de las pasivas de arma.
-const kPassiveHex = '#c39bff';
+/// Fixed mods of a unique, weapon passives and "moved" notes: KEY role
+/// (the old violet was exactly the Electro colour).
+String _keyText(String text) => '<key>$text</key>';
 
 /// `#rrggbb` del color de una rareza (`LootFilterRules.rarityColor`:
 /// Común blanco, Mágico azul, Raro amarillo, Épico violeta, Legendario
@@ -90,7 +93,7 @@ String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
 
 /// Texto de un mod con su tier, en azul (los fijos de un único, naranja).
 String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
-    _c(a.fixed ? _orange : kModHex,
+    (a.fixed ? _keyText : _mod)(
         _esc(modShort(localAffixText(rules.items, a, on: on))));
 
 /// Texto de un mod (afijo, implícito, pasiva del arma) según TEXTOS:
@@ -171,7 +174,7 @@ String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
       if (cat.skills[id] case final s?)
         (w?.skillIds.contains(id) ?? false)
             ? _esc(s.name)
-            : '${_esc(s.name)} ${_c(_orange, '(trasladada)')}',
+            : '${_esc(s.name)} ${_keyText('(trasladada)')}',
   ];
   // ULT libres del arma (ultimates_v2.md § 2.1): el arma no muestra ULT.
   return names.isEmpty ? '—' : names.join(' · ');
@@ -187,7 +190,7 @@ List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
     for (final id in rules.items.skillsOf(it))
       if (cat.skills[id] case final s?)
         '• ${skillOneLineMarkup(s, stats: stats)}'
-            '${(w?.skillIds.contains(id) ?? false) ? '' : ' ${_c(_orange, '(trasladada)')}'}',
+            '${(w?.skillIds.contains(id) ?? false) ? '' : ' ${_keyText('(trasladada)')}'}',
   ];
 }
 
@@ -237,7 +240,7 @@ String? gearOriginMarkup(ItemInstance it) {
   return [
     _c(_dim, _esc(origin)),
     _c(hex, 'Afinidad ${_esc(aff.label)} (elige el elemento y el pool de ULT)'),
-    if (it.masterwork) _c(kPassiveHex, 'Obra maestra: +1 mod sobre el máximo'),
+    if (it.masterwork) _keyText('Obra maestra: +1 mod sobre el máximo'),
   ].join('<br>');
 }
 
@@ -259,7 +262,7 @@ List<String> _skillFolds(
             skillShortLineMarkup(s, stats: stats),
             (w?.skillIds.contains(id) ?? false)
                 ? ''
-                : ' ${_c(_orange, '(trasladada)')}'),
+                : ' ${_keyText('(trasladada)')}'),
   ];
 }
 
@@ -322,8 +325,7 @@ String itemTooltipMarkup(
   if (weaponElementMarkup(it) case final el?) l.add(el);
   final passive = items.passiveText(it);
   if (passive != null) {
-    l.add('${_c(kPassiveHex, '<b style="color:$kPassiveHex">Pasiva</b>')} '
-        '${_c(kPassiveHex, _esc(modShort(passive)))}');
+    l.add('${_keyText('Pasiva')} ${_mod(_esc(modShort(passive)))}');
   }
   if (it.forgeLevel > 0 || ItemRules.forgeCapOf(it) > 0) l.add(forgeText(it));
   // [skillDetails]: qué hace cada una (el texto de la batalla, en una
@@ -397,7 +399,7 @@ String itemTooltipMarkup(
   final counts = [
     if (hasMods) 'Mods ${it.modCount}/${it.modCap}',
     if (el != null) _c(elementHex(el), _esc(el.label)),
-    if (passive != null) _c(kPassiveHex, 'Pasiva'),
+    if (passive != null) _keyText('Pasiva'),
     '${skills.length} ${skills.length == 1 ? 'habilidad' : 'habilidades'}',
     if (w != null) weightClassOf(w).label,
   ];
@@ -408,7 +410,7 @@ String itemTooltipMarkup(
       ('Mods', mods.join('<br>')),
       if (element != null) ('Elemento', element),
       if (gearOriginMarkup(it) case final g?) ('Oficio', g),
-      if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(modShort(passive)))),
+      if (passive != null) ('Pasiva', _mod(_esc(modShort(passive)))),
       ('Habilidades', _skillFolds(rules, it, stats).join('<br>')),
       ('Peso y forja', weight.join('<br>')),
       if (flavor != null && flavor.isNotEmpty)
@@ -465,13 +467,12 @@ String weaponRoleLine(WeaponDef w, ItemInstance it) {
     l.add(_c(_dim, '• ${short(m.tr)}'));
   }
   for (final a in it.affixes) {
-    l.add(_c(a.fixed ? _orange : kModHex,
+    l.add((a.fixed ? _keyText : _mod)(
         '• ${short(localAffixText(items, a, on: it))}'));
   }
   final passive = items.passiveText(it);
   if (passive != null) {
-    l.add(_c(kPassiveHex,
-        'Pasiva: ${_esc(plainShort(passive))}'));
+    l.add('${_keyText('Pasiva:')} ${_mod(_esc(plainShort(passive)))}');
   }
   final full = TextDetail.run(
       TextDetail.full,
@@ -591,7 +592,7 @@ String skillName(ProgressionRules rules, String id) =>
 String? passiveAtMarkup(
     ProgressionRules rules, ItemInstance it, int forgeLevels) {
   final t = rules.crafting.passiveAt(it, forgeLevels);
-  return t == null ? null : _c(kPassiveHex, _esc(t));
+  return t == null ? null : _mod(_esc(t));
 }
 
 // ---------------------------------------------------------------------
@@ -619,7 +620,7 @@ String ecoTooltipMarkup(ProgressionRules rules, EcoItem e,
         'monstruos nivel ${e.monsterLevel}</span>',
     'Zona: <b>${_esc(z?.name ?? '?')}</b> · '
         '${e.floors} piso${e.floors == 1 ? '' : 's'}',
-    'Jefe: <b style="color:$_orange">${_esc(eco.bossName(e))}</b>',
+    'Jefe: <key>${_esc(eco.bossName(e))}</key>',
   ];
   final cap = ecoModRange(e.rarity).$2;
   if (cap > 0 || e.mods.isNotEmpty) {

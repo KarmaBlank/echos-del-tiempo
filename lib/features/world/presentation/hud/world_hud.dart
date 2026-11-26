@@ -1761,7 +1761,7 @@ class _MessageLog extends StatelessWidget {
               child: Text(retroText('» $m'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: ProtoColors.green)),
+                  style: const TextStyle(color: DsColors.textSubtitle)),
             ),
         ],
       ),
@@ -1835,7 +1835,7 @@ class _PlayerBox extends StatelessWidget {
                 : '${masteryText(prof)} · XP ${prof.xp}/'
                     '${ProgressionRules.masteryNeed(prof.mastery)} · '
                     '₵${prof.credits}'),
-            style: const TextStyle(color: ProtoColors.violet),
+            style: const TextStyle(color: DsColors.textMuted),
           ),
         ] else ...[
           RetroBar(

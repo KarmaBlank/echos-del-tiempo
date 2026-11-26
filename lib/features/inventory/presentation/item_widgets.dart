@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../domain/item_names.dart';
 
+import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
@@ -276,7 +277,7 @@ class ItemCell extends StatelessWidget {
                   style: const TextStyle(
                       fontFamily: RetroType.pixelFamily,
                       fontSize: RetroType.label,
-                      color: ProtoColors.ink,
+                      color: DsColors.textPrimary,
                       shadows: [Shadow(offset: Offset(1, 1))])),
             ),
         ],
@@ -326,7 +327,7 @@ class LootLabel extends StatelessWidget {
           hiddenNote ?? invStrings(context).t('ui.inventory.item.hidden');
       label = Text(retroText('$text $note'),
           style: const TextStyle(
-              color: ProtoColors.dim, decoration: TextDecoration.lineThrough));
+              color: DsColors.textMuted, decoration: TextDecoration.lineThrough));
     } else {
       final bg = st.backgroundColor;
       final bd = st.borderColor;

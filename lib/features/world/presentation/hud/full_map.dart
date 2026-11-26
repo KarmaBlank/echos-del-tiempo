@@ -631,7 +631,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                     retroText(context.t('ui.world.map.choose_hint')),
                     style: DsText.subtitle(FullMap.waystoneColor)),
               Text(retroText(context.t('ui.world.map.controls')),
-                  style: DsText.subtitle(ProtoColors.dim)),
+                  style: DsText.subtitle(DsColors.textMuted)),
             ],
           ),
         ],

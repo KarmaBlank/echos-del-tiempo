@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import '../../../core/i18n/catalog_names.dart';
 import 'dart:ui' as ui;
+import '../../../app/design/ds_tokens.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -163,7 +164,7 @@ class AscensionCinematicState extends ConsumerState<AscensionCinematic>
                     style: TextStyle(
                         fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: ProtoColors.gold,
+                        color: DsColors.textTitle,
                         letterSpacing: 4)),
                 const SizedBox(height: 10),
                 Text(retroText(name.toUpperCase()),
@@ -181,14 +182,14 @@ class AscensionCinematicState extends ConsumerState<AscensionCinematic>
                     style: TextStyle(
                         fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: ProtoColors.title)),
+                        color: DsColors.textTitle)),
                 const SizedBox(height: 8),
                 Text(retroText(motto),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: ProtoColors.sky)),
+                        color: DsColors.textSubtitle)),
               ],
             ),
           ),

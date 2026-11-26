@@ -210,6 +210,48 @@ oficios (motivo de bloqueo en CLAVE), casas, colecciones, paneles NPC
 (vía `LifeItemDetail`), y todo `TextStyle(color: ProtoColors.dim/ink)`
 de `lib/features` y `lib/app` a `DsColors.textMuted` / `text`.
 
+**Estado cumplido / pendiente (v0.49.33).** Los ticks, las marcas de
+"tenés / pedido" y los requisitos usaban el verde de éxito (#7BED9F, el
+mismo de Veneno) y el rojo de peligro. Ahora tienen colores propios:
+
+| token | color | dónde |
+|---|---|---|
+| `DsColors.statusOk` | lima #9CFF2E | check de `DsCostGrid`, borde y conteo cumplidos, ticks y líneas hechas de `DsQuestTemplate`, `DsStatusMark`, requisitos cumplidos de armas (`requirementsLineMarkup` / `requirementsMarkup`), `CostChip`, nodo tomado |
+| `DsColors.statusBad` | coral #FF2E63 | conteo que no alcanza (taller, tiras del pueblo, fuente de ítems), requisito que falta, total de tienda sin oro |
+
+Ambos quedan a ΔE ≥ 20 de todo elemento, rareza, estado y rol de texto,
+y entre sí a ΔE > 60 (lo verifica `ds_text_roles_test.dart`). El
+significado no depende solo del tono: el cumplido lleva check y el
+pendiente queda gris o con su número. Están en `UiTheme.keep` (los
+colores por roles no los remapean). `success` / `danger` siguen para
+avisos y resultados, no para requisitos.
+
+**`<b>` sin color propio.** Ya no es dorado (el dorado es oro / Raro):
+abre la línea → Título (un nombre); en medio → CLAVE (el número o la
+regla que importa). `boldColor` explícito sigue mandando.
+
+**Mods.** El celeste de los afijos (#9FC4FF, ΔE 11 de Hielo), el naranja
+de los fijos de un único (ΔE 12 de Legendario) y el violeta de las
+pasivas (= Electro) se fueron: afijos e implícitos en Cuerpo, mods fijos,
+"Pasiva", "(trasladada)" y "Obra maestra" en CLAVE, texto de la pasiva
+en Cuerpo.
+
+**Árboles (pasivas y oficios).** Tooltip: nombre del nodo Título,
+rama / camino en Subtítulo, efectos en Cuerpo con los números en
+Apagado (`DsRichText.effect`), costo en Apagado, motivo de bloqueo y
+requisitos en CLAVE. Etiquetas de rama en el lienzo: Subtítulo
+(Título si está resaltada, Apagado las de clase).
+
+**Construcciones.** La descripción de cada edificio sale de i18n
+(`ui.town.construction.<id>.detail`, con `**…**`: "**12 parcelas**");
+`ConstructionDef.detail` en `game_engine` queda como texto plano de
+respaldo, sin markup.
+
+Migrado también (v0.49.33): textos con `ProtoColors.sky/gold/red/green/
+orange/violet/title` en `TextStyle` de `lib/features` y `lib/app` a
+roles (Subtítulo para etiquetas, Título para títulos de pantalla,
+CLAVE para avisos y motivos, `reward` solo para oro y recompensas).
+
 ## 4. Disposición de un panel
 
 ```

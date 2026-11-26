@@ -188,7 +188,7 @@ class _TownStripCardsState extends State<TownStripCards>
                 key: ValueKey('town-strip-${side.code}-${l.name}'),
                 softWrap: true,
                 style: DsText.subtitle(
-                    l.have >= l.need ? DsColors.success : DsColors.danger)),
+                    l.have >= l.need ? DsColors.statusOk : DsColors.statusBad)),
         ],
       ),
     );

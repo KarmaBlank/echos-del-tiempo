@@ -60,6 +60,14 @@ abstract final class DsColors {
   static const focus = ProtoColors.gold;
   static const selected = ProtoColors.gold;
 
+  /// Requirement met / unmet: check marks, have/need counts, cost and
+  /// checklist ticks (design_system.md § 3.4). Lime and coral, kept
+  /// apart from every element, rarity and status colour (poison green
+  /// and burn orange included); the icon (check / cross) carries the
+  /// meaning too, so colour-blind players don't rely on hue.
+  static const statusOk = Color(0xFF9CFF2E);
+  static const statusBad = Color(0xFFFF2E63);
+
   static const danger = ProtoColors.red;
   static const success = ProtoColors.green;
   static const reward = ProtoColors.gold;
@@ -96,6 +104,8 @@ abstract final class DsColors {
         'foco': focus,
         'peligro': danger,
         'éxito': success,
+        'requisito cumplido': statusOk,
+        'requisito pendiente': statusBad,
         'recompensa': reward,
         'Pulso': pulse,
         'MP': mp,

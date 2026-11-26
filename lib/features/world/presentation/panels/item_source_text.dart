@@ -108,7 +108,7 @@ Widget itemSourceCard(BuildContext context, String id,
       children: [
         if (have != null && need != null)
           Text(context.t('ui.town.source.have_need', {'have': have, 'need': need}),
-              style: DsText.body(have >= need ? DsColors.success : DsColors.danger)),
+              style: DsText.body(have >= need ? DsColors.statusOk : DsColors.statusBad)),
         for (final l in itemSourceLines(context, id))
           Text(l, style: DsText.body()),
       ],
