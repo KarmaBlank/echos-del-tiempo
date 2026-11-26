@@ -1340,6 +1340,9 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente al TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3).
   bool get nearWorkshop => townSpot == TownSpot.workshop;
 
+  /// In front of the town kitchen (farming.md § 17).
+  bool get nearKitchen => townSpot == TownSpot.kitchen;
+
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
 
@@ -3268,6 +3271,13 @@ class SessionController extends StateNotifier<SessionView?> {
     return p != null && !QuestTrackRules.seenFountain(p);
   }
 
+  /// Gold "!" over the town kitchen until the local player opens it once
+  /// (farming.md § 17).
+  bool get kitchenAlert {
+    final p = _s?.players[localId]?.profile;
+    return p != null && !QuestTrackRules.seenKitchen(p);
+  }
+
   /// Why the local player can't hire a [kind] helper yet because of the
   /// PROFESSION level (or `null`), with the current level
   /// (town_editor.md § 1.6).
@@ -4121,6 +4131,10 @@ class SessionController extends StateNotifier<SessionView?> {
           add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.workshop),
               () => (WorldPrompt.workshop, null));
+        case TownSpot.kitchen:
+          add(at(ActionTargetKind.shop),
+              () => openPanel(WorldPanel.kitchen),
+              () => (WorldPrompt.kitchen, null));
         case TownSpot.portal:
           add(at(ActionTargetKind.portal),
               () => openPanel(WorldPanel.ecoPortal),
@@ -4913,6 +4927,9 @@ class SessionController extends StateNotifier<SessionView?> {
     // First visit clears the fountain's onboarding "!" (town_editor.md § 1.5).
     if (panel == WorldPanel.fountain && fountainAlert) {
       markNpcSeen(QuestTrackRules.fountainKey);
+    }
+    if (panel == WorldPanel.kitchen && kitchenAlert) {
+      markNpcSeen(QuestTrackRules.kitchenKey);
     }
     _emit();
   }
@@ -6267,6 +6284,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.workshop ||
+            _panel == WorldPanel.kitchen ||
             _panel == WorldPanel.forge ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ecoZone ||

@@ -633,6 +633,10 @@ items:
   # TIENDA de los jugadores (player_shop.md § 6): casa de madera con
   # toldo y emblema de monedas (mismo tool).
   vida_tienda: { idle: items/vida_tienda.png, size: [48, 48] }
+  # COCINA del pueblo (farming.md § 17): casa de ladrillo y revoque con
+  # chimenea humeante, olla en el frontón y cartel de pan
+  # (tool/export_kitchen_sprites.dart).
+  vida_cocina: { idle: items/vida_cocina.png, size: [48, 48] }
   # Variantes de color de las casas de habitantes (town_editor.md § 3.4):
   # tejas de pizarra sobre tablas (v1) y de musgo sobre piedra (v2); la
   # v0 es `vida_casa_<nivel>`. Las pinta tool/export_house_sprites.dart.

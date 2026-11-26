@@ -538,7 +538,6 @@
   "ui.town.events.editor.season": "SEASON (NONE = ANY)",
   "ui.town.events.editor.weather": "TOWN WEATHER (NONE = ANY)",
   "ui.town.events.editor.any": "ANY",
-  "ui.town.bag.filter.cooking": "COOKING",
   "ui.town.cook.tab.all": "ALL",
   "ui.town.cook.tab.hp": "HEALTH",
   "ui.town.cook.tab.atk": "ATTACK",

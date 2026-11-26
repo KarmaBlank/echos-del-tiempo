@@ -236,7 +236,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-const kProtocolVersion = 99;
+/// 100-102: reserved by pending branches (farm animals, lightning rod).
+/// 103: town kitchen (farming.md § 17): the COCINA landmark joins the base
+/// town (a 99 peer draws no kitchen and lays out late spots differently)
+/// and `TownOp.seen` with id `~kitchen` stores its first open in
+/// `npcSeen`; cooking left the OFICIOS menu.
+const kProtocolVersion = 103;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

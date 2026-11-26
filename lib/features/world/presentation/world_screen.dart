@@ -50,6 +50,7 @@ import 'hud/pause_banner.dart';
 import 'hud/cozy_hud_dim.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
+import 'panels/kitchen_panel.dart';
 import 'panels/trader_panel.dart';
 import 'panels/player_stall_panel.dart';
 import 'panels/fountain_panel.dart';
@@ -1166,6 +1167,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return ForgePanel(view: view, controller: controller);
       case WorldPanel.workshop:
         return WorkshopPanel(view: view, controller: controller);
+      case WorldPanel.kitchen:
+        return KitchenPanel(view: view, controller: controller);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.lostLoot:

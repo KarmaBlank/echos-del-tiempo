@@ -75,6 +75,12 @@ restos del pasado magitec:
 
 Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
 
+#### COCINA (protocolo 103)
+
+- Lugar fijo `TownSpot.kitchen` (`@kitchen`), 3 × 3 en (28, 16) del
+  pueblo base, al este de la huerta. E abre la cocina (RECETAS / COMIDAS
+  / COLECCIÓN); "!" dorado hasta la primera vez. Todo en farming.md § 17.
+
 #### TALLER DE OFICIOS (v0.32.3)
 
 - Nombre genérico y neutral de lore: **el dueño puede renombrarlo**

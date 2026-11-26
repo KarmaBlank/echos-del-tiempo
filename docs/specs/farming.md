@@ -601,8 +601,26 @@ Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 La olla del pueblo convierte cosechas (y a veces pescado) en comidas que
 dan un buff para las próximas misiones.
 
-- Dónde: OFICIOS → INVENTARIO → CULTIVO → COCINA (solo en el pueblo; el
-  host valida `_inTown`). Subtabs RECETAS / COMIDAS / COLECCIÓN; RECETAS
+- Dónde (protocolo 103): la casa COCINA del pueblo (`TownSpot.kitchen`,
+  `@kitchen`, 3 × 3 en (28, 16) del pueblo base, tile `Tile.shop` con el
+  sprite `items.vida_cocina` de `tool/export_kitchen_sprites.dart`:
+  ladrillo y revoque, chimenea humeante, olla en el frontón y cartel de
+  pan). Es parte del pueblo base, gratis y para todos (pilar "nada
+  obligatorio"): no se construye desde EDITAR PUEBLO. Es un lugar tardío
+  (`TownLayout.lateSpots`): en un pueblo guardado antes, si su lugar
+  está ocupado va al hueco libre más cercano (town_editor.md § 3.3); su
+  puerta nunca queda tapada por un árbol (`TownPlan.doorClearance`,
+  § 4.5). E frente a la puerta (cursor de acción `spot:kitchen`, contorno
+  blanco del sprite) abre el panel COCINA (`WorldPanel.kitchen`,
+  `KitchenPanel`) con el organismo `CookingView`. Sin interior.
+  Cualquier jugador del co-op la usa; el host valida cada acción
+  (`_inTown`).
+- Aviso: "!" dorado (`NpcMark.news`) sobre la casa hasta que el jugador
+  la abre por primera vez: `TownOp.seen` con id `~kitchen`
+  (`QuestTrackRules.kitchenKey`) guarda la marca en `npcSeen` del perfil,
+  igual que la fuente rúnica (town_editor.md § 1.5).
+- Antes (v0.45.0–protocolo 99) vivía en OFICIOS → INVENTARIO → CULTIVO →
+  COCINA; ese filtro ya no existe. Subtabs RECETAS / COMIDAS / COLECCIÓN; RECETAS
   y COMIDAS usan la plantilla TALLER (`DsCraftGridTemplate`: grilla con
   el detalle a la derecha) con filtros TODAS / VIDA / ATAQUE /
   RESISTENCIA; COLECCIÓN usa `DsCollectionTemplate`. Arriba, la comida

@@ -538,7 +538,6 @@
   "ui.town.events.editor.season": "ESTACIÓN (NINGUNA = CUALQUIERA)",
   "ui.town.events.editor.weather": "CLIMA DEL PUEBLO (NINGUNO = CUALQUIERA)",
   "ui.town.events.editor.any": "CUALQUIERA",
-  "ui.town.bag.filter.cooking": "COCINA",
   "ui.town.cook.tab.all": "TODAS",
   "ui.town.cook.tab.hp": "VIDA",
   "ui.town.cook.tab.atk": "ATAQUE",

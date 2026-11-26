@@ -230,7 +230,7 @@ se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
 ### 3.3 Lugares fijos (v0.25.2)
 Todos los lugares de `TownLayout.landmarks` (FUENTE RÚNICA, PORTAL,
 TABLERO DE ENCARGOS, FORJA, ESTATUA DEL TIEMPO, el puesto del
-comerciante, LOOT PERDIDO y, desde v0.32.3, TALLER DE OFICIOS y ARMERÍA) se pueden
+comerciante, LOOT PERDIDO y, desde v0.32.3, TALLER DE OFICIOS y ARMERÍA; luego TIENDA y COCINA) se pueden
 mover; nunca borrar. Id de
 edición: `@` + el `TownSpot` (`@forge`, `@fountain`, …). Mismo fantasma
 verde / rojo; la esquina va en el tile del mouse.
@@ -239,7 +239,8 @@ verde / rojo; la esquina va en el tile del mouse.
   el TALLER DE OFICIOS sin marca va a (6, 6) y la ARMERÍA a (26, 6)
   (`TownLayout.lateSpots`, en ese orden; también VAGONETAS, la
   estación chica de 2 × 1 en (14, 19), pegada al oeste de la salida
-  sur, mining_smithing.md § 1.8); si ahí ya hay algo (una
+  sur, mining_smithing.md § 1.8; la TIENDA en (20, 13); la COCINA,
+  protocolo 103, en (28, 16), farming.md § 17); si ahí ya hay algo (una
   construcción a menos de 2 tiles, un faro, un árbol, un camino fijo u
   otro lugar movido a menos de 1), va al hueco libre más cercano
   (distancia Manhattan) sin guardar marca, hasta que el dueño lo mueva. De ahí salen el dibujo, las
@@ -342,7 +343,8 @@ sur de un lugar (de una columna antes a una después) ni en el tile de
 llegada debajo de su centro (los dos del medio si el ancho es par):
 `TownPlan.doorClearance`. Como el plano se arma de cero en cada carga,
 los pueblos guardados con un lugar movido o reubicado (la TIENDA, un
-lugar tardío) quedan arreglados sin migrar nada. El borde de bosque del
+lugar tardío) quedan arreglados sin migrar nada. La COCINA en (28, 16)
+tiene el árbol base (27, 19) en su fila de puerta: nunca se pinta. El borde de bosque del
 mapa no es decorado y no cambia.
 
 ## 5. Lagos y huertas

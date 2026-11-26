@@ -32,6 +32,9 @@ enum WorldPanel {
 
   /// TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3).
   workshop,
+
+  /// The town kitchen (farming.md § 17): RECETAS / COMIDAS / COLECCIÓN.
+  kitchen,
   character,
   prep,
   inventory,
@@ -113,6 +116,9 @@ enum WorldPrompt {
   armory('[E] Armería'),
   forge('[E] Forja'),
   workshop('[E] Taller de oficios'),
+
+  /// The town kitchen door (farming.md § 17).
+  kitchen('[E] Cocina'),
   seal('[E] Activar sello'),
   merchant('[E] Tienda y herrería'),
 

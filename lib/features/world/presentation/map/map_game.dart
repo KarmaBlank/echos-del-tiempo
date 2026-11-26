@@ -1175,6 +1175,15 @@ class MapGame extends Game {
               NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
         }
       }
+      // Same gold "!" over the kitchen until its first open (farming.md
+      // § 17); above its name, over the sprite's roof.
+      if (controller.kitchenAlert) {
+        for (final l in map.townMarks ?? TownLayout.landmarks) {
+          if (l.spot != TownSpot.kitchen) continue;
+          drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+        }
+      }
       farm.drawZoneLabels(
           c,
           s.town,
@@ -1234,6 +1243,7 @@ class MapGame extends Game {
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
+        _drawLandmarkSprite(c, map, TownSpot.kitchen, 'cocina');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
@@ -2321,6 +2331,7 @@ class MapGame extends Game {
     'spot:armory',
     'spot:forge',
     'spot:workshop',
+    'spot:kitchen',
   ];
 
   void _drawObjectOutline(Canvas c, GameMap map, double t) {

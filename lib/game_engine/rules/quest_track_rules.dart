@@ -194,11 +194,20 @@ abstract final class QuestTrackRules {
   static bool seenFountain(PlayerProfile p) =>
       p.npcSeen.containsKey(fountainKey);
 
+  /// `npcSeen` key for the kitchen onboarding (farming.md § 17): set the
+  /// first time the player opens the town kitchen; until then the town
+  /// shows a gold "!" over it. Not a resident id.
+  static const kitchenKey = '~kitchen';
+
+  /// Whether [p] has already opened the town kitchen.
+  static bool seenKitchen(PlayerProfile p) =>
+      p.npcSeen.containsKey(kitchenKey);
+
   /// Marca como visto lo que [npc] tiene para decir.
   static PlayerProfile? markSeen(PlayerProfile p, TownState t, String npc) {
-    if (npc == fountainKey) {
-      if (seenFountain(p)) return null;
-      return p.copyWith(npcSeen: {...p.npcSeen, fountainKey: '1'});
+    if (npc == fountainKey || npc == kitchenKey) {
+      if (p.npcSeen.containsKey(npc)) return null;
+      return p.copyWith(npcSeen: {...p.npcSeen, npc: '1'});
     }
     if (biomeNpc(npc) == null) return null;
     final k = newsKey(t.resident(npc));
