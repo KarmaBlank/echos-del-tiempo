@@ -278,6 +278,10 @@ class MapGame extends Game {
   /// sobre las luciérnagas llegan hasta su radio (lighting.md § 3.4).
   static const _lampReach = 12 * ts;
 
+  /// Fence cells of the town decor list last drawn (autotile lookups).
+  List<(String, int, int)>? _fenceOf;
+  Set<(int, int)> _fences = const {};
+
   /// Reloj de animación en ms (`performance.now()` del prototipo).
   double t = 0;
 
@@ -1317,6 +1321,10 @@ class MapGame extends Game {
       }
       // Farm decorations (cozy_life.md § 2); the little lamps glow at
       // night like the lighthouses.
+      if (!identical(_fenceOf, s.town.decor)) {
+        _fenceOf = s.town.decor;
+        _fences = CozyRules.fenceCells(s.town);
+      }
       for (final (id, dx, dy) in s.town.decor) {
         final px = (dx + ox) * ts, py = (dy + oy) * ts;
         if (!worldView.inflate(_lampReach).contains(Offset(px, py))) continue;
@@ -1324,8 +1332,10 @@ class MapGame extends Game {
           lights.add(Offset(px + 8, py + 3));
           placed.add((dx + ox + 0.5, dy + oy + 0.2));
         }
-        final d = kFarmDecos[id];
-        final im = d == null ? null : sprites.lifeIcon(d.sprite, '');
+        final im = !kFarmDecos.containsKey(id)
+            ? null
+            : sprites.lifeIcon(
+                CozyRules.decorSprite(id, dx, dy, _fences), '');
         if (im == null) continue;
         add(
             id == 'stone_path' ? py : py + 14,

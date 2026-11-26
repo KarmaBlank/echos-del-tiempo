@@ -804,6 +804,14 @@
     "text": "一段木篱笆，用来围起农田。",
     "status": "draft"
   },
+  "ui.town.decor.fence_gate.name": {
+    "text": "篱笆门",
+    "status": "draft"
+  },
+  "ui.town.decor.fence_gate.info": {
+    "text": "与旁边篱笆相连的门。",
+    "status": "draft"
+  },
   "ui.town.decor.scarecrow.name": {
     "text": "稻草人",
     "status": "draft"

@@ -783,6 +783,8 @@
   "ui.town.decor.text": "Decoración de la huerta. No es sólida: se puede caminar encima.",
   "ui.town.decor.fence.name": "Cerco",
   "ui.town.decor.fence.info": "Un tramo de cerco de madera para marcar la huerta.",
+  "ui.town.decor.fence_gate.name": "Tranquera",
+  "ui.town.decor.fence_gate.info": "Una tranquera que se une al cerco de al lado.",
   "ui.town.decor.scarecrow.name": "Espantapájaros",
   "ui.town.decor.scarecrow.info": "Cuida las parcelas cercanas: un poquito más de calidad al cosechar.",
   "ui.town.decor.pot.name": "Maceta",

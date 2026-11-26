@@ -783,6 +783,8 @@
   "ui.town.decor.text": "Farm decoration. Not solid: you can walk over it.",
   "ui.town.decor.fence.name": "Fence",
   "ui.town.decor.fence.info": "A wooden fence section to frame the farm.",
+  "ui.town.decor.fence_gate.name": "Fence gate",
+  "ui.town.decor.fence_gate.info": "A gate that joins the fence around it.",
   "ui.town.decor.scarecrow.name": "Scarecrow",
   "ui.town.decor.scarecrow.info": "Watches nearby plots: a little more quality when harvesting.",
   "ui.town.decor.pot.name": "Flower pot",
