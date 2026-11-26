@@ -50,8 +50,8 @@ class _Pen {
   }
 
   void line(int x0, int y0, int x1, int y1, int rgb) {
-    final n = [(x1 - x0).abs(), (y1 - y0).abs(), 1]
-        .reduce((a, b) => a > b ? a : b);
+    final n =
+        [(x1 - x0).abs(), (y1 - y0).abs(), 1].reduce((a, b) => a > b ? a : b);
     for (var k = 0; k <= n; k++) {
       px((x0 + (x1 - x0) * k / n).round(), (y0 + (y1 - y0) * k / n).round(),
           rgb);
@@ -134,6 +134,155 @@ RgbaImage armory() {
   return p.img;
 }
 
+const _plaster = 0xd8c8a0;
+const _plasterDark = 0xb8a47c;
+const _slate = 0x3a5a7a;
+const _slateDark = 0x26405a;
+const _woodLight = 0xb07a46;
+
+/// A small barrel of 7 x 8 with two hoops.
+void _barrel(_Pen p, int x, int y) {
+  p.rect(x, y, 7, 8, _wood);
+  p.rect(x + 1, y, 5, 1, _woodLight);
+  p.rect(x, y + 2, 7, 1, _metalDark);
+  p.rect(x, y + 5, 7, 1, _metalDark);
+  p.rect(x + 5, y + 1, 1, 7, _woodDark);
+}
+
+/// TALLER DE OFICIOS: 48 x 48, same build as the ARMERIA (gable, eaves,
+/// door, two windows) in timber-framed plaster under a slate roof. The
+/// gable carries a crossed hammer and saw; barrels, a chimney and a
+/// small anvil tell the crafts apart from the armory's weapons.
+RgbaImage workshop() {
+  final p = _Pen(48, 48);
+  // Chimney (behind the roof).
+  p.rect(34, 6, 6, 12, _stoneDark);
+  p.rect(34, 6, 6, 1, _stone);
+  // Timber-framed walls.
+  p.rect(5, 24, 38, 23, _plaster);
+  p.rect(5, 44, 38, 3, _plasterDark);
+  p.rect(5, 24, 38, 2, _woodDark);
+  p.rect(5, 37, 38, 1, _woodDark);
+  for (final x in [5, 17, 30, 42]) {
+    p.rect(x, 24, 1, 23, _woodDark);
+  }
+  p.line(6, 26, 16, 36, _woodDark);
+  p.line(41, 26, 31, 36, _woodDark);
+  // Roof eaves and front gable, slate rows.
+  p.rect(2, 21, 44, 3, _slateDark);
+  for (var r = 0; r < 17; r++) {
+    final half = r + 3;
+    p.rect(24 - half, 4 + r, half * 2, 1, r.isEven ? _slate : _slateDark);
+  }
+  // Sign plate with a crossed hammer and saw.
+  p.rect(13, 8, 22, 13, _woodDark);
+  p.rect(14, 9, 20, 11, 0x2e2a3a);
+  // Saw: blade with teeth, handle bottom-right.
+  p.line(18, 10, 30, 18, _metal);
+  p.line(19, 10, 31, 18, _metalLight);
+  for (var k = 0; k < 6; k++) {
+    p.px(18 + k * 2, 12 + (k * 4) ~/ 3, _metalDark);
+  }
+  p.rect(30, 17, 3, 3, _wood);
+  // Hammer: handle and head.
+  p.line(17, 19, 28, 10, _woodLight);
+  p.rect(26, 9, 5, 3, _metalDark);
+  p.rect(26, 9, 5, 1, _metal);
+  // Door.
+  p.rect(19, 34, 10, 13, _woodDark);
+  p.rect(20, 35, 8, 12, _wood);
+  p.rect(23, 35, 1, 12, _woodDark);
+  p.px(26, 41, 0xe0c060);
+  // Windows: tools hanging inside.
+  for (final wx in [8, 33]) {
+    p.rect(wx, 28, 7, 7, _woodDark);
+    p.rect(wx + 1, 29, 5, 5, 0x24324a);
+    p.rect(wx + 1, 31, 5, 1, _woodDark);
+    p.line(wx + 2, 29, wx + 2, 33, _woodLight);
+    p.rect(wx + 1, 29, 3, 1, _metal);
+    p.line(wx + 4, 30, wx + 4, 33, _metal);
+  }
+  // Barrels by the wall and an anvil on a stump at the corner.
+  _barrel(p, 3, 39);
+  _barrel(p, 10, 40);
+  p.rect(36, 43, 6, 4, _woodDark);
+  p.rect(34, 40, 10, 2, 0x6e7686);
+  p.rect(34, 40, 10, 1, _metalLight);
+  p.rect(37, 42, 4, 1, _metalDark);
+  p.rect(32, 40, 2, 1, 0x6e7686);
+  p.outline();
+  // Smoke puffs over the chimney (after outline: soft).
+  for (final (x, y, a) in [(36, 4, 0x90), (37, 2, 0x70), (35, 1, 0x50)]) {
+    p.px(x, y, 0xc8ccd4, a);
+    p.px(x + 1, y, 0xc8ccd4, a);
+  }
+  return p.img;
+}
+
+/// Fence piece for autotile [mask] (bit 1 N, 2 E, 4 S, 8 W): a post in
+/// the middle and rails toward each connected side.
+RgbaImage fence(int mask) {
+  final p = _Pen(16, 16);
+  if (mask & 2 != 0) _rails(p, 9, 7);
+  if (mask & 8 != 0) _rails(p, 0, 7);
+  if (mask & 1 != 0) _beam(p, 0, 4);
+  if (mask & 4 != 0) _beam(p, 12, 4);
+  _post(p, 6);
+  p.outline();
+  return p.img;
+}
+
+void _rails(_Pen p, int x, int w) {
+  for (final y in [5, 10]) {
+    p.rect(x, y, w, 1, _woodLight);
+    p.rect(x, y + 1, w, 1, _woodDark);
+  }
+}
+
+void _beam(_Pen p, int y, int h) {
+  p.rect(7, y, 2, h, _wood);
+  p.rect(7, y, 1, h, _woodLight);
+}
+
+void _post(_Pen p, int x) {
+  p.rect(x, 3, 4, 11, _wood);
+  p.rect(x, 3, 4, 1, _woodLight);
+  p.rect(x + 3, 4, 1, 10, _woodDark);
+}
+
+/// Fence gate: [vertical] runs N-S between two posts, else E-W.
+RgbaImage fenceGate({required bool vertical}) {
+  final p = _Pen(16, 16);
+  if (vertical) {
+    p.rect(6, 0, 4, 3, _wood);
+    p.rect(6, 0, 4, 1, _woodLight);
+    p.rect(6, 13, 4, 3, _wood);
+    p.rect(6, 13, 4, 1, _woodLight);
+    p.rect(7, 3, 3, 10, _woodLight);
+    p.rect(9, 3, 1, 10, _woodDark);
+    p.rect(7, 5, 3, 1, _woodDark);
+    p.rect(7, 10, 3, 1, _woodDark);
+    p.px(6, 4, _metalDark);
+    p.px(6, 11, _metalDark);
+  } else {
+    p.rect(0, 3, 3, 11, _wood);
+    p.rect(0, 3, 3, 1, _woodLight);
+    p.rect(13, 3, 3, 11, _wood);
+    p.rect(13, 3, 3, 1, _woodLight);
+    for (var x = 3; x < 13; x += 2) {
+      p.rect(x, 5, 1, 8, _woodLight);
+      p.rect(x + 1, 5, 1, 8, _wood);
+    }
+    p.rect(3, 6, 10, 1, _woodDark);
+    p.rect(3, 11, 10, 1, _woodDark);
+    p.line(3, 11, 12, 6, _woodDark);
+    p.px(3, 7, _metalDark);
+    p.px(3, 10, _metalDark);
+  }
+  p.outline();
+  return p.img;
+}
+
 /// FORJA: 80 x 32 (five tiles wide, one tile tall plus one above). Stone
 /// platform, brick hearth with embers, a big anvil with a hammer and a
 /// quenching barrel.
@@ -182,8 +331,12 @@ RgbaImage forge() {
   p.outline();
   // Soft glow around the hearth mouth and the hot bar (after outline).
   for (final (x, y, a) in [
-    (6, 11, 0x60), (19, 11, 0x60), (13, 11, 0x50),
-    (31, 6, 0x50), (35, 6, 0x60), (38, 6, 0x50),
+    (6, 11, 0x60),
+    (19, 11, 0x60),
+    (13, 11, 0x50),
+    (31, 6, 0x50),
+    (35, 6, 0x60),
+    (38, 6, 0x50),
   ]) {
     p.px(x, y, _ember, a);
   }
@@ -246,5 +399,20 @@ void main() {
   File('docs/release_shots/building_icons_preview.png')
     ..createSync(recursive: true)
     ..writeAsBytesSync(encodePng(_preview(a, f)));
-  stdout.writeln('Wrote vida_armeria.png, vida_forja.png and the preview.');
+  File('assets/sprites/items/vida_taller_oficios.png')
+      .writeAsBytesSync(encodePng(workshop()));
+  for (var m = 0; m < 16; m++) {
+    File('assets/sprites/items/vida_decor_fence_$m.png')
+        .writeAsBytesSync(encodePng(fence(m)));
+  }
+  // Palette icons: a straight E-W run and the E-W gate.
+  File('assets/sprites/items/vida_decor_fence.png')
+      .writeAsBytesSync(encodePng(fence(2 | 8)));
+  File('assets/sprites/items/vida_decor_fence_gate_h.png')
+      .writeAsBytesSync(encodePng(fenceGate(vertical: false)));
+  File('assets/sprites/items/vida_decor_fence_gate_v.png')
+      .writeAsBytesSync(encodePng(fenceGate(vertical: true)));
+  File('assets/sprites/items/vida_decor_fence_gate.png')
+      .writeAsBytesSync(encodePng(fenceGate(vertical: false)));
+  stdout.writeln('Wrote the building and fence sprites and the preview.');
 }

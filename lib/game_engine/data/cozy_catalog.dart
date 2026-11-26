@@ -42,6 +42,8 @@ class FarmDecoDef {
 
 const kFarmDecos = <String, FarmDecoDef>{
   'fence': FarmDecoDef('fence', 'decorFenceCost'),
+  // A fence gate: joins the fence run it sits in (town_editor.md § Cercos).
+  'fence_gate': FarmDecoDef('fence_gate', 'decorFenceCost'),
   'scarecrow': FarmDecoDef('scarecrow', 'decorScarecrowCost'),
   'pot': FarmDecoDef('pot', 'decorPotCost'),
   'stone_path': FarmDecoDef('stone_path', 'decorPathCost'),

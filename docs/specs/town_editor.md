@@ -323,6 +323,24 @@ la izquierda son el eje de caminos).
   fijo), del otro (`TownRules.chestOf`, v0.32.2). AGREGAR ESPECIES es una grilla: elegís el pez, ves
   el detalle y SOLTAR EN EL LAGO.
 
+### 5.1 Cercos (autotile)
+- El CERCO y la TRANQUERA (`fence`, `fence_gate` en `kFarmDecos`, mismo
+  costo `decorFenceCost`) se ponen de a una casilla y **no se rotan**:
+  cada pieza mira a sus vecinas N / E / S / O que también son cerco o
+  tranquera (`Autotile.mask4`, bit 1 N, 2 E, 4 S, 8 O) y elige una de 16
+  piezas: poste solo, punta, recta, esquina, T y cruz
+  (`Autotile.shape`, `CozyRules.decorSprite`). Poner o sacar una pieza
+  rehace las vecinas en el mismo cuadro: el dibujo se deriva, no se
+  guarda.
+- La tranquera va N-S solo si sus vecinas son N/S y ninguna E/O; si no,
+  E-O. Se une al cerco como una pieza más.
+- Arte: `items.vida_decor_fence_<0..15>`, `vida_decor_fence_gate_h/_v`
+  (y `vida_decor_fence` / `vida_decor_fence_gate` para la paleta),
+  píxel 16×16 de `tool/export_building_sprites.dart`; se cambian en el
+  manifest sin tocar Dart.
+- Guardado y red: sin cambios de formato (`dc: [id, x, y]`); un save
+  viejo con cercos se ve conectado al cargarlo.
+
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip
 de tamaño fijo: LAGO con cada especie una vez y "N/M soltados"; HUERTA
