@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -56,7 +57,7 @@ class VotePanel extends ConsumerWidget {
                       {'name': proposedBy}))),
               TextSpan(
                   text: retroText(missionName),
-                  style: const TextStyle(color: ProtoColors.ink)),
+                  style: const TextStyle(color: DsColors.text)),
               TextSpan(text: ref.t('ui.missions.vote.rank', {'rank': rank})),
               TextSpan(
                   text:

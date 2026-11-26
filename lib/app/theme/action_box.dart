@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import 'proto_colors.dart';
 import 'retro_theme.dart';
 
@@ -59,7 +60,7 @@ class _ActionBoxState extends State<ActionBox> {
     Widget child = widget.child;
     if (!enabled) {
       child = DefaultTextStyle.merge(
-          style: const TextStyle(color: ProtoColors.dim), child: child);
+          style: const TextStyle(color: DsColors.textMuted), child: child);
     }
     return FocusableActionDetector(
       enabled: enabled,

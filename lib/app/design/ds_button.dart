@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
 import '../theme/ui_theme.dart';
 import 'ds_focus.dart';
@@ -223,6 +224,12 @@ class DsButton extends StatelessWidget {
             child: button)
         : DsFocusScope(child: button);
     final tip = tooltip;
-    return tip == null ? ringed : Tooltip(message: tip, child: ringed);
+    if (tip == null) return ringed;
+    // Disabled: the reason is KEY INFO (design_system.md § 3.4).
+    if (onPressed == null) {
+      return Tooltip(
+          richMessage: protoSpan(tip, style: DsText.key()), child: ringed);
+    }
+    return Tooltip(message: tip, child: ringed);
   }
 }

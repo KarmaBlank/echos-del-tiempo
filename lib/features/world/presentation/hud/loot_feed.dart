@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/ds_tokens.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
@@ -333,7 +334,7 @@ class _LootLogState extends State<LootLog> with _FeedTicker<LootLog> {
                   TextSpan(children: [
                     TextSpan(
                         text: retroText(l.prefix),
-                        style: const TextStyle(color: ProtoColors.ink)),
+                        style: const TextStyle(color: DsColors.text)),
                     TextSpan(
                         text: retroText(l.item),
                         style: TextStyle(color: l.color)),

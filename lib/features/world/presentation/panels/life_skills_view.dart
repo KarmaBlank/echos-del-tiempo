@@ -328,7 +328,11 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               if (text.isNotEmpty)
                 Text(TextDetail.isSummary ? plainShort(text) : text,
                     style: DsText.body()),
-              Text(_stateText(k, n), style: DsText.body()),
+              // Why it can't be taken is KEY INFO (design_system.md § 3.4).
+              Text(_stateText(k, n),
+                  style: _why(k, n) != null && !LifeTreeRules.has(p, k, n.id)
+                      ? DsText.key()
+                      : DsText.muted()),
             ]);
       },
     );
