@@ -323,7 +323,8 @@ class WaterReflectionLayer {
     var bx0 = double.infinity, by0 = double.infinity;
     var bx1 = -double.infinity, by1 = -double.infinity;
     for (var i = 0; i < _runs.length; i += 4) {
-      if (_runs[i + 3] == WaterKind.cave.index) continue;
+      // Cave water only mirrors actors (§ 2): skip it when there are none.
+      if (_runs[i + 3] == WaterKind.cave.index && actors.isEmpty) continue;
       final y = _runs[i] * ts;
       if (y + ts <= view.top || y >= view.bottom) continue;
       final a = _runs[i + 1] * ts, b = _runs[i + 2] * ts;
@@ -354,7 +355,7 @@ class WaterReflectionLayer {
       final (l0, fade) = hit;
       final l = a.onWater ? l0 + ReflectionRules.floatDrop() : l0;
       final k = kindAt((a.x / ts).floor(), (l / ts).floor());
-      if (k == WaterKind.cave || k == WaterKind.none) continue;
+      if (k == WaterKind.none) continue;
       cands.add((x: a.x, y: a.y, moving: a.moving));
       lines.add(l);
       fades.add(fade);
@@ -414,7 +415,7 @@ class WaterReflectionLayer {
     final top = view.top.floor(), bottom = view.bottom.ceil();
     for (var i = 0; i < _runs.length; i += 4) {
       final kind = WaterKind.values[_runs[i + 3]];
-      if (kind == WaterKind.cave) continue;
+      if (kind == WaterKind.cave && picked.isEmpty) continue;
       final ty = _runs[i];
       final rowTop = (ty * ts).toInt();
       if (rowTop + ts <= top || rowTop >= bottom) continue;
@@ -456,7 +457,11 @@ class WaterReflectionLayer {
           water.withValues(alpha: tint.clamp(0.0, 1.0)), BlendMode.srcATop);
     }
     _atlas.colorFilter = _tintFilter;
-    for (final kind in const [WaterKind.clear, WaterKind.murky]) {
+    for (final kind in const [
+      WaterKind.clear,
+      WaterKind.murky,
+      WaterKind.cave
+    ]) {
       final n = _n[kind] ?? 0;
       if (n == 0) continue;
       lastStrips += n;

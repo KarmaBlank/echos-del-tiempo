@@ -27,6 +27,10 @@ escritorio, tienda, jefes e invocaciones.
 - **Cámara y HUD:** pescando, la cámara se acerca a `cozyFishZoom` (fracción
   del mapa visible, < 1 = más cerca) con suavizado; el HUD baja a
   `cozyHudOpacity` y se achica a `cozyHudScale`. Al soltar la caña vuelve.
+  v0.49.14: el acercamiento ya no tiembla. Avanza lineal en el tiempo
+  (`cozyFishZoomSec`, 0.6 s, igual a cualquier FPS) con curva suave
+  (smoothstep) de ida y de vuelta, y el centro de la vista queda quieto
+  mientras cambia el zoom: el seguimiento de la cámara no pelea con él.
 - **Decorar la balsa:** cosmético, barato, en el pescador del bioma
   (pestaña BALSA). Piezas: farol (`raftLanternCost`), techito
   (`raftRoofCost`) y pintura (`raftPaintCost`, 4 colores). Comprar una pieza

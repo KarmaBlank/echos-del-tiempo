@@ -873,6 +873,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     // actor afloat (px), warm dusk tint of the water surface.
     'reflAlpha': 0.74,
     'reflMurkyAlpha': 0.46,
+    // Actor reflections in cave water (water_reflections.md § 2).
+    'reflCaveAlpha': 0.5,
     'reflTint': 0.16,
     'reflRows': 1,
     'reflActorReach': 1,
@@ -889,11 +891,15 @@ const Map<String, TuningDef> kTuningDefaults = {
     'reflFade2': 20,
     'reflSkyAlpha': 0.3,
     'reflCloudAlpha': 0.5,
+    // Ground cloud shadows (biome_regions.md § 7.1): peak alpha and the
+    // floor of the cover that scales it (clear skies still show them).
+    'cloudShadowAlpha': 0.38,
+    'cloudShadowMinCover': 0.6,
     'reflGlowLen': 14,
     'reflGlowAlpha': 0.6,
     'reflBankAlpha': 0.45,
     'reflBankLip': 2,
-    'reflFloatDrop': 10,
+    'reflFloatDrop': 0,
     'reflDuskTint': 0.16,
     'reflStars': 7,
     'reflAutoLowMs': 25,
@@ -954,6 +960,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     // cozyFireflies fireflies at night, the cozy music level and the gap
     // between ambience sounds (s).
     'cozyFishZoom': 0.85,
+    'cozyFishZoomSec': 0.6,
     'cozyHudOpacity': 0.45,
     'cozyHudScale': 0.9,
     'cozyFireflies': 10,
