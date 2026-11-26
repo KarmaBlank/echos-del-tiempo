@@ -348,6 +348,8 @@
   "ui.town.fountain.edit_line": "Ampliá, poné y mové lagos y huertas, soltá peces.",
   "ui.town.fountain.hire_farmer": "CONTRATAR GRANJERO",
   "ui.town.fountain.hire_farmer_line": "Elegí la huerta: siembra, riega y cosecha en su cofre.",
+  "ui.town.fountain.need_farming": "Necesitás subir tu oficio de Cultivo a nivel {need} (ahora: nivel {now})",
+  "ui.town.fountain.need_fishing": "Necesitás subir tu oficio de Pesca a nivel {need} (ahora: nivel {now})",
   "ui.town.fountain.hire_fisher": "CONTRATAR PESCADOR",
   "ui.town.fountain.hire_fisher_line": "Elegí el lago: pesca solo y deja lo que saca en su cofre.",
   "ui.town.fountain.board": "TABLERO DE ENCARGOS",
