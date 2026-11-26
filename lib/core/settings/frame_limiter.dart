@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../persistence/ecos_log.dart';
+
 /// Decide en cada vsync si se dibuja el cuadro o se salta, para no pasar
 /// de [fps] cuadros por segundo. Ver docs/specs/settings.md § 3.4.
 ///
@@ -81,8 +83,25 @@ class EcosBinding extends WidgetsFlutterBinding {
 
   /// Inicializa el binding (una vez, antes que cualquier otro).
   static WidgetsBinding ensureInitialized() {
-    _self ??= EcosBinding._();
+    if (_self == null) {
+      _self = EcosBinding._();
+      _logErrors();
+    }
     return WidgetsBinding.instance;
+  }
+
+  /// Build / layout / paint exceptions go to `ecos.log` with their stack
+  /// (in release they only showed the grey error box, with no trace).
+  static void _logErrors() {
+    final prev = FlutterError.onError;
+    FlutterError.onError = (d) {
+      try {
+        EcosLog.error(
+            'FlutterError: ${d.exceptionAsString()}\n'
+            '${d.context ?? ''}\n${d.stack ?? ''}');
+      } catch (_) {}
+      prev?.call(d);
+    };
   }
 
   bool _skipping = false;

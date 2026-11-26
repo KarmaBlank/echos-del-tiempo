@@ -29,8 +29,8 @@ PRUEBAS y ASCENSIÓN).
 
 - Proponer: `ProposeTrialAction(n)` en el pueblo (modo lobby, sin otra
   votación). Lo puede proponer quien cumple el nivel y el requisito.
-  En el Mundo con otros humanos abre una convocatoria (IR / UNIRSE,
-  free_movement.md § 2.1.1); solo, entra directo. Dentro de la
+  Entra directo (v0.49.20, sin convocatoria; los amigos se suman
+  con UNIRSE, free_movement.md § 2.1.1). Dentro de la
   instancia, votación y preparación como cualquier misión (`MissionVote` con
   `missionId = 'trial'`, número en `GameSession.trial`, JSON `trial`).
 - Se puede repetir: la primera vez da los puntos, después solo loot.

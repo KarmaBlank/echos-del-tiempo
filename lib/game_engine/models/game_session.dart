@@ -759,7 +759,6 @@ class GameSession {
     this.ownerId,
     this.instance = '',
     List<AwayPlayer>? away,
-    this.gather,
   })  : players = players ?? LinkedHashMap(),
         away = List.unmodifiable(away ?? const <AwayPlayer>[]),
         ground = ground ?? [],
@@ -898,10 +897,6 @@ class GameSession {
   /// Los jugadores que están en otro lugar (free_movement.md § 3, `aw`).
   List<AwayPlayer> away;
 
-  /// Open gathering in the world (free_movement.md § 2.1, `gat`): the
-  /// same one in every instance.
-  Gathering? gather;
-
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -1005,7 +1000,6 @@ class GameSession {
         ownerId: ownerId,
         instance: instance,
         away: away,
-        gather: gather,
       );
 }
 
@@ -1044,72 +1038,3 @@ class AwayPlayer {
   int get hashCode => Object.hash(id, name, where, placeId, busy);
 }
 
-/// What a gathering starts (free_movement.md § 2.1).
-enum GatherKind { mission, trial, abyss, rift, tourney, eco }
-
-/// An open gathering ("convocatoria", free_movement.md § 2.1): someone
-/// proposed a mission / Trial / Abyss Boss and waits for friends before
-/// pressing IR. World-wide: every instance carries the same one.
-/// Immutable.
-class Gathering {
-  const Gathering({
-    required this.byId,
-    required this.byName,
-    required this.kind,
-    required this.target,
-    required this.label,
-    this.joined = const [],
-    this.left = 0,
-  });
-
-  /// Seconds until it enters on its own (protocol 82,
-  /// free_movement.md § 2.1.1); 0 = no timer (old host).
-  final double left;
-
-  /// Whole seconds left, for the countdown and the snapshot.
-  int get leftSeconds => left <= 0 ? 0 : left.ceil();
-
-  /// Who proposed it (only they can press IR or cancel).
-  final String byId;
-  final String byName;
-  final GatherKind kind;
-
-  /// Mission id, or the Trial / Abyss Boss number as text.
-  final String target;
-
-  /// Ready to show (mission name, Trial name...).
-  final String label;
-
-  /// Who joined (besides the proposer), in order.
-  final List<AwayPlayer> joined;
-
-  /// The mission id when [kind] is a mission.
-  String? get missionId => kind == GatherKind.mission ? target : null;
-
-  bool has(String id) => id == byId || joined.any((j) => j.id == id);
-
-  Gathering withJoined(List<AwayPlayer> joined) => Gathering(
-      byId: byId,
-      byName: byName,
-      kind: kind,
-      target: target,
-      label: label,
-      joined: List.unmodifiable(joined),
-      left: left);
-
-  Gathering withLeft(double left) => Gathering(
-      byId: byId,
-      byName: byName,
-      kind: kind,
-      target: target,
-      label: label,
-      joined: joined,
-      left: left);
-
-  /// Identity without the countdown (for a local IGNORAR).
-  String get id => '$byId|${kind.name}|$target';
-
-  /// Stable text for change detection.
-  String get signature =>
-      '$byId|$byName|${kind.name}|$target|$label|${joined.map((j) => j.id).join(',')}|$leftSeconds';
-}

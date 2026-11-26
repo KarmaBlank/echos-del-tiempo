@@ -64,6 +64,10 @@ Grupos de enemigos posibles por misión: ver catálogo (copiados 1:1).
 > (habilitado siempre) y CANCELAR; los demás ven UNIRSE (en el HUD y en
 > el mostrador, `UNIRSE (nombre)`). IR mete juntos a todos los que se
 > sumaron. Solo, PROPONER entra directo.
+>
+> v0.49.20 (protocolo 97): **sin convocatoria**. PROPONER entra al
+> instante también con amigos; ellos se suman con UNIRSE en la tarjeta
+> de ese jugador (free_movement.md § 2.1.1).
 
 - `ProposeMissionAction(id)`: en lobby, sin votación abierta y con una
   misión válida. Abre la votación con el voto a favor de quien propone.

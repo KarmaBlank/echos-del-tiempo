@@ -168,8 +168,9 @@ viajan en el perfil y el host migra igual).
 
 - **HUD**: junto a `≡ MENÚ`, un botón compacto `PERSONAJE [C]` con una
   insignia `N` (total) dentro del botón, a la derecha del texto (v0.10.1:
-  pastilla dorada sin `+`, suma al ancho y nunca tapa el texto). Solo aparece si hay puntos
-  sin usar (no ocupa lugar si no). Tooltip con el desglose
+  pastilla dorada sin `+`, suma al ancho y nunca tapa el texto). Siempre está (v0.49.20:
+  todo jugador llega a su personaje); la insignia y el tooltip, solo si hay
+  puntos sin usar. Tooltip con el desglose
   (`3 puntos de atributos`, `2 puntos de árbol`…). Clic = tecla C.
 - **Pestañas**: ATRIBUTOS y ÁRBOL del panel de personaje llevan su `N`
   (quieto) cuando tienen puntos (`PanelTabs.badges`), en una pastilla

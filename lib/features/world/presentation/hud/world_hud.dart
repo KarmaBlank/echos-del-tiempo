@@ -36,7 +36,6 @@ import '../../../endgame/domain/endgame_text.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
-import '../../../missions/presentation/gather_panel.dart';
 import '../../../missions/presentation/vote_panel.dart';
 import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
@@ -276,9 +275,9 @@ class WorldHud extends StatelessWidget {
                                     size: DsButtonSize.compact,
                                     onPressed: controller.toggleParty),
                               ],
-                              // Puntos sin usar: `PERSONAJE [TAB]` con `+N` (solo si hay;
-                              // passive_tree_v4.md § 7).
-                              if (_unused(s).any) ...[
+                              // `PERSONAJE [TAB]` siempre; con `+N` si hay puntos
+                              // sin usar (passive_tree_v4.md § 7, v0.49.20).
+                              ...[
                                 const SizedBox(width: 8),
                                 Consumer(
                                   builder: (context, ref, _) =>
@@ -513,13 +512,6 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
-            if (_gatherBox(s) case final gather?)
-              Positioned(
-                top: _gap + 48,
-                left: 0,
-                right: 0,
-                child: Center(child: gather),
-              ),
             if (_voteBox(s) case final vote?)
               Positioned(
                 top: _gap + 48,
@@ -836,24 +828,6 @@ class WorldHud extends StatelessWidget {
     if (l == null) return null;
     return context.t('ui.world.hud.pick_up',
         {'item': MapGame.lootName(controller, l.ground.drop)});
-  }
-
-  /// Open gathering (free_movement.md § 2.1), only outside a dungeon.
-  Widget? _gatherBox(GameSession s) {
-    final g = s.gather;
-    if (g == null || s.mode != SessionMode.lobby || s.vote != null) {
-      return null;
-    }
-    if (g.byId != view.localId &&
-        !g.has(view.localId) &&
-        controller.ignoredGather == g.id) {
-      return null;
-    }
-    return GatherPanel(
-        gather: g,
-        localId: view.localId,
-        onOp: controller.gather,
-        onIgnore: controller.ignoreGather);
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
