@@ -5,7 +5,6 @@ import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/renown.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
-import 'package:echos_del_tiempo/game_engine/models/town_build.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:echos_del_tiempo/game_engine/rules/autotile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/path_rules.dart';
