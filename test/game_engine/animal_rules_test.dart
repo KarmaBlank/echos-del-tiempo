@@ -217,7 +217,8 @@ void main() {
       final s = const TownState().copyWith(builds: [coop()]);
       final low = farmer(level: AnimalRules.helperLevel - 1);
       expect(TownRules.cannotHire(low, s, 'g0'),
-          'Necesitás subir tu oficio de Cultivo a nivel ${AnimalRules.helperLevel}');
+          'Necesitás subir tu oficio de Cultivo a nivel ${AnimalRules.helperLevel} '
+          '(ahora: nivel ${AnimalRules.helperLevel - 1})');
       final ok = farmer(level: AnimalRules.helperLevel);
       final h = TownRules.hire(ok.copyWith(life: ok.life.copyWith(
           crafts: {...ok.life.crafts, 'fibra': 99})), s, 'g0');
