@@ -49,15 +49,22 @@ el mouse sigue mandando. Una parcela bloqueada se saltea.
 **Color:** verde si la acción se puede, naranja si no (el motivo va en el
 aviso; un árbol ya revisado hoy queda en gris).
 
-**Contorno o recuadro (por tipo):** lo que tiene silueta de sprite lleva
-un contorno blanco de 1 px alrededor de la silueta en vez del recuadro:
-todos los NPC y actores de eventos, el cofre de oficio, la armería, la
-forja y el taller (sprites), y el cofre de lo salvaje (su caja, pintada en
-el tile, lleva el mismo contorno). Lo que está pintado en el suelo lleva
-el recuadro: piedras de paso, portales, santuarios, bocas de mina, fuente,
-carteles, matas, árboles, parcelas y rocas. Solo un objetivo marcado a la
-vez: con la selección en algo que no es herramienta, el recuadro de la
-huerta y el de la mina no se dibujan.
+**Contorno o recuadro (por tipo):** el recuadro verde / naranja queda
+solo para los objetivos de trabajo en el suelo (parcelas, rocas / vetas,
+matas, árboles). Todo lo demás lleva un contorno blanco de 1 px alrededor
+de su silueta: NPC y actores con sprite (silueta del sprite); objetos
+pintados en sus tiles (portales de Ecos, arcos de misión, piedras de
+paso, santuarios, fuente rúnica, bocas de mina, carteles, estaciones,
+cofres de lo salvaje y de la mina): la silueta son los píxeles donde el
+tile con el objeto difiere del mismo tile con suelo, y el contorno se
+dibuja debajo de los actores (nunca encima del jugador); portales de
+grieta: un óvalo blanco. Solo un objetivo marcado a la vez: con la
+selección en algo que no es herramienta, el recuadro de la huerta y el de
+la mina no se dibujan.
+
+**Vías de la mina:** la vía de la estación (`MiningRules.track`) son
+tiles de vía en el suelo (dos rieles sobre durmientes, autotile como los
+cercos), debajo de los actores.
 
 **Aviso:** siempre describe la selección ("[E] Hablar con X", "[E] Entrar
 a la mina", "[E] Leer cartel"…). Sin selección quedan los avisos sin

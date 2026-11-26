@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/custom_npc.dart';
 import '../../../../game_engine/rules/action_targeting.dart';
+import 'object_outline.dart';
 import '../../../../game_engine/data/light_catalog.dart';
 import '../../../../game_engine/rules/light_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
@@ -915,6 +916,14 @@ class MapGame extends Game {
               ..color = color);
         c.drawOval(Rect.fromCenter(center: Offset(x, y), width: 10, height: 16),
             Paint()..color = color.withValues(alpha: 0.25));
+        if (controller.selectedOf('event:') == a.uid) {
+          c.drawOval(
+              Rect.fromCenter(center: Offset(x, y), width: 21, height: 27),
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1
+                ..color = const Color(0xFFFFFFFF));
+        }
         _placeText(c, d.title.text.toUpperCase(), x, y - 18, TownPalette.label,
             6, 899);
         continue;
@@ -1080,6 +1089,13 @@ class MapGame extends Game {
       }
       tiles.entrance(c, e.tx, e.ty, e.zone,
           open: open(e.zone), t: t, density: particleDensity);
+    }
+    // The selected object painted into its tiles: its outline, under the
+    // actors (controls.md § Cursor de acción).
+    _drawObjectOutline(c, map, t);
+    // The mine cart track: rail tiles on the floor, under the actors.
+    if (controller.mineLevel case final lvl? when map.lobby) {
+      mine.drawTrack(c, MiningRules.track(lvl, controller.mineState));
     }
     final merchant = map.merchant;
     if (merchant != null) {
@@ -1679,16 +1695,10 @@ class MapGame extends Game {
     } else if (controller.actionTarget case final g?
         when !g.outline &&
             g.kind != ActionTargetKind.plot &&
-            g.kind != ActionTargetKind.rock &&
-            g.kind != ActionTargetKind.find) {
-      // The action cursor on the selected tile thing (controls.md); the
-      // farm and the mine draw their own marker, sprites their outline.
+            g.kind != ActionTargetKind.rock) {
+      // The tile cursor only on ground work targets (controls.md); the
+      // farm and the mine draw their own marker.
       drawTileTarget(c, [g.tile], g.ok);
-    } else if (controller.actionTarget case final g?
-        when g.key.startsWith('wild:')) {
-      // A wilds chest is painted into its tile: its box gets the same
-      // 1 px white outline as the sprites.
-      drawBoxOutline(c, g.x, g.y);
     }
     // Fireflies at night around the local player fishing or on a raft
     // (cozy_life.md § 1).
@@ -2247,6 +2257,67 @@ class MapGame extends Game {
 
   /// Haces de Legendarios recién caídos al inventario en curso (tests).
   int get activeBeams => _beams.length;
+
+  /// Outlines of objects painted into the tiles (portals, waystones,
+  /// shrines, fountain, mine mouths, signs, stations, wilds chests…).
+  final outlines = ObjectOutlineCache();
+
+  static const _spriteKeys = [
+    'npc:',
+    'custom:',
+    'fisher:',
+    'minenpc:',
+    'chest:',
+    'event:',
+    'spot:armory',
+    'spot:forge',
+    'spot:workshop',
+  ];
+
+  void _drawObjectOutline(Canvas c, GameMap map, double t) {
+    final g = controller.actionTarget;
+    if (g == null || !g.outline) return;
+    if (_spriteKeys.any(g.key.startsWith)) return;
+    final blank = controller.actionTiles.toSet();
+    if (blank.isEmpty) return;
+    var x0 = 1 << 30, y0 = 1 << 30, x1 = -1, y1 = -1;
+    for (final (x, y) in blank) {
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+    // Objects stand out of their tiles upward and to the sides.
+    final tx0 = x0 - 1, ty0 = y0 - 3, tx1 = x1 + 1, ty1 = y1 + 1;
+    final region = Rect.fromLTRB(
+        tx0 * ts, ty0 * ts, (tx1 + 1) * ts, (ty1 + 1) * ts);
+    final live = controller.liveTileCode;
+    final codes = [
+      for (final (x, y) in blank)
+        live(x, y) ?? (map.contains(x, y) ? map.tileAt(x, y) : '')
+    ].join();
+    final entrance = map.entrances
+        .where((e) => blank.contains((e.tx, e.ty)))
+        .firstOrNull;
+    final key = '${map.place}|${g.key}|$x0,$y0,$x1,$y1|$codes';
+    void paint(Canvas cc, bool object) {
+      for (var y = ty0; y <= ty1; y++) {
+        for (var x = tx0; x <= tx1; x++) {
+          tileLayer.drawTileAt(cc, map, x, y,
+              code: !object && blank.contains((x, y)) ? Tile.floor : null,
+              codeAt: live);
+        }
+      }
+      if (object && entrance != null) {
+        tiles.entrance(cc, entrance.tx, entrance.ty, entrance.zone,
+            open: true, t: 0, density: 0);
+      }
+    }
+
+    outlines.ring(key, region, (cc) => paint(cc, true),
+        (cc) => paint(cc, false));
+    outlines.draw(c, key, region);
+  }
 
   /// Lugares dibujados con sprite (v0.32.3: TALLER DE OFICIOS y
   /// ARMERÍA): `items.vida_<id>` del manifest, apoyado en su rectángulo.

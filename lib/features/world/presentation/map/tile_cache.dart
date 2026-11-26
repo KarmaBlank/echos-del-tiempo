@@ -225,9 +225,12 @@ class TileLayerCache {
   /// Draws the single tile (x, y) of [map] like the cache does (theme,
   /// roofed caves), frozen at t = 0: the shore of the water reflections
   /// (water_reflections.md § 1.2).
-  void drawTileAt(Canvas c, GameMap map, int x, int y, {String? theme}) {
+  /// [code] / [codeAt] replace the map's tile codes (an object blanked
+  /// to ground, a mine's live state).
+  void drawTileAt(Canvas c, GameMap map, int x, int y,
+      {String? theme, String? code, String? Function(int, int)? codeAt}) {
     if (!map.contains(x, y)) return;
-    final ch = map.tileAt(x, y);
+    final ch = code ?? codeAt?.call(x, y) ?? map.tileAt(x, y);
     final lay = map.lobby ? biomeLayout(map.place) : null;
     var cave = false;
     if (lay != null) {
@@ -236,7 +239,9 @@ class TileLayerCache {
           : ch == Tile.rock &&
               RegionAmbienceRules.caveWall(lay, map.tileAt, x, y);
     }
-    String? at(int xx, int yy) => map.contains(xx, yy) ? map.tileAt(xx, yy) : null;
+    String? at(int xx, int yy) => !map.contains(xx, yy)
+        ? null
+        : codeAt?.call(xx, yy) ?? map.tileAt(xx, yy);
     tiles.draw(c, ch, x * _ts, y * _ts, theme ?? map.theme, x, y,
         t: 0, gateOpen: false, lobby: map.lobby, at: at, cave: cave);
   }

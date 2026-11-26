@@ -3,10 +3,9 @@
 /// same selection, so what the cursor marks is what E does.
 library;
 
-/// What kind of thing a target is. Drawing: things with a sprite
-/// silhouette ([ActionTarget.outline]: NPCs, the craft chest, the town
-/// buildings drawn as sprites) get a white outline; the rest (ground
-/// tiles and objects painted into their tile) the tile cursor.
+/// What kind of thing a target is. Drawing: ground work targets (trees,
+/// bushes, plots, rocks) get the tile cursor; everything else a 1 px
+/// white outline around its silhouette ([ActionTarget.outline]).
 enum ActionTargetKind {
   tree,
   forage,
@@ -31,7 +30,20 @@ enum ActionTargetKind {
 class ActionTarget {
   const ActionTarget(this.x, this.y, this.kind,
       {this.ok = true, this.id = 0, this.key = '', bool? outline})
-      : outline = outline ?? kind == ActionTargetKind.npc;
+      : outline = outline ??
+            !(kind == ActionTargetKind.tree ||
+                kind == ActionTargetKind.forage ||
+                kind == ActionTargetKind.plot ||
+                kind == ActionTargetKind.rock);
+
+  /// Ground work targets (tool actions): the only ones with the tile
+  /// cursor; everything else is outlined.
+  static const groundKinds = {
+    ActionTargetKind.tree,
+    ActionTargetKind.forage,
+    ActionTargetKind.plot,
+    ActionTargetKind.rock,
+  };
 
   /// Tile.
   final int x, y;

@@ -4036,24 +4036,23 @@ class SessionController extends StateNotifier<SessionView?> {
     // Town places (buildings, fountain, portal, travel road, signs).
     if (townSpot case final spot?) {
       final t = _spotTile(spot);
-      ActionTarget at(ActionTargetKind k, {bool outline = false}) =>
-          ActionTarget(t.$1, t.$2, k,
-              key: 'spot:${spot.name}', outline: outline);
+      ActionTarget at(ActionTargetKind k) =>
+          ActionTarget(t.$1, t.$2, k, key: 'spot:${spot.name}');
       switch (spot) {
         case TownSpot.board:
           add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.missionBoard),
               () => (WorldPrompt.missionBoard, null));
         case TownSpot.armory:
-          add(at(ActionTargetKind.shop, outline: true),
+          add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.armory),
               () => (WorldPrompt.armory, null));
         case TownSpot.forge:
-          add(at(ActionTargetKind.shop, outline: true),
+          add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.forge),
               () => (WorldPrompt.forge, null));
         case TownSpot.workshop:
-          add(at(ActionTargetKind.shop, outline: true),
+          add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.workshop),
               () => (WorldPrompt.workshop, null));
         case TownSpot.portal:
@@ -4213,11 +4212,7 @@ class SessionController extends StateNotifier<SessionView?> {
           add(
               ActionTarget(tx, ty,
                   shrine ? ActionTargetKind.shrine : ActionTargetKind.chest,
-                  ok: !done,
-                  key: '${shrine ? 'shrine' : 'wild'}:$i',
-                  // The chest box is outlined; the shrine keeps the
-                  // tile cursor (its glow fills the tile).
-                  outline: !shrine),
+                  ok: !done, key: '${shrine ? 'shrine' : 'wild'}:$i'),
               () => useWildLoot(i, shrine: shrine),
               () => (
                     done ? WorldPrompt.spent : WorldPrompt.poi,
@@ -4289,7 +4284,7 @@ class SessionController extends StateNotifier<SessionView?> {
         final (cx, cy) = TownRules.chestOf(town, b);
         add(
             ActionTarget(cx + ox, cy + oy, ActionTargetKind.chest,
-                ok: b.chest.isNotEmpty, key: 'chest:${b.id}', outline: true),
+                ok: b.chest.isNotEmpty, key: 'chest:${b.id}'),
             () {
           if (b.chest.isNotEmpty) collectChest(b.id);
         },
@@ -4490,14 +4485,49 @@ class SessionController extends StateNotifier<SessionView?> {
         : null;
   }
 
+  /// The tiles the selection is painted on (a town place's whole
+  /// rectangle, an Eco portal's three tiles), for its outline.
+  List<(int, int)> get actionTiles {
+    final t = actionTarget;
+    final s = _s;
+    if (t == null || s == null) return const [];
+    if (selectedOf('spot:') case final name?) {
+      final map = engine.mapFor(s);
+      final (ox, oy) = map.townOrigin;
+      final (px, py) = _myTile;
+      List<(int, int)>? best;
+      var bd = 1 << 30;
+      for (final l in map.townMarks ?? TownLayout.landmarks) {
+        if (l.spot.name != name || map.place != null) continue;
+        final cx = px.clamp(l.x + ox, l.x + ox + l.w - 1);
+        final cy = py.clamp(l.y + oy, l.y + oy + l.h - 1);
+        final d = (cx - px) * (cx - px) + (cy - py) * (cy - py);
+        if (d >= bd) continue;
+        bd = d;
+        best = [
+          for (var y = l.y + oy; y < l.y + oy + l.h; y++)
+            for (var x = l.x + ox; x < l.x + ox + l.w; x++) (x, y)
+        ];
+      }
+      if (best != null) return best;
+    }
+    if (t.key.startsWith('eco:')) {
+      return [for (var dx = -1; dx <= 1; dx++) (t.x + dx, t.y)];
+    }
+    return [t.tile];
+  }
+
+  /// The live tile code at ([x], [y]) where it differs from the map's
+  /// (a mine's dug / opened state), else `null`.
+  String? liveTileCode(int x, int y) {
+    final lvl = mineLevel;
+    return lvl == null ? null : MiningRules.tileAt(lvl, mineState, x, y);
+  }
+
   /// No selection, or a tool target: the farm and mine markers show only
   /// then (one marker on the map at a time).
   bool get toolCursor => switch (actionTarget?.kind) {
-        null ||
-        ActionTargetKind.plot ||
-        ActionTargetKind.rock ||
-        ActionTargetKind.find =>
-          true,
+        null || ActionTargetKind.plot || ActionTargetKind.rock => true,
         _ => false,
       };
 

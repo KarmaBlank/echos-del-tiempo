@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/mine_catalog.dart';
+import '../../../../game_engine/rules/autotile.dart';
 import '../../../../game_engine/rules/mine_work_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import 'map_themes.dart';
@@ -301,10 +302,7 @@ class MineLayer {
           MinePalette.label,
           6);
     }
-    // Rails toward the edge of the station chamber.
-    for (var k = -4; k <= 3; k++) {
-      _rect(c, MinePalette.rail, px + k * ts, py + 13, ts, 1);
-    }
+    // The rails are floor tiles (drawTrack), under the actors.
     // Miners at work.
     for (final m in st.miners) {
       final mx = (m.x + 0.5) * ts, my = (m.y + 1) * ts;
@@ -528,6 +526,40 @@ class MineLayer {
   }
 
   final _paint = Paint();
+  /// The cart track on the floor ([tiles], `MiningRules.track`): two
+  /// rails on wooden sleepers, autotiled (straight, end, corner) from
+  /// the neighbours on the track. Drawn with the floor, before actors.
+  void drawTrack(Canvas c, List<(int, int)> tiles) {
+    final set = tiles.toSet();
+    for (final (x, y) in tiles) {
+      final m = Autotile.mask4((dx, dy) => set.contains((x + dx, y + dy)));
+      final px = x * ts, py = y * ts;
+      final horiz = m & (Autotile.e | Autotile.w) != 0 || m == 0;
+      final vert = m & (Autotile.n | Autotile.s) != 0;
+      if (horiz) {
+        final l = m & Autotile.w != 0 || m == 0 ? 0.0 : 3.0;
+        final r = m & Autotile.e != 0 || m == 0 ? ts : ts - 3;
+        for (var k = l + 1; k < r; k += 4) {
+          _rect(c, MinePalette.timberDark, px + k, py + 4, 2, 9);
+          _rect(c, MinePalette.timber, px + k, py + 4, 2, 1);
+        }
+        _rect(c, MinePalette.rail, px + l, py + 5, r - l, 1);
+        _rect(c, MinePalette.rail, px + l, py + 11, r - l, 1);
+        _rect(c, MinePalette.timberDark, px + l, py + 6, r - l, 1);
+        _rect(c, MinePalette.timberDark, px + l, py + 12, r - l, 1);
+      }
+      if (vert) {
+        final t = m & Autotile.n != 0 ? 0.0 : 3.0;
+        final b = m & Autotile.s != 0 ? ts : ts - 3;
+        for (var k = t + 1; k < b; k += 4) {
+          _rect(c, MinePalette.timberDark, px + 3, py + k, 10, 2);
+        }
+        _rect(c, MinePalette.rail, px + 4, py + t, 1, b - t);
+        _rect(c, MinePalette.rail, px + 11, py + t, 1, b - t);
+      }
+    }
+  }
+
   void _rect(Canvas c, Color col, double x, double y, double w, double h) {
     _paint.color = col;
     c.drawRect(Rect.fromLTWH(x, y, w, h), _paint);

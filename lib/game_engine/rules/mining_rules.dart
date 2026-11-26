@@ -182,6 +182,32 @@ abstract final class MiningRules {
   }
 
   /// The tile at ([x], [y]) of [lvl] with [st] laid on top.
+  /// The cart track of [lvl] (mining_smithing.md § 1.7): the open tiles
+  /// of the station row from 4 tiles west of the station to 3 east,
+  /// stopping at the first wall each way. Drawn as rail tiles on the
+  /// floor (autotiled), never over the actors.
+  static List<(int, int)> track(MineLevel lvl, MineLevelState st) {
+    final (sx, sy) = lvl.station;
+    bool open(int x) {
+      final c = tileAt(lvl, st, x, sy);
+      return c == Tile.floor || c == MineTile.station || c == MineTile.torch;
+    }
+
+    final out = <(int, int)>[];
+    if (!open(sx)) return out;
+    var x0 = sx, x1 = sx;
+    while (x0 > sx - 4 && open(x0 - 1)) {
+      x0--;
+    }
+    while (x1 < sx + 3 && open(x1 + 1)) {
+      x1++;
+    }
+    for (var x = x0; x <= x1; x++) {
+      out.add((x, sy));
+    }
+    return out;
+  }
+
   static String tileAt(MineLevel lvl, MineLevelState st, int x, int y) {
     if (x < 0 || y < 0 || x >= lvl.width || y >= lvl.height) {
       return MineTile.bedrock;

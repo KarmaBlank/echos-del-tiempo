@@ -89,7 +89,9 @@ void main() {
     final w = lay.waystones.first;
     standAim(c, (w.ax, w.ay), (w.x, w.y));
     expect(c.actionTarget?.kind, ActionTargetKind.waystone);
-    expect(ActionTargeting.tone(c.actionTarget), CursorTone.ok);
+    // Painted into its tile: outlined, no tile cursor.
+    expect(c.actionTarget!.outline, isTrue);
+    expect(ActionTargeting.tone(c.actionTarget), CursorTone.none);
     expect(
         c.view!.promptLabel,
         tr.t(c.waystoneActive(0)
@@ -184,6 +186,7 @@ void main() {
     c.aimHover(rock);
     c.advance(0.02);
     expect(c.actionTarget?.tile, rock);
+    expect(c.actionTarget!.outline, isFalse);
     expect(c.view!.promptLabel, isNot(talk));
     // Keyboard: walking toward one picks it (the mouse stops ruling).
     c.aimHover(null);

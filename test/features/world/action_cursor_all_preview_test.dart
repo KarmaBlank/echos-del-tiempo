@@ -1,7 +1,8 @@
 // Action cursor over every interactable (docs/specs/controls.md § Cursor
 // de acción). With PREVIEW_SHOTS=1 writes, with the real sprites,
 // docs/preview/action_cursor_all/{a_two_npcs,b_chest_selected,
-// b_tree_selected,c_waystone,c_eco_portal,d_miner}.png:
+// b_tree_selected,c_waystone,c_eco_portal,c_mission_portal,d_miner,
+// d_mine_track}.png:
 //   $env:PREVIEW_SHOTS = "1"; flutter test test/features/world/action_cursor_all_preview_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -95,6 +96,13 @@ void main() {
   /// The map around the player, 4x (crop of the virtual frame).
   Future<void> shot(WidgetTester tester, SessionController c, MapGame game,
       String name) async {
+    // A first frame starts the outline of a painted object; wait for it.
+    await tester.runAsync(() async {
+      game.outlines.clear();
+      game.drawWorld(ui.Canvas(ui.PictureRecorder()), c.view!);
+      await game.outlines.pending;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
     final rec = ui.PictureRecorder();
     game.drawWorld(
         Canvas(rec,
@@ -248,6 +256,28 @@ void main() {
     }
   });
 
+  testWidgets('c: a mission portal (zone arch) selected',
+      (tester) async {
+    if (!_shots) return;
+    final (c, game) = await pump(tester);
+    if (c.map.entrances.isEmpty) {
+      for (final id in kBiomeBases.keys) {
+        c.closePanel();
+        expect(c.travelPlace(id), isTrue);
+        if (c.map.entrances.isNotEmpty) break;
+      }
+    }
+    final e = c.map.entrances.first;
+    final f = e.front;
+    c.local
+      ..fx = 0
+      ..fy = -1;
+    await settle(tester, c, game, ((f.x / 16).floor(), (f.y / 16).floor()),
+        null);
+    expect(c.actionTarget?.key, 'zone:${e.zone}');
+    await shot(tester, c, game, 'c_mission_portal');
+  });
+
   testWidgets('d: the miner selected in a mine', (tester) async {
     if (!_shots) return;
     final (c, game) = await pump(tester);
@@ -275,5 +305,11 @@ void main() {
     await settle(tester, c, game, stand!, (nx, ny));
     expect(c.actionTarget?.key, startsWith('minenpc:'));
     await shot(tester, c, game, 'd_miner');
+    // The station room: the cart track as rail tiles on the floor.
+    final track = MiningRules.track(lvl, c.mineState);
+    expect(track, isNotEmpty);
+    final (tx, ty) = track[track.length ~/ 2];
+    await settle(tester, c, game, (tx, ty - 1), null);
+    await shot(tester, c, game, 'd_mine_track');
   });
 }
