@@ -520,6 +520,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (tile == null) return;
                   if (controller.helperAt(tile.$1, tile.$2) case final h?) {
                     controller.openHelper(h.build.id, h.index);
+                  } else if (controller.clickAction(tile)) {
+                    // The cursor's selection under the click: same as E
+                    // (controls.md § Cursor de acción).
                   } else if (controller.residentAt(tile.$1, tile.$2)
                       case final n?) {
                     // Clic sobre un habitante: abre su pantalla (como E).
@@ -611,6 +614,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   // El clic sobre un ayudante abre su pantalla, no trabaja.
                   if (controller.hoverHelper != null) return;
                   final tile = game.tileAtScreen(e.localPosition);
+                  if (tile != null && controller.clickAction(tile)) return;
                   if (tile != null &&
                       (controller.residentAt(tile.$1, tile.$2) != null ||
                           controller.fisherAt(tile.$1, tile.$2) ||

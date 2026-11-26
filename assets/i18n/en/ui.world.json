@@ -192,6 +192,7 @@
   "ui.world.ctl.achievement": "Feat: {name}",
   "ui.world.ctl.save_failed": "Couldn't save",
   "ui.world.ctl.prompt_travel": "[E] Travel map",
+  "ui.world.ctl.prompt_read": "[E] Read sign",
   "ui.world.ctl.prompt_talk": "[E] Talk to {name}",
   "ui.world.ctl.chest_empty": "Empty chest",
   "ui.world.ctl.chest_collect": "[E] Collect chest ({n})",

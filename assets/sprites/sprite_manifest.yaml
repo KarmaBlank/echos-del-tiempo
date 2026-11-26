@@ -620,7 +620,7 @@ items:
   vida_npc_brann_retrato: { idle: items/vida_npc_brann_retrato.png, size: [14, 12] }
   vida_npc_oren: { idle: items/vida_npc_oren.png, size: [14, 18] }
   vida_npc_oren_retrato: { idle: items/vida_npc_oren_retrato.png, size: [14, 12] }
-  # Casas de habitantes por nivel (town_editor.md § 3.4): arte provisorio.
+  # Casas de habitantes por nivel (town_editor.md § 3.4): tool/export_house_sprites.dart.
   vida_casa_1: { idle: items/vida_casa_1.png, size: [48, 48] }
   vida_casa_2: { idle: items/vida_casa_2.png, size: [48, 48] }
   vida_casa_3: { idle: items/vida_casa_3.png, size: [48, 48] }
@@ -660,6 +660,41 @@ items:
   # TIENDA de los jugadores (player_shop.md § 6): casa de madera con
   # toldo y emblema de monedas (mismo tool).
   vida_tienda: { idle: items/vida_tienda.png, size: [48, 48] }
+  # Variantes de color de las casas de habitantes (town_editor.md § 3.4):
+  # tejas de pizarra sobre tablas (v1) y de musgo sobre piedra (v2); la
+  # v0 es `vida_casa_<nivel>`. Las pinta tool/export_house_sprites.dart.
+  vida_casa_1_v1: { idle: items/vida_casa_1_v1.png, size: [48, 48] }
+  vida_casa_1_v2: { idle: items/vida_casa_1_v2.png, size: [48, 48] }
+  vida_casa_2_v1: { idle: items/vida_casa_2_v1.png, size: [48, 48] }
+  vida_casa_2_v2: { idle: items/vida_casa_2_v2.png, size: [48, 48] }
+  vida_casa_3_v1: { idle: items/vida_casa_3_v1.png, size: [48, 48] }
+  vida_casa_3_v2: { idle: items/vida_casa_3_v2.png, size: [48, 48] }
+  # Interior de la TIENDA (player_shop.md § 6.1): la sala entera de 16 × 11
+  # tiles, las mesas de exhibición por pieza (l / m / r / s, autotile) y
+  # tela (0-3, o `bare` si el mostrador está libre) y la etiqueta de
+  # precio. Las pinta tool/export_shop_interior_sprites.dart.
+  vida_shop_room: { idle: items/vida_shop_room.png, size: [256, 176] }
+  vida_shop_tag: { idle: items/vida_shop_tag.png, size: [5, 6] }
+  vida_shop_table_l_0: { idle: items/vida_shop_table_l_0.png, size: [16, 22] }
+  vida_shop_table_l_1: { idle: items/vida_shop_table_l_1.png, size: [16, 22] }
+  vida_shop_table_l_2: { idle: items/vida_shop_table_l_2.png, size: [16, 22] }
+  vida_shop_table_l_3: { idle: items/vida_shop_table_l_3.png, size: [16, 22] }
+  vida_shop_table_l_bare: { idle: items/vida_shop_table_l_bare.png, size: [16, 22] }
+  vida_shop_table_m_0: { idle: items/vida_shop_table_m_0.png, size: [16, 22] }
+  vida_shop_table_m_1: { idle: items/vida_shop_table_m_1.png, size: [16, 22] }
+  vida_shop_table_m_2: { idle: items/vida_shop_table_m_2.png, size: [16, 22] }
+  vida_shop_table_m_3: { idle: items/vida_shop_table_m_3.png, size: [16, 22] }
+  vida_shop_table_m_bare: { idle: items/vida_shop_table_m_bare.png, size: [16, 22] }
+  vida_shop_table_r_0: { idle: items/vida_shop_table_r_0.png, size: [16, 22] }
+  vida_shop_table_r_1: { idle: items/vida_shop_table_r_1.png, size: [16, 22] }
+  vida_shop_table_r_2: { idle: items/vida_shop_table_r_2.png, size: [16, 22] }
+  vida_shop_table_r_3: { idle: items/vida_shop_table_r_3.png, size: [16, 22] }
+  vida_shop_table_r_bare: { idle: items/vida_shop_table_r_bare.png, size: [16, 22] }
+  vida_shop_table_s_0: { idle: items/vida_shop_table_s_0.png, size: [16, 22] }
+  vida_shop_table_s_1: { idle: items/vida_shop_table_s_1.png, size: [16, 22] }
+  vida_shop_table_s_2: { idle: items/vida_shop_table_s_2.png, size: [16, 22] }
+  vida_shop_table_s_3: { idle: items/vida_shop_table_s_3.png, size: [16, 22] }
+  vida_shop_table_s_bare: { idle: items/vida_shop_table_s_bare.png, size: [16, 22] }
   # FORJA del pueblo: fragua con yunque, 5 tiles de ancho (mismo tool).
   vida_forja: { idle: items/vida_forja.png, size: [80, 32] }
   # Salida de la mazmorra (free_movement.md § 2.4): portal en la llegada
