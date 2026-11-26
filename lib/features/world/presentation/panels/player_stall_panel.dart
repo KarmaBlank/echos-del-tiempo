@@ -36,7 +36,7 @@ class PlayerStallPanel extends StatefulWidget {
 }
 
 class _PlayerStallPanelState extends State<PlayerStallPanel> {
-  late int _tab = widget.tab;
+  late int _tab = widget.controller.stallOwner != null ? 1 : widget.tab;
 
   /// MY STALL filter: false = on sale, true = the bag.
   bool _bag = false;
@@ -296,6 +296,9 @@ class _PlayerStallPanelState extends State<PlayerStallPanel> {
     final out = <LifeItemCellData>[];
     for (final o in widget.view.session.players.values) {
       if (o.id == widget.view.localId || o.isCompanion) continue;
+      // From a teammate's counter: only that teammate (player_shop.md § 6).
+      final only = c.stallOwner;
+      if (only != null && o.id != only) continue;
       for (final l in o.profile.life.stall.listings) {
         final look = _look(l.cell);
         if (look == null) continue;

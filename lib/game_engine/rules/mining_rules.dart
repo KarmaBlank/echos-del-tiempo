@@ -16,6 +16,7 @@ import 'craft_rules.dart' show CraftRules;
 import '../models/loot.dart' show LootSource;
 import 'loot_rules.dart';
 import 'mine_generator.dart';
+import 'shop_interior_rules.dart';
 import 'weather_rules.dart';
 
 export '../models/mine_state.dart';
@@ -110,6 +111,7 @@ abstract final class MiningRules {
 
   /// Log name of a place (es-AR, like the rest of the room log).
   static String placeName(String place) {
+    if (ShopInteriorRules.isShop(place)) return 'la tienda';
     final m = parse(place);
     if (m == null) return biomeDef(place)?.name ?? place;
     final lv = m.$3 == 0 ? '' : ' (nivel ${m.$3 + 1})';

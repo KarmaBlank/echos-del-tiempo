@@ -40,6 +40,7 @@ import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/rules/mining_rules.dart';
+import '../../../game_engine/rules/shop_interior_rules.dart';
 import '../../../game_engine/data/smithing_catalog.dart'
     show kMineNpcLines, kMineLoreLines;
 import '../../../game_engine/rules/eco_portal_rules.dart';
@@ -1371,8 +1372,36 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearTrader => townSpot == TownSpot.trader;
   bool get nearSign => townSpot == TownSpot.sign;
 
-  /// In front of the player's own stall (player_shop.md § 5).
-  bool get nearStall => townSpot == TownSpot.stall;
+  /// The owner id of the shop counter in front of the local player
+  /// (player_shop.md § 6), or `null` (no counter, or a free one).
+  String? get nearCounterOwner {
+    final s = _s;
+    if (s == null || townSpot != TownSpot.stall) return null;
+    final i = ShopInteriorRules.counterNear(local.x, local.y);
+    final owners = ShopInteriorRules.owners(s.players.values);
+    return i == null || i >= owners.length ? null : owners[i];
+  }
+
+  /// In front of the player's own counter inside the shop (§ 6).
+  bool get nearStall => nearCounterOwner == localId;
+
+  /// The TIENDA door in town, or the exit door inside (§ 6).
+  bool get nearShopDoor => townSpot == TownSpot.shop;
+
+  /// Whose stall the open stall panel shows to buy from (another
+  /// player's counter); `null` = the local player's own stall.
+  String? stallOwner;
+
+  /// Enters the shop from town, or leaves it back to town (§ 6).
+  bool travelShop() {
+    final s = _s;
+    if (s == null || cannotTravel != null) return false;
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(ShopInteriorRules.isShop(s.place)
+        ? kPueblo
+        : ShopInteriorRules.place));
+  }
 
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
@@ -4043,7 +4072,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
-      } else if (nearStall) {
+      } else if (nearShopDoor) {
+        travelShop();
+      } else if (nearCounterOwner case final o?) {
+        stallOwner = o == localId ? null : o;
         openPanel(WorldPanel.stall);
       } else if (nearFountain) {
         openPanel(WorldPanel.fountain);
@@ -4364,6 +4396,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void closePanel() {
     final s = _s;
     if (s == null || _panel == null || s.mustAllocate(localId)) return;
+    stallOwner = null;
     if (s.mode == SessionMode.prep) {
       if (_panel == WorldPanel.prep) return;
       _panel = WorldPanel.prep;
@@ -5817,7 +5850,16 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearEcoPortal != null) return (WorldPrompt.ecoZone, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
-    if (nearStall) return (WorldPrompt.stall, null);
+    if (nearShopDoor) {
+      return ShopInteriorRules.isShop(_s?.place)
+          ? (WorldPrompt.poi, strings.t('ui.world.shop.prompt_exit'))
+          : (WorldPrompt.shop, null);
+    }
+    if (nearCounterOwner case final o?) {
+      if (o == localId) return (WorldPrompt.stall, null);
+      return (WorldPrompt.poi, strings.t('ui.world.shop.prompt_buy',
+          {'name': _s?.players[o]?.name ?? ''}));
+    }
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));

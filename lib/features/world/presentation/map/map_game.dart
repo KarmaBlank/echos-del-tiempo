@@ -54,6 +54,8 @@ import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../../../../game_engine/rules/shop_interior_rules.dart';
+import 'shop_interior_layer.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -204,6 +206,9 @@ class MapGame extends Game {
 
   /// Mines: cracks, debris, bombs, carts (mining_smithing.md § 1.9).
   final mine = MineLayer();
+
+  /// Shop interior room and counters (player_shop.md § 6).
+  late final shopRoom = ShopInteriorLayer(sprites.lifeIcon);
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -1149,6 +1154,12 @@ class MapGame extends Game {
             c, map, _dressing!, map.townOrigin, reduceMotion ? 0.0 : t / 1000,
             night: SkyRules.darkness(s.town.sky) > 0.25);
       }
+      // Shop interior (player_shop.md § 6): room and one counter per player.
+      if (ShopInteriorRules.isShop(map.place)) {
+        shopRoom.drawRoom(c);
+        shopRoom.drawCounters(c, s.players, controller.strings.t('ui.world.shop.free'),
+            (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900));
+      }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
         farm.drawPlots(c, s.town, worldView, t);
@@ -1166,6 +1177,7 @@ class MapGame extends Game {
             period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
+        _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {

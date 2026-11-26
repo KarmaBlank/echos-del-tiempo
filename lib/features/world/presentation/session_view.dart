@@ -134,8 +134,11 @@ enum WorldPrompt {
   /// Puesto del agropecuario (fishing.md § 5).
   trader('[E] Agropecuario'),
 
-  /// The player's own stall in town (player_shop.md § 5).
+  /// The player's own counter inside the shop (player_shop.md § 6).
   stall('[E] Mi puesto'),
+
+  /// The TIENDA door in town (player_shop.md § 6).
+  shop('[E] Entrar a la tienda'),
 
   /// Cartel del lago.
   sign('[E] Leer cartel'),
