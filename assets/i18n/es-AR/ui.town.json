@@ -841,5 +841,11 @@
   "ui.town.forge.fish_split_hint": "Desarmar consume el pez (₵{gold}); las piezas van a la forja por piezas.",
   "ui.town.forge.fish_parts_only": "Un pez Épico solo se desarma.",
   "ui.town.forge.fish_split_level": "Pide Pesca {lv}",
-  "ui.town.forge.fish_split_none": "No tenés ese pez"
+  "ui.town.forge.fish_split_none": "No tenés ese pez",
+  "ui.town.quest.giver": "Pide: {name}",
+  "ui.town.quest.obj_items": "{item} — tenés {have} / pide {need}",
+  "ui.town.quest.obj_progress": "{what} — {n} / {goal}",
+  "ui.town.quest.needs": "PIDE",
+  "ui.town.quest.rewards": "RECOMPENSA",
+  "ui.town.quest.incomplete": "Falta completar la lista"
 }
