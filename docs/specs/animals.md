@@ -1,6 +1,6 @@
 # Spec: Animales de granja (oficio Cultivo / granjero)
 
-Estado: implementado en feat/farm-animals (protocolo 99). Extiende
+Estado: implementado en feat/farm-animals (protocolo 100). Extiende
 `farming.md` (Cultivo, huerta, ayudantes) y reemplaza la idea vieja del
 CORRAL de `farming.md` § 13. Principios: `design_pillars.md` (partes
 simples, nada obligatorio, calma real, todo en Balance). Lore: solo
@@ -192,7 +192,7 @@ Organismo `AnimalPanel`, con átomos del sistema de diseño (`DsColors`,
 
 ## 9. Red, guardado y migración
 
-- **Protocolo 99** (`wire.dart`): `TownBuild` suma `an` (animales) y `hy`
+- **Protocolo 100** (`wire.dart`): `TownBuild` suma `an` (animales) y `hy`
   (heno en el depósito); `FarmSkills` suma `ag` (productos por clave
   `<producto>@<calidad>`), `at` (herramientas de granja) y `hy` (heno);
   acciones `TownOp.buyAnimal / animalFeed / animalPet / animalCollect /
@@ -205,6 +205,6 @@ Organismo `AnimalPanel`, con átomos del sistema de diseño (`DsColors`,
 
 ## 10. Previews
 
-`docs/preview/animals/*.png` (con `ECOS_PREVIEW=1`, test
+`docs/preview/animals/*.png` (con `PREVIEW=1`, test
 `test/features/world/animal_preview_test.dart`): gallinero con gallinas,
 establo con vaca y oveja, panel del corral, tienda GRANJA.

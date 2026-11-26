@@ -159,6 +159,22 @@ void main() {
     await _shot(tester, find.byKey(const ValueKey('panel-animals')), 'panel');
   });
 
+  testWidgets('preview: barn panel', (tester) async {
+    if (!_on) return;
+    final c = await pumpPanel(tester,
+        profile: _farmer(),
+        sprites: await _sprites(tester),
+        build: (v, c) => RepaintBoundary(
+            child: AnimalPanel(view: v, controller: c)));
+    c.session!.town = c.session!.town.copyWith(builds: [_barn(2, 2)]);
+    c.openAnimals('e0', uid: 2);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    await _shot(
+        tester, find.byKey(const ValueKey('panel-animals')), 'panel_barn');
+  });
+
   testWidgets('preview: GRANJA shop', (tester) async {
     if (!_on) return;
     await pumpPanel(tester,
