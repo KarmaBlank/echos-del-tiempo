@@ -220,6 +220,17 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   cantidad (`DsCost.count`, `x3`); si no alcanza, en rojo. Siempre en
   Cuerpo: es el único formato de costo de las listas de acciones de
   batalla (HABILIDADES, DÚOS, ULTIMATE, OBJETOS); nunca dentro del título.
+- DsGold (v0.49.17): monto de oro = moneda pixel 8×8 (sprite
+  `ui.icono_oro` del manifest, procedural; un PNG override la reemplaza)
+  a la IZQUIERDA del número, en `DsColors.reward`; rojo si no alcanza.
+  Nunca "de oro" ni un número pelado que se pueda leer como cantidad.
+  `DsGoldText` es la molécula para textos con dinero: cada `₵N` del
+  string se dibuja como moneda + N (la convención `₵` de i18n es la
+  marca de dinero). `DsButton` usa `DsGoldText` si el label tiene `₵`,
+  así los botones quedan `COMPRAR · [moneda] 4`, `VENDER · [moneda] 12`,
+  `COMPRAR ×3 · [moneda] 12` (la cantidad siempre explícita con `×`).
+  Las fichas de detalle (oficios, TALLER) también pintan sus líneas con
+  `DsGoldText`.
 - DsTag: etiqueta en mayúsculas, Subtítulo chico dentro de borde del
   color del tipo: INSTANTE (celeste), PUEDE QUEBRAR (naranja), NUEVO
   (dorado).

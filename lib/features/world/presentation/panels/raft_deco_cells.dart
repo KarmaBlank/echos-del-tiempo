@@ -48,7 +48,7 @@ List<LifeItemCellData> raftDecoCells(
                   owned
                       ? context.t(
                           on ? 'ui.town.raft.take_off' : 'ui.town.raft.put_on')
-                      : context.t('ui.town.raft.buy'),
+                      : context.t('ui.town.trader.buy_price', {'n': cost}),
                   key: ValueKey('raft-deco-act-${d.id}'),
                   size: DsButtonSize.compact,
                   tooltip: short

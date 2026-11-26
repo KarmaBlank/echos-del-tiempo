@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/retro_text.dart';
 import '../theme/ui_theme.dart';
 import 'ds_focus.dart';
+import 'ds_gold.dart';
 import 'ds_tokens.dart';
 
 /// Variante de [DsButton] (design_system.md § 6).
@@ -157,13 +158,16 @@ class DsButton extends StatelessWidget {
         : style(context).copyWith(alignment: Alignment.centerLeft);
     final ps = previewStates;
     final sc = ps == null ? null : WidgetStatesController(ps);
+    final Widget labelText = DsGoldText.hasGold(label)
+        ? DsGoldText(label)
+        : Text(retroText(label));
     final Widget text = details.isEmpty
-        ? Text(retroText(label))
+        ? labelText
         : Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(retroText(label)),
+              labelText,
               for (final d in details) ...[
                 SizedBox(height: DsSpace.xs),
                 Text(retroText(d),

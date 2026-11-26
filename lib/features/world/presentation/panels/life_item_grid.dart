@@ -235,7 +235,7 @@ Widget lifeDetailPane(BuildContext context, LifeItemCellData c) {
         ]),
       ],
       SizedBox(height: DsSpace.xs),
-      for (final l in lifeDetailLines(context, d)) Text(l, style: DsText.body()),
+      for (final l in lifeDetailLines(context, d)) DsGoldText(l, style: DsText.body()),
       if (d.cost case final cost?) ...[
         SizedBox(height: DsSpace.sm),
         Text(context.t('ui.town.source.requires'),
@@ -299,7 +299,7 @@ Widget lifeTooltipCard(BuildContext context, LifeItemDetail d) => DsTooltipCard(
       tags: [for (final (t, col) in d.tags) DsTag(t, color: col)],
       children: [
         for (final l in lifeDetailLines(context, d))
-          Text(l, style: DsText.body()),
+          DsGoldText(l, style: DsText.body()),
         ...lifeChips(d),
         ...lifeCompareLines(context, d),
       ],

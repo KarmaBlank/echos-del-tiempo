@@ -68,7 +68,7 @@ class MinerPanel extends StatelessWidget {
               }),
               key: const ValueKey('miners-count'),
               style: DsText.body()),
-          Text(
+          DsGoldText(
               context.t('ui.world.miners.have',
                   {'gold': p?.credits ?? 0}),
               style: DsText.detail()),

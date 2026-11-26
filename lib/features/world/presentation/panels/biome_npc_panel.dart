@@ -764,8 +764,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         DsStatusCell(
             _s.t('ui.town.npc.your_gold'),
             key: const ValueKey('npc-gold'),
-            Text((p?.credits ?? 0).toString(),
-                style: DsText.body(DsColors.reward))),
+            DsGold(p?.credits ?? 0, style: DsText.body(DsColors.reward))),
     ]);
   }
 
@@ -836,7 +835,7 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
           SizedBox(width: DsSpace.sm),
           // Never cut: the value wraps if it does not fit.
           Flexible(
-              child: Text(v,
+              child: DsGoldText(v,
                   textAlign: TextAlign.right,
                   style: DsText.body(DsColors.text))),
         ]),

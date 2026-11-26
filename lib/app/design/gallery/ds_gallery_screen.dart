@@ -451,6 +451,16 @@ class SurfacesPage extends StatelessWidget {
             SizedBox(width: DsSpace.md),
             const DsCost.mp(20, affordable: false),
           ]),
+          const DsSectionHeader('Oro'),
+          Wrap(spacing: DsSpace.md, runSpacing: DsSpace.xs, children: [
+            const DsGold(4),
+            const DsGold(1250),
+            const DsGold(30, affordable: false),
+            const DsGoldText('Precio: ₵4'),
+            DsButton('COMPRAR · ₵4', onPressed: noop),
+            DsButton('COMPRAR ×3 · ₵12', onPressed: noop),
+            DsButton('VENDER · ₵9', onPressed: noop),
+          ]),
           const DsSectionHeader('Plegable'),
           const DsFold(
               initiallyOpen: true,

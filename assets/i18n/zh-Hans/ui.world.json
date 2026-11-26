@@ -227,6 +227,12 @@
   "ui.world.hud.points": "",
   "ui.world.hud.potion.hp": "",
   "ui.world.hud.potion.mp": "",
+  "ui.world.hud.flame.slot": "[L] {name}",
+  "ui.world.hud.flame.name": "游荡之焰",
+  "ui.world.hud.flame.on": "点亮游荡之焰",
+  "ui.world.hud.flame.off": "熄灭游荡之焰",
+  "ui.world.hud.flame.why_battle": "战斗中不可用",
+  "ui.world.hud.flame.why_outdoor": "户外夜晚火焰会自动点亮",
   "ui.world.mine.label": {
     "text": "矿洞",
     "status": "draft"
@@ -548,7 +554,7 @@
     "status": "draft"
   },
   "ui.world.miners.have": {
-    "text": "你有 {gold} 金币",
+    "text": "你有 ₵{gold}",
     "status": "draft"
   },
   "ui.world.miners.name": {

@@ -9,6 +9,7 @@ import '../world_strings.dart';
 /// Atajos de pociones del HUD del mundo (exploration.md § HUD): dos
 /// botones compactos con el contador, teclas 1 (vida) y 2 (maná). Fuera
 /// de batalla; desactivados con motivo ("Vida llena", "No te quedan").
+/// Al lado, la Llama errante (tecla L) con el mismo botón.
 class PotionShortcuts extends StatelessWidget {
   const PotionShortcuts({
     super.key,
@@ -32,14 +33,36 @@ class PotionShortcuts extends StatelessWidget {
       );
     }
 
+    // Llama errante (lighting.md § 3.1.1): mismo atajo, tecla L;
+    // seleccionado mientras alumbra, gris con motivo si no aplica.
+    Widget flame() {
+      final whyKey = controller.wispBlock();
+      final why = whyKey == null ? null : context.t(whyKey);
+      final on = controller.wispOn;
+      return DsButton(
+        context.t('ui.world.hud.flame.slot',
+            {'name': context.t('ui.world.hud.flame.name')}),
+        key: const ValueKey('hud-flame'),
+        size: DsButtonSize.compact,
+        selected: on,
+        tooltip: why ??
+            context.t(on ? 'ui.world.hud.flame.off' : 'ui.world.hud.flame.on'),
+        onPressed: why == null ? controller.toggleWisp : null,
+      );
+    }
+
     final prof = player.profile;
-    return Row(
+    // Wrap: si no entran en el ancho del HUD, la Llama sube a otra fila.
+    return Wrap(
       key: const ValueKey('hud-potions'),
-      mainAxisSize: MainAxisSize.min,
+      alignment: WrapAlignment.end,
+      verticalDirection: VerticalDirection.up,
+      spacing: 6,
+      runSpacing: 6,
       children: [
         button(BattleItem.potion, '1', context.t('ui.world.hud.potion.hp'), prof.potions),
-        const SizedBox(width: 6),
         button(BattleItem.ether, '2', context.t('ui.world.hud.potion.mp'), prof.ethers),
+        flame(),
       ],
     );
   }

@@ -188,7 +188,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
       DsStatusCell(
           context.t('ui.town.npc.your_gold'),
           key: const ValueKey('fisher-gold'),
-          Text(p.credits.toString(), style: DsText.body(DsColors.reward))),
+          DsGold(p.credits, style: DsText.body(DsColors.reward))),
     ]);
   }
 
@@ -319,7 +319,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
                   'ui.town.fisher.fresh_desc', {'n': NpcTalkRules.freshEvery})
               : context.t('ui.town.fisher.from_lake'),
           actions: [
-            DsButton(context.t('ui.town.npc.buy'),
+            DsButton(context.t('ui.town.trader.buy_price', {'n': g.price}),
                 key: ValueKey('fisher-buy-${d.id}'),
                 size: DsButtonSize.compact,
                 onPressed:

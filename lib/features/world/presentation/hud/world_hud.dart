@@ -561,8 +561,10 @@ class WorldHud extends StatelessWidget {
                     if (s.players[view.localId] case final me?)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
-                        child:
-                            PotionShortcuts(controller: controller, player: me),
+                        child: SizedBox(
+                            width: partyWidth,
+                            child: PotionShortcuts(
+                                controller: controller, player: me)),
                       ),
                   SizedBox(
                     key: const ValueKey('hud-party-boxes'),
@@ -1756,9 +1758,9 @@ class _PlayerBox extends StatelessWidget {
                   : ProgressionRules.masteryNeed(prof.mastery),
               height: 4,
               color: ProtoColors.violet),
-          Text(
+          DsGoldText(
             key: const ValueKey('hud-mastery'),
-            retroText(prof.mastery >= PlayerProfile.maxMastery
+            (prof.mastery >= PlayerProfile.maxMastery
                 ? '${masteryText(prof)} · ₵${prof.credits}'
                 : '${masteryText(prof)} · XP ${prof.xp}/'
                     '${ProgressionRules.masteryNeed(prof.mastery)} · '
