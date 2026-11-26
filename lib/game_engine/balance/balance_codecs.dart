@@ -1477,6 +1477,7 @@ const _farmLabels = {
 
 const _townLabels = {
   'stallSlots': 'Puesto: lugares para publicar',
+  'shopCounters': 'Tienda: mostradores adentro',
   'stallMaxMarkup': 'Puesto: precio máximo × referencia',
   'stallVisitors': 'Puesto: visitantes por día',
   'stallBaseChance': 'Puesto: chance de compra a precio de referencia',
@@ -1954,8 +1955,9 @@ const _regionsLabels = {
   'echoBloomXpMul': 'Flor del eco: × XP',
   'forageHideRadius': 'Rebrote: distancia de vista (px)',
   'forageRecheckSec': 'Rebrote: segundos entre chequeos',
-  'cozyFishZoom': 'Cozy: mapa visible al pescar (< 1 = más cerca)',
-  'cozyFishZoomSec': 'Cozy: segundos del acercamiento al pescar',
+  'worldZoomMin': 'Zoom del mundo: nivel mínimo (negativo = más lejos)',
+  'worldZoomMax': 'Zoom del mundo: nivel máximo (más cerca)',
+  'worldZoomFishSteps': 'Zoom del mundo: niveles que se acerca al pescar',
   'cozyHudOpacity': 'Cozy: opacidad del HUD al pescar',
   'cozyFireflies': 'Cozy: luciérnagas de noche (máx.)',
   'cozyMusicLevel': 'Cozy: volumen de la música calma',

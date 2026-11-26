@@ -1,3 +1,4 @@
+import '../../../game_engine/rules/world_zoom_rules.dart';
 import 'dart:async';
 
 import 'package:flame/game.dart';
@@ -433,6 +434,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       final gfx = ref.watch(gameSettingsProvider);
       game
         ..scaleMode = gfx.scale
+        // Pixel-perfect world zoom (exploration.md § Cámara).
+        ..worldZoomLevel = WorldZoomRules.clampLevel(gfx.worldZoom)
         ..particleDensity = gfx.particles.factor
         // Water reflections (water_reflections.md § 6).
         ..reflectionLevel = gfx.reflections
@@ -482,6 +485,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (e is PointerScrollEvent) {
                     game.zoomBy(e.scrollDelta.dy > 0 ? 1 : -1);
                   }
+                },
+              ),
+            ),
+          // Ctrl + wheel: one integer world-zoom step, saved in the
+          // settings (exploration.md § Cámara). The HUD is untouched.
+          if (!controller.editingTown)
+            Positioned.fill(
+              key: const ValueKey('world-zoom-wheel'),
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerSignal: (e) {
+                  if (e is! PointerScrollEvent ||
+                      !HardwareKeyboard.instance.isControlPressed) {
+                    return;
+                  }
+                  stepWorldZoom(ref, e.scrollDelta.dy < 0 ? 1 : -1);
                 },
               ),
             ),
@@ -1301,4 +1320,14 @@ Widget withCharacterTab(WorldPanel panel, SessionView view,
   if (ownTab) return body;
   return PanelTabShortcut(
       onTab: () => controller.openPanel(WorldPanel.character), child: body);
+}
+
+/// One Ctrl + wheel notch on the world zoom: [dir] > 0 closer. Clamped
+/// to the tunable range and saved (exploration.md § Cámara).
+void stepWorldZoom(WidgetRef ref, int dir) {
+  final s = ref.read(gameSettingsProvider);
+  final n = WorldZoomRules.step(WorldZoomRules.clampLevel(s.worldZoom), dir);
+  if (n == s.worldZoom) return;
+  unawaited(
+      ref.read(gameSettingsProvider.notifier).update(s.copyWith(worldZoom: n)));
 }

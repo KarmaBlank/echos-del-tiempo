@@ -260,6 +260,7 @@ class GameSettings {
     this.objectivesCollapsed = false,
     this.partyExpanded = false,
     this.minimapZoom = 3,
+    this.worldZoom = 0,
     this.readingTitles = true,
     this.letterSpacing = LetterSpacing.normal,
     this.noticeDuration = NoticeDuration.normal,
@@ -373,6 +374,14 @@ class GameSettings {
 
   static const minimapZooms = 3;
 
+  /// World zoom level (VIDEO "Zoom del mundo", Ctrl + wheel): an integer
+  /// step over the base pixel scale, never a fraction (exploration.md §
+  /// Cámara). The game clamps it to its tunable range.
+  final int worldZoom;
+
+  /// Hard bounds of a saved [worldZoom].
+  static const worldZoomMin = -3, worldZoomMax = 4;
+
   /// "Títulos con la fuente de lectura" (accesibilidad, v0.8.1): títulos,
   /// botones y pestañas en la fuente de lectura en vez de Press Start 2P.
   final bool readingTitles;
@@ -442,6 +451,7 @@ class GameSettings {
     bool? objectivesCollapsed,
     bool? partyExpanded,
     int? minimapZoom,
+    int? worldZoom,
     bool? readingTitles,
     LetterSpacing? letterSpacing,
     NoticeDuration? noticeDuration,
@@ -481,6 +491,8 @@ class GameSettings {
         objectivesCollapsed: objectivesCollapsed ?? this.objectivesCollapsed,
         partyExpanded: partyExpanded ?? this.partyExpanded,
         minimapZoom: (minimapZoom ?? this.minimapZoom).clamp(1, minimapZooms),
+        worldZoom:
+            (worldZoom ?? this.worldZoom).clamp(worldZoomMin, worldZoomMax),
         readingTitles: readingTitles ?? this.readingTitles,
         letterSpacing: letterSpacing ?? this.letterSpacing,
         noticeDuration: noticeDuration ?? this.noticeDuration,
@@ -527,6 +539,7 @@ class GameSettings {
         'objectivesCollapsed': objectivesCollapsed,
         'partyExpanded': partyExpanded,
         'minimapZoom': minimapZoom,
+        'worldZoom': worldZoom,
         'readingTitles': readingTitles,
         'letterSpacing': letterSpacing.name,
         'noticeDuration': noticeDuration.name,
@@ -586,6 +599,10 @@ class GameSettings {
         final int z when z >= 1 && z <= minimapZooms => z,
         _ => d.minimapZoom,
       },
+      worldZoom: switch (json['worldZoom']) {
+        final int z when z >= worldZoomMin && z <= worldZoomMax => z,
+        _ => d.worldZoom,
+      },
       readingTitles: version < 2
           ? d.readingTitles
           : flag(json['readingTitles'], d.readingTitles),
@@ -634,6 +651,7 @@ class GameSettings {
       other.objectivesCollapsed == objectivesCollapsed &&
       other.partyExpanded == partyExpanded &&
       other.minimapZoom == minimapZoom &&
+      other.worldZoom == worldZoom &&
       other.readingTitles == readingTitles &&
       other.letterSpacing == letterSpacing &&
       other.noticeDuration == noticeDuration &&
@@ -667,7 +685,7 @@ class GameSettings {
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
           mapLabelBackdrop, battleLog, partyExpanded, ultBrowse, textDetail,
-          darkness, locale));
+          darkness, locale, worldZoom));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

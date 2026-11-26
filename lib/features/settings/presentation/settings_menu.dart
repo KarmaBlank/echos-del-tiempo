@@ -1,3 +1,4 @@
+import '../../../game_engine/rules/world_zoom_rules.dart';
 import '../../../core/edition/game_edition.dart';
 import '../../../game_engine/models/combat_mode.dart';
 import '../../../game_engine/models/game_mode.dart';
@@ -655,6 +656,24 @@ class _DisplayTab extends ConsumerWidget {
             },
             value: s.scale,
             onChanged: (v) => c.update(s.copyWith(scale: v)),
+          ),
+        ),
+        // Pixel-perfect world zoom (exploration.md § Cámara).
+        _SettingRow(
+          label: t.t('ui.settings.display.world_zoom.label'),
+          hint: t.t('ui.settings.display.world_zoom.hint'),
+          control: _Choice<int>(
+            keyPrefix: 'display-world-zoom',
+            options: {
+              for (var z = WorldZoomRules.minLevel;
+                  z <= WorldZoomRules.maxLevel;
+                  z++)
+                z: z == 0
+                    ? t.t('ui.settings.display.world_zoom.normal')
+                    : (z > 0 ? '+$z' : '$z'),
+            },
+            value: WorldZoomRules.clampLevel(s.worldZoom),
+            onChanged: (v) => c.update(s.copyWith(worldZoom: v)),
           ),
         ),
         _SettingRow(

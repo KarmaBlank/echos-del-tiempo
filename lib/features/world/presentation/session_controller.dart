@@ -40,6 +40,7 @@ import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/rules/mining_rules.dart';
+import '../../../game_engine/rules/shop_interior_rules.dart';
 import '../../../game_engine/data/smithing_catalog.dart'
     show kMineNpcLines, kMineLoreLines;
 import '../../../game_engine/rules/eco_portal_rules.dart';
@@ -58,6 +59,7 @@ import '../../../game_engine/models/custom_npc.dart';
 import '../../../game_engine/rules/custom_npc_rules.dart';
 import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
+import '../../../game_engine/rules/quest_track_rules.dart';
 import 'town_edit.dart';
 
 export 'town_edit.dart';
@@ -1372,8 +1374,36 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearTrader => townSpot == TownSpot.trader;
   bool get nearSign => townSpot == TownSpot.sign;
 
-  /// In front of the player's own stall (player_shop.md § 5).
-  bool get nearStall => townSpot == TownSpot.stall;
+  /// The owner id of the shop counter in front of the local player
+  /// (player_shop.md § 6), or `null` (no counter, or a free one).
+  String? get nearCounterOwner {
+    final s = _s;
+    if (s == null || townSpot != TownSpot.stall) return null;
+    final i = ShopInteriorRules.counterNear(local.x, local.y);
+    final owners = ShopInteriorRules.owners(s.players.values);
+    return i == null || i >= owners.length ? null : owners[i];
+  }
+
+  /// In front of the player's own counter inside the shop (§ 6).
+  bool get nearStall => nearCounterOwner == localId;
+
+  /// The TIENDA door in town, or the exit door inside (§ 6).
+  bool get nearShopDoor => townSpot == TownSpot.shop;
+
+  /// Whose stall the open stall panel shows to buy from (another
+  /// player's counter); `null` = the local player's own stall.
+  String? stallOwner;
+
+  /// Enters the shop from town, or leaves it back to town (§ 6).
+  bool travelShop() {
+    final s = _s;
+    if (s == null || cannotTravel != null) return false;
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(ShopInteriorRules.isShop(s.place)
+        ? kPueblo
+        : ShopInteriorRules.place));
+  }
 
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
@@ -3217,10 +3247,32 @@ class SessionController extends StateNotifier<SessionView?> {
     return true;
   }
 
+  /// Gold "!" over the rune fountain until the local player opens its
+  /// panel once (town_editor.md § 1.5); per player, saved in the profile.
+  bool get fountainAlert {
+    final p = _s?.players[localId]?.profile;
+    return p != null && !QuestTrackRules.seenFountain(p);
+  }
+
+  /// Why the local player can't hire a [kind] helper yet because of the
+  /// PROFESSION level (or `null`), with the current level
+  /// (town_editor.md § 1.6).
+  String? hireLevelWhy(BuildKind kind) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return null;
+    final need = HelperRules.hireCost(kind).level;
+    final farm = kind == BuildKind.huerta;
+    final now = farm ? FarmingRules.level(p) : FishingRules.level(p);
+    if (now >= need) return null;
+    return strings.t(
+        farm ? 'ui.town.fountain.need_farming' : 'ui.town.fountain.need_fishing',
+        {'need': need, 'now': now});
+  }
   /// Por qué no se puede elegir dónde contratar un ayudante de [kind]
   /// (o `null`): solo el dueño, y tiene que haber alguna huerta o lago.
   String? cannotPickHire(BuildKind kind) {
     if (cannotEditTown case final why?) return why;
+    if (hireLevelWhy(kind) case final why?) return why;
     if (!town.builds.any((b) => b.kind == kind)) {
       return kind == BuildKind.huerta
           ? strings.t('ui.world.ctl.no_farms')
@@ -3299,7 +3351,7 @@ class SessionController extends StateNotifier<SessionView?> {
   String? hireWhy(TownBuild b) {
     final p = _s?.players[localId]?.profile;
     if (p == null) return 'Sin personaje';
-    return TownRules.cannotHire(p, town, b.id);
+    return hireLevelWhy(b.kind) ?? TownRules.cannotHire(p, town, b.id);
   }
 
   void exitTownEdit() {
@@ -4066,8 +4118,26 @@ class SessionController extends StateNotifier<SessionView?> {
           add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.lostLoot),
               () => (WorldPrompt.lostLoot, null));
         case TownSpot.stall:
-          add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.stall),
-              () => (WorldPrompt.stall, null));
+          // A shop counter (player_shop.md § 6): your own stall, or
+          // another player's to buy from; a free counter does nothing.
+          if (nearCounterOwner case final o?) {
+            add(at(ActionTargetKind.shop), () {
+              stallOwner = o == localId ? null : o;
+              openPanel(WorldPanel.stall);
+            }, () {
+              if (o == localId) return (WorldPrompt.stall, null);
+              return (
+                WorldPrompt.poi,
+                strings.t('ui.world.shop.prompt_buy',
+                    {'name': _s?.players[o]?.name ?? ''})
+              );
+            });
+          }
+        case TownSpot.shop:
+          add(at(ActionTargetKind.travel), () => travelShop(),
+              () => ShopInteriorRules.isShop(_s?.place)
+                  ? (WorldPrompt.poi, strings.t('ui.world.shop.prompt_exit'))
+                  : (WorldPrompt.shop, null));
         case TownSpot.trader:
           add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.trader),
               () => (WorldPrompt.trader, null));
@@ -4826,6 +4896,10 @@ class SessionController extends StateNotifier<SessionView?> {
   void openPanel(WorldPanel panel) {
     if (_s == null) return;
     _panel = panel;
+    // First visit clears the fountain's onboarding "!" (town_editor.md § 1.5).
+    if (panel == WorldPanel.fountain && fountainAlert) {
+      markNpcSeen(QuestTrackRules.fountainKey);
+    }
     _emit();
   }
 
@@ -4834,6 +4908,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void closePanel() {
     final s = _s;
     if (s == null || _panel == null || s.mustAllocate(localId)) return;
+    stallOwner = null;
     if (s.mode == SessionMode.prep) {
       if (_panel == WorldPanel.prep) return;
       _panel = WorldPanel.prep;

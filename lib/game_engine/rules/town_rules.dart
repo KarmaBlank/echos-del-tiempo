@@ -882,7 +882,8 @@ abstract final class TownRules {
     final lvl = farm ? FarmingRules.level(p) : FishingRules.level(p);
     final c = HelperRules.hireCost(b.kind);
     if (lvl < c.level) {
-      return 'Necesitás ${farm ? 'Cultivo' : 'Pesca'} nivel ${c.level}';
+      return 'Necesitás subir tu oficio de ${farm ? 'Cultivo' : 'Pesca'} a nivel '
+          '${c.level} (ahora: nivel $lvl)';
     }
     return HelperRules.cannotPay(p, c);
   }
