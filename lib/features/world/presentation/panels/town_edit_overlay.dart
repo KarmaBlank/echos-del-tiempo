@@ -465,7 +465,8 @@ class TownEditOverlay extends StatelessWidget {
             final p = c.view?.me?.profile;
             final why = p == null
                 ? s.t('ui.town.edit.no_character')
-                : TownRules.cannotHire(p, town, b.id);
+                : (c.hireLevelWhy(b.kind) ??
+                    TownRules.cannotHire(p, town, b.id));
             return Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
               DsButton(s.t('ui.town.edit.hire_helper'),
                   key: const ValueKey('town-edit-hire'),

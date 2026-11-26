@@ -234,7 +234,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// once and friends join with UNIRSE on the player's card.
 /// 98: shop interior (player_shop.md § 6): session `place` can be `shop`
 /// (travel town ↔ shop); a 97 peer would draw the town there.
-const kProtocolVersion = 98;
+/// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
+/// with id `~fountain` stores the first visit in `npcSeen`.
+const kProtocolVersion = 99;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

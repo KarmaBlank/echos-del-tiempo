@@ -16,6 +16,7 @@ enum DsGalleryPage {
   inventory('INVENTARIO'),
   transfer('TRASPASO'),
   grids('GRILLAS'),
+  quests('ENCARGOS'),
   battle('BATALLA');
 
   const DsGalleryPage(this.label);
@@ -147,6 +148,7 @@ class _DsGalleryScreenState extends State<DsGalleryScreen> {
         DsGalleryPage.inventory => const InventoryMockup(),
         DsGalleryPage.transfer => const TransferMockup(),
         DsGalleryPage.grids => const GridTemplatesMockup(),
+        DsGalleryPage.quests => const QuestTemplateMockup(),
         DsGalleryPage.battle => const BattleMockup(),
       };
 }
@@ -248,6 +250,10 @@ class PalettePage extends StatelessWidget {
           'Espada del Alba: golpe de luz que ignora la guardia.'),
       _typeRow(
           context, 'Detalle', DsText.detail(), 'Nivel 12 · Arma de una mano'),
+      _typeRow(context, 'Descripción', DsText.description(),
+          'Necesito truchas para la cena del festival.'),
+      _typeRow(context, 'Meta', DsText.meta(), 'Pide: Ilda · día 4'),
+      _typeRow(context, 'Acento', DsText.accent(), '+120 de oro · +5 rep'),
       SizedBox(height: DsSpace.lg),
       const DsSectionHeader('Espaciado'),
       SizedBox(height: DsSpace.sm),

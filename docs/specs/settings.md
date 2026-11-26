@@ -543,6 +543,10 @@ está abierto:
   defecto de antes); un jugador sin `game.json` (instalación nueva o que
   nunca tocó nada) arranca en FUERTE + ALTO CONTRASTE. No hay migración
   forzada: los dos se cambian en PANTALLA y ACCESIBILIDAD.
+- **v0.49.28**: `worldZoom` (entero, por defecto 0; fuera de −3..4 = 0)
+  guarda el nivel del zoom del mundo (PANTALLA → ZOOM DEL MUNDO, Ctrl +
+  rueda); el juego lo limita a `worldZoomMin..worldZoomMax`
+  (`exploration.md § Cámara`).
 - **v0.8.1 (HUD)**: `chat` (`hidden` / `always`, por defecto `hidden`),
   `chatNotices` (por defecto `true`) y `objectivesCollapsed` (por
   defecto `false`) son nuevos y aditivos: un `game.json` sin ellos carga

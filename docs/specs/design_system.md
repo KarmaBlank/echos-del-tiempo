@@ -98,6 +98,19 @@ Colores de texto (`DsTextColor`, siguen al tema):
 
 Todos ≥ 7:1 sobre el fondo de su tema. Desactivado: Detalle al 55 %.
 
+Jerarquía de texto de pantallas de contenido (v0.49.27, pedido del
+dueño: "no todo blanco"). Además de los cuatro de arriba, tres estilos
+con nombre en `DsText` (`DsText.hierarchy` los lista para la galería):
+
+| nombre | estilo | uso |
+|---|---|---|
+| Título | `DsText.title` / `subtitle(textTitle)` | nombre del encargo, del ítem |
+| Subtítulo | `DsText.subtitle` | encabezados (PIDE, RECOMPENSA) |
+| Cuerpo | `DsText.body` | líneas de la lista de objetivos |
+| Descripción | `DsText.description` (fuente de lectura, lavanda) | texto propio del encargo ("Necesito…") |
+| Meta | `DsText.meta` (chico, Detalle al 55 %) | quién lo pide, día, estado corto, cuentas que faltan |
+| Acento | `DsText.accent` (dorado `DsColors.reward`) | recompensas, oro |
+
 ### 3.3 Roles de color (`DsColors`)
 
 Todos son tokens de `ProtoColors` (siguen al tema y al modo daltónico).
@@ -323,12 +336,21 @@ se ve igual. Un solo organismo, `DsGridDetailLayout`
   (`inventoryBodyFor`). Solo baja si 6 columnas + detalle no entran.
 - `gridColumns` 6: la grilla mide exactamente 6 columnas; las filas
   crecen hacia abajo con barra de scroll visible si no entran.
-- `detailPaneWidth` 340: ancho fijo del detalle a la derecha (entra
-  "Precio: 4 de oro c/u" y los nombres sin cortes raros); misma fuente
+- `detailPaneWidth` 340: ancho MÍNIMO del panel de acciones a la
+  derecha. Regla del dueño (v0.49.27): la grilla va anclada arriba a la
+  izquierda (nunca centrada, ni con un solo ítem) y el panel de
+  acciones ocupa todo el ancho que sobra (`Expanded`), nunca una tira
+  angosta al lado de un vacío. Pantallas sin acciones no llevan panel
+  (`detail: null`): la grilla queda arriba a la izquierda. Misma fuente
   de siempre, acciones fijas abajo (`DsDetailPane`). Los pares
   clave/valor del detalle nunca cortan: el valor se ajusta en líneas.
-- Grilla + detalle se centran en el panel: el sobrante de los pasos de
-  escala queda repartido, nunca un gran vacío de un lado.
+- Sin texto debajo de las casillas: el nombre, rareza, datos y precio
+  (con la moneda `DsGoldText`) van en la ficha de tamaño fijo al pasar
+  el mouse.
+- `DsCostGrid` (lo que pide algo: costo, orden, objetivo de encargo)
+  usa la misma casilla con `tenés/pide` chico en la esquina (gris si no
+  alcanza, ícono atenuado) y una tilde arriba a la derecha cuando
+  alcanza (`cost-<id>-count`, `cost-<id>-done`).
 - Angosto (< `gridDetailWideFrom`) o dentro de otro scroll: detalle
   arriba, grilla debajo a ×1.
 - `leading` opcional: columna a la izquierda de la grilla (ARMERÍA).
@@ -347,6 +369,42 @@ FUSIONAR. Pendientes (layout propio todavía): INVENTARIO y ALIJO
 decoración de balsa, paleta de construcción y casas.
 
 Galería: página GRILLAS (`GridTemplatesMockup`).
+
+### 6.3 Encargos (`DsQuestTemplate`, v0.49.27)
+
+Plantilla de TODA pantalla de encargos (`ds_quest_template.dart`):
+
+- MITAD IZQUIERDA: lista vertical de encargos (`DsListRow`: tilde,
+  título y estado corto — "2/5", LISTO, CUMPLIDO —; el elegido
+  resaltado en dorado). Scroll propio con barra visible.
+- MITAD DERECHA (`DsDetailPane`): título (Título), quién lo pide
+  (Meta), el texto del encargo (Descripción), la LISTA de objetivos
+  (`DsChecklistLine`: casilla vacía / tildada en verde), la grilla de
+  ítems pedidos (`DsCostGrid`, encabezado PIDE), las recompensas como
+  chips (RECOMPENSA) y notas Meta. Botones fijos abajo.
+- Objetivo de juntar ítems: la línea dice "Trucha de río — tenés 2 /
+  pide 5" (`ui.town.quest.obj_items`) y se tilda al alcanzar; la
+  casilla muestra `2/5` en la esquina. Otros (mazmorra, élite, pedido
+  del pueblo): una línea con su progreso o motivo, tildada al cumplirse.
+- ENTREGAR / CUMPLIDO quedan grises con el motivo en tooltip
+  (`ui.town.quest.incomplete` o el motivo del pedido) hasta que la lista
+  esté completa.
+- Angosto (< `DsQuestTemplate.wideFrom` 560) o sin alto: detalle
+  debajo de la lista.
+- Datos: `DsQuestEntry` / `DsQuestObjective` (solo visual). Los arma
+  `features/world/presentation/panels/quest_entries.dart` (orden,
+  pedido, cadena de encargos, seguidos, eventos).
+- Claves: `<p>-template`, `<p>-list`, `<p>-detail`, `<p>-title`,
+  `<p>-giver`, `<p>-flavor`, `<p>-items`, `<p>-rewards`, `<p>-empty`;
+  cada fila `ValueKey(id)` (`order-<npc>`, `request-<npc>`,
+  `quest-<npc>-<i>`, `tracked-<clave>`, `event-<uid>`); cada línea
+  `quest-obj-…`.
+
+Pantallas: menú de habitante ENCARGOS y PEDIDOS (`BiomeNpcPanel`),
+DIARIO (SEGUIDOS, EVENTOS y la pestaña de cada habitante;
+`QuestLogPanel`). El mostrador de misiones (`MissionBoardPanel`) ya era
+lista + detalle propio (zonas, no encargos) y queda como está.
+Galería: página ENCARGOS.
 
 ## 7. Tema (`DsTheme`)
 
