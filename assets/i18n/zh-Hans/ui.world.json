@@ -454,7 +454,11 @@
     "status": "draft"
   },
   "ui.world.mine.prompt_station": {
-    "text": "[E] 建造矿车站（{gold} 金币，{n} 锭）",
+    "text": "[E] 建造矿车站（₵{gold}，{n} 锭）",
+    "status": "draft"
+  },
+  "ui.world.mine.station_short": {
+    "text": "矿车站需要 ₵{gold} 和 {n} 个{ingot}锭",
     "status": "draft"
   },
   "ui.world.mine.prompt_torch": {

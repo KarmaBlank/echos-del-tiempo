@@ -46,7 +46,6 @@ abstract final class CozyRules {
   }
 
   static double get hudOpacity => t.d('cozyHudOpacity').clamp(0.1, 1.0);
-  static double get hudScale => t.d('cozyHudScale').clamp(0.5, 1.0);
   static int get fireflies => t.i('cozyFireflies').clamp(0, 40);
   static double get musicLevel => t.d('cozyMusicLevel').clamp(0.0, 1.0);
 

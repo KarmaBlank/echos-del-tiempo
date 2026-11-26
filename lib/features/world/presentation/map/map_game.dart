@@ -151,7 +151,12 @@ class MapGame extends Game {
     _events = controller.events.listen(_onEvent);
     controller.onMineSwing = (x, y, bounced) {
       final p = controller.session?.players[controller.localId];
-      mine.onSwing(x, y, t, fromX: p?.x, fromY: p?.y, bounced: bounced);
+      // The local hero's own position (not the lagging snapshot).
+      final lp = controller.local;
+      mine.onSwing(x, y, t,
+          fromX: p == null ? null : lp.x,
+          fromY: p == null ? null : lp.y,
+          bounced: bounced);
     };
     // Para la línea de rendimiento de ecos.log (FPS Y PING prendido).
     PerfLog.probes['mapa'] = _perfProbe;
@@ -314,8 +319,24 @@ class MapGame extends Game {
 
   /// Camera offset actually drawn: the continuous camera snapped to
   /// whole pixels once (exploration.md § Cámara).
-  double get camDrawX => camX.roundToDouble();
-  double get camDrawY => camY.roundToDouble();
+  double get camDrawX => zoomMoving ? camX : camX.roundToDouble();
+  double get camDrawY => zoomMoving ? camY : camY.roundToDouble();
+
+  /// The fishing zoom is mid-animation (cozy_life.md § 1): the camera and
+  /// the local hero stay continuous (no whole-pixel snap) so the world
+  /// scales smoothly around a still player; once settled they snap again.
+  bool get zoomMoving =>
+      !controller.editingTown && _fishZoomP > 0 && _fishZoomP < 1;
+
+  /// Camera corner after the zoom goes from [z0] to [z1] on an axis of
+  /// [v] virtual px, keeping the view center still.
+  static double zoomRecenter(double cam, double v, double z0, double z1) =>
+      cam + v * (z0 - z1) / 2;
+
+  /// Where the local hero is drawn (world px) for [focus] and camera
+  /// [cam]: continuous while the zoom animates, else [snapFocus].
+  static double heroDraw(double focus, double cam, {required bool zooming}) =>
+      zooming ? focus : snapFocus(focus, cam);
 
   /// Where the followed hero is drawn (world px) for a continuous camera
   /// [cam]: the drawn camera plus the rounded lag, so a steady walk moves
@@ -771,8 +792,8 @@ class MapGame extends Game {
     final z0 = cozyZoom;
     cozyZoom = CozyRules.fishZoomAt(_fishZoomP);
     if (cozyZoom != z0 && !controller.editingTown) {
-      camX += MapGame.vw * (z0 - cozyZoom) / 2;
-      camY += MapGame.vh * (z0 - cozyZoom) / 2;
+      camX = zoomRecenter(camX, MapGame.vw.toDouble(), z0, cozyZoom);
+      camY = zoomRecenter(camY, MapGame.vh.toDouble(), z0, cozyZoom);
     }
     final vw = MapGame.vw * cozyZoom, vh = MapGame.vh * cozyZoom;
     final tx =
@@ -1324,8 +1345,8 @@ class MapGame extends Game {
       final double px, py;
       if (mine) {
         // Whole pixels, locked to the camera (snapFocus): no wobble.
-        px = snapFocus(controller.local.x, camX);
-        py = snapFocus(controller.local.y, camY);
+        px = heroDraw(controller.local.x, camX, zooming: zoomMoving);
+        py = heroDraw(controller.local.y, camY, zooming: zoomMoving);
       } else {
         final d = _lerpPos('p${p.id}', p.x, p.y);
         px = d.x;
@@ -1652,7 +1673,8 @@ class MapGame extends Game {
           text: mineText,
           tr: controller.strings.t,
           swing: swinging && p != null && controller.lastSwingTile != null
-              ? (controller.lastSwingTile!, ms, period, (p.x, p.y))
+              ? (controller.lastSwingTile!, ms, period,
+                  (controller.local.x, controller.local.y))
               : null,
           indicator: switch (controller.mineDigState) {
             (final tile, final dealt, final hits, final ok) => switch (

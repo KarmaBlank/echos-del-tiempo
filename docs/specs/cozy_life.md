@@ -26,7 +26,10 @@ escritorio, tienda, jefes e invocaciones.
   (`fishing_layer.dart`).
 - **Cámara y HUD:** pescando, la cámara se acerca a `cozyFishZoom` (fracción
   del mapa visible, < 1 = más cerca) con suavizado; el HUD baja a
-  `cozyHudOpacity` y se achica a `cozyHudScale`. Al soltar la caña vuelve.
+  `cozyHudOpacity`. Al soltar la caña vuelve. v0.49.19: el zoom es solo de
+  la cámara del mundo; el HUD, los menús y los paneles nunca cambian de
+  tamaño ni de lugar (se quitó `cozyHudScale`), y durante la animación la
+  cámara no se ajusta a píxel (ver `exploration.md § Cámara`).
   v0.49.14: el acercamiento ya no tiembla. Avanza lineal en el tiempo
   (`cozyFishZoomSec`, 0.6 s, igual a cualquier FPS) con curva suave
   (smoothstep) de ida y de vuelta, y el centro de la vista queda quieto

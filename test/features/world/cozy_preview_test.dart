@@ -341,12 +341,18 @@ void main() {
     Widget hud(bool calm) =>
         MaterialApp(home: CozyHudDim(calm: calm, child: const Text('HUD')));
     await tester.pumpWidget(hud(false));
+    final hudSize = tester.getSize(find.text('HUD'));
+    final hudAt = tester.getTopLeft(find.text('HUD'));
     await tester.pumpWidget(hud(true));
+    await tester.pump(CozyHudDim.duration ~/ 2);
+    expect(tester.getSize(find.text('HUD')), hudSize);
+    expect(tester.getTopLeft(find.text('HUD')), hudAt);
     await tester.pumpAndSettle();
     final o = tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity));
     expect(o.opacity, CozyRules.hudOpacity);
-    final s = tester.widget<AnimatedScale>(find.byType(AnimatedScale));
-    expect(s.scale, CozyRules.hudScale);
+    // Only the world zooms: the HUD keeps its size and place.
+    expect(find.byType(AnimatedScale), findsNothing);
+    expect(tester.getSize(find.text('HUD')), hudSize);
   });
 
   test('fish ids of the preview exist', () {

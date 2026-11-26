@@ -27,6 +27,14 @@ export 'mine_generator.dart' show MineLevel;
 abstract final class MiningRules {
   static TuningDef get t => tuning(TuningId.smithing);
 
+  /// The ingot the cart station of a mine level costs (§ 1.7).
+  static String get stationIngot => kBiomeOres[kBosque]!.ingot;
+
+  /// How near (px, player to the spot's center) E builds the station;
+  /// facing is not required (`stationReachTiles`).
+  static double get stationReach =>
+      t.d('stationReachTiles').clamp(0.5, 2.0) * 16;
+
   static const _prefix = 'mine:';
 
   /// Levels per mine (≥ 1).
