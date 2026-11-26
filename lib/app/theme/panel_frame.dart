@@ -1,3 +1,4 @@
+import '../design/ds_gold.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -338,9 +339,9 @@ class PanelButton extends StatelessWidget {
       style: style,
       onPressed: enabled,
       child: trailing == null
-          ? Text(retroText(label))
+          ? (DsGoldText.hasGold(label) ? DsGoldText(label) : Text(retroText(label)))
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(retroText(label)),
+              (DsGoldText.hasGold(label) ? DsGoldText(label) : Text(retroText(label))),
               const SizedBox(width: 6),
               trailing!,
             ]),

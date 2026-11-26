@@ -148,7 +148,7 @@ class _PlayerStallPanelState extends State<PlayerStallPanel> {
                   style: DsText.detail()),
             ],
             if (_tab == 2)
-              Text(
+              DsGoldText(
                   context.t('ui.town.stall.earned',
                       {'n': p?.life.stall.earned ?? 0}),
                   key: const ValueKey('stall-earned'),

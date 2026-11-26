@@ -639,7 +639,7 @@ class ItemsTab extends StatelessWidget {
           for (final it in kItems.values)
             PanelRow(
               trailing: PanelButton(
-                  s.t('ui.inventory.shop.items.buy', {'price': '\$${it.price}'}),
+                  s.t('ui.inventory.shop.items.buy', {'price': '₵${it.price}'}),
                   key: ValueKey('item-${it.key}'),
                   reason: shop.guards.buyItem(p, it.item),
                   onPressed: () => shop.controller.buyItem(it.item)),

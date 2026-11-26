@@ -4100,10 +4100,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     // L: Llama errante (lighting.md § 3.1.1). Al aire libre va sola de
     // noche: L solo cuenta en mazmorras.
-    if (key == LogicalKeyboardKey.keyL &&
-        s.mode != SessionMode.battle &&
-        !_wispOutdoor()) {
-      _apply(WispAction(!(s.players[localId]?.wisp ?? false)));
+    if (key == LogicalKeyboardKey.keyL && wispBlock() == null) {
+      toggleWisp();
       return true;
     }
     // J: DIARIO de encargos, en el pueblo o en el campo (roles.md § 8.1).
@@ -4437,6 +4435,28 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Motivo por el que la poción [item] no se puede usar fuera de batalla
   /// ahora ("Vida llena", "No te quedan"...), o `null` (loot.md § 17.5).
+  /// La Llama errante del jugador local está encendida.
+  bool get wispOn => _s?.players[localId]?.wisp ?? false;
+
+  /// Clave i18n del motivo por el que [toggleWisp] no aplica (o `null`): en batalla, o
+  /// al aire libre, donde la Llama va sola de noche (lighting.md § 3.1.1).
+  String? wispBlock() {
+    final s = _s;
+    if (s == null || s.mode == SessionMode.battle) {
+      return 'ui.world.hud.flame.why_battle';
+    }
+    if (_wispOutdoor()) {
+      return 'ui.world.hud.flame.why_outdoor';
+    }
+    return null;
+  }
+
+  /// Enciende o apaga la Llama errante (tecla L o el atajo del HUD).
+  void toggleWisp() {
+    if (wispBlock() != null) return;
+    _apply(WispAction(!wispOn));
+  }
+
   String? useItemBlock(BattleItem item) {
     final s = _s;
     final p = s?.players[actingId];
