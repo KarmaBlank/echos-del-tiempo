@@ -139,7 +139,10 @@ class WorldEngine {
     for (final k in [...w.rooms.keys]) {
       final s = w.rooms[k];
       if (s == null) continue;
-      op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split));
+      // One room failing never stops the others (netcode.md § "Tick a
+      // prueba de fallos"): before, the town's error froze every dungeon.
+      SessionEngine.guardRule('room',
+          () => op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split)));
     }
     return op.finish();
   }
