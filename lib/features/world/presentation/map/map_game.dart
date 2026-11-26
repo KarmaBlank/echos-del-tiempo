@@ -2349,11 +2349,21 @@ class MapGame extends Game {
         .where((e) => blank.contains((e.tx, e.ty)))
         .firstOrNull;
     final key = '${map.place}|${g.key}|$x0,$y0,$x1,$y1|$codes';
+    // The plain ground under each object tile: grass under an outdoor
+    // waystone (tile_painter draws it on grass), floor elsewhere.
+    String ground(int x, int y) {
+      final ch = live(x, y) ?? map.tileAt(x, y);
+      return (ch == Tile.waystone || ch == Tile.waystoneOn) &&
+              map.theme.endsWith('_ext')
+          ? Tile.grass
+          : Tile.floor;
+    }
+
     void paint(Canvas cc, bool object) {
       for (var y = ty0; y <= ty1; y++) {
         for (var x = tx0; x <= tx1; x++) {
           tileLayer.drawTileAt(cc, map, x, y,
-              code: !object && blank.contains((x, y)) ? Tile.floor : null,
+              code: !object && blank.contains((x, y)) ? ground(x, y) : null,
               codeAt: live);
         }
       }

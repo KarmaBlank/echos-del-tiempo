@@ -56,6 +56,7 @@ class ObjectOutlineCache {
         obj[i] = 1;
       }
     }
+    _dropSpecks(obj, w, h);
     final out = Uint8List(w * h * 4);
     var any = false;
     for (var y = 0; y < h; y++) {
@@ -79,6 +80,48 @@ class ObjectOutlineCache {
       _rings[key] = img;
     } else {
       img.dispose();
+    }
+  }
+
+  /// Clears the stray bits of [obj] (a shadow edge or a tuft that
+  /// differs from plain ground next to the object): every 8-connected
+  /// blob under a fifth of the largest one, so the ring follows only the
+  /// object's own silhouette.
+  static void _dropSpecks(Uint8List obj, int w, int h) {
+    final label = Int32List(w * h);
+    final sizes = <int>[0];
+    final stack = <int>[];
+    for (var i = 0; i < w * h; i++) {
+      if (obj[i] != 1 || label[i] != 0) continue;
+      final id = sizes.length;
+      var n = 0;
+      label[i] = id;
+      stack.add(i);
+      while (stack.isNotEmpty) {
+        final j = stack.removeLast();
+        n++;
+        final x = j % w, y = j ~/ w;
+        for (var dy = -1; dy <= 1; dy++) {
+          for (var dx = -1; dx <= 1; dx++) {
+            final nx = x + dx, ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            final k = ny * w + nx;
+            if (obj[k] == 1 && label[k] == 0) {
+              label[k] = id;
+              stack.add(k);
+            }
+          }
+        }
+      }
+      sizes.add(n);
+    }
+    if (sizes.length <= 2) return;
+    var big = 0;
+    for (final n in sizes) {
+      if (n > big) big = n;
+    }
+    for (var i = 0; i < w * h; i++) {
+      if (obj[i] == 1 && sizes[label[i]] * 5 < big) obj[i] = 0;
     }
   }
 
