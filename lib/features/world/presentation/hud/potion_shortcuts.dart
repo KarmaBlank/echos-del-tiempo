@@ -52,18 +52,26 @@ class PotionShortcuts extends StatelessWidget {
     }
 
     final prof = player.profile;
-    // Wrap: si no entran en el ancho del HUD, la Llama sube a otra fila.
-    return Wrap(
-      key: const ValueKey('hud-potions'),
-      alignment: WrapAlignment.end,
-      verticalDirection: VerticalDirection.up,
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        button(BattleItem.potion, '1', context.t('ui.world.hud.potion.hp'), prof.potions),
-        button(BattleItem.ether, '2', context.t('ui.world.hud.potion.mp'), prof.ethers),
-        flame(),
-      ],
+    // Siempre un renglón (v0.49.21): si no entra, se achica entero.
+    return Align(
+      alignment: Alignment.centerRight,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Row(
+          key: const ValueKey('hud-potions'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            button(BattleItem.potion, '1', context.t('ui.world.hud.potion.hp'),
+                prof.potions),
+            const SizedBox(width: 6),
+            button(BattleItem.ether, '2', context.t('ui.world.hud.potion.mp'),
+                prof.ethers),
+            const SizedBox(width: 6),
+            flame(),
+          ],
+        ),
+      ),
     );
   }
 }

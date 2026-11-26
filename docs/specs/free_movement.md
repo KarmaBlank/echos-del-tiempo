@@ -171,6 +171,12 @@ se cierra. El `pueblo` nunca.
 - Cajas del grupo (v0.41.3): siempre están todos. Los que están en otro
   lugar salen con una caja atenuada con su nombre, dónde está y
   `UNIRSE` (§ 2.5; gris con el motivo en el tooltip si no se puede).
+  Desde v0.49.21 todo el grupo va en UNA fila de cajas del mismo ancho
+  y alto (compactas): el que está en otro lugar usa la misma caja,
+  atenuada, con nombre, lugar y un UNIRSE chico adentro. La fila nunca
+  pasa a dos renglones: si no entra, se achica entera. Los nombres nunca
+  se cortan (se achican). Los atajos de pociones van arriba con ancho
+  fijo, así nada se corre cuando alguien entra, sale o cambia de lugar.
 
 ### 4.1 Dónde están los demás (v0.41.3)
 

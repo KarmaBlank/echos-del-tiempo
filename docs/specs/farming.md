@@ -66,6 +66,13 @@ F abona la parcela de enfrente con el mejor abono que tengas. E o el
 clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
 
 ### 2.5 HUD de herramienta (v0.23.2, herramienta activa desde v0.24.1)
+
+**v0.49.21:** las herramientas van en una columna en el margen derecho,
+debajo del reloj del día: una por fila (ícono + rótulo corto +
+cantidad), la elegida con borde dorado, ancho y alto de fila fijos (no
+corre nada del HUD). El aviso de una línea (Sin semillas: ...,
+[E] ...) sigue abajo al centro. Lo que sigue describe el contenido de
+cada casillero; la disposición en barra quedó reemplazada.
 - A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
   también las que suma ampliar el pueblo, porque se mira el tile `soil`
   del mapa) aparece el HUD de herramienta. Desde v0.24.4 es una barra
