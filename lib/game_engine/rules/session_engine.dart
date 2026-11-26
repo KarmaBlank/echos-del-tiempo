@@ -916,7 +916,7 @@ class _Op {
   void say(String text) => events.add(SystemMessageEvent(text));
 
   /// " ¡Voten!" only where the vote is still used (not in the Mundo with
-  /// free movement: there the world opens a gathering, § 2.1).
+  /// free movement: there it goes straight in, § 2.1).
   String get _voteCall =>
       e.freeMovement && e.gameMode == GameModeKind.mundo ? '' : ' ¡Voten!';
 
@@ -1297,10 +1297,6 @@ class _Op {
         s.vote = MissionVote(m.id, p.name, {p.id});
         say('${p.name} propone: ${m.name}.$_voteCall');
         return true;
-
-      // Only the world routes gatherings (free_movement.md § 2.1).
-      case GatherAction():
-        return false;
 
       case VoteMissionAction():
         final v = s.vote;

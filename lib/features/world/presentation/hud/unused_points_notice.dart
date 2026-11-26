@@ -28,13 +28,9 @@ class UnusedPointsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!points.any) return const SizedBox.shrink();
-    return RetroTooltip(
-      message: '<b>${context.t('ui.world.hud.unused_points')}</b><br>'
-          '${points.parts.map(retroText).join('<br>')}',
-      // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
-      // suma al ancho y nunca lo tapa.
-      child: DsButton(
+    // Always there (v0.49.20): without points it is just the way to the
+    // character screen; the badge and the tooltip come with points.
+    final button = DsButton(
         context.t('ui.world.hud.character'),
         key: const ValueKey('hud-points-button'),
         size: DsButtonSize.compact,
@@ -46,7 +42,14 @@ class UnusedPointsButton extends StatelessWidget {
                 reduceMotion: reduceMotion,
               )
             : null,
-      ),
+    );
+    if (!points.any) return button;
+    return RetroTooltip(
+      message: '<b>${context.t('ui.world.hud.unused_points')}</b><br>'
+          '${points.parts.map(retroText).join('<br>')}',
+      // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
+      // suma al ancho y nunca lo tapa.
+      child: button,
     );
   }
 }

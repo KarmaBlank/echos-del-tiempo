@@ -6,7 +6,6 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
-import '../../../game_engine/models/game_session.dart' show Gathering;
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../app/widgets/menu_focus.dart';
@@ -33,8 +32,6 @@ class MissionBoardPanel extends ConsumerStatefulWidget {
     this.lockText,
     this.tutorialDone = true,
     this.playersAt = const {},
-    this.gather,
-    this.onJoin,
   });
 
   /// Other players in each mission / zone dungeon, by mission id
@@ -74,10 +71,6 @@ class MissionBoardPanel extends ConsumerStatefulWidget {
   /// misiones salen desactivadas con este motivo (§ 2).
   final String? lockText;
 
-  /// Someone else's open gathering the local player has not joined
-  /// (free_movement.md § 2.1): its mission shows UNIRSE (name).
-  final Gathering? gather;
-  final VoidCallback? onJoin;
 
   @override
   ConsumerState<MissionBoardPanel> createState() => _MissionBoardPanelState();
@@ -278,13 +271,6 @@ class _MissionBoardPanelState extends ConsumerState<MissionBoardPanel> {
                 textAlign: TextAlign.right,
                 style: DsText.detail(DsColors.danger)),
           ),
-        if (w.gather case final g?
-            when g.missionId == m.id && w.onJoin != null)
-          DsButton(ref.t('ui.missions.gather.join_from', {'name': g.byName}),
-              key: ValueKey('gather-join-${m.id}'),
-              kind: DsButtonKind.primary,
-              onPressed: w.onJoin)
-        else
           DsButton(ref.t('ui.missions.enter'),
             key: ValueKey('propose-${m.id}'),
             kind: DsButtonKind.primary,

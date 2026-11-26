@@ -10,16 +10,6 @@
   "ui.missions.level_short": "",
   "ui.missions.vote_open": "",
   "ui.missions.enter": "",
-  "ui.missions.gather.title": "",
-  "ui.missions.gather.by": "",
-  "ui.missions.gather.mine": "",
-  "ui.missions.gather.joined": "",
-  "ui.missions.gather.nobody": "",
-  "ui.missions.gather.go": "",
-  "ui.missions.gather.cancel": "",
-  "ui.missions.gather.join": "",
-  "ui.missions.gather.leave": "",
-  "ui.missions.gather.join_from": "",
   "ui.missions.card.level": "",
   "ui.missions.card.objective": "",
   "ui.missions.rewards": "",
@@ -108,9 +98,5 @@
   "ui.missions.hud.stairs_open": "",
   "ui.missions.hud.stairs_closed": "",
   "ui.missions.hud.go_boss": "",
-  "ui.missions.hud.boss_locked": "",
-  "ui.missions.gather.waiting": "等待其他人加入…",
-  "ui.missions.gather.countdown": "{s} 秒后进入",
-  "ui.missions.gather.enter_now": "立即进入",
-  "ui.missions.gather.ignore": "忽略"
+  "ui.missions.hud.boss_locked": ""
 }

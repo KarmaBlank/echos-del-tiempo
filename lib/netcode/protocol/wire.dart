@@ -229,7 +229,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// `n`: gold, ore, crops, seeds…) on the floor of biomes, mines and the
 /// town; wilds chests, shrines, mine and sunken chests and harvests
 /// spill them instead of granting silently.
-const kProtocolVersion = 96;
+/// 97: no mission gathering (v0.49.20, free_movement.md § 2.1): the
+/// `gather` action and `gat` in the snapshot are gone; PROPONER enters at
+/// once and friends join with UNIRSE on the player's card.
+const kProtocolVersion = 97;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

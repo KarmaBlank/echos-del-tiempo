@@ -18,12 +18,9 @@ void main() {
     return (we, w);
   }
 
-  /// PROPONER and, if a gathering opened (friends around), IR alone.
-  WorldStep? enter(WorldEngine we, SessionWorld w, String id, String m) {
-    final s = we.apply(w, id, ProposeMissionAction(m));
-    if (s == null || w.gather?.byId != id) return s;
-    return we.apply(w, id, const GatherAction(GatherOp.go));
-  }
+  /// PROPONER: straight in (v0.49.20, no gathering).
+  WorldStep? enter(WorldEngine we, SessionWorld w, String id, String m) =>
+      we.apply(w, id, ProposeMissionAction(m));
 
   test('cada uno viaja solo, sin anfitrión ni votación', () {
     final (we, w) = world();
@@ -133,54 +130,23 @@ void main() {
     expect(w.rooms.containsKey(d), isFalse);
   });
 
-  group('gathering (free_movement.md § 2.1.1)', () {
-    test('PROPONER with friends opens a gathering; IR takes the joined', () {
+  // v0.49.20: no gathering. PROPONER enters at once, even with friends
+  // around; the others join with UNIRSE on the player's card.
+  group('straight in (free_movement.md § 2.1)', () {
+    test('with friends around PROPONER enters at once; UNIRSE joins', () {
       final (we, w) = world();
       expect(we.apply(w, 'p0', const ProposeMissionAction('m1')), isNotNull);
-      expect(w.roomOf('p0'), kTownRoom, reason: 'waits for IR');
-      final g = w.town.gather!;
-      expect((g.byId, g.target, g.kind), ('p0', 'm1', GatherKind.mission));
-      // Every instance carries it (p1 is in the forest).
-      we.apply(w, 'p1', const TravelAction(kBosque));
-      expect(w.rooms[kBosque]!.gather?.byId, 'p0');
-      expect(we.apply(w, 'p1', const GatherAction(GatherOp.join)), isNotNull);
-      expect(w.town.gather!.joined.map((j) => j.id), ['p1']);
-      // Only the proposer goes / cancels.
-      expect(we.apply(w, 'p1', const GatherAction(GatherOp.go)), isNull);
-      final step = we.apply(w, 'p0', const GatherAction(GatherOp.go))!;
       final d = w.roomOf('p0')!;
       expect(SessionWorld.isDungeon(d), isTrue);
-      expect(w.roomOf('p1'), d, reason: 'same instance at once');
-      expect(w.roomOf('p2'), kTownRoom);
       expect(w.rooms[d]!.mode, SessionMode.field);
-      expect(w.town.gather, isNull);
-      expect(step.eventsFor('p2'), isNotNull);
-      // Who did not join can still enter later.
+      expect(w.roomOf('p1'), kTownRoom);
+      final card = w.town.away.firstWhere((a) => a.id == 'p0');
+      expect(card.busy, isFalse);
+      expect(we.apply(w, 'p1', const JoinPlayerAction('p0')), isNotNull);
+      expect(w.roomOf('p1'), d);
+      // Proposing the same mission also joins the running one.
       expect(we.apply(w, 'p2', const ProposeMissionAction('m1')), isNotNull);
       expect(w.roomOf('p2'), d);
-    });
-
-    test('IR with nobody joined enters alone; cancel closes it', () {
-      final (we, w) = world();
-      we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      expect(we.apply(w, 'p1', const GatherAction(GatherOp.cancel)), isNull);
-      expect(we.apply(w, 'p0', const GatherAction(GatherOp.cancel)), isNotNull);
-      expect(w.town.gather, isNull);
-      we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      expect(we.apply(w, 'p0', const GatherAction(GatherOp.go)), isNotNull);
-      expect(SessionWorld.isDungeon(w.roomOf('p0')!), isTrue);
-      expect(w.town.players.keys, ['p1', 'p2']);
-    });
-
-    test('proposing the gathered mission joins; the proposer leaving drops it',
-        () {
-      final (we, w) = world();
-      we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      expect(we.apply(w, 'p2', const ProposeMissionAction('m1')), isNotNull);
-      expect(w.roomOf('p2'), kTownRoom);
-      expect(w.town.gather!.has('p2'), isTrue);
-      we.removePlayer(w, 'p0');
-      expect(w.town.gather, isNull);
     });
 
     test('solo: PROPONER goes straight in', () {
@@ -189,50 +155,17 @@ void main() {
       we.addPlayer(w, 'p0', newProfile('Ana', 'guerrero'));
       expect(we.apply(w, 'p0', const ProposeMissionAction('m1')), isNotNull);
       expect(SessionWorld.isDungeon(w.roomOf('p0')!), isTrue);
-      expect(w.town.gather, isNull);
     });
 
-    test('gat travels in the snapshot', () {
+    test('the arrival grace runs out: enemies engage again', () {
       final (we, w) = world();
       we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      we.apply(w, 'p1', const GatherAction(GatherOp.join));
-      final codec = SessionJson(we.engine.catalog);
-      final back = codec.fromJson(codec.toJson(w.town)).gather!;
-      expect(back.signature, w.town.gather!.signature);
-    });
-
-    test('the gathering counts down and enters on its own with the joined', () {
-      final (we, w) = world();
-      we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      final g = w.town.gather!;
-      expect(g.left, WorldEngine.gatherSeconds);
-      expect(g.leftSeconds, 20, reason: 'tuning default');
-      we.apply(w, 'p1', const GatherAction(GatherOp.join));
-      // Half way: still waiting, the countdown reached every instance.
-      for (var i = 0; i < 10; i++) {
-        we.tick(w, 1);
-      }
-      expect(w.roomOf('p0'), kTownRoom);
-      expect(w.town.gather!.leftSeconds, 10);
-      for (var i = 0; i < 11; i++) {
-        we.tick(w, 1);
-      }
       final d = w.roomOf('p0')!;
-      expect(SessionWorld.isDungeon(d), isTrue);
-      expect(w.roomOf('p1'), d);
-      expect(w.roomOf('p2'), kTownRoom, reason: 'did not join');
-      expect(w.town.gather, isNull);
-    });
-
-    test('late join: UNIRSE on the card goes into the running mission', () {
-      final (we, w) = world();
-      we.apply(w, 'p0', const ProposeMissionAction('m1'));
-      we.apply(w, 'p0', const GatherAction(GatherOp.go));
-      final d = w.roomOf('p0')!;
-      final card = w.town.away.firstWhere((a) => a.id == 'p0');
-      expect(card.busy, isFalse);
-      expect(we.apply(w, 'p2', const JoinPlayerAction('p0')), isNotNull);
-      expect(w.roomOf('p2'), d);
+      expect(w.rooms[d]!.graceLeft, greaterThan(0));
+      for (var i = 0; i < 80; i++) {
+        we.tick(w, 0.05);
+      }
+      expect(w.rooms[d]!.graceLeft, 0);
     });
   });
 }

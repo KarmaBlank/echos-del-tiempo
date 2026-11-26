@@ -1,5 +1,5 @@
 {
-  "ui.missions.board.help": "<b>Counter</b><br>Pick a mission and press PROPOSE. Alone, you go straight in. With friends a gathering opens: they can JOIN from wherever they are and, when you press GO, everyone enters together (if nobody joins, GO enters anyway). If your friends are already on that mission, you join them.<br>It is also the travel map: unlocked zones are chosen here (there is no world to walk).<br><span class=\"k\">Rank</span>: S if you finish in time with no K.O.; higher rank = more credits and a better weapon chance.<br><span class=\"k\">Arrows / 1-9</span> select · <span class=\"k\">Enter</span> picks · <span class=\"k\">Esc</span> closes.",
+  "ui.missions.board.help": "<b>Counter</b><br>Pick a mission and press PROPOSE. Alone, you go straight in. With friends you also go straight in: they join with JOIN on your card. If your friends are already on that mission, you join them.<br>It is also the travel map: unlocked zones are chosen here (there is no world to walk).<br><span class=\"k\">Rank</span>: S if you finish in time with no K.O.; higher rank = more credits and a better weapon chance.<br><span class=\"k\">Arrows / 1-9</span> select · <span class=\"k\">Enter</span> picks · <span class=\"k\">Esc</span> closes.",
   "ui.missions.board.tutorial": "TUTORIAL: Practice Echoes",
   "ui.missions.board.done": "Done",
   "ui.missions.board.pending": "Pending",
@@ -10,16 +10,6 @@
   "ui.missions.level_short": "Lv {level}",
   "ui.missions.vote_open": "A vote is already open",
   "ui.missions.enter": "PROPOSE",
-  "ui.missions.gather.title": "Gathering",
-  "ui.missions.gather.by": "{name} calls: {mission}",
-  "ui.missions.gather.mine": "You called: {mission}",
-  "ui.missions.gather.joined": "Going: {names}",
-  "ui.missions.gather.nobody": "Nobody joined yet: GO enters anyway.",
-  "ui.missions.gather.go": "GO",
-  "ui.missions.gather.cancel": "CANCEL",
-  "ui.missions.gather.join": "JOIN",
-  "ui.missions.gather.leave": "LEAVE",
-  "ui.missions.gather.join_from": "JOIN ({name})",
   "ui.missions.card.level": "Recommended Lv {level}{low, select, yes{ · your Lv {mine}} other{}}",
   "ui.missions.card.objective": "OBJECTIVE",
   "ui.missions.rewards": "REWARDS",
@@ -108,9 +98,5 @@
   "ui.missions.hud.stairs_open": "Stairs open: go down [E]",
   "ui.missions.hud.stairs_closed": "Stairs: clear the floor",
   "ui.missions.hud.go_boss": "Go for the BOSS!",
-  "ui.missions.hud.boss_locked": "Boss: complete the objectives",
-  "ui.missions.gather.waiting": "Waiting for someone to join…",
-  "ui.missions.gather.countdown": "Entering in {s} s",
-  "ui.missions.gather.enter_now": "ENTER NOW",
-  "ui.missions.gather.ignore": "IGNORE"
+  "ui.missions.hud.boss_locked": "Boss: complete the objectives"
 }
