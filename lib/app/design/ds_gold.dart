@@ -42,9 +42,32 @@ class DsGold extends StatelessWidget {
 /// El resto pasa por `retroText` como cualquier texto de la UI.
 class DsGoldText extends StatelessWidget {
   const DsGoldText(this.text,
-      {super.key, this.style, this.maxLines, this.textAlign});
+      {super.key, this.style, this.maxLines, this.textAlign, this.overflow});
+
+  /// Plain [Text] when [s] has no `₵`, [DsGoldText] otherwise: any label
+  /// that may carry a gold amount goes through here.
+  static Widget auto(String s,
+          {Key? key,
+          TextStyle? style,
+          int? maxLines,
+          TextOverflow? overflow,
+          TextAlign? textAlign}) =>
+      hasGold(s)
+          ? DsGoldText(s,
+              key: key,
+              style: style,
+              maxLines: maxLines,
+              overflow: overflow,
+              textAlign: textAlign)
+          : Text(s,
+              key: key,
+              style: style,
+              maxLines: maxLines,
+              overflow: overflow,
+              textAlign: textAlign);
 
   final String text;
+  final TextOverflow? overflow;
   final TextStyle? style;
   final int? maxLines;
   final TextAlign? textAlign;
@@ -87,6 +110,9 @@ class DsGoldText extends StatelessWidget {
   Widget build(BuildContext context) {
     final st = style ?? DefaultTextStyle.of(context).style;
     return Text.rich(TextSpan(children: spans(text, st)),
-        style: style, maxLines: maxLines, textAlign: textAlign);
+        style: style,
+        maxLines: maxLines,
+        overflow: overflow,
+        textAlign: textAlign);
   }
 }

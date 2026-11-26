@@ -161,7 +161,7 @@ class _TraderPanelState extends State<TraderPanel> {
                 hint: context.t('ui.town.trader.search'),
                 onChanged: (v) => setState(() => _query = v)),
             const Spacer(),
-            Text(context.t('ui.town.trader.gold', {'n': p?.credits ?? 0}),
+            DsGoldText(context.t('ui.town.trader.gold', {'n': p?.credits ?? 0}),
                 key: const ValueKey('trade-gold-have'), style: DsText.detail()),
           ]),
           SizedBox(height: DsSpace.xs),
@@ -195,7 +195,7 @@ class _TraderPanelState extends State<TraderPanel> {
                   selected: _materials,
                   onPressed: () => setState(() => _materials = true)),
             ]),
-            Text(
+            DsGoldText(
                 _materials
                     ? context.t('ui.town.trader.materials_note', {
                         'pct': ((FishingRules.t.d('matRate') - 1) * 100).round(),

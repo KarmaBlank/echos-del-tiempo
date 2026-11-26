@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/proto_colors.dart';
+import '../../../app/design/design.dart';
+import '../../../app/theme/proto_markup.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
@@ -18,8 +19,13 @@ import '../../../core/i18n/i18n_providers.dart';
 /// Un drop propio de la misión con el veredicto de tu filtro.
 class ResultDrop {
   const ResultDrop(this.text, this.verdict,
-      {this.tooltip, this.exclusive = false});
+      {this.tooltip, this.exclusive = false, this.cell});
   final String text;
+
+  /// The INVENTARIO cell of the drop at side `size` (its sprite, framed
+  /// when `selected`); `null`
+  /// = a generic gem cell.
+  final Widget Function(double size, bool selected)? cell;
   final FilterVerdict verdict;
 
   /// Ficha del objeto (markup).
@@ -30,9 +36,11 @@ class ResultDrop {
 }
 
 /// Pantalla de resultado de la misión (`#result` del prototipo): rango,
-/// tiempo, XP, créditos, bonus y armas obtenidas. Ver
-/// docs/specs/exploration.md § "Paneles".
-class ResultsPanel extends ConsumerWidget {
+/// tiempo, XP, créditos, bonus y armas obtenidas. Subtabs RESUMEN /
+/// PROGRESO / BOTÍN (never stacked sections); BOTÍN is the INVENTARIO
+/// grid with the chosen drop on the right. Ver docs/specs/panels.md §
+/// "Resultado" y design_system.md § DsGridDetailLayout.
+class ResultsPanel extends ConsumerStatefulWidget {
   const ResultsPanel({
     super.key,
     required this.result,
@@ -105,61 +113,81 @@ class ResultsPanel extends ConsumerWidget {
 
   static String rankLabel(MissionRank r) => r.name.toUpperCase();
 
+  /// Fixed height of the tab body (the grid scrolls inside).
+  static const bodyHeight = 300.0;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final r = result;
+  ConsumerState<ResultsPanel> createState() => _ResultsPanelState();
+}
+
+class _ResultsPanelState extends ConsumerState<ResultsPanel> {
+  int _tab = 0;
+  int _sel = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    final unlocked = w.unlocked,
+        othersUnlocked = w.othersUnlocked,
+        trial = w.trial,
+        ecoAtlas = w.ecoAtlas,
+        abyss = w.abyss,
+        finalVictory = w.finalVictory,
+        zoneProgress = w.zoneProgress,
+        onAscend = w.onAscend,
+        victoryLap = w.victoryLap,
+        onBack = w.onBack,
+        playerName = w.playerName,
+        weaponName = w.weaponName;
+    String rankLabel(MissionRank r) => ResultsPanel.rankLabel(r);
+    final r = w.result;
     final el = r.time.floor();
     final time = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
-    final mine = r.drops[localId];
+    final mine = r.drops[w.localId];
     Widget line(String s, {Color? color, Key? key}) => Padding(
           key: key,
           padding: const EdgeInsets.only(bottom: 4),
-          child: Text(retroText(s), style: TextStyle(color: color)),
+          child: Text(retroText(s), style: DsText.body(color)),
         );
-    const shadow = [
-      Shadow(color: ProtoColors.titleShadow, offset: Offset(2, 2)),
-    ];
     final progress = <Widget>[
       if (unlocked case final u?)
         Padding(
           key: const ValueKey('results-unlocked'),
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(retroText(u),
-              style: TextStyle(
-                  fontFamily: RetroType.titleFamily,
-                  fontSize: RetroType.title,
-                  color: ProtoColors.gold,
-                  shadows: shadow)),
+              style: DsText.title(DsColors.reward)),
         ),
-      if (othersUnlocked case final o?) line(o, color: ProtoColors.gold),
+      if (othersUnlocked case final o?) line(o, color: DsColors.reward),
       if (trial case final t?)
         line(t,
-            color: ProtoColors.violet, key: const ValueKey('results-trial')),
+            color: DsColors.pulse, key: const ValueKey('results-trial')),
       if (ecoAtlas case final a?)
         line(a,
             color: kEcoColor,
             key: const ValueKey('results-atlas')),
       if (abyss case final a?)
         line(a,
-            color: ProtoColors.violet,
+            color: DsColors.pulse,
             key: const ValueKey('results-abyss')),
     ];
-    final exclusive = [for (final d in this.loot) if (d.exclusive) d];
-    final loot = <Widget>[
+    // Exclusive Abyss legendaries first (gold frame), then the rest.
+    final drops = [
+      for (final d in w.loot)
+        if (d.exclusive) d,
+      for (final d in w.loot)
+        if (!d.exclusive) d,
+    ];
+    final weapons = <Widget>[
       if (mine != null)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-              retroText(ref.t('ui.missions.results.you_got',
-                  {'weapon': weaponName(mine)})),
-              style: const TextStyle(color: ProtoColors.orange)),
-        ),
+        line(
+            ref.t('ui.missions.results.you_got', {'weapon': weaponName(mine)}),
+            color: DsColors.reward),
       if (r.drops.isNotEmpty)
         line(
             r.drops.entries
                 .map((e) => '${playerName(e.key)}: ${weaponName(e.value)}')
                 .join(' · '),
-            color: ProtoColors.dim),
+            color: DsColors.textSecondary),
       if (r.eliteDrops.isNotEmpty)
         line(
             ref.t('ui.missions.results.elites', {
@@ -169,107 +197,94 @@ class ResultsPanel extends ConsumerWidget {
                       '${playerName(d.playerId)}: ${weaponName(d.weaponId)}')
                   .join(' · '),
             }),
-            color: ProtoColors.gold),
-      if (exclusive.isNotEmpty)
-        Container(
-          key: const ValueKey('results-exclusive'),
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: ProtoColors.input,
-            border: Border.all(color: ProtoColors.gold, width: 3),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(retroText(ref.t('ui.missions.results.abyss_exclusive')),
-                  style: TextStyle(
-                      fontFamily: RetroType.titleFamily,
-                      fontSize: RetroType.title,
-                      color: ProtoColors.gold,
-                      shadows: shadow)),
-              const SizedBox(height: 4),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final d in exclusive)
-                  LootLabel(
-                      text: d.text,
-                      verdict: d.verdict,
-                      hiddenNote: ref.t('ui.missions.results.hidden_by_filter'),
-                      tooltip: d.tooltip),
-              ]),
-            ],
-          ),
-        ),
-      if (this.loot.isNotEmpty) ...[
-        line(ref.t('ui.missions.results.your_drops', {'n': this.loot.length}),
-            color: ProtoColors.gold),
-        Wrap(
-          key: const ValueKey('results-loot'),
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final d in this.loot)
-              LootLabel(
-                  text: d.text,
-                  verdict: d.verdict,
-                  hiddenNote: ref.t('ui.missions.results.hidden_by_filter'),
-                  tooltip: d.tooltip),
-          ],
-        ),
-      ],
+            color: DsColors.reward),
     ];
-    return PanelFrame(
-      width: 900,
-      title: ref.t(r.success
-          ? 'ui.missions.results.success'
-          : 'ui.missions.results.failure'),
-      actions: [
-        if (onAscend != null)
-          PanelButton(ref.t('ui.missions.results.choose_ascension'),
-              key: const ValueKey('results-ascend'),
-              accent: ProtoColors.violet,
-              onPressed: onAscend),
-        // Abre con el foco en el primario: Enter = volver.
-        InitialFocus(
-          child: PanelButton(
-              ref.t(victoryLap
-                  ? 'ui.missions.results.close'
-                  : 'ui.missions.results.back_to_lobby'),
-              key: const ValueKey('results-back'), onPressed: onBack),
+    final hasLoot = drops.isNotEmpty || weapons.isNotEmpty;
+    final tabs = <(String, String)>[
+      ('summary', ref.t('ui.missions.results.tab_summary')),
+      if (progress.isNotEmpty)
+        ('progress', ref.t('ui.missions.results.progress')),
+      if (hasLoot) ('loot', ref.t('ui.missions.results.loot')),
+    ];
+    final tab = tabs[_tab.clamp(0, tabs.length - 1)].$1;
+    final sel = drops.isEmpty ? null : drops[_sel.clamp(0, drops.length - 1)];
+    final hidden = ref.t('ui.missions.results.hidden_by_filter');
+    Widget dropCell(BuildContext context, int i, double size) {
+      final d = drops[i];
+      final cell = d.cell?.call(size, d == sel) ??
+          DsItemCell(
+              dimension: size,
+              icon: PixelIcon(PixelIconKind.gem,
+                  size: DsSizes.itemIcon * size / DsSizes.itemCell,
+                  color: d.verdict.style.textColor == null
+                      ? DsColors.textPrimary
+                      : RarityColors.filterColor(d.verdict.style.textColor!)),
+              border: d.exclusive ? DsColors.reward : DsColors.border,
+              selected: d == sel);
+      return DsTooltip(
+        card: DsTooltipCard(title: d.text, children: [
+          if (!d.verdict.visible) Text(hidden, style: DsText.detail()),
+          if (d.exclusive)
+            Text(ref.t('ui.missions.results.abyss_exclusive'),
+                style: DsText.detail(DsColors.reward)),
+        ]),
+        child: GestureDetector(
+          key: ValueKey('results-drop-$i'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _sel = i),
+          child: Opacity(opacity: d.verdict.visible ? 1 : 0.4, child: cell),
         ),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      );
+    }
+
+    final lootTab = DsGridDetailLayout(
+      key: const ValueKey('results-loot'),
+      keyPrefix: 'results',
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (finalVictory) ...[
-            Container(
-              key: const ValueKey('results-final'),
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: ProtoColors.input,
-                border: Border.all(color: ProtoColors.gold, width: 3),
+          ...weapons,
+          if (drops.isNotEmpty)
+            Text(
+                retroText(ref.t('ui.missions.results.your_drops',
+                    {'n': drops.length})),
+                style: DsText.subtitle(DsColors.reward)),
+        ],
+      ),
+      count: drops.length,
+      empty: Text(ref.t('ui.missions.results.loot_empty'),
+          style: DsText.detail()),
+      cell: dropCell,
+      detail: sel == null
+          ? null
+          : DsDetailPane(
+              key: const ValueKey('results-drop-detail'),
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (sel.exclusive)
+                    Padding(
+                      key: const ValueKey('results-exclusive'),
+                      padding: EdgeInsets.only(bottom: DsSpace.xs),
+                      child: DsTag(ref.t('ui.missions.results.abyss_exclusive'),
+                          color: DsColors.reward),
+                    ),
+                  LootLabel(
+                      text: sel.text,
+                      verdict: sel.verdict,
+                      hiddenNote: hidden,
+                      tooltip: null),
+                  if (sel.tooltip case final t?) ...[
+                    SizedBox(height: DsSpace.sm),
+                    ProtoText(t),
+                  ],
+                ],
               ),
-              child: Text(retroText(ref.t('ui.missions.results.final_title')),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: RetroType.titleFamily,
-                      fontSize: RetroType.title,
-                      color: ProtoColors.gold,
-                      shadows: shadow)),
             ),
-            Text(retroText(ref.t('ui.missions.results.final_subtitle')),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: ProtoColors.sky)),
-            const SizedBox(height: 8),
-          ],
-          // Qué misión: nombre y zona / piso.
-          Text(retroText(r.missionName),
-              style: const TextStyle(color: ProtoColors.sky)),
-          if (zoneProgress case final z?)
-            line(z,
-                color: ProtoColors.dim, key: const ValueKey('results-zone')),
-          const SizedBox(height: 6),
+    );
+    Widget summary() =>
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -283,16 +298,7 @@ class ResultsPanel extends ConsumerWidget {
                       Center(
                         child: Text(rankLabel(r.rank),
                             key: const ValueKey('results-rank'),
-                            style: TextStyle(
-                                fontFamily: RetroType.titleFamily,
-                                fontSize: RetroType.display,
-                                height: 1.4,
-                                color: ProtoColors.gold,
-                                shadows: const [
-                                  Shadow(
-                                      color: ProtoColors.titleShadow,
-                                      offset: Offset(4, 4)),
-                                ])),
+                            style: DsText.display(DsColors.reward)),
                       ),
                       InfoLine(ref.t('ui.missions.results.time'), time, labelEms: 8),
                       InfoLine(ref.t('ui.missions.results.kos'), '${r.kos}', labelEms: 8),
@@ -321,17 +327,79 @@ class ResultsPanel extends ConsumerWidget {
                 ),
               ],
             ),
+          );
+    return PanelFrame(
+      width: 1000,
+      title: ref.t(r.success
+          ? 'ui.missions.results.success'
+          : 'ui.missions.results.failure'),
+      actions: [
+        if (onAscend != null)
+          PanelButton(ref.t('ui.missions.results.choose_ascension'),
+              key: const ValueKey('results-ascend'),
+              accent: DsColors.pulse,
+              onPressed: onAscend),
+        // Abre con el foco en el primario: Enter = volver.
+        InitialFocus(
+          child: PanelButton(
+              ref.t(victoryLap
+                  ? 'ui.missions.results.close'
+                  : 'ui.missions.results.back_to_lobby'),
+              key: const ValueKey('results-back'), onPressed: onBack),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (finalVictory) ...[
+            Container(
+              key: const ValueKey('results-final'),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: DsColors.surfaceSunken,
+                border: Border.all(color: DsColors.reward, width: 3),
+              ),
+              child: Text(retroText(ref.t('ui.missions.results.final_title')),
+                  textAlign: TextAlign.center,
+                  style: DsText.title(DsColors.reward)),
+            ),
+            Text(retroText(ref.t('ui.missions.results.final_subtitle')),
+                textAlign: TextAlign.center,
+                style: DsText.body(DsColors.mp)),
+            const SizedBox(height: 8),
+          ],
+          // Qué misión: nombre y zona / piso.
+          Text(retroText(r.missionName),
+              style: DsText.body(DsColors.mp)),
+          if (zoneProgress case final z?)
+            line(z,
+                color: DsColors.textSecondary, key: const ValueKey('results-zone')),
+          SizedBox(height: DsSpace.sm),
+          if (tabs.length > 1) ...[
+            DsTabBar(
+              key: const ValueKey('results-tabs'),
+              tabs: [
+                for (final t in tabs)
+                  DsTab(t.$2, key: ValueKey('results-tab-${t.$1}')),
+              ],
+              index: _tab.clamp(0, tabs.length - 1),
+              onChanged: (i) => setState(() => _tab = i),
+            ),
+            SizedBox(height: DsSpace.sm),
+          ],
+          SizedBox(
+            height: ResultsPanel.bodyHeight,
+            child: switch (tab) {
+              'progress' => SingleChildScrollView(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: progress)),
+              'loot' => lootTab,
+              _ => SingleChildScrollView(child: summary()),
+            },
           ),
-          if (progress.isNotEmpty)
-            SectionPanel(
-                icon: PixelIconKind.arrowIn,
-                title: ref.t('ui.missions.results.progress'),
-                children: progress),
-          if (loot.isNotEmpty)
-            SectionPanel(
-                icon: PixelIconKind.gem,
-                title: ref.t('ui.missions.results.loot'),
-                children: loot),
+          SizedBox(height: DsSpace.sm),
           Row(
             children: [
               Expanded(
@@ -341,7 +409,7 @@ class ResultsPanel extends ConsumerWidget {
                         : ref.t('ui.missions.results.auto_return',
                             {'s': r.timeLeft.ceil()})),
                     key: const ValueKey('results-footer'),
-                    style: const TextStyle(color: ProtoColors.dim)),
+                    style: DsText.body(DsColors.textSecondary)),
               ),
               KeyHints(
                   confirm: ref.t(victoryLap

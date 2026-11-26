@@ -223,6 +223,12 @@ class DsButton extends StatelessWidget {
             child: button)
         : DsFocusScope(child: button);
     final tip = tooltip;
-    return tip == null ? ringed : Tooltip(message: tip, child: ringed);
+    if (tip == null) return ringed;
+    // A gold amount in the reason draws the coin, never "\$".
+    return DsGoldText.hasGold(tip)
+        ? Tooltip(
+            richMessage: TextSpan(children: DsGoldText.spans(tip, null)),
+            child: ringed)
+        : Tooltip(message: tip, child: ringed);
   }
 }

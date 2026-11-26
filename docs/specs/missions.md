@@ -230,8 +230,9 @@ batalla vuelven al jugador.
 - En el pueblo hay una torrecita, el Loot perdido (tiles x 3–5, y 10,
   debajo de la fuente izquierda; `Tile.lostTower`), que se usa con E
   desde abajo y abre el panel LOOT PERDIDO y el aviso `Se borra al
-  empezar la próxima misión.` Desde v0.41.6 el panel es una grilla de
-  casillas como INVENTARIO (`DsItemGrid`, 8 por fila, marco de rareza)
+  empezar la próxima misión.` Desde v0.49.33 el panel es la grilla de
+  INVENTARIO (`DsGridDetailLayout`, prefijo `lost`, 6 por fila arriba a
+  la izquierda, casilla `ItemSlot` con marco de rareza, doble clic toma)
   con la ficha del mouse de siempre (`itemHoverTip` para armas,
   `RetroTooltip` para Ecos y pilas; mismo tope de ancho y letra), y a la
   derecha la columna de detalle de la elegida (por defecto la primera)

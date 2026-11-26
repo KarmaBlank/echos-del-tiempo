@@ -358,7 +358,7 @@ class PanelButton extends StatelessWidget {
         // Sin `Flexible`: el botón suele ir en filas de ancho libre.
         ConstrainedBox(
           constraints: BoxConstraints(maxWidth: RetroType.width(context, 220)),
-          child: Text(retroText(reason!),
+          child: DsGoldText(reason!,
               textAlign: TextAlign.right,
               style: TextStyle(
                   fontFamily: RetroType.bodyFamily,

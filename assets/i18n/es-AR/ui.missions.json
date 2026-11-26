@@ -98,5 +98,7 @@
   "ui.missions.hud.stairs_open": "Escalera abierta: bajá [E]",
   "ui.missions.hud.stairs_closed": "Escalera: despejá el piso",
   "ui.missions.hud.go_boss": "¡Ve por el JEFE!",
-  "ui.missions.hud.boss_locked": "Jefe: completa los objetivos"
+  "ui.missions.hud.boss_locked": "Jefe: completa los objetivos",
+  "ui.missions.results.tab_summary": "RESUMEN",
+  "ui.missions.results.loot_empty": "No te tocó nada en esta misión."
 }

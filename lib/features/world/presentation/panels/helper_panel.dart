@@ -264,7 +264,7 @@ class _HelperPanelState extends State<HelperPanel> {
         Text(
             context.t('ui.town.helper.upgrades_text', {'who': b.kind == BuildKind.huerta ? 'farmer' : 'fisher', 'mat': kLifeMaterials[mat]!.name.toLowerCase()}),
             style: DsText.detail()),
-        Text(
+        DsGoldText(
             context.t('ui.town.helper.upgrades_have', {'n': p?.life.craft(mat) ?? 0, 'mat': kLifeMaterials[mat]!.name.toLowerCase(), 'planks': p?.life.craft('tabla') ?? 0, 'gold': p?.credits ?? 0}),
             key: const ValueKey('helper-up-have'),
             style: DsText.body()),

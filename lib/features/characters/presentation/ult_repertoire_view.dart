@@ -483,7 +483,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
             style: DsText.detail()),
         SizedBox(height: DsSpace.xs),
         Text(_s.t('ui.characters.ult.cost'), style: DsText.subtitle()),
-        Text(
+        DsGoldText(
             _s.t('ui.characters.ult.cost_credits', {
               'cost': '₵${cost.credits}',
               'have': '₵${p.credits}',

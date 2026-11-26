@@ -37,7 +37,7 @@ abstract final class TownRules {
       );
 
   static String costText(ExpansionCost c) => [
-        '${c.gold} de oro',
+        '₵${c.gold}',
         if (c.esquirlas > 0) '${c.esquirlas} Esquirlas',
         if (c.cristales > 0) '${c.cristales} Cristales de Era',
       ].join(' · ');

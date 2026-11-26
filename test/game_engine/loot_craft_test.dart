@@ -163,7 +163,7 @@ void main() {
       final mag = _craft.transferAffix(p, 'b', 'a', 0);
       expect(mag.error, startsWith('Sin lugar'));
       expect(_craft.transferAffix(_rich(credits: 10), 'a', 'b', 0).error,
-          'Faltan \$140');
+          'Faltan ₵140');
     });
 
     test('arma inicial: la última no se sacrifica', () {

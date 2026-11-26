@@ -1,6 +1,6 @@
 {
   "ui.town.source.compost": "在堆肥箱制作",
-  "ui.town.forge.fish_forge_hint": "布兰将传说之鱼锻造成独特武器（{gold} 金币）",
+  "ui.town.forge.fish_forge_hint": "布兰将传说之鱼锻造成独特武器（₵{gold}）",
   "ui.town.forge.fish_forge": "锻造鱼",
   "ui.town.compost.frost_compost": "霜冻堆肥",
   "ui.town.compost.honey_compost": "蜂蜜堆肥",
@@ -471,7 +471,7 @@
   "ui.town.events.rift": "首领：{boss} · 生命 ×{hp} · 攻击 ×{atk} · 等级 +{lv}",
   "ui.town.events.rift_reward": "奖励 ×{n}",
   "ui.town.events.quest": "{npc} 的任务：{objective}",
-  "ui.town.events.quest_reward": "奖励：{gold} 金币 · 友好 +{rep}",
+  "ui.town.events.quest_reward": "奖励：₵{gold} · 友好 +{rep}",
   "ui.town.events.discount": "价格 −{n}%",
   "ui.town.events.cat.visitor": "访客",
   "ui.town.events.cat.overworldNpc": "旅人",
@@ -642,7 +642,7 @@
   "ui.town.npc.com.time": "时间：立即交付",
   "ui.town.npc.com.cap": "布兰最高可锻造{rarity}（你自己：最高{self}）",
   "ui.town.npc.com.xp": "无需亲自锻造即获得 {xp} 锻造经验",
-  "ui.town.npc.com.extra": "他的工钱：比自己锻造多 {gold} 金币",
+  "ui.town.npc.com.extra": "他的工钱：比自己锻造多 ₵{gold}",
   "ui.town.npc.com.random": "词缀：随机，取决于稀有度",
   "ui.town.npc.com.special": "布兰负责手艺：稀有度上限取决于他的委托（你最高的生活技能和你与他的关系），而不是你的锻造等级。材料相同，但收费更高。",
   "ui.town.npc.com.empty": "以你的等级，该锭没有可用的武器底材。",
@@ -706,7 +706,7 @@
   "ui.town.request.huerta": "我家附近的一块菜园",
   "ui.town.request.muelle": "我家附近一个带码头的湖",
   "ui.town.npc.have_of": "已有 {have}/{need}",
-  "ui.town.chip.gold": "+{n} 金币",
+  "ui.town.chip.gold": "+₵{n}",
   "ui.town.chip.rep": "+{n} 关系",
   "ui.town.chip.rep_tip": "与{name}的关系：提升其在镇上的加成。",
   "ui.town.chip.xp": "+{n} 经验",
@@ -747,7 +747,7 @@
   "ui.town.trades.fx.hp": "最大生命 +{v}%",
   "ui.town.trades.fx.atk": "攻击与魔力 +{v}%",
   "ui.town.trades.fx.meal": "每份餐点多持续 {v} 次任务",
-  "ui.town.trades.grant.gold": "获得 {n} 金币",
+  "ui.town.trades.grant.gold": "获得 ₵{n}",
   "ui.town.trades.grant.item": "获得 {n} × {item}",
   "ui.town.trades.grant.meal": "获得 {n} × {item}（{q}）",
   "ui.town.trades.grant.weapon": "获得一把本职业武器（{n} 阶）",
@@ -793,7 +793,7 @@
   "ui.town.stall.seller": "卖家：{name}",
   "ui.town.stall.visitor": "访客",
   "ui.town.stall.log_day": "第 {n} 天",
-  "ui.town.stall.log_sold": "卖出 {n} 个，获得 {gold} 金币",
+  "ui.town.stall.log_sold": "卖出 {n} 个，获得 ₵{gold}",
   "ui.town.decor.text": {
     "text": "农田装饰。不阻挡通行。",
     "status": "draft"
@@ -1031,5 +1031,9 @@
   "ui.town.quest.obj_progress": "{what} — {n} / {goal}",
   "ui.town.quest.needs": "需要",
   "ui.town.quest.rewards": "奖励",
-  "ui.town.quest.incomplete": "清单尚未完成"
+  "ui.town.quest.incomplete": "清单尚未完成",
+  "ui.town.houses.pick_resident": {
+    "text": "选择入住的居民",
+    "status": "draft"
+  }
 }

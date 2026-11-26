@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_gold.dart';
 import 'proto_colors.dart';
 import 'retro_text.dart';
 import 'retro_type.dart';
@@ -105,7 +106,12 @@ TextSpan _parseProtoSpan(String markup,
   void flush() {
     if (buf.isEmpty) return;
     final t = _unescape(buf.toString());
-    children.addAll(symbolSpans(retroText(t)));
+    // Each `₵` is the gold coin (design_system.md § DsGold), never "$".
+    final parts = t.split('₵');
+    for (var k = 0; k < parts.length; k++) {
+      if (k > 0) children.add(DsGoldText.coinSpan(style));
+      if (parts[k].isNotEmpty) children.addAll(symbolSpans(retroText(parts[k])));
+    }
     buf.clear();
     final nl = t.lastIndexOf('\n');
     if (nl >= 0) lineStart = true;
