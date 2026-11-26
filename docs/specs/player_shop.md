@@ -133,6 +133,16 @@ Capturas: `docs/preview/shop_exterior.png` y
 `docs/preview/shop_interior.png` (test `shop_preview_test.dart` con
 `PREVIEW=1`).
 
+### 6.4 Llegada segura (v0.49.31)
+
+- La llegada al pueblo (`ShopInteriorRules.townFront`) está en px del
+  mapa: suma el origen del pueblo base (`TownState.origin`), así en un
+  pueblo ampliado se sale frente a la puerta y no corrido.
+- Red de seguridad: al entrar o salir, si la caja del personaje choca
+  con algo sólido en el punto de llegada (con el reparto del grupo), va
+  al centro del tile libre más cercano (`WorldRules.safeLanding`).
+- El frente de la puerta nunca tiene árboles (town_editor.md § 4.5).
+
 ### 6.1 Arte del interior (v0.49.26)
 
 Lo pinta `tool/export_shop_interior_sprites.dart`; el juego solo nombra
