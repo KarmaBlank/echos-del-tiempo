@@ -426,5 +426,7 @@
   "ui.world.cozy.search_prompt": "[Hold E/Click] Search the tree",
   "ui.world.cozy.searched": "You already searched this tree today",
   "ui.world.prompt.spent": "Already used",
-  "ui.world.loot.gold": "{n} gold"
+  "ui.world.loot.gold": "{n} gold",
+  "ui.world.offering.offer_eco": "ECHO OFFERING",
+  "ui.world.offering.eco_asks": "Echo: needs {n} (stronger boss, more loot)"
 }

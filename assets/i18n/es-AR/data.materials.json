@@ -367,5 +367,6 @@
   "data.materials.tool.regadera_cobre.name": "Regadera de cobre",
   "data.materials.tool.regadera_eco.name": "Regadera del Eco",
   "data.materials.tool.regadera_lata.name": "Regadera de lata",
-  "data.materials.tool.regadera_runica.name": "Regadera de bronce rúnico"
+  "data.materials.tool.regadera_runica.name": "Regadera de bronce rúnico",
+  "data.materials.smith.boss_gelcrown.name": "Corona de Gel"
 }

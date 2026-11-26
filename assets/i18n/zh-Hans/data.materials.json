@@ -475,5 +475,9 @@
   "data.materials.tool.regadera_cobre.name": "",
   "data.materials.tool.regadera_eco.name": "",
   "data.materials.tool.regadera_lata.name": "",
-  "data.materials.tool.regadera_runica.name": ""
+  "data.materials.tool.regadera_runica.name": "",
+  "data.materials.smith.boss_gelcrown.name": {
+    "text": "凝胶王冠",
+    "status": "draft"
+  }
 }

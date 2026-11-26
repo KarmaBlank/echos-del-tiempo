@@ -672,5 +672,13 @@
   "ui.world.loot.gold": {
     "text": "{n} 金币",
     "status": "draft"
+  },
+  "ui.world.offering.offer_eco": {
+    "text": "回响供奉",
+    "status": "draft"
+  },
+  "ui.world.offering.eco_asks": {
+    "text": "回响：需要 {n}（首领更强，掉落更多）",
+    "status": "draft"
   }
 }

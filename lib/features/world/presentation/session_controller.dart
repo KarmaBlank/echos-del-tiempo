@@ -3972,10 +3972,11 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   /// OFRENDAR: paga los materiales y revive al jefe.
-  bool offerBoss() {
+  /// [eco]: the harder Eco re-fight (bosses.md § v0.50).
+  bool offerBoss({bool eco = false}) {
     if (!nearOffering) return false;
     closePanel();
-    return _apply(const OfferBossAction());
+    return _apply(OfferBossAction(eco: eco));
   }
 
   /// SALIR DE LA MAZMORRA: vuelve solo al exterior de la entrada.

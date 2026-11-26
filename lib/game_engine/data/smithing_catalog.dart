@@ -107,6 +107,9 @@ const _kSmithBase = <String, SmithMaterialDef>{
       SmithMatKind.ingot, biome: kAbismo, tier: 5),
   'rare_sand': SmithMaterialDef('rare_sand', 'Arena detenida',
       SmithMatKind.rare, biome: kAbismo, tier: 5),
+  // Boss materials (bosses.md § v0.50): parts-forge settings.
+  'boss_gelcrown': SmithMaterialDef('boss_gelcrown', 'Corona de Gel',
+      SmithMatKind.rare, biome: kBosque, tier: 2),
   kSchematic:
       SmithMaterialDef(kSchematic, 'Plano antiguo', SmithMatKind.special),
   kGuardianCore: SmithMaterialDef(

@@ -159,6 +159,39 @@ void main() {
     expect(we.engine.canOffer(after, 'p0'), isFalse);
   });
 
+  test('Ofrenda del Eco (bosses.md § v0.50): paga el doble y marca el jefe Eco',
+      () {
+    final (we, w) = world();
+    final s0 = enter(we, w);
+    final key = w.roomOf('p0')!;
+    final boss = DungeonRules.boss(s0.mission!)!;
+    boss.alive = false;
+    final s = s0.copy();
+    s.mission!.floor = boss.floor;
+    final cost = DungeonRules.offeringCost(1, eco: true);
+    s.players['p0']!
+      ..x = boss.homeX
+      ..y = boss.homeY
+      ..profile = s.players['p0']!.profile.copyWith(materials: {
+        for (final e in DungeonRules.offeringCost(1).entries) e.key: e.value,
+      });
+    w.rooms[key] = s;
+    // Alcanza para la normal pero no para la Eco.
+    expect(we.apply(w, 'p0', const OfferBossAction(eco: true)), isNull);
+    final rich = w.rooms[key]!.copy();
+    final p = rich.players['p0']!;
+    p.profile = p.profile.copyWith(
+        materials: {for (final e in cost.entries) e.key: e.value});
+    w.rooms[key] = rich;
+    expect(we.apply(w, 'p0', const OfferBossAction(eco: true)), isNotNull);
+    final after = w.rooms[key]!;
+    expect(after.mission!.bossEco, isTrue);
+    expect(DungeonRules.boss(after.mission!)!.alive, isTrue);
+    for (final e in cost.entries) {
+      expect(after.players['p0']!.profile.material(e.key), 0);
+    }
+  });
+
   test('sin mundo (tests viejos) o un Eco: semilla al azar y nada se guarda',
       () {
     final e = sessionEngine(zones: true, seed: 123);

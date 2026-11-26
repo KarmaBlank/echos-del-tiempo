@@ -258,6 +258,20 @@ const Map<String, BossMechanicDef> kBossMechanics = {
 
   // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2): las
   // fases y movimientos viven en `kAbyssBosses`. ----
+  // ---- Zone bosses v0.50 (docs/specs/bosses.md § v0.50): phases and
+  // moves are built from kTuning in `zone_bosses_catalog.dart`. ----
+  'mareaReal': BossMechanicDef(
+    id: 'mareaReal',
+    kind: BossMechanicKind.abyss,
+    name: 'Marea Real',
+    addType: 'slime',
+    adds: 3,
+    soloAdds: 2,
+    counter: '<b>3 fases</b> (66% y 33%). Avisa sus golpes a todos: '
+        '<b>Ola Ácida</b> envenena y <b>Marea Real</b> moja y retrasa. '
+        '<b>Defendé</b> cuando dice PRÓX. En la fase 2 <b>se divide</b>: '
+        'vuelven sus limos. <span class="k">Solo: menos limos.</span>',
+  ),
   'abismoReloj': BossMechanicDef(
     id: 'abismoReloj',
     kind: BossMechanicKind.abyss,

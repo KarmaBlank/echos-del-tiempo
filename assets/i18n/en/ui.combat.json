@@ -363,5 +363,12 @@
   "ui.combat.hud.break_bar": "BRK",
   "ui.combat.ult.silenced": "Silenced: cannot cast the ULT.",
   "ui.combat.duo.silenced": "Silenced: duos cost MP.",
-  "ui.combat.chip.meal.short": "MEAL"
+  "ui.combat.chip.meal.short": "MEAL",
+  "ui.combat.boss_bar.phase": "PHASE {n}/{of} · {name}",
+  "ui.combat.boss_bar.next": "NEXT: {move}",
+  "ui.combat.boss_bar.eco": "ECHO",
+  "ui.combat.boss_bar.label.corte_gel": "Gel Cut",
+  "ui.combat.boss_bar.label.division": "Division",
+  "ui.combat.boss_bar.label.marea_real": "Royal Tide",
+  "ui.combat.boss_bar.label.ola_acida": "Acid Wave"
 }

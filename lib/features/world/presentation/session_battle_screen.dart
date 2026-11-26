@@ -132,6 +132,7 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
           ? widget.onConfirmQueue
           : null,
       queueAgreed: view.queueAgreement,
+      bossEco: view.session.mission?.bossEco ?? false,
     );
   }
 

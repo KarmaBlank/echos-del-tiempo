@@ -77,7 +77,7 @@ void main() {
         expect(entries.where((e) => e.category == c), isNotEmpty, reason: c.label);
       }
       for (final e in entries.where((e) => e.category == SpriteCategory.bosses)) {
-        expect(kEnemies[e.key]?.boss == true || e.key.contains('Fase2'), isTrue, reason: e.id);
+        expect(kEnemies[e.key]?.boss == true || e.key.contains('Fase2') || e.key.contains('Fase3'), isTrue, reason: e.id);
       }
       expect(cat.entry('characters.guerrero.idle')!.path, 'characters/guerrero/idle.png');
       // Desde v0.25.8 los íconos de armas son PNG (tool/export_item_icons.dart).

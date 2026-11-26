@@ -29,6 +29,11 @@ class OfferingPanel extends StatelessWidget {
     final why = me == null
         ? context.t('ui.world.offering.not_in_dungeon')
         : DungeonRules.cannotOffer(me.profile, zone);
+    // Eco re-fight (bosses.md § v0.50): harder, better loot, optional.
+    final eco = DungeonRules.offeringCost(zone, eco: true);
+    final ecoWhy = me == null
+        ? context.t('ui.world.offering.not_in_dungeon')
+        : DungeonRules.cannotOffer(me.profile, zone, eco: true);
     return PanelFrame(
       key: const ValueKey('panel-offering'),
       title: context.t('ui.world.offering.title'),
@@ -39,6 +44,12 @@ class OfferingPanel extends StatelessWidget {
             key: const ValueKey('offering-pay'),
             reason: why,
             onPressed: why == null ? controller.offerBoss : null),
+        PanelButton(context.t('ui.world.offering.offer_eco'),
+            key: const ValueKey('offering-pay-eco'),
+            reason: ecoWhy,
+            onPressed: ecoWhy == null
+                ? () => controller.offerBoss(eco: true)
+                : null),
         PanelButton(context.t('ui.world.offering.close'),
             key: const ValueKey('offering-close'),
             onPressed: controller.closePanel),
@@ -71,6 +82,8 @@ class OfferingPanel extends StatelessWidget {
                         context.t('ui.world.offering.asks', {'n': e.value, 'have': have}),
                         if (have < e.value)
                           context.t('ui.world.offering.missing', {'n': e.value - have}),
+                        context.t('ui.world.offering.eco_asks',
+                            {'n': eco[e.key] ?? 0}),
                       ],
                     );
                   }(),

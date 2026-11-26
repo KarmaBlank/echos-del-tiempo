@@ -60,8 +60,10 @@ class JoinPlayerAction extends SessionAction {
 
 /// `offer` (protocolo 58, persistent_dungeons.md § 4): pagar la Ofrenda
 /// en el altar del jefe vencido de una mazmorra de zona para revivirlo.
+/// [eco] (protocol 100, bosses.md § v0.50): the harder Eco re-fight.
 class OfferBossAction extends SessionAction {
-  const OfferBossAction();
+  const OfferBossAction({this.eco = false});
+  final bool eco;
 }
 
 /// `forage` (protocolo 48): recolectar el punto [spot] del exterior

@@ -74,7 +74,14 @@ enemies:
     idle: enemies/ghost/idle.png
     float: true
   reyLimo:
-    idle: enemies/reyLimo/idle.png
+    idle: enemies/reyLimo/king.png
+    scale: 2
+  # Phased zone boss (bosses.md § v0.50; tool/export_boss_sprites.dart).
+  reyLimoFase2:
+    idle: enemies/reyLimoFase2/idle.png
+    scale: 2
+  reyLimoFase3:
+    idle: enemies/reyLimoFase3/idle.png
     scale: 2
   golemReloj:
     idle: enemies/golemReloj/idle.png
@@ -704,6 +711,7 @@ items:
   vida_rare_sand: { idle: items/vida_mine_rare_sand.png, size: [16, 16] }
   vida_schematic: { idle: items/vida_mine_schematic.png, size: [16, 16] }
   vida_guardian_core: { idle: items/vida_mine_guardian_core.png, size: [16, 16] }
+  vida_boss_gelcrown: { idle: items/vida_mine_boss_gelcrown.png, size: [16, 16] }
   # Mining v2 (mining_smithing.md § 1.6): tools and supplies (placeholders).
   vida_pick_copper: { idle: items/vida_mine_pick_copper.png, size: [16, 16] }
   vida_pick_frost: { idle: items/vida_mine_pick_frost.png, size: [16, 16] }

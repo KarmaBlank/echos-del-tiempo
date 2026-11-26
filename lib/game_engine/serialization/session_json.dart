@@ -316,6 +316,8 @@ class SessionJson {
         if (m.questsFailed.isNotEmpty) 'qf': (m.questsFailed.toList()..sort()),
         if (m.blessing != null) 'bl': m.blessing!.name,
         if (m.windUntil != 0) 'wind': m.windUntil,
+        // Protocol 100 (bosses.md § v0.50): Eco re-fight boss.
+        if (m.bossEco) 'be': true,
         // Protocol 95 (biome_exploration.md § 11.8): dungeon map discovery
         // as packed cell bits (`n,1,` + base64) and its revision.
         if (m.discovery.contains(1)) ...{
@@ -377,6 +379,7 @@ class SessionJson {
         questsFailed: _ints(j, 'qf').toSet(),
         blessing: j.enumOrNull('bl', BlessingKind.values),
         windUntil: j.dblOrNull('wind') ?? 0,
+        bossEco: j['be'] == true,
         discovery: _discovery(j['md']),
         discoveryRev: j.intOrNull('mdr') ?? 0,
       );

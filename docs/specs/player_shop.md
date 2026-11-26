@@ -174,3 +174,62 @@ llegada.
 Capturas: `docs/preview/shop_interior_v2.png` (con los sprites de los
 personajes) y `docs/preview/shop_interior_before_after.png` (test
 `shop_interior_art_test.dart` con `PREVIEW=1`).
+
+## 7. Modelo de ingresos (spec aprobada; implementación en el paso 5 de la hoja de ruta)
+
+Decisión del dueño: se adopta la recomendación. Esta sección manda sobre
+§ 3 cuando se implementen los viajeros y la reputación (paso 5); hasta
+entonces el puesto sigue como está.
+
+### 7.1 Principios
+
+- **Consignación a precio justo.** El jugador deja ítems en consignación;
+  se venden **con el tiempo** al precio de referencia (`StallRules
+  .refPrice`, el del AGROPECUARIO sin bonos). Desaparece el precio libre
+  (el × de § 3 queda solo para compras entre compañeros).
+- **La casa no cobra comisión.** El dueño se lleva el 100 % de cada
+  venta.
+- **Quién compra:** viajeros NPC que pasan por el pueblo. Cuántos y qué
+  buscan depende de la **demanda** (estación, eventos del mundo, el bioma
+  del que vienen) y de la **reputación** de la tienda.
+- **La reputación sube el tráfico, no los precios.** Más reputación =
+  más viajeros por día y más chance de que alguno busque lo que tenés;
+  nunca un precio más alto.
+- **Tope diario.** El oro que la tienda cobra por día del mundo tiene un
+  tope, para que la tienda no gane más que un oficio.
+
+### 7.2 Paridad con los oficios
+
+- El ingreso de la tienda no puede superar el de un oficio dedicado.
+  Referencia: **≈ 1500 oro por hora de juego** como máximo equivalente
+  (`shopGoldHourCap`). Con `daySeconds` del reloj del mundo, el tope del
+  día es `shopGoldHourCap × daySeconds / 3600`.
+- El test de paridad de hoy (`test/game_engine/profession_parity_sim_test.dart`)
+  mide **equipo por hora**, no oro. Al implementar, agregar a esa
+  simulación el oro por hora de cada oficio (pesca, cultivo, herrería) y
+  ajustar `shopGoldHourCap` al promedio medido (± 15 %), en lugar de
+  fijar 1500 a ciegas.
+- La tienda vende lo que otro oficio produjo: su valor agregado es la
+  comodidad (vender sin estar) y la XP de la tienda, no más oro por ítem.
+
+### 7.3 Reglas (para el paso 5)
+
+- Cada día del mundo: viajeros = `shopTravelersBase` +
+  `shopTravelersPerRep` × nivel de reputación (tope `shopTravelersMax`).
+- Cada viajero elige una categoría según la demanda del día y compra
+  1..`shopMaxBuy` de una consignación que la cumpla, al precio de
+  referencia × demanda (la demanda puede bajar o subir el precio de
+  ese día; la reputación no).
+- Se vende hasta el tope diario de oro; lo que sobra queda en
+  consignación para otro día.
+- Reputación: sube con cada venta (`shopRepPerSale`) y con pedidos de
+  viajeros cumplidos; no baja sola. Niveles por umbral (`shopRepLevels`).
+- Algunos viajeros vienen de biomas cerrados y ofrecen a cambio botín
+  útil de allá (roles.md § 1): solo intercambio, nunca la llave de una
+  zona (los jefes siguen siendo la llave).
+- Todos los números en `kTuning[town]` (`shop*`), editables en Balance.
+
+### 7.4 Fuera de alcance de esta spec
+
+UI de los viajeros, sprites, textos de NPC (van como BORRADOR) y red:
+se especifican con el paso 5.

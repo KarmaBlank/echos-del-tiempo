@@ -138,7 +138,8 @@ abstract final class ItemSourceRules {
     if (kSmithMaterials[id] case final m?) {
       return switch (m.kind) {
         _ when id == kSchematic => const [ItemSource(ItemSourceKind.dungeonVein)],
-        _ when id == kGuardianCore => const [ItemSource(ItemSourceKind.bossDrop)],
+        _ when id == kGuardianCore || id.startsWith('boss_') =>
+          const [ItemSource(ItemSourceKind.bossDrop)],
         SmithMatKind.ore || SmithMatKind.rare || SmithMatKind.special => [
             ItemSource(ItemSourceKind.mine, biome: m.biome)
           ],

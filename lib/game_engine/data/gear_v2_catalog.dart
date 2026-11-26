@@ -43,6 +43,8 @@ const kRareAffinity = <String, GameElement>{
   'rare_rime': GameElement.hielo,
   'rare_magma': GameElement.fuego,
   'rare_sand': GameElement.sagrado,
+  // Boss materials (bosses.md § v0.50).
+  'boss_gelcrown': GameElement.veneno,
 };
 
 /// Elemental compost → affinity of a living weapon (§ 5). Plain compost

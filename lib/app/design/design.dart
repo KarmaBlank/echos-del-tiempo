@@ -2,6 +2,7 @@
 library;
 
 export 'ds_action_row.dart';
+export 'ds_boss_bar.dart';
 export 'ds_button.dart';
 export 'ds_carousel.dart';
 export 'ds_collection_template.dart';

@@ -17,6 +17,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/vision_palette.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
+import '../../../game_engine/data/zone_bosses_catalog.dart';
 import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/data/classes_catalog.dart';
@@ -292,7 +293,7 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
                 'n': e.wardTurns
               }))}'));
     }
-    final m = bossMechanicOf(kEnemies[e.enemyType]);
+    final m = combatMechanicOf(e);
     if (m == null) continue;
     switch (m.kind) {
       case BossMechanicKind.web:
@@ -457,7 +458,7 @@ List<StatusChip> bossMechanicChips(Strings s, BattleState b) {
 /// aspecto, inmunidad y buffs comidos.
 List<StatusChip> abyssChips(
     Strings s, BattleState b, Combatant e, BossMechanicDef m) {
-  final d = abyssBossOf(e.enemyType);
+  final d = abyssBossOf(e.enemyType) ?? zonePhasesOf(e);
   if (d == null) return const [];
   final ph = AbyssRules.phaseOf(d, e);
   final n = AbyssRules.phaseIndex(d, e) + 1;
@@ -520,7 +521,8 @@ List<StatusChip> abyssChips(
             ProtoColors.ice,
             tip);
       }(),
-    if (!e.abyssEnraged)
+    // Zone bosses without fury (enrageTurns 0, bosses.md § v0.50).
+    if (!e.abyssEnraged && enrage < 100000)
       StatusChip(
           s.t('ui.combat.abyss.fury_in_short', {'n': enrage}),
           s.t('ui.combat.abyss.fury_in_long', {'n': enrage}),

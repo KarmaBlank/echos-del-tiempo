@@ -363,5 +363,33 @@
   "ui.combat.hud.break_bar": "",
   "ui.combat.ult.silenced": "",
   "ui.combat.duo.silenced": "",
-  "ui.combat.chip.meal.short": "料理"
+  "ui.combat.chip.meal.short": "料理",
+  "ui.combat.boss_bar.phase": {
+    "text": "第{n}/{of}阶段 · {name}",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.next": {
+    "text": "下一招：{move}",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.eco": {
+    "text": "回响",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.label.corte_gel": {
+    "text": "凝胶斩",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.label.division": {
+    "text": "分裂",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.label.marea_real": {
+    "text": "王之潮",
+    "status": "draft"
+  },
+  "ui.combat.boss_bar.label.ola_acida": {
+    "text": "酸浪",
+    "status": "draft"
+  }
 }

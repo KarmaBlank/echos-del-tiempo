@@ -73,5 +73,13 @@
   "data.enemies.mechanic.abismo_eras.name": "",
   "data.enemies.mechanic.abismo_eras.counter": "",
   "data.enemies.mechanic.abismo_primordial.name": "",
-  "data.enemies.mechanic.abismo_primordial.counter": ""
+  "data.enemies.mechanic.abismo_primordial.counter": "",
+  "data.enemies.mechanic.marea_real.name": {
+    "text": "王之潮",
+    "status": "draft"
+  },
+  "data.enemies.mechanic.marea_real.counter": {
+    "text": "<b>3个阶段</b>（66%和33%）。全体攻击会预告：<b>酸浪</b>使中毒，<b>王之潮</b>使潮湿并延迟。看到“下一招”时<b>防御</b>。第2阶段<b>分裂</b>：史莱姆回归。<span class=\"k\">单人：史莱姆更少。</span>",
+    "status": "draft"
+  }
 }

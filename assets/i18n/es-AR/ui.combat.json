@@ -363,5 +363,12 @@
   "ui.combat.hud.break_bar": "QB",
   "ui.combat.ult.silenced": "Silenciado: no puede lanzar la ULT.",
   "ui.combat.duo.silenced": "Silenciado: los dúos cuestan MP.",
-  "ui.combat.chip.meal.short": "COMIDA"
+  "ui.combat.chip.meal.short": "COMIDA",
+  "ui.combat.boss_bar.phase": "FASE {n}/{of} · {name}",
+  "ui.combat.boss_bar.next": "PRÓX: {move}",
+  "ui.combat.boss_bar.eco": "ECO",
+  "ui.combat.boss_bar.label.corte_gel": "Corte de Gel",
+  "ui.combat.boss_bar.label.division": "División",
+  "ui.combat.boss_bar.label.marea_real": "Marea Real",
+  "ui.combat.boss_bar.label.ola_acida": "Ola Ácida"
 }

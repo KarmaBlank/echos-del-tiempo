@@ -248,7 +248,8 @@ class SpriteCatalog {
     final category = switch (section) {
       'characters' => SpriteCategory.characters,
       'enemies' =>
-        kEnemies[key]?.boss == true || key.contains('Fase2')
+        kEnemies[key]?.boss == true || key.contains('Fase2') ||
+                key.contains('Fase3')
             ? SpriteCategory.bosses
             : SpriteCategory.enemies,
       'items' => SpriteCategory.items,

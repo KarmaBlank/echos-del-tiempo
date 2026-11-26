@@ -479,6 +479,15 @@ class SurfacesPage extends StatelessWidget {
             DsPercent(72, label: 'Hacha Tronante'),
             DsPercent(100, label: 'Completa'),
           ]),
+          const DsSectionHeader('Barra de jefe'),
+          const DsBossHealthBar(
+              name: 'Rey Limo',
+              hp: 120,
+              maxHp: 300,
+              gates: [0.66, 0.33],
+              phaseText: 'FASE 2/3 · División',
+              nextText: 'PRÓX: Ola Ácida',
+              tag: 'ECO'),
         ]),
       ),
       SizedBox(

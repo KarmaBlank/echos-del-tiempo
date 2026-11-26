@@ -6,6 +6,7 @@ import '../../../core/i18n/data_text.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../game_engine/data/zone_bosses_catalog.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/enemy_def.dart';
@@ -142,7 +143,7 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
     final s = combatStrings(context);
     final open = widget.open ?? _keys;
     final ult = e.ultPending ? kEnemyUlts[e.ultId] : null;
-    final mech = e.boss ? bossMechanicOf(kEnemies[e.enemyType]) : null;
+    final mech = e.boss ? combatMechanicOf(e) : null;
     final states = EnemyLiveInfo.statusEntries(s, e);
     final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
     final cap = EnemyLiveInfo.hitCapText(s, e);

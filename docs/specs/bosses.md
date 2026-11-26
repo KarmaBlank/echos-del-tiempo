@@ -333,3 +333,124 @@ espectros chicos encapuchados), Centinela (coloso de obsidiana con ojo
 del vacío), Devorador fase 2 (fauces, cuernos, núcleo carmesí). Escalas:
 Hechicera 1.7, su eco 1.4, Heraldo 1.2, Bestia 1.9, Espectro 1.8, Centinela 1.9, Devorador
 fase 2 2.8.
+
+## v0.50: jefes de zona con fases telegrafiadas, escalado, Ofrenda del Eco y botín de oficio
+
+Paso 1 de la hoja de ruta aprobada (jefes → invocaciones → modos R →
+widget → viajeros y reputación). Visión del dueño (roles.md § 1): cada
+rol sube igual de rápido y **los jefes abren las zonas**. Pilares: partes
+simples, nada obligatorio (design_pillars.md).
+
+### 1. Qué cambia en cada jefe de zona
+
+Los 10 jefes de arriba ya abren la zona siguiente (worldgen.md § 6.4:
+al vencerlo, quien tenía esa zona como tope pasa a la siguiente) y ya
+tienen su Ofrenda (persistent_dungeons.md § 4). Esta versión les suma,
+uno por uno empezando por el de la zona 1:
+
+1. **Patrón legible en 2–3 fases.** El jefe pasa a usar la máquina de
+   fases y movimientos de los Jefes del Abismo (abyss_bosses.md § 2:
+   `AbyssBossDef`, umbral de vida, rotación de movimientos, aviso
+   `PRÓX: <movimiento>` una acción antes). No se duplica código: el
+   catálogo nuevo `zone_bosses_catalog.dart` arma esas definiciones con
+   los números de `kTuning[bosses]` y `GameCatalog.abyssOf` las devuelve
+   además de las del Abismo. Nada del Abismo (Portal, Fragmentos, música,
+   arena) los ve.
+2. **Escalado co-op por tamaño de grupo y nivel de zona.** Encima del
+   escalado de siempre (`ZoneRules.scaleBattle` al nivel del piso y la
+   vida en grupo `groupHp`), el jefe con fases suma `partyHpPer` de vida
+   y quiebre por jugador extra. Sus invocaciones son `adds` con grupo y
+   `soloAdds` en solo.
+3. **Dificultad normal y Eco.** La pelea **normal** está pensada para un
+   grupo promedio del nivel de la zona (el máximo de la zona,
+   `ZoneDef.maxLevel`). La **re-pelea Eco** es opcional: en el altar de
+   la Ofrenda, OFRENDA DEL ECO paga `ecoCostMult` × la Ofrenda y revive
+   al jefe con vida y quiebre × `ecoHp` y ATQ × `ecoAtk`; da `ecoLootRolls`
+   tiradas de botín de jefe extra, `ecoMat` materiales del jefe (en vez
+   de `bossMat`) y `ecoLegendBonus` más de chance de su legendario.
+   Nunca hace falta para abrir nada.
+4. **Botín propio del jefe para los oficios.** Cada jefe deja un
+   **material de jefe** (`SmithMatKind.rare`, con afinidad) a cada
+   jugador: `bossMat` en la normal, `ecoMat` en la Eco. Sirve como
+   **engarce** en la forja por partes (profession_gear_v2.md § 3) con la
+   afinidad del jefe, así alimenta los sistemas de equipo de los oficios
+   sin ser obligatorio. Fuente en el detalle: "Jefe".
+
+Todos los números viven en `kTuning[TuningId.bosses]` (Balance → Jefes
+de zona).
+
+### 2. Zona 1: Rey Limo — Marea Real (implementado)
+
+Mecánica `mareaReal` (tipo `abyss`, invoca `slime`). Nivel de zona 5.
+
+| Fase | Umbral | ATQ | Rotación (una por acción) |
+|---|---|---|---|
+| 1 «Corte de Gel» | 100 % | ×1 | ataque · ataque · **Ola Ácida** · ataque |
+| 2 «División» | `p2Gate` 66 % | × `p2Atk` 1.1 | ataque · **Ola Ácida** · ataque · **invoca** |
+| 3 «Marea Real» | `p3Gate` 33 % | × `p3Atk` 1.15 (sobre la 2) | **Marea Real** · ataque · **Ola Ácida** · ataque |
+
+- **Ola Ácida**: golpe a todos ATQ × `wavePower` (0.8) + `wavePoison` (2)
+  Veneno. **Marea Real**: ATQ × `tidePower` (1.1) a todos + Mojado y
+  retrasa al grupo `tideDelay` (0.3) de turno.
+- **Aviso**: cada golpe especial se anuncia en su turno anterior (chip
+  `PRÓX: Ola Ácida` y la barra del jefe). Contrarrestar: **Defender**
+  (½ daño, el golpe llega físico, no reacciona).
+- **División** (al entrar a la fase 2 y con su movimiento `invoca`):
+  completa sus limos hasta `adds` 3 (`soloAdds` 2 en solo). Los limos
+  normales del grupo inicial cuentan.
+- El golpe que cruza un umbral deja la vida justo en él (como el
+  Devorador): cada fase se ve entera.
+- **Furia**: `enrageTurns` (0 = sin furia en los jefes de zona).
+- Sprites: `reyLimo` (fase 1, corona dorada), `reyLimoFase2` (rajado,
+  goteando, corona torcida) y `reyLimoFase3` (marea violeta, ojos rojos,
+  corona encendida) en `tool/export_boss_sprites.dart`; el manifest los
+  mapea y `enemySpriteId` usa `Fase3` en la fase 3 (si falta, `Fase2`).
+- Botín: **Corona de Gel** (`boss_gelcrown`, rara, tier 2, afinidad
+  Veneno) × `bossMat` 1 (Eco: `ecoMat` 3).
+- Desbloqueo: al vencerlo se abre la zona 2 (Bosque Hondo), como siempre.
+
+- **Solo en Mundo.** La mecánica no está en `EnemyDef` (Travesía y las
+  misiones viejas del prototipo siguen con el Rey Limo simple):
+  `kZoneBossMechanics` la asigna y la pelea de una misión de zona la
+  prende arrancando al jefe en fase 1 (`BossRules.applyBattle`).
+- La Ofrenda del Eco no se guarda en la mazmorra persistente: si todos
+  salen antes de pelear, el jefe queda vivo pero normal (deuda menor).
+
+### 3. Barra del jefe (sistema de diseño)
+
+Organismo `DsBossHealthBar` (`lib/app/design/ds_boss_bar.dart`, en la
+galería): nombre, ECO si es la re-pelea, vida con las marcas de los
+umbrales, `FASE n/3` y nombre de la fase, y la línea `PRÓX:` cuando el
+próximo movimiento es especial. Arriba al centro de la batalla, solo con
+un jefe con fases. Visual agnóstico a la lógica: recibe textos y números.
+
+### 4. Red
+
+Protocolo 100: `OfferBossAction` lleva `eco` (`{'t':'offer','eco':true}`)
+y la misión manda `be` (el jefe revivido es Eco) para la barra.
+
+### 5. Tuning (`kTuning[bosses]`)
+
+| Clave | Valor | Qué |
+|---|---|---|
+| `p2Gate` / `p3Gate` | 0.66 / 0.33 | umbrales de fase |
+| `p2Atk` / `p3Atk` | 1.1 / 1.15 | ATQ al entrar a cada fase |
+| `wavePower` / `wavePoison` | 0.8 / 2 | Ola Ácida |
+| `tidePower` / `tideDelay` | 1.1 / 0.3 | Marea Real |
+| `adds` / `soloAdds` | 3 / 2 | limos de la División |
+| `enrageTurns` / `enragePower` | 0 / 1.5 | furia (0 = no) |
+| `partyHpPer` | 0.1 | vida y quiebre extra por jugador después del primero |
+| `ecoHp` / `ecoAtk` | 1.6 / 1.3 | re-pelea Eco |
+| `ecoCostMult` | 2 | × costo de la Ofrenda |
+| `ecoLootRolls` | 1 | tiradas extra de botín de jefe |
+| `ecoLegendBonus` | 0.15 | + chance del legendario |
+| `bossMat` / `ecoMat` | 1 / 3 | material de jefe por jugador |
+
+### 6. Pendiente (zonas 2–10)
+
+Cada jefe de 2 a 10 conserva hoy su mecánica propia (telaraña, escarcha,
+postura…). Falta, por jefe: su definición de fases en
+`zone_bosses_catalog.dart` (2–3 fases que integren la mecánica actual en
+la rotación), su material de jefe (afinidad del bioma) con ícono, los
+sprites de fase y sus textos. El Eco, el escalado por grupo y la barra
+ya valen para cualquiera que tenga definición.

@@ -1,3 +1,4 @@
+import 'boss_rules.dart';
 import '../data/game_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/world_save.dart' show DungeonSave, TownState;
@@ -88,7 +89,8 @@ abstract final class DungeonRules {
   }
 
   /// Costo de la Ofrenda en la zona [zone] (solo lo que es > 0).
-  static Map<CraftMaterial, int> offeringCost(int zone) {
+  static Map<CraftMaterial, int> offeringCost(int zone, {bool eco = false}) {
+    if (eco) return BossRules.ecoCost(offeringCost(zone));
     final t = _t;
     final z = zone < 1 ? 1 : zone;
     int from(String k, String per) =>
@@ -103,18 +105,18 @@ abstract final class DungeonRules {
   }
 
   /// Por qué [p] no puede ofrendar, o `null`.
-  static String? cannotOffer(PlayerProfile p, int zone) {
-    for (final e in offeringCost(zone).entries) {
+  static String? cannotOffer(PlayerProfile p, int zone, {bool eco = false}) {
+    for (final e in offeringCost(zone, eco: eco).entries) {
       if (p.material(e.key) < e.value) return 'Faltan ${e.key.label}';
     }
     return null;
   }
 
   /// [p] con el costo pagado, o `null` si no le alcanza.
-  static PlayerProfile? pay(PlayerProfile p, int zone) {
-    if (cannotOffer(p, zone) != null) return null;
+  static PlayerProfile? pay(PlayerProfile p, int zone, {bool eco = false}) {
+    if (cannotOffer(p, zone, eco: eco) != null) return null;
     final mats = {...p.materials};
-    for (final e in offeringCost(zone).entries) {
+    for (final e in offeringCost(zone, eco: eco).entries) {
       mats[e.key] = mats[e.key]! - e.value;
     }
     return p.copyWith(materials: mats);

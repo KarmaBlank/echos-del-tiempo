@@ -20,7 +20,9 @@ final _abyssHaste = Expando<double>('abyssHaste');
 
 extension _AbyssTurn on _Turn {
   AbyssBossDef? _abyssDef(Combatant e) =>
-      e.isPlayer ? null : engine.catalog.abyssOf(e.enemyType);
+      e.isPlayer
+          ? null
+          : engine.catalog.abyssOf(e.enemyType) ?? zonePhasesOf(e);
 
   bool get _abyssSolo => state.party.length == 1;
 

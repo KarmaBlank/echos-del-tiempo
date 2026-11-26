@@ -390,6 +390,7 @@ class MissionRun {
     Set<int>? questsFailed,
     this.blessing,
     this.windUntil = 0,
+    this.bossEco = false,
     Uint8List? discovery,
     this.discoveryRev = 0,
   })  : discovery = discovery ?? Uint8List(0),
@@ -427,6 +428,9 @@ class MissionRun {
 
   /// Viento del Eco activo para el grupo hasta este `GameSession.time`.
   double windUntil;
+
+  /// The revived boss is the Eco re-fight (bosses.md § v0.50).
+  bool bossEco;
 
   final String missionId;
   final int seed;
@@ -532,6 +536,7 @@ class MissionRun {
         questsFailed: questsFailed,
         blessing: blessing,
         windUntil: windUntil,
+        bossEco: bossEco,
         discovery: Uint8List.fromList(discovery),
         discoveryRev: discoveryRev,
       );

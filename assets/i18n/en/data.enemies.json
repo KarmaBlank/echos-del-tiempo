@@ -73,5 +73,7 @@
   "data.enemies.mechanic.abismo_eras.name": "Abyss Hunger",
   "data.enemies.mechanic.abismo_eras.counter": "<b>3 phases</b>. <b>Devour</b>: eats the party''s buffs and shields and gains +5% ATK for each: <b>do not stack them before the warning</b>. Phase 3: changes <b>aspect</b> every turn (Fire, Water, Electro, Ice) and resists its own element.",
   "data.enemies.mechanic.abismo_primordial.name": "Primordial",
-  "data.enemies.mechanic.abismo_primordial.counter": "Every element: cycling <b>aspect</b>, <b>seals</b>, copying <b>echoes</b>, <b>devour</b>, <b>rewind</b> and <b>distortion</b>. Heals hurt it (40%). Phase 3: <b>immune to damage</b> while echoes live. <span class=\"k\">Solo: 1 echo, any reaction breaks the seal.</span>"
+  "data.enemies.mechanic.abismo_primordial.counter": "Every element: cycling <b>aspect</b>, <b>seals</b>, copying <b>echoes</b>, <b>devour</b>, <b>rewind</b> and <b>distortion</b>. Heals hurt it (40%). Phase 3: <b>immune to damage</b> while echoes live. <span class=\"k\">Solo: 1 echo, any reaction breaks the seal.</span>",
+  "data.enemies.mechanic.marea_real.name": "Royal Tide",
+  "data.enemies.mechanic.marea_real.counter": "<b>3 phases</b> (66% and 33%). It warns its hits on everyone: <b>Acid Wave</b> poisons and <b>Royal Tide</b> soaks and delays. <b>Defend</b> when it says NEXT. In phase 2 it <b>splits</b>: its slimes return. <span class=\"k\">Solo: fewer slimes.</span>"
 }

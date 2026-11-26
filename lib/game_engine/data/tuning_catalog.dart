@@ -37,6 +37,7 @@ abstract final class TuningId {
   static const town = 'town';
   static const lifeTree = 'lifeTree';
   static const dungeon = 'dungeon';
+  static const bosses = 'bosses';
   static const smithing = 'smithing';
   static const regions = 'regions';
   static const ascension = 'ascension';
@@ -593,6 +594,30 @@ const Map<String, TuningDef> kTuningDefaults = {
     'prismaFrom': 4,
     'prismaPerZone': 1,
     'altarReach': 40,
+  }),
+  // bosses.md § v0.50: phased zone bosses, co-op scaling, Eco re-fight
+  // and boss materials.
+  TuningId.bosses: TuningDef('Jefes de zona', {
+    'p2Gate': 0.66,
+    'p3Gate': 0.33,
+    'p2Atk': 1.1,
+    'p3Atk': 1.15,
+    'wavePower': 0.8,
+    'wavePoison': 2,
+    'tidePower': 1.1,
+    'tideDelay': 0.3,
+    'adds': 3,
+    'soloAdds': 2,
+    'enrageTurns': 0,
+    'enragePower': 1.5,
+    'partyHpPer': 0.1,
+    'ecoHp': 1.6,
+    'ecoAtk': 1.3,
+    'ecoCostMult': 2,
+    'ecoLootRolls': 1,
+    'ecoLegendBonus': 0.15,
+    'bossMat': 1,
+    'ecoMat': 3,
   }),
   // mining_smithing.md (v0.44.0): minas, vetas, fundir y forjar armas.
   TuningId.smithing: TuningDef('Minería y herrería', {

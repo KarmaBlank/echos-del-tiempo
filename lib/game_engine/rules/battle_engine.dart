@@ -13,6 +13,7 @@ import '../data/passive_mechanics.dart' show mechanicById;
 import '../data/skills_catalog.dart';
 import '../data/summoner_catalog.dart';
 import '../data/zones_catalog.dart' show kEnemyBaseLevel;
+import '../data/zone_bosses_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
@@ -5078,7 +5079,7 @@ class _Turn {
       !c.isPlayer && (engine.catalog.enemies[c.enemyType]?.passive ?? false);
 
   BossMechanicDef? _mechanicOf(Combatant e) =>
-      e.isPlayer ? null : bossMechanicOf(engine.catalog.enemies[e.enemyType]);
+      combatMechanicOf(e, engine.catalog.enemies[e.enemyType]);
 
   /// Quedan invocaciones vivas del tipo [type].
   bool _addsAlive(String type) =>
@@ -5148,8 +5149,14 @@ class _Turn {
   }
 
   /// Invocaciones que tiene que tener [m] (con grupo / solo).
-  int _addsMax(BossMechanicDef m) =>
-      state.party.length == 1 ? m.soloAdds : m.adds;
+  int _addsMax(BossMechanicDef m) {
+    final solo = state.party.length == 1;
+    // Phased zone bosses (bosses.md § v0.50): from kTuning.
+    if (m.id == 'mareaReal') {
+      return tuning(TuningId.bosses).i(solo ? 'soloAdds' : 'adds');
+    }
+    return solo ? m.soloAdds : m.adds;
+  }
 
   /// Al empezar su turno: si le faltan invocaciones, cuenta; al llegar a
   /// `every` turnos, las vuelve a crear.

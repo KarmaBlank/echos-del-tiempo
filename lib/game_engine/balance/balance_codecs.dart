@@ -106,6 +106,10 @@ enum BalanceKind {
   /// Generated biome regions and region foraging (biome_regions.md).
   regions('regions', 'Regiones de bioma', 'Ajustes de regiones de bioma'),
 
+  /// Phased zone bosses, Eco re-fight and boss materials (bosses.md
+  /// § v0.50).
+  bosses('bosses', 'Jefes de zona', 'Ajustes de los jefes de zona'),
+
   /// Points, branch stats and Trades conditions of the ascension tree
   /// (ascension.md § 3).
   ascension('ascension', 'Ascensión: árbol', 'Ajustes del árbol de ascensión');
@@ -1730,6 +1734,32 @@ const _fishLabels = {
   'fisherGoldPerValue': 'Pescador: oro × valor',
 };
 
+final bossesCodec =
+    _tuningCodec(BalanceKind.bosses, _autoFields('bosses', _bossesLabels));
+
+const _bossesLabels = {
+  'p2Gate': 'Fase 2: umbral de vida',
+  'p3Gate': 'Fase 3: umbral de vida',
+  'p2Atk': 'Fase 2: × ATQ',
+  'p3Atk': 'Fase 3: × ATQ',
+  'wavePower': 'Ola Ácida: × ATQ a todos',
+  'wavePoison': 'Ola Ácida: Veneno',
+  'tidePower': 'Marea Real: × ATQ a todos',
+  'tideDelay': 'Marea Real: retraso (turno)',
+  'adds': 'División: invocaciones con grupo',
+  'soloAdds': 'División: invocaciones en solo',
+  'enrageTurns': 'Furia: turno (0 = sin furia)',
+  'enragePower': 'Furia: × ATQ',
+  'partyHpPer': 'Vida y quiebre extra por jugador',
+  'ecoHp': 'Eco: × vida y quiebre',
+  'ecoAtk': 'Eco: × ATQ',
+  'ecoCostMult': 'Eco: × costo de la Ofrenda',
+  'ecoLootRolls': 'Eco: tiradas extra de botín',
+  'ecoLegendBonus': 'Eco: + chance del legendario',
+  'bossMat': 'Material de jefe (normal)',
+  'ecoMat': 'Material de jefe (Eco)',
+};
+
 final smithingCodec = _tuningCodec(
     BalanceKind.smithing, _autoFields('smithing', _smithingLabels));
 
@@ -2053,6 +2083,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.lifeTree => lifeTreeCodec,
       BalanceKind.smithing => smithingCodec,
       BalanceKind.regions => regionsCodec,
+      BalanceKind.bosses => bossesCodec,
       BalanceKind.ascension => ascensionCodec,
     };
 
@@ -2074,5 +2105,6 @@ const kTuningKinds = [
   BalanceKind.lifeTree,
   BalanceKind.smithing,
   BalanceKind.regions,
+  BalanceKind.bosses,
   BalanceKind.ascension,
 ];

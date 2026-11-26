@@ -307,7 +307,7 @@ abstract final class ActionJson {
         // Protocolo 63: IR CON otro jugador.
         JoinPlayerAction() => {'t': 'joinP', 'p': a.targetId},
         // Protocolo 58 (v0.34.0): Ofrenda del jefe.
-        OfferBossAction() => {'t': 'offer'},
+        OfferBossAction(:final eco) => {'t': 'offer', if (eco) 'eco': true},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -610,7 +610,7 @@ abstract final class ActionJson {
       case 'leaveD':
         return LeaveDungeonAction(poiId: j.intOrNull('i'));
       case 'offer':
-        return const OfferBossAction();
+        return OfferBossAction(eco: j['eco'] == true);
       case 'joinP':
         return JoinPlayerAction(j.str('p'));
     }

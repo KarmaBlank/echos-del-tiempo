@@ -1,3 +1,4 @@
+import 'boss_rules.dart';
 import 'gear_v2_rules.dart';
 import 'profession_gear_rules.dart';
 import 'oficio_storage_rules.dart';
@@ -1558,8 +1559,8 @@ class _Op {
       case LeaveDungeonAction():
       case JoinPlayerAction():
         return false;
-      case OfferBossAction():
-        return _offerBoss(p);
+      case OfferBossAction(:final eco):
+        return _offerBoss(p, eco: eco);
       case CozyAction():
         return cozyAction(p, a);
       case TravelAction() ||
@@ -2903,7 +2904,8 @@ class _Op {
 
   /// El legendario propio del jefe de [b] (si tiene): a cada jugador con
   /// `SessionEngine.bossLegendaryChance`, al nivel de la batalla.
-  void _bossLegendary(SessionBattle b, double x, double y, int? level) {
+  void _bossLegendary(SessionBattle b, double x, double y, int? level,
+      {bool eco = false}) {
     final type = b.state.enemies.firstOrNull?.enemyType;
     final id = type == null ? null : catalog.enemies[type]?.legendaryId;
     final u = id == null ? null : kUniques[id];
@@ -2911,8 +2913,10 @@ class _Op {
     final cap = _lootCap();
     final lv = level ?? s.mission?.zoneLevel ?? 1;
     final il = cap == null ? lv : math.min(lv, cap);
-    final chance = SessionEngine.bossLegendaryChance +
-        (_eco == null ? 0 : _atlas.bossUnique);
+    final chance = BossRules.legendaryChance(
+        SessionEngine.bossLegendaryChance +
+            (_eco == null ? 0 : _atlas.bossUnique),
+        eco: eco);
     for (final p in players) {
       if (_rand() >= chance) continue;
       final item = rules.loot.generateUnique(_rand, u, il);
@@ -4370,6 +4374,11 @@ class _Op {
       EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
     }
     if (_rift case final r?) WorldEventRules.applyRiftBattle(step.state, r.$2);
+    // Zone bosses (bosses.md § v0.50): party size and the Eco re-fight.
+    if (en.boss && eco == null && s.run == null && (s.mission?.zone ?? 0) > 0) {
+      BossRules.applyBattle(step.state,
+          players: players.length, eco: s.mission?.bossEco ?? false);
+    }
     // Zone / Eco scaling may move enemy turns: keep the opener first.
     EncounterRules.applyTimelineOpener(
         step.state,
@@ -4768,10 +4777,17 @@ class _Op {
         events.add(WeaponDropEvent(d.key, it.baseId, 'elite'));
       }
     } else if (b.boss) {
+      final bossEco = m.bossEco;
+      m.bossEco = false;
       _lootAll(LootSource.boss, lx, ly, level: lootLevel);
-      _bossLegendary(b, lx, ly, lootLevel);
+      // Eco re-fight (bosses.md § v0.50): extra boss loot rolls.
+      for (var i = 0; i < BossRules.extraRolls(eco: bossEco); i++) {
+        _lootAll(LootSource.boss, lx, ly, level: lootLevel);
+      }
+      _bossLegendary(b, lx, ly, lootLevel, eco: bossEco);
       if (s.tutorial == null) _bossFragment(b);
       _bossCores();
+      _bossMaterial(b, eco: bossEco);
     } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);
@@ -5044,7 +5060,7 @@ class _Op {
 
   /// `OfferBossAction` (persistent_dungeons.md § 4): paga la Ofrenda en el
   /// altar del jefe vencido y lo revive en su sala.
-  bool _offerBoss(SessionPlayer p) {
+  bool _offerBoss(SessionPlayer p, {bool eco = false}) {
     final m = s.mission;
     if (m == null ||
         s.mode != SessionMode.field ||
@@ -5061,16 +5077,19 @@ class _Op {
         _dist(p.x, p.y, b.homeX, b.homeY) > DungeonRules.altarReach) {
       return false;
     }
-    final paid = DungeonRules.pay(p.profile, m.zone);
+    final paid = DungeonRules.pay(p.profile, m.zone, eco: eco);
     if (paid == null) return false;
     p.profile = paid;
+    m.bossEco = eco;
     b
       ..alive = true
       ..x = b.homeX
       ..y = b.homeY
       ..aggro = false;
     s.graceUntil = s.time + SessionEngine.missionStartGrace;
-    say('${p.name} hizo la Ofrenda: el jefe volvió a su sala.');
+    say(eco
+        ? '${p.name} hizo la Ofrenda del Eco: el jefe volvió más fuerte.'
+        : '${p.name} hizo la Ofrenda: el jefe volvió a su sala.');
     return true;
   }
 

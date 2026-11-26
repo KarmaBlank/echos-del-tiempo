@@ -158,6 +158,10 @@ class GameSprites {
 extension EnemySpriteId on GameSprites? {
   String enemySpriteId(String enemyType, int phase) {
     final s = this;
+    // Phased zone bosses (bosses.md § v0.50): `<tipo>Fase3` in phase 3.
+    if (phase >= 3 && s != null && s.enemy('${enemyType}Fase3') != null) {
+      return '${enemyType}Fase3';
+    }
     if (phase >= 2 && s != null && s.enemy('${enemyType}Fase2') != null) {
       return '${enemyType}Fase2';
     }

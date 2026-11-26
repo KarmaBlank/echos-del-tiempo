@@ -550,6 +550,25 @@ extension _MiningOp on _Op {
     smithXp(p, MiningRules.t.i('mineXp') * 2);
   }
 
+  /// The boss material of [b]'s boss for everyone (bosses.md § v0.50):
+  /// a parts-forge setting with the boss affinity.
+  void _bossMaterial(SessionBattle b, {bool eco = false}) {
+    if (s.run != null || s.tutorial != null) return;
+    final got = BossRules.material(b.state.enemies.firstOrNull?.enemyType,
+        eco: eco);
+    if (got == null) return;
+    final (id, n) = got;
+    for (final q in players) {
+      if (q.isCompanion) continue;
+      _profileChange(
+          q,
+          MiningRules.give(q.profile, {id: n},
+              source: 'boss', day: s.town.sky.day),
+          gain: true);
+    }
+    say('El jefe dejó $n ${kSmithMaterials[id]?.name ?? id}.');
+  }
+
   /// Guardian cores for everyone who beat a zone boss (§ 1.5).
   void _bossCores() {
     final n = MiningRules.t.i('bossCore');

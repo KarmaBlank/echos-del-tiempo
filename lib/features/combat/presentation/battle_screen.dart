@@ -47,6 +47,7 @@ import 'combat_strings.dart';
 import 'game_sprites.dart';
 import 'scene/battle_layout.dart';
 import 'scene/battle_painter.dart';
+import 'zone_boss_bar.dart';
 import 'scene/battle_scene.dart';
 
 /// Pantalla de batalla pixel art: arriba la escena del prototipo (grupo
@@ -91,7 +92,11 @@ class BattleView extends StatefulWidget {
     this.onMoveQueued,
     this.onConfirmQueue,
     this.queueAgreed,
+    this.bossEco = false,
   });
+
+  /// The boss is the Eco re-fight (bosses.md § v0.50): ECO on its bar.
+  final bool bossEco;
 
   /// Moves a queued command to position `to`; `null` = no arrows.
   final void Function(String id, int to)? onMoveQueued;
@@ -1499,6 +1504,7 @@ class BattleViewState extends State<BattleView>
         layout: layout,
       );
       final s = g.scale;
+      final bossBar = zoneBossBar(_s, b, eco: widget.bossEco);
       return ClipRect(
         child: Stack(
           children: [
@@ -1553,12 +1559,20 @@ class BattleViewState extends State<BattleView>
                   onHover: _hoverRow,
                 ),
               ),
+            // Phased zone boss (bosses.md § v0.50): its bar, top center.
+            if (bossBar != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: g.stripPx + 4,
+                child: IgnorePointer(child: Center(child: bossBar)),
+              ),
             // Action queue (turn_modes.md § 3.1): centered under the strip.
             if (widget.queue.isNotEmpty)
               Positioned(
                 left: 0,
                 right: 0,
-                top: g.stripPx + 4,
+                top: g.stripPx + (bossBar != null ? 76 : 4),
                 child: Center(
                   child: BattleQueueRow(
                     entries: widget.queue,

@@ -111,6 +111,8 @@ flutter:
     - assets/sprites/enemies/golem/
     - assets/sprites/enemies/ghost/
     - assets/sprites/enemies/reyLimo/
+    - assets/sprites/enemies/reyLimoFase2/
+    - assets/sprites/enemies/reyLimoFase3/
     - assets/sprites/enemies/golemReloj/
     - assets/sprites/enemies/devorador/
     - assets/sprites/enemies/arana/

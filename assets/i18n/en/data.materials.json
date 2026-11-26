@@ -367,5 +367,6 @@
   "data.materials.tool.regadera_cobre.name": "Copper watering can",
   "data.materials.tool.regadera_eco.name": "Echo Watering Can",
   "data.materials.tool.regadera_lata.name": "Tin watering can",
-  "data.materials.tool.regadera_runica.name": "Runic bronze watering can"
+  "data.materials.tool.regadera_runica.name": "Runic bronze watering can",
+  "data.materials.smith.boss_gelcrown.name": "Gel crown"
 }

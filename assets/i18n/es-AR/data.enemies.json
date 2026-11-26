@@ -64,6 +64,8 @@
   "data.enemies.mechanic.marca.counter": "Cada 3 acciones el Centinela <b>marca</b> a un jugador: su próximo golpe va contra él y pega <b>×2</b>. Que <b>otro aliado lo Proteja</b> (Protección o Baluarte) para recibirlo normal. <span class=\"k\">Solo: Defender también la contrarresta.</span>",
   "data.enemies.mechanic.fases.name": "Fin del Tiempo",
   "data.enemies.mechanic.fases.counter": "Jefe final en <b>2 fases</b>. Al 50% de la vida se transforma: pierde sus estados y la barra de quiebre, pega +15% y lanza <b>Colapso Temporal cada 2 acciones</b> (a todos, retrasa). Guardá curas y defensas para la fase 2; Fin de las Eras borra los buffs.",
+  "data.enemies.mechanic.marea_real.name": "Marea Real",
+  "data.enemies.mechanic.marea_real.counter": "<b>3 fases</b> (66% y 33%). Avisa sus golpes a todos: <b>Ola Ácida</b> envenena y <b>Marea Real</b> moja y retrasa. <b>Defendé</b> cuando dice PRÓX. En la fase 2 <b>se divide</b>: vuelven sus limos. <span class=\"k\">Solo: menos limos.</span>",
   "data.enemies.mechanic.abismo_reloj.name": "Reloj del Abismo",
   "data.enemies.mechanic.abismo_reloj.counter": "<b>3 fases</b>. <b>Rebobinar</b>: se cura lo que recibió desde su acción anterior; <b>quebralo antes</b> (avisa). <b>Distorsión</b>: retrasa al grupo. Fase 2: <b>Diluvio</b> moja y <b>Descarga</b> electrocuta a los Mojados: <b>Defendé</b> para que no reaccione. <span class=\"k\">Solo: rebobina 50% y retrasa menos.</span>",
   "data.enemies.mechanic.abismo_eco.name": "Ecos del Abismo",

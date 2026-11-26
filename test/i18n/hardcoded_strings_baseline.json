@@ -84,7 +84,7 @@
   "lib/game_engine/data/eco_catalog.dart": 61,
   "lib/game_engine/data/elemental_skills_catalog.dart": 20,
   "lib/game_engine/data/elite_ults_catalog.dart": 20,
-  "lib/game_engine/data/enemies_catalog.dart": 78,
+  "lib/game_engine/data/enemies_catalog.dart": 79,
   "lib/game_engine/data/exploration_catalog.dart": 3,
   "lib/game_engine/data/items_catalog.dart": 6,
   "lib/game_engine/data/missions_catalog.dart": 3,
@@ -100,5 +100,6 @@
   "lib/game_engine/data/uniques_catalog.dart": 29,
   "lib/game_engine/data/weapon_passives.dart": 50,
   "lib/game_engine/data/weapons_catalog.dart": 94,
-  "lib/game_engine/data/zones_catalog.dart": 20
+  "lib/game_engine/data/zones_catalog.dart": 20,
+  "lib/game_engine/data/zone_bosses_catalog.dart": 7
 }

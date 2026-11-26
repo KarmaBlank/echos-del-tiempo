@@ -236,7 +236,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-const kProtocolVersion = 99;
+/// 100: phased zone bosses (bosses.md § v0.50): `offer` carries `eco`
+/// (the Eco re-fight) and the mission sends `be`; a 99 host would revive
+/// a normal boss and charge the normal offering.
+const kProtocolVersion = 100;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

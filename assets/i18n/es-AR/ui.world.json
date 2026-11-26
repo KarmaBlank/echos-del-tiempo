@@ -426,5 +426,7 @@
   "ui.world.cozy.search_prompt": "[Mantené E/Clic] Buscar en el árbol",
   "ui.world.cozy.searched": "Ya buscaste en este árbol hoy",
   "ui.world.prompt.spent": "Ya lo usaste",
-  "ui.world.loot.gold": "{n} de oro"
+  "ui.world.loot.gold": "{n} de oro",
+  "ui.world.offering.offer_eco": "OFRENDA DEL ECO",
+  "ui.world.offering.eco_asks": "Eco: pide {n} (jefe más fuerte, más botín)"
 }
