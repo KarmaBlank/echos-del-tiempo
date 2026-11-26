@@ -24,16 +24,14 @@ escritorio, tienda, jefes e invocaciones.
 - **Luciérnagas:** de noche, pescando o en balsa, hasta `cozyFireflies`
   puntitos de luz que flotan cerca del jugador sobre el agua
   (`fishing_layer.dart`).
-- **Cámara y HUD:** pescando, la cámara se acerca a `cozyFishZoom` (fracción
-  del mapa visible, < 1 = más cerca) con suavizado; el HUD baja a
-  `cozyHudOpacity`. Al soltar la caña vuelve. v0.49.19: el zoom es solo de
-  la cámara del mundo; el HUD, los menús y los paneles nunca cambian de
-  tamaño ni de lugar (se quitó `cozyHudScale`), y durante la animación la
-  cámara no se ajusta a píxel (ver `exploration.md § Cámara`).
-  v0.49.14: el acercamiento ya no tiembla. Avanza lineal en el tiempo
-  (`cozyFishZoomSec`, 0.6 s, igual a cualquier FPS) con curva suave
-  (smoothstep) de ida y de vuelta, y el centro de la vista queda quieto
-  mientras cambia el zoom: el seguimiento de la cámara no pelea con él.
+- **Cámara y HUD:** pescando, la cámara se acerca un nivel entero del
+  zoom del mundo (`worldZoomFishSteps`, ver `exploration.md § Cámara`,
+  "Zoom del mundo"), con corte instantáneo; si el jugador ya está en el
+  nivel máximo no hay acercamiento. El HUD baja a `cozyHudOpacity`. Al
+  soltar la caña vuelve al nivel elegido por el jugador. El HUD, los
+  menús y los paneles nunca cambian de tamaño ni de lugar. v0.49.28:
+  reemplaza el acercamiento fraccional suave (`cozyFishZoom`,
+  `cozyFishZoomSec`, quitados), que deformaba el pixel art.
 - **Decorar la balsa:** cosmético, barato, en el pescador del bioma
   (pestaña BALSA). Piezas: farol (`raftLanternCost`), techito
   (`raftRoofCost`) y pintura (`raftPaintCost`, 4 colores). Comprar una pieza

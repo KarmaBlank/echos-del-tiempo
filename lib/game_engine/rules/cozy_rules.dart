@@ -24,27 +24,7 @@ abstract final class CozyRules {
 
   // ---------------- fishing calm (§ 1) ----------------
 
-  /// Map fraction shown while fishing (< 1 = closer).
-  static double get fishZoom => t.d('cozyFishZoom').clamp(0.5, 1.0);
-
-  /// Seconds the fishing zoom takes to go in or out.
-  static double get fishZoomSec => t.d('cozyFishZoomSec').clamp(0.05, 5.0);
-
-  /// Fishing zoom progress [p] (0 = normal, 1 = fishing) after [dt]
-  /// seconds: linear in time, so it does not depend on the frame rate.
-  static double fishZoomStep(double p,
-      {required bool fishing, required double dt}) {
-    final d = dt / fishZoomSec;
-    return (fishing ? p + d : p - d).clamp(0.0, 1.0);
-  }
-
-  /// Map fraction at zoom progress [p]: ease-in-out (smoothstep) from 1
-  /// to [fishZoom].
-  static double fishZoomAt(double p) {
-    final e = p * p * (3 - 2 * p);
-    return 1 + (fishZoom - 1) * e;
-  }
-
+  // The fishing zoom is an integer world-zoom level (WorldZoomRules).
   static double get hudOpacity => t.d('cozyHudOpacity').clamp(0.1, 1.0);
   static int get fireflies => t.i('cozyFireflies').clamp(0, 40);
   static double get musicLevel => t.d('cozyMusicLevel').clamp(0.0, 1.0);
