@@ -40,7 +40,11 @@ void _checkGrid(WidgetTester tester, String p, {double? cell}) {
 void main() {
   test('inventoryScale mirrors inventoryLayout', () {
     expect(DsSizes.gridWidth(), 6 * 44 + 5 * 4);
-    for (final (w, h) in const [(962.0, 447.0), (1462.0, 723.0), (1962.0, 994.0)]) {
+    for (final (w, h) in const [
+      (962.0, 447.0),
+      (1462.0, 723.0),
+      (1962.0, 994.0)
+    ]) {
       final strip = w * 0.245;
       final l = inventoryLayout(w, h, stripWidth: strip + 8);
       expect(DsSizes.inventoryScale(w, h), l.scale, reason: '$w x $h');
@@ -60,9 +64,8 @@ void main() {
         tester.view.physicalSize = size;
         await tester.pump();
         await tester.pump();
-        final inv = tester
-            .getSize(find.byKey(const ValueKey('inv-cell-0')))
-            .width;
+        final inv =
+            tester.getSize(find.byKey(const ValueKey('inv-cell-0'))).width;
         expect(find.byType(InventoryTab), findsOneWidget);
 
         final c = await pumpPanel(tester,
@@ -89,8 +92,7 @@ void main() {
             home: MediaQuery(
           data: MediaQueryData(
               size: size,
-              textScaler:
-                  TextScaler.linear(t == TextSize.enormous ? 1.6 : 1)),
+              textScaler: TextScaler.linear(t == TextSize.enormous ? 1.6 : 1)),
           child: const Scaffold(
               body: SingleChildScrollView(child: GridTemplatesMockup())),
         )));

@@ -12,13 +12,16 @@ import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/app/theme/ui_theme.dart';
 import 'package:echos_del_tiempo/core/settings/crt_filter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/biome_npc_panel.dart';
+import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../features/inventory/loot_fixtures.dart';
 import '../features/panel_test_harness.dart';
 import '../game_engine/session_test_helpers.dart';
 import '../real_fonts.dart';
@@ -69,8 +72,8 @@ void main() {
             credits: 900,
             life: LifeSkills(
                 farm: FarmSkills(xp: 300, seeds: const {'nabo_claro': 6})))),
-        build: (v, c) => RepaintBoundary(
-            child: BiomeNpcPanel(view: v, controller: c)));
+        build: (v, c) =>
+            RepaintBoundary(child: BiomeNpcPanel(view: v, controller: c)));
     tester.view.physicalSize = const Size(1280, 720);
     c.openResident(kBiomeNpcs.first);
     await tester.pump();
@@ -81,5 +84,42 @@ void main() {
     await tester.pump();
     await tester.pump();
     await _save(tester, 'docs/preview/grids/shop_caravana_1280.png');
+  }, skip: !_on);
+
+  testWidgets('smithy (Brann forge)', (tester) async {
+    final c = await pumpPanel(tester,
+        profile: progression.normalize(PlayerProfile(
+            name: 'Ana',
+            classId: 'guerrero',
+            level: 20,
+            credits: 5000,
+            life: LifeSkills(ores: const {'ingot_copper': 10}))),
+        build: (v, c) =>
+            RepaintBoundary(child: BiomeNpcPanel(view: v, controller: c)));
+    tester.view.physicalSize = const Size(1280, 720);
+    c.session!.town = c.session!.town
+        .withResident(const ResidentState('brann', invited: true, house: 1));
+    c.openResident(kBiomeNpcs.firstWhere((n) => n.id == 'brann'));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('ds-dialogue-text')),
+        warnIfMissed: false);
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('npc-choice-comprar')));
+    await tester.pump();
+    await tester.pump();
+    await _save(tester, 'docs/preview/grids/smithy_brann_1280.png');
+  }, skip: !_on);
+
+  testWidgets('inventory', (tester) async {
+    await pumpPanel(tester,
+        profile: lootWarrior(),
+        build: (v, c) => RepaintBoundary(
+            child: CharacterPanel(
+                view: v, controller: c, initialTab: CharacterTab.inventory)));
+    tester.view.physicalSize = const Size(1280, 720);
+    await tester.pump();
+    await tester.pump();
+    await _save(tester, 'docs/preview/grids/inventory_1280.png');
   }, skip: !_on);
 }

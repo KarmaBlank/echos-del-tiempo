@@ -76,8 +76,8 @@ void main() {
     final g = await setUp(
         t,
         DsTooltip(
-            card: DsTooltipCard(
-                title: 'Mecánica', children: [Text('x ' * 2000)]),
+            card:
+                DsTooltipCard(title: 'Mecánica', children: [Text('x ' * 2000)]),
             child: target));
     final tRect = t.getRect(find.byKey(const ValueKey('target')));
     final card = find.byType(DsTooltipCard);

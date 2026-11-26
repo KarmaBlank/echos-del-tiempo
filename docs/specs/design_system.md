@@ -292,7 +292,7 @@ Plantilla única para colecciones (pesca, cultivo y herrería):
   de ancho fijo.
 - Test de overflow a 1024×640 y 1920×1080 con escala 1.0 y 2.0.
 
-### 6.2 Grilla de ítems (`DsGridDetailLayout`, v0.49.9)
+### 6.2 Grilla de ítems (`DsGridDetailLayout`, v0.49.13)
 
 Regla del dueño: INVENTARIO es la base; TODA pantalla que muestra ítems
 se ve igual. Un solo organismo, `DsGridDetailLayout`
@@ -305,7 +305,11 @@ se ve igual. Un solo organismo, `DsGridDetailLayout`
   INVENTARIO. La casilla escala con los mismos pasos que INVENTARIO
   (enteros desde ×2, cuartos entre ×1 y ×2; `DsSizes.itemScale`): el
   mayor paso en que entran 6 columnas + el detalle a lo ancho y 5 filas
-  a lo alto. El ícono escala con la casilla.
+  a lo alto. El ícono escala con la casilla. INVENTARIO avisa la escala
+  con la que se dibujó (`DsSizes.rememberInventoryScale`, por tamaño de
+  pantalla y de texto) y las demás grillas usan exactamente esa; si
+  INVENTARIO todavía no se abrió, se estima desde la pantalla
+  (`inventoryBodyFor`). Solo baja si 6 columnas + detalle no entran.
 - `gridColumns` 6: la grilla mide exactamente 6 columnas; las filas
   crecen hacia abajo con barra de scroll visible si no entran.
 - `detailPaneWidth` 340: ancho fijo del detalle a la derecha (entra
@@ -319,6 +323,8 @@ se ve igual. Un solo organismo, `DsGridDetailLayout`
 - `leading` opcional: columna a la izquierda de la grilla (ARMERÍA).
 - Claves: `<prefijo>-grid`, `<prefijo>-pane`, `<prefijo>-scroll`.
 - `DsItemCell` (átomo de casilla de TALLER y TRASPASO) mide `itemCell`.
+- `DsTransferTemplate`: cada lado es una grilla de 6 columnas con barra
+  de scroll visible (`<prefijo>-scroll-l` / `-r`).
 
 Pantallas: caravana / tiendas de NPC de bioma (COMPRAR), AGROPECUARIO,
 PESCA Y CULTIVO, menús de NPC, minero, MI PUESTO, ayudantes, diarios de
