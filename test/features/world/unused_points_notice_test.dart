@@ -89,7 +89,9 @@ void main() {
         (tester) async {
       await tester.pumpWidget(_app(
           UnusedPointsButton(points: UnusedPoints.none, onPressed: () {})));
-      expect(find.byKey(const ValueKey('hud-points-button')), findsNothing);
+      // v0.49.20: always there; without points, no badge.
+      expect(find.byKey(const ValueKey('hud-points-button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('hud-points-badge')), findsNothing);
 
       var taps = 0;
       await tester.pumpWidget(_app(UnusedPointsButton(
@@ -252,7 +254,8 @@ void main() {
       await pumpPanel(tester,
           profile: newProfile('Leo', 'maga'),
           build: (v, c) => WorldHud(view: v, controller: c));
-      expect(find.byKey(const ValueKey('hud-points-button')), findsNothing);
+      // PERSONAJE stays (every player reaches the character screen).
+      expect(find.byKey(const ValueKey('hud-points-button')), findsOneWidget);
       expect(find.byType(PointsBadge), findsNothing);
     });
   });
