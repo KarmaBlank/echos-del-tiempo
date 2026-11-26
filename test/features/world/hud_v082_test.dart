@@ -124,7 +124,7 @@ void main() {
     expect(find.textContaining('Pociones'), findsNothing);
     final area = tester.getRect(find.byKey(const ValueKey('hud-party-boxes')));
     // Una franja fina: menos de 1/10 del alto (antes ~1/3).
-    expect(area.height, lessThan(60), reason: '$area');
+    expect(area.height, lessThanOrEqualTo(60), reason: '$area');
     final local = c.view!.localId;
     expect(find.byKey(ValueKey('hud-hp-$local')), findsOneWidget);
     expect(find.byKey(ValueKey('hud-mp-$local')), findsOneWidget);

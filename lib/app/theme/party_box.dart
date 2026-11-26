@@ -35,6 +35,17 @@ class PartyBox extends StatelessWidget {
   static double compactWidthOf(BuildContext context) =>
       RetroType.width(context, compactWidth);
 
+  /// Alto fijo de la caja compacta (v0.49.21): la fila del grupo no salta
+  /// de alto cuando alguien cambia de lugar.
+  ///
+  /// Dos renglones de [RetroType.small] con [RetroType.lineTight], la barra
+  /// de XP (2 + 2), el aire (3 + 3), el borde (2 + 2) y
+  /// 4 de holgura para las barras.
+  static double compactHeightOf(BuildContext context) =>
+      2 * MediaQuery.textScalerOf(context).scale(RetroType.small) *
+          RetroType.lineTight +
+      20;
+
   final List<Widget> children;
   final bool local;
   final bool knockedOut;

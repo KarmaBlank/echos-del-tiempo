@@ -29,7 +29,10 @@ Future<SessionController> _atStation(WidgetTester tester,
       engine: sessionEngine(zones: true),
       build: (v, c) => Align(
           alignment: Alignment.bottomCenter,
-          child: ToolHud(controller: c, profile: v.me!.profile)));
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ToolPrompt(controller: c),
+            ToolHud(controller: c, profile: v.me!.profile),
+          ])));
   expect(c.travelPlace(kBosque), isTrue);
   expect(c.travelMine(0), isTrue);
   final (sx, sy) = c.mineLevel!.station;
