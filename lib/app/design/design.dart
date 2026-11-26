@@ -12,6 +12,7 @@ export 'ds_craft_template.dart';
 export 'ds_detail_pane.dart';
 export 'ds_dialogue.dart';
 export 'ds_focus.dart';
+export 'ds_gold.dart';
 export 'ds_guide.dart';
 export 'ds_menu_button.dart';
 export 'ds_tokens.dart';

@@ -120,6 +120,10 @@ se encendió: alumbra más, pero en lo profundo también se deja ver.
   (`SkyRules.isNight`) y se apaga de día; L no hace nada ahí. En
   mazmorras nunca es automática: se prende y se apaga con L (fuera de
   batalla), como en v0.37.0.
+- Atajo del HUD (v0.49.17): al lado de `[1] Vida` / `[2] Maná`, el
+  mismo botón compacto `[L] Llama errante` (`hud-flame`): seleccionado
+  mientras alumbra; gris con el motivo en el tooltip al aire libre (va
+  sola) o en batalla. Clic = L.
 - Luz en mazmorra oscura (v0.41.3): `carried(dark: true, wisp: true)`
   multiplica el radio por `wispDarkRadiusFactor` (2: 5.5 → 11) y sube la
   intensidad a `wispDarkIntensity` (1.5; sin la Llama, 1). Antes la Llama

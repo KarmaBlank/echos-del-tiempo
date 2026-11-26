@@ -4,6 +4,7 @@ import 'ds_button.dart';
 import 'ds_components.dart';
 import 'ds_collection_template.dart' show DsGridDetailLayout;
 import 'ds_detail_pane.dart';
+import 'ds_gold.dart';
 import 'ds_tokens.dart';
 import 'ds_transfer_template.dart' show DsItemCell, DsTransferFilter;
 
@@ -85,7 +86,7 @@ class DsCraftDetail extends StatelessWidget {
               item.body!,
             ],
             SizedBox(height: DsSpace.xs),
-            for (final l in item.lines) Text(l, style: DsText.body()),
+            for (final l in item.lines) DsGoldText(l, style: DsText.body()),
           ],
         ),
         actions: item.actions.isEmpty

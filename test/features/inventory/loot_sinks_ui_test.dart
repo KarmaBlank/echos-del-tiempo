@@ -38,7 +38,7 @@ void main() {
     final price = c.engine.progression.crafting.sellPrice(rareAxe);
     await _tap(tester, 'inv-cell-${_cell(me(), 'r1')}');
     await openInventoryActions(tester);
-    expect(plain(tester, 'inv-sell'), contains('Vender \$$price'));
+    expect(plain(tester, 'inv-sell'), contains('Vender · \$$price'));
     await _tap(tester, 'inv-sell');
     expect(plain(tester, 'inv-craft-question'), contains('¿Vender'));
     expect(plain(tester, 'inv-craft-question'), contains('+\$$price'));
