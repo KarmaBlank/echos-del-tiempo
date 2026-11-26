@@ -236,7 +236,13 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-const kProtocolVersion = 99;
+/// 100–103: reserved by pending branches (farm animals, lightning rod,
+/// kitchen).
+/// 104: quiet loot (loot.md § 4c / 4d): `LootDropEvent` and
+/// `LootPickedEvent` carry `q` (host flag: log line only, no loot-filter
+/// toast) for everything obtained in the town and everything farming
+/// yields; harvests go straight into the bags instead of the floor.
+const kProtocolVersion = 104;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

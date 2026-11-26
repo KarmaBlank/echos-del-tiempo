@@ -164,12 +164,14 @@ class EventJson {
             'src': e.source.name,
             if (e.groundId != null) 'g': e.groundId,
             if (e.uid != null) 'u': e.uid,
+            if (e.quiet) 'q': true,
           },
         LootPickedEvent() => {
             't': 'picked',
             'id': e.playerId,
             'g': e.groundId,
             'd': e.drop.toJson(),
+            if (e.quiet) 'q': true,
           },
         ItemGivenEvent() => {
             't': 'given',
@@ -326,9 +328,12 @@ class EventJson {
       case 'loot':
         return LootDropEvent(j.str('id'), _drop(j['d']),
             j.enumByName('src', LootSource.values),
-            groundId: j.intOrNull('g'), uid: j.strOrNull('u'));
+            groundId: j.intOrNull('g'),
+            uid: j.strOrNull('u'),
+            quiet: j['q'] == true);
       case 'picked':
-        return LootPickedEvent(j.str('id'), j.integer('g'), _drop(j['d']));
+        return LootPickedEvent(j.str('id'), j.integer('g'), _drop(j['d']),
+            quiet: j['q'] == true);
       case 'given':
         return ItemGivenEvent(j.str('from'), j.str('to'), _drop(j['d']));
       case 'crafted':

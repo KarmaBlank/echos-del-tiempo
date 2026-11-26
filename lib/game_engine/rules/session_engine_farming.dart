@@ -444,13 +444,18 @@ extension _FarmingOp on _Op {
       y < m.height &&
       m.tileAt(x, y) == Tile.soil;
 
-  void _grantHarvest(SessionPlayer p, FarmPlot pl, int tx, int ty) {
+  /// What a harvest yields goes straight in (loot.md § 4c, farming.md
+  /// § 3): no ground loot, log line only.
+  void _grantHarvest(SessionPlayer p, FarmPlot pl, int tx, int ty) =>
+      _asFarming(() => _grantHarvestNow(p, pl, tx, ty));
+
+  void _grantHarvestNow(SessionPlayer p, FarmPlot pl, int tx, int ty) {
     // Scarecrow nearby: a small quality bias (cozy_life.md § 2).
     final h = FarmingRules.harvest(_rand, p.profile, pl,
         bias: CozyRules.scarecrowBias(s.town, tx, ty))!;
     final lvl0 = FarmingRules.level(p.profile);
-    // XP and pity now; the crop and its seeds pop out of the plot as
-    // ground loot with a short magnet (farming.md § 3, loot.md § 4c).
+    // XP and pity now; the crop and its seeds go straight into the bags
+    // (farming.md § 3, loot.md § 4c).
     final bags = p.profile.life.farm;
     var prof = FarmingRules.addHarvest(p.profile, h);
     prof = prof.copyWith(
@@ -514,7 +519,10 @@ extension _FarmingOp on _Op {
 
   /// A ripe living weapon (profession_gear.md § 3.4): the weapon to the
   /// harvester (inventory, floor or stash), Cultivo XP and an event.
-  void _grantLiving(SessionPlayer p, ItemInstance item, int tx, int ty) {
+  void _grantLiving(SessionPlayer p, ItemInstance item, int tx, int ty) =>
+      _asFarming(() => _grantLivingNow(p, item, tx, ty));
+
+  void _grantLivingNow(SessionPlayer p, ItemInstance item, int tx, int ty) {
     final lvl0 = FarmingRules.level(p.profile);
     final f = p.profile.life.farm;
     _profileChange(

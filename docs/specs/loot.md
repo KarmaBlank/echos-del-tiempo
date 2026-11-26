@@ -239,7 +239,7 @@ fila: `TOMAR` (al inventario; en partida pasa por el host como
 `stashTake`, entera o, un material, lo que entre) y `DESCARTAR`
 (solo local). Con una operación en curso los botones quedan grises.
 
-## 4c. Botín en el piso fuera de las mazmorras (protocolo 96)
+## 4c. Botín en el piso fuera de las mazmorras (protocolo 96, 104)
 
 Los exteriores (biomas, minas) y el pueblo usan el **mismo** sistema de
 piso que las mazmorras: `GroundLoot` instanciado (`ownerId` = quien lo
@@ -255,12 +255,20 @@ aviso `+` a la izquierda. El host decide todo.
 - **Quién derrama**: cofre de bioma (sobre el cofre), santuario/fuente
   (una casilla delante), cofre y cofre reliquia de mina (sobre el
   cofre), cofre hundido pescado desde tierra (a los pies; desde una
-  balsa entra directo con aviso), cosecha de huerta, matas recolectadas
-  y búsqueda en árboles (sobre la parcela / mata / árbol). Armas y pilas
-  pasan por `_deliver` con `LootSource.chest` (filtro y topes de siempre).
-- **Imán**: los bienes de cosecha (todo menos `gold` y `ore`) se levantan
-  solos dentro de `magnetRange` (40 px), así cosechar no es tedioso; el
-  oro y el mineral esperan en el piso como el botín de un cofre.
+  balsa entra directo con aviso), matas recolectadas y búsqueda en árboles (sobre la mata / árbol). Armas
+  y pilas pasan por `_deliver` con `LootSource.chest` (filtro y topes de
+  siempre).
+- **El cultivo no derrama** (protocolo 104): todo lo que sale de sembrar
+  y cosechar (cultivo, semillas, semillas de arma, armas vivas, ecos,
+  materiales, rarezas) entra directo al inventario del que cosechó, donde
+  sea que se cultive (`_Op._farming`). Inventario lleno: la regla que ya
+  existía para el botín del pueblo (`stashOverflow`, fishing.md § 8.4):
+  lo que ocupa casilla va al alijo y, si no entra, a Objetos sin recoger
+  (§ 4b.1 / 4b.2); nunca al piso. Los bienes siempre entran. La cosecha
+  automática de los ayudantes sigue yendo a su cofre.
+- **Imán**: los bienes recolectados (todo menos `gold` y `ore`) se
+  levantan solos dentro de `magnetRange` (40 px); el oro y el mineral
+  esperan en el piso como el botín de un cofre.
 - Un compañero (o un motor sin `groundLoot`) los recibe directo, con
   aviso.
 - **Cerrar el mapa** (viajar a otro lugar, empezar una misión, volver de
@@ -279,13 +287,21 @@ Dos lugares anuncian loot: el **registro** encima del chat
   sin `groundLoot`) o que, en el piso, levanta el imán (todo menos
   `gold` y `ore`). Solo sale en el registro; **nunca** con aviso del
   filtro, ni al caer ni al levantarse.
+- **Botín silencioso** (`GoodsRules.quiet`, protocolo 104): en el
+  **pueblo** (incluido el interior de la tienda) no hay avisos del
+  filtro para nada, ni el Legendario: solo el registro. Lo mismo para
+  todo lo que da el **cultivo**, donde sea. El host lo decide y lo marca
+  en el evento (`LootDropEvent.quiet` / `LootPickedEvent.quiet`, JSON
+  `q`); `GoodsRules.toast` es la única regla que usa el registro.
+- Mazmorras y exteriores no cambian: lo que es loot sigue siendo loot
+  (piso con su aviso del filtro).
 - Lo demás sigue igual: armas, equipo, ecos y pilas que entran directo
   tienen su aviso `+`; el Legendario siempre su aviso; el oro y el
   mineral que esperan en el piso tienen su `+` al levantarlos; dar un
   objeto avisa al que lo recibe.
 - Las menas picadas en la mina (`MineDugEvent`) no pasan por el loot.
 - Multijugador: cada cliente aplica la misma regla a los mismos eventos
-  del host (`groundId` y el drop ya viajan); el protocolo no cambia.
+  del host (`groundId`, el drop y `q` viajan).
 
 ## 5. Crafteo
 

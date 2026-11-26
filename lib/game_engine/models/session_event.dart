@@ -196,8 +196,11 @@ class LootDropEvent extends SessionEvent {
   final LootSource source;
   final int? groundId;
   final String? uid;
+
+  /// Host flag: log line only, no loot-filter toast (`GoodsRules.quiet`).
+  final bool quiet;
   const LootDropEvent(this.playerId, this.drop, this.source,
-      {this.groundId, this.uid});
+      {this.groundId, this.uid, this.quiet = false});
 }
 
 /// [playerId] levantó del piso el objeto [groundId].
@@ -205,7 +208,11 @@ class LootPickedEvent extends SessionEvent {
   final String playerId;
   final int groundId;
   final LootDrop drop;
-  const LootPickedEvent(this.playerId, this.groundId, this.drop);
+
+  /// Host flag: no loot-filter toast (`GoodsRules.quiet`).
+  final bool quiet;
+  const LootPickedEvent(this.playerId, this.groundId, this.drop,
+      {this.quiet = false});
 }
 
 /// [fromId] le dio [drop] a [toId].

@@ -179,25 +179,31 @@ class LootFeed extends ChangeNotifier {
 
   void onEvent(SessionEvent e) {
     switch (e) {
-      case LootDropEvent(:final playerId, :final drop, :final groundId):
+      case LootDropEvent(
+          :final playerId,
+          :final drop,
+          :final groundId,
+          :final quiet
+        ):
         final v = verdictFor(playerId, drop);
         if (v != null && !v.visible) return;
         _line(_s.t('ui.world.loot.found', {'name': playerName(playerId)}), drop, v);
-        if (playerId == localId) {
+        if (playerId == localId && !quiet) {
           final legendary = drop.item?.rarity == Rarity.legendario;
           final style = v?.style ?? LootFilterRules.defaultStyle(drop);
           if (legendary) {
             _toast(_s.t('ui.world.loot.legendary'), drop, style, legendary: true, verdict: v);
           } else if (groundId == null &&
-              !GoodsRules.autoPickup(drop, onGround: false)) {
+              GoodsRules.toast(drop, quiet: quiet, onGround: false)) {
             // Sin loot en el piso: entró directo al inventario (los
-            // bienes solo van al registro, loot.md § 4d).
+            // bienes, el pueblo y el cultivo solo van al registro,
+            // loot.md § 4d).
             _toast('+', drop, style, verdict: v);
           }
         }
-      case LootPickedEvent(:final playerId, :final drop)
+      case LootPickedEvent(:final playerId, :final drop, :final quiet)
           when playerId == localId &&
-              !GoodsRules.autoPickup(drop, onGround: true):
+              GoodsRules.toast(drop, quiet: quiet, onGround: true):
         final v = verdictFor(playerId, drop);
         _toast('+', drop, v?.style ?? LootFilterRules.defaultStyle(drop),
             verdict: v);

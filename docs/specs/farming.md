@@ -55,12 +55,17 @@ Con una herramienta que no sirve, E / clic no hacen nada (el aviso dice
 por qué). La cosecha funciona con cualquier herramienta elegida: así no
 hay que cambiar de mano para levantar lo maduro.
 
-**Cosecha al piso (protocolo 96, loot.md § 4c).** El cultivo y sus
-semillas **saltan de la parcela** como botín en el piso del que cosechó
-(la XP y el pity se cuentan al cosechar) y el imán corto (`magnetRange`)
-los lleva solos a su bolsa con el aviso `+` de la izquierda. Lo mismo
-con lo recolectado de las matas de los biomas y lo que cae al buscar en
-un árbol. La cosecha automática de los ayudantes no cambia.
+**Cosecha directa (protocolo 104, loot.md § 4c / 4d; antes "cosecha al
+piso", protocolo 96).** Todo lo que da el cultivo (sembrar y cosechar),
+donde sea que se cultive, entra **directo al inventario** del que
+cosechó, sin botín en el piso: el cultivo y sus semillas, las semillas
+raras, mutadas y de arma, las armas vivas, los materiales y lo que salga.
+Solo se anuncia en el registro encima del chat (`Ana encontró: …`),
+nunca con aviso del filtro. Con el inventario lleno, lo que ocupa
+casilla (armas vivas, materiales) va al alijo y, si tampoco entra, a
+Objetos sin recoger (loot.md § 4b.1 / 4b.2, `stashOverflow`); los bienes
+siempre entran. La cosecha automática de los ayudantes sigue yendo a su
+cofre.
 
 F abona la parcela de enfrente con el mejor abono que tengas. E o el
 clic izquierdo sobre el mapa hacen la labor (igual que la pesca).

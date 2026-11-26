@@ -2634,7 +2634,7 @@ class _Op {
     if (next == null) return false;
     _profileChange(p, next);
     s.ground.remove(g);
-    events.add(LootPickedEvent(p.id, g.id, g.drop));
+    events.add(LootPickedEvent(p.id, g.id, g.drop, quiet: _quietLoot));
     return true;
   }
 
@@ -2711,6 +2711,29 @@ class _Op {
     }
   }
 
+  /// True while the host grants what farming yields (planting and
+  /// harvesting): it all goes straight in, with no ground loot and no
+  /// loot-filter toast (loot.md § 4c / 4d, farming.md § 3).
+  bool _farming = false;
+
+  /// Runs [grant] as farming output (see [_farming]).
+  void _asFarming(void Function() grant) {
+    final was = _farming;
+    _farming = true;
+    try {
+      grant();
+    } finally {
+      _farming = was;
+    }
+  }
+
+  /// Host flag for loot events: log line only (`GoodsRules.quiet`).
+  bool get _quietLoot => GoodsRules.quiet(
+      town: s.mode == SessionMode.lobby &&
+          s.run == null &&
+          (s.place == null || s.place == ShopInteriorRules.place),
+      farming: _farming);
+
   /// Goods left on the floor when the map closes (loot.md § 4c).
   void _giveGoods(SessionPlayer p, LootDrop d) {
     final next = GoodsRules.give(p.profile, d);
@@ -2730,13 +2753,14 @@ class _Op {
         rest.add(d);
         continue;
       }
-      if (!e.groundLoot || p.isCompanion) {
+      if (!e.groundLoot || p.isCompanion || _farming) {
         _giveGoods(p, d);
-        events.add(LootDropEvent(p.id, d, src));
+        events.add(LootDropEvent(p.id, d, src, quiet: _quietLoot));
         continue;
       }
       final g = _toGround(d, x, y, owner: p.id);
-      events.add(LootDropEvent(p.id, d, src, groundId: g.id));
+      events.add(
+          LootDropEvent(p.id, d, src, groundId: g.id, quiet: _quietLoot));
     }
     _deliver(p, rest, src, x, y);
   }
@@ -2783,12 +2807,15 @@ class _Op {
                   ? next.items.last.uid
                   : d.isEco
                       ? next.ecos.last.uid
-                      : null));
+                      : null,
+              quiet: _quietLoot));
           continue;
         }
         // Botín del agua en el pueblo (fishing.md § 8.4): el equipo que no
-        // entra va al alijo, no al piso.
+        // entra va al alijo, no al piso. Lo del cultivo nunca cae al piso
+        // (loot.md § 4c): al alijo y, si no entra, a Objetos sin recoger.
         if ((_keepsOffFloor(d, src) ||
+                _farming ||
                 (stashOverflow && st?.material == null)) &&
             s.run == null) {
           saved.add(d);
@@ -2797,7 +2824,8 @@ class _Op {
         full = true;
       }
       final g = _toGround(d, x, y, owner: p.id);
-      events.add(LootDropEvent(p.id, d, src, groundId: g.id));
+      events.add(
+          LootDropEvent(p.id, d, src, groundId: g.id, quiet: _quietLoot));
     }
     _recover(p, saved);
     if (shown.isEmpty) return;

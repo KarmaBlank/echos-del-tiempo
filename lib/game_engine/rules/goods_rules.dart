@@ -57,6 +57,22 @@ abstract final class GoodsRules {
   static bool autoPickup(LootDrop d, {required bool onGround}) =>
       d.isGoods && (!onGround || magnet(d));
 
+  /// Loot that is announced only in the loot log above the chat, never
+  /// with a loot-filter toast, whatever it is (loot.md § 4d): everything
+  /// obtained in the town (including the shop interior), and everything
+  /// farming yields anywhere. The host decides and flags the event
+  /// (`LootDropEvent.quiet`), so every client shows the same.
+  static bool quiet({required bool town, required bool farming}) =>
+      town || farming;
+
+  /// Whether a loot event of the local player shows a loot-filter toast
+  /// (loot.md § 4d). [quiet] is the host's flag ([GoodsRules.quiet]);
+  /// [onGround] is true for a pickup from the floor or a drop that fell
+  /// on it.
+  static bool toast(LootDrop d,
+          {required bool quiet, required bool onGround}) =>
+      !quiet && !autoPickup(d, onGround: onGround);
+
   /// [p] with [d] added; `null` if [d] is not a valid goods drop.
   static PlayerProfile? give(PlayerProfile p, LootDrop d) {
     final g = d.goods;

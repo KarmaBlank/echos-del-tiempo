@@ -465,7 +465,7 @@ extension _FishingOp on _Op {
     // On a raft there is no floor: goods go straight in, with notice.
     for (final d in drops.where((d) => d.isGoods)) {
       _giveGoods(p, d);
-      events.add(LootDropEvent(p.id, d, LootSource.chest));
+      events.add(LootDropEvent(p.id, d, LootSource.chest, quiet: _quietLoot));
     }
     drops.removeWhere((d) => d.isGoods);
     _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
