@@ -62,7 +62,8 @@ void main() {
     expect(e.apply(s, 'p0', const TravelAction(kBosque)), isNull);
     s = act(e, s, 'p0', const TravelAction(kPueblo));
     expect(s.place, isNull);
-    final front = ShopInteriorRules.townFront(TownPlan.landmarksOf(s.town));
+    final front = ShopInteriorRules.townFront(
+            TownPlan.landmarksOf(s.town), s.town.origin);
     expect((s.players['p0']!.y - front.y).abs(), lessThan(1));
     // Not from a biome.
     s = act(e, s, 'p0', const TravelAction(kBosque));

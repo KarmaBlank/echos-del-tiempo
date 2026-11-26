@@ -60,6 +60,7 @@ extension _BiomeOp on _Op {
       // Into / out of the shop (player_shop.md § 6).
       if (shopPos(fromShop, place) case final f?) {
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+        pos = ShopInteriorRules.safeLanding(place, s.town, pos);
       }
       // Between mine levels (mining_smithing.md § 1.4).
       if (arrive != null) {
@@ -80,7 +81,10 @@ extension _BiomeOp on _Op {
   /// Where a player lands entering or leaving the shop, or `null`.
   WorldPoint? shopPos(bool fromShop, String place) {
     if (ShopInteriorRules.isShop(place)) return ShopInteriorRules.arrival;
-    if (fromShop) return ShopInteriorRules.townFront(TownPlan.landmarksOf(s.town));
+    if (fromShop) {
+      return ShopInteriorRules.townFront(
+          TownPlan.landmarksOf(s.town), s.town.origin);
+    }
     return null;
   }
 
