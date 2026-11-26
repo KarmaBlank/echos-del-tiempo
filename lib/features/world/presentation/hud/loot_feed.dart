@@ -15,10 +15,12 @@ import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
+import '../../../../game_engine/rules/goods_rules.dart';
 import '../../../../game_engine/rules/loot_filter_rules.dart';
 import '../map/loot_painter.dart';
 import '../session_controller.dart';
 import '../world_strings.dart';
+
 import '../../../inventory/domain/eco_text.dart';
 
 /// Una línea del registro de loot: `Ana encontró: <objeto>` con el
@@ -187,13 +189,16 @@ class LootFeed extends ChangeNotifier {
           final style = v?.style ?? LootFilterRules.defaultStyle(drop);
           if (legendary) {
             _toast(_s.t('ui.world.loot.legendary'), drop, style, legendary: true, verdict: v);
-          } else if (groundId == null) {
-            // Sin loot en el piso: entró directo al inventario.
+          } else if (groundId == null &&
+              !GoodsRules.autoPickup(drop, onGround: false)) {
+            // Sin loot en el piso: entró directo al inventario (los
+            // bienes solo van al registro, loot.md § 4d).
             _toast('+', drop, style, verdict: v);
           }
         }
       case LootPickedEvent(:final playerId, :final drop)
-          when playerId == localId:
+          when playerId == localId &&
+              !GoodsRules.autoPickup(drop, onGround: true):
         final v = verdictFor(playerId, drop);
         _toast('+', drop, v?.style ?? LootFilterRules.defaultStyle(drop),
             verdict: v);

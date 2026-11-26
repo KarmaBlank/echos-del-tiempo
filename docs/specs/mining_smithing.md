@@ -275,6 +275,11 @@ pausa); clics o toques repetidos también pican (el ritmo lo limita el
 pico, y el anfitrión lo valida). Si el pico no alcanza, rebota y avisa
 «Necesitás un pico mejor (nivel N)» (`ui.world.mine.need_tier`, como
 mucho cada 2 s).
+El tile clicado se mantiene mientras siga al lado del jugador; si camina
+y queda lejos, el pico pasa al objetivo que elija el cursor de acción
+(controls.md § Cursor de acción) o deja de picar, y la barra de progreso
+de la roca lejana desaparece (el anfitrión ya rechazaba esos golpes; la
+predicción local no debe mostrarlos).
 
 ## 2. Materiales de herrería
 

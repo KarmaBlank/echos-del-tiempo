@@ -337,6 +337,8 @@ class SessionEngine {
     // El pueblo del mundo (farming.md § 10): huerta, ampliaciones y lago.
     if (town != null) {
       s.town = MiningRules.rebase(BiomeRules.rebase(town, s.time), s.time);
+      // Self-healing farm (farming.md § 8.7): plots no rule can read.
+      s.town = GearRules.repairPlots(s.town);
     }
     // A new world picks its sky seed now, so the biome regions (which
     // come from it, biome_regions.md § 1) do not change after the first
@@ -488,6 +490,29 @@ class SessionEngine {
       };
   static const missionStartGrace = 2.5;
   static const battleGrace = 3.5; // GRACE_MS
+
+  /// Called once per distinct failure when a tick rule throws
+  /// (netcode.md § "Tick a prueba de fallos"): the rule is skipped for
+  /// that tick and the rest of the tick still runs. The composition root
+  /// points it at the log; `null` = silent.
+  static void Function(String rule, Object error, StackTrace stack)?
+      onRuleError;
+
+  /// Failures already reported (`rule|error type|message`).
+  static final _reported = <String>{};
+
+  /// Runs one tick rule; an exception is reported once and swallowed so
+  /// the clock and every other rule keep advancing.
+  static void guardRule(String rule, void Function() f) {
+    try {
+      f();
+    } catch (e, st) {
+      final key = '$rule|${e.runtimeType}|$e';
+      if (_reported.length < 64 && _reported.add(key)) {
+        onRuleError?.call(rule, e, st);
+      }
+    }
+  }
   static const leash = 110.0; // LEASH
   static const aggroRange = 64.0;
   static const chaseSpeed = 34.0;
@@ -3061,14 +3086,19 @@ class _Op {
 
   void tick(double dt, {bool world = true}) {
     s.time += dt;
-    releaseTownLock();
+    // Each rule is guarded (netcode.md § "Tick a prueba de fallos"): one
+    // that throws must never stop the clock, the grace timers or the
+    // rules after it (v0.49.32: a helper round froze the whole room).
+    const g = SessionEngine.guardRule;
+    g('townLock', releaseTownLock);
     // Mudanzas (overworld_biomes.md § 10.1): quien ya llegó al borde.
-    s.town = ResidentRules.settleDepartures(s.town, s.time);
-    if (world) farmTick(dt);
-    if (s.mode == SessionMode.lobby) mineTick(dt, world);
-    autoFishTick();
-    if (s.mode == SessionMode.lobby) raftNetTick(dt);
-    _loreExplore();
+    g('departures',
+        () => s.town = ResidentRules.settleDepartures(s.town, s.time));
+    if (world) g('farm', () => farmTick(dt));
+    if (s.mode == SessionMode.lobby) g('mine', () => mineTick(dt, world));
+    g('autoFish', autoFishTick);
+    if (s.mode == SessionMode.lobby) g('raftNet', () => raftNetTick(dt));
+    g('lore', _loreExplore);
     final m = s.mission;
     if (m != null &&
         s.result == null &&
@@ -3077,15 +3107,15 @@ class _Op {
     }
     switch (s.mode) {
       case SessionMode.field:
-        fieldTick(dt);
+        g('field', () => fieldTick(dt));
       case SessionMode.battle:
         if (s.tutorial != null) {
-          tutorialTick(dt);
+          g('tutorial', () => tutorialTick(dt));
         } else {
-          battleTick(dt);
+          g('battle', () => battleTick(dt));
         }
       case SessionMode.run:
-        runTick();
+        g('run', runTick);
       case SessionMode.result:
         final r = s.result!;
         r.timeLeft -= dt;

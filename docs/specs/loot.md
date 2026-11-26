@@ -267,6 +267,26 @@ aviso `+` a la izquierda. El host decide todo.
   una misión): lo no levantado vuelve a su dueño como siempre (§ 4b.1);
   los bienes no tienen lugar en el alijo y entran directo a sus bolsas.
 
+## 4d. Avisos de lo que entra solo
+
+Dos lugares anuncian loot: el **registro** encima del chat
+(`Ana encontró: <objeto>`, todos los `LootDropEvent` visibles) y los
+**avisos del filtro** (abajo al centro, con el estilo del filtro).
+
+- **Entra solo** (`GoodsRules.autoPickup`, única regla): un bien
+  (`LootDrop.goods`: cosechas, semillas, menas, cebos, abono, oro…) que
+  entra directo al inventario (sin `groundId`: compañero, balsa, motor
+  sin `groundLoot`) o que, en el piso, levanta el imán (todo menos
+  `gold` y `ore`). Solo sale en el registro; **nunca** con aviso del
+  filtro, ni al caer ni al levantarse.
+- Lo demás sigue igual: armas, equipo, ecos y pilas que entran directo
+  tienen su aviso `+`; el Legendario siempre su aviso; el oro y el
+  mineral que esperan en el piso tienen su `+` al levantarlos; dar un
+  objeto avisa al que lo recibe.
+- Las menas picadas en la mina (`MineDugEvent`) no pasan por el loot.
+- Multijugador: cada cliente aplica la misma regla a los mismos eventos
+  del host (`groundId` y el drop ya viajan); el protocolo no cambia.
+
 ## 5. Crafteo
 
 Tres materiales que también caen como loot.
