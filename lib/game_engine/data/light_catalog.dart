@@ -69,7 +69,17 @@ abstract final class LightId {
 
   /// Wall lamp inside the players' shop (player_shop.md § 6.1).
   static const lamparaTienda = 'lampara_tienda';
+
+  /// Small town lamp: the farm decor lamp and the tier lamp posts
+  /// (cozy_life.md § 2, renown_town_growth.md § 5.2).
+  static const farolito = 'farolito';
 }
+
+/// Town decor that gives light at night (cozy_life.md § 2): decor id
+/// (`kFarmDecos`) → light key. Every light-type decor must be listed.
+const Map<String, String> kDecorLights = {
+  'lamp': LightId.farolito,
+};
 
 /// Ceiling openings of an indoor place (biome_regions.md § 7): light
 /// shafts fall on open floor tiles chosen by hash, one in [every]. A theme
@@ -112,8 +122,8 @@ const Map<String, LightDef> kLightDefs = {
   LightId.flora: LightDef(radius: 2.2, intensity: 0.35, tint: 'flora'),
   // Daylight through an opening (biome_regions.md § 7): lights dark
   // places by day too.
-  LightId.shaft: LightDef(
-      radius: 3.2, intensity: 0.7, tint: 'shaft', nightOnly: false),
+  LightId.shaft:
+      LightDef(radius: 3.2, intensity: 0.7, tint: 'shaft', nightOnly: false),
   LightId.pesca: LightDef(radius: 2, intensity: 0.3, tint: 'agua'),
   LightId.botin: LightDef(radius: 2.5, intensity: 0.5, tint: 'botin'),
   LightId.jugadorPueblo: LightDef(radius: 4.5, intensity: 0.6, tint: 'calida'),
@@ -137,6 +147,8 @@ const Map<String, LightDef> kLightDefs = {
       LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
   LightId.lamparaTienda:
       LightDef(radius: 5, intensity: 0.85, tint: 'calida', flicker: 0.04),
+  LightId.farolito:
+      LightDef(radius: 6, intensity: 1, tint: 'calida', flicker: 0.04),
 };
 
 /// Luz natural de un tema (lighting.md § 3.3): una luz [light] en los

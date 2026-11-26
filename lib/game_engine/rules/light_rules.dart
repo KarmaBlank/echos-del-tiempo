@@ -107,8 +107,8 @@ abstract final class LightRules {
         radius: dark
             ? d.radius * wispDarkRadiusFactor + bonus
             : d.radius + wispBonus + bonus,
-        intensity: math.max(
-            d.intensity, dark ? wispDarkIntensity : wispIntensity),
+        intensity:
+            math.max(d.intensity, dark ? wispDarkIntensity : wispIntensity),
         tint: d.tint,
         flicker: d.flicker);
   }
@@ -211,6 +211,34 @@ abstract final class LightRules {
       MineTile.deep: base * t.d('veinGlowDeep'),
       MineTile.gem: base * t.d('veinGlowGem'),
     };
+  }
+
+  /// Lights of the town's own lamps in [x0, x1)×[y0, y1) (map tiles):
+  /// light-type [decor] (`town.dc`, base-town coordinates, shifted by
+  /// [origin]; see [kDecorLights]) and the tier lamp [posts] (map
+  /// tiles, renown_town_growth.md § 5.2). Night-only like every light.
+  static List<LightSource> townLampEmitters(
+      Iterable<(String, int, int)> decor,
+      Iterable<(int, int)> posts,
+      (int, int) origin,
+      int x0,
+      int y0,
+      int x1,
+      int y1) {
+    final out = <LightSource>[];
+    bool inside(int x, int y) => x >= x0 && x < x1 && y >= y0 && y < y1;
+    for (final (id, dx, dy) in decor) {
+      final key = kDecorLights[id];
+      if (key == null) continue;
+      final x = dx + origin.$1, y = dy + origin.$2;
+      if (!inside(x, y)) continue;
+      out.add(LightSource(x + 0.5, y + 0.2, kLightDefs[key]!));
+    }
+    for (final (x, y) in posts) {
+      if (!inside(x, y)) continue;
+      out.add(LightSource(x + 0.5, y + 0.2, kLightDefs[LightId.farolito]!));
+    }
+    return out;
   }
 
   static List<LightSource> tileEmitters(

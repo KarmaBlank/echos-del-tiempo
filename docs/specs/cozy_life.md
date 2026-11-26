@@ -47,6 +47,15 @@ escritorio, tienda, jefes e invocaciones.
   apoyar, mover, borrar): cerco, espantapájaros, maceta, caminito de piedra
   y farolito. 1×1, no sólidas, en pasto o camino. Costo `decor<Id>Cost`.
   Viajan en `town.dc` (`[[id, x, y], ...]`). Id estable `deco@x,y`.
+- **Luz de las decoraciones:** toda decoración que da luz figura en
+  `kDecorLights` (hoy el farolito → luz `farolito`, radio 6) y emite en la
+  capa de luz por tile de noche vía `LightRules.townLampEmitters`; los
+  faroles de calle del nivel del pueblo (renown_town_growth.md § 5.2)
+  usan la misma luz. Hasta v0.49.34 el farolito solo tenía el halo del
+  cielo (muerto desde la luz por tile) y no alumbraba.
+  Prueba: `test/game_engine/town_lamp_light_test.dart` y
+  `test/features/world/town_lamps_preview_test.dart` (`PREVIEW=1` escribe
+  `docs/preview/town_lamps/{before,after}.png`).
 - **Espantapájaros:** +`scarecrowQualityBias` de sesgo de calidad en las
   parcelas a `scarecrowRadius` tiles o menos (no se acumula). Opcional y
   chico (pilar 4).

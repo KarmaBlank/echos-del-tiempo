@@ -1919,6 +1919,19 @@ class MapGame extends Game {
                     for (final (fx, fy) in townLights)
                       LightSource(fx + ox + 0.5, fy + oy + 0.3,
                           kLightDefs[LightId.faro]!),
+                    // Farm decor lamps and tier lamp posts (cozy_life.md
+                    // § 2, renown_town_growth.md § 5.2).
+                    if (map.lobby && map.place == null)
+                      ...LightRules.townLampEmitters(
+                          s.town.decor,
+                          _dressing == null
+                              ? const <(int, int)>[]
+                              : dressing.layout.lamps,
+                          (ox, oy),
+                          a,
+                          b,
+                          cx,
+                          cy),
                     // Hoguera del campamento (lighting.md § 3).
                     if (campNpc != null)
                       if (NpcCampRules.light(campNpc, a, b, cx, cy)
