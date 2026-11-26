@@ -28,8 +28,10 @@ void main() {
         level: p.level,
         attributes: p.attributes,
         stats: progression.previewEquip(p, 'e1'));
-    // Nombre en el color de la rareza.
-    expect(m, contains('<b style="color:#be6eff">Filo del Alba +1</b>'));
+    // Name in the Title role; the rarity word in its rarity colour
+    // (design_system.md § 3.4).
+    expect(m, contains('<title>Filo del Alba +1</title>'));
+    expect(m, contains('<span style="color:#be6eff">Épico</span>'));
     final t = protoPlain(m);
     expect(t, contains(protoPlain('Épico · espada · nivel de objeto 10')));
     expect(t, contains(protoPlain('Espada Ígnea')));

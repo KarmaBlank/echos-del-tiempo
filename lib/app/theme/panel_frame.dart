@@ -2,6 +2,7 @@ import '../design/ds_gold.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import '../widgets/menu_focus.dart';
 import '../widgets/points_badge.dart';
 import 'proto_colors.dart';
@@ -385,7 +386,7 @@ class ComingSoon extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(retroText('$what: próximamente.'),
-          style: const TextStyle(color: ProtoColors.dim)),
+          style: const TextStyle(color: DsColors.textMuted)),
     );
   }
 }

@@ -3,6 +3,7 @@
 // grip (handle) change. Pure Dart: the painter, the export tool and the
 // pixel tests share it.
 
+import '../../game_engine/data/animals_catalog.dart';
 import '../../game_engine/data/gear_v2_catalog.dart';
 import '../../game_engine/models/elements.dart';
 import '../../game_engine/models/item.dart';
@@ -63,11 +64,25 @@ const kIngotColor = <String, int>{
 const _bone = 0xe8e0c8;
 const _livingWood = 0x6f8f3e;
 
+/// Animal parts (animals.md § 9): horn ivory, shed fur brown, fine wool
+/// cream; feathers take the species' affinity colour.
+const _horn = 0xe6d6a8;
+const _fur = 0x9a6a3e;
+const _wool = 0xf2ead2;
+
 /// Base colour of a head / grip material id (`null` = default).
 int? materialColor(String id) {
   if (kIngotColor[id] case final c?) return c;
   if (parseFishPart(id) case (final sp, final part)?) {
     return part == FishPart.bone ? _bone : kAffinityColor[fishAffinity(sp)];
+  }
+  if (parseAnimalPart(id) case (final sp, final part, _)?) {
+    return switch (part) {
+      AnimalPart.horn => _horn,
+      AnimalPart.fur => _fur,
+      AnimalPart.wool => _wool,
+      AnimalPart.feather => kAffinityColor[kAnimals[sp]!.affinity],
+    };
   }
   if (id == 'living') return _livingWood;
   if (id.startsWith('living_')) {
@@ -89,6 +104,20 @@ int? materialColor(String id) {
       fishPartId(pt[1], FishPart.scale),
       fishPartId(pt[1], FishPart.bone)
     );
+  }
+  // A legendary animal weapon (animals.md § 10): the species' colours.
+  if (pt.first == 'ranch' && pt.length > 1) {
+    final a = kAnimals[pt[1]];
+    if (a == null) return (null, null);
+    final head = a.parts.contains(AnimalPart.horn)
+        ? AnimalPart.horn
+        : a.parts.first;
+    final grip = a.parts.contains(AnimalPart.fur)
+        ? AnimalPart.fur
+        : a.parts.contains(AnimalPart.wool)
+            ? AnimalPart.wool
+            : a.parts.first;
+    return (animalPartId(a.id, head, 2), animalPartId(a.id, grip, 2));
   }
   return (pt.length > 1 ? pt[1] : null, pt.length > 2 ? pt[2] : null);
 }

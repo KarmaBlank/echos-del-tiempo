@@ -26,6 +26,7 @@ class FountainPanel extends StatelessWidget {
     final editWhy = c.cannotEditTown;
     final farmWhy = c.cannotPickHire(BuildKind.huerta);
     final fishWhy = c.cannotPickHire(BuildKind.lago);
+    final ranchWhy = c.cannotPickHire(BuildKind.gallinero);
     final actions = [
       ('fountain-edit-btn', context.t('ui.town.fountain.edit'),
           context.t('ui.town.fountain.edit_line'), editWhy,
@@ -36,6 +37,10 @@ class FountainPanel extends StatelessWidget {
       ('fountain-hire-fisher', context.t('ui.town.fountain.hire_fisher'),
           context.t('ui.town.fountain.hire_fisher_line'),
           fishWhy, () => c.enterHirePick(BuildKind.lago)),
+      // Ranch helper (animals.md § 6).
+      ('fountain-hire-rancher', context.t('ui.town.fountain.hire_rancher'),
+          context.t('ui.town.fountain.hire_rancher_line'),
+          ranchWhy, () => c.enterHirePick(BuildKind.gallinero)),
       ('fountain-board', context.t('ui.town.fountain.board'),
           context.t('ui.town.fountain.board_line'), null,
           () => c.openPanel(WorldPanel.missionBoard)),
@@ -66,14 +71,14 @@ class FountainPanel extends StatelessWidget {
     return PanelFrame(
       key: const ValueKey('panel-fountain'),
       title: context.t('ui.town.fountain.title'),
-      width: 560,
+      width: 780,
       onClose: c.closePanel,
       actions: [
         PanelButton(context.t('ui.town.fountain.close'),
             key: const ValueKey('fountain-close'), onPressed: c.closePanel),
       ],
       child: LayoutBuilder(builder: (context, box) {
-        final w = (box.maxWidth - DsSpace.sm) / 2;
+        final w = (box.maxWidth - DsSpace.sm * 2) / 3;
         return Wrap(
           spacing: DsSpace.sm,
           runSpacing: DsSpace.sm,

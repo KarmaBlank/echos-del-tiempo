@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import 'action_box.dart';
 import 'proto_colors.dart';
 import 'proto_markup.dart';
@@ -51,13 +52,13 @@ class PanelHint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: parts == null
-          ? ProtoText(markup, style: const TextStyle(color: ProtoColors.dim))
+          ? ProtoText(markup, style: const TextStyle(color: DsColors.textMuted))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 ProtoText(parts.$1,
-                    style: const TextStyle(color: ProtoColors.dim)),
+                    style: const TextStyle(color: DsColors.textMuted)),
                 RetroTipFold(
                     key: const ValueKey('panel-hint-more'),
                     title: 'Más',
@@ -259,7 +260,7 @@ class StatChange extends StatelessWidget {
         if (suffix != null)
           TextSpan(
               text: retroText(' $suffix'),
-              style: const TextStyle(color: ProtoColors.dim)),
+              style: const TextStyle(color: DsColors.textMuted)),
       ]),
     );
   }

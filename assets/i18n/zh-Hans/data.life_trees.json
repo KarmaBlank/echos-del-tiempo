@@ -226,5 +226,22 @@
   "data.life_trees.node.smith_e7s.name": "感恩的行会",
   "data.life_trees.node.smith_e8.name": "锻炉之锚",
   "data.life_trees.node.smith_e9.name": "村中铁匠",
-  "data.life_trees.node.smith_r.name": "锻炉学徒"
+  "data.life_trees.node.smith_r.name": "锻炉学徒",
+  "data.life_trees.branch.cultivo.f": "畜栏",
+  "data.life_trees.group.crops": "作物",
+  "data.life_trees.group.animals": "动物",
+  "data.life_trees.node.farm_f1.name": "温暖之手",
+  "data.life_trees.node.farm_f2.name": "整齐草捆",
+  "data.life_trees.node.farm_f3.name": "牧人之眼",
+  "data.life_trees.node.farm_f4.name": "散落羽毛",
+  "data.life_trees.node.farm_f5.name": "记得的畜群",
+  "data.life_trees.node.farm_f6.name": "鬃毛刷",
+  "data.life_trees.node.farm_f7.name": "回响换毛",
+  "data.life_trees.node.farm_f4s.name": "双巢",
+  "data.life_trees.node.farm_f5s.name": "丰盈乳房",
+  "data.life_trees.node.farm_f6s.name": "双倍剪毛",
+  "data.life_trees.node.farm_f7s.name": "丰收畜栏",
+  "data.life_trees.node.farm_f8.name": "昨日谷仓",
+  "data.life_trees.node.farm_f9.name": "时间牧人",
+  "data.life_trees.node.farm_f10.name": "岁月畜栏"
 }

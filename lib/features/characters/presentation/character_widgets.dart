@@ -279,7 +279,7 @@ class ClassCard extends StatelessWidget {
                         style: const TextStyle(color: RetroPalette.muted)),
                     if (index != null)
                       Text('[$index]',
-                          style: const TextStyle(color: ProtoColors.dim)),
+                          style: const TextStyle(color: DsColors.textMuted)),
                   ],
                 ),
               ),
@@ -489,7 +489,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           Text(
               retroText(
                   s.t('ui.characters.delete.type_to_confirm', {'name': name})),
-              style: const TextStyle(color: ProtoColors.dim)),
+              style: const TextStyle(color: DsColors.textMuted)),
           const SizedBox(height: 8),
           RetroTextField(
             key: const ValueKey('char-delete-field'),

@@ -6,6 +6,8 @@ import '../../../../game_engine/rules/cozy_rules.dart';
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/town_build.dart';
+import '../../../../game_engine/rules/animal_rules.dart';
+import '../../../../game_engine/rules/farming_rules.dart' show FarmingRules;
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
@@ -52,6 +54,7 @@ class TownPiece {
         BuildKind.huerta => TownPieceCategory.farm,
         BuildKind.lago => TownPieceCategory.water,
         BuildKind.casa => TownPieceCategory.home,
+        BuildKind.gallinero || BuildKind.establo => TownPieceCategory.farm,
       };
 }
 
@@ -88,7 +91,27 @@ class TownBuildPalette extends StatefulWidget {
     final p = c.view?.me?.profile;
     return [
       for (final d in kConstructions)
-        if (d.kind == BuildKind.casa)
+        if (animalHomeById(d.id) case final h?)
+          // Coop / barn (animals.md § 3): gold and a Cultivo level.
+          TownPiece(
+            id: d.id,
+            category: TownPieceCategory.farm,
+            name: s.t('ui.town.ranch.${d.kind.name}.name'),
+            w: d.w,
+            h: d.h,
+            detail: s.t('ui.town.ranch.${d.kind.name}.info',
+                {'cap': h.cap, 'level': h.level}),
+            cost: s.t('ui.town.edit.lamp_detail', {'cost': h.price}),
+            why: p == null
+                ? s.t('ui.town.edit.no_character')
+                : FarmingRules.level(p) < h.level
+                    ? s.t('ui.town.ranch.need_level', {'n': h.level})
+                    : p.credits < h.price
+                        ? s.t('ui.town.edit.missing_gold',
+                            {'have': p.credits, 'need': h.price})
+                        : null,
+          )
+        else if (d.kind == BuildKind.casa)
           TownPiece(
             id: d.id,
             category: TownPieceCategory.home,
@@ -364,17 +387,17 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         ),
         Text(p.name,
             key: const ValueKey('town-build-detail-name'),
-            style: DsText.title(_catColor(p.category))),
+            style: DsText.title()),
         Text(s.t('ui.town.edit.size', {'w': p.w, 'h': p.h}),
             style: DsText.detail()),
         gap,
-        Text(p.detail, style: DsText.body()),
+        DsGoldText(p.detail, style: DsText.body()),
         gap,
         DsGoldText(
             p.cost == null
                 ? s.t('ui.town.edit.free')
                 : s.t('ui.town.edit.cost', {'cost': p.cost}),
-            style: DsText.detail(p.enabled ? null : DsColors.danger)),
+            style: p.enabled ? DsText.detail() : DsText.key()),
         if (p.costItems.isNotEmpty) ...[
           gap,
           itemCostGrid(context, widget.controller.view?.me?.profile,
@@ -384,7 +407,7 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         if (p.why case final why?)
           Text(why,
               key: const ValueKey('town-build-why'),
-              style: DsText.detail(DsColors.danger)),
+              style: DsText.key()),
         if (placing)
           Text(err ?? s.t('ui.town.edit.placing_info'),
               key: const ValueKey('town-edit-ghost'),

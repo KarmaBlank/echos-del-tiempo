@@ -25,6 +25,7 @@ import '../../../../game_engine/models/weapon.dart' show WeaponDef;
 import '../../../../game_engine/rules/life_tree_rules.dart' show SmithRules;
 import '../../../../game_engine/rules/mining_rules.dart' show SmithCraftRules;
 import '../../../inventory/presentation/item_widgets.dart';
+import '../../../../game_engine/rules/animal_rules.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/gear_v2_rules.dart';
 import '../../../../game_engine/rules/profession_gear_rules.dart';
@@ -1167,6 +1168,11 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                       f.rarity == FishRarity.epico) &&
                   p.life.count(f.id) > 0)
                 _fishForgeCell(c, p, f),
+            // Legendary animal products (animals.md § 10).
+            for (final a in kAnimalProducts.values)
+              if (a.legend &&
+                  p.life.farm.goodsCount(GearRules.animalLegendKey(a.id)) > 0)
+                _animalForgeCell(c, p, a),
             for (final w in bases) cell(w),
           ], _s.t('ui.town.npc.com.empty')),
         ),
@@ -1238,6 +1244,48 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
               onPressed: splitWhy == null
                   ? () => c.smith(SmithAction(SmithOp.fishSplit, f.id))
                   : null),
+        ],
+      ),
+    );
+  }
+
+  LifeItemCellData _animalForgeCell(
+      SessionController c, PlayerProfile p, AnimalProductDef a) {
+    final why = GearRules.animalForgeBlock(p, a.id);
+    final whyText = switch (why) {
+      null => null,
+      FishForgeBlock.gold => _s.t('ui.inventory.smith.why.noGold'),
+      _ => _s.t('ui.inventory.smith.why.level'),
+    };
+    final gold = AnimalRules.t.i('animalForgeGold');
+    final name = _s.t('data.materials.animal_product.${a.id}.name');
+    final animal = animalOfLegend(a.id)!;
+    final n = p.life.farm.goodsCount(GearRules.animalLegendKey(a.id));
+    return LifeItemCellData(
+      id: 'brann-animal-${a.id}',
+      icon: LifeIcon(a.id, LifeIconKind.cosecha, size: 32),
+      border: RarityColors.of(Rarity.legendario),
+      search: name,
+      caption: 'x$n',
+      detail: LifeItemDetail(
+        name: name,
+        nameColor: RarityColors.of(Rarity.legendario),
+        tags: [
+          (_s.t('ui.town.forge.animal_legend').toUpperCase(),
+              RarityColors.of(Rarity.legendario)),
+        ],
+        lines: [
+          _s.t('ui.town.forge.fish_affinity',
+              {'v': _s.t('data.elements.element.${animal.affinity.name}')}),
+          _s.t('ui.town.forge.animal_forge_hint', {'gold': gold}),
+        ],
+        actions: [
+          DsButton(_s.t('ui.town.forge.animal_forge'),
+              key: ValueKey('brann-animal-go-${a.id}'),
+              size: DsButtonSize.compact,
+              kind: DsButtonKind.primary,
+              tooltip: whyText,
+              onPressed: whyText == null ? () => c.animalForge(a.id) : null),
         ],
       ),
     );

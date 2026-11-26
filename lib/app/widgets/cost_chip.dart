@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
@@ -57,7 +58,7 @@ class CostChip extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(retroText(reason!),
-                style: const TextStyle(color: ProtoColors.dim)),
+                style: const TextStyle(color: DsColors.textMuted)),
           ),
         ],
       );

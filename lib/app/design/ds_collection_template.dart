@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'ds_components.dart';
 import 'ds_detail_pane.dart';
+import 'ds_gold.dart';
 import 'ds_tokens.dart';
 
 /// One entry of a collection (design_system.md Â§ "ColecciÃ³n"). Generic:
@@ -178,7 +179,7 @@ class _Cell extends StatelessWidget {
               title: e.title,
               titleColor: e.titleColor,
               children: [
-                for (final r in e.rows) Text(r, style: DsText.detail()),
+                for (final r in e.rows) DsGoldText(r, style: DsText.detail()),
               ])
           : DsTooltipCard(title: unknownTitle, children: [
               Text(unknownHint, style: DsText.detail()),
@@ -257,7 +258,7 @@ class _Detail extends StatelessWidget {
         for (final r in e.rows)
           Padding(
             padding: EdgeInsets.only(bottom: DsSpace.xs),
-            child: Text(r, style: DsText.body()),
+            child: DsGoldText(r, style: DsText.body()),
           ),
       ],
     );

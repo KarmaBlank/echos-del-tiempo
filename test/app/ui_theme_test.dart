@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/proto_markup.dart';
@@ -241,7 +242,8 @@ void main() {
     test('COMPLETO: cada uno con su color (como v0.8.0)', () {
       final c = colors(m);
       expect(c['Paladín Creyente'], ProtoColors.gold);
-      expect(c['KEYSTONE · Cluster Fe'], ProtoColors.sky);
+      // `class="k"` is the Subtitle role (design_system.md § 3.4).
+      expect(c['KEYSTONE · Cluster Fe'], DsColors.textSubtitle);
       expect(c['Pasiva viva']!.toARGB32(), 0xFFC39BFF);
       expect(c['ULT: Juicio'], ProtoColors.pink);
     });
@@ -251,7 +253,7 @@ void main() {
       UiTheme.textColors = TextColorMode.reduced;
       final c = colors(m);
       expect(c['Paladín Creyente'], ProtoColors.title);
-      expect(c['KEYSTONE · Cluster Fe'], ProtoColors.dim);
+      expect(c['KEYSTONE · Cluster Fe'], DsColors.textSubtitle);
       expect(c['120'], ProtoColors.gold);
       expect(c['Pasiva viva'], ProtoColors.ink);
       expect(c['+12% crítico'], ProtoColors.ink);
@@ -263,9 +265,9 @@ void main() {
       expect(c['Hoja Larga']!.toARGB32(),
           const VisionColor(VisionSlot.epic).toARGB32());
       expect(c['Quemadura']!.toARGB32(), 0xFFFF7B29);
-      // La paleta que queda es chica.
+      // La paleta que queda es chica (+1: rol Subtítulo, § 3.4).
       final used = {for (final v in c.values.nonNulls) v.toARGB32()};
-      expect(used.length, lessThanOrEqualTo(8));
+      expect(used.length, lessThanOrEqualTo(9));
     });
 
     test('ALTO CONTRASTE usa siempre los roles', () {

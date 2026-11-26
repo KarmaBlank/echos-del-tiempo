@@ -84,7 +84,7 @@ class CropDef {
   /// Precio base en oro (calidad normal).
   final int price;
 
-  /// XP de Cultivo base (antes de rareza y calidad).
+  /// XP de Granjero base (antes de rareza y calidad).
   final int xp;
 
   /// Precio de la semilla en el agropecuario (0 = no se vende: cae de

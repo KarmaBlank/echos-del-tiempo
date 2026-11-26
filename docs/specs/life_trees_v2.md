@@ -340,3 +340,38 @@ Raíz `smith_r` **Aprendiz de fragua** (gratis): xp 0.05.
 | e Taller | 8 | `smith_e8` | Ancla de la fragua | 2 | — | mat:ancla ×1 |
 | e Taller | 9 | `smith_e9` | Herrero del pueblo | 2 | forge 0.03 | gold ×1200 |
 | e Taller | 10 | `smith_e10` | Legado de la fragua ★ | 3 | xp 0.2 | gold ×3000, mat:ancla ×2 |
+
+## 8. Granjero: dos ramas, CULTIVOS y ANIMALES (v0.50, protocolo 101)
+
+El árbol de Cultivo pasa a ser el del **GRANJERO** (`animals.md`,
+`farming.md` § 21) y tiene **seis** ramas en vez de cinco:
+
+- **CULTIVOS** (título sobre las cinco de siempre): Tierra, Semilla,
+  Abono, Madera viva, Cocina (`farm_a*` … `farm_e*`, sin cambios).
+- **ANIMALES** (título sobre la sexta): **Corral** (`farm_f*`).
+
+Las demás profesiones siguen con cinco (`lifeBranchesOf(k)`,
+`kLifeExtraBranches`). Corral tiene la misma forma que cualquier rama:
+escalones 1–10, bifurcación en 4–7 (camino A `farm_f4..7`, camino B
+`farm_f4s..7s`) que se une en el 8 (nodo mayor) y el remate `farm_f10`
+en el grupo exclusivo `cap` (sigue habiendo un solo remate por árbol).
+
+| Escalón | Nodo | Efecto (`LifeFx`) | Valor (Balance → Oficios: árboles) |
+|---|---|---|---|
+| 1 | Mano tibia | `petCare` × cariño por caricia | `farm_f1` 0.15 |
+| 2 | Fardo ordenado | `haySilo` + fardos por depósito | `farm_f2` 20 |
+| 3 | Ojo de pastor | `animalQuality` chance de +1 calidad | `farm_f3` 0.05 |
+| 4–7 A | Pluma suelta, Rebaño que recuerda, Cepillo de cerda, Muda del eco | `partDrop` × chance de piezas | `farm_f4x..f7x` 0.15 / 0.15 / 0.2 / 0.25 |
+| 4–7 B | Nido doble, Ubre generosa, Doble esquila, Corral que rinde | `animalDouble` chance de producto doble | `farm_f4s..f7s` 0.04 / 0.04 / 0.05 / 0.07 |
+| 8 | Granero del ayer | `haySilo`, `petCare` | `farm_f8` 30, `farm_f8_2` 0.15 |
+| 9 | Pastor del tiempo | `animalQuality` | `farm_f9` 0.08 |
+| 10 | Corral de las eras | `animalLegend`, `animalQuality` | `farm_f10` 0.02, `farm_f10_2` 0.1 |
+
+Lienzo: con seis ramas el abanico se centra en el medio (la rama
+de índice `i` va a `i − (n − 1) / 2` × la apertura); sobre las ramas, los
+títulos de cada rama y, más arriba, CULTIVOS sobre las cinco primeras y
+ANIMALES sobre Corral. Puntos: los mismos por nivel; la rama nueva solo
+abre más opciones.
+
+Migración: ninguna. Los nodos `farm_f*` empiezan libres; el árbol
+guardado de un perfil viejo carga igual (`kLifeTreeVersion` sin cambio).

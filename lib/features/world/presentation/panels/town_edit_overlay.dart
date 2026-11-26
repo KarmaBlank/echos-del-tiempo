@@ -73,6 +73,7 @@ class TownEditOverlay extends StatelessWidget {
                   BuildKind.casa => s.t('ui.town.edit.house_pick_title'),
                   BuildKind.huerta => s.t('ui.town.edit.hire_farmer'),
                   BuildKind.lago => s.t('ui.town.edit.hire_fisher'),
+                  BuildKind.gallinero => s.t('ui.town.edit.hire_rancher'),
                   _ => s.t('ui.town.edit.title'),
                 },
                 style: DsText.title()),
@@ -219,7 +220,7 @@ class TownEditOverlay extends StatelessWidget {
           ]);
     }
     if (e.hire case final kind?) {
-      if (b == null || b.kind != kind) return null;
+      if (b == null || !SessionController.hireKindMatches(kind, b.kind)) return null;
       final why = c.hireWhy(b);
       return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -292,6 +293,8 @@ class TownEditOverlay extends StatelessWidget {
         _ when e.hire == BuildKind.huerta =>
           s.t('ui.town.edit.hint_hire_farmer'),
         _ when e.hire == BuildKind.lago => s.t('ui.town.edit.hint_hire_fisher'),
+        _ when e.hire?.ranch ?? false =>
+          s.t('ui.town.edit.hint_hire_rancher'),
         TownEditStep.moving ||
         TownEditStep.placing =>
           c.editGhostError ?? s.t('ui.town.edit.hint_place'),

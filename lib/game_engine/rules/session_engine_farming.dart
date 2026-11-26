@@ -145,6 +145,7 @@ extension _FarmingOp on _Op {
       });
       _worldEventsDay(sky.day);
       _stallDay(sky.day);
+      animalsDay(sky.day);
     }
     if (SkyRules.now(sky) != Weather.tormenta) {
       _fa.boltAcc = 0;
@@ -228,9 +229,11 @@ extension _FarmingOp on _Op {
         0.0, (a, h) => math.max(a, LifeTreeRules.fish(h.profile, LifeFx.auto)));
     for (final b0 in s.town.builds) {
       if (b0.helper <= 0) continue;
-      s.town = s.town.withBuild(b0.kind == BuildKind.huerta
-          ? _farmerRound(owner, b0)
-          : _fisherRound(b0, net));
+      s.town = s.town.withBuild(b0.kind.ranch
+          ? animalHelperRound(b0)
+          : b0.kind == BuildKind.huerta
+              ? _farmerRound(owner, b0)
+              : _fisherRound(b0, net));
     }
   }
 
@@ -506,7 +509,7 @@ extension _FarmingOp on _Op {
     }
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
-      say('${p.name} subió Cultivo a nivel $lvl1.');
+      say('${p.name} subió Granjero a nivel $lvl1.');
       lifeLevelXp(p, lvl1);
     }
   }
@@ -530,7 +533,7 @@ extension _FarmingOp on _Op {
     _deliver(p, [d], LootSource.mission, p.x, p.y, stashOverflow: true);
     final lvl1 = FarmingRules.level(p.profile);
     if (lvl1 > lvl0) {
-      say('${p.name} subió Cultivo a nivel $lvl1.');
+      say('${p.name} subió Granjero a nivel $lvl1.');
       lifeLevelXp(p, lvl1);
     }
   }
@@ -713,6 +716,12 @@ extension _FarmingOp on _Op {
             '${r.esquirlas > 0 ? '${r.credits > 0 ? ' y' : ' por'} '
                 '${r.esquirlas} Esquirla${r.esquirlas == 1 ? '' : 's'}' : ''}.');
         return true;
+      case FarmShopOp.buyHay ||
+            FarmShopOp.buyRanchTool ||
+            FarmShopOp.makeHay ||
+            FarmShopOp.sellGoods ||
+            FarmShopOp.processGoods:
+        return animalShop(p, a);
       case FarmShopOp.exchange:
         if (id == null ||
             !_profileChange(p, FarmingRules.exchangeLegendary(prof, id))) {
@@ -1042,9 +1051,13 @@ extension _FarmingOp on _Op {
         final id = a.id, x = a.x, y = a.y;
         if (!_mayEdit(p) || id == null || x == null || y == null) return false;
         final casa = id == kCasaId;
-        final paid =
-            casa ? HelperRules.pay(p.profile, ResidentRules.placeCost()) : null;
-        if (casa && paid == null) return false;
+        final ranch = animalHomeById(id) != null;
+        final paid = casa
+            ? HelperRules.pay(p.profile, ResidentRules.placeCost())
+            : ranch
+                ? AnimalRules.payBuild(p.profile, id)
+                : null;
+        if ((casa || ranch) && paid == null) return false;
         final r = TownRules.place(s.town, id, x, y);
         if (r.town == null) return false;
         s.town = r.town!;
@@ -1074,6 +1087,8 @@ extension _FarmingOp on _Op {
           BuildKind.lago => 'un lago',
           BuildKind.huerta => 'una huerta',
           BuildKind.casa => 'una casa',
+          BuildKind.gallinero => 'un gallinero',
+          BuildKind.establo => 'un establo',
         }}.');
         return true;
       case TownOp.track:
@@ -1168,7 +1183,7 @@ extension _FarmingOp on _Op {
         _profileChange(p, r.$1);
         final b = s.town.build(id)!;
         say('${p.name} contrató un '
-            '${b.kind == BuildKind.huerta ? 'granjero' : 'pescador'}.');
+            '${b.kind.ranch ? 'granjero de corral' : b.kind == BuildKind.huerta ? 'granjero' : 'pescador'}.');
         return true;
       case TownOp.fireHelper:
         final id = a.target;
@@ -1194,6 +1209,12 @@ extension _FarmingOp on _Op {
         s.town = r.$2;
         _profileChange(p, r.$1);
         return true;
+      case TownOp.buyAnimal ||
+            TownOp.animalFeed ||
+            TownOp.animalPet ||
+            TownOp.animalCollect ||
+            TownOp.depositHay:
+        return animalAction(p, a);
       case TownOp.helperUpgrade:
         final id = a.target, i = a.x, u = HelperUpgrade.fromName(a.id);
         if (!_mayEdit(p) || id == null || i == null || u == null) return false;

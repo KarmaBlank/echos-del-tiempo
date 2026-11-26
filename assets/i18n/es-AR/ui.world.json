@@ -156,10 +156,10 @@
   "ui.world.ctl.farm.water": "[E o clic] Regar · {pct} %",
   "ui.world.ctl.helper.fisher_title": "PESCADOR {n} · NIVEL {level}",
   "ui.world.ctl.helper.fisher_line": "Pesca en la orilla del lago y guarda en el cofre.",
-  "ui.world.ctl.helper.fisher_catch": "{n} peces por vuelta · sin legendarios",
+  "ui.world.ctl.helper.fisher_catch": "{n} peces por vuelta · **sin legendarios**",
   "ui.world.ctl.helper.chest_next": "Cofre {n} · próxima vuelta en {s} s",
   "ui.world.ctl.helper.farmer_title": "GRANJERO {n} · NIVEL {level}",
-  "ui.world.ctl.helper.farmer_area": "Atiende {n} parcelas (resaltadas).",
+  "ui.world.ctl.helper.farmer_area": "Solo atiende **{n} parcelas**, marcadas en verde.",
   "ui.world.ctl.helper.farmer_seeds": "Semillas de la huerta: {n}",
   "ui.world.ctl.helper.farmer_tasks": "Tareas: {list}",
   "ui.world.ctl.helper.none": "ninguna",
@@ -426,5 +426,6 @@
   "ui.world.cozy.search_prompt": "[Mantené E/Clic] Buscar en el árbol",
   "ui.world.cozy.searched": "Ya buscaste en este árbol hoy",
   "ui.world.prompt.spent": "Ya lo usaste",
-  "ui.world.loot.gold": "₵{n}"
+  "ui.world.loot.gold": "₵{n}",
+  "ui.world.ctl.no_ranch": "No hay gallineros ni establos en el pueblo"
 }

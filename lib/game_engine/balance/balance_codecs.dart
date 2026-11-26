@@ -89,7 +89,13 @@ enum BalanceKind {
   exploration('exploration', 'Exploración', 'Ajustes de exploración'),
 
   /// Cultivo, huerta y agropecuario (farming.md, v0.23.0).
-  farming('farming', 'Cultivo', 'Ajustes de Cultivo'),
+  farming('farming', 'Granjero: cultivos', 'Ajustes de cultivos del Granjero'),
+
+  /// Animales de granja (animals.md).
+  animals('animals', 'Granjero: animales', 'Ajustes de animales del Granjero'),
+
+  /// Armas de oficio y modelo de paridad (profession_gear.md, animals.md § 7).
+  gear('gear', 'Oficios: equipo', 'Armas de oficio y paridad por hora'),
 
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).
   town('town', 'Pueblo', 'Ajustes del pueblo'),
@@ -1591,7 +1597,7 @@ const _townLabels = {
   'faroCost': 'Faro: oro',
   'forageRespawnSec': 'Biomas: segundos de rebrote de una mata',
   'forageSeedChance': 'Biomas: chance de semilla al recolectar',
-  'forageXp': 'Biomas: XP de Cultivo por recolectar',
+  'forageXp': 'Biomas: XP de Granjero por recolectar',
   'reinforceDelay': 'Refuerzo: turnos de espera al entrar a una pelea',
   'absentWeight': 'Dificultad: peso de cada ausente de la sala',
   'resInviteRep': 'Habitantes: relación para invitarlo al pueblo',
@@ -1622,7 +1628,7 @@ const _townLabels = {
   'orderGoldPerValue': 'Órdenes: oro × valor',
   'mealOrderPay': 'Órdenes de comida: × del valor crudo',
   'mealOrderChance': 'Órdenes de comida: probabilidad por día',
-  'mealOrderLevel': 'Órdenes de comida: nivel de Cultivo',
+  'mealOrderLevel': 'Órdenes de comida: nivel de Granjero',
   'mealOrderMin': 'Órdenes de comida: cantidad mínima',
   'mealOrderMax': 'Órdenes de comida: cantidad máxima',
   'orderSkillEvery': 'Órdenes: punto de árbol cada N',
@@ -1643,7 +1649,7 @@ const _townLabels = {
   'lifeLevelCharXp': 'Oficios: XP de personaje × nivel de oficio',
   'orderRarityLevels': 'Órdenes: niveles de oficio por rareza',
   'orderAnyBiomeLevel': 'Órdenes: nivel para pedir de otros biomas',
-  'orderQualityLevel': 'Órdenes: nivel de Cultivo para pedir calidad',
+  'orderQualityLevel': 'Órdenes: nivel de Granjero para pedir calidad',
   'orderSizeLevel': 'Órdenes: nivel de Pesca para pedir tamaño',
   'comGold': 'Forja de Brann: oro × nivel',
   'comMat': 'Forja de Brann: materiales',
@@ -1685,12 +1691,89 @@ Map<String, String> _lifeTreeLabels() => {
 
 final farmingCodec =
     _tuningCodec(BalanceKind.farming, _autoFields('farming', _farmLabels));
+final animalsCodec = _tuningCodec(
+    BalanceKind.animals, _autoFields(TuningId.animals, _animalLabels));
+
+const _animalLabels = {
+  'coopPrice': 'Gallinero: precio (oro)',
+  'coopLevel': 'Gallinero: nivel de Granjero',
+  'coopCap': 'Gallinero: cupo de animales',
+  'barnPrice': 'Establo: precio (oro)',
+  'barnLevel': 'Establo: nivel de Granjero',
+  'barnCap': 'Establo: cupo de animales',
+  'hayPrice': 'Heno: precio del fardo',
+  'hayPerCrop': 'Heno: fardos por cultivo picado',
+  'siloMax': 'Depósito de heno: tope',
+  'affMax': 'Cariño máximo (100 = un corazón)',
+  'petGain': 'Cariño al acariciar',
+  'feedGain': 'Cariño al dar de comer',
+  'unfedDecay': 'Cariño que pierde sin comer un día',
+  'unpetDecay': 'Cariño que pierde sin caricia un día',
+  'helperPetGain': 'Ayudante: cariño por caricia',
+  'helperHeartCap': 'Ayudante: tope de corazones',
+  'helperPerHome': 'Ayudante: cuántos por construcción',
+  'helperLevel': 'Ayudante: nivel de Granjero para contratar',
+  'qRaroPerHeart': 'Calidad rara por corazón',
+  'qEpicoPerHeart': 'Calidad épica por corazón (desde el 3.º)',
+  'feedXp': 'XP de Granjero al dar de comer',
+  'petXp': 'XP de Granjero al acariciar',
+  'xpDayCap': 'Tope de XP de animales por día del mundo (0 = sin tope)',
+  'huevoPrice': 'Huevo: precio de venta',
+  'huevoXp': 'Huevo: XP al juntarlo',
+  'huevoPatoPrice': 'Huevo de pato: precio de venta',
+  'huevoPatoXp': 'Huevo de pato: XP al juntarlo',
+  'lechePrice': 'Leche: precio de venta',
+  'lecheXp': 'Leche: XP al ordeñar',
+  'lecheCabraPrice': 'Leche de cabra: precio de venta',
+  'lecheCabraXp': 'Leche de cabra: XP al ordeñar',
+  'lanaPrice': 'Lana: precio de venta',
+  'lanaXp': 'Lana: XP al esquilar',
+  'quesoPrice': 'Queso: precio de venta',
+  'quesoXp': 'Queso: XP',
+  'quesoCabraPrice': 'Queso de cabra: precio de venta',
+  'quesoCabraXp': 'Queso de cabra: XP',
+  'mayonesaPrice': 'Mayonesa: precio de venta',
+  'mayonesaXp': 'Mayonesa: XP',
+  'mayonesaPatoPrice': 'Mayonesa de pato: precio de venta',
+  'mayonesaPatoXp': 'Mayonesa de pato: XP',
+  'processXp': 'Máquinas: XP por producto procesado',
+  'queseraPrice': 'Quesera: precio (oro)',
+  'mayoneseraPrice': 'Mayonesera: precio (oro)',
+  'machineLevel': 'Máquinas: nivel de Granjero para comprar y usar',
+  'partBase': 'Piezas: chance base por día',
+  'partPerHeart': 'Piezas: chance extra por corazón',
+  'woolHearts': 'Lana fina: corazones para que salga al esquilar',
+  'legendChance': 'Producto legendario: chance por producto a cinco corazones',
+  'animalForgeLevel': 'Forja de animal: nivel de Granjero',
+  'animalForgeGold': 'Forja de animal: oro',
+  'animalForgeLegend': 'Forja de animal: chance de Legendaria',
+  'animalForgeLegendTree': 'Forja de animal: × del bonus del árbol a la chance de Legendaria',
+  'partQNormal': 'Pieza normal: calidad de material',
+  'partQRaro': 'Pieza rara: calidad de material',
+  'partQEpico': 'Pieza épica: calidad de material',
+};
+
+final gearCodec =
+    _tuningCodec(BalanceKind.gear, _autoFields(TuningId.gear, _gearLabels));
+
+const _gearLabels = {
+  'incomeCatchesPerHour': 'Paridad: peces por hora',
+  'incomeVeinsPerHour': 'Paridad: vetas por hora',
+  'incomeDigPerHour': 'Paridad: casillas cavadas por hora',
+  'incomePlots': 'Paridad: parcelas de cultivo',
+  'incomeCropLoopSec': 'Paridad: segundos extra por vuelta de huerta',
+  'incomeAnimalCareSec': 'Paridad: segundos de cuidado por animal y día',
+  'incomeHearts': 'Paridad: corazones de los animales',
+  'incomeBand': 'Paridad: margen permitido entre oficios',
+};
+
 final townCodec =
     _tuningCodec(BalanceKind.town, _autoFields('town', _townLabels));
 final fishingCodec =
     _tuningCodec(BalanceKind.fishing, _autoFields('fishing', _fishLabels));
 
 const _fishLabels = {
+  'sellMult': 'Venta de peces: × del precio del catálogo',
   'ambMusicLevel': 'Ambiente al pescar: nivel de la música',
   'ambDuckSec': 'Ambiente al pescar: segundos para bajar la música',
   'ambVolume': 'Ambiente al pescar: volumen de los sonidos',
@@ -1974,7 +2057,7 @@ const _regionsLabels = {
   'scarecrowQualityBias': 'Espantapájaros: sesgo de calidad',
   'scarecrowRadius': 'Espantapájaros: alcance (tiles)',
   'gatherHoldSec': 'Recolectar: segundos manteniendo E',
-  'gatherSpeedPerLevel': 'Recolectar: más rápido por nivel de Cultivo',
+  'gatherSpeedPerLevel': 'Recolectar: más rápido por nivel de Granjero',
   'gatherHoldMinSec': 'Recolectar: segundos mínimos',
   'holdRepeatSec': 'Mantener E/clic: segundos entre repeticiones',
   'actionReachTiles': 'Cursor de acción: alcance (tiles alrededor)',
@@ -1983,7 +2066,7 @@ const _regionsLabels = {
   'searchNestChance': 'Buscar en árboles: chance de nido',
   'searchRecipeChance': 'Buscar en árboles: chance de receta de abono',
   'treeSearchFraction': 'Buscar en árboles: fracción de árboles buscables por día',
-  'searchXp': 'Buscar en árboles: XP de Cultivo',
+  'searchXp': 'Buscar en árboles: XP de Granjero',
   'waystoneReach': 'Piedra de paso: distancia (px)',
   'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',
   'mapStartRadius': 'Mapa del exterior: radio conocido al llegar (tiles)',
@@ -2048,6 +2131,8 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.combatLimits => combatLimitsCodec,
       BalanceKind.exploration => explorationCodec,
       BalanceKind.farming => farmingCodec,
+      BalanceKind.animals => animalsCodec,
+      BalanceKind.gear => gearCodec,
       BalanceKind.town => townCodec,
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
@@ -2069,6 +2154,8 @@ const kTuningKinds = [
   BalanceKind.combatLimits,
   BalanceKind.exploration,
   BalanceKind.farming,
+  BalanceKind.animals,
+  BalanceKind.gear,
   BalanceKind.town,
   BalanceKind.fishing,
   BalanceKind.lifeTree,

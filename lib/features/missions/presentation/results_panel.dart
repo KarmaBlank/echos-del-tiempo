@@ -409,7 +409,7 @@ class _ResultsPanelState extends ConsumerState<ResultsPanel> {
                         : ref.t('ui.missions.results.auto_return',
                             {'s': r.timeLeft.ceil()})),
                     key: const ValueKey('results-footer'),
-                    style: DsText.body(DsColors.textSecondary)),
+                    style: const TextStyle(color: DsColors.textMuted)),
               ),
               KeyHints(
                   confirm: ref.t(victoryLap

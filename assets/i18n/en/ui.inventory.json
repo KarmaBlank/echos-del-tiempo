@@ -401,7 +401,7 @@
   "ui.inventory.sort.weapon_type": "Weapon type",
   "ui.inventory.workshop.credits": "Credits <b>{credits}</b>",
   "ui.inventory.workshop.filter.all": "ALL",
-  "ui.inventory.workshop.filter.farming": "FARMING",
+  "ui.inventory.workshop.filter.farming": "FARMER",
   "ui.inventory.workshop.filter.fishing": "FISHING",
   "ui.inventory.workshop.have": "You have {n} · enough for {max}",
   "ui.inventory.workshop.help": "<b>Crafts workshop</b><br>CRAFTING: harvests and fish (never legendary; lowest value first) become trade materials to hire and upgrade helpers. Pick a recipe; on the right you see the ingredients, the amount and CRAFT.<br>TOOLS: rods, hoes, watering cans and picks are bought and equipped here (the FARM SHOP only sells supplies). Weapons are worked in the ARMORY.",

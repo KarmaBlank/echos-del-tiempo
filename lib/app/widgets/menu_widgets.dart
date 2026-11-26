@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_tokens.dart';
 import '../theme/action_box.dart';
 import '../theme/panel_frame.dart';
 import '../theme/proto_colors.dart';
@@ -90,7 +91,7 @@ class _MenuRowState extends State<MenuRow> {
   @override
   Widget build(BuildContext context) {
     final style =
-        widget.dimmed ? const TextStyle(color: ProtoColors.dim) : null;
+        widget.dimmed ? const TextStyle(color: DsColors.textMuted) : null;
     return Padding(
       padding: EdgeInsets.only(
           left: widget.indent, bottom: UiTheme.wide ? 4 : 2),
@@ -173,7 +174,7 @@ class _MenuRowState extends State<MenuRow> {
                 child: widget.description == null
                     ? const SizedBox.shrink()
                     : ProtoText(widget.description!,
-                        style: const TextStyle(color: ProtoColors.dim)),
+                        style: const TextStyle(color: DsColors.textMuted)),
               ),
               if (widget.value != null) ...[
                 const SizedBox(width: 12),
@@ -285,7 +286,7 @@ class StepCrumbs extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (var i = 0; i < steps.length; i++) ...[
-          if (i > 0) const Text('›', style: TextStyle(color: ProtoColors.dim)),
+          if (i > 0) const Text('›', style: TextStyle(color: DsColors.textMuted)),
           _tip(
               i,
               PanelButton('${i + 1} ${steps[i]}',
@@ -337,7 +338,7 @@ class ChoiceCycler<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(retroText(label), style: const TextStyle(color: ProtoColors.dim)),
+        Text(retroText(label), style: const TextStyle(color: DsColors.textMuted)),
         const SizedBox(width: 6),
         PanelButton('‹',
             key: ValueKey('${keyPrefix}prev'), onPressed: () => _step(-1)),
@@ -373,7 +374,7 @@ class KeyHints extends StatelessWidget {
       if (back != null) '<span class="k">Esc</span> $back',
     ];
     return ProtoText(parts.join(' · '),
-        style: const TextStyle(color: ProtoColors.dim),
+        style: const TextStyle(color: DsColors.textMuted),
         maxLines: 1,
         overflow: TextOverflow.ellipsis);
   }

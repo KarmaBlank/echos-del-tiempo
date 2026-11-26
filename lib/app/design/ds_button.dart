@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
 import '../theme/ui_theme.dart';
 import 'ds_focus.dart';
@@ -224,11 +225,19 @@ class DsButton extends StatelessWidget {
         : DsFocusScope(child: button);
     final tip = tooltip;
     if (tip == null) return ringed;
-    // A gold amount in the reason draws the coin, never "\$".
-    return DsGoldText.hasGold(tip)
-        ? Tooltip(
-            richMessage: TextSpan(children: DsGoldText.spans(tip, null)),
-            child: ringed)
-        : Tooltip(message: tip, child: ringed);
+    // Disabled: the reason is KEY INFO (design_system.md § 3.4); a gold
+    // amount in the reason draws the coin, never "\$".
+    final disabled = onPressed == null;
+    if (DsGoldText.hasGold(tip)) {
+      return Tooltip(
+          richMessage: TextSpan(
+              children: DsGoldText.spans(tip, disabled ? DsText.key() : null)),
+          child: ringed);
+    }
+    if (disabled) {
+      return Tooltip(
+          richMessage: protoSpan(tip, style: DsText.key()), child: ringed);
+    }
+    return Tooltip(message: tip, child: ringed);
   }
 }

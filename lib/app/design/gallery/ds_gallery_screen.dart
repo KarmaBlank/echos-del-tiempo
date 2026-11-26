@@ -1,8 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../theme/proto_colors.dart';
 import '../../theme/retro_theme.dart';
 import '../../theme/ui_theme.dart';
+import '../../../core/procedural/weapon_look.dart' show elementColor;
 import '../../../core/settings/game_settings.dart' show TextSize;
+import '../../../game_engine/models/elements.dart';
+import '../../../game_engine/models/item.dart' show Rarity;
+import '../../../game_engine/models/loot_filter.dart' show FilterColor;
+import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../design.dart';
 import 'ds_examples.dart';
 
@@ -245,15 +251,48 @@ class PalettePage extends StatelessWidget {
       const DsSectionHeader('Tipografía'),
       SizedBox(height: DsSpace.sm),
       _typeRow(context, 'Título', DsText.title(), 'PERSONAJE'),
-      _typeRow(context, 'Subtítulo', DsText.subtitle(), 'ATRIBUTOS · EQUIPO'),
-      _typeRow(context, 'Texto', DsText.body(),
-          'Espada del Alba: golpe de luz que ignora la guardia.'),
       _typeRow(
-          context, 'Detalle', DsText.detail(), 'Nivel 12 · Arma de una mano'),
-      _typeRow(context, 'Descripción', DsText.description(),
-          'Necesito truchas para la cena del festival.'),
+          context, 'Título compacto', DsText.heading(), 'GRANJERO 1 · NV 3'),
+      _typeRow(context, 'Subtítulo', DsText.subtitle(), 'ATRIBUTOS · EQUIPO'),
+      _typeRow(
+          context,
+          'Subtítulo (lectura)',
+          DsText.body(DsColors.textSubtitle),
+          'Arma de una mano · nivel de objeto 12'),
+      _typeRow(context, 'Cuerpo / Descripción', DsText.body(),
+          'Espada del Alba: golpe de luz que ignora la guardia.'),
+      _typeRow(context, 'Apagado / stats', DsText.muted(),
+          'ATQ 14 · MAG 3 (con tus atributos)'),
       _typeRow(context, 'Meta', DsText.meta(), 'Pide: Ilda · día 4'),
-      _typeRow(context, 'Acento', DsText.accent(), '+120 de oro · +5 rep'),
+      _typeRow(context, 'CLAVE', DsText.key(), 'Solo atiende 12 parcelas'),
+      _typeRow(
+          context, 'Acento (oro)', DsText.accent(), '+120 de oro · +5 rep'),
+      _richRow(context, 'CLAVE en línea (**…**)',
+          'Solo atiende **12 parcelas**, marcadas en verde.'),
+      SizedBox(height: DsSpace.lg),
+      const DsSectionHeader('Paletas reservadas (nunca para texto)'),
+      SizedBox(height: DsSpace.sm),
+      Text('Elementos', style: DsText.subtitle()),
+      SizedBox(height: DsSpace.xs),
+      Wrap(spacing: DsSpace.md, runSpacing: DsSpace.sm, children: [
+        for (final e in GameElement.values)
+          _swatch(context, e.name.toUpperCase(), elementColor(e)),
+      ]),
+      SizedBox(height: DsSpace.sm),
+      Text('Rarezas', style: DsText.subtitle()),
+      SizedBox(height: DsSpace.xs),
+      Wrap(spacing: DsSpace.md, runSpacing: DsSpace.sm, children: [
+        for (final r in Rarity.values)
+          _swatch(context, r.name.toUpperCase(),
+              _rgb(LootFilterRules.rarityColor(r))),
+      ]),
+      SizedBox(height: DsSpace.sm),
+      Text('Roles de texto', style: DsText.subtitle()),
+      SizedBox(height: DsSpace.xs),
+      Wrap(spacing: DsSpace.md, runSpacing: DsSpace.sm, children: [
+        for (final r in DsTextRole.values)
+          _swatch(context, r.name.toUpperCase(), DsTextColor(r)),
+      ]),
       SizedBox(height: DsSpace.lg),
       const DsSectionHeader('Espaciado'),
       SizedBox(height: DsSpace.sm),
@@ -273,6 +312,37 @@ class PalettePage extends StatelessWidget {
       ]),
     ]);
   }
+
+  /// A loot-filter colour as a Flutter colour.
+  static Color _rgb(FilterColor f) => ProtoColors.parse('#${[
+        f.r,
+        f.g,
+        f.b
+      ].map((v) => v.toRadixString(16).padLeft(2, '0')).join()}')!;
+
+  /// A colour square with its name in the body role.
+  Widget _swatch(BuildContext context, String name, Color c) {
+    final sw = RetroType.width(context, 22);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+          width: sw,
+          height: sw,
+          decoration: BoxDecoration(
+              color: c, border: Border.all(color: DsColors.border, width: 2))),
+      SizedBox(width: DsSpace.xs),
+      Text(name, style: DsText.detail()),
+    ]);
+  }
+
+  Widget _richRow(BuildContext context, String name, String markup) => Padding(
+        padding: EdgeInsets.only(bottom: DsSpace.md),
+        child: Row(children: [
+          SizedBox(
+              width: RetroType.width(context, 260),
+              child: Text(name, style: DsText.detail())),
+          Expanded(child: DsRichText(markup)),
+        ]),
+      );
 
   Widget _typeRow(BuildContext context, String name, TextStyle s, String text) {
     final px = MediaQuery.textScalerOf(context).scale(s.fontSize!).round();

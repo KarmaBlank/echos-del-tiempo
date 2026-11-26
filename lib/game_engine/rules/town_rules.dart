@@ -8,6 +8,7 @@ import '../models/game_map.dart' show Tile;
 import '../models/item.dart' show CraftMaterial;
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import 'animal_rules.dart';
 import 'farming_rules.dart';
 import 'helper_rules.dart';
 import 'fishing_rules.dart';
@@ -125,6 +126,8 @@ abstract final class TownRules {
       BuildKind.lago => 'l',
       BuildKind.huerta => 'h',
       BuildKind.casa => 'c',
+      BuildKind.gallinero => 'g',
+      BuildKind.establo => 'e',
     }}$n';
   }
 
@@ -183,7 +186,9 @@ abstract final class TownRules {
       while (grew) {
         grew = false;
         for (final o in [...rest]) {
-          if (o.kind != b.kind || b.kind == BuildKind.casa) continue;
+          if (o.kind != b.kind || b.kind == BuildKind.casa || b.kind.ranch) {
+            continue;
+          }
           final touch = o.parts
               .any((p) => merged.parts.any((q) => p.touches(q)));
           if (!touch) continue;
@@ -436,7 +441,7 @@ abstract final class TownRules {
   static (PlayerProfile, TownState)? remove(
       PlayerProfile p, TownState s, String id) {
     final b = s.build(id);
-    if (b == null) return null;
+    if (b == null || AnimalRules.cannotRemove(b) != null) return null;
     // Lo del cofre va a quien borra.
     var prof = collectChest(p, s, id)?.$1 ?? p;
     if (b.kind == BuildKind.huerta) {
@@ -587,6 +592,7 @@ abstract final class TownRules {
   /// Cuántos ayudantes entran en [b]: uno cada `helperPlots` tiles de
   /// huerta o cada `fisherTiles` tiles de lago (redondeo para arriba).
   static int helperCap(TownBuild b) {
+    if (b.kind.ranch) return AnimalRules.helperCap;
     final per = math.max(1,
         b.kind == BuildKind.huerta ? t.i('helperPlots') : t.i('fisherTiles'));
     return (b.area + per - 1) ~/ per;
@@ -772,6 +778,23 @@ abstract final class TownRules {
     final (ax, ay) = b.anchor;
     // Bloqueado (§ 8.6): se queda quieto, sin trabajar.
     final stuck = HelperRules.blocked(b, i);
+    if (b.kind.ranch) {
+      // Ranch helper (animals.md § 6): strolls the yard tile by tile.
+      final yard = AnimalRules.pastureTiles(b);
+      if (yard.isEmpty) {
+        return (x: (ax + ox + 0.5) * 16, y: (ay + oy + 0.5) * 16, work: false);
+      }
+      final k = time / 5 + i * 2.3;
+      final n = yard.length;
+      final a = yard[(k.floor() * 7) % n], z = yard[((k.floor() + 1) * 7) % n];
+      final f = k - k.floor();
+      final m = f < 0.6 ? 0.0 : (f - 0.6) / 0.4;
+      return (
+        x: (a.$1 + (z.$1 - a.$1) * m + ox + 0.5) * 16,
+        y: (a.$2 + (z.$2 - a.$2) * m + oy + 0.5) * 16,
+        work: f < 0.6
+      );
+    }
     if (b.kind == BuildKind.lago) {
       final p = fisherAt(s, b, i, time);
       return (
@@ -865,7 +888,10 @@ abstract final class TownRules {
   }
 
   /// "Ayudantes 1 / 3 · cada uno atiende 8 parcelas" (cartel y opciones).
-  static String helperLine(TownBuild b) => b.kind == BuildKind.huerta
+  static String helperLine(TownBuild b) => b.kind.ranch
+      ? 'Granjeros de corral ${b.helper} / ${helperCap(b)} · '
+          'dan de comer, acarician y juntan'
+      : b.kind == BuildKind.huerta
       ? 'Granjeros ${b.helper} / ${helperCap(b)} · cada uno atiende '
           '${t.i('helperPlots')} parcelas'
       : 'Pescadores ${b.helper} / ${helperCap(b)} · uno cada '
@@ -875,14 +901,16 @@ abstract final class TownRules {
   static String? cannotHire(PlayerProfile p, TownState s, String id) {
     final b = s.build(id);
     if (b == null) return 'No existe';
-    final farm = b.kind == BuildKind.huerta;
+    final farm = b.kind == BuildKind.huerta || b.kind.ranch;
+    if (b.kind == BuildKind.casa) return 'No es una huerta ni un lago';
     if (b.helper >= helperCap(b)) {
+      if (b.kind.ranch) return 'Ya tiene su granjero de corral';
       return 'No hay más lugar: agrandá ${farm ? 'la huerta' : 'el lago'}';
     }
     final lvl = farm ? FarmingRules.level(p) : FishingRules.level(p);
     final c = HelperRules.hireCost(b.kind);
     if (lvl < c.level) {
-      return 'Necesitás subir tu oficio de ${farm ? 'Cultivo' : 'Pesca'} a nivel '
+      return 'Necesitás subir tu oficio de ${farm ? 'Granjero' : 'Pesca'} a nivel '
           '${c.level} (ahora: nivel $lvl)';
     }
     return HelperRules.cannotPay(p, c);
@@ -1122,7 +1150,22 @@ abstract final class TownRules {
     final b = s.build(id);
     if (b == null || b.chest.isEmpty) return null;
     var prof = p;
-    if (b.kind == BuildKind.huerta) {
+    if (b.kind.ranch) {
+      // Animal products (animals.md § 6): the bag and a share of the XP.
+      var f = p.life.farm;
+      var xp = 0;
+      for (final e in b.chest.entries) {
+        final pk = parseAnimalGoodsKey(e.key);
+        if (pk == null) continue;
+        f = f.addGoods(e.key, e.value);
+        xp += (pk.$1.xp *
+                AnimalRules.qualityMult(pk.$2) *
+                e.value *
+                t.d('helperXpShare'))
+            .round();
+      }
+      prof = p.copyWith(life: p.life.copyWith(farm: f.copyWith(xp: f.xp + xp)));
+    } else if (b.kind == BuildKind.huerta) {
       var f = p.life.farm;
       var xp = 0;
       for (final e in b.chest.entries) {

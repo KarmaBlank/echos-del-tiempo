@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
@@ -60,7 +61,7 @@ class PartyPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final full = selected.length >= Account.maxCompanions;
     final byId = {for (final c in candidates) c.id: c};
-    const muted = TextStyle(color: ProtoColors.dim);
+    const muted = TextStyle(color: DsColors.textMuted);
     final s = charStrings(context);
     const max = Account.maxCompanions;
     return Column(

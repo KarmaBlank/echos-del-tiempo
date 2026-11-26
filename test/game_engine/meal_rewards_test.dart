@@ -88,7 +88,7 @@ void main() {
       expect(out.$2.resident('lina').order, isNull);
     });
 
-    test('con nivel de Cultivo aparecen órdenes de comida', () {
+    test('con nivel de Granjero aparecen órdenes de comida', () {
       var found = false;
       for (var day = 1; day < 60 && !found; day++) {
         found = ResidentRules.mealOrder('lina', day, 30) != null;
