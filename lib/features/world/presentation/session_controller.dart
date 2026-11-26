@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import '../../inventory/domain/item_names.dart';
+import '../../../core/i18n/catalog_text.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -2853,6 +2854,22 @@ class SessionController extends StateNotifier<SessionView?> {
     return parts.join('\n');
   }
 
+  /// Display name of a plantable [id]: crop seed, weapon seed or a living
+  /// weapon to replant (profession_gear.md § 3.5).
+  String plantableName(String id) {
+    if (kCrops[id] case final c?) return c.seedName;
+    if (kWeaponSeeds.containsKey(id)) {
+      return CatalogText.of(
+          'data.items.gear.seed.$id', kWeaponSeedNames[id] ?? id);
+    }
+    if (id.startsWith(kRegrowItem)) {
+      final it = _s?.players[localId]?.profile
+          .itemByUid(id.substring(kRegrowItem.length));
+      if (it != null) return localItemName(engine.progression.items, it);
+    }
+    return id;
+  }
+
   /// Texto del aviso de la huerta (sobre las pociones).
   String? farmHint() {
     final t = farmTile;
@@ -2877,7 +2894,12 @@ class SessionController extends StateNotifier<SessionView?> {
       return strings.t('ui.world.ctl.farm.fertilize', {'fert': kFertilizers[farmFert]?.name ?? strings.t('ui.world.ctl.farm.fert_generic')});
     }
     if (pl == null) return strings.t('ui.world.ctl.farm.till');
-    if (!pl.planted) return strings.t('ui.world.ctl.farm.plant', {'crop': kCrops[seed]!.name});
+    if (!pl.planted) {
+      // Any plantable: crop seed, weapon seed or a living weapon to
+      // replant (v0.49.22: a weapon seed here threw and froze the HUD).
+      if (seed == null) return strings.t('ui.world.tools.no_seeds');
+      return strings.t('ui.world.ctl.farm.plant', {'crop': kCrops[seed]?.name ?? plantableName(seed)});
+    }
     final r = (FarmingRules.ratio(pl) * 100).round();
     final paused = _cropPaused(pl)
         ? ' · ${strings.t('ui.world.ctl.farm.paused_season')}'
@@ -5606,7 +5628,16 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_shownPanel != null && _panel != _shownPanel) _saveSoon();
     _shownPanel = _panel;
 
-    final (prompt, promptText) = _prompt();
+    // A failing prompt must never stop the view (v0.49.22): before, the
+    // exception skipped `state = ...`, so the HUD kept the last prompt
+    // on screen until a later emit happened to succeed.
+    WorldPrompt? prompt;
+    String? promptText;
+    try {
+      (prompt, promptText) = _prompt();
+    } catch (e, st) {
+      if (_promptErrors++ < 3) EcosLog.error('Aviso del mapa', '$e\n$st');
+    }
     final prev = state;
     state = SessionView(
       session: s,
@@ -5649,6 +5680,9 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     return List.unmodifiable(now);
   }
+
+  /// Prompt failures logged so far (only the first few go to the log).
+  int _promptErrors = 0;
 
   (WorldPrompt?, String?) _prompt() {
     if (_panel != null || editingTown) return (null, null);
