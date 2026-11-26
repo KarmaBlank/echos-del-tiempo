@@ -141,16 +141,21 @@ corral. Igual se los puede atender desde el panel.
 
 ## 5. Panel del corral (E sobre la casa o con un animal)
 
-Organismo `AnimalPanel`, con átomos del sistema de diseño (`DsColors`,
-`DsButton`, `DsGold`):
-- Grilla tipo INVENTARIO de los animales de la construcción; la casilla
-  muestra el sprite, los corazones y un punto si tiene producto listo.
-- Detalle (tooltip / panel derecho) del elegido: nombre, especie,
-  corazones, si comió y si lo acariciaron hoy, el producto de hoy (o en
-  cuántos días) y las odds de calidad.
-- Botones: DAR DE COMER, ACARICIAR, JUNTAR (gris con motivo si no se
-  puede) y, para la construcción, DEPOSITAR HENO (todo el heno de la
-  bolsa, hasta `siloMax`).
+Organismo `AnimalPanel` sobre `DsGridDetailLayout` (la misma grilla +
+detalle de INVENTARIO y `DsCollectionTemplate`), solo con `DsColors`:
+- Encabezado en una fila: contadores con ícono (animales / capacidad,
+  heno en el depósito / `siloMax`, heno en la bolsa) y DEPOSITAR HENO
+  (todo el heno de la bolsa, hasta `siloMax`).
+- Grilla de 6 columnas anclada arriba a la izquierda, casillas del
+  tamaño de INVENTARIO con solo el sprite (borde del color de calidad si
+  tiene producto listo). Nada de texto abajo: nombre, especie,
+  corazones y estado van en el tooltip.
+- Panel derecho con todo el ancho restante (mínimo 340 px): retrato
+  grande, nombre (Título), especie (etiqueta), cinco corazones y una
+  lista de tildes: comió hoy, lo acariciaron hoy, listo para juntar (o
+  en cuántos días), y la línea de calidad (odds de plata y oro).
+- Botones en una sola fila fija abajo del panel derecho: DAR DE COMER,
+  ACARICIAR, JUNTAR; grises con el motivo en el tooltip si no se puede.
 - Nada truncado: los textos largos bajan de línea.
 
 ## 6. Ayudantes (granjero de corral)
@@ -207,4 +212,5 @@ Organismo `AnimalPanel`, con átomos del sistema de diseño (`DsColors`,
 
 `docs/preview/animals/*.png` (con `PREVIEW=1`, test
 `test/features/world/animal_preview_test.dart`): gallinero con gallinas,
-establo con vaca y oveja, panel del corral, tienda GRANJA.
+establo con vaca y oveja, panel del gallinero (`panel.png`), panel del
+establo (`panel_barn.png`), tienda GRANJA.
