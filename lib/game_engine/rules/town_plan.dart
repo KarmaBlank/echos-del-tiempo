@@ -162,6 +162,22 @@ class TownPlan {
     return best ?? (l.x, l.y);
   }
 
+  /// Tiles (base-town coordinates) where no solid decor may go
+  /// (town_editor.md § 4.5): for every place, the whole row right in
+  /// front of it (its door side, south) and the tile below the middle of
+  /// that row (the exit landing and the party spread around it).
+  static Set<(int, int)> doorClearance(TownState s) {
+    final out = <(int, int)>{};
+    for (final l in landmarksOf(s)) {
+      for (var x = l.x - 1; x <= l.x + l.w; x++) {
+        out.add((x, l.y + l.h));
+      }
+      out.add((l.x + l.w ~/ 2, l.y + l.h + 1));
+      if (l.w.isEven) out.add((l.x + l.w ~/ 2 - 1, l.y + l.h + 1));
+    }
+    return out;
+  }
+
   /// El lugar [spot] en este mundo.
   static TownLandmark landmarkOf(TownState s, TownSpot spot) =>
       landmarksOf(s).firstWhere((l) => l.spot == spot);
@@ -269,7 +285,11 @@ class TownPlan {
       }
     }
 
+    // Trees never on a door, its front or the exit landing (§ 4.5):
+    // derived every load, so old saves are fixed too.
+    final clear = doorClearance(s);
     for (final (x, y) in TownLayout.trees) {
+      if (clear.contains((x, y))) continue;
       t[y + oy][x + ox] = Tile.tree;
     }
     for (final p in fixedPaths(s)) {

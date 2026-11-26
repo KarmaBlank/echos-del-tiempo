@@ -336,6 +336,15 @@ derecha, una fila más abajo, a la izquierda). El del lago base queda en
 (12, 15) como antes; el de la huerta base, en (18, 18) (los dos tiles a
 la izquierda son el eje de caminos).
 
+### 4.5 Puertas despejadas (v0.49.31)
+Ningún árbol suelto (`TownLayout.trees`) se pinta en la fila justo al
+sur de un lugar (de una columna antes a una después) ni en el tile de
+llegada debajo de su centro (los dos del medio si el ancho es par):
+`TownPlan.doorClearance`. Como el plano se arma de cero en cada carga,
+los pueblos guardados con un lugar movido o reubicado (la TIENDA, un
+lugar tardío) quedan arreglados sin migrar nada. El borde de bosque del
+mapa no es decorado y no cambia.
+
 ## 5. Lagos y huertas
 - 5.1 Capacidad de un lago: `max(lakeMin, tiles × lakePerTile)` (2;
   0,2: el base tiene 10, uno de 6 × 6, 7). Rareza: `lakeZoneRare` por

@@ -418,7 +418,11 @@ class _W {
       // Into / out of the shop (player_shop.md § 6).
       if (ShopInteriorRules.isShop(place)) arrive = ShopInteriorRules.arrival;
       if (ShopInteriorRules.isShop(s.place)) {
-        arrive = ShopInteriorRules.townFront(TownPlan.landmarksOf(s.town));
+        arrive = ShopInteriorRules.townFront(
+            TownPlan.landmarksOf(s.town), s.town.origin);
+      }
+      if (ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)) {
+        arrive = ShopInteriorRules.safeLanding(place, s.town, arrive!);
       }
       if ((fromMine != null || arrive != null) &&
           w.rooms[to]!.players.containsKey(p.id)) {

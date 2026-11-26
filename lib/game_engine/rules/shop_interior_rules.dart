@@ -5,6 +5,9 @@ import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import '../models/game_session.dart' show SessionPlayer;
+import '../models/world_save.dart' show TownState;
+import 'map_generator.dart';
+import 'world_rules.dart';
 
 /// Interior of the players' shop (docs/specs/player_shop.md § 6): a
 /// separate lobby map entered through the TIENDA door in town, like a
@@ -70,13 +73,22 @@ abstract final class ShopInteriorRules {
   static bool canTravel(String? from, String to) =>
       isShop(to) ? from == null : isShop(from) && to == kPueblo;
 
-  /// Where a player lands back in town: in front of the TIENDA door.
-  static WorldPoint townFront(List<TownLandmark> marks) {
+  /// Where a player lands back in town: in front of the TIENDA door, in
+  /// map px ([origin]: the base town inside an expanded map, § 6.4).
+  static WorldPoint townFront(List<TownLandmark> marks,
+      [(int, int) origin = (0, 0)]) {
     final l = marks.firstWhere((l) => l.spot == TownSpot.shop,
         orElse: () => TownLayout.landmarks
             .firstWhere((l) => l.spot == TownSpot.shop));
-    return WorldPoint((l.x + l.w / 2) * 16, (l.y + l.h) * 16 + 8.0);
+    return WorldPoint((l.x + origin.$1 + l.w / 2) * 16,
+        (l.y + origin.$2 + l.h) * 16 + 8.0);
   }
+
+  /// Safety net (§ 6.4): [p] moved to the nearest walkable tile of the
+  /// map the player lands on ([to]: the shop or the town of [town]) if
+  /// something solid sits there.
+  static WorldPoint safeLanding(String to, TownState town, WorldPoint p) =>
+      WorldRules.safeLanding(isShop(to) ? map() : MapGenerator.town(town), p);
 
   /// Ids of the counter owners, in slot order: the players inside (no
   /// companions), sorted by id so every peer sees the same layout.
