@@ -407,3 +407,359 @@ Tests:
   columna del hito como grupo), ULT (con su vista previa, sin
   reconstruir por frame), HAZAÑAS, BESTIARIO y BUILD siguen siendo
   template; después, el resto de las pantallas.
+
+
+---
+
+# Parte II (PROPUESTA): editor visual de composición con datos
+
+Estado: **PROPUESTA**, pendiente de las decisiones del dueño (§ II.12).
+Maqueta: `docs/preview/layout_editor_mockup.png` (generada por
+`test/design/layout_editor_mockup_test.dart` con `LAYOUT_MOCKUP=1`; es
+una maqueta estática con los componentes Ds reales, no el editor).
+
+Pedido: en el Editor, armar pantallas arrastrando componentes del
+sistema de diseño (Átomos / Moléculas / Organismos / Templates) a la
+pantalla, configurar sus perillas y **de dónde salen sus datos**
+("inventario del jugador", "encargos del NPC", "stock de la tienda"),
+guardar el resultado como datos por pantalla y que el juego dibuje esas
+pantallas desde el archivo, con la pantalla en código como respaldo.
+Por juego del monorepo (Mundo y Travesía por separado).
+
+## II.1 De dónde partimos (no se reabre)
+
+Hoy conviven dos editores, y esta Parte II los **une**, no agrega un
+tercero:
+
+| | Parte I (LAYOUT, slots) | screen_editor.md (PANTALLAS) |
+|---|---|---|
+| Modelo | `LayoutDoc`: slots en regiones, sin x/y | `ScreenLayout`: elementos con x/y/anclas |
+| Componentes | slots que arma el código | `DsRegistry` (paleta por nivel) |
+| Datos | ninguno (el slot ya los trae) | `ScreenBindingSpec`: acciones, fuentes (sin tipo), huecos |
+| Uso | ALIJO, INVENTARIO, forja, PERSONAJE, batalla | TÍTULO |
+
+Lo que falta para la visión del dueño: (a) árbol anidado (templates con
+hijos), (b) fuentes de datos **tipadas** con validación, (c) acciones
+con argumentos (comprar *este* ítem), (d) perillas por componente
+declaradas como esquema, (e) un formato único por pantalla y por juego.
+
+Decisión de diseño: el modelo nuevo es un **árbol de nodos con flujo
+(sin x/y)** como la Parte I, porque lo responsivo y el tamaño de texto
+ya están resueltos ahí. Las anclas de screen_editor.md quedan como un
+tipo de contenedor más (`stage`) para pantallas tipo póster (TÍTULO).
+
+## II.2 Modelo de datos
+
+Dart puro en `lib/core/ui_layout/` (sin Flutter: testeable con
+`flutter test` sin UI).
+
+### II.2.1 `LayoutNode`
+
+```yaml
+# assets/layouts/<game>/<screen>.ui.yaml
+schema: 1                 # versión del formato (§ II.7)
+game: world               # world (Mundo) | voyage (Travesía)
+screen: npc_shop
+template: transfer        # de qué template partió (solo informativo)
+root:
+  id: root
+  component: DsTransferTemplate
+  knobs: {split: 0.5, gap: md}
+  slots:                  # huecos con nombre del componente padre
+    left:
+      - id: inv_search
+        component: DsSearchField
+        knobs: {hint: ui.common.search, width: 24tx}
+      - id: inv_grid
+        component: DsGridDetailLayout
+        knobs: {columns: 6, cell: normal}
+        bind:
+          items: player.inventory | filter(search: inv_search.text)
+        on:
+          activate: shop.sell(item: $item, qty: 1)
+    right:
+      - id: stock_tabs
+        component: DsTabBar
+        bind: {tabs: shop.categories}
+      - id: stock_grid
+        component: DsGridDetailLayout
+        bind: {items: shop.stock | where(category: stock_tabs.value)}
+        on: {activate: shop.buy(item: $item, qty: 1)}
+    footer:
+      - id: actions
+        component: DsActionRow
+        children:
+          - {id: buy,  component: DsButton, knobs: {label: ui.shop.buy, kind: primary},
+             on: {press: shop.buy(item: stock_grid.selected, qty: 1)}}
+          - {id: sell, component: DsButton, knobs: {label: ui.shop.sell},
+             on: {press: shop.sell(item: inv_grid.selected, qty: 1)}}
+breakpoints:              # mismos 4 cortes globales de la Parte I (§ 5.6)
+  narrow:
+    root: {knobs: {stack: true}}
+```
+
+- `id`: estable, único en la pantalla, `snake_case`. Es lo que usan los
+  tests (`ValueKey('ui.<screen>.<id>')`), el foco y los bindings.
+- `component`: id del registro (§ II.2.2). Desconocido = el nodo se
+  dibuja como `DsMissing` en el editor y se **omite** en el juego (log).
+- `slots` vs `children`: un componente declara si tiene huecos con
+  nombre (`left`, `right`, `footer`, `detail`) o una lista simple.
+- `knobs`: solo claves del esquema del componente.
+- `bind`: entrada → expresión de datos (§ II.2.3).
+- `on`: evento del componente → acción (§ II.2.4).
+- `breakpoints`: parches por corte (solo `knobs`, `hide`, orden).
+
+### II.2.2 Registro de componentes con esquema de perillas
+
+Se extiende `DsComponentSpec` (`lib/app/design/registry/ds_registry.dart`)
+en lugar de crear otro registro:
+
+```dart
+class DsComponentSpec {
+  final String id;                 // 'DsGridDetailLayout'
+  final DsLevel level;             // atom | molecule | organism | template
+  final List<DsKnob> knobs;        // esquema
+  final List<DsInput> inputs;      // entradas ligables, tipadas
+  final List<DsEvent> events;      // eventos que emite, con su payload
+  final DsChildren children;       // none | list | slots(['left','right'])
+  final Widget Function(DsBuildCtx) build;
+  final String? galleryExample;    // el mismo ejemplo de ds_examples.dart
+}
+```
+
+Tipos de perilla (`DsKnob`), cerrados, sin valores libres:
+
+| Tipo | Ejemplo | Valores |
+|---|---|---|
+| `enumKnob` | `kind`, `size`, `variant` | los del componente |
+| `colorToken` | `accent`, `border` | solo nombres de `DsColors` (`selected`, `danger`, `success`, ...) |
+| `textStyle` | `style` | `DsTextStyleId` (display/title/subtitle/body/detail) |
+| `space` | `gap`, `padding` | `DsSpace` (xs/sm/md/lg/xl) |
+| `intRange` | `columns` | min/max/paso del componente |
+| `width` | `width` | anchos de texto (`24tx`) o `fill`; nunca px |
+| `textKey` | `label`, `hint` | clave i18n existente (§ II.9) |
+| `bool` | `stack`, `hideable` | |
+
+El esquema vive al lado del componente (`ds_registry_defaults.dart`) y
+lo usan a la vez la paleta, el panel de propiedades, el validador y el
+parser. Un componente nuevo que se registre aparece solo en la paleta.
+
+### II.2.3 Fuentes de datos tipadas y expresiones de binding
+
+Cada pantalla (por juego) registra un `ScreenContract` (reemplaza y
+amplía `ScreenBindingSpec`):
+
+```dart
+ScreenContract(
+  game: Game.world, screen: 'npc_shop', label: 'Tienda de NPC',
+  params: {'npc': UiType.npcId},
+  sources: [
+    DataSource('player.inventory', UiType.list(UiType.itemStack), label: 'Inventario del jugador'),
+    DataSource('shop.stock',       UiType.list(UiType.itemStack), label: 'Stock de la tienda'),
+    DataSource('shop.categories',  UiType.list(UiType.tab)),
+    DataSource('player.gold',      UiType.int),
+  ],
+  actions: [
+    ActionSpec('shop.buy',  {'item': UiType.itemStack, 'qty': UiType.int}, label: 'Comprar'),
+    ActionSpec('shop.sell', {'item': UiType.itemStack, 'qty': UiType.int}, label: 'Vender'),
+  ],
+  sample: npcShopSample,          // datos de ejemplo para el editor y la verificación
+)
+```
+
+- **Tipos** (`UiType`): un conjunto chico y cerrado: `int`, `text`,
+  `bool`, `itemStack`, `quest`, `recipe`, `npc`, `tab`, `cost`,
+  `list<T>`. Cada componente declara el tipo de sus entradas
+  (`DsGridDetailLayout.items: list<itemStack | recipe | quest>`).
+- **Fuentes**: implementadas en `features/<x>/presentation` como
+  `ValueListenable<T>` (o `Stream`) sobre los casos de uso existentes;
+  el layout nunca llama al dominio directo.
+- **Expresiones**: gramática mínima, **no** un lenguaje:
+  `fuente[.campo] ( | operador(args) )*`. Operadores cerrados:
+  `filter(search:)`, `where(campo: valor)`, `sort(campo)`, `take(n)`,
+  `count`, `sum(campo)`. Referencias a otros nodos por id
+  (`stock_tabs.value`, `inv_grid.selected`). Sin aritmética libre, sin
+  condicionales: lo que no entra en esto es lógica y va en código como
+  fuente nueva.
+- **Validación de tipos** al editar y al cargar: `list<itemStack>` en
+  una entrada `int` = error; `count` convierte `list<T>` en `int`.
+
+### II.2.4 Acciones
+
+`on: {evento: accion(args)}`. Los args son expresiones del § II.2.3 o
+`$payload` del evento (`$item` en `activate` de una grilla). El
+contrato dice el tipo de cada arg; el validador los chequea. En el
+juego, la pantalla entrega `ActionHandler`s por nombre (como hoy
+`ScreenAction`); el handler decide si está habilitado y por qué
+(`enabledWhen` + motivo → botón gris con tooltip, regla de botones
+deshabilitados). Ejemplos por pantalla: `shop.buy/sell`,
+`quest.accept/deliver/abandon`, `stash.deposit/withdraw`,
+`craft.fuse`, `npc.talk(topic:)`.
+
+En P2P el handler sigue mandando la intención por `NetSession` como
+hoy: el layout **no** cambia quién valida (el host).
+
+## II.3 Templates como punto de partida
+
+Cada template es un componente de nivel `template` con huecos con
+nombre y un **layout semilla** (YAML) que el editor copia al crear una
+pantalla:
+
+| Template | Componente | Huecos | Pantallas típicas |
+|---|---|---|---|
+| Colección | `DsCollectionTemplate` / `DsGridDetailLayout` | `toolbar`, `grid`, `detail`, `footer` | inventario, bestiario, hazañas |
+| Traspaso | `DsTransferTemplate` | `left`, `right`, `footer` | alijo, tienda, entregas |
+| Taller | `DsCraftGridTemplate` | `recipes`, `detail`, `costs`, `footer` | forja, fusión, cocina |
+| Lista + detalle | `DsColumnsTemplate` | `list`, `detail`, `footer` | encargos de NPC, misiones |
+| Escenario | `stage` (anclas, screen_editor.md § 2.1) | libre | título, pausa |
+
+Una pantalla elige template al crearse; cambiar de template después
+mueve los nodos a huecos con el mismo nombre y deja los demás en
+"sin ubicar" (el editor los muestra para reubicar).
+
+## II.4 UX del editor (Editor → PANTALLAS)
+
+Ver la maqueta. Tres columnas:
+
+1. **Árbol** (izquierda): nodos con su binding resumido
+   (`DsGridDetailLayout ← player.inventory`, `DsButton → shop.buy`),
+   reordenable por arrastre y teclado. Candado en nodos fijos del
+   template.
+2. **Lienzo** (centro): la pantalla real dibujada con los componentes
+   Ds y los **datos de ejemplo** del contrato (sin red, sin Firestore,
+   como la Parte I). Selector de resolución (1280×720, 1920×1080,
+   2560×1440, 800×600, 600×900, personalizada) y tamaño de texto
+   (100/125/150/200 %).
+3. **Paleta + Propiedades** (derecha): subpestañas ÁTOMOS / MOLÉCULAS /
+   ORGANISMOS / TEMPLATES con buscador (por nombre, nivel y etiqueta);
+   ítems en grilla con la vista previa del registro. Debajo,
+   PROPIEDADES del nodo elegido en tres secciones: PERILLAS (del
+   esquema), DATOS (fuente + expresión, con selector que solo ofrece
+   fuentes de tipo compatible y vista de los ítems de ejemplo), ACCIONES
+   (evento → acción con args).
+
+Interacción:
+
+- **Selección**: clic = nodo más interno; `Esc` / Alt+clic = padre.
+  Contorno `DsColors.editSelection` y nombre.
+- **Arrastrar y soltar**: desde la paleta o el árbol. Guías iguales a
+  la Parte I (línea verde de inserción; hueco verde si acepta, rojo
+  tachado si no: un hueco declara qué niveles/tipos acepta).
+- **Teclado**: flechas reordenan, `Tab` cambia de hueco, `Supr` borra,
+  `Ctrl+D` duplica, `Ctrl+Z / Ctrl+Y`.
+- **Deshacer/rehacer**: pila de comandos sobre el árbol inmutable
+  (`LayoutCommand`: insertar, mover, borrar, setKnob, setBind, setOn);
+  sin límite práctico (los árboles son chicos).
+- **VERIFICAR** (barra de problemas abajo, en vivo): reúne lo de
+  screen_editor.md § 6 y la Parte I § 2.5 más: tipo de binding,
+  acción inexistente, arg faltante o de tipo incorrecto, referencia a
+  un id que no existe, clave i18n inexistente, perilla fuera de rango,
+  hueco obligatorio vacío, acción única oculta. Clic en un problema =
+  selecciona el nodo. Con errores no se guarda ni publica.
+- **GUARDAR** (override local) / **PUBLICAR AL REPO** / RESTAURAR /
+  RECARGAR, mismo circuito que sprites y la Parte I.
+
+## II.5 Render en el juego y respaldo
+
+- `UiLayoutCatalog` (única clase que lee `assets/layouts/<game>/*.ui.yaml`,
+  como `SpriteCatalog`): override local válido → asset del repo válido
+  → **`null`**.
+- `DsLayoutScreen(screen:, contract:, handlers:, fallback:)`: si el
+  catálogo da un layout válido para el juego actual, lo dibuja; si no,
+  dibuja `fallback` (la pantalla armada en código de hoy). Así una
+  pantalla se migra sin riesgo y siempre hay respaldo.
+- Un layout que en runtime falla (fuente que no llega, excepción en un
+  `build`) cae al respaldo con log, nunca pantalla roja.
+- El juego activo sale del flavor (`main_*.dart` inyecta `Game.world` o
+  `Game.voyage`); cada juego tiene su carpeta y su lista de contratos.
+  Componentes Ds compartidos; contratos y layouts no.
+
+## II.6 Rendimiento
+
+- Parseo y validación **una vez** al cargar → `ResolvedLayout`
+  inmutable con los builders ya resueltos (id de componente → fábrica,
+  expresión → función compilada). Por frame solo se elige corte.
+- Cada nodo ligado escucha solo su fuente (`ValueListenableBuilder` por
+  nodo), no reconstruye la pantalla entera.
+- Grillas grandes usan las vistas perezosas que ya usan los
+  componentes; el layout no agrega envoltorios por ítem.
+- Meta: abrir una pantalla por layout ≤ 1 ms más que la de código
+  (medido en test con 200 ítems).
+
+## II.7 Versionado y migración
+
+- `schema:` entero en cada archivo. `UiLayoutMigrations` encadena
+  `v1→v2→…` en Dart puro; el editor guarda siempre la última.
+- Componente renombrado: tabla de alias en el registro
+  (`aliases: ['DsGridDetail']`). Perilla renombrada: alias por perilla.
+- Contrato que pierde una fuente o acción: el layout carga, el nodo
+  queda con error de VERIFICAR y en el juego se usa el respaldo.
+- Tests: cada layout del repo se carga, migra y valida en `flutter test`
+  (un test por juego que recorre la carpeta).
+
+## II.8 Reglas atómicas
+
+- **Sin duplicar**: el editor no tiene widgets propios para dibujar la
+  pantalla; usa los Ds reales vía registro. La galería
+  (`ds_gallery_screen.dart`) y la paleta comparten ejemplos.
+- **Solo tokens**: colores = nombres de `DsColors`; texto =
+  `DsTextStyleId`; espacios = `DsSpace`. Nada de hex, px o negritas en
+  los YAML; el parser rechaza lo demás.
+- **Visual agnóstico a la lógica**: los componentes reciben datos y
+  callbacks; la lógica queda en contratos y handlers.
+- Ítems en grilla con detalle a la derecha y categorías con subpestañas
+  (nunca secciones apiladas): los templates de Colección y Lista+detalle
+  ya lo traen; VERIFICAR avisa si se apilan 2+ `DsSectionHeader` con
+  colecciones en el mismo hueco.
+
+## II.9 i18n
+
+Los textos del layout son **claves** (`ui.shop.buy`), nunca texto
+suelto; el panel de propiedades busca y ofrece claves existentes y
+permite crear una nueva (va al archivo de textos base con el texto en
+castellano). VERIFICAR marca clave inexistente. Los datos ligados
+(nombres de ítems, encargos) ya vienen traducidos de su fuente.
+
+## II.10 Plan por fases
+
+| Fase | Contenido | Estimado |
+|---|---|---|
+| 0 | Decisiones del dueño (§ II.12) | — |
+| 1 | Núcleo puro: `LayoutNode`, parser/encode, `UiType`, expresiones, `ScreenContract`, validador, migraciones v1; tests | 4–5 días |
+| 2 | Registro con esquema de perillas/entradas/eventos para ~15 componentes (botón, texto, buscador, pestañas, fila de lista, grilla+detalle, fila de acciones, costos, diálogo, oro, 3 templates) | 3–4 días |
+| 3 | Runtime: `UiLayoutCatalog`, `DsLayoutScreen` con respaldo, por juego | 2–3 días |
+| 4 | **MVP de punta a punta: Tienda de NPC (Mundo)**: contrato con fuentes y `shop.buy/sell`, layout por defecto que reproduce la de hoy (golden igual), editor: árbol, lienzo, paleta con buscador, propiedades (perillas + datos + acciones), arrastrar/soltar, deshacer, VERIFICAR, guardar/publicar | 6–8 días |
+| 5 | Encargos de NPC (Lista + detalle) y entrega (`quest.deliver`) | 3 días |
+| 6 | Unificar: TÍTULO (`stage`) y pantallas de la Parte I pasan al formato nuevo con migración automática | 4–5 días |
+| 7 | Travesía: contratos propios y primera pantalla | 3 días |
+
+MVP (fases 1–4): **3 a 4 semanas** de trabajo efectivo. Total hasta
+fase 7: 6 a 7 semanas.
+
+## II.11 Riesgos
+
+- **Dos/tres formatos a la vez** (Parte I, `.screen.json`, `.ui.yaml`)
+  hasta la fase 6: deuda explícita; regla: ninguna pantalla nueva en
+  formatos viejos.
+- **Expresiones que crecen hasta ser un lenguaje**: lista cerrada de
+  operadores; pedir uno nuevo es un cambio de código con test.
+- **Pantallas acopladas a animación o geometría** (batalla, mapa, árbol
+  de pasivas): siguen como huecos fijos que arma el código.
+- **Datos de ejemplo desactualizados** respecto del dominio real: los
+  fixtures salen de los catálogos reales con semilla fija.
+- **Layouts válidos pero feos**: VERIFICAR garantiza "no roto"; lo
+  lindo sigue siendo criterio del dueño.
+
+## II.12 Decisiones del dueño
+
+1. ¿El MVP es la **Tienda de NPC** (recomendado: ejercita traspaso,
+   dos fuentes y dos acciones) o los **Encargos de NPC**?
+2. ¿Formato del archivo: **YAML** (recomendado, igual que sprites y la
+   Parte I, comentable) o JSON (como el TÍTULO de hoy)?
+3. ¿Se **unifican** los editores LAYOUT y PANTALLAS en uno (fase 6,
+   recomendado) o conviven?
+4. ¿Hasta dónde llegan las **expresiones**: solo la lista cerrada del
+   § II.2.3 (recomendado) o también condiciones simples de visibilidad
+   (`visible: player.gold > 0`)?
+5. ¿Los layouts publicados son **iguales para todos** (recomendado,
+   como la Parte I § 5.2) o se permiten overrides por jugador/servidor?
