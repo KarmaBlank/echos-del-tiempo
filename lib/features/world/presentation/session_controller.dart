@@ -33,6 +33,7 @@ import '../../../game_engine/rules/biome_rules.dart';
 import '../../../game_engine/rules/waystone_rules.dart';
 import '../../../game_engine/rules/raft_rules.dart';
 import '../../../game_engine/rules/wild_loot_rules.dart';
+import '../../../game_engine/rules/action_targeting.dart';
 import '../../../game_engine/rules/cozy_rules.dart';
 import '../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 import '../../../game_engine/rules/weather_rules.dart';
@@ -1433,15 +1434,32 @@ class SessionController extends StateNotifier<SessionView?> {
     if (lay == null) {
       // En el pueblo: el habitante que camina frente a su casa (§ 10.1).
       if (s.place != null || editingTown) return null;
+      // Two side by side: the hovered one, the one in the last WASD
+      // direction, else the nearest (controls.md § Cursor de acción).
       final night = SkyRules.isNight(s.town.sky);
-      for (final n in ResidentRules.living(s.town)) {
-        final pos = ResidentRules.position(s.town, n.id, s.time, night: night);
+      final living = ResidentRules.living(s.town).toList();
+      final (px, py) = _myTile;
+      final near = <ActionTarget>[];
+      for (var i = 0; i < living.length; i++) {
+        final pos =
+            ResidentRules.position(s.town, living[i].id, s.time, night: night);
         if (pos == null) continue;
-        if (WorldRules.distance(local.x, local.y, pos.$1, pos.$2) < 26) {
-          return n;
+        if (WorldRules.distance(local.x, local.y, pos.$1, pos.$2) >= 26) {
+          continue;
         }
+        near.add(ActionTarget((pos.$1 / 16).floor(), (pos.$2 / 16).floor(),
+            ActionTargetKind.npc,
+            id: i));
       }
-      return null;
+      final pick = ActionTargeting.select(
+        px: px,
+        py: py,
+        candidates: near,
+        hover: _hover,
+        facing: _facingStep,
+        reach: 3,
+      );
+      return pick == null ? null : living[pick.id];
     }
     // Ya vive en el pueblo: no está más en su bioma (§ 10.1).
     if (s.town.resident(lay.npc.id).invited) return null;
@@ -1721,12 +1739,32 @@ class SessionController extends StateNotifier<SessionView?> {
 
   (int, int) get mineTarget {
     if (_mineAim case final a?) return a;
-    var fx = local.fx, fy = local.fy;
-    if (fx == 0 && fy == 0) fy = 1;
-    final horiz = fx.abs() >= fy.abs();
-    final tx = (local.x / 16).floor() + (horiz ? fx.sign.toInt() : 0);
-    final ty = (local.y / 16).floor() + (horiz ? 0 : fy.sign.toInt());
-    return (tx, ty);
+    final (px, py) = _myTile;
+    final (sx, sy) = _facingStep;
+    final ahead = (px + sx, py + sy);
+    final lvl = mineLevel;
+    if (lvl == null) return ahead;
+    // The hovered tile in reach, the one in the last WASD direction, else
+    // the nearest rock / find next to the player (controls.md).
+    final r = CozyRules.actionReach;
+    final rocks = <ActionTarget>[];
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        final c = MiningRules.tileAt(lvl, mineState, px + dx, py + dy);
+        if (c == Tile.floor || c == MineTile.torch) continue;
+        rocks.add(ActionTarget(px + dx, py + dy, ActionTargetKind.rock));
+      }
+    }
+    return ActionTargeting.select(
+          px: px,
+          py: py,
+          candidates: rocks,
+          hover: _hover,
+          facing: (sx, sy),
+          reach: r,
+        )?.tile ??
+        ahead;
   }
 
   /// The code of the tile in front.
@@ -2290,24 +2328,92 @@ class SessionController extends StateNotifier<SessionView?> {
 
   // ---------------- hold to gather (cozy_life.md § 3) ----------------
 
-  /// The ordinary tree in front in a biome exterior (tile), or `null`.
-  (int, int)? get facingTree {
+  // ------------- action cursor (controls.md § Cursor de acción) -------------
+
+  /// Tile under the mouse and where the player stood when it was set:
+  /// the mouse picks the target until the player walks away from there,
+  /// then the keyboard (last WASD direction) picks again.
+  (int, int)? _aimHover;
+  double _aimX = 0, _aimY = 0;
+
+  /// The mouse moved over [tile] (`null` = off the map).
+  void aimHover((int, int)? tile) {
+    _aimHover = tile;
+    _aimX = local.x;
+    _aimY = local.y;
+  }
+
+  (int, int)? get _hover => _aimHover != null &&
+          (local.x - _aimX).abs() < 2 &&
+          (local.y - _aimY).abs() < 2
+      ? _aimHover
+      : null;
+
+  (int, int) get _myTile => ((local.x / 16).floor(), (local.y / 16).floor());
+
+  (int, int) get _facingStep =>
+      ActionTargeting.facingStep(local.fx, local.fy);
+
+  /// Bushes and searchable trees in reach of a biome exterior.
+  List<ActionTarget> _gatherCandidates() {
     final s = _s;
     final lay = biomeLayout(s?.place);
     if (s == null || s.mode != SessionMode.lobby || lay == null || onRaft) {
-      return null;
+      return const [];
     }
-    var fx = local.fx, fy = local.fy;
-    if (fx == 0 && fy == 0) fy = 1;
-    final horiz = fx.abs() >= fy.abs();
-    final tx = (local.x / 16).floor() + (horiz ? fx.sign.toInt() : 0);
-    final ty = (local.y / 16).floor() + (horiz ? 0 : fy.sign.toInt());
+    final (px, py) = _myTile;
+    final r = CozyRules.actionReach;
     final map = engine.mapFor(s);
-    if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return null;
-    return CozyRules.searchable(map, lay.id, town.sky.day, tx, ty)
-        ? (tx, ty)
-        : null;
+    final out = <ActionTarget>[];
+    for (var i = 0; i < lay.forage.length; i++) {
+      final f = lay.forage[i];
+      if (!ActionTargeting.inReach(px, py, f.x, f.y, reach: r)) continue;
+      out.add(ActionTarget(f.x, f.y, ActionTargetKind.forage,
+          ok: BiomeRules.regrowIn(town, lay.id, i, s.time) <= 0, id: i));
+    }
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        final tx = px + dx, ty = py + dy;
+        if (!CozyRules.searchable(map, lay.id, town.sky.day, tx, ty)) continue;
+        out.add(ActionTarget(tx, ty, ActionTargetKind.tree,
+            ok: !CozyRules.searched(town, _me, lay.id, tx, ty)));
+      }
+    }
+    return out;
   }
+
+  /// The bush / tree E or a click works next ([skip]: tiles already worked
+  /// in this hold).
+  ActionTarget? gatherTargetFor({Set<(int, int)> skip = const {}}) {
+    final (px, py) = _myTile;
+    return ActionTargeting.select(
+        px: px,
+        py: py,
+        candidates: _gatherCandidates(),
+        hover: _hover,
+        facing: _facingStep,
+        skip: skip,
+        reach: CozyRules.actionReach);
+  }
+
+  /// The selected bush / tree (drawn with the tile cursor).
+  ActionTarget? get gatherTarget => gatherTargetFor();
+
+  /// The selected searchable tree (tile), from any side, or `null`.
+  (int, int)? get facingTree => switch (gatherTarget) {
+        final g? when g.kind == ActionTargetKind.tree => g.tile,
+        _ => null,
+      };
+
+  bool _gatherInReach((int, int) t) {
+    final (px, py) = _myTile;
+    return ActionTargeting.inReach(px, py, t.$1, t.$2,
+        reach: CozyRules.actionReach);
+  }
+
+  void _gatherStart(ActionTarget g) => g.kind == ActionTargetKind.forage
+      ? gatherHoldStart(forage: g.id)
+      : gatherHoldStart(tree: g.tile);
 
   /// I already searched the tree [t] today.
   bool searchedToday((int, int) t) {
@@ -2360,14 +2466,23 @@ class SessionController extends StateNotifier<SessionView?> {
       ..reset()
       ..start();
     _gatherTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      final lay = biomeLayout(_s?.place);
+      final gf = _gatherForage;
       final still = _gatherTree != null
-          ? facingTree == _gatherTree
-          : nearForage == _gatherForage && _gatherForage != null;
+          ? _gatherInReach(_gatherTree!)
+          : gf != null &&
+              lay != null &&
+              gf < lay.forage.length &&
+              _gatherInReach((lay.forage[gf].x, lay.forage[gf].y));
       if (!still) return gatherHoldEnd();
       if (_gatherClock.elapsedMilliseconds >= gatherSec * 1000) {
         final f = _gatherForage, t = _gatherTree;
         gatherHoldEnd();
-        _holdDone.add(t ?? (-1, f!));
+        final lay2 = biomeLayout(_s?.place);
+        _holdDone.add(t ??
+            (lay2 != null && f! < lay2.forage.length
+                ? (lay2.forage[f].x, lay2.forage[f].y)
+                : (-1, f!)));
         if (t != null) {
           _apply(CozyAction(CozyOp.search, x: t.$1, y: t.$2));
         } else if (f != null) {
@@ -2386,19 +2501,17 @@ class SessionController extends StateNotifier<SessionView?> {
     if (s == null || _panel != null || s.mode != SessionMode.lobby) {
       return false;
     }
-    final lay = biomeLayout(s.place);
-    if (lay != null) {
-      if (nearForage case final i?) {
-        final f = lay.forage[i];
-        if ((f.x - tile.$1).abs() <= 1 && (f.y - tile.$2).abs() <= 1) {
-          gatherHoldStart(forage: i);
-          return true;
-        }
-      }
-      if (facingTree case final t? when t == tile) {
-        gatherHoldStart(tree: t);
-        return true;
-      }
+    // The mouse is the cursor: a press in reach selects what is there
+    // (or the nearest), a press far away does nothing.
+    final (px, py) = _myTile;
+    if (!ActionTargeting.inReach(px, py, tile.$1, tile.$2,
+        reach: CozyRules.actionReach)) {
+      return false;
+    }
+    aimHover(tile);
+    if (gatherTarget case final g?) {
+      _gatherStart(g);
+      return true;
     }
     if (farmTile == tile && farmOp == FarmOp.harvest) return farmWork();
     return false;
@@ -2433,10 +2546,11 @@ class SessionController extends StateNotifier<SessionView?> {
   void holdStart({(int, int)? tile, bool pointer = false}) {
     _holdPointer = pointer;
     _holdTile = tile;
+    if (pointer && tile != null) aimHover(tile);
     _holdDone.clear();
     final t = farmTile;
     if (t != null && farmOp != null) _holdDone.add(t);
-    if (facingTree case final tr?) _holdDone.add(tr);
+    if (gatherTarget case final g?) _holdDone.add(g.tile);
     _holdTimer?.cancel();
     final ms = (CozyRules.holdRepeatSec * 1000).round().clamp(16, 5000);
     _holdTimer =
@@ -2446,6 +2560,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// The cursor moved while the click is held.
   void holdAim((int, int)? tile) {
     if (_holdPointer) _holdTile = tile;
+    aimHover(tile);
   }
 
   /// E / the click released: ends the repeat, the pick and any bar.
@@ -2491,35 +2606,24 @@ class SessionController extends StateNotifier<SessionView?> {
       mineSwing();
       return;
     }
-    // Bushes and trees: start the bar on the next one.
+    // Bushes and trees: start the bar on the next one in reach (the
+    // hovered one first), each once per hold.
     final lay = biomeLayout(s.place);
     if (lay != null && (!_holdPointer || activeTool == null)) {
-      if (nearForage case final i? when !_holdDone.contains((-1, i))) {
-        final f = lay.forage[i];
-        final tile = _holdTile;
-        if (!_holdPointer ||
-            tile == null ||
-            ((f.x - tile.$1).abs() <= 1 && (f.y - tile.$2).abs() <= 1)) {
-          gatherHoldStart(forage: i);
-          return;
-        }
-      }
-      if (facingTree case final t?
-          when !_holdDone.contains(t) && !searchedToday(t)) {
-        if (!_holdPointer || _holdTile == null || _holdTile == t) {
-          gatherHoldStart(tree: t);
-          return;
-        }
+      if (gatherTargetFor(skip: _holdDone) case final g? when g.ok) {
+        _gatherStart(g);
+        return;
       }
     }
     // Farm plots: the one in front, once per hold.
     final t = farmTile;
-    if (t != null && !_holdDone.contains(t) && farmOp != null) {
+    if (t != null && !_holdDone.contains(t)) {
       if (_holdPointer && activeTool == null && farmOp != FarmOp.harvest) {
         return;
       }
-      // A press inside the farm cooldown just tries again next repeat.
-      if (farmWork()) _holdDone.add(t);
+      // A press inside the farm cooldown just tries again next repeat; a
+      // blocked plot is skipped so the hold moves on to the next one.
+      if (farmWork() || farmOp == null) _holdDone.add(t);
     }
   }
 
@@ -2553,13 +2657,25 @@ class SessionController extends StateNotifier<SessionView?> {
   /// (a 10 px) o el que pisa. `null` = no está en la huerta.
   (int, int)? get farmTile {
     if (!_townFree()) return null;
-    final fx = local.fx, fy = local.fy;
-    final ax = ((local.x + fx * 10) / 16).floor();
-    final ay = ((local.y + fy * 10) / 16).floor();
-    if (_isSoil(ax, ay)) return (ax, ay);
-    final tx = (local.x / 16).floor(), ty = (local.y / 16).floor();
-    if (_isSoil(tx, ty)) return (tx, ty);
-    return null;
+    // One rule with the bushes and trees (controls.md § Cursor de
+    // acción): the hovered plot, the one in the last WASD direction, then
+    // the nearest; a held E moves on to the next one.
+    final (px, py) = _myTile;
+    final r = CozyRules.actionReach;
+    return ActionTargeting.select(
+      px: px,
+      py: py,
+      candidates: [
+        for (var dy = -r; dy <= r; dy++)
+          for (var dx = -r; dx <= r; dx++)
+            if (_isSoil(px + dx, py + dy))
+              ActionTarget(px + dx, py + dy, ActionTargetKind.plot)
+      ],
+      hover: _hover,
+      facing: _facingStep,
+      skip: holding ? _holdDone : const {},
+      reach: r,
+    )?.tile;
   }
 
   FarmPlot? plotAt(int x, int y) => town.plots[plotKey(x, y)];
@@ -3960,10 +4076,8 @@ class SessionController extends StateNotifier<SessionView?> {
         useWildLoot(i, shrine: shrine);
       } else if (nearRaftDock != null) {
         boardRaft();
-      } else if (nearForage case final i?) {
-        gatherHoldStart(forage: i);
-      } else if (facingTree case final t?) {
-        gatherHoldStart(tree: t);
+      } else if (gatherTarget case final g?) {
+        _gatherStart(g);
       } else if (nearMineExit) {
         travelMine(null);
       } else if (nearShaft) {
@@ -5759,13 +5873,16 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearRaftDock != null) {
       return (WorldPrompt.poi, strings.t('ui.world.raft.prompt_board'));
     }
-    if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
-    if (facingTree case final t?) {
+    // The cursor's target (controls.md § Cursor de acción): the line says
+    // what E / the click does there; a searched tree is grey.
+    if (gatherTarget case final g?) {
+      if (g.kind == ActionTargetKind.forage) {
+        return (WorldPrompt.poi, forageHint(g.id));
+      }
       return (
-        WorldPrompt.poi,
-        strings.t(searchedToday(t)
-            ? 'ui.world.cozy.searched'
-            : 'ui.world.cozy.search_prompt')
+        g.ok ? WorldPrompt.poi : WorldPrompt.spent,
+        strings.t(
+            g.ok ? 'ui.world.cozy.search_prompt' : 'ui.world.cozy.searched')
       );
     }
     if (nearMineExit) {

@@ -985,6 +985,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'gatherHoldMinSec': 0.4,
     // Hold = repeat (§ 3): seconds between repeats of a held E / click.
     'holdRepeatSec': 0.25,
+    // Action cursor (controls.md): reach in tiles around the player.
+    'actionReachTiles': 1,
     // Tree search (§ 3): chance of each find (rest = nothing) and XP.
     'searchSeedChance': 0.3,
     'searchMushroomChance': 0.2,
