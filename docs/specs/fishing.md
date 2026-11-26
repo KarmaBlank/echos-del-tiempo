@@ -212,6 +212,13 @@ Se fue en v0.25.5 (la reemplazó el PESCADOR de cada lago, farming.md
 - **Cuándo.** Con la caña afuera en una orilla (donde anda la pesca a
   mano: lago del pueblo o agua de un bioma), sin lance o con la boya
   esperando, R la prende. El personaje pesca solo mientras esté quieto.
+  v0.49.14: también justo después de sacar o perder un pez (antes R no
+  hacía nada ahí y la auto-pesca nunca arrancaba), y en la orilla con la
+  caña guardada R la saca y prende la auto-pesca de una. El aviso de la
+  orilla dice `[R] Auto-pesca` (también esperando la picada) y pescando
+  solo `[R] Detener`. Ritmo esperado con cielo despejado: una tirada cada
+  `biteDelay` × `autoWaitMult` (2.5–7 s × 2 ≈ 9.5 s de media); con la
+  chance del clima (1 despejado) da ~1 pez cada 10–15 s.
 - **Qué la corta.** Caminar, abrir un menú o panel, entrar en pelea,
   alejarse del agua / salir del pueblo, guardar la caña (Esc) o R de
   nuevo. Con la caña guardada R no hace nada de pesca (cerca de la

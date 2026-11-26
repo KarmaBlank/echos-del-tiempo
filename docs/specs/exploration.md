@@ -312,6 +312,15 @@ si |cam − t| > 200 en x o y → cam = t (salto)
 El lobby (26×14 tiles = 416×224 px) es más chico que la pantalla: queda
 centrado con `tx = −32`, `ty = −32`.
 
+**Ajuste a píxel (v0.49.14).** La cámara se sigue en espacio continuo
+(suavizado por tiempo, `smoothing`) y se ajusta a píxeles enteros una
+sola vez: `camDraw = round(cam)`. El héroe local se dibuja en
+`round(cam) + round(fx − cam)`. Así, caminando a velocidad
+constante, el mundo y el héroe avanzan en pasos de 1 px monótonos, sin
+idas y vueltas (antes cámara y héroe se redondeaban por separado y el
+héroe temblaba contra el mundo). La `camDraw` se usa para todo lo
+dibujado (mundo, actores, HUD en el mapa).
+
 **Desvío**: el prototipo suaviza por frame (`requestAnimationFrame`). El
 puerto usa el factor equivalente independiente del frame rate:
 `k = 1 − (1 − 0.25)^(dt·60)`. Lo mismo para `lerpPos` (0.35, salto si

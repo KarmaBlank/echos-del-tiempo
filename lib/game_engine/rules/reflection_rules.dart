@@ -20,7 +20,7 @@ enum WaterKind {
   /// Murky water: everything, weaker and greener.
   murky,
 
-  /// Water under a roof: only light streaks.
+  /// Water under a roof: light streaks and actors (no sky, no shore).
   cave,
 }
 
@@ -44,11 +44,12 @@ abstract final class ReflectionRules {
     return murkyThemes.contains(theme) ? WaterKind.murky : WaterKind.clear;
   }
 
-  /// Reflection opacity of a water [kind] (0 for none / cave).
+  /// Reflection opacity of a water [kind] (0 for none; cave is dimmer).
   static double alphaOf(WaterKind kind) => switch (kind) {
         WaterKind.clear => _r.d('reflAlpha'),
         WaterKind.murky => _r.d('reflMurkyAlpha'),
-        WaterKind.none || WaterKind.cave => 0,
+        WaterKind.cave => _r.d('reflCaveAlpha'),
+        WaterKind.none => 0,
       };
 
   /// Sideways offset (integer px) of the strip at world row [y] (px) at

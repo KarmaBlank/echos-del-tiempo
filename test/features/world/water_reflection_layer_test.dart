@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/core/settings/graphics.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/region_light_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/water_reflection_layer.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/rules/reflection_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,7 +106,7 @@ void main() {
     expect(lo.single, ReflectionRules.actorCap(high: false));
   });
 
-  test('cave water reflects only lights; automatic low when slow', () {
+  test('cave water reflects actors too (no sky); automatic low when slow', () {
     final map = reflectionLake();
     final layer = reflectionLayer(TilePainter());
     frame((c) {
@@ -122,8 +123,9 @@ void main() {
           t: 0,
           darkness: 1);
     });
-    expect(layer.lastStrips, 0);
-    expect(layer.lastActors, 0);
+    // v0.49.14: actors on the north shore show in cave water too.
+    expect(layer.lastActors, greaterThan(0));
+    expect(layer.lastStrips, greaterThan(0));
     for (var i = 0; i < 200; i++) {
       layer.frameTime(60);
     }
@@ -270,5 +272,36 @@ void main() {
       }
     }
     img.dispose();
+  });
+
+  test('a raft rider in open water is always reflected (full opacity)', () {
+    final map = reflectionLake();
+    final layer = reflectionLayer(TilePainter());
+    // The middle of the lake, far from any shore.
+    final x = map.width * 8.0, y = (map.height / 2 + 2) * 16.0;
+    expect(map.tileAt(x ~/ 16, y ~/ 16), Tile.water);
+    final ReflectedActor rider = (
+      x: x,
+      y: y,
+      moving: false,
+      onWater: true,
+      draw: (c) => c.drawRect(Rect.fromLTWH(x - 8, y - 24, 16, 24),
+          Paint()..color = const Color(0xFFE0B050)),
+    );
+    expect(rider.onWater, isTrue);
+    final view = Rect.fromCenter(
+        center: Offset(rider.x, rider.y), width: 320, height: 180);
+    frame((c) => layer.draw(c, map, view,
+        t: 0,
+        darkness: 0,
+        cover: 0,
+        field: const Size(768, 480),
+        actors: [rider],
+        roofed: (_, __) => false));
+    expect(layer.lastActors, 1);
+    final hit = ReflectionRules.actorLine(rider.x, rider.y,
+        (x, y) => map.tileAt(x, y) == Tile.water ? WaterKind.clear : WaterKind.none);
+    expect(hit, (rider.y, 1.0));
+    layer.dispose();
   });
 }

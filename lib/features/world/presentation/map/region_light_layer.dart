@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/biomes_catalog.dart';
+import '../../../../game_engine/data/tuning_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/rules/biome_regions.dart';
 import '../../../../game_engine/rules/light_shaft_rules.dart';
@@ -157,9 +158,19 @@ class RegionLightLayer {
       _cloudPx
         ..strokeWidth = cell
         ..color = RegionPalette.cloudShadow
-            .withValues(alpha: 0.18 * (k / _steps) * (s + 1) / _cloudLevels);
+            .withValues(alpha: shadowAlpha(k / _steps, s + 1));
       c.drawRawPoints(ui.PointMode.points, Float32List.fromList(pts), _cloudPx);
     }
+  }
+
+  /// Ground alpha of a shadow cell at rim step [step] (1..[cloudLevels])
+  /// under quantized [cover] (biome_regions.md § 7.1): tuning
+  /// `cloudShadowAlpha` scaled by the cover, never below
+  /// `cloudShadowMinCover` so a clear sky still casts a visible shadow.
+  static double shadowAlpha(double cover, int step) {
+    final r = kTuning[TuningId.regions]!;
+    final c = math.max(cover, r.d('cloudShadowMinCover'));
+    return (r.d('cloudShadowAlpha') * c * step / _cloudLevels).clamp(0.0, 1.0);
   }
 
   /// Shadow cells drawn last frame, per step (tests).

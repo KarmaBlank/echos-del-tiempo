@@ -3406,7 +3406,14 @@ class SessionController extends StateNotifier<SessionView?> {
       _emit();
       return true;
     }
-    if (f.phase != FishPhase.idle && f.phase != FishPhase.waiting) {
+    // Also right after a catch or a miss (won / lost): R used to do
+    // nothing there, so auto-fishing never started (v0.49.14).
+    if (!const {
+      FishPhase.idle,
+      FishPhase.waiting,
+      FishPhase.won,
+      FishPhase.lost
+    }.contains(f.phase)) {
       return false;
     }
     if (!_apply(const FishAutoAction(true))) return false;
@@ -3855,6 +3862,16 @@ class SessionController extends StateNotifier<SessionView?> {
         toggleAutoFish();
         return true;
       }
+    }
+    // R at the shore (rod away): take the rod out and auto-fish right
+    // away, as the prompt says (fishing.md § 6).
+    if (key == LogicalKeyboardKey.keyR &&
+        _panel == null &&
+        !inMine &&
+        !onRaft &&
+        canFish) {
+      if (startFishing()) toggleAutoFish();
+      return true;
     }
     // Mines (mining_smithing.md § 1.6): G hires a miner at the station
     // (Shift+G dismisses one); R / Shift+R cycles the held tool.

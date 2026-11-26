@@ -20,8 +20,10 @@ discretos.
 1. **Actores** (jugadores, enemigos, PNJ, balsa) a ≤ `reflActorReach`
    tiles por encima del agua de su columna: sprite volteado en vertical
    con los pies en la línea del agua (el borde superior del primer tile
-   de agua de esa columna). Sobre el agua (balsa) la línea es el pie + `reflFloatDrop` px, así el
-   reflejo de la balsa y su jinete se lee debajo. Se
+   de agua de esa columna). Sobre el agua (balsa, v0.49.14) la línea es el borde inferior de la
+   balsa (+ `reflFloatDrop`, 0 por defecto): balsa y jinete se espejan
+   enteros justo debajo, opacidad plena (sin fundido por orilla), corto
+   (`reflMaxLen`) y con las mismas ondas, en cualquier punto del lago. Se
    reflejan como mucho `reflActorsHigh` (ALTA) o `reflActorsLow` (BAJA),
    los más cercanos al centro de la vista.
    **Fundido por distancia**: la opacidad del reflejo es un smoothstep de
@@ -80,7 +82,7 @@ discretos.
 |---|---|---|
 | agua | `~` / `f` al aire libre | todo, alfa `reflAlpha` |
 | pantano | temas de `ReflectionRules.murkyThemes` | todo, alfa `reflMurkyAlpha` (más débil) |
-| cueva | agua bajo techo de región, minas, mazmorras oscuras | solo estelas de luz |
+| cueva | agua bajo techo de región, minas, mazmorras oscuras | estelas de luz y personajes (v0.49.14: misma regla de orilla norte y desvanecido, alfa `reflCaveAlpha` 0.5, sin cielo ni orilla) |
 | lava | `%` | nada (se queda su brillo) |
 
 ## 3. Arquitectura de rendimiento
