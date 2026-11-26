@@ -530,9 +530,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 child: MouseRegion(
                   opaque: false,
                   hitTestBehavior: HitTestBehavior.translucent,
-                  onExit: (_) => setState(() => _hover = null),
+                  onExit: (_) {
+                    controller.aimHover(null);
+                    setState(() => _hover = null);
+                  },
                   onHover: (e) {
                     final tile = game.tileAtScreen(e.localPosition);
+                    // The mouse is the action cursor (controls.md).
+                    controller.aimHover(tile);
                     if (tile != null) controller.editHover(tile.$1, tile.$2);
                     final helper = tile == null
                         ? null
@@ -604,6 +609,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   // Held, it keeps working the next target (cozy_life.md § 3).
                   controller.holdStart(tile: tile, pointer: true);
                 },
+                onPointerHover: (e) =>
+                    controller.aimHover(game.tileAtScreen(e.localPosition)),
                 onPointerMove: (e) =>
                     controller.holdAim(game.tileAtScreen(e.localPosition)),
                 onPointerUp: (_) => controller.holdRelease(),

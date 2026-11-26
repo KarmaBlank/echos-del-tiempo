@@ -390,6 +390,7 @@ class MapFarmLayer {
   void drawHelpers(Canvas c, TownState town, double time, double t,
       ui.Image? Function(String id) sprite, MapText text,
       {({TownBuild build, int index})? hover,
+      String? selectedNpc,
       NpcMark Function(BiomeNpcDef n)? markOf,
       double? period}) {
     final (ox, oy) = town.origin;
@@ -502,6 +503,17 @@ class MapFarmLayer {
       final pos = ResidentRules.position(town, n.id, time, night: night);
       if (pos == null) continue;
       final bob = (math.sin(t / 140) * 1).roundToDouble();
+      // The one E / a click talks to: 1 px white outline (controls.md).
+      if (n.id == selectedNpc) {
+        if (sprite(n.sprite) case final im?) {
+          final w = im.width.toDouble(), hh = im.height.toDouble();
+          drawSpriteOutline(
+              c,
+              im,
+              Rect.fromLTWH((pos.$1 - w / 2).roundToDouble(),
+                  pos.$2 + 6 + bob - hh, w, hh));
+        }
+      }
       img(n.sprite, pos.$1, pos.$2 + 6 + bob);
       text(n.name, pos.$1, pos.$2 - 14, TownPalette.label, 6);
       // Marca por jugador (roles.md § 8.4): "!" algo nuevo, "?" listo

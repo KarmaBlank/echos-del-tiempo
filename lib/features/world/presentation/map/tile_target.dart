@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'map_themes.dart';
@@ -28,5 +30,24 @@ void drawTileTarget(Canvas c, Iterable<(int, int)> tiles, bool ok,
     if (w > 0) {
       c.drawRect(Rect.fromLTWH(px + 2, py + _ts - 4, w, 2), fill..color = col);
     }
+  }
+}
+
+final _outlinePaint = Paint()
+  ..filterQuality = FilterQuality.none
+  ..colorFilter = const ColorFilter.mode(Color(0xFFFFFFFF), BlendMode.srcIn);
+
+/// The selected NPC (controls.md § Cursor de acción): its silhouette
+/// drawn white 1 px off in the 4 directions, behind the sprite drawn
+/// right after at [dst]. NPCs get this instead of the tile cursor.
+void drawSpriteOutline(Canvas c, ui.Image im, Rect dst) {
+  final src = Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble());
+  for (final o in const [
+    Offset(1, 0),
+    Offset(-1, 0),
+    Offset(0, 1),
+    Offset(0, -1),
+  ]) {
+    c.drawImageRect(im, src, dst.shift(o), _outlinePaint);
   }
 }

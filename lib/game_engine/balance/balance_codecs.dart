@@ -1975,6 +1975,7 @@ const _regionsLabels = {
   'gatherSpeedPerLevel': 'Recolectar: más rápido por nivel de Cultivo',
   'gatherHoldMinSec': 'Recolectar: segundos mínimos',
   'holdRepeatSec': 'Mantener E/clic: segundos entre repeticiones',
+  'actionReachTiles': 'Cursor de acción: alcance (tiles alrededor)',
   'searchSeedChance': 'Buscar en árboles: chance de semilla',
   'searchMushroomChance': 'Buscar en árboles: chance de hongo',
   'searchNestChance': 'Buscar en árboles: chance de nido',
