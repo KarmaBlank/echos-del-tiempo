@@ -77,6 +77,9 @@ void main() {
         final r = MiningRules.tileAt(lvl, c.mineState, x + 1, y);
         if (!Tile.isWalkable(here) || r != '#' && r != 'r') continue;
         if (MiningRules.cannotBreak(r, lvl.level, tool) != null) continue;
+        // Next to the station spot E builds the station, not the pick.
+        final (sx, sy) = lvl.station;
+        if ((x - sx).abs() <= 3 && (y - sy).abs() <= 3) continue;
         out.add(((x, y), (x + 1, y)));
       }
     }

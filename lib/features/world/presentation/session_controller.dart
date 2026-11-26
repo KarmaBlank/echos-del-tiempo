@@ -1907,8 +1907,21 @@ class SessionController extends StateNotifier<SessionView?> {
         _mineAim = at;
       }
     }
+    // The cart-station spot nearby wins over the tool (§ 1.7): what the
+    // prompt says is what E does.
+    if (mineStationSpot case (final sx, final sy)) {
+      _holdInteracted = true;
+      return _buildMineStation(sx, sy);
+    }
     final (x, y) = mineTarget;
     final c = MiningRules.tileAt(lvl, mineState, x, y);
+    if (c == MineTile.chest ||
+        c == MineTile.relic ||
+        c == MineTile.mushroom ||
+        c == MineTile.lore ||
+        c == MineTile.station) {
+      _holdInteracted = true;
+    }
     switch (c) {
       case MineTile.chest || MineTile.relic || MineTile.mushroom:
         return _apply(MineAction(MineOp.use, x: x, y: y));
@@ -1941,6 +1954,39 @@ class SessionController extends StateNotifier<SessionView?> {
         return ok;
     }
   }
+
+  /// The unbuilt cart-station spot of this level when the local player
+  /// is within `stationReachTiles` of it (facing not required), or `null`.
+  (int, int)? get mineStationSpot {
+    final lvl = mineLevel;
+    if (lvl == null || !inMine || mineState.station) return null;
+    final (sx, sy) = lvl.station;
+    return _tileDist(local.x, local.y, sx, sy) <= MiningRules.stationReach
+        ? (sx, sy)
+        : null;
+  }
+
+  /// E at the station spot: builds it, or says what is missing.
+  bool _buildMineStation(int x, int y) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return false;
+    final gold = MiningRules.t.i('stationGold');
+    final n = MiningRules.t.i('stationIngots');
+    final ing = MiningRules.stationIngot;
+    if (p.credits < gold || p.life.ore(ing) < n) {
+      addLocalNotice(strings.t('ui.world.mine.station_short', {
+        'gold': gold,
+        'n': n,
+        'ingot': strings.t('data.materials.smith.$ing.name'),
+      }));
+      return false;
+    }
+    return _apply(MineAction(MineOp.use, x: x, y: y));
+  }
+
+  /// The current E / click hold started on an interaction (station,
+  /// chest, lore…): it does not repeat into the tool.
+  bool _holdInteracted = false;
 
   /// Local booster clock (HUD), ms of [mineClock].
   double boostUntilMs = 0;
@@ -2006,7 +2052,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final lvl = mineLevel;
     if (lvl == null) return null;
     final c = mineTargetCode;
-    if (c == MineTile.station && !mineState.station) {
+    if (mineStationSpot != null || (c == MineTile.station && !mineState.station)) {
       return strings.t('ui.world.mine.prompt_station', {
         'gold': MiningRules.t.i('stationGold'),
         'n': MiningRules.t.i('stationIngots'),
@@ -2406,6 +2452,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _holdTimer?.cancel();
     _holdTimer = null;
     _holdDone.clear();
+    _holdInteracted = false;
     mineHoldEnd();
   }
 
@@ -2423,6 +2470,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (gathering) return;
     if (inMine) {
+      // A hold that began on an interaction never turns into swings.
+      if (_holdInteracted || mineStationSpot != null) return;
       if (mineHand != MineHand.pick) return;
       // A held click aims at the tile next to the player under the cursor.
       _mineAim = null;

@@ -169,6 +169,15 @@ barata (caminar 1, cavar según golpes): si no hay camino, **cava túnel**
 tiles, y lo picado va a la vagoneta. Corre en la sala del mundo, aunque
 nadie esté en la mina; se ven trabajando.
 
+**Armar la estación (v0.49.19).** A `stationReachTiles` (1.5) tiles o
+menos del lugar, sin necesidad de mirarlo, el aviso dice
+`[E] Armar estación de vagonetas (₵oro, n lingotes)` (moneda de oro) y E
+la arma aunque se tenga el pico en la mano: las interacciones (estación,
+cofres, hongos, piedras de saber, NPC) le ganan a la herramienta, y
+mantener E después no se convierte en golpes de pico. Sin oro o
+lingotes, un aviso dice qué falta. Los avisos de herramienta nunca se
+cortan con "…": la caja crece y el texto baja de renglón.
+
 - **Pico del minero** (`MinerState.tier`, 0–4, JSON `pt`): solo rompe la
   roca o la veta cuyo nivel pedido (`MiningRules.reqTierOf`: el del
   nivel de la mina, +1 para vetas profundas y de gema) sea ≤ su pico; lo
