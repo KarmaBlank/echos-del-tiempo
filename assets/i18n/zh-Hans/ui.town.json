@@ -1035,5 +1035,137 @@
   "ui.town.houses.pick_resident": {
     "text": "选择入住的居民",
     "status": "draft"
+  },
+  "ui.town.mode.build": {
+    "text": "建造 [{key}]",
+    "status": "draft"
+  },
+  "ui.town.mode.move": {
+    "text": "移动 [{key}]",
+    "status": "draft"
+  },
+  "ui.town.mode.erase": {
+    "text": "拆除 [{key}]",
+    "status": "draft"
+  },
+  "ui.town.mode.paths": {
+    "text": "道路 [{key}]",
+    "status": "draft"
+  },
+  "ui.town.mode.build_tip": {
+    "text": "选择一个物件并放到地图上",
+    "status": "draft"
+  },
+  "ui.town.mode.move_tip": {
+    "text": "点击已放置的物件将其拿起，再次点击放下",
+    "status": "draft"
+  },
+  "ui.town.mode.erase_tip": {
+    "text": "点击已放置的物件将其拆除",
+    "status": "draft"
+  },
+  "ui.town.mode.paths_tip": {
+    "text": "拖动鼠标铺设道路",
+    "status": "draft"
+  },
+  "ui.town.mode.hint_move": {
+    "text": "移动：点击建筑、地点或装饰将其拿起 · 再次点击放下 · Esc：返回建造",
+    "status": "draft"
+  },
+  "ui.town.mode.hint_erase": {
+    "text": "拆除：点击移除 · 装饰、灯塔和道路立即移除；建筑需要确认 · Esc：返回建造",
+    "status": "draft"
+  },
+  "ui.town.mode.hint_paths": {
+    "text": "道路：点击并拖动铺设 · Shift 或右键清除 · Esc：返回建造",
+    "status": "draft"
+  },
+  "ui.town.mode.hint_paths_erase": {
+    "text": "道路 · 清除：点击并拖动移除手绘道路 · Esc：返回建造",
+    "status": "draft"
+  },
+  "ui.town.paths.title": {
+    "text": "道路",
+    "status": "draft"
+  },
+  "ui.town.paths.paint": {
+    "text": "铺设",
+    "status": "draft"
+  },
+  "ui.town.paths.erase": {
+    "text": "清除",
+    "status": "draft"
+  },
+  "ui.town.paths.erase_tip": {
+    "text": "移除手绘道路（不退还费用）",
+    "status": "draft"
+  },
+  "ui.town.paths.cost": {
+    "text": "每格 ₵{gold}",
+    "status": "draft"
+  },
+  "ui.town.paths.cost_ore": {
+    "text": "每格 ₵{gold} + {n} {item}",
+    "status": "draft"
+  },
+  "ui.town.paths.level": {
+    "text": "需要城镇等级 {n}",
+    "status": "draft"
+  },
+  "ui.town.paths.need_level": {
+    "text": "需要城镇等级 {need}（当前：{now} 级）",
+    "status": "draft"
+  },
+  "ui.town.paths.need_gold": {
+    "text": "金币不足（{have}/{need}）",
+    "status": "draft"
+  },
+  "ui.town.paths.need_item": {
+    "text": "{item}不足（{have}/{need}）",
+    "status": "draft"
+  },
+  "ui.town.paths.ore.ore_copper": {
+    "text": "铜矿石",
+    "status": "draft"
+  },
+  "ui.town.paths.ore.ore_bronze": {
+    "text": "符文青铜矿石",
+    "status": "draft"
+  },
+  "ui.town.paths.dirt.name": {
+    "text": "泥土路",
+    "status": "draft"
+  },
+  "ui.town.paths.dirt.info": {
+    "text": "压实的泥土。城镇会自动在门口和广场之间铺设。",
+    "status": "draft"
+  },
+  "ui.town.paths.stone.name": {
+    "text": "石板路",
+    "status": "draft"
+  },
+  "ui.town.paths.stone.info": {
+    "text": "手工铺设的石板，经得起雨水和车轮。",
+    "status": "draft"
+  },
+  "ui.town.paths.rune.name": {
+    "text": "符文铺石",
+    "status": "draft"
+  },
+  "ui.town.paths.rune.info": {
+    "text": "镶嵌符文青铜的铺石，如同往昔的道路。偶尔仍有符文闪烁。",
+    "status": "draft"
+  },
+  "ui.town.mode.click_move": {
+    "text": "点击拿起。",
+    "status": "draft"
+  },
+  "ui.town.mode.click_erase": {
+    "text": "点击拆除。",
+    "status": "draft"
+  },
+  "ui.town.mode.no_erase_place": {
+    "text": "城镇地点不能拆除，但可以移动。",
+    "status": "draft"
   }
 }

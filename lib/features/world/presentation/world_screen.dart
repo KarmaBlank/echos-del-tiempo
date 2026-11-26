@@ -106,6 +106,36 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
   /// Edición del pueblo: dónde arrancó el clic y si ya es un arrastre.
   Offset? _editDown;
   bool _editDragged = false;
+
+  /// CAMINOS stroke in progress (town_editor.md § 1.7): last tile painted
+  /// and whether it erases (Shift or the right button).
+  (int, int)? _brushAt;
+  bool _brushErase = false;
+
+  /// Paints (or erases) every tile from [_brushAt] to [to], so a fast
+  /// drag leaves no gaps (Bresenham).
+  void _brushTo(SessionController c, (int, int) to) {
+    final from = _brushAt ?? to;
+    var (x, y) = from;
+    final (x1, y1) = to;
+    final dx = (x1 - x).abs(), dy = -(y1 - y).abs();
+    final sx = x < x1 ? 1 : -1, sy = y < y1 ? 1 : -1;
+    var err = dx + dy;
+    while (true) {
+      if ((x, y) != _brushAt) c.pathBrush(x, y, erase: _brushErase);
+      if (x == x1 && y == y1) break;
+      final e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y += sy;
+      }
+    }
+    _brushAt = to;
+  }
   final _focus = FocusNode(debugLabel: 'world');
   final _chatFocus = FocusNode(debugLabel: 'chat');
   final _battleKey = GlobalKey<BattleViewState>();
@@ -465,16 +495,40 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (e) {
+                  final ed = controller.townEdit;
+                  if (ed != null &&
+                      ed.mode == TownEditMode.paths &&
+                      ed.step == TownEditStep.browse) {
+                    // CAMINOS: click-drag paints; Shift or the right
+                    // button erases (town_editor.md § 1.7).
+                    final t = game.tileAtScreen(e.localPosition);
+                    if (t == null) return;
+                    _brushErase = HardwareKeyboard.instance.isShiftPressed ||
+                        e.buttons == kSecondaryMouseButton;
+                    _brushAt = null;
+                    _brushTo(controller, t);
+                    return;
+                  }
                   _editDown = e.localPosition;
                   _editDragged = false;
                 },
                 onPointerMove: (e) {
+                  if (_brushAt != null) {
+                    final t = game.tileAtScreen(e.localPosition);
+                    if (t != null) controller.editHover(t.$1, t.$2);
+                    if (t != null && t != _brushAt) _brushTo(controller, t);
+                    return;
+                  }
                   final d = _editDown;
                   if (d == null) return;
                   if ((e.localPosition - d).distance > 4) _editDragged = true;
                   if (_editDragged) game.panBy(e.delta);
                 },
                 onPointerUp: (e) {
+                  if (_brushAt != null) {
+                    _brushAt = null;
+                    return;
+                  }
                   final dragged = _editDragged;
                   _editDown = null;
                   _editDragged = false;

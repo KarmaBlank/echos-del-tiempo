@@ -26,10 +26,36 @@ enum TownEditStep {
   placing,
 }
 
+/// Editor tool (town_editor.md § 1.7): always visible in the bar, each
+/// with its hotkey. [build] is the base one (Esc comes back to it).
+enum TownEditMode {
+  build('1'),
+  move('2'),
+  erase('3'),
+  paths('4');
+
+  const TownEditMode(this.hotkey);
+
+  /// Label of the key that picks it (digit row or numpad).
+  final String hotkey;
+}
+
 /// Estado local de la edición del pueblo (no viaja: lo que cambia el
 /// pueblo va al anfitrión como `TownAction`).
 class TownEdit {
   TownEditStep step = TownEditStep.browse;
+
+  /// Tool in use (town_editor.md § 1.7).
+  TownEditMode mode = TownEditMode.build;
+
+  /// CAMINOS: material painted (`kTownPaths` id; `null` until picked).
+  String? pathMat;
+
+  /// CAMINOS: erase sub-mode (Shift or the right button also erase).
+  bool pathErase = false;
+
+  /// Map tile under the mouse (cursor feedback of every tool).
+  (int, int)? hoverTile;
 
   /// Construcción elegida.
   String? selected;
@@ -76,6 +102,7 @@ class TownEdit {
   /// contratar ni la casa de un habitante.
   bool get buildAvailable =>
       pick == null &&
+      mode == TownEditMode.build &&
       (step == TownEditStep.browse || step == TownEditStep.placing);
 
   /// La ventana CONSTRUIR está a la vista.

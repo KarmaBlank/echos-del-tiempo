@@ -48,8 +48,9 @@ escritorio, tienda, jefes e invocaciones.
   agua al regar (eventos), pájaros de día, grillos de noche y lluvia sobre
   los cultivos cuando llueve (`amb.rain`).
 - **Decoraciones** en EDITAR PUEBLO, como el faro (mismo flujo: elegir,
-  apoyar, mover, borrar): cerco, espantapájaros, maceta, caminito de piedra
-  y farolito. 1×1, no sólidas, en pasto o camino. Costo `decor<Id>Cost`.
+  apoyar, mover, borrar): cerco, espantapájaros, maceta y farolito. El
+  caminito de piedra pasó a ser un camino de Piedra de la herramienta
+  CAMINOS (town_editor.md § 4.6); los saves viejos se migran solos. 1×1, no sólidas, en pasto o camino. Costo `decor<Id>Cost`.
   Viajan en `town.dc` (`[[id, x, y], ...]`). Id estable `deco@x,y`.
 - **Espantapájaros:** +`scarecrowQualityBias` de sesgo de calidad en las
   parcelas a `scarecrowRadius` tiles o menos (no se acumula). Opcional y

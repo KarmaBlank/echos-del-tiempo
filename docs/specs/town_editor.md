@@ -1,4 +1,4 @@
-# Spec: Edición del pueblo (v0.24.0)
+# Spec: Edición del pueblo (v0.24.0; herramientas y caminos: protocolo 103)
 
 El dueño del mundo arma su pueblo a mano: amplía hacia cualquier lado,
 pone lagos y huertas donde quiere, los mueve, funde lagos y suelta
@@ -38,7 +38,8 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
   franja por lado para ver las ampliaciones fantasma.
 - Esc vuelve un paso (cierra el menú, suelta la pieza elegida o cancela lo que se mueve); en el
-  paso base sale. LISTO [ESC] sale siempre.
+  paso base de MOVER, BORRAR o CAMINOS vuelve a CONSTRUIR (§ 1.7) y en
+  el de CONSTRUIR sale. LISTO [ESC] sale siempre.
 - Los demás siguen jugando. Cada cambio es una acción al anfitrión, que
   lo valida y lo manda en el estado: todos ven el pueblo nuevo al toque.
 
@@ -202,6 +203,33 @@ Orden de motivos al contratar: otro edita el pueblo → nivel de oficio →
 no hay huertas / lagos. Editar pueblo solo se bloquea por el candado
 (§ 1.3). Tablero, viaje, casas y encargos no tienen requisitos.
 
+### 1.7 Herramientas
+
+Antes había que cerrar la ventana CONSTRUIR para hacer clic en algo y
+moverlo o borrarlo, y nadie lo entendía. Ahora, debajo de la barra de
+arriba y siempre a la vista (también con la ventana abierta), una fila de
+cuatro botones con su tecla (`TownEditMode`, la elegida en primario):
+
+| Botón | Tecla | Clic en el mapa | Cursor |
+|---|---|---|---|
+| CONSTRUIR [1] | 1 | lo de siempre (§ 1.2): abre la ventana; con una pieza elegida la pone; sin pieza, opciones de lo puesto | fantasma verde / rojo |
+| MOVER [2] | 2 | levanta lo que está bajo el mouse (construcción, cartel, lugar, faro, decoración); otro clic lo deja | contorno dorado sobre lo que se levantaría; levantado, el fantasma verde / rojo y, en dorado, los caminos automáticos que el pueblo trazaría con la pieza ahí (§ 4.1) |
+| BORRAR [3] | 3 | decoraciones, faros y caminos dibujados se borran al toque, sin confirmar; una construcción pide la confirmación chica de siempre (devuelve lo de § 5.3); los lugares no se borran | relleno y borde en el color de peligro (`DsColors.danger`) |
+| CAMINOS [4] | 4 | pinta caminos (§ 4.6) arrastrando; Shift o el botón derecho borran | el tile del pincel en verde (se puede) o rojo (no, con el motivo en la barra) |
+
+- Cada herramienta tiene su línea de ayuda en la barra (`ui.town.mode.hint_*`)
+  y el panel de info de la derecha dice qué hace el clic con esa
+  herramienta ("Clic para levantarlo", "Clic para borrarlo", "Los lugares
+  del pueblo no se borran").
+- Las teclas 1–4 (fila de números o teclado numérico) cambian de
+  herramienta en cualquier paso; cambiar suelta lo que estaba en curso.
+  CONSTRUIR abre su ventana; las otras la cierran.
+- Esc: dentro de un paso (levantado, confirmación) vuelve al paso base
+  de la herramienta; en el paso base de MOVER / BORRAR / CAMINOS vuelve a
+  CONSTRUIR (con la ventana cerrada) y en CONSTRUIR sale.
+- Contratar y elegir la casa de un habitante (§ 1.1) no muestran la
+  fila: ahí solo se elige.
+
 ## 2. Ampliaciones por lado
 - Cada ampliación suma una franja de `kTownStrip` (8) tiles al norte,
   sur, este u oeste. Tope total `maxExpansions` (6) y por lado
@@ -310,14 +338,31 @@ verde / rojo; la esquina va en el tile del mouse.
   (`shop_interior_art_test.dart` con `PREVIEW=1`).
 
 ## 4. Mapa (`TownPlan`, determinista)
-### 4.1 Caminos procedurales
+### 4.1 Caminos procedurales (automáticos)
 Con lugares movidos, primero cada lugar (§ 3.3) y después cada
-construcción (en orden): Dijkstra desde los tiles de pasto al
-lado de su huella hasta el camino más cercano (fijo o ya generado),
-con costo 4 + ruido por tile (0–2) para que serpenteen. Se pinta el
-recorrido. Si un lado ya toca un camino, no se agrega nada. Se regenera
-con cada cambio; el plano se cachea por la clave de lados y huellas
-(las parcelas y los peces no lo rehacen).
+construcción (en orden), el pueblo traza un camino desde su PUERTA hasta
+la red de caminos que sale de la plaza (los caminos fijos y todo camino
+conectado a ellos):
+
+- Puerta: para las CASAS y los lugares, el tile debajo del medio del lado
+  sur (`TownPlan.doorOf`, el mismo de § 4.5); si ese tile no está libre
+  (borde, agua, otra construcción), y para huertas y lagos, cualquier
+  tile de pasto o camino pegado a la huella.
+- Ruta: Dijkstra determinista (A* sin heurística, porque hay muchos
+  destinos) sobre la grilla del pueblo, solo por pasto y camino (nunca
+  por árboles, agua, construcciones, carteles ni lugares). Un tile que ya
+  es camino cuesta 1 (así reusa los dibujados a mano, § 4.6, y los ya
+  trazados); uno de pasto, 4 + ruido por tile (0–2) para que serpenteen.
+- Si la puerta ya está en la red, no se agrega nada. El recorrido nuevo
+  (y cualquier tramo dibujado a mano que toque) pasa a ser parte de la
+  red para los que siguen.
+- Los caminos automáticos no se guardan: se regeneran con cada cambio
+  (poner, mover, borrar, pintar) y usan el material por defecto
+  (Tierra). El plano se cachea por la clave de lados, huellas y caminos
+  dibujados (las parcelas y los peces no lo rehacen).
+- `TownPlan.routed` lista los tiles trazados (la vista previa de MOVER,
+  § 1.7). Lo que no llega queda en `unreached` y bloquea poner o mover
+  (§ 3.2).
 
 ### 4.2 Lagos que se funden
 Un lago puede tener varias partes (rectángulos). Al poner o mover un
@@ -354,6 +399,60 @@ llegada debajo de su centro (los dos del medio si el ancho es par):
 los pueblos guardados con un lugar movido o reubicado (la TIENDA, un
 lugar tardío) quedan arreglados sin migrar nada. El borde de bosque del
 mapa no es decorado y no cambia.
+
+### 4.6 Caminos dibujados (protocolo 103)
+
+La herramienta CAMINOS (§ 1.7) pinta caminos a mano, de a un tile.
+
+- Panel a la derecha (`TownPathPicker`): PINTAR / BORRAR, los materiales
+  como casillas de INVENTARIO (miniatura del arte) y debajo el detalle del
+  elegido (nombre en Título, costo y nivel en Detalle, descripción en
+  Cuerpo). Un material bloqueado va gris y no se elige; su tooltip (ancho
+  y letra fijos del DS) dice el costo y el motivo. Al entrar se elige el
+  mejor material que el nivel del pueblo ya habilita.
+- Pintar: clic y arrastrar (sin huecos aunque el mouse vaya rápido).
+  Borrar: el modo BORRAR del panel, Shift o el botón derecho. Arrastrar
+  no mueve la cámara en CAMINOS (queda WASD / flechas).
+- Dónde: dentro del pueblo (sin la fila de árboles), sobre pasto o
+  camino, nunca sobre un lugar, una construcción, su cartel o cofre ni una
+  decoración. Un faro puede quedar sobre un camino. Una construcción que
+  se pone encima de un camino dibujado lo tapa; al moverla, el camino
+  vuelve (`TownPlan.hand` solo trae los visibles).
+- Se borran solo los dibujados a mano; los fijos y los automáticos son
+  del pueblo ("Este camino lo traza el pueblo"). Borrar no devuelve nada
+  (como las decoraciones).
+- Materiales (`kTownPaths`, `game_engine/data/path_catalog.dart`), costo
+  POR TILE pintado; números en `kTuning[TuningId.town]` (Editor → Balance
+  → Pueblo):
+
+| id | es-AR | en | oro (`*Gold`) | material (`*Ore`) | nivel del pueblo (`*Level`) |
+|---|---|---|---|---|---|
+| `dirt` | Tierra | Dirt | 2 | — | 1 (Caserío) |
+| `stone` | Piedra | Stone | 6 | mena de cobre × 0 | 2 (Aldea) |
+| `rune` | Adoquín rúnico | Runic cobble | 15 | mena de bronce rúnico × 1 | 3 (Pueblo) |
+
+  El nivel del pueblo es el de renown_town_growth.md § 5.1 (índice de
+  `townTiers` + 1). Orden de los motivos (`PathRules.lock`): nivel
+  ("Necesitás pueblo nivel 3 (ahora: nivel 1)") → oro ("Te falta oro
+  (2/6)") → material ("Te falta mena de bronce rúnico (0/1)").
+- Autotile por material: cada tile mira a sus vecinos N / E / S / O que
+  son camino DEL MISMO material (`PathRules.mask`, `Autotile.mask4`; los
+  fijos y automáticos cuentan como Tierra) y elige una de 16 piezas:
+  borde oscuro + claro en los lados abiertos, esquinas redondeadas.
+- Arte: `items.vida_path_<id>_<0..15>` y `vida_path_<id>_icon` (paleta),
+  pixel art 16×16 de `tool/export_path_sprites.dart` (tierra apisonada
+  con huellas, lajas de piedra, adoquines de pizarra con borde de bronce
+  y alguna runa celeste). Se cambian en el manifest sin tocar Dart. Se
+  dibujan sobre el tile de camino y el vestido del pueblo
+  (`PathLayer`).
+- Red: `town {o: paintPath, id: <material>, x, y}` y
+  `town {o: erasePath, x, y}` (tile del mapa), uno por tile. El anfitrión
+  valida candado (§ 1.3), nivel, costo y tile (`PathRules.paint` /
+  `erase`) y cobra a quien pinta.
+- Guardado: `TownState.paths` (tile del pueblo base → material), JSON
+  `pth: [[id, x, y], …]` ordenado por fila. El viejo `stone_path` de las
+  decoraciones (cozy_life.md § 2) se migra al cargar a un camino de
+  Piedra en el mismo tile, y ya no está en la paleta.
 
 ## 5. Lagos y huertas
 - 5.1 Capacidad de un lago: `max(lakeMin, tiles × lakePerTile)` (2;
@@ -421,7 +520,7 @@ base; solo los que no están en su lugar de siempre.
 
 JSON: `sides {n,s,e,o}`, `builds [{id, k, p: [[x,y,w,h]], st?, pl?}]`,
 `marks? {"@forge": [x, y]}` (sin `marks`, todo en su lugar: los saves
-viejos no cambian).
+viejos no cambian), `pth? [[material, x, y]]` (caminos dibujados, § 4.6).
 
 ### 7.2 Migración de v0.23
 Sin `builds`: `exp` pasa a ser ampliaciones al ESTE; cada zona i de

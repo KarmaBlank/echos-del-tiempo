@@ -60,6 +60,7 @@ import 'eco_rules.dart';
 import 'exploration_rules.dart';
 import 'wild_loot_rules.dart';
 import 'cozy_rules.dart';
+import 'path_rules.dart';
 import '../data/cozy_catalog.dart';
 import 'goods_rules.dart';
 import 'inventory_rules.dart';

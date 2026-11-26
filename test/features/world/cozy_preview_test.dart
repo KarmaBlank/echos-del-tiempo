@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/features/world/presentation/hud/cozy_hud_dim.da
 import 'package:echos_del_tiempo/features/world/presentation/map/actor_painter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/cozy_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/map_themes.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/path_layer.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_painter.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/tile_target.dart';
 import 'package:echos_del_tiempo/app/design/design.dart';
@@ -240,8 +241,11 @@ void main() {
       ('scarecrow', f.x + f.w, f.y + 1),
       ('pot', f.x - 1, f.y + 1),
       ('lamp', f.x + f.w + 1, f.y - 1),
-      for (var y = f.y; y < f.y + f.h; y++) ('stone_path', f.x + f.w + 1, y),
-    ]);
+    ], paths: {
+      // The old stone path decoration is a stone path tile now
+      // (town_editor.md § 4.6).
+      for (var y = f.y; y < f.y + f.h; y++) (f.x + f.w + 1, y): 'stone',
+    });
     final map = MapGenerator.town(town);
     final (ox, oy) = map.townOrigin;
     final view = Rect.fromLTWH((f.x + ox - 3) * 16.0, (f.y + oy - 3) * 16.0,
@@ -252,11 +256,12 @@ void main() {
       ..scale(scale)
       ..translate(-view.left, -view.top);
     _tiles(c, map, view);
+    PathLayer.draw(c, town, view, (id) => sprites?.lifeIcon(id, ''));
     cozy.drawDecor(c, town, ox, oy);
     await _picShot(tester, rec.endRecording(), (view.width * scale).round(),
         (view.height * scale).round(), 'cozy_farm_decor');
-    expect(town.decor.length, greaterThan(5));
-    expect(kFarmDecos.length, 6);
+    expect(town.decor.length, greaterThan(4));
+    expect(kFarmDecos.length, 5);
   });
 
   testWidgets('map: hold-to-gather bar on a forage bush', (tester) async {

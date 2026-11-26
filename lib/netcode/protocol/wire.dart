@@ -236,7 +236,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-const kProtocolVersion = 99;
+/// 100–102: taken by pending branches (showcase, farm animals, lightning
+/// rod); skipped so they can land in any order.
+/// 103: town paths (town_editor.md § 4.6): `town.pth` hand-drawn path
+/// tiles, `TownOp.paintPath` / `erasePath`; the old `stone_path`
+/// decoration became a stone path tile.
+const kProtocolVersion = 103;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

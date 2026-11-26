@@ -994,6 +994,23 @@ extension _FarmingOp on _Op {
         _profileChange(p, r.$1);
         say('${p.name} amplió el pueblo al ${side.label.toLowerCase()}.');
         return true;
+      case TownOp.paintPath:
+        // Hand-drawn paths (town_editor.md § 4.6): the host checks the
+        // lock, the town level, the purse and the tile.
+        final x = a.x, y = a.y, id = a.id;
+        if (!_mayEdit(p) || x == null || y == null || id == null) return false;
+        final r = PathRules.paint(p.profile, s.town, id, x, y);
+        if (r == null) return false;
+        s.town = r.$2;
+        _profileChange(p, r.$1);
+        return true;
+      case TownOp.erasePath:
+        final x = a.x, y = a.y;
+        if (!_mayEdit(p) || x == null || y == null) return false;
+        final r = PathRules.erase(s.town, x, y);
+        if (r == null) return false;
+        s.town = r;
+        return true;
       case TownOp.place when kFarmDecos.containsKey(a.id):
         final x = a.x, y = a.y;
         if (!_mayEdit(p) || x == null || y == null) return false;

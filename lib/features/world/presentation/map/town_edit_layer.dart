@@ -1,4 +1,6 @@
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:material_ui/material_ui.dart';
+import '../../../../app/design/design.dart' show DsColors;
 import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 
 import '../../../../game_engine/data/construction_catalog.dart';
@@ -48,6 +50,80 @@ abstract final class TownEditLayer {
       }
       c.drawLine(Offset((x0 + ox) * ts + dx, (y0 + oy) * ts + dy),
           Offset((x1 + ox) * ts + dx, (y1 + oy) * ts + dy), line);
+    }
+  }
+
+  /// Cursor feedback of the MOVER / BORRAR / CAMINOS tools (§ 1.7): the
+  /// piece under the mouse outlined in gold (MOVER) or filled in the
+  /// danger colour (BORRAR); the brush tile green or red (CAMINOS).
+  static void _drawTool(Canvas c, SessionController ctl, TownEdit e, int ox,
+      int oy, Paint fill, Paint line) {
+    if (e.pick != null || e.step != TownEditStep.browse) return;
+    final t = e.hoverTile;
+    if (t == null) return;
+    final town = ctl.town;
+    final danger = e.mode == TownEditMode.erase;
+    void mark(Rect r) {
+      c.drawRect(
+          r,
+          fill
+            ..color = danger
+                ? DsColors.danger.withValues(alpha: 0.45)
+                : TownEditPalette.valid);
+      c.drawRect(
+          r.deflate(0.5),
+          line
+            ..color = danger ? DsColors.danger : TownEditPalette.selected
+            ..strokeWidth = 1.5);
+      line.strokeWidth = 1;
+    }
+
+    switch (e.mode) {
+      case TownEditMode.paths:
+        final erase = e.pathErase || HardwareKeyboard.instance.isShiftPressed;
+        final bad = ctl.pathBrushError(t.$1, t.$2, erase: erase) != null;
+        final r = Rect.fromLTWH(t.$1 * ts, t.$2 * ts, ts, ts);
+        c.drawRect(
+            r,
+            fill
+              ..color = bad
+                  ? TownEditPalette.invalid
+                  : erase
+                      ? DsColors.danger.withValues(alpha: 0.45)
+                      : TownEditPalette.valid);
+        c.drawRect(
+            r.deflate(0.5),
+            line
+              ..color =
+                  bad ? TownEditPalette.invalidBorder : TownEditPalette.validBorder);
+      case TownEditMode.move || TownEditMode.erase:
+        final id = ctl.editHoverTarget;
+        if (id == null) {
+          // BORRAR over a hand-drawn path: that tile.
+          if (danger && town.paths.containsKey((t.$1 - ox, t.$2 - oy))) {
+            mark(Rect.fromLTWH(t.$1 * ts, t.$2 * ts, ts, ts));
+          }
+          return;
+        }
+        if (TownState.parseLightId(id) ?? TownState.parseDecorId(id)
+            case (final x, final y)?) {
+          mark(Rect.fromLTWH((x + ox) * ts, (y + oy) * ts, ts, ts));
+          return;
+        }
+        if (town.build(id) case final b?) {
+          for (final p in b.parts) {
+            mark(Rect.fromLTWH(
+                (p.x + ox) * ts, (p.y + oy) * ts, p.w * ts, p.h * ts));
+          }
+          return;
+        }
+        for (final l in TownPlan.landmarksOf(town)) {
+          if (l.id != id) continue;
+          mark(Rect.fromLTWH(
+              (l.x + ox) * ts, (l.y + oy) * ts, l.w * ts, l.h * ts));
+        }
+      case TownEditMode.build:
+        return;
     }
   }
 
@@ -133,6 +209,7 @@ abstract final class TownEditLayer {
               .deflate(0.5),
           line);
     }
+    _drawTool(c, ctl, e, ox, oy, fill, line);
     final g = e.ghost;
     if (g == null) return;
     final List<TownRect> parts;
@@ -161,6 +238,21 @@ abstract final class TownEditLayer {
       return;
     }
     final ok = ctl.editGhostError == null;
+    // MOVER: the auto paths the town would lay with the piece there
+    // (town_editor.md § 1.7), in gold over the map.
+    if (ok && e.step == TownEditStep.moving) {
+      final moved = TownState.parseLightId(e.selected) != null ||
+              TownState.parseDecorId(e.selected) != null
+          ? null
+          : TownRules.move(town, e.selected!, g.$1, g.$2).town;
+      if (moved != null) {
+        final plan = TownPlan.of(moved);
+        fill.color = TownEditPalette.route;
+        for (final (x, y) in plan.routed) {
+          c.drawRect(Rect.fromLTWH(x * ts, y * ts, ts, ts).deflate(2), fill);
+        }
+      }
+    }
     // Vista previa de la fusión: si al soltar se funde con otra huerta o
     // lago, se marca el contorno del resultado (town_editor.md § 4.2).
     if (ok && (e.step == TownEditStep.placing || e.step == TownEditStep.moving)) {

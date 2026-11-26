@@ -82,3 +82,16 @@ abrir, viajar, leer) actúa una sola vez aunque se mantenga; solo matas,
 
 **Red:** es solo de presentación y entrada; las acciones que se mandan son
 las mismas de antes (sin cambio de protocolo).
+
+## Edición del pueblo
+
+Teclas de EDITAR PUEBLO (town_editor.md § 1.7):
+
+| Tecla | Acción |
+|---|---|
+| 1 / 2 / 3 / 4 | CONSTRUIR / MOVER / BORRAR / CAMINOS (fila de números o teclado numérico) |
+| Esc | vuelve un paso; en MOVER, BORRAR o CAMINOS vuelve a CONSTRUIR; en CONSTRUIR sale |
+| WASD / flechas | mueven la cámara |
+| Arrastrar | mueve la cámara; en CAMINOS pinta |
+| Shift o botón derecho (CAMINOS) | borra el camino dibujado |
+| Rueda | zoom |

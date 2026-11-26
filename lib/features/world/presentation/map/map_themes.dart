@@ -402,6 +402,9 @@ abstract final class TownEditPalette {
   static const invalid = Color(0x66FF5C5C);
   static const invalidBorder = Color(0xFFFF5C5C);
   static const lakeGhost = Color(0x663F8FD6);
+
+  /// Auto path the town would lay for what is being moved (§ 1.7).
+  static const route = Color(0x99FFD166);
 }
 
 /// Colores de la huerta (farming.md § 2.3, v0.23.0).

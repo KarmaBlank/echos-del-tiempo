@@ -55,6 +55,7 @@ class TownState {
       this.discovery = const {},
       this.lights = const [],
       this.decor = const [],
+      this.paths = const {},
       this.sky = const SkyState(),
       this.residents = const {},
       this.daily = const {},
@@ -130,6 +131,11 @@ class TownState {
   /// Farm decorations (cozy_life.md § 2): `(id of kFarmDecos, x, y)` in
   /// base-town coordinates, 1×1, not solid. JSON `dc`.
   final List<(String, int, int)> decor;
+
+  /// Hand-drawn town paths (town_editor.md § 4.6): base-town tile →
+  /// material id (`kTownPaths`). Auto paths are not stored: `TownPlan`
+  /// routes them every build and reuses these. JSON `pth`.
+  final Map<(int, int), String> paths;
 
   /// Stable id of the decoration at ([x], [y]).
   static String decorId(int x, int y) => 'deco@$x,$y';
@@ -275,6 +281,7 @@ class TownState {
     Map<String, (int, int)>? marks,
     List<(int, int)>? lights,
     List<(String, int, int)>? decor,
+    Map<(int, int), String>? paths,
     SkyState? sky,
     Map<String, int>? wild,
     Set<String>? waystones,
@@ -298,6 +305,7 @@ class TownState {
         marks: marks ?? this.marks,
         lights: lights ?? this.lights,
         decor: decor ?? this.decor,
+        paths: paths ?? this.paths,
         sky: sky ?? this.sky,
         wild: wild ?? this.wild,
         waystones: waystones ?? this.waystones,
@@ -342,6 +350,14 @@ class TownState {
         if (lights.isNotEmpty) 'lt': [for (final l in lights) [l.$1, l.$2]],
         if (decor.isNotEmpty)
           'dc': [for (final d in decor) [d.$1, d.$2, d.$3]],
+        if (paths.isNotEmpty)
+          'pth': [
+            for (final e in (paths.entries.toList()
+              ..sort((a, b) => a.key.$2 != b.key.$2
+                  ? a.key.$2 - b.key.$2
+                  : a.key.$1 - b.key.$1)))
+              [e.value, e.key.$1, e.key.$2]
+          ],
         if (sky.started) 'sky': sky.toJson(),
         if (residents.isNotEmpty)
           'res': [
@@ -451,13 +467,25 @@ class TownState {
                 if (v case [final num x, final num y, ...]) (x.round(), y.round()),
             }.toList()
           : const [],
+      // The old 1×1 'stone_path' decoration became a stone path tile
+      // (town_editor.md § 4.6).
       decor: raw['dc'] is List
           ? [
               for (final v in raw['dc'] as List)
                 if (v case [final String id, final num x, final num y, ...])
-                  (id, x.round(), y.round()),
+                  if (id != 'stone_path') (id, x.round(), y.round()),
             ]
           : const [],
+      paths: {
+        if (raw['dc'] is List)
+          for (final v in raw['dc'] as List)
+            if (v case ['stone_path', final num x, final num y, ...])
+              (x.round(), y.round()): 'stone',
+        if (raw['pth'] is List)
+          for (final v in raw['pth'] as List)
+            if (v case [final String id, final num x, final num y, ...])
+              (x.round(), y.round()): id,
+      },
       sky: SkyState.fromJson(raw['sky']),
       events: WorldEventsState.fromJson(raw['wev']),
       renown: RenownState.fromJson(raw['rn']),

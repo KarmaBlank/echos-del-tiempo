@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/path_catalog.dart';
 import '../data/town_layout.dart';
 import '../models/game_map.dart' show Tile;
 import '../models/world_save.dart';
@@ -10,7 +11,7 @@ import '../models/world_save.dart';
 /// en el anfitrión y en cada cliente.
 class TownPlan {
   TownPlan._(this.width, this.height, this.ox, this.oy, this.tiles,
-      this.unreached);
+      this.unreached, this.hand, this.routed);
 
   final int width, height;
 
@@ -20,6 +21,18 @@ class TownPlan {
 
   /// Construcciones sin camino hasta la plaza.
   final Set<String> unreached;
+
+  /// Hand-drawn path tiles that show (map coordinates → material id,
+  /// town_editor.md § 4.6); the ones under a building are hidden.
+  final Map<(int, int), String> hand;
+
+  /// Path tiles the auto-router laid (map coordinates, § 4.1).
+  final Set<(int, int)> routed;
+
+  /// Material of the path on map tile ([x], [y]): the hand-drawn one, or
+  /// [kDefaultPath] for fixed and auto paths; `null` if it is no path.
+  String? materialAt(int x, int y) =>
+      at(x, y) != Tile.path ? null : hand[(x, y)] ?? kDefaultPath;
 
   String at(int x, int y) =>
       x < 0 || y < 0 || x >= width || y >= height ? Tile.tree : tiles[y][x];
@@ -248,6 +261,7 @@ class TownPlan {
         for (final l in landmarksOf(s)) '${l.id}:${l.x}.${l.y}',
         for (final b in s.builds)
           '${b.id}:${b.kind.name}:${b.parts.map((p) => p.toJson().join('.')).join('/')}',
+        for (final e in s.paths.entries) 'p${e.key.$1}.${e.key.$2}${e.value}',
       ].join(',');
 
   static TownPlan of(TownState s) {
@@ -356,46 +370,102 @@ class TownPlan {
     for (final l in marks) {
       put(TownRect(l.x, l.y, l.w, l.h), l.tile);
     }
-    // Caminos procedurales: con lugares movidos, primero cada lugar (en
-    // orden) hasta la red que sale de la fuente; después cada
-    // construcción al camino más cercano.
+    // Hand-drawn paths (§ 4.6) on bare grass: a building over one hides
+    // it, and it shows again when the building moves away.
+    final hand = <(int, int), String>{};
+    for (final e in s.paths.entries) {
+      final mx = e.key.$1 + ox, my = e.key.$2 + oy;
+      if (mx < 0 || my < 0 || mx >= w || my >= h) continue;
+      if (t[my][mx] != Tile.grass && t[my][mx] != Tile.path) continue;
+      t[my][mx] = Tile.path;
+      hand[(mx, my)] = e.value;
+    }
+    // Caminos procedurales (§ 4.1): con lugares movidos, primero cada
+    // lugar (en orden) hasta la red que sale de la fuente; después cada
+    // construcción. Each one goes from its door to the network.
+    final net = _network(t, w, h, [
+      for (final p in fixedPaths(s))
+        for (var y = p.y; y < p.bottom; y++)
+          for (var x = p.x; x < p.right; x++) (x + ox, y + oy),
+    ]);
+    final routed = <(int, int)>{};
     final unreached = <String>{};
     if (rearranged(s)) {
       for (final l in marks) {
         if (l.spot == TownSpot.fountain) continue;
         final r = TownRect(l.x, l.y, l.w, l.h);
-        if (!_connect(t, w, h, r, r.contains, ox, oy)) unreached.add(l.id);
+        if (!_connect(t, w, h, r, r.contains, ox, oy, net, routed,
+            door: doorOf(r))) {
+          unreached.add(l.id);
+        }
       }
     }
     for (final b in s.builds) {
-      if (!_connect(t, w, h, b.bounds, b.contains, ox, oy)) {
+      if (!_connect(t, w, h, b.bounds, b.contains, ox, oy, net, routed,
+          door: b.kind == BuildKind.casa ? doorOf(b.bounds) : null)) {
         unreached.add(b.id);
       }
     }
-    return TownPlan._(w, h, ox, oy, t, unreached);
+    return TownPlan._(w, h, ox, oy, t, unreached, hand, routed);
   }
 
-  /// Dijkstra desde los tiles al lado de lo que ocupa [bb] ([inside])
-  /// hasta cualquier camino; pinta el recorrido. `false` si no hay forma
-  /// de llegar.
-  static bool _connect(List<List<String>> t, int w, int h, TownRect bb,
-      bool Function(int, int) inside, int ox, int oy) {
+  /// The tile right below the middle of [r]'s south side (base-town
+  /// coordinates): where a house or a place opens (§ 4.5).
+  static (int, int) doorOf(TownRect r) => (r.x + r.w ~/ 2, r.bottom);
+
+  /// Path tiles (map coordinates) connected to [seeds] (flood fill).
+  static Set<(int, int)> _network(
+      List<List<String>> t, int w, int h, Iterable<(int, int)> seeds) {
+    final out = <(int, int)>{};
+    final stack = [...seeds];
+    while (stack.isNotEmpty) {
+      final (x, y) = stack.removeLast();
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      if (t[y][x] != Tile.path || !out.add((x, y))) continue;
+      stack.addAll([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]);
+    }
+    return out;
+  }
+
+  /// Cheapest route (Dijkstra, deterministic) from the door of what
+  /// [inside] covers to the path network [net]; paints it, adds it to
+  /// [net] and [routed]. Existing paths cost 1 (hand-drawn ones are
+  /// reused), grass 4 + noise (0–2) so new ones wind a little. [door]
+  /// (base-town coordinates): the only start if it is open; otherwise
+  /// every free tile next to the footprint. `false` if it can't reach.
+  static bool _connect(
+      List<List<String>> t,
+      int w,
+      int h,
+      TownRect bb,
+      bool Function(int, int) inside,
+      int ox,
+      int oy,
+      Set<(int, int)> net,
+      Set<(int, int)> routed,
+      {(int, int)? door}) {
     bool open(int x, int y) =>
         x >= 0 && y >= 0 && x < w && y < h &&
         (t[y][x] == Tile.grass || t[y][x] == Tile.path);
     final starts = <int>[];
-    for (var y = bb.y - 1; y <= bb.bottom; y++) {
-      for (var x = bb.x - 1; x <= bb.right; x++) {
-        if (inside(x, y)) continue;
-        final near = inside(x - 1, y) || inside(x + 1, y) ||
-            inside(x, y - 1) || inside(x, y + 1);
-        final mx = x + ox, my = y + oy;
-        if (!near || !open(mx, my)) continue;
-        if (t[my][mx] == Tile.path) return true;
-        starts.add(my * w + mx);
+    if (door case (final dx, final dy) when open(dx + ox, dy + oy)) {
+      starts.add((dy + oy) * w + dx + ox);
+    } else {
+      for (var y = bb.y - 1; y <= bb.bottom; y++) {
+        for (var x = bb.x - 1; x <= bb.right; x++) {
+          if (inside(x, y)) continue;
+          final near = inside(x - 1, y) || inside(x + 1, y) ||
+              inside(x, y - 1) || inside(x, y + 1);
+          final mx = x + ox, my = y + oy;
+          if (!near || !open(mx, my)) continue;
+          starts.add(my * w + mx);
+        }
       }
     }
     if (starts.isEmpty) return false;
+    for (final i in starts) {
+      if (net.contains((i % w, i ~/ w))) return true;
+    }
     final dist = List<int>.filled(w * h, 1 << 30);
     final prev = List<int>.filled(w * h, -1);
     final heap = _Heap();
@@ -407,18 +477,25 @@ class TownPlan {
       final (d, i) = heap.pop();
       if (d > dist[i]) continue;
       final x = i % w, y = i ~/ w;
-      if (t[y][x] == Tile.path) {
+      if (net.contains((x, y))) {
+        final laid = <(int, int)>[];
         var k = prev[i];
         while (k >= 0) {
-          t[k ~/ w][k % w] = Tile.path;
+          final p = (k % w, k ~/ w);
+          if (t[p.$2][p.$1] != Tile.path) routed.add(p);
+          t[p.$2][p.$1] = Tile.path;
+          laid.add(p);
           k = prev[k];
         }
+        // The route and any hand-drawn stretch it touched join the net.
+        net.addAll(_network(t, w, h, laid));
         return true;
       }
       for (final (nx, ny) in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]) {
         if (!open(nx, ny)) continue;
         final j = ny * w + nx;
-        final nd = d + 4 + _hash(nx, ny) % 3;
+        final step = t[ny][nx] == Tile.path ? 1 : 4 + _hash(nx, ny) % 3;
+        final nd = d + step;
         if (nd < dist[j]) {
           dist[j] = nd;
           prev[j] = i;

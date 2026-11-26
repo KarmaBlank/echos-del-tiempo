@@ -16,6 +16,7 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'town_build_palette.dart';
+import 'town_path_picker.dart';
 import '../world_strings.dart';
 
 /// Interfaz de la edición del pueblo (town_editor.md § 1): barra de
@@ -30,7 +31,7 @@ class TownEditOverlay extends StatelessWidget {
 
   /// Alto reservado para la barra de arriba (las tarjetas de las franjas
   /// van debajo).
-  static const barHeight = 56.0;
+  static const barHeight = 96.0;
 
   /// Ancho de la columna de la derecha para una pantalla de [w] px.
   static double sideWidth(double w) => (w * 0.3).clamp(240.0, 320.0);
@@ -41,6 +42,7 @@ class TownEditOverlay extends StatelessWidget {
     // La ventana CONSTRUIR va centrada y el botón del borde es chico:
     // mirando o poniendo, el mapa queda libre salvo el panel de info.
     if (e == null) return false;
+    if (e.mode == TownEditMode.paths && e.pick == null) return true;
     return switch (e.step) {
       TownEditStep.browse => e.hoverBuild != null,
       TownEditStep.placing => false,
@@ -92,6 +94,30 @@ class TownEditOverlay extends StatelessWidget {
                 onPressed: c.exitTownEdit),
           ]),
         ),
+        // Tools, always visible with their hotkey (town_editor.md § 1.7).
+        if (e.pick == null)
+          Container(
+            key: const ValueKey('town-edit-modes'),
+            color: DsColors.background,
+            padding: EdgeInsets.fromLTRB(
+                DsSpace.md, 0, DsSpace.md, DsSpace.xs),
+            child: Row(children: [
+              for (final m in TownEditMode.values) ...[
+                DsButton(
+                    s.t('ui.town.mode.${m.name}',
+                        {'key': m.hotkey}),
+                    key: ValueKey('town-edit-mode-${m.name}'),
+                    size: DsButtonSize.compact,
+                    selected: e.mode == m,
+                    kind: e.mode == m
+                        ? DsButtonKind.primary
+                        : DsButtonKind.secondary,
+                    tooltip: s.t('ui.town.mode.${m.name}_tip'),
+                    onPressed: () => c.setEditMode(m)),
+                SizedBox(width: DsSpace.xs),
+              ],
+            ]),
+          ),
         Expanded(
           child: Stack(children: [
             Align(
@@ -201,6 +227,12 @@ class TownEditOverlay extends StatelessWidget {
   /// costo en su tarjeta). `null` si no hay nada o si ya hay un menú.
   static Widget? _info(Strings s, SessionController c, TownEdit e) {
     final town = c.town;
+    // What a click does with the tool in hand (town_editor.md § 1.7).
+    final click = switch (e.mode) {
+      TownEditMode.move => s.t('ui.town.mode.click_move'),
+      TownEditMode.erase => s.t('ui.town.mode.click_erase'),
+      _ => s.t('ui.town.edit.click_options'),
+    };
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
     if (e.houseFor != null) {
@@ -244,7 +276,7 @@ class TownEditOverlay extends StatelessWidget {
           children: [
             DsSectionHeader(s.t('ui.town.decor.${id ?? 'fence'}.name')),
             Text(s.t('ui.town.decor.text'), style: DsText.detail()),
-            Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
+            Text(click, style: DsText.detail()),
           ]);
     }
     if (TownState.parseLightId(e.hoverBuild) != null) {
@@ -254,7 +286,7 @@ class TownEditOverlay extends StatelessWidget {
           children: [
             DsSectionHeader(s.t('ui.town.edit.lamp')),
             Text(s.t('ui.town.edit.lamp_text'), style: DsText.detail()),
-            Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
+            Text(click, style: DsText.detail()),
           ]);
     }
     if (b == null) {
@@ -268,25 +300,51 @@ class TownEditOverlay extends StatelessWidget {
           children: [
             DsSectionHeader(l.name),
             Text(s.t('ui.town.edit.landmark_text'), style: DsText.detail()),
-            Text(s.t('ui.town.edit.click_move'), style: DsText.detail()),
+            Text(
+                e.mode == TownEditMode.erase
+                    ? s.t('ui.town.mode.no_erase_place')
+                    : s.t('ui.town.edit.click_move'),
+                style: DsText.detail()),
           ]);
     }
     return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          DsSectionHeader(b.kind.text),
+          DsSectionHeader(b.kind == BuildKind.casa
+              ? s.t('ui.town.edit.house_title', {'level': b.level})
+              : b.kind.text),
           Text(
-              b.kind == BuildKind.lago
-                  ? TownRules.lakeSignText(town, b)
-                  : TownRules.farmSignText(b),
+              switch (b.kind) {
+                BuildKind.lago => TownRules.lakeSignText(town, b),
+                BuildKind.huerta => TownRules.farmSignText(b),
+                BuildKind.casa => b.resident == null
+                    ? s.t('ui.town.edit.house_empty')
+                    : s.t('ui.town.edit.house_lives',
+                        {'name': biomeNpcName(b.resident!)}),
+              },
               style: DsText.detail()),
-          Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
+          Text(click, style: DsText.detail()),
         ]);
   }
 
   static String _hint(Strings s, SessionController c, TownEdit e) =>
       switch (e.step) {
+        TownEditStep.browse when e.pick == null &&
+            e.mode == TownEditMode.paths =>
+          switch (e.hoverTile) {
+            (final x, final y) when c.pathBrushError(x, y) != null =>
+              c.pathBrushError(x, y)!,
+            _ => s.t(e.pathErase
+                ? 'ui.town.mode.hint_paths_erase'
+                : 'ui.town.mode.hint_paths'),
+          },
+        TownEditStep.browse when e.pick == null &&
+            e.mode == TownEditMode.move =>
+          s.t('ui.town.mode.hint_move'),
+        TownEditStep.browse when e.pick == null &&
+            e.mode == TownEditMode.erase =>
+          s.t('ui.town.mode.hint_erase'),
         _ when e.houseFor != null => s.t('ui.town.edit.hint_house',
             {'name': biomeNpc(e.houseFor!)?.name ?? e.houseFor!}),
         _ when e.hire == BuildKind.huerta =>
@@ -332,6 +390,8 @@ class TownEditOverlay extends StatelessWidget {
       ]);
     }
     switch (e.step) {
+      case TownEditStep.browse when e.mode == TownEditMode.paths:
+        return TownPathPicker(controller: c);
       case TownEditStep.browse:
         // La paleta va en la ventana CONSTRUIR centrada (§ 1.2).
         return null;

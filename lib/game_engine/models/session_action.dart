@@ -943,7 +943,13 @@ enum TownOp {
 
   /// Protocol 80 (roles.md § 9): claim milestone [TownAction.n] of the
   /// resident [TownAction.id] (chest, materials, meal, weapon, Eco...).
-  claimMilestone
+  claimMilestone,
+
+  /// Protocol 103 (town_editor.md § 4.6): paint one tile of hand-drawn
+  /// path of material [TownAction.id] on map tile ([TownAction.x],
+  /// [TownAction.y]) / erase the hand-drawn path there.
+  paintPath,
+  erasePath
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

@@ -17,6 +17,7 @@ import '../../../../game_engine/rules/profession_gear_rules.dart';
 import 'light_layer.dart';
 import 'mine_layer.dart';
 import '../../../../game_engine/rules/town_plan.dart';
+import 'path_layer.dart';
 import '../../../../game_engine/data/mine_catalog.dart' show MineTile;
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
@@ -1209,6 +1210,11 @@ class MapGame extends Game {
             c, map, _dressing!, map.townOrigin, reduceMotion ? 0.0 : t / 1000,
             night: SkyRules.darkness(s.town.sky) > 0.25);
       }
+      // Hand-drawn paths (town_editor.md § 4.6): one autotiled piece per
+      // tile and material, over the base path and the tier dressing.
+      if (map.place == null) {
+        PathLayer.draw(c, s.town, worldView, (id) => sprites.lifeIcon(id, ''));
+      }
       // Shop interior (player_shop.md § 6): room and one counter per player.
       if (ShopInteriorRules.isShop(map.place)) {
         shopRoom.drawRoom(c);
@@ -1421,7 +1427,7 @@ class MapGame extends Game {
                 CozyRules.decorSprite(id, dx, dy, _fences), '');
         if (im == null) continue;
         add(
-            id == 'stone_path' ? py : py + 14,
+            py + 14,
             () => c.drawImageRect(
                 im,
                 Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),

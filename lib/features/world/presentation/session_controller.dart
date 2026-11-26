@@ -36,6 +36,8 @@ import '../../../game_engine/rules/wild_loot_rules.dart';
 import '../../../game_engine/rules/action_targeting.dart';
 import '../../../game_engine/rules/cozy_rules.dart';
 import '../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
+import '../../../game_engine/data/path_catalog.dart';
+import '../../../game_engine/rules/path_rules.dart';
 import '../../../game_engine/rules/weather_rules.dart';
 import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
@@ -3386,11 +3388,99 @@ class SessionController extends StateNotifier<SessionView?> {
       _emit();
       return;
     }
-    if (e.step == TownEditStep.browse || e.pick != null) {
-      return exitTownEdit();
+    if (e.pick != null) return exitTownEdit();
+    if (e.step == TownEditStep.browse) {
+      // Esc comes back to CONSTRUIR, then closes (town_editor.md § 1.7).
+      if (e.mode == TownEditMode.build) return exitTownEdit();
+      return setEditMode(TownEditMode.build, open: false);
     }
     e.reset();
     _emit();
+  }
+
+  /// Switch the editor tool (town_editor.md § 1.7): drops what was in
+  /// progress; CONSTRUIR opens its window unless [open] is false;
+  /// CAMINOS starts on the best material the town level unlocks.
+  void setEditMode(TownEditMode m, {bool open = true}) {
+    final e = _edit;
+    if (e == null || e.pick != null) return;
+    e
+      ..reset()
+      ..mode = m
+      ..buildOpen = m == TownEditMode.build && open;
+    if (m == TownEditMode.paths) {
+      e.pathMat ??= PathRules.bestUnlocked(town).id;
+    }
+    _emit();
+  }
+
+  /// CAMINOS: pick the material to paint (and leave the erase sub-mode).
+  void setPathMaterial(String id) {
+    final e = _edit;
+    if (e == null || townPath(id) == null) return;
+    e
+      ..pathMat = id
+      ..pathErase = false;
+    _emit();
+  }
+
+  /// CAMINOS: PINTAR / BORRAR sub-mode.
+  void setPathErase(bool erase) {
+    final e = _edit;
+    if (e == null || e.pathErase == erase) return;
+    e.pathErase = erase;
+    _emit();
+  }
+
+  /// Why the local player can't paint [d] (or `null`), for its tooltip
+  /// (town_editor.md § 4.6).
+  String? pathLockText(TownPathDef d) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return strings.t('ui.town.edit.no_character');
+    final l = PathRules.lock(p, town, d);
+    if (l == null) return null;
+    return switch (l.kind) {
+      PathLockKind.level =>
+        strings.t('ui.town.paths.need_level', {'need': l.need, 'now': l.have}),
+      PathLockKind.gold =>
+        strings.t('ui.town.paths.need_gold', {'have': l.have, 'need': l.need}),
+      PathLockKind.ore => strings.t('ui.town.paths.need_item', {
+          'item': strings.t('ui.town.paths.ore.${l.item}'),
+          'have': l.have,
+          'need': l.need
+        }),
+    };
+  }
+
+  /// Why the CAMINOS brush can't act on map tile ([tx], [ty]) now (or
+  /// `null`).
+  String? pathBrushError(int tx, int ty, {bool erase = false}) {
+    final e = _edit;
+    if (e == null) return null;
+    final (ox, oy) = town.origin;
+    if (erase || e.pathErase) return PathRules.eraseError(town, tx, ty);
+    final d = townPath(e.pathMat);
+    if (d == null) return null;
+    if (pathLockText(d) case final why?) return why;
+    if (town.paths[(tx - ox, ty - oy)] == d.id) return null;
+    return PathRules.tileError(town, tx - ox, ty - oy);
+  }
+
+  /// CAMINOS brush on map tile ([tx], [ty]): paints the chosen material
+  /// or, with [erase] (Shift / right button) or the BORRAR sub-mode,
+  /// erases the hand-drawn path there. Each tile is one host action.
+  bool pathBrush(int tx, int ty, {bool erase = false}) {
+    final e = _edit;
+    if (e == null || e.mode != TownEditMode.paths) return false;
+    final (ox, oy) = town.origin;
+    if (erase || e.pathErase) {
+      if (PathRules.eraseError(town, tx, ty) != null) return false;
+      return _apply(TownAction(TownOp.erasePath, x: tx, y: ty));
+    }
+    final id = e.pathMat;
+    if (id == null || town.paths[(tx - ox, ty - oy)] == id) return false;
+    if (pathBrushError(tx, ty) != null) return false;
+    return _apply(TownAction(TownOp.paintPath, id: id, x: tx, y: ty));
   }
 
   /// El lado del pueblo cuya franja fantasma ocupa el tile ([tx], [ty]).
@@ -3433,6 +3523,8 @@ class SessionController extends StateNotifier<SessionView?> {
   void editHover(int tx, int ty) {
     final e = _edit;
     if (e == null) return;
+    final tileChanged = e.hoverTile != (tx, ty);
+    e.hoverTile = (tx, ty);
     if (e.step != TownEditStep.moving && e.step != TownEditStep.placing) {
       final side = editSideAt(tx, ty);
       final light = _pinAt(tx, ty);
@@ -3443,7 +3535,7 @@ class SessionController extends StateNotifier<SessionView?> {
                       TownRules.buildAtSign(town, tx, ty))
                   ?.id ??
               TownRules.landmarkAt(town, tx, ty)?.id;
-      if (side == e.hoverSide && b == e.hoverBuild) return;
+      if (side == e.hoverSide && b == e.hoverBuild && !tileChanged) return;
       e
         ..hoverSide = side
         ..hoverBuild = b;
@@ -3524,6 +3616,35 @@ class SessionController extends StateNotifier<SessionView?> {
           // Poner deja la pieza elegida para poner otra (town_editor.md
           // § 1.2); mover termina.
           if (ok && e.step == TownEditStep.moving) e.reset();
+        }
+      case TownEditStep.browse when e.mode == TownEditMode.paths:
+        pathBrush(tx, ty);
+      case TownEditStep.browse when e.mode == TownEditMode.move:
+        // MOVER (§ 1.7): a click lifts what is under the mouse.
+        final id = _thingAt(tx, ty);
+        if (id == null) break;
+        e.selected = id;
+        editStartMove();
+        return;
+      case TownEditStep.browse when e.mode == TownEditMode.erase:
+        // BORRAR (§ 1.7): decorations, lighthouses and hand-drawn paths
+        // go at once; a building asks first; places never go.
+        final pin = _pinAt(tx, ty);
+        final b = pin != null
+            ? null
+            : TownRules.buildAt(town, tx, ty) ??
+                TownRules.buildAtSign(town, tx, ty);
+        if (pin != null) {
+          e.selected = pin;
+          editRemove();
+          return;
+        }
+        if (b != null) {
+          e
+            ..selected = b.id
+            ..step = TownEditStep.confirmDelete;
+        } else if (PathRules.eraseError(town, tx, ty) == null) {
+          _apply(TownAction(TownOp.erasePath, x: tx, y: ty));
         }
       default:
         final side = editSideAt(tx, ty);
@@ -3616,6 +3737,33 @@ class SessionController extends StateNotifier<SessionView?> {
     if (e == null) return;
     e.step = step;
     _emit();
+  }
+
+  /// What MOVER / BORRAR pick on map tile ([tx], [ty]): a 1×1 piece, a
+  /// building (or its sign) or a place; `null` = nothing.
+  String? _thingAt(int tx, int ty) =>
+      _pinAt(tx, ty) ??
+      (TownRules.buildAt(town, tx, ty) ?? TownRules.buildAtSign(town, tx, ty))
+          ?.id ??
+      TownRules.landmarkAt(town, tx, ty)?.id;
+
+  /// What the hovered tool would act on (cursor feedback, § 1.7): the id
+  /// under the mouse in MOVER / BORRAR, `null` otherwise or if nothing.
+  String? get editHoverTarget {
+    final e = _edit;
+    final t = e?.hoverTile;
+    if (e == null || t == null || e.step != TownEditStep.browse) return null;
+    if (e.mode != TownEditMode.move && e.mode != TownEditMode.erase) {
+      return null;
+    }
+    final id = _thingAt(t.$1, t.$2);
+    // Places are never erased (§ 3.3).
+    if (e.mode == TownEditMode.erase &&
+        id != null &&
+        TownLayout.byId(id) != null) {
+      return null;
+    }
+    return id;
   }
 
   /// The id of the 1×1 piece on map tile ([tx], [ty]): a lighthouse or a
@@ -4676,6 +4824,19 @@ class SessionController extends StateNotifier<SessionView?> {
     }
   }
 
+  /// The editor tool [key] picks (digit row or numpad 1-4), or `null`.
+  static TownEditMode? editModeKey(LogicalKeyboardKey key) => switch (key) {
+        LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 =>
+          TownEditMode.build,
+        LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 =>
+          TownEditMode.move,
+        LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 =>
+          TownEditMode.erase,
+        LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 =>
+          TownEditMode.paths,
+        _ => null,
+      };
+
   /// Teclas del mapa (no de batalla). Devuelve si la tecla es del juego
   /// (para que no mueva el foco entre botones). Ver la tabla del spec.
   bool handleKey(LogicalKeyboardKey key) {
@@ -4690,8 +4851,14 @@ class SessionController extends StateNotifier<SessionView?> {
         } else {
           editBack();
         }
+        return true;
       }
-      return key == LogicalKeyboardKey.escape;
+      // Tool hotkeys 1-4 (town_editor.md § 1.7).
+      if (editModeKey(key) case final m?) {
+        setEditMode(m);
+        return true;
+      }
+      return false;
     }
     // Travesía: no hay pueblo ni campo; solo cerrar y abrir el personaje.
     if (isRun) {

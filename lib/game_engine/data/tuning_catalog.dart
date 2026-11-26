@@ -486,6 +486,17 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resMaxTier': 5,
     'resMaxHouse': 3,
     'resHouseGold': 800,
+    // Town paths (town_editor.md § 4.6): per tile painted, gold, an
+    // optional material (smithing ore) and the town level needed
+    // (1 = Caserío, renown_town_growth.md § 5.1).
+    'pathDirtGold': 2,
+    'pathDirtLevel': 1,
+    'pathStoneGold': 6,
+    'pathStoneOre': 0,
+    'pathStoneLevel': 2,
+    'pathRuneGold': 15,
+    'pathRuneOre': 1,
+    'pathRuneLevel': 3,
     'resRequestEveryDays': 2,
     'resUnhappyDays': 4,
     'resRequestRep': 2,
@@ -980,7 +991,6 @@ const Map<String, TuningDef> kTuningDefaults = {
     'decorFenceCost': 10,
     'decorScarecrowCost': 80,
     'decorPotCost': 20,
-    'decorPathCost': 5,
     'decorLampCost': 40,
     'scarecrowQualityBias': 0.05,
     'scarecrowRadius': 4,

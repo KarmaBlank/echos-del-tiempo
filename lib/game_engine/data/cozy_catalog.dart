@@ -46,7 +46,6 @@ const kFarmDecos = <String, FarmDecoDef>{
   'fence_gate': FarmDecoDef('fence_gate', 'decorFenceCost'),
   'scarecrow': FarmDecoDef('scarecrow', 'decorScarecrowCost'),
   'pot': FarmDecoDef('pot', 'decorPotCost'),
-  'stone_path': FarmDecoDef('stone_path', 'decorPathCost'),
   'lamp': FarmDecoDef('lamp', 'decorLampCost'),
 };
 
