@@ -366,3 +366,19 @@ cuero.
 `granjero_preview_test.dart`): árbol del Granjero con sus dos ramas,
 corral con una pieza en el piso, forja por piezas con piezas de animal,
 forja legendaria de animales y la máquina de queso / mayonesa.
+
+### 7.1 Paridad entre todos los oficios (aprobada por el dueño)
+
+Pesca y Minería + herrería se reajustaron solo con `kTuning` para rendir
+lo mismo que el Granjero (± `incomeBand`, `granjero_parity_test` cubre
+los cuatro caminos): Pesca `xpComun/Raro/Epico/Legendario` 0.82 / 2.05 /
+4.9 / 12.3 y `sellMult` 0.6 (precio de venta = catálogo × `sellMult`);
+Herrería `mineXp` 17, `digXp` 2, `smeltXp` 9; `incomeHearts` 5.
+
+| Camino | XP/h | Oro/h |
+|---|---|---|
+| Granjero: cultivos | 2774 | 1591 |
+| Granjero: animales | 2767 | 1559 |
+| Granjero: ambos | 2771 | 1575 |
+| Pesca | 2759 | 1578 |
+| Minería + herrería | 2749 | 1461 |

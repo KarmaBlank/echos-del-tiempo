@@ -122,7 +122,7 @@ Income fishingHour() {
   for (var i = 0; i < n; i++) {
     final c = FishingRules.roll(r.nextDouble, lake);
     xp += FishingRules.fishXp(c);
-    gold += c.def.price;
+    gold += FishingRules.salePrice(c.def.id);
   }
   final perH = _g.d('incomeCatchesPerHour');
   return (xp: xp / n * perH, gold: gold / n * perH);
@@ -156,7 +156,7 @@ String _row(String name, Income i) =>
     '${i.gold.round().toString().padLeft(5)} oro/h';
 
 void main() {
-  test('crops only, animals only and both pay the same per hour', () {
+  test('every profession pays the same per hour as the Granjero', () {
     final crops = cropsHour();
     final animals = animalsHour();
     final both = (
@@ -179,7 +179,12 @@ void main() {
     // ignore: avoid_print
     print(report);
     final band = _g.d('incomeBand');
-    for (final (name, i) in [('animales', animals), ('ambos', both)]) {
+    for (final (name, i) in [
+      ('animales', animals),
+      ('ambos', both),
+      ('pesca', fish),
+      ('minería + herrería', mine),
+    ]) {
       expect((i.xp / crops.xp - 1).abs(), lessThanOrEqualTo(band),
           reason: '$name XP\n$report');
       expect((i.gold / crops.gold - 1).abs(), lessThanOrEqualTo(band),

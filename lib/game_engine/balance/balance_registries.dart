@@ -162,6 +162,7 @@ class BalanceBase {
         BalanceKind.exploration ||
         BalanceKind.farming ||
         BalanceKind.animals ||
+        BalanceKind.gear ||
         BalanceKind.town ||
         BalanceKind.fishing ||
         BalanceKind.lifeTree ||

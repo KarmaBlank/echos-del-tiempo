@@ -919,5 +919,19 @@
   "ui.town.source.ranch": "Granja (animales): sale del cuidado",
   "ui.town.forge.animal_legend": "Producto legendario de la granja",
   "ui.town.forge.animal_forge_hint": "Brann forja este producto legendario en un arma única ({gold} de oro)",
-  "ui.town.forge.animal_forge": "Forjar arma"
+  "ui.town.forge.animal_forge": "Forjar arma",
+  "ui.town.ranch.panel.floor": "EN EL PISO",
+  "ui.town.ranch.panel.floor_from": "Lo dejó {who}. Tocá para juntarlo.",
+  "ui.town.ranch.machine.tab": "MÁQUINAS",
+  "ui.town.ranch.machine.hint": "Quesera y mayonesera: la misma calidad, mejor precio.",
+  "ui.town.ranch.machine.tag": "MÁQUINA",
+  "ui.town.ranch.machine.quesera": "Hace queso con la leche (de vaca o de cabra).",
+  "ui.town.ranch.machine.mayonesera": "Hace mayonesa con los huevos (de gallina o de pato).",
+  "ui.town.ranch.machine.makes": "Se vuelve {item}: {from} → {to} de oro cada uno",
+  "ui.town.ranch.machine.process": "PROCESAR",
+  "ui.town.ranch.machine.process_all": "PROCESAR TODO",
+  "ui.town.ranch.machine.empty": "Comprá una máquina",
+  "ui.town.ranch.machine.why.none": "Te falta la máquina",
+  "ui.town.ranch.machine.why.level": "Necesitás Granjero nivel {n}",
+  "ui.town.ranch.machine.why.nothing": "No tenés nada para procesar"
 }

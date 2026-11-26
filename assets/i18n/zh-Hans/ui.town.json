@@ -1099,5 +1099,19 @@
   "ui.town.source.ranch": "牧场（动物）：来自照料",
   "ui.town.forge.animal_legend": "牧场传奇产物",
   "ui.town.forge.animal_forge_hint": "布兰将这件传奇产物锻造成独特武器（{gold} 金币）",
-  "ui.town.forge.animal_forge": "锻造武器"
+  "ui.town.forge.animal_forge": "锻造武器",
+  "ui.town.ranch.panel.floor": "地上",
+  "ui.town.ranch.panel.floor_from": "{who}留下的。点击拾取。",
+  "ui.town.ranch.machine.tab": "机器",
+  "ui.town.ranch.machine.hint": "奶酪压机与蛋黄酱机：品质不变，价格更高。",
+  "ui.town.ranch.machine.tag": "机器",
+  "ui.town.ranch.machine.quesera": "用牛奶或羊奶制作奶酪。",
+  "ui.town.ranch.machine.mayonesera": "用鸡蛋或鸭蛋制作蛋黄酱。",
+  "ui.town.ranch.machine.makes": "变为{item}：每个 {from} → {to} 金币",
+  "ui.town.ranch.machine.process": "加工",
+  "ui.town.ranch.machine.process_all": "全部加工",
+  "ui.town.ranch.machine.empty": "购买一台机器",
+  "ui.town.ranch.machine.why.none": "你需要这台机器",
+  "ui.town.ranch.machine.why.level": "需要农夫等级 {n}",
+  "ui.town.ranch.machine.why.nothing": "没有可加工的物品"
 }

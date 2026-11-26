@@ -241,6 +241,10 @@ abstract final class FishingRules {
 
   // ---------------- agropecuario ----------------
 
+  /// Sale price of one fish [id] (catalog price × `sellMult`).
+  static int salePrice(String id) =>
+      ((kFish[id]?.price ?? 0) * t.d('sellMult')).round();
+
   /// Vende [n] de [species] (todos con `null`), o con `species == null`
   /// toda la bolsa menos los legendarios ("Vender todo"). En oro o en
   /// materiales (Esquirlas; lo que no llega a una se paga en oro).
@@ -252,7 +256,7 @@ abstract final class FishingRules {
       final f = kFish[id];
       if (f == null || k <= 0) return;
       bag[id] = (bag[id] ?? 0) - k;
-      value += f.price * k;
+      value += salePrice(id) * k;
       sold += k;
     }
 

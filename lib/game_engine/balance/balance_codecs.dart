@@ -94,6 +94,9 @@ enum BalanceKind {
   /// Animales de granja (animals.md).
   animals('animals', 'Granjero: animales', 'Ajustes de animales del Granjero'),
 
+  /// Armas de oficio y modelo de paridad (profession_gear.md, animals.md § 7).
+  gear('gear', 'Oficios: equipo', 'Armas de oficio y paridad por hora'),
+
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).
   town('town', 'Pueblo', 'Ajustes del pueblo'),
 
@@ -1714,7 +1717,54 @@ const _animalLabels = {
   'qEpicoPerHeart': 'Calidad épica por corazón (desde el 3.º)',
   'feedXp': 'XP de Granjero al dar de comer',
   'petXp': 'XP de Granjero al acariciar',
-  'xpDayCap': 'Tope de XP de animales por día del mundo',
+  'xpDayCap': 'Tope de XP de animales por día del mundo (0 = sin tope)',
+  'huevoPrice': 'Huevo: precio de venta',
+  'huevoXp': 'Huevo: XP al juntarlo',
+  'huevoPatoPrice': 'Huevo de pato: precio de venta',
+  'huevoPatoXp': 'Huevo de pato: XP al juntarlo',
+  'lechePrice': 'Leche: precio de venta',
+  'lecheXp': 'Leche: XP al ordeñar',
+  'lecheCabraPrice': 'Leche de cabra: precio de venta',
+  'lecheCabraXp': 'Leche de cabra: XP al ordeñar',
+  'lanaPrice': 'Lana: precio de venta',
+  'lanaXp': 'Lana: XP al esquilar',
+  'quesoPrice': 'Queso: precio de venta',
+  'quesoXp': 'Queso: XP',
+  'quesoCabraPrice': 'Queso de cabra: precio de venta',
+  'quesoCabraXp': 'Queso de cabra: XP',
+  'mayonesaPrice': 'Mayonesa: precio de venta',
+  'mayonesaXp': 'Mayonesa: XP',
+  'mayonesaPatoPrice': 'Mayonesa de pato: precio de venta',
+  'mayonesaPatoXp': 'Mayonesa de pato: XP',
+  'processXp': 'Máquinas: XP por producto procesado',
+  'queseraPrice': 'Quesera: precio (oro)',
+  'mayoneseraPrice': 'Mayonesera: precio (oro)',
+  'machineLevel': 'Máquinas: nivel de Granjero para comprar y usar',
+  'partBase': 'Piezas: chance base por día',
+  'partPerHeart': 'Piezas: chance extra por corazón',
+  'woolHearts': 'Lana fina: corazones para que salga al esquilar',
+  'legendChance': 'Producto legendario: chance por producto a cinco corazones',
+  'animalForgeLevel': 'Forja de animal: nivel de Granjero',
+  'animalForgeGold': 'Forja de animal: oro',
+  'animalForgeLegend': 'Forja de animal: chance de Legendaria',
+  'animalForgeLegendTree': 'Forja de animal: × del bonus del árbol a la chance de Legendaria',
+  'partQNormal': 'Pieza normal: calidad de material',
+  'partQRaro': 'Pieza rara: calidad de material',
+  'partQEpico': 'Pieza épica: calidad de material',
+};
+
+final gearCodec =
+    _tuningCodec(BalanceKind.gear, _autoFields(TuningId.gear, _gearLabels));
+
+const _gearLabels = {
+  'incomeCatchesPerHour': 'Paridad: peces por hora',
+  'incomeVeinsPerHour': 'Paridad: vetas por hora',
+  'incomeDigPerHour': 'Paridad: casillas cavadas por hora',
+  'incomePlots': 'Paridad: parcelas de cultivo',
+  'incomeCropLoopSec': 'Paridad: segundos extra por vuelta de huerta',
+  'incomeAnimalCareSec': 'Paridad: segundos de cuidado por animal y día',
+  'incomeHearts': 'Paridad: corazones de los animales',
+  'incomeBand': 'Paridad: margen permitido entre oficios',
 };
 
 final townCodec =
@@ -1723,6 +1773,7 @@ final fishingCodec =
     _tuningCodec(BalanceKind.fishing, _autoFields('fishing', _fishLabels));
 
 const _fishLabels = {
+  'sellMult': 'Venta de peces: × del precio del catálogo',
   'ambMusicLevel': 'Ambiente al pescar: nivel de la música',
   'ambDuckSec': 'Ambiente al pescar: segundos para bajar la música',
   'ambVolume': 'Ambiente al pescar: volumen de los sonidos',
@@ -2081,6 +2132,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.exploration => explorationCodec,
       BalanceKind.farming => farmingCodec,
       BalanceKind.animals => animalsCodec,
+      BalanceKind.gear => gearCodec,
       BalanceKind.town => townCodec,
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
@@ -2103,6 +2155,7 @@ const kTuningKinds = [
   BalanceKind.exploration,
   BalanceKind.farming,
   BalanceKind.animals,
+  BalanceKind.gear,
   BalanceKind.town,
   BalanceKind.fishing,
   BalanceKind.lifeTree,

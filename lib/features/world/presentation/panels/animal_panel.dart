@@ -53,7 +53,8 @@ class _AnimalPanelState extends State<AnimalPanel> {
     final sel = animals.where((a) => a.uid == _uid).firstOrNull ??
         animals.firstOrNull;
 
-    final siloFull = b.hay >= AnimalRules.t.i('siloMax');
+    final siloMax = AnimalRules.siloMax(p);
+    final siloFull = b.hay >= siloMax;
     final depositWhy = hay <= 0
         ? context.t('ui.town.ranch.no_hay')
         : siloFull
@@ -78,7 +79,7 @@ class _AnimalPanelState extends State<AnimalPanel> {
         _Counter(
             key: const ValueKey('animal-silo'),
             icon: 'heno',
-            value: '${b.hay}/${AnimalRules.t.i('siloMax')}',
+            value: '${b.hay}/$siloMax',
             tip: context.t('ui.town.ranch.hay_info')),
         _Counter(
             key: const ValueKey('animal-bag-hay'),
@@ -89,6 +90,29 @@ class _AnimalPanelState extends State<AnimalPanel> {
             key: const ValueKey('animal-deposit'),
             tooltip: depositWhy,
             onPressed: depositWhy == null ? () => c.depositHay(b.id) : null),
+        // EN EL PISO (animals.md § 9): parts and legendary products left
+        // by the animals; a tap picks up everything under that animal.
+        if (animals.any((a) => a.drops.isNotEmpty))
+          Row(
+            key: const ValueKey('animal-floor'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(context.t('ui.town.ranch.panel.floor'),
+                  style: DsText.meta(DsColors.textSecondary)),
+              SizedBox(width: DsSpace.sm),
+              for (final a in animals)
+                for (final (i, d) in a.drops.indexed)
+                  Padding(
+                    padding: EdgeInsets.only(right: DsSpace.xs),
+                    child: _Drop(
+                      key: ValueKey('animal-drop-${a.uid}-$i'),
+                      id: d,
+                      who: animalPetText(a),
+                      onTap: () => c.collectAnimal(b.id, a.uid),
+                    ),
+                  ),
+            ],
+          ),
       ],
     );
 
@@ -185,6 +209,54 @@ String _odds(BuildContext context, FarmAnimal a) {
     'raro': ((odds[CropQuality.raro] ?? 0) * 100).round(),
     'epico': ((odds[CropQuality.epico] ?? 0) * 100).round(),
   });
+}
+
+/// Atom: one thing on the floor (sprite only, name in the tooltip).
+class _Drop extends StatelessWidget {
+  const _Drop(
+      {super.key, required this.id, required this.who, required this.onTap});
+
+  final String id;
+  final String who;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final part = parseAnimalPart(id);
+    final goods = part == null ? parseAnimalGoodsKey(id) : null;
+    final icon = part != null
+        ? 'ap_${part.$1}_${part.$2.id}'
+        : goods?.$1.sprite ?? 'heno';
+    final name = part != null
+        ? context.t('data.materials.smith.$id.name')
+        : animalGoodsName(id);
+    final color = goods != null
+        ? qualityColor(goods.$2)
+        : qualityColor(CropQuality.values[part!.$3]);
+    return DsTooltip(
+      card: DsTooltipCard(
+        title: name,
+        children: [
+          Text(context.t('ui.town.ranch.panel.floor_from', {'who': who}),
+              style: DsText.detail(DsColors.textSecondary)),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: DsSizes.itemCell,
+          height: DsSizes.itemCell,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: DsColors.surfaceSunken,
+            border: Border.all(color: color),
+          ),
+          child: LifeIcon(icon, LifeIconKind.herramienta,
+              size: DsSizes.itemIcon),
+        ),
+      ),
+    );
+  }
 }
 
 /// Molecule: an icon with its count (or a label) after it.
@@ -284,11 +356,28 @@ class _Cell extends StatelessWidget {
             color: DsColors.surfaceSunken,
             border: Border.all(color: border, width: selected ? 2 : 1),
           ),
-          child: SizedBox.square(
-              dimension: DsSizes.itemIcon * size / DsSizes.itemCell,
-              child: FittedBox(
-                  child: LifeIcon(a.def.sprite, LifeIconKind.herramienta,
-                      size: DsSizes.itemIcon))),
+          child: Stack(fit: StackFit.expand, children: [
+            Center(
+              child: SizedBox.square(
+                dimension: DsSizes.itemIcon * size / DsSizes.itemCell,
+                child: FittedBox(
+                    child: LifeIcon(a.def.sprite, LifeIconKind.herramienta,
+                        size: DsSizes.itemIcon))),
+            ),
+            // Something on the floor under this animal.
+            if (a.drops.isNotEmpty)
+              Positioned(
+                key: ValueKey('animal-dot-${a.uid}'),
+                top: 3,
+                right: 3,
+                child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                        color: DsColors.reward,
+                        border: Border.all(color: DsColors.background))),
+              ),
+          ]),
         ),
       ),
     );

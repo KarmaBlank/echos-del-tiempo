@@ -919,5 +919,19 @@
   "ui.town.source.ranch": "Ranch (animals): comes from care",
   "ui.town.forge.animal_legend": "Legendary ranch product",
   "ui.town.forge.animal_forge_hint": "Brann forges this legendary product into a unique weapon ({gold} gold)",
-  "ui.town.forge.animal_forge": "Forge weapon"
+  "ui.town.forge.animal_forge": "Forge weapon",
+  "ui.town.ranch.panel.floor": "ON THE FLOOR",
+  "ui.town.ranch.panel.floor_from": "Left by {who}. Tap to pick it up.",
+  "ui.town.ranch.machine.tab": "MACHINES",
+  "ui.town.ranch.machine.hint": "Cheese press and mayonnaise machine: same quality, better price.",
+  "ui.town.ranch.machine.tag": "MACHINE",
+  "ui.town.ranch.machine.quesera": "Makes cheese from milk (cow or goat).",
+  "ui.town.ranch.machine.mayonesera": "Makes mayonnaise from eggs (hen or duck).",
+  "ui.town.ranch.machine.makes": "Becomes {item}: {from} → {to} gold each",
+  "ui.town.ranch.machine.process": "PROCESS",
+  "ui.town.ranch.machine.process_all": "PROCESS ALL",
+  "ui.town.ranch.machine.empty": "Buy a machine",
+  "ui.town.ranch.machine.why.none": "You need the machine",
+  "ui.town.ranch.machine.why.level": "You need Farmer level {n}",
+  "ui.town.ranch.machine.why.nothing": "Nothing to process"
 }

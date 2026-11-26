@@ -126,7 +126,8 @@ List<RanchRow> ranchShopRows(BuildContext context, SessionController c,
         ),
       ),
     ),
-    for (final t in RanchTool.values)
+    // Machines are sold in the TALLER DE OFICIOS › MÁQUINAS.
+    for (final t in RanchTool.values.where((t) => !t.machine))
       () {
         final reason = p == null ? null : AnimalRules.cannotBuyTool(p, t);
         final has = f?.hasTool(t) ?? false;

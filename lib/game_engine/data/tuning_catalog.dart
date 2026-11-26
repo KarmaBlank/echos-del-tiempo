@@ -73,11 +73,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'ambGapMaxSec': 20,
     // Lance largo: + chance de rareza con la carga al máximo.
     'distanceBonus': 0.3,
-    // × de XP de Pesca por rareza.
-    'xpComun': 1,
-    'xpRaro': 2.5,
-    'xpEpico': 6,
-    'xpLegendario': 15,
+    // × de XP de Pesca por rareza (paridad de oficios, animals.md § 7).
+    'xpComun': 0.82,
+    'xpRaro': 2.05,
+    'xpEpico': 4.9,
+    'xpLegendario': 12.3,
+    // × del precio de venta de los peces (paridad de oficios).
+    'sellMult': 0.6,
     // XP de personaje por rareza y tope por estadía en el pueblo.
     'charXpComun': 2,
     'charXpRaro': 5,
@@ -657,7 +659,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'richOreBonus': 2,
     'richRareChance': 0.2,
     'crystalRareChance': 0.1,
-    'digXp': 1,
+    'digXp': 2,
     'tool0Power': 1,
     'tool0Swing': 0.38,
     'tool0Yield': 0.0,
@@ -731,13 +733,13 @@ const Map<String, TuningDef> kTuningDefaults = {
     'mineRareChance': 0.06,
     'mineBaitChance': 0.05,
     'mineNpcChance': 0.5,
-    'mineXp': 8,
+    'mineXp': 17,
     'dungeonOreChance': 0.5,
     'dungeonSchematicChance': 0.15,
     'bossCore': 1,
     'smeltOre': 3,
     'smeltGoldPerTier': 10,
-    'smeltXp': 4,
+    'smeltXp': 9,
     'ingotIlPerTier': 12,
     'craftIlGap': 3,
     'craftGoldPerIl': 4,
@@ -837,7 +839,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'incomePlots': 12,
     'incomeCropLoopSec': 75,
     'incomeAnimalCareSec': 30,
-    'incomeHearts': 4,
+    'incomeHearts': 5,
     'incomeBand': 0.15,
   }),
   // profession_gear_v2.md: forge by parts, fish taken apart, living
