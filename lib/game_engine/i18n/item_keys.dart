@@ -49,6 +49,16 @@ abstract final class ItemKeys {
   static String mealLore(String id) => 'data.materials.meal.$id.lore';
   static String fertName(String id) => 'data.materials.fert.$id.name';
   static String farmToolName(String id) => 'data.materials.tool.$id.name';
+
+  // Farm animals (animals.md).
+  static String animalName(String id) => 'data.materials.animal.$id.name';
+  static String animalProductName(String id) =>
+      'data.materials.animal_product.$id.name';
+  static String ranchToolName(String id) =>
+      'data.materials.ranch_tool.$id.name';
+  static String animalPetName(String species, int i) =>
+      'data.materials.animal_name.$species.$i';
+  static const hayName = 'data.materials.ranch.hay.name';
   static String lifeMaterialName(String id) => 'data.materials.life.$id.name';
   static String lifeMaterialDesc(String id) => 'data.materials.life.$id.desc';
 }

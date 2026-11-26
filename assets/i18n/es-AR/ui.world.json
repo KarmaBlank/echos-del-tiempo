@@ -425,5 +425,6 @@
   "ui.world.cozy.search_prompt": "[Mantené E/Clic] Buscar en el árbol",
   "ui.world.cozy.searched": "Ya buscaste en este árbol hoy",
   "ui.world.prompt.spent": "Ya lo usaste",
-  "ui.world.loot.gold": "{n} de oro"
+  "ui.world.loot.gold": "{n} de oro",
+  "ui.world.ctl.no_ranch": "No hay gallineros ni establos en el pueblo"
 }

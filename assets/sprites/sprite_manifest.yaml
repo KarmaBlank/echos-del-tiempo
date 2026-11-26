@@ -538,6 +538,8 @@ items:
   vida_comida_melon_glaseado: { idle: items/vida_comida_melon_glaseado.png, size: [16, 16] }
   vida_comida_ensalada_runica: { idle: items/vida_comida_ensalada_runica.png, size: [16, 16] }
   vida_comida_mojarra_nabo: { idle: items/vida_comida_mojarra_nabo.png, size: [16, 16] }
+  vida_comida_tortilla_campo: { idle: items/vida_comida_tortilla_campo.png, size: [16, 16] }
+  vida_comida_flan_leche: { idle: items/vida_comida_flan_leche.png, size: [16, 16] }
   vida_comida_trucha_cebolla: { idle: items/vida_comida_trucha_cebolla.png, size: [16, 16] }
   vida_cebo_lombriz: { idle: items/vida_cebo_lombriz.png, size: [16, 16] }
   vida_cebo_larva_brillante: { idle: items/vida_cebo_larva_brillante.png, size: [16, 16] }
@@ -623,6 +625,31 @@ items:
   vida_casa_2: { idle: items/vida_casa_2.png, size: [48, 48] }
   vida_casa_3: { idle: items/vida_casa_3.png, size: [48, 48] }
   # vida:fin
+  # animales:inicio — animales de granja (tool/export_animal_sprites.dart)
+  vida_animal_gallina: { idle: items/vida_animal_gallina.png, size: [16, 16] }
+  vida_animal_gallina_b: { idle: items/vida_animal_gallina_b.png, size: [16, 16] }
+  vida_animal_pato: { idle: items/vida_animal_pato.png, size: [16, 16] }
+  vida_animal_pato_b: { idle: items/vida_animal_pato_b.png, size: [16, 16] }
+  vida_animal_vaca: { idle: items/vida_animal_vaca.png, size: [24, 20] }
+  vida_animal_vaca_b: { idle: items/vida_animal_vaca_b.png, size: [24, 20] }
+  vida_animal_cabra: { idle: items/vida_animal_cabra.png, size: [24, 20] }
+  vida_animal_cabra_b: { idle: items/vida_animal_cabra_b.png, size: [24, 20] }
+  vida_animal_oveja: { idle: items/vida_animal_oveja.png, size: [24, 20] }
+  vida_animal_oveja_b: { idle: items/vida_animal_oveja_b.png, size: [24, 20] }
+  vida_gallinero: { idle: items/vida_gallinero.png, size: [32, 32] }
+  vida_establo: { idle: items/vida_establo.png, size: [48, 48] }
+  vida_huevo: { idle: items/vida_huevo.png, size: [16, 16] }
+  vida_huevo_pato: { idle: items/vida_huevo_pato.png, size: [16, 16] }
+  vida_leche: { idle: items/vida_leche.png, size: [16, 16] }
+  vida_leche_cabra: { idle: items/vida_leche_cabra.png, size: [16, 16] }
+  vida_lana: { idle: items/vida_lana.png, size: [16, 16] }
+  vida_heno: { idle: items/vida_heno.png, size: [16, 16] }
+  vida_cubeta: { idle: items/vida_cubeta.png, size: [16, 16] }
+  vida_tijeras: { idle: items/vida_tijeras.png, size: [16, 16] }
+  vida_corazon: { idle: items/vida_corazon.png, size: [8, 8] }
+  vida_corazon_vacio: { idle: items/vida_corazon_vacio.png, size: [8, 8] }
+  vida_comedero: { idle: items/vida_comedero.png, size: [16, 16] }
+  # animales:fin
   # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1): casa de entramado
   # con techo de pizarra, martillo y serrucho, barriles y yunque, en el
   # estilo de la ARMERÍA (tool/export_building_sprites.dart).

@@ -4,6 +4,7 @@
 // lee siempre [kTuning], que `BalanceRegistries.install` cambia en el
 // lugar y `restore` devuelve a estos valores.
 
+import 'animals_catalog.dart' show kAnimalTuning;
 import 'life_tree_catalog.dart' show kLifeTreeTuning;
 
 /// Un grupo de números con nombre (los valores del código o del parche).
@@ -42,6 +43,9 @@ abstract final class TuningId {
   static const ascension = 'ascension';
   static const gear = 'gear';
   static const gearV2 = 'gearV2';
+
+  /// Farm animals (animals.md): buildings, animals, products, helpers.
+  static const animals = 'animals';
 }
 
 /// Los valores del código.
@@ -554,6 +558,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resvidenteBase': 3,
     'resvidenteStep': 2,
   }),
+  // animals.md: farm animals of Cultivo (values in animals_catalog.dart).
+  TuningId.animals: TuningDef('Animales', kAnimalTuning),
   // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
   TuningId.lifeTree: TuningDef('Oficios: árboles', {
     'pointsPerLevel': 1,

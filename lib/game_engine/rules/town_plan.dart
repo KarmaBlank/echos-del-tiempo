@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/town_layout.dart';
 import '../models/game_map.dart' show Tile;
 import '../models/world_save.dart';
+import 'animal_rules.dart' show AnimalRules;
 
 /// El plano del pueblo de un mundo (town_editor.md § 4): los tiles que
 /// salen de `TownState` (ampliaciones por lado, construcciones, caminos
@@ -278,6 +279,14 @@ class TownPlan {
     // Construcciones: huertas de tierra; lagos de agua con orilla
     // orgánica (esquinas de pasto y, si se fusionaron, mordiscos).
     for (final b in s.builds) {
+      if (b.kind.ranch) {
+        // Coop / barn (animals.md § 3): solid house, walkable fenced yard.
+        for (final p in b.parts) {
+          put(p, Tile.grass);
+        }
+        put(AnimalRules.houseOf(b), Tile.house);
+        continue;
+      }
       final water = b.kind == BuildKind.lago;
       for (final p in b.parts) {
         put(

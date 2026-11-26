@@ -94,6 +94,7 @@ import 'life_tree_rules.dart';
 import 'biome_fisher_rules.dart';
 import 'life_time_rules.dart';
 import 'helper_rules.dart';
+import 'animal_rules.dart';
 import 'light_rules.dart';
 import 'mining_rules.dart';
 import 'mine_work_rules.dart';
@@ -118,6 +119,7 @@ part 'session_engine_tutorial.dart';
 part 'session_engine_run.dart';
 part 'session_engine_fishing.dart';
 part 'session_engine_farming.dart';
+part 'session_engine_animals.dart';
 part 'session_engine_biome.dart';
 part 'session_engine_mining.dart';
 part 'session_engine_cozy.dart';
@@ -380,6 +382,9 @@ class SessionEngine {
 
   /// Huerta del anfitrión (farming.md § 10): tiempos y acumuladores.
   final farming = FarmingHostState();
+
+  /// Farm animals (animals.md): host-only XP bookkeeping.
+  final animals = AnimalHostState();
 
   /// Mining of the host (mining_smithing.md § 1): swings, cracks, bombs.
   final mining = MiningHostState();

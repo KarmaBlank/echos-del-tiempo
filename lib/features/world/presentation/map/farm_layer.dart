@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/npc_camp_catalog.dart';
+import '../../../../game_engine/rules/animal_rules.dart' show AnimalRules;
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/profession_gear_rules.dart';
@@ -446,7 +447,7 @@ class MapFarmLayer {
       }
       for (var i = 0; i < b.helper; i++) {
         final pos = TownRules.helperPos(town, b, i, time);
-        final farm = b.kind == BuildKind.huerta;
+        final farm = b.kind == BuildKind.huerta || b.kind.ranch;
         final stuck = HelperRules.blocked(b, i);
         if (farm) {
           final work = pos.work && (t ~/ 400) % 2 == 0;
@@ -528,7 +529,9 @@ class MapFarmLayer {
       ..color = FarmPalette.targetOk
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final tiles = b.kind == BuildKind.huerta
+    final tiles = b.kind.ranch
+        ? AnimalRules.pastureTiles(b)
+        : b.kind == BuildKind.huerta
         ? [
             for (final (x, y) in TownRules.helperArea(b, h.index))
               (x + b.anchor.$1, y + b.anchor.$2)

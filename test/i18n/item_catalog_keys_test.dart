@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/core/i18n/catalog_text.dart';
 import 'package:echos_del_tiempo/core/i18n/locale_id.dart';
 import 'package:echos_del_tiempo/core/i18n/string_tables.dart';
 import 'package:echos_del_tiempo/game_engine/data/affixes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/animals_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/bait_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/cooking_catalog.dart' show kMeals;
 import 'package:echos_del_tiempo/game_engine/data/farming_catalog.dart';
@@ -78,6 +79,15 @@ Map<String, Map<String, String>> catalogSource() {
     for (final f in kFertilizers.values) ItemKeys.fertName(f.id): f.name,
     for (final b in kBaits.values) baitNameKey(b.id): b.name,
     for (final t in kFarmTools.values) ItemKeys.farmToolName(t.id): t.name,
+    // Farm animals (animals.md).
+    for (final a in kAnimals.values) ItemKeys.animalName(a.id): a.name,
+    for (final p in kAnimalProducts.values)
+      ItemKeys.animalProductName(p.id): p.name,
+    for (final t in RanchTool.values) ItemKeys.ranchToolName(t.id): t.sourceName,
+    ItemKeys.hayName: 'Heno',
+    for (final e in kAnimalNames.entries)
+      for (var i = 0; i < e.value.length; i++)
+        ItemKeys.animalPetName(e.key, i): e.value[i],
     for (final m in kLifeMaterials.values) ...{
       ItemKeys.lifeMaterialName(m.id): m.name,
       ItemKeys.lifeMaterialDesc(m.id): m.description,

@@ -870,7 +870,14 @@ enum FarmShopOp {
   // key [id] to the player [FarmShopAction.to], or cook recipe [id] at
   // quality [n] as a feast for everyone in town.
   giveMeal,
-  feast
+  feast,
+  // Farm animals (animals.md § 2, protocol 99): buy [n] hay bales, a
+  // ranch tool [id], chop [n] of the crop key [id] into hay, sell the
+  // animal product key [id] (`null` = all of them).
+  buyHay,
+  buyRanchTool,
+  makeHay,
+  sellGoods
 }
 
 /// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.
@@ -943,7 +950,17 @@ enum TownOp {
 
   /// Protocol 80 (roles.md § 9): claim milestone [TownAction.n] of the
   /// resident [TownAction.id] (chest, materials, meal, weapon, Eco...).
-  claimMilestone
+  claimMilestone,
+
+  /// Protocol 99 (animals.md § 4): buy the species [TownAction.id] (goes
+  /// to the first home with room); feed / pet / collect the animal
+  /// [TownAction.n] of the coop or barn [TownAction.target]; put the
+  /// bag's hay into the store of [TownAction.target].
+  buyAnimal,
+  animalFeed,
+  animalPet,
+  animalCollect,
+  depositHay
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

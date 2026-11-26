@@ -528,6 +528,10 @@ PLANTAR), abonos y COSECHAS por calidad.
 
 ## 13. Animales del bioma y CORRAL (especificado en v0.31.0, sin código)
 
+> **Reemplazado por `animals.md`** (gallinero y establo, protocolo 99):
+> los animales de granja, su cuidado, los ayudantes y la venta viven ahí.
+> Lo que sigue queda como idea para animales propios de cada bioma.
+
 Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 - Un animal por bioma: Bosque ciervo de musgo (leche de musgo), Ruinas
   gallina de engranaje (huevo de cobre), Cavernas cabra de escarcha (lana

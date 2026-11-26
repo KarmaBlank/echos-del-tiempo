@@ -5,7 +5,7 @@ library;
 
 /// What kind of thing a target is (drawing only: NPCs get an outline,
 /// everything else the tile cursor).
-enum ActionTargetKind { tree, forage, plot, rock, find, npc }
+enum ActionTargetKind { tree, forage, plot, rock, find, npc, animal }
 
 /// Something next to the player that E / a click can act on.
 class ActionTarget {

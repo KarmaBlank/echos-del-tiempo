@@ -73,6 +73,7 @@ import 'water_reflection_layer.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
+import 'animal_layer.dart';
 import 'farm_layer.dart';
 import 'life_level_layer.dart';
 import '../../../../core/audio/sfx_catalog.dart';
@@ -197,6 +198,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   late final farm = MapFarmLayer()..icon = ((id) => sprites.lifeIcon(id, ''));
+
+  /// Coops and barns (animals.md).
+  final animals = AnimalLayer();
 
   /// Cozy life art (cozy_life.md): fireflies, raft and farm decorations.
   late final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
@@ -1175,6 +1179,12 @@ class MapGame extends Game {
             selectedNpc: controller.nearNpc?.id,
             markOf: _npcMark,
             period: controller.helperPeriod);
+        animals.draw(c, s.town, s.time, reduceMotion ? 0.0 : t,
+            (id) => sprites.lifeIcon(id, 'herramienta'),
+            asleep: controller.animalsAsleep,
+            text: (txt, x, y, col, size) =>
+                _placeText(c, txt, x, y, col, size, 900),
+            hover: controller.hoverAnimal);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
@@ -1678,6 +1688,9 @@ class MapGame extends Game {
       drawTileTarget(c, [tile], true, progress: k);
     } else if (controller.gatherTarget case final g?) {
       // The action cursor on the selected bush / tree (controls.md).
+      drawTileTarget(c, [g.tile], g.ok);
+    } else if (controller.animalTarget case final g?) {
+      // The same cursor on the animal E cares for (animals.md § 4.2).
       drawTileTarget(c, [g.tile], g.ok);
     }
     // Fireflies at night around the local player fishing or on a raft

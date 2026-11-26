@@ -339,6 +339,11 @@ class LootPainter {
         _rect(c, const Color(0xFF6AB04C), 0, -7, 1, 4);
         _rect(c, const Color(0xFFBADC58), -2, -6, 2, 1);
         _rect(c, const Color(0xFFE58E26), -2, -3, 4, 3);
+      case 'agood':
+        // An egg / a jug / a tuft: a small cream oval.
+        _rect(c, const Color(0xFFF5EBD7), -2, -5, 4, 5);
+        _rect(c, const Color(0xFFFFFFFF), -1, -5, 1, 1);
+        _rect(c, const Color(0xFFC8B89A), -2, -1, 4, 1);
       default:
         _rect(c, const Color(0xFF8D6E63), -3, -5, 6, 5);
         _rect(c, const Color(0xFFD7CCC8), -1, -6, 2, 1);

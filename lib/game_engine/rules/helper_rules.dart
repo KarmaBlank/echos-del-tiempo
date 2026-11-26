@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import 'animal_rules.dart' show AnimalRules;
 import 'life_craft_rules.dart';
 import 'town_rules.dart';
 
@@ -50,11 +51,12 @@ abstract final class HelperRules {
 
   /// Material de oficio de cada tipo: fibra para granjeros, cebo para
   /// pescadores.
-  static String matOf(BuildKind k) => k == BuildKind.huerta ? 'fibra' : 'cebo';
+  static String matOf(BuildKind k) =>
+      k == BuildKind.huerta || k.ranch ? 'fibra' : 'cebo';
 
   static List<HelperUpgrade> upgradesOf(BuildKind k) => [
         for (final u in HelperUpgrade.values)
-          if (u.farmer == (k == BuildKind.huerta)) u
+          if (!k.ranch && u.farmer == (k == BuildKind.huerta)) u
       ];
 
   static int get maxRank => math.max(1, t.i('upMaxRank'));
@@ -63,7 +65,8 @@ abstract final class HelperRules {
   static HelperCost hireCost(BuildKind k) => (
         gold: t.i('helperCost'),
         mats: {matOf(k): t.i('hireMat')}..removeWhere((_, v) => v <= 0),
-        level: t.i('helperLevel'),
+        // Ranch helpers ask for their own Cultivo level (animals.md § 6).
+        level: k.ranch ? AnimalRules.helperLevel : t.i('helperLevel'),
       );
 
   /// Costo del rango [r] (1 = el primero) de una mejora en [k].
@@ -106,7 +109,9 @@ abstract final class HelperRules {
   static String? cannotUpgrade(
       PlayerProfile p, TownBuild b, int i, HelperUpgrade u) {
     if (i < 0 || i >= b.helper) return 'Ese ayudante ya no está';
-    if (u.farmer != (b.kind == BuildKind.huerta)) return 'No es de este oficio';
+    if (b.kind.ranch || u.farmer != (b.kind == BuildKind.huerta)) {
+      return 'No es de este oficio';
+    }
     final st = b.stat(i);
     final r = st.rank(u) + 1;
     if (r > maxRank) return 'Rango máximo';

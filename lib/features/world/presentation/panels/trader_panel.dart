@@ -20,6 +20,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import 'ranch_shop_rows.dart';
 import 'world_event_cells.dart' show eventSaleText;
 import 'seed_text.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
@@ -76,12 +77,19 @@ class _TraderPanelState extends State<TraderPanel> {
         'mine_tools' => 'ui.town.trader.kind.mine_tools',
         'mine_supplies' => 'ui.town.trader.kind.mine_supplies',
         'mine_goods' => 'ui.town.trader.kind.mine_goods',
+        'animals' => 'ui.town.trader.kind.animals',
+        'hay' => 'ui.town.trader.kind.hay',
+        'ranch_tools' => 'ui.town.trader.kind.ranch_tools',
+        'ranch_homes' => 'ui.town.trader.kind.ranch_homes',
+        'animal_goods' => 'ui.town.trader.kind.animal_goods',
         _ => 'ui.town.trader.kind.all',
       });
 
   List<String> get _kinds => switch ((_mode, _tab)) {
         // Tools are sold at the crafts workshop (town_loop.md § 2.1,
         // v0.48.5): the farm shop only sells consumables and inputs.
+        // GRANJA (animals.md § 4.1, § 8).
+        (_, 3) => _mode == 0 ? kRanchBuyKinds : kRanchSellKinds,
         (_, 2) => _mode == 0
             ? const ['mine_supplies']
             : const ['mine_goods'],
@@ -116,6 +124,12 @@ class _TraderPanelState extends State<TraderPanel> {
                       ? c.sellFish(materials: _materials)
                       : c.sellCrop(null, materials: _materials)
                   : null),
+        if (_mode == 1 && _tab == 3)
+          PanelButton(context.t('ui.town.trader.sell_all'),
+              key: const ValueKey('trade-sell-all'),
+              onPressed: (p?.life.farm.goods.isNotEmpty ?? false)
+                  ? () => c.sellGoods()
+                  : null),
         PanelButton(context.t('ui.town.trader.close'),
             key: const ValueKey('trade-close'), onPressed: c.closePanel),
       ],
@@ -147,6 +161,7 @@ class _TraderPanelState extends State<TraderPanel> {
               DsTab(context.t('ui.town.trader.tab_fishing'), key: const ValueKey('trade-tab-pesca')),
               DsTab(context.t('ui.town.trader.tab_crops'), key: const ValueKey('trade-tab-cultivo')),
               DsTab(context.t('ui.town.trader.tab_mining'), key: const ValueKey('trade-tab-mina')),
+              DsTab(context.t('ui.town.trader.tab_ranch'), key: const ValueKey('trade-tab-granja')),
             ],
             index: _tab,
             onChanged: (i) => setState(() {
@@ -212,14 +227,21 @@ class _TraderPanelState extends State<TraderPanel> {
               groups: _visible(switch (_tab) {
                 0 => _fishing(),
                 1 => _farming(),
-                _ => _mining(),
+                2 => _mining(),
+                _ => [
+                    for (final r in ranchShopRows(context, c, p, c.town,
+                        icon: _icon))
+                      _Row(r.kind, r.cell, sell: r.sell)
+                  ],
               }),
               empty: _query.isNotEmpty || _kind != null
                   ? context.t('ui.town.trader.no_match')
                   : _mode == 1
                       ? (_tab == 0
                           ? context.t('ui.town.trader.no_fish')
-                          : context.t('ui.town.trader.no_crops'))
+                          : _tab == 3
+                              ? context.t('ui.town.trader.no_goods')
+                              : context.t('ui.town.trader.no_crops'))
                       : context.t('ui.town.trader.nothing_to_buy'),
               emptyKey:
                   ValueKey(_tab == 0 ? 'trade-empty' : 'trade-crop-empty'),

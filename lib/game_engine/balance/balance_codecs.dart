@@ -91,6 +91,9 @@ enum BalanceKind {
   /// Cultivo, huerta y agropecuario (farming.md, v0.23.0).
   farming('farming', 'Cultivo', 'Ajustes de Cultivo'),
 
+  /// Animales de granja (animals.md).
+  animals('animals', 'Animales', 'Ajustes de animales'),
+
   /// Ampliaciones, lago y ayudante (farming.md § 6–8).
   town('town', 'Pueblo', 'Ajustes del pueblo'),
 
@@ -1685,6 +1688,35 @@ Map<String, String> _lifeTreeLabels() => {
 
 final farmingCodec =
     _tuningCodec(BalanceKind.farming, _autoFields('farming', _farmLabels));
+final animalsCodec = _tuningCodec(
+    BalanceKind.animals, _autoFields(TuningId.animals, _animalLabels));
+
+const _animalLabels = {
+  'coopPrice': 'Gallinero: precio (oro)',
+  'coopLevel': 'Gallinero: nivel de Cultivo',
+  'coopCap': 'Gallinero: cupo de animales',
+  'barnPrice': 'Establo: precio (oro)',
+  'barnLevel': 'Establo: nivel de Cultivo',
+  'barnCap': 'Establo: cupo de animales',
+  'hayPrice': 'Heno: precio del fardo',
+  'hayPerCrop': 'Heno: fardos por cultivo picado',
+  'siloMax': 'Depósito de heno: tope',
+  'affMax': 'Cariño máximo (100 = un corazón)',
+  'petGain': 'Cariño al acariciar',
+  'feedGain': 'Cariño al dar de comer',
+  'unfedDecay': 'Cariño que pierde sin comer un día',
+  'unpetDecay': 'Cariño que pierde sin caricia un día',
+  'helperPetGain': 'Ayudante: cariño por caricia',
+  'helperHeartCap': 'Ayudante: tope de corazones',
+  'helperPerHome': 'Ayudante: cuántos por construcción',
+  'helperLevel': 'Ayudante: nivel de Cultivo para contratar',
+  'qRaroPerHeart': 'Calidad rara por corazón',
+  'qEpicoPerHeart': 'Calidad épica por corazón (desde el 3.º)',
+  'feedXp': 'XP de Cultivo al dar de comer',
+  'petXp': 'XP de Cultivo al acariciar',
+  'xpDayCap': 'Tope de XP de animales por día del mundo',
+};
+
 final townCodec =
     _tuningCodec(BalanceKind.town, _autoFields('town', _townLabels));
 final fishingCodec =
@@ -2047,6 +2079,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.combatLimits => combatLimitsCodec,
       BalanceKind.exploration => explorationCodec,
       BalanceKind.farming => farmingCodec,
+      BalanceKind.animals => animalsCodec,
       BalanceKind.town => townCodec,
       BalanceKind.fishing => fishingCodec,
       BalanceKind.lifeTree => lifeTreeCodec,
@@ -2068,6 +2101,7 @@ const kTuningKinds = [
   BalanceKind.combatLimits,
   BalanceKind.exploration,
   BalanceKind.farming,
+  BalanceKind.animals,
   BalanceKind.town,
   BalanceKind.fishing,
   BalanceKind.lifeTree,

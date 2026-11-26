@@ -161,6 +161,7 @@ class BalanceBase {
         BalanceKind.combatLimits ||
         BalanceKind.exploration ||
         BalanceKind.farming ||
+        BalanceKind.animals ||
         BalanceKind.town ||
         BalanceKind.fishing ||
         BalanceKind.lifeTree ||
