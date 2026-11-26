@@ -364,29 +364,32 @@ class _DsGridDetailLayoutState extends State<DsGridDetailLayout> {
         final k = DsSizes.itemScale(w, h,
             screen: MediaQuery.sizeOf(context),
             text: MediaQuery.textScalerOf(context).scale(240) / 240);
-        // Centered: the slack left by the scale steps splits on both
-        // sides instead of one big empty area.
+        // Top-left anchored: the grid keeps INVENTARIO's cell and the
+        // actions pane takes every pixel left (never a narrow strip next
+        // to empty space). Without a pane the grid just sits top-left.
+        final gridBox = SizedBox(
+          width: DsSizes.gridWidth(k) + DsSizes.gridScrollbar,
+          child: Scrollbar(
+            key: ValueKey('$p-scroll'),
+            controller: _scroll,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _scroll,
+              padding: const EdgeInsets.only(right: DsSizes.gridScrollbar),
+              child: _grid(context, k),
+            ),
+          ),
+        );
         return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              width: DsSizes.gridWidth(k) + DsSizes.gridScrollbar,
-              child: Scrollbar(
-                key: ValueKey('$p-scroll'),
-                controller: _scroll,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _scroll,
-                  padding:
-                      const EdgeInsets.only(right: DsSizes.gridScrollbar),
-                  child: _grid(context, k),
-                ),
-              ),
-            ),
-            const SizedBox(width: DsSizes.gridDetailGap),
-            if (detail != null)
-              SizedBox(width: DsSizes.detailPaneWidth, child: detail),
+            gridBox,
+            if (detail != null) ...[
+              const SizedBox(width: DsSizes.gridDetailGap),
+              Expanded(child: detail),
+            ] else
+              const Spacer(),
           ],
         );
       }

@@ -1025,5 +1025,11 @@
   "ui.town.forge.fish_split_hint": "拆解会消耗这条鱼（₵{gold}）；部件用于分件锻造。",
   "ui.town.forge.fish_parts_only": "史诗鱼只能拆解。",
   "ui.town.forge.fish_split_level": "需要钓鱼 {lv} 级",
-  "ui.town.forge.fish_split_none": "你没有这条鱼"
+  "ui.town.forge.fish_split_none": "你没有这条鱼",
+  "ui.town.quest.giver": "委托人：{name}",
+  "ui.town.quest.obj_items": "{item} — 已有 {have} / 需要 {need}",
+  "ui.town.quest.obj_progress": "{what} — {n} / {goal}",
+  "ui.town.quest.needs": "需要",
+  "ui.town.quest.rewards": "奖励",
+  "ui.town.quest.incomplete": "清单尚未完成"
 }
