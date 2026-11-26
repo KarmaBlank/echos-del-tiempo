@@ -950,7 +950,7 @@ abstract final class TownRules {
     if (on(HelperTask.cosechar) &&
         !chestFull(b) &&
         plots.any((p) =>
-            p != null && p.planted && FarmingRules.harvestable(p, season))) {
+            p != null && p.planted && FarmingRules.helperHarvestable(p, season))) {
       return HelperTask.cosechar;
     }
     return null;
@@ -964,7 +964,7 @@ abstract final class TownRules {
   /// cosecha puede subir de calidad ([rand]) y aparecer una semilla rara
   /// ([rareSeed]) para la huerta.
   static (TownBuild, List<(int, int, Harvest)>) farmerCycle(
-      TownBuild b0, int i, Harvest Function(FarmPlot) harvest,
+      TownBuild b0, int i, Harvest? Function(FarmPlot) harvest,
       {double Function()? rand,
       String Function()? rareSeed,
       Season? season}) {
@@ -1006,11 +1006,12 @@ abstract final class TownRules {
         case HelperTask.cosechar:
           if (pl == null ||
               !pl.planted ||
-              !FarmingRules.harvestable(pl, season)) {
+              !FarmingRules.helperHarvestable(pl, season)) {
             continue;
           }
           if (chestFull(b)) break;
           final h = harvest(pl);
+          if (h == null) continue;
           var q = h.quality;
           if (rand != null && qChance > 0 && rand() < qChance &&
               q.index < CropQuality.values.length - 1) {

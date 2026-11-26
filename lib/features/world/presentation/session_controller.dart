@@ -1131,12 +1131,26 @@ class SessionController extends StateNotifier<SessionView?> {
   void _hostTick(double dt) {
     final s = _s;
     if (s == null || !mounted) return;
-    _sendPosition();
-    _sinceSave += dt;
-    _world(_we.tick(_w!, dt));
-    _autoTurn();
-    _save();
+    // A failing tick rule is skipped and logged once with its stack
+    // (netcode.md § "Tick a prueba de fallos").
+    SessionEngine.onRuleError ??= (rule, e, st) =>
+        EcosLog.error('Regla del tick "$rule" falló (se saltea)', '$e\n$st');
+    try {
+      _sendPosition();
+      _sinceSave += dt;
+      _world(_we.tick(_w!, dt));
+      _autoTurn();
+      _save();
+    } catch (e, st) {
+      // Never silent and never every tick: once per distinct error.
+      if (_tickErrors.add('${e.runtimeType}|$e') && _tickErrors.length <= 16) {
+        EcosLog.error('Tick del anfitrión', '$e\n$st');
+      }
+    }
   }
+
+  /// Host tick failures already logged.
+  final _tickErrors = <String>{};
 
   /// Turno de un compañero con AUTO (solo_party.md § 4.1).
   void _autoTurn() {
@@ -2753,7 +2767,7 @@ class SessionController extends StateNotifier<SessionView?> {
     return FarmHand.can;
   }
 
-  /// La herramienta de huerta en la mano (farming.md § 2.5). Mientras no
+  /// La herramienta de huerta en la mano (farming.md § 8.7). Mientras no
   /// elijas a mano, sigue lo que pide la parcela de enfrente; una elección
   /// manual se respeta hasta alejarte de la huerta.
   FarmHand get farmHand {
@@ -2912,7 +2926,7 @@ class SessionController extends StateNotifier<SessionView?> {
     ];
   }
 
-  /// El abono para E / F (farming.md § 2.5): el elegido si te queda; si
+  /// El abono para E / F (farming.md § 8.7): el elegido si te queda; si
   /// no, el mejor que tengas.
   String? get farmFert {
     final own = ownedFerts;
@@ -6429,5 +6443,5 @@ enum ActiveTool { rod, hoe, mine }
 /// best pick (or drill), torches, bombs and the vein oil.
 enum MineHand { pick, torch, bomb, oil }
 
-/// Herramienta de huerta en la mano (farming.md § 2.5).
+/// Herramienta de huerta en la mano (farming.md § 8.7).
 enum FarmHand { hoe, seed, can, fert }

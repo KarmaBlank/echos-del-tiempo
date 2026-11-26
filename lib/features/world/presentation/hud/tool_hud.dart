@@ -44,7 +44,7 @@ class ToolPrompt extends StatelessWidget {
   }
 }
 
-/// HUD de la herramienta en la mano (farming.md § 2.5, fishing.md § 4):
+/// HUD de la herramienta en la mano (farming.md § 8.7, fishing.md § 4):
 /// desde v0.49.21 una columna en el margen derecho, bajo el reloj del día,
 /// una herramienta por fila (ícono + rótulo corto + cantidad), la elegida
 /// con borde dorado. Ancho [columnWidth] y alto de fila [rowHeight] fijos:

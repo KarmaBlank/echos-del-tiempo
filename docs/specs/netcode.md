@@ -998,3 +998,22 @@ manda Travesía).
   del árbol de afuera de cada jugador, en la sala o con la run terminada.
 - El guardado de la run (`travesia_run.json`) y el progreso
   (`travesia_meta.json`) son locales: no viajan.
+
+## Tick a prueba de fallos (v0.49.32)
+
+- `hostTick` corre sobre una copia del estado: si una regla tira una
+  excepción, la copia entera se pierde, incluido el reloj de la sala
+  (`time`). Con un error que se repite, el reloj queda congelado y todo
+  lo que se mide con él también: la vuelta de los ayudantes, el
+  crecimiento, la pausa entre labores (`minWorkSec`) y la gracia de
+  entrada a la mazmorra (`graceUntil`, el jugador parpadea para siempre
+  y no puede actuar).
+- Por eso el reloj avanza primero y cada regla del tick corre por
+  separado (`SessionEngine.guardRule`): la que falla se saltea en ese
+  tick y el resto sigue. `WorldEngine.tick` además aísla cada sala: un
+  error del pueblo no frena las mazmorras.
+- Cada falla distinta se informa UNA vez con su traza
+  (`SessionEngine.onRuleError`, que el `SessionController` apunta a
+  `ecos.log`), y el tick del anfitrión entero va en un `try` que también
+  la registra una vez. Nunca en silencio, nunca en cada tick.
+

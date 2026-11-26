@@ -392,6 +392,14 @@ herramienta de área trabaja menos tiles.
   calidad normal, sin hallazgos; deja la parcela arada para la próxima
   vuelta de plantar. Los jugadores trabajan cualquier parcela cuando
   quieren con sus propias stats; el granjero sigue con lo que encuentra.
+- Armas vivas (v0.49.32): el granjero NO cosecha parcelas de semilla
+  de arma (`ws_*` ni rebrote, profession_gear.md § 3); las deja maduras
+  para un jugador (`FarmingRules.helperHarvestable`: solo cultivos de
+  `kCrops`). Tampoco cuentan para "COSECHAR posible" en § 8.6. Antes,
+  una madura en su área tiraba una excepción en cada vuelta y congelaba
+  la sala entera (reloj, cosechas, gracia de la mazmorra).
+- La vuelta se marca hecha ANTES de correrla: una vuelta que falla no
+  se reintenta en cada tick.
 - Pantalla del granjero (G): SEMILLAS (grilla tipo inventario: tus
   semillas y las de la huerta, filtro por rareza y buscador, detalle con
   PASAR 1 / 10 / TODO → o ← DEVOLVER), TAREAS y COFRE.
@@ -478,6 +486,17 @@ ni ahora ni en ninguna vuelta futura sin que un jugador cambie algo
   pantalla (G) arranca con un aviso "!" y los motivos.
 - Sin cambio de protocolo: host y clientes lo calculan del pueblo que ya
   viaja en el estado.
+
+### 8.7 Huerta que se repara sola al cargar (v0.49.32)
+
+Al abrir el mundo (`SessionEngine.setWorld`), `GearRules.repairPlots`
+revisa cada parcela: una con semilla que ninguna regla conoce (ni
+cultivo de `kCrops` ni arma viva con su equipo en `kProfessionGear`) se
+ve plantada pero nadie puede trabajarla ni cosecharla; vuelve a arada y
+vacía (conserva el riego). Una parcela que guarda un arma viva (`it`)
+nunca se borra: ningún objeto se pierde. Cosechar un arma viva tira el
+arma primero; si no sale ninguna, la parcela queda como estaba. Sin
+cambio de protocolo.
 
 ## 9. Agropecuario (vista CULTIVO)
 Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →

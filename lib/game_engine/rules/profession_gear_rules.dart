@@ -8,6 +8,7 @@ import '../models/item.dart';
 import '../models/loot.dart' show LootSource;
 import '../models/player_profile.dart';
 import '../models/weapon.dart';
+import '../models/world_save.dart' show TownState;
 import 'battle_engine.dart' show RandomSource;
 import 'farming_rules.dart';
 import 'fishing_rules.dart';
@@ -149,6 +150,28 @@ abstract final class GearRules {
   static bool isLiving(String? seed) =>
       seed != null &&
       (kWeaponSeeds.containsKey(seed) || seed.startsWith(kRegrowPrefix));
+
+  /// Whether [p]'s seed is one some rule can grow and harvest: a crop of
+  /// `kCrops` or a living weapon whose gear exists (farming.md § 8.7).
+  static bool knownSeed(FarmPlot p) =>
+      p.seed == null ||
+      kCrops.containsKey(p.seed) ||
+      (isLiving(p.seed) && kProfessionGear.containsKey(livingGear(p)));
+
+  /// Load-time repair of the town farm (farming.md § 8.7): a plot whose
+  /// seed no rule knows (it would show as planted but nobody could work
+  /// or harvest it) goes back to tilled and empty. A plot that still
+  /// holds a living weapon (`held`) is never cleared, so no item is lost.
+  static TownState repairPlots(TownState t) {
+    Map<String, FarmPlot>? out;
+    for (final e in t.plots.entries) {
+      final p = e.value;
+      if (knownSeed(p) || p.held != null) continue;
+      (out ??= {...t.plots})[e.key] =
+          FarmPlot(wet: p.wet, waterRate: p.waterRate);
+    }
+    return out == null ? t : t.copyWith(plots: out);
+  }
 
   /// Gear id a living plot grows.
   static String? livingGear(FarmPlot p) {
