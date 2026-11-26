@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../characters/presentation/characters_providers.dart';
 import '../../combat/presentation/game_sprites.dart';
@@ -52,7 +51,7 @@ class _BestiaryScreenState extends ConsumerState<BestiaryScreen> {
         ],
         child: b == null
             ? Text(ref.t('ui.bestiary.loading'),
-                style: const TextStyle(color: ProtoColors.dim))
+                style: const TextStyle(color: DsColors.textMuted))
             : BestiaryView(bestiary: b, sprites: sprites),
       ),
     );

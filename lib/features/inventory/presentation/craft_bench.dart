@@ -937,7 +937,7 @@ class _CraftBenchState extends State<CraftBench> {
     Widget dim(String t) => Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(retroText(t),
-              style: const TextStyle(color: ProtoColors.dim)),
+              style: const TextStyle(color: DsColors.textMuted)),
         );
 
     final picks =

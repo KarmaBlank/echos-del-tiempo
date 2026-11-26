@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_tokens.dart';
 import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -341,7 +342,7 @@ class ResultsPanel extends ConsumerWidget {
                         : ref.t('ui.missions.results.auto_return',
                             {'s': r.timeLeft.ceil()})),
                     key: const ValueKey('results-footer'),
-                    style: const TextStyle(color: ProtoColors.dim)),
+                    style: const TextStyle(color: DsColors.textMuted)),
               ),
               KeyHints(
                   confirm: ref.t(victoryLap

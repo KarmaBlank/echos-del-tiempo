@@ -167,7 +167,7 @@ class _StatDeltaText extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!s.changed) {
       return Text(retroText('${s.label} ${s.format(s.before)}'),
-          style: const TextStyle(color: ProtoColors.dim));
+          style: const TextStyle(color: DsColors.textMuted));
     }
     final c = s.better ? ProtoColors.green : ProtoColors.red;
     // ▲ mejora / ▼ empeora: no solo el color (daltonismo).

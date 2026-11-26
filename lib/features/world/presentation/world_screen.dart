@@ -670,8 +670,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                         return DsTooltipCard(
                           title: title,
                           children: [
-                            for (final l in lines)
-                              Text(l, style: DsText.detail())
+                            for (final l in lines) DsRichText(l)
                           ],
                         );
                       }(),
