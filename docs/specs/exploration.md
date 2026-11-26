@@ -321,6 +321,21 @@ idas y vueltas (antes cámara y héroe se redondeaban por separado y el
 héroe temblaba contra el mundo). La `camDraw` se usa para todo lo
 dibujado (mundo, actores, HUD en el mapa).
 
+**Zoom de la pesca (v0.49.19).** El zoom (`cozyFishZoom`) es solo de la
+cámara del mundo: el lienzo virtual se escala alrededor del jugador y
+los widgets del HUD, menús y paneles no cambian de tamaño ni de lugar.
+Mientras el zoom anima (progreso entre 0 y 1) la cámara y el héroe local
+quedan en espacio continuo (sin redondear a píxel): el centro de la vista
+se mantiene (`zoomRecenter`) y el jugador queda quieto en pantalla
+(±0.5 px) a cualquier FPS. Con el zoom asentado vuelve el ajuste a
+píxel de arriba.
+
+**Sin sacudidas por herramienta (v0.49.19).** Los golpes de pico,
+azada, etc. no mueven la cámara: la única sacudida del mapa es la de la
+bomba (`mining_smithing.md § 1.9`), que no se acumula. El pico y las
+astillas se dibujan desde la posición local del héroe (no desde la del
+snapshot, que llega atrasada y hacía temblar al pico al caminar).
+
 **Desvío**: el prototipo suaviza por frame (`requestAnimationFrame`). El
 puerto usa el factor equivalente independiente del frame rate:
 `k = 1 − (1 − 0.25)^(dt·60)`. Lo mismo para `lerpPos` (0.35, salto si

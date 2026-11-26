@@ -51,11 +51,9 @@ class ToolHud extends StatelessWidget {
             DsCard(
               padding: EdgeInsets.symmetric(
                   horizontal: DsSpace.sm, vertical: DsSpace.xs),
-              child: Text(prompt,
+              // Never truncated: the box wraps to fit (₵N = gold coin).
+              child: DsGoldText(prompt,
                   key: const ValueKey('hud-tool-prompt'),
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: DsText.subtitle(DsColors.reward)),
             ),
