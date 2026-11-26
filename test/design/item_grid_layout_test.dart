@@ -32,8 +32,12 @@ void _checkGrid(WidgetTester tester, String p, {double? cell}) {
   // Exactly 6 columns of cells of side itemCell × k.
   expect(grid.width, closeTo(DsSizes.gridWidth(k), 0.01));
   if (cell != null) expect(DsSizes.itemCell * k, closeTo(cell, 0.01));
-  expect(detail.width, closeTo(DsSizes.detailPaneWidth, 0.01));
+  // The actions pane is at least detailPaneWidth and takes the rest of
+  // the width; the grid is anchored top-left (v0.49.27, § 6.2).
+  expect(detail.width, greaterThanOrEqualTo(DsSizes.detailPaneWidth - 0.01));
   expect(detail.left, greaterThan(grid.right));
+  expect(detail.left - grid.right,
+      lessThanOrEqualTo(DsSizes.gridDetailGap + DsSizes.gridScrollbar + 0.01));
   expect(find.byKey(ValueKey('$p-scroll')), findsOneWidget);
 }
 

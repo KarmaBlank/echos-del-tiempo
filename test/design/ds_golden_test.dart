@@ -94,6 +94,23 @@ void main() {
       ]),
     ),
     'tooltip': const WeaponTooltip(),
+    'quest_template': SizedBox(
+      width: 900,
+      height: 420,
+      child: DsQuestTemplate(
+          entries: QuestTemplateMockup.entries(),
+          empty: '-',
+          itemsLabel: 'PIDE',
+          rewardsLabel: 'RECOMPENSA'),
+    ),
+    'text_hierarchy': Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final e in DsText.hierarchy.entries)
+          Text('${e.key} — Trucha de río', style: e.value),
+      ],
+    ),
   };
 
   for (final e in cases.entries) {

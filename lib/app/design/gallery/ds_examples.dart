@@ -413,3 +413,102 @@ class GridTemplatesMockup extends StatelessWidget {
     );
   }
 }
+
+
+/// ENCARGOS (design_system.md § 6.3): the quest template with a
+/// checklist partly done, and the text hierarchy in use.
+class QuestTemplateMockup extends StatelessWidget {
+  const QuestTemplateMockup({super.key});
+
+  static DsCostEntry _item(String id, Color c, int have, int need) =>
+      DsCostEntry(
+        id: id,
+        icon: Container(color: c),
+        have: have,
+        need: need,
+        card: DsTooltipCard(title: id, children: [
+          Text('$have / $need', style: DsText.body()),
+        ]),
+      );
+
+  static List<DsQuestEntry> entries() => [
+        DsQuestEntry(
+          id: 'gallery-quest-0',
+          title: 'Cena del festival',
+          status: '2/5',
+          statusColor: DsColors.textDisabled,
+          giver: 'Pide: Ilda',
+          flavor: 'Necesito truchas de río para la cena del festival. '
+              'Las de la orilla norte son las mejores.',
+          objectives: const [
+            DsQuestObjective('Trucha de río — tenés 2 / pide 5', done: false),
+            DsQuestObjective('Carpa dorada — tenés 1 / pide 1', done: true),
+            DsQuestObjective('Hablá con Brann en la forja', done: true),
+          ],
+          items: [
+            _item('Trucha de río', DsColors.mp, 2, 5),
+            _item('Carpa dorada', DsColors.reward, 1, 1),
+          ],
+          rewards: const [
+            (label: '+120 ₵', color: DsColors.reward, tip: null),
+            (label: '+5 REP', color: DsColors.success, tip: null),
+          ],
+          notes: const ['Pedido el día 4'],
+          actions: const [
+            DsButton('ENTREGAR',
+                size: DsButtonSize.compact,
+                tooltip: 'Falta completar la lista',
+                onPressed: null),
+          ],
+        ),
+        const DsQuestEntry(
+          id: 'gallery-quest-1',
+          title: 'Limpiar la Cripta',
+          status: 'CUMPLIDO',
+          statusColor: DsColors.success,
+          done: true,
+          giver: 'Pide: Brann',
+          objectives: [
+            DsQuestObjective('Vencé al guardián de la Cripta — 1 / 1',
+                done: true),
+          ],
+        ),
+        DsQuestEntry(
+          id: 'gallery-quest-2',
+          title: 'Una casa para Toma',
+          status: 'PEDIDO',
+          statusColor: DsColors.textDisabled,
+          giver: 'Pide: Toma',
+          objectives: const [
+            DsQuestObjective('Construí una casa en el pueblo', done: false),
+          ],
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ENCARGOS · DsQuestTemplate (pedidos, encargos, diario)',
+              style: DsText.subtitle()),
+          SizedBox(height: DsSpace.sm),
+          SizedBox(
+            width: 900,
+            height: 420,
+            child: DsQuestTemplate(
+              key: const ValueKey('gallery-quests'),
+              keyPrefix: 'gallery-quests',
+              entries: entries(),
+              empty: 'Nada por ahora',
+              itemsLabel: 'PIDE',
+              rewardsLabel: 'RECOMPENSA',
+            ),
+          ),
+          SizedBox(height: DsSpace.lg),
+          Text('Jerarquía de texto', style: DsText.subtitle()),
+          SizedBox(height: DsSpace.sm),
+          for (final e in DsText.hierarchy.entries)
+            Text('${e.key} — Trucha de río', style: e.value),
+        ],
+      );
+}

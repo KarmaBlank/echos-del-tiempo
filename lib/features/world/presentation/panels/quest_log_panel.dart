@@ -1,5 +1,4 @@
 import 'package:material_ui/material_ui.dart';
-import '../../../../game_engine/models/player_profile.dart';
 import '../../domain/quest_text.dart';
 
 import '../../../../app/design/design.dart';
@@ -7,13 +6,10 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
-import '../hud/tracked_quests_hud.dart' show questProgressText;
 import '../session_controller.dart';
 import '../session_view.dart';
-import 'biome_npc_panel.dart'
-    show orderCell, questCells, residentItemIcon, trackButton;
-import 'life_icon.dart';
-import 'life_item_grid.dart';
+import 'biome_npc_panel.dart' show trackButton;
+import 'quest_entries.dart';
 import 'profession_journal.dart';
 import 'world_event_cells.dart';
 import '../world_strings.dart';
@@ -127,56 +123,37 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                 profile: p,
                 onCompost: c.compost)
           else
-            LifeItemGrid(
-              key: ValueKey(
-                  'quest-log-grid-${n?.id ?? (events ? 'eventos' : 'seguidos')}'),
-              groups: [
-                LifeItemGroup(null, [
+            // Quest screens share the ENCARGOS template (list left,
+            // checklist right; design_system.md § "Encargos").
+            SizedBox(
+              height: 420,
+              child: DsQuestTemplate(
+                key: ValueKey(
+                    'quest-log-grid-${n?.id ?? (events ? 'eventos' : 'seguidos')}'),
+                keyPrefix: 'quest-log',
+                itemsLabel: context.t('ui.town.quest.needs'),
+                rewardsLabel: context.t('ui.town.quest.rewards'),
+                entries: [
                   if (events)
                     for (final a in town.events.active)
-                      worldEventCell(context, a, town),
+                      cellEntry(worldEventCell(context, a, town)),
                   if (n == null && !events)
-                    for (final a in tracked) _trackedCell(a, p),
-                  if (n != null && r != null) ...[
-                    if (orderCell(worldStrings(context), c, n, r, p,
-                            home: c.place == kPueblo)
-                        case final o?)
-                      o,
-                    ...questCells(worldStrings(context), c, n, r, p),
-                  ],
-                ]),
-              ],
-              empty: events
-                  ? context.t('ui.town.journal.no_events')
-                  : n == null
-                      ? context.t('ui.town.journal.none_tracked')
-                      : context.t('ui.town.journal.no_quests'),
+                    for (final a in tracked)
+                      trackedEntry(worldStrings(context), a,
+                          [trackButton(c, p, a.npc.id, a.kind)]),
+                  if (n != null && r != null)
+                    ...residentEntries(worldStrings(context), c, n, r, p, town,
+                        home: c.place == kPueblo),
+                ],
+                empty: events
+                    ? context.t('ui.town.journal.no_events')
+                    : n == null
+                        ? context.t('ui.town.journal.none_tracked')
+                        : context.t('ui.town.journal.no_quests'),
+              ),
             ),
         ],
       ),
     );
   }
-
-  LifeItemCellData _trackedCell(ActiveQuest a, PlayerProfile? p) =>
-      LifeItemCellData(
-        id: 'tracked-${a.key}',
-        icon: a.item != null
-            ? residentItemIcon(a.item!)
-            : const LifeIcon('cofre_oficio', LifeIconKind.herramienta,
-                size: 32),
-        border: a.ready ? DsColors.success : DsColors.selected,
-        search: activeQuestWho(a),
-        count: a.item == null ? null : a.need,
-        detail: LifeItemDetail(
-          name: activeQuestWho(a),
-          nameColor: DsColors.textTitle,
-          tags: [
-            (trackKindText(a.kind).toUpperCase(), DsColors.textSecondary),
-            if (a.ready) (context.t('ui.town.journal.ready'), DsColors.success),
-          ],
-          // One line: what and how far (quest_audit.md § 8).
-          lines: [questProgressText(worldStrings(context), a)],
-          actions: [trackButton(widget.controller, p, a.npc.id, a.kind)],
-        ),
-      );
 }

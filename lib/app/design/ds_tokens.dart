@@ -163,6 +163,31 @@ abstract final class DsText {
   /// Detalle: fuente de lectura 10 nominal, secundario.
   static TextStyle detail([Color? c]) =>
       RetroType.style(RetroType.small, color: c ?? DsColors.textSecondary);
+
+  /// Descripción: fuente de lectura 11, en el lavanda del detalle (texto
+  /// de ambientación de un encargo: "Necesito…"). Distinto del Cuerpo.
+  static TextStyle description([Color? c]) =>
+      RetroType.style(RetroType.body, color: c ?? DsColors.textSecondary);
+
+  /// Meta / apagado: fuente de lectura 10 en gris (quién lo pide, día,
+  /// estado corto de una fila). El escalón más bajo de la jerarquía.
+  static TextStyle meta([Color? c]) =>
+      RetroType.style(RetroType.small, color: c ?? DsColors.textDisabled);
+
+  /// Acento / recompensa: fuente de lectura 11 en dorado (oro, rep,
+  /// lo que se gana).
+  static TextStyle accent([Color? c]) =>
+      RetroType.style(RetroType.body, color: c ?? DsColors.reward);
+
+  /// La jerarquía de texto completa, para la galería: nombre → estilo.
+  static Map<String, TextStyle> get hierarchy => {
+        'Título': title(),
+        'Subtítulo': subtitle(),
+        'Cuerpo': body(),
+        'Descripción': description(),
+        'Meta': meta(),
+        'Acento': accent(),
+      };
 }
 
 /// Medidas fijas de los componentes (px nominales).
@@ -197,7 +222,8 @@ abstract final class DsSizes {
   /// Rows the cell scale is fitted to (INVENTARIO's 5 rows).
   static const gridRows = 5;
 
-  /// Fixed width of the detail column on the right of a grid.
+  /// Minimum width of the actions pane on the right of a grid (it
+  /// grows to fill whatever the grid leaves).
   static const detailPaneWidth = 340.0;
 
   /// Separation between grid and detail, and room for the scrollbar.
