@@ -129,4 +129,39 @@ void main() {
     // Only one is ever selected (and so only one outlined).
     expect(pick(), anyOf(0, 1));
   });
+
+  group('held click walking away (mine hold bug)', () {
+    const rock = ActionTargetKind.rock;
+    // Rock clicked at (4, 6) from (5, 5); the player walks right.
+    const aim = (4, 6);
+    final rocks = [at(4, 6, k: rock), at(9, 6, k: rock)];
+
+    test('the held tile counts while in reach', () {
+      expect(ActionTargeting.heldAim(5, 5, aim), aim);
+      expect(ActionTargeting.heldAim(4, 5, aim), aim);
+    });
+
+    test('out of reach the held tile is dropped (never a stale target)', () {
+      expect(ActionTargeting.heldAim(6, 5, aim), isNull);
+      expect(ActionTargeting.heldAim(8, 5, aim), isNull);
+      // Nor the player's own tile.
+      expect(ActionTargeting.heldAim(4, 6, aim), isNull);
+      expect(ActionTargeting.heldAim(5, 5, null), isNull);
+    });
+
+    test('after walking away the selection re-runs in reach or is empty', () {
+      // At (8, 5) facing right: (9, 6) is the only rock in reach.
+      final t = ActionTargeting.heldAim(8, 5, aim) ??
+          ActionTargeting.select(
+                  px: 8, py: 5, candidates: rocks, hover: aim, facing: (1, 0))
+              ?.tile;
+      expect(t, (9, 6));
+      // At (7, 5) nothing is in reach: no target at all.
+      final none = ActionTargeting.heldAim(7, 5, aim) ??
+          ActionTargeting.select(
+                  px: 7, py: 5, candidates: rocks, hover: aim, facing: (1, 0))
+              ?.tile;
+      expect(none, isNull);
+    });
+  });
 }

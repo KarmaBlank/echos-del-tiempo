@@ -43,6 +43,12 @@ lado de la otra se eligen con el mouse o con WASD como cualquier par.
 **Mantener E / clic** (cozy_life.md § 3): al terminar un objetivo pasa al
 siguiente más cercano sin repetir (los ya hechos en el mantener se saltan);
 el mouse sigue mandando. Una parcela bloqueada se saltea.
+Al caminar mientras se mantiene, el objetivo se vuelve a elegir con el
+mismo orden (mouse, WASD, el más cercano) entre lo que queda a alcance, o
+no hay ninguno: el tile clicado al empezar solo vale mientras siga a
+alcance (`ActionTargeting.heldAim`). Un objetivo lejano nunca sigue
+avanzando, y la barra de progreso y el recuadro nunca se dibujan sobre un
+tile fuera de alcance.
 
 **Clic:** a alcance actúa sobre la selección; lejos no hace nada.
 
