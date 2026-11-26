@@ -2767,7 +2767,7 @@ class SessionController extends StateNotifier<SessionView?> {
     return FarmHand.can;
   }
 
-  /// La herramienta de huerta en la mano (farming.md § 8.7). Mientras no
+  /// La herramienta de huerta en la mano (farming.md § 2.5). Mientras no
   /// elijas a mano, sigue lo que pide la parcela de enfrente; una elección
   /// manual se respeta hasta alejarte de la huerta.
   FarmHand get farmHand {
@@ -2926,7 +2926,7 @@ class SessionController extends StateNotifier<SessionView?> {
     ];
   }
 
-  /// El abono para E / F (farming.md § 8.7): el elegido si te queda; si
+  /// El abono para E / F (farming.md § 2.5): el elegido si te queda; si
   /// no, el mejor que tengas.
   String? get farmFert {
     final own = ownedFerts;
@@ -6443,5 +6443,5 @@ enum ActiveTool { rod, hoe, mine }
 /// best pick (or drill), torches, bombs and the vein oil.
 enum MineHand { pick, torch, bomb, oil }
 
-/// Herramienta de huerta en la mano (farming.md § 8.7).
+/// Herramienta de huerta en la mano (farming.md § 2.5).
 enum FarmHand { hoe, seed, can, fert }
