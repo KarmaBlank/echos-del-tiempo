@@ -153,10 +153,8 @@ extension _MineTiles on TilePainter {
         _rect(c, MinePalette.relic, px + 5, py + 6, 6, 1);
         _rect(c, MinePalette.relic, px + 5, py + 9, 4, 1);
       case MineTile.station:
+        // Plain floor: the rails come from MineLayer.drawTrack.
         _caveFloor(px, py, h, at, tx, ty, c);
-        _rect(c, MinePalette.timber, px, py + 12, ts, 2);
-        _rect(c, MinePalette.rail, px + 2, py + 11, 1, 4);
-        _rect(c, MinePalette.rail, px + 12, py + 11, 1, 4);
       case Tile.stairsUp:
         _caveFloor(px, py, h, at, tx, ty, c);
         _rect(c, MinePalette.spark.withValues(alpha: 0.25), px + 2, py, 12, ts);

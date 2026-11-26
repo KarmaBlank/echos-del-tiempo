@@ -3,13 +3,47 @@
 /// same selection, so what the cursor marks is what E does.
 library;
 
-/// What kind of thing a target is (drawing only: NPCs get an outline,
-/// everything else the tile cursor).
-enum ActionTargetKind { tree, forage, plot, rock, find, npc }
+/// What kind of thing a target is. Drawing: ground work targets (trees,
+/// bushes, plots, rocks) get the tile cursor; everything else a 1 px
+/// white outline around its silhouette ([ActionTarget.outline]).
+enum ActionTargetKind {
+  tree,
+  forage,
+  plot,
+  rock,
+  find,
+  npc,
+  chest,
+  shrine,
+  waystone,
+  portal,
+  mine,
+  station,
+  sign,
+  fountain,
+  shop,
+  dock,
+  travel,
+}
 
 /// Something next to the player that E / a click can act on.
 class ActionTarget {
-  const ActionTarget(this.x, this.y, this.kind, {this.ok = true, this.id = 0});
+  const ActionTarget(this.x, this.y, this.kind,
+      {this.ok = true, this.id = 0, this.key = '', bool? outline})
+      : outline = outline ??
+            !(kind == ActionTargetKind.tree ||
+                kind == ActionTargetKind.forage ||
+                kind == ActionTargetKind.plot ||
+                kind == ActionTargetKind.rock);
+
+  /// Ground work targets (tool actions): the only ones with the tile
+  /// cursor; everything else is outlined.
+  static const groundKinds = {
+    ActionTargetKind.tree,
+    ActionTargetKind.forage,
+    ActionTargetKind.plot,
+    ActionTargetKind.rock,
+  };
 
   /// Tile.
   final int x, y;
@@ -21,6 +55,12 @@ class ActionTarget {
   /// Index / key of the thing (bush index, NPC order…).
   final int id;
 
+  /// String key of the thing (NPC id, event uid, build id…).
+  final String key;
+
+  /// Drawn with the white sprite outline instead of the tile cursor.
+  final bool outline;
+
   (int, int) get tile => (x, y);
 
   @override
@@ -30,10 +70,12 @@ class ActionTarget {
       other.y == y &&
       other.kind == kind &&
       other.ok == ok &&
-      other.id == id;
+      other.id == id &&
+      other.key == key &&
+      other.outline == outline;
 
   @override
-  int get hashCode => Object.hash(x, y, kind, ok, id);
+  int get hashCode => Object.hash(x, y, kind, ok, id, key, outline);
 
   @override
   String toString() => 'ActionTarget($x, $y, ${kind.name}, ok: $ok)';
@@ -109,8 +151,7 @@ abstract final class ActionTargeting {
 
   /// Cursor colour for [t]: none (no target / an NPC, which is outlined
   /// instead), green or orange.
-  static CursorTone tone(ActionTarget? t) => t == null ||
-          t.kind == ActionTargetKind.npc
+  static CursorTone tone(ActionTarget? t) => t == null || t.outline
       ? CursorTone.none
       : t.ok
           ? CursorTone.ok
