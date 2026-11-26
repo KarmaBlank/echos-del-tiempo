@@ -1120,6 +1120,15 @@ class MapGame extends Game {
         _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }
+      // Onboarding (town_editor.md § 1.5): gold "!" over the rune
+      // fountain until this player opens its panel once.
+      if (controller.fountainAlert) {
+        for (final l in map.townMarks ?? TownLayout.landmarks) {
+          if (l.spot != TownSpot.fountain) continue;
+          drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+        }
+      }
       farm.drawZoneLabels(
           c,
           s.town,

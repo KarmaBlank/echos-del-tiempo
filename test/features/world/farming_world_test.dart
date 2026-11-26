@@ -1,3 +1,5 @@
+import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/town_build.dart';
 import 'package:echos_del_tiempo/features/world/presentation/map/map_game.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
@@ -149,7 +151,10 @@ void main() {
   });
   testWidgets('fuente rúnica: CONTRATAR PESCADOR elige el lago en el mapa',
       (tester) async {
-    final h = await FishingMapHarness.pump(tester);
+    // Fishing profession high enough to pick (town_editor.md § 1.6).
+    final h = await FishingMapHarness.pump(tester,
+        profile: PlayerProfile(name: 'Ana', classId: 'guerrero', unlockedZone: 1,
+            life: LifeSkills(fishXp: 1000000)));
     final c = h.c;
     // ignore: invalid_use_of_visible_for_testing_member
     c.teleport(17.0 * 16, 12.4 * 16);
@@ -164,7 +169,7 @@ void main() {
     expect(find.text('¿En qué lago querés el pescador?'), findsOneWidget);
     final lake = c.town.builds.firstWhere((b) => b.kind == BuildKind.lago);
     expect(find.byKey(ValueKey('town-hire-${lake.id}')), findsOneWidget);
-    // Sin nivel de Pesca: gris con el motivo, el clic no contrata.
+    // Sin oro ni materiales: gris con el motivo, el clic no contrata.
     expect(c.hireWhy(lake), isNotNull);
     expect(find.text(c.hireWhy(lake)!), findsWidgets);
     expect(c.handleKey(LogicalKeyboardKey.escape), isTrue);

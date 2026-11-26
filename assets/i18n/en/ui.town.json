@@ -348,6 +348,8 @@
   "ui.town.fountain.edit_line": "Expand, place and move lakes and farm plots, release fish.",
   "ui.town.fountain.hire_farmer": "HIRE A FARMER",
   "ui.town.fountain.hire_farmer_line": "Pick the farm plot: they sow, water and harvest into its chest.",
+  "ui.town.fountain.need_farming": "Raise your Farming profession to level {need} (now: level {now})",
+  "ui.town.fountain.need_fishing": "Raise your Fishing profession to level {need} (now: level {now})",
   "ui.town.fountain.hire_fisher": "HIRE A FISHER",
   "ui.town.fountain.hire_fisher_line": "Pick the lake: they fish on their own and leave the catch in its chest.",
   "ui.town.fountain.board": "QUEST BOARD",
