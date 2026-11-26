@@ -119,10 +119,10 @@ void main() {
     }
     final map = MapGenerator.biome(lay);
     final d = lay.raftDocks.first;
-    // Out on the water a few tiles from the dock (cozyFishZoom framing).
+    // Out on the water a few tiles from the dock (one-step-closer fishing framing).
     final cx = (d.wx + 0.5) * 16, cy = (d.wy + 0.5) * 16;
     const w = 320.0, h = 180.0, scale = 3.0;
-    final z = CozyRules.fishZoom;
+    const z = 0.75;
     final view =
         Rect.fromCenter(center: Offset(cx, cy), width: w * z, height: h * z);
     final rec = ui.PictureRecorder();
