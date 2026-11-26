@@ -11,6 +11,7 @@ import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.da
 import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/biome_npc_panel.dart';
+import 'package:echos_del_tiempo/features/world/presentation/panels/life_icon.dart';
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/elements.dart';
@@ -30,7 +31,8 @@ import '../panel_test_harness.dart';
 
 // profession_gear_v2.md § 3–6: the forge-by-parts steps, taking a fish
 // apart at Brann's and a living weapon's detail. With `GEAR_V2_PREVIEW=1`
-// it writes docs/preview/forge_parts_steps.png, brann_fish_split.png and
+// it writes docs/preview/forge_ui_smelt.png, forge_ui_tools.png,
+// forge_ui_steps.png, brann_fish_split.png and
 // living_weapon_detail.png.
 
 final _preview = Platform.environment['GEAR_V2_PREVIEW'] != null;
@@ -77,28 +79,73 @@ void main() {
             child: ForgePanel(
                 view: v, controller: c, initialTab: ForgeHallTab.smith)));
     await tester.pump();
-    // FORJAR is grey until every step has a part.
-    await _tap(tester, 'smith-filter-1');
+    // Top tabs say what each activity is (mining_smithing.md § 3.1).
+    for (final (k, label) in [
+      ('smelt', 'FUNDIR'),
+      ('forge', 'FORJAR ARMA'),
+      ('tools', 'HERRAMIENTAS DE MINA'),
+    ]) {
+      expect(
+          find.descendant(
+              of: find.byKey(ValueKey('smith-tab-$k')),
+              matching: find.text(label)),
+          findsOneWidget);
+    }
+    await _save(tester, 'forge_ui_smelt');
+    await _tap(tester, 'smith-tab-tools');
+    await _save(tester, 'forge_ui_tools');
+    await _tap(tester, 'smith-tab-forge');
+    // Numbered stepper: 1 Tipo › 2 Base › 3 Cabeza › 4 Mango › 5 Engaste.
+    DsButton step(int i) =>
+        tester.widget<DsButton>(find.byKey(ValueKey('smith-step-$i')));
+    for (final (i, label) in [
+      (0, '1 Tipo'),
+      (1, '2 Base'),
+      (2, '3 Cabeza'),
+      (3, '4 Mango'),
+      (4, '5 Engaste (opcional)'),
+    ]) {
+      expect(step(i).label, label);
+    }
+    expect(step(0).selected, isTrue);
+    // FORJAR is grey (with its reason) until every required step is chosen.
     await _tap(tester, 'smith-cell-type-espada');
     DsButton go() =>
         tester.widget<DsButton>(find.byKey(const ValueKey('smith-parts-go')));
     expect(go().onPressed, isNull);
     expect(go().tooltip, isNotNull);
+    // Picking moves on to the next step.
     await _tap(tester, 'smith-parts-pick-type-espada');
-    for (final (i, slot, id) in [
-      (2, 'base', 'ingot_frost'),
-      (3, 'head', 'ingot_ember'),
-      (4, 'grip', 'ingot_copper'),
-      (5, 'setting', 'rare_rime'),
+    expect(step(1).selected, isTrue);
+    for (final (slot, id) in [
+      ('base', 'ingot_frost'),
+      ('head', 'ingot_ember'),
+      ('grip', 'ingot_copper'),
+      ('setting', 'rare_rime'),
     ]) {
-      await _tap(tester, 'smith-filter-$i');
+      // No empty cell: every cell has its icon and a name tooltip.
+      final cells = find.byWidgetPredicate((w) =>
+          w is DsItemCell &&
+          (w.key! as ValueKey<String>).value.startsWith('smith-cell-'));
+      expect(cells, findsWidgets);
+      for (final e in cells.evaluate()) {
+        expect(
+            find.ancestor(
+                of: find.byWidget(e.widget), matching: find.byType(DsTooltip)),
+            findsWidgets);
+        expect(
+            find.descendant(
+                of: find.byWidget(e.widget), matching: find.byType(LifeIcon)),
+            findsOneWidget);
+      }
       await _tap(tester, 'smith-cell-$slot-$id');
       await _tap(tester, 'smith-parts-pick-$slot-$id');
     }
     expect(go().onPressed, isNotNull);
-    expect(find.textContaining('Afinidad: Hielo'), findsWidgets);
+    expect(find.textContaining('· Hielo'), findsWidgets);
+    expect(find.byKey(const ValueKey('smith-preview')), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await _save(tester, 'forge_parts_steps');
+    await _save(tester, 'forge_ui_steps');
     final before = c.view!.me!.profile.items.length;
     await _tap(tester, 'smith-parts-go');
     final me = c.view!.me!.profile;

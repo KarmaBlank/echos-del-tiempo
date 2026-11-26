@@ -505,11 +505,11 @@
     "status": "draft"
   },
   "ui.inventory.smith.search": {
-    "text": "搜索底材",
+    "text": "搜索材料",
     "status": "draft"
   },
   "ui.inventory.smith.empty": {
-    "text": "该锭无可锻造之物。",
+    "text": "这里暂时什么都没有。",
     "status": "draft"
   },
   "ui.inventory.smith.tab.smelt": {
@@ -517,7 +517,7 @@
     "status": "draft"
   },
   "ui.inventory.smith.tab.forge": {
-    "text": "锻造",
+    "text": "锻造武器",
     "status": "draft"
   },
   "ui.inventory.smith.tab.brann": {
@@ -708,10 +708,6 @@
     "text": "一段时间内，矿脉产出更多更好的矿石。",
     "status": "draft"
   },
-  "ui.inventory.smith.tab.mine": {
-    "text": "采矿",
-    "status": "draft"
-  },
   "ui.inventory.smith.wait_brann": {
     "text": "布兰立即交付，但要收取他的那份",
     "status": "draft"
@@ -742,11 +738,6 @@
   "ui.inventory.workshop.ing.shard_src": "远征战利品",
   "ui.inventory.workshop.ing.gold": "金币",
   "ui.inventory.workshop.ing.gold_src": "在农用品店出售或远征中获得",
-  "ui.inventory.smith.tab.type": "类型",
-  "ui.inventory.smith.tab.base": "基底",
-  "ui.inventory.smith.tab.head": "头部",
-  "ui.inventory.smith.tab.grip": "握柄",
-  "ui.inventory.smith.tab.setting": "镶嵌",
   "ui.inventory.smith.parts.pick": "选择",
   "ui.inventory.smith.parts.drop": "移除",
   "ui.inventory.smith.parts.why.badPart": "请选择类型、基底、头部和握柄",
@@ -758,10 +749,25 @@
   "ui.inventory.smith.parts.line.head": "头部：{v}",
   "ui.inventory.smith.parts.line.grip": "握柄：{v}",
   "ui.inventory.smith.parts.line.setting": "镶嵌：{v}",
-  "ui.inventory.smith.parts.line.affinity": "亲和：{v}",
-  "ui.inventory.smith.parts.line.quality": "品质：{q}%",
   "ui.inventory.smith.parts.line.rarity": "稀有度：{r}（上限 {cap}）",
   "ui.inventory.smith.parts.line.masterwork": "杰作：+1 词缀",
-  "ui.inventory.smith.parts.affinity_of": "亲和：{v}",
-  "ui.inventory.smith.parts.colour_of": "决定该部件的颜色并提升品质。"
+  "ui.inventory.smith.tab.tools": "采矿工具",
+  "ui.inventory.smith.step.type": "类型",
+  "ui.inventory.smith.step.base": "基底",
+  "ui.inventory.smith.step.head": "头部",
+  "ui.inventory.smith.step.grip": "握柄",
+  "ui.inventory.smith.step.setting": "镶嵌（可选）",
+  "ui.inventory.smith.hint.smelt": "把矿石熔炼成锭。锭是锻造武器和工具的材料。",
+  "ui.inventory.smith.hint.type": "第1步：选择武器类型，决定其形状。",
+  "ui.inventory.smith.hint.base": "第2步：选择基底的锭，决定物品等级和亲和。",
+  "ui.inventory.smith.hint.head": "第3步：选择头部（锭或鱼鳞），决定颜色并提升品质。",
+  "ui.inventory.smith.hint.grip": "第4步：选择握柄（锭或鱼骨），决定颜色并提升品质。",
+  "ui.inventory.smith.hint.setting": "第5步（可选）：生物群系稀有材料或鱼精华会改变亲和并提升品质。然后锻造。",
+  "ui.inventory.smith.hint.tools": "用锭和金币制作镐和采矿补给。",
+  "ui.inventory.smith.parts.type_desc": "武器的形状。",
+  "ui.inventory.smith.parts.preview": "品质 {q}% · {r} · {v}",
+  "ui.inventory.smith.parts.preview_pending": "选择类型、基底、头部和握柄以查看品质。",
+  "ui.inventory.smith.parts.effect.base": "{tier}级材料：提升物品等级。亲和：{v}。",
+  "ui.inventory.smith.parts.effect.setting": "将亲和改为{v}并提升品质。",
+  "ui.inventory.smith.parts.effect.colour": "{tier}级材料：赋予部件颜色并提升品质。"
 }
