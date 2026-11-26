@@ -1974,6 +1974,7 @@ const _regionsLabels = {
   'searchMushroomChance': 'Buscar en árboles: chance de hongo',
   'searchNestChance': 'Buscar en árboles: chance de nido',
   'searchRecipeChance': 'Buscar en árboles: chance de receta de abono',
+  'treeSearchFraction': 'Buscar en árboles: fracción de árboles buscables por día',
   'searchXp': 'Buscar en árboles: XP de Cultivo',
   'waystoneReach': 'Piedra de paso: distancia (px)',
   'mapRevealRadius': 'Mapa del exterior: radio que revela cada jugador (tiles)',

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/cozy_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/tuning_catalog.dart';
+import '../models/game_map.dart';
 import '../models/life_skills.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
@@ -187,6 +188,35 @@ abstract final class CozyRules {
   static String searchKey(String player, String biome, int x, int y, int day) =>
       '${WildLootRules.prefix}$player:$biome:v${BiomeLayout.version}:'
       't$x.$y:$day';
+
+  /// Stable 0..1 roll of tree ([x], [y]) of [biome] on [day] (FNV-1a:
+  /// the same on every peer, no wire state).
+  static double searchRollFor(String biome, int day, int x, int y) {
+    var h = 0x811c9dc5;
+    for (final c in '$biome:$day:$x.$y'.codeUnits) {
+      h = ((h ^ c) * 0x01000193) & 0xffffffff;
+    }
+    h ^= h >> 15;
+    h = (h * 0x2c1b3c6d) & 0xffffffff;
+    h ^= h >> 12;
+    return (h & 0xffffff) / 0x1000000;
+  }
+
+  /// Tree ([x], [y]) of [map] can be searched today (§ 3): a `T` tile
+  /// with a walkable side, picked by [searchRollFor] < `treeSearchFraction`.
+  static bool searchable(GameMap map, String biome, int day, int x, int y) {
+    if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
+    if (map.tileAt(x, y) != Tile.tree) return false;
+    if (searchRollFor(biome, day, x, y) >= t.d('treeSearchFraction')) {
+      return false;
+    }
+    for (final (dx, dy) in const [(0, 1), (0, -1), (1, 0), (-1, 0)]) {
+      final nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
+      if (Tile.isWalkable(map.tileAt(nx, ny))) return true;
+    }
+    return false;
+  }
 
   static bool searched(
           TownState town, String player, String biome, int x, int y) =>

@@ -982,6 +982,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     'searchNestChance': 0.12,
     'searchRecipeChance': 0.05,
     'searchXp': 3,
+    // Share of exterior trees that can be searched each day (seeded by
+    // biome + day; the rest show no prompt).
+    'treeSearchFraction': 0.33,
     // Waystones (§ 4): reach (px) to activate / use one.
     'waystoneReach': 26,
     // Overworld map discovery (biome_exploration.md § 11.4): tiles each

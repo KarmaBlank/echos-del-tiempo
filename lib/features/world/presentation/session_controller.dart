@@ -2241,7 +2241,9 @@ class SessionController extends StateNotifier<SessionView?> {
     final ty = (local.y / 16).floor() + (horiz ? 0 : fy.sign.toInt());
     final map = engine.mapFor(s);
     if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return null;
-    return map.tileAt(tx, ty) == Tile.tree ? (tx, ty) : null;
+    return CozyRules.searchable(map, lay.id, town.sky.day, tx, ty)
+        ? (tx, ty)
+        : null;
   }
 
   /// I already searched the tree [t] today.
