@@ -107,8 +107,7 @@ recién creada (como `EcoRules.applyBattle`). Dura pocos días (def. 3).
 - Portal visible en el exterior del bioma (§ 3.0). ENTRAR manda
   `ProposeRiftAction(uid)` (`rift`): el anfitrión valida lobby del
   bioma, frente al portal y que el jugador no la haya ganado; abre la
-  votación de misión `rift` (con amigos en el mundo, convocatoria
-  `GatherKind.rift`, igual que las misiones; `_joinable` suma a quien
+  votación de misión `rift` (v0.49.20: entra directo, igual que las misiones; `_joinable` suma a quien
   entre a una grieta en curso).
 - Pelea directa con el jefe (como el Jefe del Abismo): arena de un piso
   del tipo de la zona, nivel `maxLevel` de la zona + `levelBonus`,

@@ -16,7 +16,6 @@ import '../../../core/settings/notices.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
-import '../../../game_engine/models/session_action.dart' show GatherOp;
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/helper_rules.dart';
@@ -1100,11 +1099,6 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return MissionBoardPanel(
           missions: catalog.missions,
           voteOpen: s.vote != null,
-          // Someone else's gathering not joined yet (§ 2.1).
-          gather: (s.gather?.has(view.localId) ?? true) ? null : s.gather,
-          onJoin: () {
-            if (controller.gather(GatherOp.join)) controller.closePanel();
-          },
           bossName: (m) => missionBossName(ref.strings, catalog, m),
           playerLevel: me.profile.level,
           zones: controller.zones,

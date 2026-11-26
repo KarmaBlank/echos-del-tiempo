@@ -4294,22 +4294,6 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool vote(bool yes) => _apply(VoteMissionAction(yes));
 
-  /// Open gathering (free_movement.md § 2.1): UNIRSE / SALIR / IR /
-  /// CANCELAR.
-  bool gather(GatherOp op) => _apply(GatherAction(op));
-
-  /// The gathering IGNORAR hid on this device ([Gathering.id]); local only.
-  String? ignoredGather;
-
-  /// IGNORAR someone else's gathering: hides its card here (it can still
-  /// be joined from the board or, once they enter, from their card).
-  void ignoreGather() {
-    final g = _s?.gather;
-    if (g == null || g.byId == localId) return;
-    ignoredGather = g.id;
-    _emit();
-  }
-
   /// Why UNIRSE on [a]'s card is off, or `null` when it works
   /// (free_movement.md § 2.5).
   String? joinPlayerBlock(AwayPlayer a) {

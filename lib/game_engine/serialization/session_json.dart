@@ -111,41 +111,7 @@ class SessionJson {
             for (final a in s.away)
               [a.id, a.name, a.where, a.placeId, if (a.busy) 1]
           ],
-        // v0.41.4 (protocol 64): open gathering (free_movement.md § 2.1).
-        if (s.gather case final g?)
-          'gat': {
-            'by': g.byId,
-            'bn': g.byName,
-            'k': g.kind.name,
-            't': g.target,
-            'l': g.label,
-            'j': [
-              for (final a in g.joined) [a.id, a.name]
-            ],
-            // protocol 82: seconds until it enters on its own.
-            if (g.leftSeconds > 0) 'lf': g.leftSeconds,
-          },
       };
-
-  static Gathering? _gatherFromJson(Object? raw) {
-    if (raw is! Map) return null;
-    final kind = GatherKind.values.where((k) => k.name == raw['k']).firstOrNull;
-    if (kind == null) return null;
-    return Gathering(
-      byId: '${raw['by']}',
-      byName: '${raw['bn']}',
-      kind: kind,
-      target: '${raw['t']}',
-      label: '${raw['l']}',
-      joined: [
-        if (raw['j'] case final List js)
-          for (final e in js)
-            if (e is List && e.length >= 2)
-              AwayPlayer('${e[0]}', '${e[1]}', ''),
-      ],
-      left: (raw['lf'] as num?)?.toDouble() ?? 0,
-    );
-  }
 
   GameSession fromJson(Json j) {
     final players = <String, SessionPlayer>{};
@@ -207,7 +173,6 @@ class SessionJson {
                   AwayPlayer('${raw[0]}', '${raw[1]}', '${raw[2]}',
                       raw.length > 3 ? '${raw[3]}' : '', raw.length > 4),
             ],
-      gather: _gatherFromJson(j['gat']),
     );
   }
 

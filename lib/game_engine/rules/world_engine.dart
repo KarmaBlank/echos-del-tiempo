@@ -1,5 +1,4 @@
 import '../data/biomes_catalog.dart';
-import '../data/tuning_catalog.dart';
 import '../models/game_mode.dart';
 import '../models/game_session.dart';
 import '../models/player_profile.dart';
@@ -41,10 +40,6 @@ class WorldEngine {
   WorldEngine(this.engine);
 
   final SessionEngine engine;
-
-  /// Seconds a gathering waits before entering on its own (tunable).
-  static double get gatherSeconds =>
-      tuning(TuningId.mission).d('gatherSeconds').clamp(3, 600).toDouble();
 
   /// La Travesía es una sola sala: sin instancias.
   bool get split =>
@@ -103,18 +98,13 @@ class WorldEngine {
             ? op.finish()
             : null;
       }
-      if (action is GatherAction) {
-        return op.gather(key, p, action.op) ? op.finish() : null;
-      }
       if (_starts(action) &&
           !SessionWorld.isDungeon(key) &&
           s.mode == SessionMode.lobby &&
           s.run == null &&
           !p.isCompanion) {
-        // With friends around: open a gathering and wait for IR (§ 2.1).
-        if (op.gathers(p, action)) {
-          return op.convene(key, p, action) ? op.finish() : null;
-        }
+        // Straight in (v0.49.20, no gathering): friends join the running
+        // mission with UNIRSE on the player's card (free_movement.md § 2.1).
         return op.enter(key, p, action) ? op.finish() : null;
       }
     }
@@ -149,7 +139,6 @@ class WorldEngine {
       if (s == null) continue;
       op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split));
     }
-    if (split) op.tickGather(dt);
     return op.finish();
   }
 
@@ -513,177 +502,6 @@ class _W {
     return r.mode != SessionMode.lobby && r.mode != SessionMode.prep;
   }
 
-  // ---------------- gatherings (free_movement.md § 2.1) ----------------
-
-  static (GatherKind, String)? _gatherKey(SessionAction a) => switch (a) {
-        ProposeMissionAction(:final missionId) => (
-            GatherKind.mission,
-            missionId
-          ),
-        ProposeTrialAction(:final trial) => (GatherKind.trial, '$trial'),
-        ProposeAbyssAction(:final boss) => (GatherKind.abyss, '$boss'),
-        ProposeRiftAction(:final uid) => (GatherKind.rift, uid),
-        ProposeTourneyAction(:final id) => (GatherKind.tourney, id),
-        ProposeEcoAction(:final uid) => (GatherKind.eco, uid),
-        _ => null,
-      };
-
-  static SessionAction? _actionOf(Gathering g) => switch (g.kind) {
-        GatherKind.mission => ProposeMissionAction(g.target),
-        GatherKind.trial => switch (int.tryParse(g.target)) {
-            final n? => ProposeTrialAction(n),
-            null => null,
-          },
-        GatherKind.abyss => switch (int.tryParse(g.target)) {
-            final n? => ProposeAbyssAction(n),
-            null => null,
-          },
-        GatherKind.rift => ProposeRiftAction(g.target),
-        GatherKind.tourney => ProposeTourneyAction(g.target),
-        GatherKind.eco => ProposeEcoAction(g.target),
-      };
-
-  Iterable<String> get _humanIds =>
-      w.allPlayers.where((q) => !q.isCompanion).map((q) => q.id);
-
-  void _tellAll(String text) =>
-      _emit(_humanIds.toList(), [SystemMessageEvent(text)]);
-
-  /// Whether [a] by [p] opens (or joins) a gathering instead of entering:
-  /// only with other humans in the world, nobody already playing it, and
-  /// no other open gathering for something else (then it goes straight
-  /// in, free movement unchanged).
-  bool gathers(SessionPlayer p, SessionAction a) {
-    final k = _gatherKey(a);
-    if (k == null || _humanIds.length < 2 || _joinable(a) != null) {
-      return false;
-    }
-    final g = w.gather;
-    if (g == null || g.byId == p.id) return true;
-    return g.kind == k.$1 && g.target == k.$2;
-  }
-
-  /// PROPONER with friends around: opens the gathering (or joins the
-  /// open one for the same thing).
-  bool convene(String key, SessionPlayer p, SessionAction a) {
-    final (kind, target) = _gatherKey(a)!;
-    final g = w.gather;
-    if (g != null && g.byId != p.id) return gather(key, p, GatherOp.join);
-    // Validates as if proposing here (nothing is kept).
-    final probe = engine.apply(w.rooms[key]!, p.id, a);
-    if (probe == null) return false;
-    final st = probe.state;
-    final id =
-        st.vote?.missionId ?? st.prep?.missionId ?? st.mission?.missionId;
-    final label =
-        (id == null ? null : engine.missionOf(st, id)?.name) ?? target;
-    w.gather = Gathering(
-        byId: p.id,
-        byName: p.name,
-        kind: kind,
-        target: target,
-        label: label,
-        left: WorldEngine.gatherSeconds);
-    _tellAll('${p.name} convoca a $label — UNIRSE para ir juntos.');
-    return true;
-  }
-
-  /// Counts the open gathering down; at 0 the proposer (and whoever
-  /// joined) enters as with ENTRAR YA. If that fails (the proposer walked
-  /// off the portal, left the lobby...) the gathering closes.
-  void tickGather(double dt) {
-    final g = w.gather;
-    if (g == null || g.left <= 0) return;
-    final left = g.left - dt;
-    if (left > 0) {
-      w.gather = g.withLeft(left);
-      return;
-    }
-    final key = w.roomOf(g.byId);
-    final p = key == null ? null : w.rooms[key]!.players[g.byId];
-    if (key == null || p == null || !_go(key, p, g)) {
-      w.gather = null;
-      _tellAll('La convocatoria de ${g.byName} se cerró.');
-    }
-  }
-
-  /// UNIRSE / SALIR / IR / CANCELAR on the open gathering.
-  bool gather(String key, SessionPlayer p, GatherOp op) {
-    final g = w.gather;
-    if (g == null || p.isCompanion) return false;
-    switch (op) {
-      case GatherOp.join:
-        if (g.has(p.id) || SessionWorld.isDungeon(key)) return false;
-        w.gather = g.withJoined([...g.joined, AwayPlayer(p.id, p.name, '')]);
-        _tellAll('${p.name} se sumó a la convocatoria de ${g.byName}.');
-      case GatherOp.leave:
-        if (p.id == g.byId || !g.has(p.id)) return false;
-        w.gather = g.withJoined([...g.joined.where((j) => j.id != p.id)]);
-      case GatherOp.cancel:
-        if (p.id != g.byId) return false;
-        w.gather = null;
-        _tellAll('${p.name} canceló la convocatoria.');
-      case GatherOp.go:
-        if (p.id != g.byId) return false;
-        return _go(key, p, g);
-    }
-    return true;
-  }
-
-  /// IR: the proposer enters and everyone joined (in the town or an
-  /// exterior) goes into the same instance at once.
-  bool _go(String key, SessionPlayer p, Gathering g) {
-    final s = w.rooms[key]!;
-    final a = _actionOf(g);
-    if (a == null ||
-        SessionWorld.isDungeon(key) ||
-        s.mode != SessionMode.lobby ||
-        s.run != null ||
-        !enter(key, p, a)) {
-      return false;
-    }
-    w.gather = null;
-    final to = w.roomOf(p.id);
-    if (to == null || !SessionWorld.isDungeon(to)) return true;
-    for (final j in g.joined) {
-      final from = w.roomOf(j.id);
-      if (from == null || SessionWorld.isDungeon(from)) continue;
-      final r = w.rooms[from]!;
-      final q = r.players[j.id];
-      if (q == null || r.mode != SessionMode.lobby || r.run != null) continue;
-      if (w.rooms[to]!.players.length >= engine.maxPlayers) break;
-      _move(q, from, to,
-          leave: '${q.name} entró a ${we.placeLabel(w, to)}.',
-          arrive: '${q.name} se sumó.');
-    }
-    return true;
-  }
-
-  /// Drops a gathering whose proposer left or went into a dungeon, and
-  /// copies the current one to every instance when it changed.
-  void _syncGather() {
-    var g = w.gather;
-    if (g != null) {
-      final at = w.roomOf(g.byId);
-      if (at == null || SessionWorld.isDungeon(at)) {
-        g = null;
-      } else {
-        final keep = [
-          for (final j in g.joined)
-            if (w.roomOf(j.id) != null) j
-        ];
-        if (keep.length != g.joined.length) g = g.withJoined(keep);
-      }
-      w.gather = g;
-    }
-    final sig = g?.signature ?? '';
-    if (sig == w.gatherSig) return;
-    w.gatherSig = sig;
-    for (final k in [...w.rooms.keys]) {
-      w.rooms[k] = w.rooms[k]!.copy()..gather = g;
-    }
-  }
-
   /// La instancia de mazmorra a la que se suma quien hace [a], o `null`.
   String? _joinable(SessionAction a) {
     for (final e in w.rooms.entries) {
@@ -744,7 +562,6 @@ class _W {
       _dropEmpty(k);
     }
     _away();
-    _syncGather();
     return WorldStep(out);
   }
 

@@ -189,8 +189,8 @@ jugador).
 
 - En curso, hablar con el habitante muestra INSCRIBIRSE (`signup`).
   Manda `ProposeTourneyAction(id)` (`tourney`): abre la votación de
-  misión `tourney` igual que una grieta (convocatoria
-  `GatherKind.tourney`; en coop entran todos los que se suman).
+  misión `tourney` igual que una grieta (v0.49.20: entra
+  directo; en coop los demás se suman con UNIRSE).
 - Arena: un piso del tipo de la zona más alta vencida del mundo (zona 1
   si ninguna), nivel `maxLevel` de esa zona + `levelBonus`.
 - Llave de 3 peleas: tres luchadores (`rounds`) en el campo; solo el
