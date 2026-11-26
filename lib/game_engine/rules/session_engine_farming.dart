@@ -115,8 +115,11 @@ extension _FarmingOp on _Op {
       // falta (`TownRules.nextRoundIn`).
       final k = (s.time / TownRules.helperPeriod(humans.map((h) => h.profile)))
           .floor();
-      if (_fa.lastRound != null && k != _fa.lastRound) _helperRound();
+      // The round is marked done before it runs: a failing round must
+      // never be retried on every tick (v0.49.32, farming.md § 8.2).
+      final due = _fa.lastRound != null && k != _fa.lastRound;
       _fa.lastRound = k;
+      if (due) _helperRound();
     }
   }
 
@@ -246,7 +249,7 @@ extension _FarmingOp on _Op {
             b,
             i,
             (pl) =>
-                FarmingRules.harvest(_rand, owner.profile, pl, helper: true)!,
+                FarmingRules.harvest(_rand, owner.profile, pl, helper: true),
             rand: _rand,
             rareSeed: () => FarmingRules.rareSeed(_rand),
             season: WeatherRules.season(s.town.sky.day));
@@ -398,9 +401,13 @@ extension _FarmingOp on _Op {
         final pl = plots[key];
         if (pl == null || !FarmingRules.ripe(pl)) return false;
         if (GearRules.isLiving(pl.seed)) {
+          // The weapon is rolled first: a plot with no weapon to give is
+          // kept as it is, never emptied for nothing.
+          final item = GearRules.harvest(rules.loot, _rand, p.profile, pl);
+          if (item == null) return false;
           _fa.lastWork[p.id] = s.time;
           s.town = s.town.copyWith(plots: {...plots, key: const FarmPlot()});
-          _grantLiving(p, pl, a.tx, a.ty);
+          _grantLiving(p, item, a.tx, a.ty);
           return true;
         }
         // Winter crops: only harvested in winter (farming.md § 15).
@@ -510,9 +517,7 @@ extension _FarmingOp on _Op {
 
   /// A ripe living weapon (profession_gear.md § 3.4): the weapon to the
   /// harvester (inventory, floor or stash), Cultivo XP and an event.
-  void _grantLiving(SessionPlayer p, FarmPlot pl, int tx, int ty) {
-    final item = GearRules.harvest(rules.loot, _rand, p.profile, pl);
-    if (item == null) return;
+  void _grantLiving(SessionPlayer p, ItemInstance item, int tx, int ty) {
     final lvl0 = FarmingRules.level(p.profile);
     final f = p.profile.life.farm;
     _profileChange(

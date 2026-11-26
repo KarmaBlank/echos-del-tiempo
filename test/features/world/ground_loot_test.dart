@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/loot_filter.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
+import 'package:echos_del_tiempo/game_engine/rules/goods_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_filter_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -337,6 +338,36 @@ void main() {
       expect(leg.legendary, isTrue);
       expect(leg.title, '¡LEGENDARIO!');
       expect(leg.durationS, LootFeed.legendaryToastS);
+    });
+
+    test('auto-pickup goods only go to the log, never to a filter toast '
+        '(loot.md § 4d)', () {
+      final f = LootFeed(
+        localId: 'me',
+        playerName: (id) => names[id] ?? id,
+        itemName: (d) => d.goods ?? d.item?.name ?? '',
+        verdictFor: (_, __) => null,
+        clock: () => now,
+      );
+      final crop = GoodsRules.crop('trigo@0', 2);
+      final ore = GoodsRules.ore('cobre', 3);
+      // Straight into the bag (companion, raft, no ground loot).
+      f.onEvent(LootDropEvent('me', ore, LootSource.chest));
+      // Spilled crop pulled by the magnet.
+      f.onEvent(LootDropEvent('me', crop, LootSource.chest, groundId: 1));
+      f.onEvent(LootPickedEvent('me', 1, crop));
+      expect(f.lines.map((l) => l.text),
+          ['Ana encontró: ore:cobre', 'Ana encontró: crop:trigo@0']);
+      expect(f.toasts, isEmpty);
+      // Ore waiting on the floor is picked up later: keeps its toast.
+      f.onEvent(LootDropEvent('me', ore, LootSource.chest, groundId: 2));
+      f.onEvent(LootPickedEvent('me', 2, ore));
+      expect(f.toasts.single.name, 'ore:cobre');
+      // A weapon straight into the bag keeps its toast too.
+      f.onEvent(LootDropEvent('me', _item('r', Rarity.raro, name: 'Hoja'),
+          LootSource.mission));
+      expect(f.toasts.map((t) => t.name), ['ore:cobre', 'Hoja']);
+      f.dispose();
     });
 
     testWidgets('el aviso usa fondo, borde y color del filtro', (tester) async {

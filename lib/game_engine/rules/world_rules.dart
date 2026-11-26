@@ -32,6 +32,31 @@ abstract final class WorldRules {
         (c == Tile.gate && !gateOpen);
   }
 
+  /// Landing safety net (player_shop.md § 6.4): [p] itself if the
+  /// character box fits there, else the centre of the nearest tile
+  /// (ring by ring) where it fits. Used when entering or leaving a
+  /// building so nobody lands stuck inside a tree or a wall.
+  static WorldPoint safeLanding(GameMap map, WorldPoint p) {
+    if (!collides(map, p.x, p.y)) return p;
+    final tx = (p.x / tileSize).floor(), ty = (p.y / tileSize).floor();
+    final r = math.max(map.width, map.height);
+    for (var d = 1; d <= r; d++) {
+      WorldPoint? best;
+      var bd = double.infinity;
+      for (var y = ty - d; y <= ty + d; y++) {
+        for (var x = tx - d; x <= tx + d; x++) {
+          if ((x - tx).abs() != d && (y - ty).abs() != d) continue;
+          final c = WorldPoint(x * tileSize + 8.0, y * tileSize + 8.0);
+          if (collides(map, c.x, c.y)) continue;
+          final dd = (c.x - p.x) * (c.x - p.x) + (c.y - p.y) * (c.y - p.y);
+          if (dd < bd) (bd, best) = (dd, c);
+        }
+      }
+      if (best != null) return best;
+    }
+    return p;
+  }
+
   /// El tile ([tx], [ty]) es vacío.
   static bool isVoid(GameMap map, int tx, int ty) =>
       map.contains(tx, ty) && map.tileAt(tx, ty) == Tile.voidTile;

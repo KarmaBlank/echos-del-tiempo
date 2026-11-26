@@ -52,6 +52,15 @@ abstract final class GoodsRules {
     return k != gold && k != 'ore';
   }
 
+  /// Goods that reach the bag without the player deciding to pick them
+  /// up: straight in (no ground loot: companion, raft, an engine without
+  /// `groundLoot`) or, once on the floor ([onGround]), pulled by the
+  /// [magnet]. They are announced only in the loot log above the chat,
+  /// never with a loot-filter toast (loot.md § 4d). Gold and ore that
+  /// wait on the floor, and every weapon, eco or stack, keep their toast.
+  static bool autoPickup(LootDrop d, {required bool onGround}) =>
+      d.isGoods && (!onGround || magnet(d));
+
   /// [p] with [d] added; `null` if [d] is not a valid goods drop.
   static PlayerProfile? give(PlayerProfile p, LootDrop d) {
     final g = d.goods;

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/farming_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
@@ -210,7 +211,9 @@ abstract final class HelperRules {
     ];
     final seeds = b.seedTotal > 0;
     final empty = plots.any((p) => p == null || !p.planted);
-    final anyPlanted = plots.any((p) => p != null && p.planted);
+    // Living weapon plots are the players' to pick (farming.md § 8.2).
+    final anyPlanted = plots.any((p) =>
+        p != null && p.planted && kCrops.containsKey(p.seed));
     // Llega a madurar sola: el granjero riega solo en cada vuelta
     // (farming.md § 8.2), así que todo lo plantado madura.
     final harvest = on(HelperTask.cosechar) && !full && anyPlanted;
