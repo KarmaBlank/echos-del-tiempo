@@ -405,17 +405,17 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         ),
         Text(p.name,
             key: const ValueKey('town-build-detail-name'),
-            style: DsText.title(_catColor(p.category))),
+            style: DsText.title()),
         Text(s.t('ui.town.edit.size', {'w': p.w, 'h': p.h}),
             style: DsText.detail()),
         gap,
-        Text(p.detail, style: DsText.body()),
+        DsGoldText(p.detail, style: DsText.body()),
         gap,
         Text(
             p.cost == null
                 ? s.t('ui.town.edit.free')
                 : s.t('ui.town.edit.cost', {'cost': p.cost}),
-            style: DsText.detail(p.enabled ? null : DsColors.danger)),
+            style: p.enabled ? DsText.detail() : DsText.key()),
         if (p.costItems.isNotEmpty) ...[
           gap,
           itemCostGrid(context, widget.controller.view?.me?.profile,
@@ -425,7 +425,7 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         if (p.why case final why?)
           Text(why,
               key: const ValueKey('town-build-why'),
-              style: DsText.detail(DsColors.danger)),
+              style: DsText.key()),
         if (placing)
           Text(err ?? s.t('ui.town.edit.placing_info'),
               key: const ValueKey('town-edit-ghost'),

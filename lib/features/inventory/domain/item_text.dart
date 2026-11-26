@@ -30,7 +30,6 @@ import 'eco_text.dart';
 
 const _green = '#7bed9f';
 const _red = '#ff6b81';
-const _sky = '#9fb4ff';
 const _orange = '#ff9f43';
 const _dim = '#7d8bc4';
 
@@ -52,6 +51,9 @@ String rarityHex(Rarity r) {
 /// `<span style="color:#hex">`.
 String _c(String hex, String text) => '<span style="color:$hex">$text</span>';
 
+/// Subtitle role (section labels; design_system.md § 3.4).
+String _sub(String text) => '<sub>$text</sub>';
+
 String _esc(String s) =>
     s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
@@ -69,8 +71,17 @@ String requirementsLineMarkup(WeaponDef w, int level, PlayerAttributes a) {
       _c(a[e.key] >= e.value ? _green : _red,
           '${attributeShort(e.key)} ${e.value}'),
   ];
-  return 'Requiere: ${parts.join(' ')}';
+  // An unmet requirement is KEY INFO (design_system.md § 3.4).
+  final unmet = level < w.level ||
+      w.requirements.entries.any((e) => a[e.key] < e.value);
+  return '${unmet ? '<key>Requiere:</key>' : '<sub>Requiere:</sub>'} '
+      '${parts.join(' ')}';
 }
+
+/// Name of an item in the Title role (tooltip header; the rarity
+/// colour goes on the rarity word of the next line).
+String itemTitleMarkup(ProgressionRules rules, ItemInstance it) =>
+    '<title>${_esc(localItemName(rules.items, it))}</title>';
 
 /// Nombre de un objeto en el color de su rareza (negrita).
 String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
@@ -104,10 +115,10 @@ String affixSidesHelp([Rarity? r]) {
       ? 'Cada arma tiene lugar para la mitad de sus mods de cada lado.'
       : 'Un arma ${r.label} lleva hasta ${r.maxMods} mods: hasta '
           '${r.affixSideCap} prefijos y hasta ${r.affixSideCap} sufijos.';
-  return '${_c(_sky, 'Prefijos y sufijos')}<br>'
-      '${_c(_sky, 'PREFIJO')}: mod de ataque (daño, magia, crítico, '
+  return '${_sub('Prefijos y sufijos')}<br>'
+      '${_sub('PREFIJO')}: mod de ataque (daño, magia, crítico, '
       'velocidad, estados).<br>'
-      '${_c(_sky, 'SUFIJO')}: mod de atributos o defensa (FUE, VIT, HP, '
+      '${_sub('SUFIJO')}: mod de atributos o defensa (FUE, VIT, HP, '
       'MP, defensa, robo de vida...).<br>'
       '$cupo<br>'
       'Al agregar o traer un mod tiene que quedar lugar de su lado: si los '
@@ -131,7 +142,7 @@ List<String> affixGroupsMarkup(ProgressionRules rules, ItemInstance it,
         if (items.affixOf(a)?.slot == side) a
     ];
     if (group.isEmpty && (it.rarity.maxMods == 0 || cap == 0)) continue;
-    out.add('${_c(_sky, '${affixSideLabel(side)}S')} '
+    out.add('${_sub('${affixSideLabel(side)}S')} '
         '${_c(_dim, '(${affixSideKind(side)}) ${group.length}/$cap')}');
     for (final a in group) {
       out.add(mod(a));
@@ -278,13 +289,15 @@ String itemTooltipMarkup(
 }) {
   final items = rules.items;
   final w = items.baseOf(it);
-  final l = <String>[itemNameMarkup(rules, it)];
+  // Roles (design_system.md § 3.4): name = Title, the rarity word in
+  // its rarity colour (the point of the line), the rest Subtitle.
+  final l = <String>[itemTitleMarkup(rules, it)];
   final base = w?.text ?? it.baseId;
   final generated = it.rarity.index >= Rarity.raro.index;
-  l.add('<span class="k">${it.rarity.text} · ${w?.type ?? '?'} · '
-      'nivel de objeto ${it.itemLevel}</span>'
+  l.add('${_c(rarityHex(it.rarity), it.rarity.text)}'
+      '<sub> · ${w?.type ?? '?'} · nivel de objeto ${it.itemLevel}</sub>'
       '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
-      '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}');
+      '${equipped ? ' <title>EQUIPADA</title>' : ''}');
   // Travesía: las armas no piden nivel ni atributos (roguelike.md § 12.2).
   if (w != null && !rules.ignoreRequirements) {
     l.add(requirementsLineMarkup(w, level, attributes));
@@ -352,11 +365,11 @@ String itemTooltipMarkup(
   final base = w?.text ?? it.baseId;
   final generated = it.rarity.index >= Rarity.raro.index;
   final head = <String>[
-    itemNameMarkup(rules, it),
-    '<span class="k">${it.rarity.text} · ${w?.type ?? '?'} · '
-        'nivel de objeto ${it.itemLevel}</span>'
+    itemTitleMarkup(rules, it),
+    '${_c(rarityHex(it.rarity), it.rarity.text)}'
+        '<sub> · ${w?.type ?? '?'} · nivel de objeto ${it.itemLevel}</sub>'
         '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
-        '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
+        '${equipped ? ' <title>EQUIPADA</title>' : ''}',
     if (w != null && !rules.ignoreRequirements)
       requirementsLineMarkup(w, level, attributes),
     if (stats != null)
@@ -388,7 +401,7 @@ String itemTooltipMarkup(
     '${skills.length} ${skills.length == 1 ? 'habilidad' : 'habilidades'}',
     if (w != null) weightClassOf(w).label,
   ];
-  head.add(_c(_sky, counts.join(' · ')));
+  head.add(_sub(counts.join(' · ')));
   return (
     summary: head.join('<br>'),
     sections: [
@@ -433,10 +446,10 @@ String weaponRoleLine(WeaponDef w, ItemInstance it) {
   final w = items.baseOf(it);
   String short(String t) => _esc(plainShort(t, sentence: false));
   final l = <String>[
-    itemNameMarkup(rules, it),
-    '<span class="k">${it.rarity.text}</span>'
-        '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
-    if (w != null) _c(_sky, _esc(weaponRoleLine(w, it))),
+    itemTitleMarkup(rules, it),
+    '${_c(rarityHex(it.rarity), it.rarity.text)}'
+        '${equipped ? ' <title>EQUIPADA</title>' : ''}',
+    if (w != null) '<sub>${_esc(weaponRoleLine(w, it))}</sub>',
     if (stats != null)
       'ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
     else if (w != null)
@@ -530,7 +543,7 @@ String stackTooltipMarkup(StackKind k, int count) {
     _ => m!.description,
   };
   return '<b style="color:#78e6dc">${_esc(k.label)}</b> x$count<br>'
-      '${_c(_sky, m == null ? 'Consumible' : 'Material de fusión')} · '
+      '${_sub(m == null ? 'Consumible' : 'Material de fusión')} · '
       'máx. ${k.maxStack}<br>${_esc(modShort(desc))}';
 }
 
