@@ -566,6 +566,27 @@ items:
   vida_raft_posts: { idle: items/vida_raft_posts.png, size: [32, 17] }
   vida_raft_seat: { idle: items/vida_raft_seat.png, size: [16, 6] }
   vida_decor_fence: { idle: items/vida_decor_fence.png, size: [16, 16] }
+  # Fence autotile (town_editor.md § Cercos): one piece per N/E/S/W
+  # neighbour mask (bit 1 N, 2 E, 4 S, 8 W) and the gate, E-W or N-S.
+  vida_decor_fence_0: { idle: items/vida_decor_fence_0.png, size: [16, 16] }
+  vida_decor_fence_1: { idle: items/vida_decor_fence_1.png, size: [16, 16] }
+  vida_decor_fence_2: { idle: items/vida_decor_fence_2.png, size: [16, 16] }
+  vida_decor_fence_3: { idle: items/vida_decor_fence_3.png, size: [16, 16] }
+  vida_decor_fence_4: { idle: items/vida_decor_fence_4.png, size: [16, 16] }
+  vida_decor_fence_5: { idle: items/vida_decor_fence_5.png, size: [16, 16] }
+  vida_decor_fence_6: { idle: items/vida_decor_fence_6.png, size: [16, 16] }
+  vida_decor_fence_7: { idle: items/vida_decor_fence_7.png, size: [16, 16] }
+  vida_decor_fence_8: { idle: items/vida_decor_fence_8.png, size: [16, 16] }
+  vida_decor_fence_9: { idle: items/vida_decor_fence_9.png, size: [16, 16] }
+  vida_decor_fence_10: { idle: items/vida_decor_fence_10.png, size: [16, 16] }
+  vida_decor_fence_11: { idle: items/vida_decor_fence_11.png, size: [16, 16] }
+  vida_decor_fence_12: { idle: items/vida_decor_fence_12.png, size: [16, 16] }
+  vida_decor_fence_13: { idle: items/vida_decor_fence_13.png, size: [16, 16] }
+  vida_decor_fence_14: { idle: items/vida_decor_fence_14.png, size: [16, 16] }
+  vida_decor_fence_15: { idle: items/vida_decor_fence_15.png, size: [16, 16] }
+  vida_decor_fence_gate: { idle: items/vida_decor_fence_gate.png, size: [16, 16] }
+  vida_decor_fence_gate_h: { idle: items/vida_decor_fence_gate_h.png, size: [16, 16] }
+  vida_decor_fence_gate_v: { idle: items/vida_decor_fence_gate_v.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }
   vida_decor_stone_path: { idle: items/vida_decor_stone_path.png, size: [16, 16] }
@@ -602,9 +623,10 @@ items:
   vida_casa_2: { idle: items/vida_casa_2.png, size: [48, 48] }
   vida_casa_3: { idle: items/vida_casa_3.png, size: [48, 48] }
   # vida:fin
-  # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3): arte
-  # provisorio (la casa de nivel 3); se cambia acá sin tocar Dart.
-  vida_taller_oficios: { idle: items/vida_casa_3.png, size: [48, 48] }
+  # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1): casa de entramado
+  # con techo de pizarra, martillo y serrucho, barriles y yunque, en el
+  # estilo de la ARMERÍA (tool/export_building_sprites.dart).
+  vida_taller_oficios: { idle: items/vida_taller_oficios.png, size: [48, 48] }
   # ARMERÍA del pueblo: tienda con emblema de espada y escudos
   # (tool/export_building_sprites.dart).
   vida_armeria: { idle: items/vida_armeria.png, size: [48, 48] }
