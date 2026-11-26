@@ -4,6 +4,7 @@ import '../../../app/design/design.dart';
 import '../../../core/procedural/item_icons.dart' show procKeyForType;
 import '../../../core/procedural/weapon_look.dart';
 import '../../../core/procedural/weapon_parts.dart' show materialColor;
+import '../../../game_engine/data/animals_catalog.dart' show parseAnimalPart;
 import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/data/smithing_catalog.dart';
 import '../../../game_engine/models/elements.dart';
@@ -22,13 +23,19 @@ import 'shop_sections.dart';
 /// top tab with a verb, never mixed with the forge steps.
 enum SmithTab { smelt, forge, tools }
 
-/// Icon of a smithing material: fish parts show their fish, everything
+/// Icon of a smithing material: fish parts show their fish, animal parts
+/// their part (`vida_ap_<species>_<part>`, animals.md § 9), everything
 /// else its own `vida_<id>` sprite (category icon as fallback).
-Widget smithMaterialIcon(String id, {double size = 32}) =>
-    switch (parseFishPart(id)) {
-      (final sp, _) => LifeIcon(sp, LifeIconKind.pescado, size: size),
-      null => LifeIcon(id, LifeIconKind.herramienta, size: size),
-    };
+Widget smithMaterialIcon(String id, {double size = 32}) {
+  if (parseAnimalPart(id) case (final sp, final part, _)?) {
+    return LifeIcon('ap_${sp}_${part.id}', LifeIconKind.herramienta,
+        size: size);
+  }
+  return switch (parseFishPart(id)) {
+    (final sp, _) => LifeIcon(sp, LifeIconKind.pescado, size: size),
+    null => LifeIcon(id, LifeIconKind.herramienta, size: size),
+  };
+}
 
 /// FORJA → HERRERÍA (mining_smithing.md § 3–5, § 3.1): three top tabs —
 /// SMELT (ore → ingots), FORGE WEAPON (numbered steps TYPE › BASE › HEAD ›

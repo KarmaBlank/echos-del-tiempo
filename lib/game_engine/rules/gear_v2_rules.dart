@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/animals_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/gear_v2_catalog.dart';
@@ -12,6 +13,7 @@ import '../models/item.dart';
 import '../models/loot.dart' show LootSource;
 import '../models/player_profile.dart';
 import '../models/ult_def.dart' show UltSource;
+import 'animal_rules.dart' show AnimalRules;
 import 'battle_engine.dart' show RandomSource;
 import 'farming_rules.dart';
 import 'fishing_rules.dart';
@@ -104,6 +106,8 @@ abstract final class GearV2Rules {
   /// Quality (0..1) of one material: tier / 5; fish parts Epic 0.8,
   /// Legendary 1.
   static double materialQ(String id) {
+    // Animal parts (animals.md § 9): by the quality they came with.
+    if (parseAnimalPart(id) case (_, _, final q)?) return AnimalRules.partQ(q);
     if (parseFishPart(id) case (final sp, _)?) {
       return kFish[sp]?.rarity == FishRarity.legendario ? 1 : 0.8;
     }
@@ -121,11 +125,17 @@ abstract final class GearV2Rules {
       return GameElement.values.asNameMap()[pt[1]] ?? GameElement.fisico;
     }
     if (pt[0] == 'fish' && pt.length >= 2) return fishAffinity(pt[1]);
+    if (pt[0] == 'ranch' && pt.length >= 2) {
+      return kAnimals[pt[1]]?.affinity ?? GameElement.fisico;
+    }
     if (pt.length >= 4) {
       final s = pt[3];
       if (kRareAffinity[s] case final e?) return e;
       if (parseFishPart(s) case (final sp, FishPart.essence)?) {
         return fishAffinity(sp);
+      }
+      if (parseAnimalPart(s) case (final sp, _, _)?) {
+        return kAnimals[sp]!.affinity;
       }
     }
     return kIngotAffinity[pt[0]] ?? GameElement.fisico;
@@ -215,14 +225,21 @@ abstract final class GearV2Rules {
   static bool fits(PartSlot slot, String id) {
     final d = kSmithMaterials[id];
     final fish = parseFishPart(id);
+    // Animal parts (animals.md § 9): horn is a head, fur and fine wool a
+    // grip; every animal part fits the setting and gives its affinity.
+    final animal = parseAnimalPart(id)?.$2;
     return switch (slot) {
       PartSlot.base => d?.kind == SmithMatKind.ingot,
-      PartSlot.head =>
-        d?.kind == SmithMatKind.ingot || fish?.$2 == FishPart.scale,
-      PartSlot.grip =>
-        d?.kind == SmithMatKind.ingot || fish?.$2 == FishPart.bone,
-      PartSlot.setting =>
-        d?.kind == SmithMatKind.rare || fish?.$2 == FishPart.essence,
+      PartSlot.head => d?.kind == SmithMatKind.ingot ||
+          fish?.$2 == FishPart.scale ||
+          animal == AnimalPart.horn,
+      PartSlot.grip => d?.kind == SmithMatKind.ingot ||
+          fish?.$2 == FishPart.bone ||
+          animal == AnimalPart.fur ||
+          animal == AnimalPart.wool,
+      PartSlot.setting => d?.kind == SmithMatKind.rare ||
+          fish?.$2 == FishPart.essence ||
+          animal != null,
     };
   }
 

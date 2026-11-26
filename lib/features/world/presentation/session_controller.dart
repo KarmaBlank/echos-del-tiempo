@@ -105,6 +105,7 @@ import '../../../game_engine/rules/bait_rules.dart';
 import '../../../game_engine/rules/fishing_rules.dart';
 import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
+import '../../../game_engine/rules/animal_rules.dart';
 import '../../../game_engine/rules/farming_rules.dart';
 import '../../../game_engine/rules/life_time_rules.dart';
 import '../../../game_engine/rules/profession_gear_rules.dart';
@@ -3224,6 +3225,192 @@ class SessionController extends StateNotifier<SessionView?> {
     );
   }
 
+  // ---- Farm animals (docs/specs/animals.md) ----
+
+  /// The world day animals count by.
+  int get animalDay => math.max(1, town.sky.day);
+
+  /// Night: the animals sleep inside (animals.md § 4.4).
+  bool get animalsAsleep => SkyRules.isNight(town.sky);
+
+  /// The animal under the mouse (outlined on the map).
+  ({String build, int uid})? hoverAnimal;
+
+  /// The coop / barn whose panel is open, and the animal picked in it.
+  String? animalPanelBuild;
+  int? animalPanelUid;
+
+  /// Animal care targets in reach of the local player: each animal on
+  /// its tile and each egg on its nest (`id` = index in [_animalRefs]).
+  final List<(String, int)> _animalRefs = [];
+
+  List<ActionTarget> _animalCandidates() {
+    _animalRefs.clear();
+    final p = _s?.players[localId]?.profile;
+    if (!_townFree() || _s?.place != null || p == null || animalsAsleep) {
+      return const [];
+    }
+    final (px, py) = _myTile;
+    final (ox, oy) = town.origin;
+    final r = CozyRules.actionReach;
+    final out = <ActionTarget>[];
+    for (final b in town.builds) {
+      if (!b.kind.ranch || b.animals.isEmpty) continue;
+      if (!b.bounds.inflate(r + 1).contains(px - ox, py - oy)) continue;
+      for (final a in b.animals) {
+        final pos = AnimalRules.animalPos(b, a, sessionTime);
+        final tile = (pos.x.floor() + ox, pos.y.floor() + oy);
+        final step = AnimalRules.next(p, b, a, animalDay);
+        final ok = step != AnimalCare.done &&
+            !(step == AnimalCare.collect &&
+                AnimalRules.collectBlock(p, a) == AnimalBlock.noTool);
+        _animalRefs.add((b.id, a.uid));
+        out.add(ActionTarget(tile.$1, tile.$2, ActionTargetKind.animal,
+            ok: ok, id: _animalRefs.length - 1));
+        if (a.ready != null && a.def.tool == null) {
+          final (nx, ny) = AnimalRules.nestOf(b, a);
+          _animalRefs.add((b.id, a.uid));
+          out.add(ActionTarget(nx + ox, ny + oy, ActionTargetKind.animal,
+              id: _animalRefs.length - 1));
+        }
+      }
+    }
+    return out;
+  }
+
+  /// The animal (or egg) E / a click cares for now.
+  ActionTarget? get animalTarget {
+    final (px, py) = _myTile;
+    return ActionTargeting.select(
+        px: px,
+        py: py,
+        candidates: _animalCandidates(),
+        hover: _hover,
+        facing: _facingStep,
+        reach: CozyRules.actionReach);
+  }
+
+  ({TownBuild build, FarmAnimal animal})? _animalOf(ActionTarget t) {
+    if (t.id < 0 || t.id >= _animalRefs.length) return null;
+    final (id, uid) = _animalRefs[t.id];
+    final b = town.build(id);
+    final a = b?.animal(uid);
+    return b == null || a == null ? null : (build: b, animal: a);
+  }
+
+  /// The animal under the map tile ([tx], [ty]) (hover outline, tooltip).
+  ({TownBuild build, FarmAnimal animal})? animalAt(int tx, int ty) {
+    if (animalsAsleep) return null;
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      if (!b.kind.ranch) continue;
+      for (final a in b.animals) {
+        final pos = AnimalRules.animalPos(b, a, sessionTime);
+        if (pos.x.floor() + ox == tx && pos.y.floor() + oy == ty) {
+          return (build: b, animal: a);
+        }
+      }
+    }
+    return null;
+  }
+
+  /// The coop / barn whose house is next to the local player (E: panel).
+  TownBuild? get nearRanchHouse {
+    if (!_townFree() || _s?.place != null) return null;
+    final (px, py) = _myTile;
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      if (!b.kind.ranch) continue;
+      if (AnimalRules.houseOf(b).inflate(1).contains(px - ox, py - oy)) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  /// What E does on [a] of [b] for the local player, as a prompt line.
+  String animalPrompt(TownBuild b, FarmAnimal a) {
+    final p = _s?.players[localId]?.profile;
+    final name = animalPetText(a);
+    if (p == null) return name;
+    if (a.ready != null) {
+      if (AnimalRules.collectBlock(p, a) == AnimalBlock.noTool) {
+        return strings.t('ui.town.ranch.prompt_need_tool',
+            {'name': name, 'tool': a.def.tool!.text});
+      }
+      return strings.t('ui.town.ranch.prompt_collect',
+          {'name': name, 'item': a.def.productDef.text});
+    }
+    return switch (AnimalRules.next(p, b, a, animalDay)) {
+      AnimalCare.feed => strings.t('ui.town.ranch.prompt_feed', {'name': name}),
+      AnimalCare.pet => strings.t('ui.town.ranch.prompt_pet', {'name': name}),
+      AnimalCare.done || AnimalCare.collect =>
+        strings.t('ui.town.ranch.prompt_done', {'name': name}),
+    };
+  }
+
+  /// E on an animal: the first missing step (animals.md § 4.2).
+  bool careAnimal(String buildId, int uid) {
+    final b = town.build(buildId);
+    final a = b?.animal(uid);
+    final p = _s?.players[localId]?.profile;
+    if (b == null || a == null || p == null) return false;
+    if (a.ready != null) {
+      if (AnimalRules.collectBlock(p, a) != AnimalBlock.noTool) {
+        return collectAnimal(buildId, uid);
+      }
+      addLocalNotice(
+          strings.t('ui.town.ranch.need_tool', {'tool': a.def.tool!.text}));
+      return false;
+    }
+    switch (AnimalRules.next(p, b, a, animalDay)) {
+      case AnimalCare.feed:
+        return feedAnimal(buildId, uid);
+      case AnimalCare.pet:
+        return petAnimal(buildId, uid);
+      case AnimalCare.collect:
+        return collectAnimal(buildId, uid);
+      case AnimalCare.done:
+        if (AnimalRules.feedBlock(p, b, a, animalDay) == AnimalBlock.noHay) {
+          addLocalNotice(strings.t('ui.town.ranch.no_hay'));
+        }
+        return false;
+    }
+  }
+
+  bool feedAnimal(String id, int uid) =>
+      _apply(TownAction(TownOp.animalFeed, target: id, n: uid));
+  bool petAnimal(String id, int uid) =>
+      _apply(TownAction(TownOp.animalPet, target: id, n: uid));
+  bool collectAnimal(String id, int uid) =>
+      _apply(TownAction(TownOp.animalCollect, target: id, n: uid));
+  bool depositHay(String id) =>
+      _apply(TownAction(TownOp.depositHay, target: id));
+  bool buyAnimal(String species) =>
+      _apply(TownAction(TownOp.buyAnimal, id: species));
+  bool buyHay(int n) => _apply(FarmShopAction(FarmShopOp.buyHay, n: n));
+  bool buyRanchTool(String id) =>
+      _apply(FarmShopAction(FarmShopOp.buyRanchTool, id: id));
+  bool makeHay(String cropKey, int n) =>
+      _apply(FarmShopAction(FarmShopOp.makeHay, id: cropKey, n: n));
+  bool sellGoods([String? key]) =>
+      _apply(FarmShopAction(FarmShopOp.sellGoods, id: key));
+
+  /// Cheese / mayonnaise machine (animals.md § 11): [n] of [key].
+  bool processGoods(String key, int n) =>
+      _apply(FarmShopAction(FarmShopOp.processGoods, id: key, n: n));
+
+  /// Brann forges the legendary animal product [id] (animals.md § 10).
+  bool animalForge(String id) =>
+      _apply(SmithAction(SmithOp.animalForge, id));
+
+  /// Opens the panel of the coop / barn [buildId] (animal [uid] picked).
+  void openAnimals(String buildId, {int? uid}) {
+    animalPanelBuild = buildId;
+    animalPanelUid = uid;
+    openPanel(WorldPanel.animals);
+  }
+
   // ---- Edición del pueblo (town_editor.md § 1) ----
 
   TownEdit? _edit;
@@ -3275,7 +3462,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[localId]?.profile;
     if (p == null) return null;
     final need = HelperRules.hireCost(kind).level;
-    final farm = kind == BuildKind.huerta;
+    final farm = kind == BuildKind.huerta || kind.ranch;
     final now = farm ? FarmingRules.level(p) : FishingRules.level(p);
     if (now >= need) return null;
     return strings.t(
@@ -3287,6 +3474,18 @@ class SessionController extends StateNotifier<SessionView?> {
   String? cannotPickHire(BuildKind kind) {
     if (cannotEditTown case final why?) return why;
     if (hireLevelWhy(kind) case final why?) return why;
+    if (kind.ranch) {
+      // Ranch helper (animals.md § 6): any coop or barn.
+      if (!town.builds.any((b) => b.kind.ranch)) {
+        return strings.t('ui.world.ctl.no_ranch');
+      }
+      final p = _s?.players[localId]?.profile;
+      if (p != null && FarmingRules.level(p) < AnimalRules.helperLevel) {
+        return strings.t('ui.town.ranch.helper_level',
+            {'n': AnimalRules.helperLevel});
+      }
+      return null;
+    }
     if (!town.builds.any((b) => b.kind == kind)) {
       return kind == BuildKind.huerta
           ? strings.t('ui.world.ctl.no_farms')
@@ -3360,6 +3559,10 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     return hireWhy(b);
   }
+
+  /// A pick for [hire] accepts [k] (any coop or barn for a ranch helper).
+  static bool hireKindMatches(BuildKind hire, BuildKind k) =>
+      hire.ranch ? k.ranch : hire == k;
 
   /// Por qué no se puede contratar en [b] en el modo de elegir (o `null`).
   String? hireWhy(TownBuild b) {
@@ -3508,7 +3711,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (e.hire case final kind?) {
       final b = TownRules.buildAt(town, tx, ty) ??
           TownRules.buildAtSign(town, tx, ty);
-      if (b != null && b.kind == kind && hireWhy(b) == null) {
+      if (b != null && hireKindMatches(kind, b.kind) && hireWhy(b) == null) {
         if (hireHelper(b.id)) return exitTownEdit();
       }
       return;
@@ -3658,6 +3861,14 @@ class SessionController extends StateNotifier<SessionView?> {
           'Nivel ${b.level}'
               '${b.resident == null ? ' · vacía' : ' · vive ${biomeNpcName(b.resident!)}'}'
         ),
+        BuildKind.gallinero || BuildKind.establo => (
+            strings.t('ui.town.ranch.${b.kind.name}.name'),
+            strings.t('ui.town.ranch.sign', {
+              'n': b.animals.length,
+              'max': AnimalRules.homeOf(b)!.cap,
+              'hay': b.hay,
+            })
+          ),
     };
   }
 
@@ -4402,6 +4613,42 @@ class SessionController extends StateNotifier<SessionView?> {
           if (nearHelper != null) return (WorldPrompt.helper, null);
           return (null, null);
         });
+      }
+    }
+    // Farm animals, their eggs and the coop / barn house (animals.md
+    // § 4.2): the tile cursor (they walk; the house is a sprite).
+    if (!isRun && s.place == null) {
+      for (final t in _animalCandidates()) {
+        final r = _animalOf(t);
+        if (r == null) continue;
+        final b = r.build, a = r.animal;
+        add(
+            ActionTarget(t.x, t.y, ActionTargetKind.animal,
+                ok: t.ok,
+                id: t.id,
+                key: 'animal:${b.id}:${a.uid}:${t.x},${t.y}',
+                outline: false),
+            () => careAnimal(b.id, a.uid),
+            () => (
+                  t.ok ? WorldPrompt.poi : WorldPrompt.spent,
+                  animalPrompt(b, a)
+                ));
+      }
+      if (nearRanchHouse case final b?) {
+        final (ox, oy) = town.origin;
+        final (px, py) = _myTile;
+        final h = AnimalRules.houseOf(b);
+        final tx = (px - ox).clamp(h.x, h.x + h.w - 1) + ox;
+        final ty = (py - oy).clamp(h.y, h.y + h.h - 1) + oy;
+        add(
+            ActionTarget(tx, ty, ActionTargetKind.animal,
+                key: 'ranch:${b.id}', outline: false),
+            () => openAnimals(b.id),
+            () => (
+                  WorldPrompt.poi,
+                  strings.t('ui.town.ranch.prompt_house',
+                      {'name': strings.t('ui.town.ranch.${b.kind.name}.name')})
+                ));
       }
     }
     // Mission entrances (zone arches).

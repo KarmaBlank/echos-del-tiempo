@@ -7,6 +7,8 @@ import '../../../../app/design/design.dart';
 import '../../../../app/theme/retro_type.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/town_build.dart';
+import '../../../../game_engine/rules/animal_rules.dart';
+import '../../../../game_engine/rules/farming_rules.dart' show FarmingRules;
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
@@ -53,6 +55,7 @@ class TownPiece {
         BuildKind.huerta => TownPieceCategory.farm,
         BuildKind.lago => TownPieceCategory.water,
         BuildKind.casa => TownPieceCategory.home,
+        BuildKind.gallinero || BuildKind.establo => TownPieceCategory.farm,
       };
 }
 
@@ -105,7 +108,27 @@ class TownBuildPalette extends StatefulWidget {
     final p = c.view?.me?.profile;
     return [
       for (final d in kConstructions)
-        if (d.kind == BuildKind.casa)
+        if (animalHomeById(d.id) case final h?)
+          // Coop / barn (animals.md § 3): gold and a Cultivo level.
+          TownPiece(
+            id: d.id,
+            category: TownPieceCategory.farm,
+            name: s.t('ui.town.ranch.${d.kind.name}.name'),
+            w: d.w,
+            h: d.h,
+            detail: s.t('ui.town.ranch.${d.kind.name}.info',
+                {'cap': h.cap, 'level': h.level}),
+            cost: s.t('ui.town.edit.lamp_detail', {'cost': h.price}),
+            why: p == null
+                ? s.t('ui.town.edit.no_character')
+                : FarmingRules.level(p) < h.level
+                    ? s.t('ui.town.ranch.need_level', {'n': h.level})
+                    : p.credits < h.price
+                        ? s.t('ui.town.edit.missing_gold',
+                            {'have': p.credits, 'need': h.price})
+                        : null,
+          )
+        else if (d.kind == BuildKind.casa)
           TownPiece(
             id: d.id,
             category: TownPieceCategory.home,

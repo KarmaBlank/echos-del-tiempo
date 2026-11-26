@@ -717,7 +717,8 @@ void main() {
       expect(all.length,
           kSmithMaterials.values.where((d) => d.kind != SmithMatKind.tool &&
               d.kind != SmithMatKind.supply &&
-              d.kind != SmithMatKind.fishPart).length);
+              d.kind != SmithMatKind.fishPart &&
+              d.kind != SmithMatKind.animalPart).length);
       final cu = all.firstWhere((x) => x.id == 'ore_copper');
       expect(cu.discovered, isTrue);
       expect(cu.icon, 'vida_ore_copper');
@@ -729,7 +730,8 @@ void main() {
       for (final d in kSmithMaterials.values) {
         if (d.kind == SmithMatKind.tool ||
             d.kind == SmithMatKind.supply ||
-            d.kind == SmithMatKind.fishPart) {
+            d.kind == SmithMatKind.fishPart ||
+            d.kind == SmithMatKind.animalPart) {
           continue;
         }
         expect(SmithCollection.usesOf(d.id), isNotEmpty, reason: d.id);

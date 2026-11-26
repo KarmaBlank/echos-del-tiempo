@@ -672,5 +672,6 @@
   "ui.world.loot.gold": {
     "text": "{n} 金币",
     "status": "draft"
-  }
+  },
+  "ui.world.ctl.no_ranch": "城镇里没有鸡舍或畜棚"
 }

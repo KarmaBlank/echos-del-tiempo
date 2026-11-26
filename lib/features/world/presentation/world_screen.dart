@@ -82,6 +82,7 @@ import 'session_view.dart';
 import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
 import 'hud/map_hover_tip.dart';
+import 'panels/animal_panel.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../domain/player_locations.dart';
 
@@ -1231,6 +1232,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             view: view,
             controller: controller,
             initialTab: RunCharacterTab.inventory);
+      case WorldPanel.animals:
+        return AnimalPanel(
+            key: const ValueKey('panel-animals-root'),
+            view: view,
+            controller: controller);
       case WorldPanel.character:
         return CharacterPanel(
             key: const ValueKey('panel-character'),

@@ -1,3 +1,4 @@
+import '../models/farm_animal.dart' show parseAnimalGoodsKey;
 import '../data/bait_catalog.dart';
 import '../data/farming_catalog.dart';
 import '../data/profession_gear_catalog.dart';
@@ -31,6 +32,9 @@ abstract final class GoodsRules {
   static LootDrop wseed(String id) => LootDrop.goods('wseed:$id', 1);
   static LootDrop bait(String id, int n) => LootDrop.goods('bait:$id', n);
   static LootDrop fert(String id, int n) => LootDrop.goods('fert:$id', n);
+
+  /// An animal product (`<product>@<quality>`, animals.md § 4.2).
+  static LootDrop animal(String key, int n) => LootDrop.goods('agood:$key', n);
 
   /// (kind, id) of a goods key.
   static (String, String) split(String key) {
@@ -82,6 +86,9 @@ abstract final class GoodsRules {
       case 'bait':
         if (!kBaits.containsKey(id)) return null;
         return p.copyWith(life: p.life.addBait(id, n));
+      case 'agood':
+        if (parseAnimalGoodsKey(id) == null) return null;
+        return p.copyWith(life: p.life.copyWith(farm: farm.addGoods(id, n)));
       case 'fert':
         if (!kFertilizers.containsKey(id)) return null;
         return p.copyWith(

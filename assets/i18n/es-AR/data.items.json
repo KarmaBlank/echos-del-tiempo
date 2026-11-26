@@ -28,6 +28,7 @@
   "data.items.gear.metal.ingot_ember": "acero ígneo",
   "data.items.gear.metal.ingot_frost": "hierro helado",
   "data.items.gear.parts.name": "{type} de {metal}",
+  "data.items.gear.ranch.name": "{type} de {item}",
   "data.items.gear.seed.ws_arco": "Semilla de arco vivo",
   "data.items.gear.seed.ws_arco_old": "Semilla antigua de arco vivo",
   "data.items.gear.seed.ws_ballesta": "Semilla de ballesta viva",

@@ -554,6 +554,10 @@ PLANTAR), abonos y COSECHAS por calidad.
 
 ## 13. Animales del bioma y CORRAL (especificado en v0.31.0, sin código)
 
+> **Reemplazado por `animals.md`** (gallinero y establo, protocolo 99):
+> los animales de granja, su cuidado, los ayudantes y la venta viven ahí.
+> Lo que sigue queda como idea para animales propios de cada bioma.
+
 Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 - Un animal por bioma: Bosque ciervo de musgo (leche de musgo), Ruinas
   gallina de engranaje (huevo de cobre), Cavernas cabra de escarcha (lana
@@ -735,3 +739,25 @@ Abono (más bolsas / abono en área), Madera viva (calidad / afijo) y
 Cocina (`mealPower` / comidas más largas): life_trees_v2.md § 2.1. Una
 comida guarda su potencia (`MealBuff.b`) y el ATK / MAG de pescado
 (`MealBuff.a`) al comerla.
+
+## 21. El oficio se llama GRANJERO (v0.50, protocolo 101)
+
+Reforma aprobada por el dueño (detalle en `animals.md`):
+
+- **Nombre:** el oficio Cultivo pasa a llamarse **GRANJERO** en la UI y
+  en los tres idiomas (Granjero / Farmer / 农夫). "Cultivo/cultivos"
+  sigue nombrando a las plantas. Los ids internos no cambian
+  (`LifeSkillKind.cultivo`, `life.farm`, `farm_*`, `kTuning['farming']`)
+  y los guardados cargan igual.
+- **Dos ramas:** **CULTIVOS** (todo lo de esta spec: huerta, abonos,
+  armas vivas, cocina) y **ANIMALES** (`animals.md`: gallinero, establo,
+  piezas de forja, productos legendarios, máquinas de queso y mayonesa).
+  En el árbol, las cinco ramas de siempre van bajo el título CULTIVOS y
+  la sexta (Corral, `farm_f*`) bajo ANIMALES (`life_trees_v2.md` § 8).
+- **Misma recompensa:** solo cultivos, solo animales o ambos rinden la
+  misma XP y el mismo oro por hora (± 15 %, `granjero_parity_test`,
+  `animals.md` § 7). Referencia de esta rama: 12 parcelas de cultivos
+  comunes ≈ 2 770 XP/h y ≈ 1 590 oro/h (≈ 46 XP/min, como § 18).
+- Los animales ya no tienen tope diario de XP (`xpDayCap` = 0).
+- En Balance, los grupos se llaman **Granjero: cultivos** (antes
+  Cultivo) y **Granjero: animales**.

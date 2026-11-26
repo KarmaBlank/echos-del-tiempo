@@ -401,7 +401,7 @@
   "ui.inventory.sort.weapon_type": "Tipo de arma",
   "ui.inventory.workshop.credits": "Créditos <b>{credits}</b>",
   "ui.inventory.workshop.filter.all": "TODOS",
-  "ui.inventory.workshop.filter.farming": "CULTIVO",
+  "ui.inventory.workshop.filter.farming": "GRANJERO",
   "ui.inventory.workshop.filter.fishing": "PESCA",
   "ui.inventory.workshop.have": "Tenés {n} · alcanza para {max}",
   "ui.inventory.workshop.help": "<b>Taller de oficios</b><br>CRAFTEO: cosechas y pescados (nunca legendarios; primero los de menos valor) se convierten en materiales de oficio para contratar y mejorar ayudantes. Elegí una receta; a la derecha ves los ingredientes, la cantidad y CRAFTEAR.<br>HERRAMIENTAS: acá se compran y equipan cañas, azadas, regaderas y picos (el AGROPECUARIO vende solo insumos). Las armas se trabajan en la ARMERÍA.",
