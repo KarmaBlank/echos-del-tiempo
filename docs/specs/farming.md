@@ -147,8 +147,15 @@ cada casillero; la disposición en barra quedó reemplazada.
 - Con el juego cerrado no crece nada (sin reloj real: nadie pierde ni
   gana por no conectarse, town_loop.md § 1).
 - Etapas visibles: semilla (< 20 %), brote, crecido (≥ 55 %), maduro
-  (100 %, con brillo). Arado con surcos; regado, tierra oscura y una gota;
-  abonado, granitos claros. Dibujado en `MapFarmLayer` (colores en
+  (100 %, con brillo). Arado seco: marrón claro (`tilled`) con surcos y
+  migas de polvo claras (`dust`). Regado (v0.13.5): marrón húmedo muy
+  oscuro y desaturado (`wet`, surcos `wetFurrow`), un borde húmedo
+  translúcido que oscurece el pasto alrededor (`wetRim`) y un brillo
+  mojado de reflejos fríos: trazos suaves (`wetShineSoft`) y píxeles
+  brillantes sobre los lomos (`wetShine`), legibles también de noche;
+  más una gota mientras no esté maduro. Abonado, granitos claros. La
+  vista previa (`PREVIEW=1`, `test/features/world/wet_soil_preview_test.dart`)
+  deja `docs/preview/wet_soil/wet_soil_{day,night}.png`. Dibujado en `MapFarmLayer` (colores en
   `FarmPalette`); registrado como procedural.
 - Aspecto por cultivo (v0.25.3): la semilla es un puntito del color de
   su tipo en un punto al azar del tile, determinista por parcela, cultivo
