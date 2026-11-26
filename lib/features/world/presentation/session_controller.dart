@@ -1746,8 +1746,10 @@ class SessionController extends StateNotifier<SessionView?> {
   (int, int)? _mineAim;
 
   (int, int) get mineTarget {
-    if (_mineAim case final a?) return a;
     final (px, py) = _myTile;
+    // The held click's tile only while still in reach: walking away
+    // re-picks (controls.md § Cursor de acción).
+    if (ActionTargeting.heldAim(px, py, _mineAim) case final a?) return a;
     final (sx, sy) = _facingStep;
     final ahead = (px + sx, py + sy);
     final lvl = mineLevel;
@@ -1846,6 +1848,10 @@ class SessionController extends StateNotifier<SessionView?> {
     final tile = lastSwingTile;
     if (lvl == null || p == null || tile == null || !inMine) return null;
     final (x, y) = tile;
+    // Never on a tile the player walked away from (controls.md § Cursor
+    // de acción): the bar and the cursor only show in reach.
+    final (px, py) = _myTile;
+    if (!ActionTargeting.inReach(px, py, x, y)) return null;
     final c = MiningRules.tileAt(lvl, mineState, x, y);
     if (!MineTile.breakable.contains(c) && c != MineTile.bedrock) return null;
     final ok =
@@ -1950,11 +1956,9 @@ class SessionController extends StateNotifier<SessionView?> {
     _holdInteracted = false;
     // A click on a tile next to the player aims there (§ 1.12).
     _mineAim = null;
-    if (at case (final ax, final ay)) {
-      final px = (local.x / 16).floor(), py = (local.y / 16).floor();
-      if ((ax - px).abs() <= 1 && (ay - py).abs() <= 1 && (ax, ay) != (px, py)) {
-        _mineAim = at;
-      }
+    if (at != null) {
+      final (px, py) = _myTile;
+      _mineAim = ActionTargeting.heldAim(px, py, at);
     }
     // The cart-station spot nearby wins over the tool (§ 1.7): what the
     // prompt says is what E does.
@@ -2604,13 +2608,9 @@ class SessionController extends StateNotifier<SessionView?> {
       if (mineHand != MineHand.pick) return;
       // A held click aims at the tile next to the player under the cursor.
       _mineAim = null;
-      if (_holdTile case (final ax, final ay) when _holdPointer) {
-        final px = (local.x / 16).floor(), py = (local.y / 16).floor();
-        if ((ax - px).abs() <= 1 &&
-            (ay - py).abs() <= 1 &&
-            (ax, ay) != (px, py)) {
-          _mineAim = (ax, ay);
-        }
+      if (_holdPointer) {
+        final (px, py) = _myTile;
+        _mineAim = ActionTargeting.heldAim(px, py, _holdTile);
       }
       _mineHold ??= Timer.periodic(const Duration(milliseconds: 40), (_) {
         if (!inMine) return mineHoldEnd();
