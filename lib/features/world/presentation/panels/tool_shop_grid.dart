@@ -30,7 +30,6 @@ class ToolShopGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LifeItemGrid(
         key: const ValueKey('tools-grid'),
-        maxDetail: 420,
         groups: [
           LifeItemGroup(context.t('ui.town.trader.kind.rods'), _rods(context),
               headerKey: const ValueKey('tools-filter-rods')),

@@ -67,7 +67,7 @@ class DsItemCell extends StatelessWidget {
     this.dimension = size,
   });
 
-  static const size = 48.0;
+  static const size = DsSizes.itemCell;
 
   /// Side of the cell (default [size]).
   final double dimension;
@@ -95,7 +95,10 @@ class DsItemCell extends StatelessWidget {
                 width: selected ? 3 : RetroTheme.thinBorderWidth),
           ),
           child: Stack(children: [
-            Center(child: icon),
+            Center(
+                child: SizedBox.square(
+                    dimension: DsSizes.itemIcon * dimension / DsSizes.itemCell,
+                    child: FittedBox(child: icon))),
             if (count != null)
               Positioned(
                 right: 2,
@@ -172,6 +175,17 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
   int _filter = 0;
   DsTransferSide? _side;
   String? _id;
+  final _leftScroll = ScrollController(), _rightScroll = ScrollController();
+
+  ScrollController _scrollOf(DsTransferSide s) =>
+      s == DsTransferSide.left ? _leftScroll : _rightScroll;
+
+  @override
+  void dispose() {
+    _leftScroll.dispose();
+    _rightScroll.dispose();
+    super.dispose();
+  }
 
   bool _pass(DsTransferItem it) {
     if (widget.filters.isNotEmpty) {
@@ -206,8 +220,7 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
       mainAxisSize: MainAxisSize.min,
       children: [
         DsSectionHeader(title,
-            key: ValueKey(_p('title-$tag')),
-            trailing: DsBadge('$total')),
+            key: ValueKey(_p('title-$tag')), trailing: DsBadge('$total')),
         SizedBox(height: DsSpace.xs),
         Container(
           height: widget.gridHeight,
@@ -217,26 +230,37 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
           padding: EdgeInsets.all(DsSpace.xs),
           child: items.isEmpty
               ? Text(empty, style: DsText.detail())
-              : SingleChildScrollView(
-                  child: Wrap(
-                    spacing: DsSpace.xs,
-                    runSpacing: DsSpace.xs,
-                    children: [
-                      for (final it in items)
-                        DsItemCell(
-                          key: ValueKey(_p('cell-$tag-${it.id}')),
-                          icon: it.icon,
-                          border: it.border,
-                          count: it.count,
-                          selected: sel != null &&
-                              _side == s &&
-                              sel.id == it.id,
-                          onTap: () => setState(() {
-                            _side = s;
-                            _id = it.id;
-                          }),
-                        ),
-                    ],
+              : Scrollbar(
+                  key: ValueKey(_p('scroll-$tag')),
+                  controller: _scrollOf(s),
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollOf(s),
+                    padding:
+                        const EdgeInsets.only(right: DsSizes.gridScrollbar),
+                    // INVENTARIO's grid: 6 columns, rows grow downward.
+                    child: SizedBox(
+                      width: DsSizes.gridWidth(),
+                      child: Wrap(
+                        spacing: DsSizes.itemGap,
+                        runSpacing: DsSizes.itemGap,
+                        children: [
+                          for (final it in items)
+                            DsItemCell(
+                              key: ValueKey(_p('cell-$tag-${it.id}')),
+                              icon: it.icon,
+                              border: it.border,
+                              count: it.count,
+                              selected:
+                                  sel != null && _side == s && sel.id == it.id,
+                              onTap: () => setState(() {
+                                _side = s;
+                                _id = it.id;
+                              }),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
         ),
@@ -257,8 +281,7 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
     } else {
       why = widget.canMove?.call(from, sel.id);
     }
-    final enabled =
-        allowed && sel != null && _side == from && why == null;
+    final enabled = allowed && sel != null && _side == from && why == null;
     return SizedBox(
       width: 132,
       child: DsButton(right ? 'PASAR $ql →' : '← PASAR $ql',
@@ -266,9 +289,7 @@ class _DsTransferTemplateState extends State<DsTransferTemplate> {
           size: DsButtonSize.compact,
           kind: right ? DsButtonKind.primary : DsButtonKind.secondary,
           tooltip: why,
-          onPressed: enabled
-              ? () => widget.onMove(from, sel.id, q)
-              : null),
+          onPressed: enabled ? () => widget.onMove(from, sel.id, q) : null),
     );
   }
 

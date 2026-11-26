@@ -286,12 +286,56 @@ Plantilla única para colecciones (pesca, cultivo y herrería):
   etiquetas, filas del detalle y grupos (para los filtros).
 - Subtabs de filtro (`(id, label)`, `all` = todos) y contador
   descubiertos/total (`DsBadge`, key `<prefijo>-progress`).
-- Grilla de celdas de 44 px; sin descubrir: "?" gris sin pistas
-  (key `<prefijo>-unknown-<id>`).
-- Detalle a la derecha (`DsDetailPane`) desde 460 px de ancho; abajo si no.
+- Grilla y detalle: el layout compartido de § 6.2; sin descubrir: "?"
+  gris sin pistas (key `<prefijo>-unknown-<id>`).
 - Tipografía por rol (`DsText.title/body/detail`), sin cortes; tooltips
   de ancho fijo.
 - Test de overflow a 1024×640 y 1920×1080 con escala 1.0 y 2.0.
+
+### 6.2 Grilla de ítems (`DsGridDetailLayout`, v0.49.13)
+
+Regla del dueño: INVENTARIO es la base; TODA pantalla que muestra ítems
+se ve igual. Un solo organismo, `DsGridDetailLayout`
+(`ds_collection_template.dart`), es el cuerpo de las plantillas
+`DsCollectionTemplate`, `DsCraftGridTemplate` (TALLER), de
+`LifeItemGrid` (oficios y tiendas de NPC) y de `EcoGridLayout`
+(MEJORAR / FUSIONAR). Medidas en tokens (`DsSizes`):
+
+- `itemCell` 44, `itemGap` 4, `itemIcon` 32: la casilla base de
+  INVENTARIO. La casilla escala con los mismos pasos que INVENTARIO
+  (enteros desde ×2, cuartos entre ×1 y ×2; `DsSizes.itemScale`): el
+  mayor paso en que entran 6 columnas + el detalle a lo ancho y 5 filas
+  a lo alto. El ícono escala con la casilla. INVENTARIO avisa la escala
+  con la que se dibujó (`DsSizes.rememberInventoryScale`, por tamaño de
+  pantalla y de texto) y las demás grillas usan exactamente esa; si
+  INVENTARIO todavía no se abrió, se estima desde la pantalla
+  (`inventoryBodyFor`). Solo baja si 6 columnas + detalle no entran.
+- `gridColumns` 6: la grilla mide exactamente 6 columnas; las filas
+  crecen hacia abajo con barra de scroll visible si no entran.
+- `detailPaneWidth` 340: ancho fijo del detalle a la derecha (entra
+  "Precio: 4 de oro c/u" y los nombres sin cortes raros); misma fuente
+  de siempre, acciones fijas abajo (`DsDetailPane`). Los pares
+  clave/valor del detalle nunca cortan: el valor se ajusta en líneas.
+- Grilla + detalle se centran en el panel: el sobrante de los pasos de
+  escala queda repartido, nunca un gran vacío de un lado.
+- Angosto (< `gridDetailWideFrom`) o dentro de otro scroll: detalle
+  arriba, grilla debajo a ×1.
+- `leading` opcional: columna a la izquierda de la grilla (ARMERÍA).
+- Claves: `<prefijo>-grid`, `<prefijo>-pane`, `<prefijo>-scroll`.
+- `DsItemCell` (átomo de casilla de TALLER y TRASPASO) mide `itemCell`.
+- `DsTransferTemplate`: cada lado es una grilla de 6 columnas con barra
+  de scroll visible (`<prefijo>-scroll-l` / `-r`).
+
+Pantallas: caravana / tiendas de NPC de bioma (COMPRAR), AGROPECUARIO,
+PESCA Y CULTIVO, menús de NPC, minero, MI PUESTO, ayudantes, diarios de
+oficio, registro de misiones, tienda de herramientas, ARMERÍA y
+HERRERÍA (TALLER), cocina, ofrendas, colecciones, ECOS MEJORAR /
+FUSIONAR. Pendientes (layout propio todavía): INVENTARIO y ALIJO
+(grilla 8 × 5 / tablero con arrastre), FORJA y COMPRAR de Brann
+(`craft_bench`, `shop_sections` sobre `PanelSplit`), botín perdido,
+decoración de balsa, paleta de construcción y casas.
+
+Galería: página GRILLAS (`GridTemplatesMockup`).
 
 ## 7. Tema (`DsTheme`)
 

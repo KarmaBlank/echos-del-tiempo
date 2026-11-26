@@ -39,9 +39,8 @@ class EcoGridCell extends StatelessWidget {
       );
 }
 
-/// Template: a wrapping grid of cells on the left and [detail] on the
-/// right ([detailWidth] wide, full height); on narrow widths the detail
-/// goes on top. [empty] replaces the grid when there are no cells.
+/// The ECOS grid + detail: the shared [DsGridDetailLayout]
+/// (design_system.md § "Grilla de ítems"); cells scale like INVENTARIO.
 class EcoGridLayout extends StatelessWidget {
   const EcoGridLayout({
     super.key,
@@ -49,7 +48,6 @@ class EcoGridLayout extends StatelessWidget {
     required this.detail,
     this.empty,
     this.footer = const [],
-    this.detailWidth = 300,
   });
 
   final List<Widget> cells;
@@ -58,37 +56,14 @@ class EcoGridLayout extends StatelessWidget {
 
   /// Extra widgets under the grid (dev shortcuts).
   final List<Widget> footer;
-  final double detailWidth;
 
   @override
-  Widget build(BuildContext context) {
-    final grid = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (cells.isEmpty && empty != null)
-          empty!
-        else
-          Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: cells),
-        for (final f in footer) ...[SizedBox(height: DsSpace.sm), f],
-      ],
-    );
-    return LayoutBuilder(builder: (context, box) {
-      if (box.maxWidth >= 560 && box.hasBoundedHeight) {
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: SingleChildScrollView(child: grid)),
-            SizedBox(width: DsSpace.sm),
-            SizedBox(width: detailWidth, height: box.maxHeight, child: detail),
-          ],
-        );
-      }
-      return SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [detail, SizedBox(height: DsSpace.sm), grid],
-        ),
+  Widget build(BuildContext context) => DsGridDetailLayout(
+        keyPrefix: 'eco',
+        count: cells.length,
+        cell: (context, i, size) => FittedBox(child: cells[i]),
+        empty: empty,
+        footer: footer,
+        detail: detail,
       );
-    });
-  }
 }

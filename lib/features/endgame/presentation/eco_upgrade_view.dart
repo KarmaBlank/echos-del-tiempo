@@ -87,7 +87,7 @@ class EcoUpgradeView extends StatelessWidget {
   /// Under the grid (dev shortcuts).
   final List<Widget> footer;
 
-  static const detailWidth = 360.0;
+  static const detailWidth = DsSizes.detailPaneWidth;
 
   Widget _op(EcoUpgradeOp op) => Padding(
         padding: EdgeInsets.only(bottom: DsSpace.sm),
@@ -174,7 +174,6 @@ class EcoUpgradeView extends StatelessWidget {
             ),
     );
     return EcoGridLayout(
-      detailWidth: detailWidth,
       empty: Text(empty,
           key: const ValueKey('eco-upgrade-empty'), style: DsText.detail()),
       footer: footer,
