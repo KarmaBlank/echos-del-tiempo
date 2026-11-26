@@ -102,6 +102,15 @@ class EcosBinding extends WidgetsFlutterBinding {
       } catch (_) {}
       prev?.call(d);
     };
+    // Errors outside a frame (timers such as the game tick, futures) used
+    // to vanish in release; a failing tick froze the HUD with no trace.
+    final prevAsync = _self!.platformDispatcher.onError;
+    _self!.platformDispatcher.onError = (e, st) {
+      try {
+        EcosLog.error('Uncaught: $e\n$st');
+      } catch (_) {}
+      return prevAsync?.call(e, st) ?? false;
+    };
   }
 
   bool _skipping = false;

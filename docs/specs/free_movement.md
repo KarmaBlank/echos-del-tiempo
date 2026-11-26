@@ -177,6 +177,11 @@ se cierra. El `pueblo` nunca.
   pasa a dos renglones: si no entra, se achica entera. Los nombres nunca
   se cortan (se achican). Los atajos de pociones van arriba con ancho
   fijo, así nada se corre cuando alguien entra, sale o cambia de lugar.
+  Desde v0.49.22 la caja compacta es tan ancha como su primera línea
+  (nombre, ascensión, clase y nivel) a tamaño normal: jugando solo
+  nunca se achica. Solo una fila que no entra se achica, y nunca por
+  debajo de `WorldHud.minPartyScale` (0.8) mientras quepa en la
+  pantalla: para eso le quita lugar al chat.
 
 ### 4.1 Dónde están los demás (v0.41.3)
 
