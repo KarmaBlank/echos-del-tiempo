@@ -58,7 +58,8 @@ obra maestra: q ≥ masterworkQ → +1 mod sobre el máximo (`mw`), nunca más
 - Paridad: manual ≥ ayudante × `parityManualEdge` (1.15).
 
 ## 3. HERRERÍA: forja por piezas
-HERRERÍA → FORJAR, **paso a paso** (subtabs, no secciones apiladas):
+HERRERÍA → FORJAR ARMA, **paso a paso** con stepper numerado
+(mining_smithing.md § 3.1):
 
 | Paso | Material | Define |
 |---|---|---|

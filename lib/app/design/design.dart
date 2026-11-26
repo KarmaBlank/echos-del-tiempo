@@ -19,3 +19,4 @@ export 'ds_tokens.dart';
 export 'ds_transfer_template.dart';
 export 'ds_progress.dart';
 export 'ds_sprite_icon.dart';
+export 'ds_stepper.dart';
