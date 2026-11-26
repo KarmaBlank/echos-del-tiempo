@@ -76,10 +76,9 @@ parche de balance puede tocar.
 
 ## 5. UI
 
-Lugar **MI PUESTO** del pueblo (`TownSpot.stall`, mostrador de 2 tiles
-sobre el camino sur, en (19, 15) del pueblo base; lugar tardío:
-en un pueblo guardado antes va al hueco libre más cercano). Cerca
-aparece `[E] Mi puesto` y E abre `WorldPanel.stall`. Desde v0.49.12 el
+El puesto ya no es un mostrador suelto en el pueblo: es un mostrador
+dentro de la **TIENDA** (§ 6). Frente a tu mostrador aparece
+`[E] Mi puesto` y E abre `WorldPanel.stall`. Desde v0.49.12 el
 panel del vendedor ya no tiene botón MI PUESTO (salía con cualquier
 vendedor y confundía). Panel
 con pestañas (nunca secciones apiladas):
@@ -95,3 +94,41 @@ con pestañas (nunca secciones apiladas):
   con el detalle (día, comprador, cantidad) y el total ganado.
 
 Captura: `docs/preview/player_shop.png` (test con `PREVIEW=1`).
+
+## 6. La TIENDA (casa e interior)
+
+- **Afuera:** casa de 3 × 3 tiles en el pueblo (`TownSpot.shop`,
+  `Tile.shop`, esquina (20, 13) del pueblo base, justo al norte del
+  camino sur), mismo estilo que la ARMERÍA: sprite `items.vida_tienda`
+  (madera, toldo a rayas, emblema de monedas; lo pinta
+  `tool/export_building_sprites.dart`). Frente a la puerta:
+  `[E] Entrar a la tienda`.
+- **Interior:** otro mapa, como una mina: `GameSession.place = 'shop'`
+  (`ShopInteriorRules`), mapa de lobby de 16 × 11 sin enemigos, con su
+  cámara. Se entra solo desde el pueblo y se sale solo al pueblo
+  (`TravelAction`; el anfitrión valida `ShopInteriorRules.canTravel`).
+  Se aparece adentro junto a la puerta; al salir, frente a la puerta de
+  la casa (donde esté la casa en ese pueblo). En co-op con salas
+  separadas, la tienda es una sala más: los que entran se ven adentro.
+- **Mostradores:** uno por jugador de la sala (sin compañeros), en orden
+  de id para que todos vean lo mismo; hasta `shopCounters` (Balance,
+  tuning `town`, 4 por defecto, máx. 4). Cada uno muestra el nombre del
+  dueño y hasta 4 íconos de lo que tiene publicado; los que sobran dicen
+  LIBRE. Estantes con mercadería, alfombra y la puerta de salida son
+  decorado.
+- **E en un mostrador:** el propio abre `WorldPanel.stall` (MI PUESTO);
+  el de otro jugador (`[E] Puesto de <nombre>`) abre el mismo panel en
+  PUESTOS DEL GRUPO filtrado a ese jugador, con la regla de compra de
+  siempre (§ 3). E en la puerta: `[E] Salir al pueblo`.
+- **Visitantes:** la simulación diaria (§ 3) no cambia; no hay NPC
+  visibles adentro.
+- **Migración:** el viejo mostrador al aire libre desaparece. La casa es
+  un lugar tardío (`TownLayout.lateSpots`): en un pueblo guardado con
+  algo en su lugar va al hueco libre más cercano. Una marca vieja
+  `@stall` se ignora. Los datos del puesto viven en el perfil y no se
+  tocan.
+- **Red:** protocolo Mundo 98 (`place` puede ser `shop`).
+
+Capturas: `docs/preview/shop_exterior.png` y
+`docs/preview/shop_interior.png` (test `shop_preview_test.dart` con
+`PREVIEW=1`).

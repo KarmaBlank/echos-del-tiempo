@@ -7,6 +7,7 @@ import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/player_stall_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/rules/shop_interior_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stall_rules.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -96,15 +97,36 @@ void main() {
     expect(find.byKey(const ValueKey('stall-empty')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-  testWidgets('E at the MI PUESTO town spot opens the stall', (tester) async {
+  testWidgets('E at the TIENDA door enters; own counter opens the stall; '
+      'the door inside goes back to town', (tester) async {
     final c = await pumpPanel(tester,
         profile: PlayerProfile(name: 'Ana', classId: 'guerrero', level: 5),
         build: (v, c) => const SizedBox());
-    final l = TownLayout.byId('@stall')!;
+    final l = TownLayout.byId('@shop')!;
     c.teleport(l.center.x, (l.y + l.h) * 16 + 4.0);
+    expect(c.nearShopDoor, isTrue);
+    expect(c.view!.prompt, WorldPrompt.shop);
+    c.interact();
+    await tester.pump();
+    expect(c.view!.session.place, ShopInteriorRules.place);
+    // Own counter (slot 0: the only player).
+    final (tx, ty) = ShopInteriorRules.counterTiles[0];
+    c.teleport((tx + 1) * 16.0, (ty + 1) * 16 + 4.0);
     expect(c.nearStall, isTrue);
     expect(c.view!.prompt, WorldPrompt.stall);
     c.interact();
     expect(c.view!.panel, WorldPanel.stall);
+    expect(c.stallOwner, isNull);
+    c.closePanel();
+    // Exit door: back in front of the house.
+    final (dx, dy) = ShopInteriorRules.door;
+    c.teleport((dx + 1) * 16.0, dy * 16 - 4.0);
+    expect(c.nearShopDoor, isTrue);
+    c.interact();
+    await tester.pump();
+    expect(c.view!.session.place, isNull);
+    final me = c.view!.me!;
+    expect((me.x - l.center.x).abs(), lessThan(24));
+    expect(me.y, greaterThan((l.y + l.h) * 16.0));
   });
 }

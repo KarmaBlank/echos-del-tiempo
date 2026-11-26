@@ -630,6 +630,9 @@ items:
   # ARMERÍA del pueblo: tienda con emblema de espada y escudos
   # (tool/export_building_sprites.dart).
   vida_armeria: { idle: items/vida_armeria.png, size: [48, 48] }
+  # TIENDA de los jugadores (player_shop.md § 6): casa de madera con
+  # toldo y emblema de monedas (mismo tool).
+  vida_tienda: { idle: items/vida_tienda.png, size: [48, 48] }
   # FORJA del pueblo: fragua con yunque, 5 tiles de ancho (mismo tool).
   vida_forja: { idle: items/vida_forja.png, size: [80, 32] }
   # Salida de la mazmorra (free_movement.md § 2.4): portal en la llegada

@@ -35,6 +35,7 @@ extension _BiomeOp on _Op {
       return false;
     }
     final fromMine = MiningRules.parse(s.place);
+    final fromShop = ShopInteriorRules.isShop(s.place);
     final next = place == kPueblo ? null : place;
     if (next == s.place && portal == null) return false;
     final moved = next != s.place;
@@ -56,6 +57,10 @@ extension _BiomeOp on _Op {
         final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
       }
+      // Into / out of the shop (player_shop.md § 6).
+      if (shopPos(fromShop, place) case final f?) {
+        pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+      }
       // Between mine levels (mining_smithing.md § 1.4).
       if (arrive != null) {
         pos = WorldPoint(
@@ -72,9 +77,19 @@ extension _BiomeOp on _Op {
     return true;
   }
 
+  /// Where a player lands entering or leaving the shop, or `null`.
+  WorldPoint? shopPos(bool fromShop, String place) {
+    if (ShopInteriorRules.isShop(place)) return ShopInteriorRules.arrival;
+    if (fromShop) return ShopInteriorRules.townFront(TownPlan.landmarksOf(s.town));
+    return null;
+  }
+
   /// Biomes need the zone unlocked; a mine is entered from its biome and
   /// left back to it (mining_smithing.md § 1.1).
   bool _canGo(SessionPlayer p, String place) {
+    if (ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)) {
+      return ShopInteriorRules.canTravel(s.place, place);
+    }
     if (MiningRules.isMine(place) || MiningRules.isMine(s.place)) {
       return MiningRules.canTravel(s.place, place);
     }

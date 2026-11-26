@@ -54,9 +54,13 @@ enum TownSpot {
   /// carts from the mines arrive here; E unloads one.
   carts,
 
-  /// The player's own sale stall (player_shop.md § 5): E opens MI
-  /// PUESTO.
+  /// A counter inside the players' shop (player_shop.md § 6): E at your
+  /// own opens MI PUESTO, at a teammate's their stall to buy.
   stall,
+
+  /// The players' shop house in town, or its exit door inside
+  /// (player_shop.md § 6): E enters / leaves the interior.
+  shop,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su
@@ -120,8 +124,9 @@ abstract final class TownLayout {
     // Small station just west of the south exit (mining_smithing.md
     // § 1.8): its rail stub runs one tile south into the map edge.
     TownLandmark(TownSpot.carts, 'VAGONETAS', Tile.counter, 14, 19, w: 2),
-    // The player's own stall, just north of the south road (player_shop.md § 5).
-    TownLandmark(TownSpot.stall, 'MI PUESTO', Tile.counter, 19, 15, w: 2),
+    // The players' shop house, just north of the south road (player_shop.md
+    // § 6); its interior is a separate map (`ShopInteriorRules`).
+    TownLandmark(TownSpot.shop, 'TIENDA', Tile.shop, 20, 13, w: 3, h: 3),
   ];
 
   /// Lugares que llegaron después del editor (v0.32.3): en un pueblo
@@ -131,7 +136,7 @@ abstract final class TownLayout {
     TownSpot.workshop,
     TownSpot.armory,
     TownSpot.carts,
-    TownSpot.stall,
+    TownSpot.shop,
   ];
 
   /// Muelles del lago base sin mover (los arma `TownPlan`).
