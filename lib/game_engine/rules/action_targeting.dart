@@ -92,6 +92,21 @@ abstract final class ActionTargeting {
           {int reach = defaultReach}) =>
       (x - px).abs() <= reach && (y - py).abs() <= reach;
 
+  /// A tile picked with the mouse and kept while the button is held
+  /// ([aim]) still counts only while it is in reach of the player's tile
+  /// and is not that tile; otherwise `null`, so the selection re-runs
+  /// (hover, WASD direction, nearest). A held click never keeps working a
+  /// tile the player walked away from (controls.md § Cursor de acción).
+  static (int, int)? heldAim(int px, int py, (int, int)? aim,
+      {int reach = defaultReach}) {
+    if (aim case (final ax, final ay)
+        when (ax, ay) != (px, py) &&
+            inReach(px, py, ax, ay, reach: reach)) {
+      return aim;
+    }
+    return null;
+  }
+
   /// The neighbour offset of a facing / last-move vector: the dominant
   /// axis wins (ties go horizontal); no direction = down.
   static (int, int) facingStep(num fx, num fy) {
