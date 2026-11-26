@@ -313,6 +313,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     // reference, visitors per world day and their buy chance / amount,
     // and how many sales the log keeps.
     'stallSlots': 6,
+    // Counters inside the shop house (player_shop.md § 6), at most 4.
+    'shopCounters': 4,
     'stallMaxMarkup': 3,
     'stallVisitors': 3,
     'stallBaseChance': 0.6,

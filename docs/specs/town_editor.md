@@ -166,6 +166,32 @@ fantasma va en el tile del mouse.
   borde de la pantalla: se corren hacia adentro. Nombres de jugadores y
   avisos no participan.
 
+### 1.5 Aviso de la fuente rúnica (v0.49.26, protocolo 99)
+
+Los jugadores no sabían que EDITAR PUEBLO, CONTRATAR y el resto viven en
+la fuente rúnica. Hasta que un jugador abre su panel por primera vez, el
+pueblo dibuja el "!" dorado de novedades (`drawNpcMark`, mismo estilo que
+`DsMark`) sobre la fuente. Al abrirlo, el cliente manda
+`TownAction(TownOp.seen, id: '~fountain')`; el anfitrión guarda
+`npcSeen['~fountain']` en el perfil del jugador (JSON `seen`, ya
+existente: una partida vieja no lo trae y ve el aviso una vez). Es por
+jugador: en co-op cada uno lo apaga al abrir su propio panel. El
+minimapa no dibuja lugares del pueblo, así que no lleva marca.
+
+### 1.6 Botones bloqueados de la fuente (v0.49.26)
+
+Toda acción que el jugador todavía no puede hacer va en gris, con el
+motivo en su línea y en el tooltip. Contratar pide el nivel de OFICIO
+(`HelperRules.hireCost(kind).level`) y muestra el nivel actual, sin
+ambigüedad con niveles de semillas o cultivos:
+
+- es-AR: "Necesitás subir tu oficio de Cultivo a nivel 5 (ahora: nivel 2)"
+- en: "Raise your Farming profession to level 5 (now: level 2)"
+
+Orden de motivos al contratar: otro edita el pueblo → nivel de oficio →
+no hay huertas / lagos. Editar pueblo solo se bloquea por el candado
+(§ 1.3). Tablero, viaje, casas y encargos no tienen requisitos.
+
 ## 2. Ampliaciones por lado
 - Cada ampliación suma una franja de `kTownStrip` (8) tiles al norte,
   sur, este u oeste. Tope total `maxExpansions` (6) y por lado
@@ -322,6 +348,24 @@ la izquierda son el eje de caminos).
   de afuera y, si ahí no entra (borde, construcción, cartel o camino
   fijo), del otro (`TownRules.chestOf`, v0.32.2). AGREGAR ESPECIES es una grilla: elegís el pez, ves
   el detalle y SOLTAR EN EL LAGO.
+
+### 5.1 Cercos (autotile)
+- El CERCO y la TRANQUERA (`fence`, `fence_gate` en `kFarmDecos`, mismo
+  costo `decorFenceCost`) se ponen de a una casilla y **no se rotan**:
+  cada pieza mira a sus vecinas N / E / S / O que también son cerco o
+  tranquera (`Autotile.mask4`, bit 1 N, 2 E, 4 S, 8 O) y elige una de 16
+  piezas: poste solo, punta, recta, esquina, T y cruz
+  (`Autotile.shape`, `CozyRules.decorSprite`). Poner o sacar una pieza
+  rehace las vecinas en el mismo cuadro: el dibujo se deriva, no se
+  guarda.
+- La tranquera va N-S solo si sus vecinas son N/S y ninguna E/O; si no,
+  E-O. Se une al cerco como una pieza más.
+- Arte: `items.vida_decor_fence_<0..15>`, `vida_decor_fence_gate_h/_v`
+  (y `vida_decor_fence` / `vida_decor_fence_gate` para la paleta),
+  píxel 16×16 de `tool/export_building_sprites.dart`; se cambian en el
+  manifest sin tocar Dart.
+- Guardado y red: sin cambios de formato (`dc: [id, x, y]`); un save
+  viejo con cercos se ve conectado al cargarlo.
 
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip

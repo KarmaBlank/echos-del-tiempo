@@ -56,6 +56,8 @@ import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../../../../game_engine/rules/shop_interior_rules.dart';
+import 'shop_interior_layer.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -207,6 +209,9 @@ class MapGame extends Game {
   /// Mines: cracks, debris, bombs, carts (mining_smithing.md § 1.9).
   final mine = MineLayer();
 
+  /// Shop interior room and counters (player_shop.md § 6).
+  late final shopRoom = ShopInteriorLayer(sprites.lifeIcon);
+
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
 
@@ -279,6 +284,10 @@ class MapGame extends Game {
   /// Margen (px) para juntar faros fuera de cuadro: su luz y su efecto
   /// sobre las luciérnagas llegan hasta su radio (lighting.md § 3.4).
   static const _lampReach = 12 * ts;
+
+  /// Fence cells of the town decor list last drawn (autotile lookups).
+  List<(String, int, int)>? _fenceOf;
+  Set<(int, int)> _fences = const {};
 
   /// Reloj de animación en ms (`performance.now()` del prototipo).
   double t = 0;
@@ -1139,6 +1148,15 @@ class MapGame extends Game {
         _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
       }
+      // Onboarding (town_editor.md § 1.5): gold "!" over the rune
+      // fountain until this player opens its panel once.
+      if (controller.fountainAlert) {
+        for (final l in map.townMarks ?? TownLayout.landmarks) {
+          if (l.spot != TownSpot.fountain) continue;
+          drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+        }
+      }
       farm.drawZoneLabels(
           c,
           s.town,
@@ -1173,6 +1191,12 @@ class MapGame extends Game {
             c, map, _dressing!, map.townOrigin, reduceMotion ? 0.0 : t / 1000,
             night: SkyRules.darkness(s.town.sky) > 0.25);
       }
+      // Shop interior (player_shop.md § 6): room and one counter per player.
+      if (ShopInteriorRules.isShop(map.place)) {
+        shopRoom.drawRoom(c);
+        shopRoom.drawCounters(c, s.players, controller.strings.t('ui.world.shop.free'),
+            (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900));
+      }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
         farm.drawPlots(c, s.town, worldView, t);
@@ -1190,6 +1214,7 @@ class MapGame extends Game {
             period: controller.helperPeriod);
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
+        _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
@@ -1351,6 +1376,10 @@ class MapGame extends Game {
       }
       // Farm decorations (cozy_life.md § 2); the little lamps glow at
       // night like the lighthouses.
+      if (!identical(_fenceOf, s.town.decor)) {
+        _fenceOf = s.town.decor;
+        _fences = CozyRules.fenceCells(s.town);
+      }
       for (final (id, dx, dy) in s.town.decor) {
         final px = (dx + ox) * ts, py = (dy + oy) * ts;
         if (!worldView.inflate(_lampReach).contains(Offset(px, py))) continue;
@@ -1358,8 +1387,10 @@ class MapGame extends Game {
           lights.add(Offset(px + 8, py + 3));
           placed.add((dx + ox + 0.5, dy + oy + 0.2));
         }
-        final d = kFarmDecos[id];
-        final im = d == null ? null : sprites.lifeIcon(d.sprite, '');
+        final im = !kFarmDecos.containsKey(id)
+            ? null
+            : sprites.lifeIcon(
+                CozyRules.decorSprite(id, dx, dy, _fences), '');
         if (im == null) continue;
         add(
             id == 'stone_path' ? py : py + 14,

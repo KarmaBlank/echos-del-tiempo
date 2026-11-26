@@ -16,6 +16,8 @@ import 'trial_rules.dart';
 import 'renown_rules.dart';
 import 'world_event_rules.dart';
 import 'mining_rules.dart';
+import 'shop_interior_rules.dart';
+import 'town_plan.dart';
 import 'zone_rules.dart';
 
 export '../models/session_world.dart';
@@ -393,7 +395,9 @@ class _W {
         s.run != null ||
         p.isCompanion ||
         SessionWorld.isDungeon(key) ||
-        !(MiningRules.isMine(place) || MiningRules.isMine(s.place)
+        !(ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)
+            ? ShopInteriorRules.canTravel(s.place, place)
+            : MiningRules.isMine(place) || MiningRules.isMine(s.place)
             ? MiningRules.canTravel(s.place, place)
             : BiomeRules.canTravelTo(place,
                 unlockedZone: ZoneRules.unlockedZone(p.profile)))) {
@@ -410,7 +414,12 @@ class _W {
           leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
       // Out of a mine: in front of its entrance (mining_smithing.md § 1.1);
       // between levels, at the way up or the shaft (§ 1.4).
-      final arrive = MiningRules.arrival(s.place, place, worldId: s.worldId);
+      var arrive = MiningRules.arrival(s.place, place, worldId: s.worldId);
+      // Into / out of the shop (player_shop.md § 6).
+      if (ShopInteriorRules.isShop(place)) arrive = ShopInteriorRules.arrival;
+      if (ShopInteriorRules.isShop(s.place)) {
+        arrive = ShopInteriorRules.townFront(TownPlan.landmarksOf(s.town));
+      }
       if ((fromMine != null || arrive != null) &&
           w.rooms[to]!.players.containsKey(p.id)) {
         final n = w.rooms[to]!.copy();

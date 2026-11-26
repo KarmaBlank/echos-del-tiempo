@@ -7,6 +7,7 @@ import '../models/game_map.dart';
 import '../models/life_skills.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
+import 'autotile.dart';
 import 'biome_regions.dart' show BiomeLayout;
 import 'town_rules.dart';
 import 'wild_loot_rules.dart';
@@ -146,6 +147,33 @@ abstract final class CozyRules {
     return s.copyWith(decor: [...s.decor.where((d) => (d.$2, d.$3) != at)]);
   }
 
+  /// Fence pieces (fence or gate) connect to each other.
+  static bool isFence(String id) => id == 'fence' || id == 'fence_gate';
+
+  /// Base-town cells holding a fence piece; build once per frame.
+  static Set<(int, int)> fenceCells(TownState s) => {
+        for (final d in s.decor)
+          if (isFence(d.$1)) (d.$2, d.$3),
+      };
+
+  /// Autotile mask of the fence piece at base-town ([x], [y]).
+  static int fenceMask(Set<(int, int)> fences, int x, int y) =>
+      Autotile.mask4((dx, dy) => fences.contains((x + dx, y + dy)));
+
+  /// Manifest id (`items.vida_<id>`) of decoration [id] at ([x], [y]):
+  /// fences pick one of 16 pieces from their neighbours, a gate runs
+  /// vertically only between N / S fences; never rotated by hand.
+  static String decorSprite(String id, int x, int y, Set<(int, int)> fences) {
+    if (id == 'fence') return 'decor_fence_${fenceMask(fences, x, y)}';
+    if (id == 'fence_gate') {
+      final m = fenceMask(fences, x, y);
+      final vertical = m & (Autotile.e | Autotile.w) == 0 &&
+          m & (Autotile.n | Autotile.s) != 0;
+      return vertical ? 'decor_fence_gate_v' : 'decor_fence_gate_h';
+    }
+    return kFarmDecos[id]?.sprite ?? 'decor_$id';
+  }
+
   /// The decoration on map tile ([mx], [my]), or `null`.
   static (String, int, int)? decorAt(TownState s, int mx, int my) {
     final (ox, oy) = s.origin;
@@ -263,12 +291,10 @@ abstract final class CozyRules {
       if (have < e.value) return null;
       crops[e.key] = have - e.value;
     }
-    return f.copyWith(
-        crops: crops,
-        ferts: {
-          ...f.ferts,
-          c.fert: f.fertCount(c.fert) + (c.makes * (1 + bonus)).round(),
-        });
+    return f.copyWith(crops: crops, ferts: {
+      ...f.ferts,
+      c.fert: f.fertCount(c.fert) + (c.makes * (1 + bonus)).round(),
+    });
   }
 
   /// Can [f] prepare [recipe] now.

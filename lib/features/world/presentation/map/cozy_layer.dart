@@ -102,7 +102,8 @@ class CozyLayer {
     c.drawOval(Rect.fromLTWH(x - 7, y + 3, 14, 2),
         Paint()..color = CozyPalette.seatShadow);
     if (icon('raft_seat') case final im?) {
-      _img(c, im, Rect.fromLTWH(x - 8, y - 2, 16, 6), SpriteCatalog.pixelPaint());
+      _img(c, im, Rect.fromLTWH(x - 8, y - 2, 16, 6),
+          SpriteCatalog.pixelPaint());
     }
   }
 
@@ -116,10 +117,10 @@ class CozyLayer {
 
   /// Farm decorations of [town] (map origin [ox], [oy] in tiles).
   void drawDecor(Canvas c, TownState town, int ox, int oy) {
+    final fences = CozyRules.fenceCells(town);
     for (final (id, x, y) in town.decor) {
-      final d = kFarmDecos[id];
-      if (d == null) continue;
-      final im = icon(d.sprite);
+      if (!kFarmDecos.containsKey(id)) continue;
+      final im = icon(CozyRules.decorSprite(id, x, y, fences));
       if (im == null) continue;
       _img(c, im, Rect.fromLTWH((x + ox) * ts, (y + oy) * ts, ts, ts),
           SpriteCatalog.pixelPaint());

@@ -4,6 +4,7 @@ import '../models/game_map.dart';
 import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import 'map_generator.dart';
+import 'shop_interior_rules.dart';
 
 /// Colisión y movimiento en el mapa — puerto de `solidT`, `hit`,
 /// `moveEnt` y de los helpers de interacción del cliente (`nearSeal`,
@@ -101,6 +102,13 @@ abstract final class WorldRules {
       return math.sqrt(dx * dx + dy * dy);
     }
 
+    // Inside the shop (player_shop.md § 6): its counters and the door.
+    if (ShopInteriorRules.isShop(map?.place)) {
+      if (ShopInteriorRules.nearDoor(x, y)) return TownSpot.shop;
+      return ShopInteriorRules.counterNear(x, y) == null
+          ? null
+          : TownSpot.stall;
+    }
     // Exterior de bioma: sin los lugares del pueblo.
     if (map?.place == null) {
       for (final l in map?.townMarks ?? TownLayout.landmarks) {

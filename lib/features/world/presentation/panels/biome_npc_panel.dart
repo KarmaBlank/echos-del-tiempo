@@ -43,6 +43,7 @@ import 'item_source_text.dart';
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import 'quest_entries.dart' show residentEntries;
 import 'resident_milestone_row.dart';
 import 'seed_text.dart';
 import '../world_strings.dart';
@@ -246,6 +247,7 @@ LifeItemCellData _questCell(Strings s, SessionController c, BiomeNpcDef n,
           DsButton(s.t('ui.town.npc.turn_in'),
               key: ValueKey('quest-turnin-${n.id}'),
               size: DsButtonSize.compact,
+              tooltip: have > 0 ? null : s.t('ui.town.quest.incomplete'),
               onPressed:
                   have > 0 ? () => c.residentOp(TownOp.turnIn, n.id) : null),
       ],
@@ -343,9 +345,52 @@ LifeItemCellData? orderCell(Strings s, SessionController c, BiomeNpcDef n,
         DsButton(s.t('ui.town.npc.deliver_order'),
             key: ValueKey('order-deliver-${n.id}'),
             size: DsButtonSize.compact,
+            tooltip: have >= r.orderN ? null : s.t('ui.town.quest.incomplete'),
             onPressed: home && have >= r.orderN
                 ? () => c.residentOp(TownOp.order, n.id)
                 : null),
+      ],
+    ),
+  );
+}
+
+/// Casilla del pedido actual de [r] (una casa, un servicio…).
+LifeItemCellData requestCell(Strings s, SessionController c, BiomeNpcDef n,
+    ResidentState r, PlayerProfile? p, TownState town,
+    {required bool home}) {
+  final req = r.request!;
+  final why = ResidentRules.requestUnmet(town, n.id);
+  return LifeItemCellData(
+    id: 'request-${n.id}',
+    icon: const LifeIcon('cofre_oficio', LifeIconKind.herramienta, size: 32),
+    border: r.unhappy ? DsColors.danger : DsColors.selected,
+    search: requestText(req),
+    detail: LifeItemDetail(
+      name: requestText(req),
+      nameColor: DsColors.textTitle,
+      tags: [
+        (s.t('ui.town.npc.request'), DsColors.selected),
+        if (r.unhappy) (s.t('ui.town.npc.unhappy_tag'), DsColors.danger),
+      ],
+      lines: [
+        s.t('ui.town.npc.requested_day', {'day': r.requestDay}),
+        s.t('ui.town.npc.request_reward',
+            {'rep': ResidentRules.t.i('resRequestRep')}),
+        if (why != null) why,
+      ],
+      description: r.unhappy
+          ? s.t('ui.town.npc.unhappy_desc')
+          : s.t('ui.town.npc.request_desc'),
+      actions: [
+        trackButton(c, p, n.id, QuestTrackKind.pedido),
+        if (req != ResidentRequest.casa)
+          DsButton(s.t('ui.town.npc.fulfilled'),
+              key: ValueKey('request-fulfil-${n.id}'),
+              size: DsButtonSize.compact,
+              tooltip: why,
+              onPressed: home && why == null
+                  ? () => c.residentOp(TownOp.fulfil, n.id)
+                  : null),
       ],
     ),
   );
@@ -784,9 +829,13 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
     final Widget body = switch (menu) {
       NpcMenu.comprar => _shopView(c, n, tier, p, inBiome: !home),
       NpcMenu.forja => _forgeView(c, p, town),
-      NpcMenu.encargos =>
-        _grid(questCells(_s, c, n, r, p), _s.t('ui.town.npc.nothing_yet')),
-      NpcMenu.pedidos => _grid(_requests(c, n, r, p, town, home: home),
+      // Quest screens: the ENCARGOS template (list left, checklist
+      // right; design_system.md § "Encargos").
+      NpcMenu.encargos => _quests(
+          residentEntries(_s, c, n, r, p, town, home: home, requests: false),
+          _s.t('ui.town.npc.nothing_yet')),
+      NpcMenu.pedidos => _quests(
+          residentEntries(_s, c, n, r, p, town, home: home, quests: false),
           _s.t('ui.town.npc.no_requests')),
       NpcMenu.regalar => _grid(_gifts(c, n, p), _s.t('ui.town.npc.no_gifts')),
       NpcMenu.casa => _grid(_house(c, n, r, p, town, home: home),
@@ -840,6 +889,12 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
                   style: DsText.body(DsColors.text))),
         ]),
       );
+
+  Widget _quests(List<DsQuestEntry> entries, String empty) => DsQuestTemplate(
+      entries: entries,
+      empty: empty,
+      itemsLabel: _s.t('ui.town.quest.needs'),
+      rewardsLabel: _s.t('ui.town.quest.rewards'));
 
   Widget _grid(List<LifeItemCellData> cells, String empty) =>
       LifeItemGrid(groups: [LifeItemGroup(null, cells)], empty: empty);
@@ -1186,52 +1241,6 @@ class _BiomeNpcPanelState extends State<BiomeNpcPanel> {
         ],
       ),
     );
-  }
-
-  List<LifeItemCellData> _requests(SessionController c, BiomeNpcDef n,
-      ResidentState r, PlayerProfile? p, TownState town,
-      {required bool home}) {
-    final req = r.request;
-    final why = ResidentRules.requestUnmet(town, n.id);
-    return [
-      if (orderCell(_s, c, n, r, p, home: home) case final o?) o,
-      if (req != null)
-        LifeItemCellData(
-          id: 'request-${n.id}',
-          icon: const LifeIcon('cofre_oficio', LifeIconKind.herramienta,
-              size: 32),
-          border: r.unhappy ? DsColors.danger : DsColors.selected,
-          search: requestText(req),
-          caption: _s.t('ui.town.npc.request'),
-          detail: LifeItemDetail(
-            name: requestText(req),
-            nameColor: DsColors.textTitle,
-            tags: [
-              (_s.t('ui.town.npc.request'), DsColors.selected),
-              if (r.unhappy) (_s.t('ui.town.npc.unhappy_tag'), DsColors.danger),
-            ],
-            lines: [
-              _s.t('ui.town.npc.requested_day', {'day': r.requestDay}),
-              _s.t('ui.town.npc.request_reward',
-                  {'rep': ResidentRules.t.i('resRequestRep')}),
-              if (why != null) why,
-            ],
-            description: r.unhappy
-                ? _s.t('ui.town.npc.unhappy_desc')
-                : _s.t('ui.town.npc.request_desc'),
-            actions: [
-              trackButton(c, p, n.id, QuestTrackKind.pedido),
-              if (req != ResidentRequest.casa)
-                DsButton(_s.t('ui.town.npc.fulfilled'),
-                    key: ValueKey('request-fulfil-${n.id}'),
-                    size: DsButtonSize.compact,
-                    onPressed: home && why == null
-                        ? () => c.residentOp(TownOp.fulfil, n.id)
-                        : null),
-            ],
-          ),
-        ),
-    ];
   }
 
   /// Encargo de forja (roles.md § 4): un arma de tu clase.

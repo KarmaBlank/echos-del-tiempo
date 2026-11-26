@@ -97,9 +97,11 @@ import 'helper_rules.dart';
 import 'light_rules.dart';
 import 'mining_rules.dart';
 import 'mine_work_rules.dart';
+import 'shop_interior_rules.dart';
 import '../data/mine_catalog.dart';
 import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
+import 'town_plan.dart';
 import 'town_rules.dart';
 import 'biome_rules.dart';
 import 'map_discovery_rules.dart';
@@ -350,6 +352,7 @@ class SessionEngine {
     if (!identical(before, s.town) &&
         s.place != null &&
         !MiningRules.isMine(s.place) &&
+        !ShopInteriorRules.isShop(s.place) &&
         s.mission == null) {
       final sp = mapFor(s).spawn;
       var i = 0;
@@ -556,6 +559,8 @@ class SessionEngine {
         return MapGenerator.biome(
             lay, BiomeRules.picked(s.town, lay.id, s.time));
       }
+      // Shop interior (player_shop.md § 6).
+      if (ShopInteriorRules.isShop(s.place)) return ShopInteriorRules.map();
       // Mine (mining_smithing.md § 1): a calm lobby map, no enemies.
       if (MiningRules.level(s.place, worldId: s.worldId) case final lvl?) {
         return MiningRules.mapOf(lvl, s.town.mine(s.place!));

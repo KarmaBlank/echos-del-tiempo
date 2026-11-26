@@ -185,8 +185,21 @@ abstract final class QuestTrackRules {
     return p.copyWith(tracked: [...p.tracked, key]);
   }
 
+  /// `npcSeen` key for the rune fountain onboarding (town_editor.md
+  /// § 1.5): set the first time the player opens its panel; until then the
+  /// town shows a gold "!" over the fountain. Not a resident id.
+  static const fountainKey = '~fountain';
+
+  /// Whether [p] has already opened the rune fountain panel.
+  static bool seenFountain(PlayerProfile p) =>
+      p.npcSeen.containsKey(fountainKey);
+
   /// Marca como visto lo que [npc] tiene para decir.
   static PlayerProfile? markSeen(PlayerProfile p, TownState t, String npc) {
+    if (npc == fountainKey) {
+      if (seenFountain(p)) return null;
+      return p.copyWith(npcSeen: {...p.npcSeen, fountainKey: '1'});
+    }
     if (biomeNpc(npc) == null) return null;
     final k = newsKey(t.resident(npc));
     if (p.npcSeen[npc] == k) return null;
