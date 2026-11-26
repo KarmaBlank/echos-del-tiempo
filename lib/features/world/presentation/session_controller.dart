@@ -1131,12 +1131,26 @@ class SessionController extends StateNotifier<SessionView?> {
   void _hostTick(double dt) {
     final s = _s;
     if (s == null || !mounted) return;
-    _sendPosition();
-    _sinceSave += dt;
-    _world(_we.tick(_w!, dt));
-    _autoTurn();
-    _save();
+    // A failing tick rule is skipped and logged once with its stack
+    // (netcode.md § "Tick a prueba de fallos").
+    SessionEngine.onRuleError ??= (rule, e, st) =>
+        EcosLog.error('Regla del tick "$rule" falló (se saltea)', '$e\n$st');
+    try {
+      _sendPosition();
+      _sinceSave += dt;
+      _world(_we.tick(_w!, dt));
+      _autoTurn();
+      _save();
+    } catch (e, st) {
+      // Never silent and never every tick: once per distinct error.
+      if (_tickErrors.add('${e.runtimeType}|$e') && _tickErrors.length <= 16) {
+        EcosLog.error('Tick del anfitrión', '$e\n$st');
+      }
+    }
   }
+
+  /// Host tick failures already logged.
+  final _tickErrors = <String>{};
 
   /// Turno de un compañero con AUTO (solo_party.md § 4.1).
   void _autoTurn() {

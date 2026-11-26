@@ -124,6 +124,12 @@ abstract final class FarmingRules {
 
   /// Ripe and allowed to be picked in [season] (farming.md § 15): winter
   /// crops are only harvested in winter. `null` season = no gate.
+  /// What a farm helper may pick (farming.md § 8.2): a harvestable
+  /// regular crop. Living weapon plots (`ws_*`, profession_gear.md § 3)
+  /// are left for a player: [harvest] has no crop for them.
+  static bool helperHarvestable(FarmPlot p, Season? season) =>
+      kCrops.containsKey(p.seed) && harvestable(p, season);
+
   static bool harvestable(FarmPlot p, Season? season) =>
       ripe(p) &&
       (season == null ||
