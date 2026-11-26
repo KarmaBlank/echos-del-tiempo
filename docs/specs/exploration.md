@@ -321,14 +321,37 @@ idas y vueltas (antes cámara y héroe se redondeaban por separado y el
 héroe temblaba contra el mundo). La `camDraw` se usa para todo lo
 dibujado (mundo, actores, HUD en el mapa).
 
-**Zoom de la pesca (v0.49.19).** El zoom (`cozyFishZoom`) es solo de la
-cámara del mundo: el lienzo virtual se escala alrededor del jugador y
-los widgets del HUD, menús y paneles no cambian de tamaño ni de lugar.
-Mientras el zoom anima (progreso entre 0 y 1) la cámara y el héroe local
-quedan en espacio continuo (sin redondear a píxel): el centro de la vista
-se mantiene (`zoomRecenter`) y el jugador queda quieto en pantalla
-(±0.5 px) a cualquier FPS. Con el zoom asentado vuelve el ajuste a
-píxel de arriba.
+**Zoom del mundo, pixel perfect (v0.49.28).** El zoom del mundo nunca
+es fraccional. Un *nivel* es un entero sobre la escala base
+`P0 = max(1, round(ancho del mapa en pantalla / 480))`: el mundo se
+dibuja a `P = max(1, P0 + nivel)` px de pantalla por px del mundo.
+
+- **Nivel 0** = el camino clásico (lienzo virtual 480×288 escalado al
+  área del mapa, entero con PIXEL PERFECT).
+- **Nivel ≠ 0** (`WorldFrame`, `world_frame.dart`): la escena se graba
+  igual en px virtuales con `scale(1/zoom)`, pero se rasteriza a una
+  imagen de `ceil(área/P)` px — un px del mundo = un px de la imagen —
+  y esa imagen va a pantalla ×P con vecino más cercano, recortada al
+  área del mapa. Como la cámara se dibuja en px enteros (`camDraw`),
+  tiles, actores, niebla, luces, reflejos, sombras de nubes,
+  partículas, etiquetas y cursor quedan alineados en todos los niveles;
+  las capas cacheadas viven en px del mundo y no dependen del nivel. La
+  vista visible (y el culling de tiles) es `480·zoom × 288·zoom` px del
+  mundo, con `zoom = ancho de la imagen / 480`.
+- **Elegir nivel:** Ctrl + rueda sobre el mapa sube/baja un nivel
+  (`worldZoomMin` −1 … `worldZoomMax` +2, tunables en Balance) y se
+  guarda en los ajustes (`worldZoom`, VIDEO → ZOOM DEL MUNDO, mismos
+  pasos). El HUD no cambia.
+- **Transición:** corte instantáneo (sin animación de escala ni
+  fundido): el centro de la vista se mantiene (`zoomRecenter`) y el
+  ajuste a píxel de arriba sigue activo siempre.
+- **Pesca:** pescando se usa `worldZoomFishSteps` (1) nivel más cerca
+  si entra en el máximo; si no, no hay zoom de pesca. Al soltar la caña
+  vuelve al nivel elegido. Reemplaza el zoom suave fraccional de
+  v0.49.14/19 (`cozyFishZoom` 0.85 + smoothstep), que estiraba los
+  píxeles de forma despareja.
+- **Edición del pueblo:** conserva sus pasos propios (`editZooms` 1,
+  1.5, 2: solo alejar, instantáneo, cámara ajustada a píxel).
 
 **Sin sacudidas por herramienta (v0.49.19).** Los golpes de pico,
 azada, etc. no mueven la cámara: la única sacudida del mapa es la de la
