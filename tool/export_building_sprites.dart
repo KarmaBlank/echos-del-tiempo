@@ -3,7 +3,8 @@
 // hearth with a glowing anvil stall).
 //
 // Run with `dart run tool/export_building_sprites.dart`. It writes
-// assets/sprites/items/vida_armeria.png, vida_forja.png and the 4x
+// assets/sprites/items/vida_armeria.png, vida_forja.png, vida_tienda.png
+// and the 4x
 // preview at docs/release_shots/building_icons_preview.png. The game never
 // names a file: SpriteCatalog resolves `items.vida_armeria` /
 // `items.vida_forja` through sprite_manifest.yaml, so the art can be
@@ -134,6 +135,57 @@ RgbaImage armory() {
   return p.img;
 }
 
+/// TIENDA (player_shop.md § 6): 48 x 48, same build as the ARMERÍA in
+/// timber: plank walls, a green gable with a coin-pouch emblem, a
+/// striped awning over the door and crates of goods in the windows.
+RgbaImage playerShop() {
+  final p = _Pen(48, 48);
+  const roof = 0x3a7a4a, roofDark = 0x285a34, gold = 0xe0c060;
+  // Plank walls.
+  p.rect(5, 24, 38, 23, _wood);
+  for (var x = 5; x < 43; x += 4) {
+    p.rect(x, 24, 1, 23, _woodDark);
+  }
+  p.rect(5, 24, 2, 23, _woodDark);
+  p.rect(41, 24, 2, 23, _woodDark);
+  // Roof eaves and front gable.
+  p.rect(2, 21, 44, 3, roofDark);
+  for (var r = 0; r < 17; r++) {
+    final half = r + 3;
+    p.rect(24 - half, 4 + r, half * 2, 1, r.isEven ? roof : roofDark);
+  }
+  // Emblem plate: a coin pouch with two coins.
+  p.rect(14, 8, 20, 12, _woodDark);
+  p.rect(15, 9, 18, 10, 0x2e2a3a);
+  p.rect(20, 12, 8, 6, 0xb07a44);
+  p.rect(21, 11, 6, 1, 0xb07a44);
+  p.rect(22, 10, 4, 1, _woodDark);
+  p.px(24, 14, gold);
+  p.rect(16, 15, 3, 3, gold);
+  p.rect(29, 15, 3, 3, gold);
+  p.px(17, 16, 0xffd166);
+  p.px(30, 16, 0xffd166);
+  // Striped awning over the door.
+  for (var x = 15; x < 33; x++) {
+    p.rect(x, 30, 1, 3, ((x - 15) ~/ 3).isEven ? 0xdfe6e9 : 0xa83a3a);
+  }
+  // Door.
+  p.rect(19, 34, 10, 13, _woodDark);
+  p.rect(20, 35, 8, 12, 0x6e4426);
+  p.rect(23, 35, 1, 12, _woodDark);
+  p.px(26, 41, gold);
+  // Windows with crates of goods.
+  for (final wx in [7, 34]) {
+    p.rect(wx, 33, 7, 7, _woodDark);
+    p.rect(wx + 1, 34, 5, 5, 0x24324a);
+    p.rect(wx + 1, 37, 5, 2, 0xb07a44);
+    p.px(wx + 2, 36, 0xa83a3a);
+    p.px(wx + 4, 36, gold);
+  }
+  p.outline();
+  return p.img;
+}
+
 /// FORJA: 80 x 32 (five tiles wide, one tile tall plus one above). Stone
 /// platform, brick hearth with embers, a big anvil with a hammer and a
 /// quenching barrel.
@@ -243,6 +295,8 @@ void main() {
   final f = forge();
   File('assets/sprites/items/vida_armeria.png').writeAsBytesSync(encodePng(a));
   File('assets/sprites/items/vida_forja.png').writeAsBytesSync(encodePng(f));
+  File('assets/sprites/items/vida_tienda.png')
+      .writeAsBytesSync(encodePng(playerShop()));
   File('docs/release_shots/building_icons_preview.png')
     ..createSync(recursive: true)
     ..writeAsBytesSync(encodePng(_preview(a, f)));

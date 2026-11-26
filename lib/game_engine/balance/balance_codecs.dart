@@ -1477,6 +1477,7 @@ const _farmLabels = {
 
 const _townLabels = {
   'stallSlots': 'Puesto: lugares para publicar',
+  'shopCounters': 'Tienda: mostradores adentro',
   'stallMaxMarkup': 'Puesto: precio máximo × referencia',
   'stallVisitors': 'Puesto: visitantes por día',
   'stallBaseChance': 'Puesto: chance de compra a precio de referencia',
