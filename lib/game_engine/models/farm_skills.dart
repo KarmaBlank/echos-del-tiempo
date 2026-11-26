@@ -1,4 +1,6 @@
+import '../data/animals_catalog.dart' show RanchTool;
 import '../data/cooking_catalog.dart';
+import 'farm_animal.dart' show parseAnimalGoodsKey;
 import '../data/cozy_catalog.dart' show kCompostRecipes;
 import '../data/farming_catalog.dart';
 import '../data/life_tree_catalog.dart';
@@ -30,7 +32,18 @@ class FarmSkills {
     this.meal,
     Set<String> recipes = const {},
     Map<String, int> wseeds = const {},
-  })  : wseeds = Map.unmodifiable({
+    Map<String, int> goods = const {},
+    List<String> rtools = const [],
+    int hay = 0,
+  })  : goods = Map.unmodifiable({
+          for (final e in goods.entries)
+            if (e.value > 0 && parseAnimalGoodsKey(e.key) != null)
+              e.key: e.value,
+        }),
+        rtools = List.unmodifiable(
+            {...rtools.where((t) => RanchTool.fromId(t) != null)}),
+        hay = hay < 0 ? 0 : hay,
+        wseeds = Map.unmodifiable({
           for (final e in wseeds.entries)
             if (e.value > 0 && kWeaponSeeds.containsKey(e.key)) e.key: e.value,
         }),
@@ -97,6 +110,23 @@ class FarmSkills {
   /// Weapon seeds (profession_gear.md § 3.1): id of `kWeaponSeeds` →
   /// count. JSON `ws`.
   final Map<String, int> wseeds;
+
+  /// Animal products (animals.md § 8): `<product>@<quality>` → count.
+  /// JSON `ag`.
+  final Map<String, int> goods;
+
+  /// Ranch tools owned (`RanchTool.id`). JSON `at`.
+  final List<String> rtools;
+
+  /// Hay bales in the bag. JSON `hy`.
+  final int hay;
+
+  int goodsCount(String key) => goods[key] ?? 0;
+  int get goodsTotal => goods.values.fold(0, (a, b) => a + b);
+  bool hasTool(RanchTool t) => rtools.contains(t.id);
+
+  FarmSkills addGoods(String key, [int n = 1]) =>
+      copyWith(goods: {...goods, key: goodsCount(key) + n});
   int wseedCount(String id) => wseeds[id] ?? 0;
   FarmSkills addWseed(String id, [int n = 1]) =>
       copyWith(wseeds: {...wseeds, id: wseedCount(id) + n});
@@ -178,8 +208,14 @@ class FarmSkills {
     Object? meal = _keep,
     Set<String>? recipes,
     Map<String, int>? wseeds,
+    Map<String, int>? goods,
+    List<String>? rtools,
+    int? hay,
   }) =>
       FarmSkills(
+          goods: goods ?? this.goods,
+          rtools: rtools ?? this.rtools,
+          hay: hay ?? this.hay,
           wseeds: wseeds ?? this.wseeds,
           recipes: recipes ?? this.recipes,
           xp: xp ?? this.xp,
@@ -225,6 +261,9 @@ class FarmSkills {
         if (meal != null) 'mb': meal!.toJson(),
         if (recipes.isNotEmpty) 'rc': [...recipes]..sort(),
         if (wseeds.isNotEmpty) 'ws': wseeds,
+        if (goods.isNotEmpty) 'ag': goods,
+        if (rtools.isNotEmpty) 'at': rtools,
+        if (hay > 0) 'hy': hay,
       };
 
   /// Tolerante; sin `farm` (saves de antes de v0.23.0) → [initial].
@@ -259,6 +298,10 @@ class FarmSkills {
       meal: MealBuff.fromJson(raw['mb']),
       recipes: {...l(raw['rc'])},
       wseeds: m(raw['ws']),
+      // animals.md § 9: absent before protocol 99.
+      goods: m(raw['ag']),
+      rtools: l(raw['at']),
+      hay: n(raw['hy']),
     );
   }
 
@@ -286,7 +329,10 @@ class FarmSkills {
       other.meal == meal &&
       other.recipes.length == recipes.length &&
       other.recipes.containsAll(recipes) &&
-      _mapEq(other.wseeds, wseeds);
+      _mapEq(other.wseeds, wseeds) &&
+      _mapEq(other.goods, goods) &&
+      other.rtools.join(',') == rtools.join(',') &&
+      other.hay == hay;
 
   @override
   int get hashCode => Object.hash(xp, hoe, can, seeds.length, crops.length);

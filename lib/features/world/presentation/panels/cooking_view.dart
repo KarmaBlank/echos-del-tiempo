@@ -4,6 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../core/i18n/catalog_text.dart';
 import '../../../../game_engine/data/farming_catalog.dart' show kCrops;
 import '../../../../game_engine/data/fishing_catalog.dart' show kFish;
+import '../../../../game_engine/models/farm_animal.dart' show animalGoodsKey;
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/cooking_rules.dart';
 import '../../../inventory/domain/item_names.dart';
@@ -136,6 +137,12 @@ class _CookingViewState extends State<CookingView> {
         context.t('ui.town.cook.need', {
           'item': kFish[e.key]?.text ?? e.key,
           'have': p.life.count(e.key),
+          'need': e.value,
+        }),
+      for (final e in m.goods.entries)
+        context.t('ui.town.cook.need', {
+          'item': animalGoodsName(animalGoodsKey(e.key, q)),
+          'have': f.goodsCount(animalGoodsKey(e.key, q)),
           'need': e.value,
         }),
     ];

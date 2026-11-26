@@ -145,7 +145,7 @@ extension _BiomeOp on _Op {
         ? '${p.name} recolectó $seed.'
         : '${p.name} recolectó ${crop.name}${seed.isEmpty ? '' : ' y $seed'}.');
     final lvl1 = FarmingRules.level(p.profile);
-    if (lvl1 > lvl0) say('${p.name} subió Cultivo a nivel $lvl1.');
+    if (lvl1 > lvl0) say('${p.name} subió Granjero a nivel $lvl1.');
     return true;
   }
 

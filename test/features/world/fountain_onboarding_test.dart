@@ -65,7 +65,7 @@ void main() {
 
     final now = FarmingRules.level(me);
     final want =
-        'Necesitás subir tu oficio de Cultivo a nivel 5 (ahora: nivel $now)';
+        'Necesitás subir tu oficio de Granjero a nivel 5 (ahora: nivel $now)';
     final btn = tester.widget<DsButton>(
         find.byKey(const ValueKey('fountain-hire-farmer')));
     expect(btn.onPressed, isNull);

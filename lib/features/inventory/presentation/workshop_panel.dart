@@ -20,6 +20,7 @@ import '../../world/presentation/panels/tool_shop_grid.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import 'inventory_strings.dart';
+import 'machine_grid.dart';
 import 'shop_sections.dart';
 
 /// Oficio de cada receta del taller (filtro de chip).
@@ -90,20 +91,26 @@ class _WorkshopPanelState extends State<WorkshopPanel> {
                     key: const ValueKey('workshop-tab-craft')),
                 DsTab(s.t('ui.inventory.workshop.tab.tools'),
                     key: const ValueKey('workshop-tab-tools')),
+                DsTab(s.t('ui.town.ranch.machine.tab'),
+                    key: const ValueKey('workshop-tab-machines')),
               ],
               index: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
             SizedBox(height: DsSpace.xs),
-            PanelHint(s.t(_tab == 0
-                ? 'ui.inventory.workshop.hint'
-                : 'ui.inventory.workshop.tools_hint')),
+            PanelHint(s.t(switch (_tab) {
+              0 => 'ui.inventory.workshop.hint',
+              1 => 'ui.inventory.workshop.tools_hint',
+              _ => 'ui.town.ranch.machine.hint',
+            })),
             Expanded(
               child: KeyedSubtree(
                 key: ValueKey('${view.actorId}-$_tab'),
-                child: _tab == 0
-                    ? WorkshopGrid(shop: shop)
-                    : ToolShopGrid(view: view, controller: controller),
+                child: switch (_tab) {
+                  0 => WorkshopGrid(shop: shop),
+                  1 => ToolShopGrid(view: view, controller: controller),
+                  _ => MachineGrid(profile: p, controller: controller),
+                },
               ),
             ),
           ],

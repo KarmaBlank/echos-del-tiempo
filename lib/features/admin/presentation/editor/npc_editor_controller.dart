@@ -359,7 +359,7 @@ class NpcEditorController extends ChangeNotifier {
             ('orderEveryDays', 'Cada cuántos días'),
             ('orderRarityLevels', 'Niveles de oficio por rareza'),
             ('orderAnyBiomeLevel', 'Oficio para pedir de cualquier bioma'),
-            ('orderQualityLevel', 'Cultivo para pedir calidad rara'),
+            ('orderQualityLevel', 'Granjero para pedir calidad rara'),
             ('orderSizeLevel', 'Pesca para pedir tamaño mínimo'),
             ('orderXpPerValue', 'XP × valor'),
             ('orderXpDayCap', 'Tope diario de XP'),

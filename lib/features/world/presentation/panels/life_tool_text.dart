@@ -69,7 +69,7 @@ List<String> farmToolLines(FarmToolDef d, int level) {
   }
   String x(double v) => '×${(1 + v).toStringAsFixed(2)}';
   return [
-    ..._yieldLines('Cultivo', level, d.reqLevel, k),
+    ..._yieldLines('Granjero', level, d.reqLevel, k),
     TextDetail.isSummary || area == d.area
         ? 'Área ${_area(area)}'
         : 'Área ${_area(d.area)} → ${_area(area)} con tu nivel',

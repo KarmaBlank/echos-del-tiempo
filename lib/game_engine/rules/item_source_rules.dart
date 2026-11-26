@@ -55,6 +55,9 @@ enum ItemSourceKind {
   /// Cooked at the kitchen.
   cooking,
 
+  /// Left by a farm animal you care for (animals.md § 9).
+  ranch,
+
   /// Prepared at the bait bench.
   baitCraft,
 
@@ -153,6 +156,7 @@ abstract final class ItemSourceRules {
         SmithMatKind.supply ||
         SmithMatKind.fishPart =>
           const [ItemSource(ItemSourceKind.smithing)],
+        SmithMatKind.animalPart => const [ItemSource(ItemSourceKind.ranch)],
       };
     }
     if (kLifeMaterials.containsKey(id)) {

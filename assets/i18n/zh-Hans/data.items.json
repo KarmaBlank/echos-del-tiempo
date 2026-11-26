@@ -28,6 +28,7 @@
   "data.items.gear.metal.ingot_ember": "炽焰钢",
   "data.items.gear.metal.ingot_frost": "寒霜铁",
   "data.items.gear.parts.name": "{metal}{type}",
+  "data.items.gear.ranch.name": "{item}{type}",
   "data.items.gear.seed.ws_arco": "活木弓种子",
   "data.items.gear.seed.ws_arco_old": "远古活木弓种子",
   "data.items.gear.seed.ws_ballesta": "活木弩种子",

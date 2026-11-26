@@ -82,7 +82,7 @@ class _TownStripCardsState extends State<TownStripCards>
         // o lago con los ayudantes, el costo o el motivo.
         if (hire != null)
           for (final b in town.builds)
-            if (b.kind == hire)
+            if (SessionController.hireKindMatches(hire, b.kind))
               if (g
                       .worldToScreen(b.parts
                           .map((p) => Rect.fromLTWH((p.x + ox) * ts,

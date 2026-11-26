@@ -24,6 +24,10 @@ enum ActionTargetKind {
   shop,
   dock,
   travel,
+
+  /// A farm animal, its egg on the ground or its coop / barn house
+  /// (animals.md § 4.2): the tile cursor, never the outline.
+  animal,
 }
 
 /// Something next to the player that E / a click can act on.

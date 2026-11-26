@@ -217,6 +217,8 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.combatLimits:
       case BalanceKind.exploration:
       case BalanceKind.farming:
+      case BalanceKind.animals:
+      case BalanceKind.gear:
       case BalanceKind.town:
       case BalanceKind.fishing:
       case BalanceKind.lifeTree:

@@ -343,7 +343,7 @@ abstract final class FarmingRules {
 
   static int charXp(CropDef c) => t.i('charXp${c.rarity.key}');
 
-  /// Suma la cosecha a [p] (bolsa, semillas, XP de Cultivo y los pity).
+  /// Suma la cosecha a [p] (bolsa, semillas, XP de Granjero y los pity).
   static PlayerProfile addHarvest(PlayerProfile p, Harvest h, {double xpMult = 1}) {
     var f = p.life.farm.addCrop(cropKey(h.crop.id, h.quality), h.count);
     if (h.seeds > 0) f = f.addSeed(h.crop.id, h.seeds);

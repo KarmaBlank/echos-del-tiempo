@@ -44,6 +44,7 @@ class MealDef {
   const MealDef(this.id, this.name, this.stat,
       {required this.crops,
       this.fish = const {},
+      this.goods = const {},
       this.element,
       this.power = 1,
       this.lore = ''});
@@ -57,6 +58,10 @@ class MealDef {
 
   /// Fish species → count (any size).
   final Map<String, int> fish;
+
+  /// Farm animal products → count, of the quality picked at the pot
+  /// (animals.md § 8).
+  final Map<String, int> goods;
 
   /// Resisted element when [stat] is [MealStat.res].
   final DamageTag? element;
@@ -123,6 +128,17 @@ const kMeals = <String, MealDef>{
       crops: {'nabo_claro': 2},
       fish: {'mojarra_claro': 1},
       lore: 'Pesca y huerta en el mismo plato.'),
+  // Farm animals (animals.md § 8): products of the quality picked.
+  'tortilla_campo': MealDef('tortilla_campo', 'Tortilla de campo', MealStat.hp,
+      crops: {'papa_piedra': 1},
+      goods: {'huevo': 2},
+      power: 1.5,
+      lore: 'Huevos del gallinero y papas de la huerta.'),
+  'flan_leche': MealDef('flan_leche', 'Flan de leche', MealStat.atk,
+      crops: {},
+      goods: {'leche': 2, 'huevo': 1},
+      power: 1.5,
+      lore: 'Dulce de establo: da ganas de volver a salir.'),
   'trucha_cebolla': MealDef('trucha_cebolla', 'Trucha a la cebolla',
       MealStat.atk,
       crops: {'cebolla_cobre': 1},

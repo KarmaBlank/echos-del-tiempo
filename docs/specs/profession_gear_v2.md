@@ -152,3 +152,41 @@ fishEssenceLegend, legendUltChance, parityExtraSlotW, parityManualEdge`.
 - Widgets: pasos de la forja y desarme en Brann.
 - `profession_parity_sim_test`: ±15 % en 10/20/30 y manual ≥ 1.15×.
 - Handshake 93.
+
+## 11. GRANJERO: piezas de animal y la forja legendaria (v0.50, protocolo 101)
+
+Los animales de la granja (`animals.md` § 9–10) se suman a la forja por
+piezas igual que los peces, con una regla: **nunca se lastima a un
+animal**; todo sale del cuidado.
+
+| Pieza (`ap_<especie>_<pieza>_<q>`) | Animal | Paso |
+|---|---|---|
+| Cuerno mudado | vaca, cabra | **Cabeza** o engaste |
+| Pelaje mudado | vaca, cabra | **Mango** o engaste |
+| Lana fina | oveja | **Mango** o engaste |
+| Pluma | gallina, pato | engaste |
+
+- `q` = calidad con que salió (0 normal, 1 rara, 2 épica): nivel 3 / 4 /
+  5 y `calidadMateriales` `partQNormal/Raro/Epico` (0.6 / 0.8 / 1),
+  Balance → Granjero: animales.
+- **Afinidad** (§ 1): una pieza de animal en el **engaste** cambia la
+  afinidad a la del animal: gallina fuego, pato agua, vaca físico, cabra
+  electro, oveja sagrado. En cabeza y mango solo tiñe (cuerno marfil,
+  pelaje castaño, lana crema; las plumas, del color de su afinidad).
+
+| Fuente | Afinidad |
+|---|---|
+| Pieza de gallina / pato / vaca / cabra / oveja | fuego / agua / físico / electro / sagrado |
+
+- **Forja legendaria de animales:** en Brann, al lado de la forja de
+  peces, el producto legendario (Huevo dorado, Huevo de la marea quieta,
+  Cuerno ancestral, Cuerno del risco eterno, Vellón del eco) se forja
+  entero en un arma única de tipo fijo (varita, arco, hacha, lanza,
+  báculo) con firma propia, como un pez legendario: Épica, o Legendaria
+  con `animalForgeLegend` + árbol; calidad de ayudante; `pt = ['ranch',
+  <especie>]`; nombre "<Tipo> de <producto>".
+- **Paridad:** las armas de animal no entran al modelo de equipo de § 2
+  (que mide pesca, cultivo y herrería por hora); el Granjero ya tenía las
+  armas vivas en ese modelo y la rama ANIMALES le suma piezas y una
+  forja legendaria lenta (3 % por producto a cinco corazones). Si el
+  dueño quiere medirlas, se agregan como cuarto camino al sim.

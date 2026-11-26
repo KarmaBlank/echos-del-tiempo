@@ -26,6 +26,11 @@ const kConstructions = <ConstructionDef>[
       detail: 'Pegalo a otro lago para agrandarlo'),
   ConstructionDef(kCasaId, BuildKind.casa, 'CASA', 3, 3,
       detail: 'Hogar para un habitante invitado'),
+  // Farm animals (animals.md § 3): a house and a fenced yard.
+  ConstructionDef('gallinero', BuildKind.gallinero, 'GALLINERO', 5, 4,
+      detail: 'Casa y patio para gallinas y patos'),
+  ConstructionDef('establo', BuildKind.establo, 'ESTABLO', 7, 5,
+      detail: 'Casa y patio para vacas, cabras y ovejas'),
 ];
 
 /// La casa de un habitante (town_editor.md § 3.4): cuesta oro y tablas

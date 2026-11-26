@@ -37,9 +37,13 @@ void main() {
     for (final b in kBaits.keys) 'cebo_$b',
     for (final m in kLifeMaterialIds) 'mat_$m',
     // Fish parts (fp_*) draw their fish's icon (profession_gear_v2.md § 4).
-    ...kSmithMaterials.keys.where((m) => !m.startsWith('fp_')),
+    ...kSmithMaterials.keys
+        .where((m) => !m.startsWith('fp_') && !m.startsWith('ap_')),
     for (final m in kSmithMaterials.keys)
-      if (!m.startsWith('fp_')) 'mat_$m',
+      if (!m.startsWith('fp_') && !m.startsWith('ap_')) 'mat_$m',
+    // Animal parts draw one sprite per species and part (animals.md § 9).
+    for (final m in kSmithMaterials.keys)
+      if (m.startsWith('ap_')) m.substring(0, m.lastIndexOf('_')),
   ];
 
   test('every catalog item icon maps to an existing PNG', () {

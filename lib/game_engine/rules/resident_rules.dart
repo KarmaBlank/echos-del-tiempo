@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/biomes_catalog.dart';
 import '../data/cooking_catalog.dart'
     show kMeals, MealDef, mealKey, parseMealKey;
+import '../data/animals_catalog.dart' show kAnimalProducts;
 import '../data/farming_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/smithing_catalog.dart';
@@ -988,8 +989,10 @@ abstract final class ResidentRules {
     final maxR = (farmLv ~/ math.max(1, t.i('orderRarityLevels')))
         .clamp(0, FishRarity.values.length - 1);
     final meals = [
+      // Animal recipes stay out of the orders (animals.md § 8): a resident
+      // never asks for what the town may not have built.
       for (final m in kMeals.values)
-        if (m.rarity.index <= maxR) m.id
+        if (m.rarity.index <= maxR && m.goods.isEmpty) m.id
     ];
     if (meals.isEmpty) return null;
     final lo = math.max(1, t.i('mealOrderMin'));
@@ -1012,6 +1015,9 @@ abstract final class ResidentRules {
     }
     for (final e in m.fish.entries) {
       v += (kFish[e.key]?.price ?? 10) * e.value;
+    }
+    for (final e in m.goods.entries) {
+      v += (kAnimalProducts[e.key]?.price ?? 10) * e.value;
     }
     return v;
   }
