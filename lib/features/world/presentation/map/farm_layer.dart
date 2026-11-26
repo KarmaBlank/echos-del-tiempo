@@ -261,16 +261,37 @@ class MapFarmLayer {
     }
   }
 
-  /// Parcela arada sin cultivo en el tile de esquina ([px], [py]): la
-  /// usan el mapa y la vista previa de la paleta CONSTRUIR.
+  /// Tilled plot with no crop at tile corner ([px], [py]); used by the
+  /// map and the BUILD palette preview. Dry soil is a lighter brown with
+  /// dusty crumbs; watered soil is a deep, desaturated wet brown with a
+  /// damp rim and cool specular glints (farming.md § 2.3).
   static void drawTilled(Canvas c, double px, double py,
       {bool watered = false}) {
-    final paint = Paint()
-      ..color = watered ? FarmPalette.wet : FarmPalette.tilled;
-    c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2), paint);
-    paint.color = FarmPalette.furrow;
+    final paint = Paint();
+    void r(double dx, double dy, double w, double h, Color col) =>
+        c.drawRect(Rect.fromLTWH(px + dx, py + dy, w, h), paint..color = col);
+    if (watered) {
+      r(0, 0, ts, ts, FarmPalette.wetRim);
+      r(1, 1, ts - 2, ts - 2, FarmPalette.wet);
+      for (var i = 0; i < 3; i++) {
+        r(2, 3.0 + i * 5, ts - 4, 1, FarmPalette.wetFurrow);
+      }
+      // Wet sheen: soft streaks plus a few bright glints on the ridges.
+      for (final (dx, dy, w) in const [(3, 1, 3), (8, 6, 4), (4, 11, 3)]) {
+        r(dx.toDouble(), dy.toDouble(), w.toDouble(), 1,
+            FarmPalette.wetShineSoft);
+      }
+      for (final (dx, dy) in const [(4, 1), (10, 6), (5, 11), (12, 12)]) {
+        r(dx.toDouble(), dy.toDouble(), 1, 1, FarmPalette.wetShine);
+      }
+      return;
+    }
+    r(1, 1, ts - 2, ts - 2, FarmPalette.tilled);
     for (var i = 0; i < 3; i++) {
-      c.drawRect(Rect.fromLTWH(px + 2, py + 3 + i * 5, ts - 4, 1), paint);
+      r(2, 3.0 + i * 5, ts - 4, 1, FarmPalette.furrow);
+    }
+    for (final (dx, dy) in const [(3, 2), (9, 2), (6, 7), (12, 7), (4, 12)]) {
+      r(dx.toDouble(), dy.toDouble(), 1, 1, FarmPalette.dust);
     }
   }
 
