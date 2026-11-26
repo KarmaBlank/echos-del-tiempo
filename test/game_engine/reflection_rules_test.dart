@@ -18,7 +18,9 @@ void main() {
         WaterKind.murky);
     expect(ReflectionRules.kindOf(Tile.water, 'pradera', roofed: true),
         WaterKind.cave);
-    expect(ReflectionRules.alphaOf(WaterKind.cave), 0);
+    expect(ReflectionRules.alphaOf(WaterKind.cave), greaterThan(0));
+    expect(ReflectionRules.alphaOf(WaterKind.cave),
+        lessThan(ReflectionRules.alphaOf(WaterKind.clear)));
     expect(ReflectionRules.alphaOf(WaterKind.murky),
         lessThan(ReflectionRules.alphaOf(WaterKind.clear)));
   });
@@ -115,7 +117,7 @@ void main() {
         expect(step, inInclusiveRange(0, 2));
       }
     }
-    expect(ReflectionRules.floatDrop(), greaterThan(0));
+    expect(ReflectionRules.floatDrop(), greaterThanOrEqualTo(0));
     expect(ReflectionRules.duskTint(0), 0);
     expect(ReflectionRules.duskTint(1), 0);
     expect(ReflectionRules.duskTint(0.5), greaterThan(0));

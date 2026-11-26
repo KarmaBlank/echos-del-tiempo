@@ -288,8 +288,8 @@ class MapGame extends Game {
   Rect worldToScreen(Rect w) {
     final r = viewRect(Size(size.x, size.y));
     final k = r.width / vw / zoom;
-    Offset p(Offset o) => Offset(r.left + (o.dx - camX.roundToDouble()) * k,
-        r.top + (o.dy - camY.roundToDouble()) * k);
+    Offset p(Offset o) => Offset(r.left + (o.dx - camDrawX) * k,
+        r.top + (o.dy - camDrawY) * k);
     return Rect.fromPoints(p(w.topLeft), p(w.bottomRight));
   }
 
@@ -302,13 +302,24 @@ class MapGame extends Game {
     final r = viewRect(Size(size.x, size.y));
     if (!r.contains(p) || r.width <= 0) return null;
     final k = vw / r.width * zoom;
-    final wx = (p.dx - r.left) * k + camX.roundToDouble();
-    final wy = (p.dy - r.top) * k + camY.roundToDouble();
+    final wx = (p.dx - r.left) * k + camDrawX;
+    final wy = (p.dy - r.top) * k + camDrawY;
     return ((wx / ts).floor(), (wy / ts).floor());
   }
 
   /// Cámara (`cam`), esquina superior izquierda en px del mundo.
   double camX = 0, camY = 0;
+
+  /// Camera offset actually drawn: the continuous camera snapped to
+  /// whole pixels once (exploration.md § Cámara).
+  double get camDrawX => camX.roundToDouble();
+  double get camDrawY => camY.roundToDouble();
+
+  /// Where the followed hero is drawn (world px) for a continuous camera
+  /// [cam]: the drawn camera plus the rounded lag, so a steady walk moves
+  /// world and hero in monotonic whole-pixel steps (no wobble).
+  static double snapFocus(double focus, double cam) =>
+      cam.roundToDouble() + (focus - cam).roundToDouble();
 
   /// Zoom de la edición del pueblo (1 = normal; más = se ve más mapa).
   double editZoom = 1;
@@ -321,6 +332,7 @@ class MapGame extends Game {
   /// Map fraction shown outside the editor: eases toward
   /// `cozyFishZoom` while fishing and back to 1.
   double cozyZoom = 1;
+  double _fishZoomP = 0;
 
   /// Rueda del mouse en la edición: [dir] > 0 aleja.
   void zoomBy(int dir) {
@@ -750,9 +762,16 @@ class MapGame extends Game {
       fx = fall.x;
       fy = fall.y;
     }
-    final zt = controller.isFishing ? CozyRules.fishZoom : 1.0;
-    cozyZoom += (zt - cozyZoom) * smoothing(0.06, dt);
-    if ((cozyZoom - zt).abs() < 0.002) cozyZoom = zt;
+    // Eased, time-based zoom (cozy_life.md § 1) that keeps the view
+    // center still: the follow below never fights the zoom.
+    _fishZoomP = CozyRules.fishZoomStep(_fishZoomP,
+        fishing: controller.isFishing, dt: dt);
+    final z0 = cozyZoom;
+    cozyZoom = CozyRules.fishZoomAt(_fishZoomP);
+    if (cozyZoom != z0 && !controller.editingTown) {
+      camX += MapGame.vw * (z0 - cozyZoom) / 2;
+      camY += MapGame.vh * (z0 - cozyZoom) / 2;
+    }
     final vw = MapGame.vw * cozyZoom, vh = MapGame.vh * cozyZoom;
     final tx =
         mw < vw ? bx + (mw - vw) / 2 : (fx - vw / 2).clamp(bx, bx + mw - vw);
@@ -955,7 +974,7 @@ class MapGame extends Game {
     c.save();
     final z = zoom;
     if (z != 1) c.scale(1 / z);
-    c.translate(-camX.roundToDouble(), -camY.roundToDouble());
+    c.translate(-camDrawX, -camDrawY);
     // Bomb blast: a small screen shake (mining_smithing.md § 1.9).
     final shake = mine.shake(t);
     if (shake != Offset.zero) c.translate(shake.dx, shake.dy);
@@ -976,7 +995,7 @@ class MapGame extends Game {
     // Capa estática por bloques + tiles animados encima (exploration.md §
     // "Rendimiento").
     final worldView = Rect.fromLTWH(
-        camX.roundToDouble(), camY.roundToDouble(), vw * z, vh * z);
+        camDrawX, camDrawY, vw * z, vh * z);
     tileLayer.draw(c, map, worldView,
         theme: map.theme,
         backdrop: abyss,
@@ -1294,8 +1313,9 @@ class MapGame extends Game {
       final mine = p.id == view.localId;
       final double px, py;
       if (mine) {
-        px = controller.local.x;
-        py = controller.local.y;
+        // Whole pixels, locked to the camera (snapFocus): no wobble.
+        px = snapFocus(controller.local.x, camX);
+        py = snapFocus(controller.local.y, camY);
       } else {
         final d = _lerpPos('p${p.id}', p.x, p.y);
         px = d.x;
@@ -1379,7 +1399,9 @@ class MapGame extends Game {
       final raft = s.mode == SessionMode.lobby && p.rafting;
       _refl.add((
         x: px,
-        y: py + 1,
+        // On a raft the water line is the raft's lower edge
+        // (water_reflections.md § 1): the whole raft mirrors below it.
+        y: raft ? py + 3 + ts / 2 + _bob(t) : py + 1,
         moving: mine ? controller.local.moving : p.moving,
         onWater: raft,
         draw: (cc) {

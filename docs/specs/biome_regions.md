@@ -178,6 +178,10 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
 - v0.48.3: con cielo despejado la cobertura es 0.5 y cada disco llega a
   alfa 0.18 × cobertura (antes 0.055: no se veían). El centro de una nube
   oscurece ~25% en un día despejado.
+- v0.49.14: la sombra en el suelo apenas se notaba. Alfa del centro =
+  `cloudShadowAlpha` (0.38) × max(cobertura, `cloudShadowMinCover` (0.6)),
+  con 3 escalones hacia el borde pixelado. Con cielo despejado el centro
+  llega a ~0.23. El reflejo de las nubes en el agua no cambia.
 
 ### 7.2 Haces de luz
 - Interiores: grutas de lago, cuevas cortas, exteriores sin cielo,
