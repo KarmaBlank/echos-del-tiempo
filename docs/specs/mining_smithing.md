@@ -349,6 +349,32 @@ En la FORJA del pueblo, pestaña HERRERÍA → FUNDIR: `smeltOre` menas +
 `smeltGoldPerTier` × nivel de oro → 1 lingote. XP `smeltXp` × nivel por
 lingote. Lotes ×1 / ×5. Cualquiera puede fundir.
 
+## 3.1 Pantalla de HERRERÍA (v0.49.18)
+
+Tres pestañas arriba, una por actividad, con verbo (nunca mezcladas con
+los pasos de la forja):
+
+| Pestaña | Qué hace |
+|---|---|
+| **FUNDIR** | menas → lingotes (§ 3). Línea de ayuda: los lingotes son el material para forjar armas y herramientas. |
+| **FORJAR ARMA** | forja por piezas (profession_gear_v2.md § 3), paso a paso. |
+| **HERRAMIENTAS DE MINA** | fabrica picos y suministros de mina con lingotes y oro (§ 1.6). No es una tienda: no se compra nada. |
+
+FORJAR ARMA muestra un **stepper numerado** `1 Tipo › 2 Base › 3 Cabeza ›
+4 Mango › 5 Engaste (opcional)` (átomo `DsStepper`): el paso actual
+resaltado, los pasos elegidos con el ícono del material, cualquiera se
+puede tocar. Debajo, una línea de ayuda por paso con la regla real (tipo =
+forma; base = nivel de objeto y afinidad; cabeza / mango = color y
+calidad; engaste = cambia la afinidad y suma calidad). Cada paso es la
+plantilla TALLER (grilla tipo INVENTARIO, detalle a la derecha) con: qué
+aporta esa pieza, la **vista previa** del arma (ícono con los colores de
+cabeza y mango) con calidad, rareza y afinidad estimadas, y el costo.
+ELEGIR pasa solo al paso siguiente. FORJAR queda gris con el motivo hasta
+tener tipo, base, cabeza y mango.
+
+Toda casilla tiene ícono (los peces desarmados muestran su pez; si falta
+un sprite, el de su categoría) y tooltip con el nombre.
+
 ## 4. Forjar un arma
 
 HERRERÍA → FORJAR: grilla de bases del catálogo de armas (las de nivel ≤
