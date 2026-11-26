@@ -65,6 +65,7 @@ import 'ground_layer.dart';
 import 'sky_layer.dart';
 import 'town_edit_layer.dart';
 import 'tile_cache.dart';
+import 'tree_rustle_layer.dart';
 import 'vegetation_sway_layer.dart';
 import 'water_reflection_layer.dart';
 import 'tile_painter.dart';
@@ -181,6 +182,7 @@ class MapGame extends Game {
 
   /// Wind sway of the vegetation (biome_regions.md § 7.2.2).
   final sway = VegetationSwayLayer();
+  final rustle = TreeRustleLayer();
   final voidBg = VoidPainter();
 
   /// Pesca en el mapa (fishing.md § 4).
@@ -1007,6 +1009,14 @@ class MapGame extends Game {
     if (map.lobby && !controller.editingTown) {
       sway.draw(c, map, x0, y0, x1, y1, t / 1000,
           motion: !reduceMotion, themeId: map.theme);
+      // Searchable trees rustle and drop leaves (cozy_life.md § 3).
+      if (biomeLayout(map.place) case final lay?) {
+        final who = s.players[view.localId]?.profile.name;
+        rustle.draw(c, map, lay.id, s.town.sky.day, x0, y0, x1, y1, t / 1000,
+            motion: !reduceMotion,
+            searched: (x, y) =>
+                who != null && CozyRules.searched(s.town, who, lay.id, x, y));
+      }
     }
     // Season and weather marks on the ground (weather_seasons.md § 6.3).
     if (map.lobby && s.town.sky.started && !controller.editingTown) {

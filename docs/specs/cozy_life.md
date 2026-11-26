@@ -67,6 +67,15 @@ escritorio, tienda, jefes e invocaciones.
   nido (`searchNestChance`: lombrices) o, rara vez, una **receta de abono**
   nueva (`searchRecipeChance`; si ya las sabe todas, una bolsa de abono).
   Si no sale nada: "Nada esta vez". Da `searchXp` de Cultivo.
+- **Árboles buscables:** no todos. Cada día, cerca de `treeSearchFraction`
+  (0.33) de los árboles del exterior con un lado caminable se pueden
+  buscar; la elección es determinista por bioma + día + tile
+  (`CozyRules.searchable`, hash FNV), igual en todos los pares sin estado
+  extra en la red, y cambia al día siguiente. El anfitrión rechaza los
+  demás y el cliente no muestra aviso frente a ellos. Los buscables se
+  mueven suave y sueltan un par de hojitas de píxel (`TreeRustleLayer`,
+  solo tiles en pantalla); una vez buscado hoy, se quedan quietos.
+  En el pueblo no se busca (solo exteriores de bioma).
 - **Límite diario:** cada árbol una vez por jugador por día; clave
   `wx:<jugador>:<bioma>:v<layout>:t<x>.<y>:<día>` en `town.daily` (misma
   poda y migración que el botín de la intemperie, `wild_loot_rules.dart`).

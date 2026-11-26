@@ -37,7 +37,7 @@ extension _CozyOp on _Op {
     if (lay == null) return false;
     final map = e.mapFor(s);
     if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
-    if (map.tileAt(x, y) != Tile.tree) return false;
+    if (!CozyRules.searchable(map, lay.id, s.town.sky.day, x, y)) return false;
     if (WorldRules.distance(p.x, p.y, (x + 0.5) * 16, (y + 0.5) * 16) >
         _BiomeOp.forageReach + 4) {
       return false;

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/cozy_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
@@ -9,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/rules/cozy_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/farming_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/wild_loot_rules.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
+import 'package:echos_del_tiempo/features/world/presentation/map/tree_rustle_layer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -62,7 +65,9 @@ void main() {
       (int, int, double, double)? spot;
       for (var y = 1; y < map.height - 1 && spot == null; y++) {
         for (var x = 1; x < map.width - 1 && spot == null; x++) {
-          if (map.tileAt(x, y) != Tile.tree) continue;
+          if (!CozyRules.searchable(map, lay.id, s.town.sky.day, x, y)) {
+            continue;
+          }
           if (Tile.isWalkable(map.tileAt(x, y + 1))) {
             spot = (x, y, (x + 0.5) * 16, (y + 1.5) * 16);
           }
@@ -78,9 +83,90 @@ void main() {
       expect(CozyRules.searched(s.town, 'Ana', lay.id, tx, ty), isTrue);
       expect(e.apply(s, 'p0', CozyAction(CozyOp.search, x: tx, y: ty)), isNull,
           reason: 'once a day');
+      // A tree not picked today: refused even in reach.
+      (int, int)? plain;
+      for (var y = 1; y < map.height - 1 && plain == null; y++) {
+        for (var x = 1; x < map.width - 1 && plain == null; x++) {
+          if (map.tileAt(x, y) == Tile.tree &&
+              Tile.isWalkable(map.tileAt(x, y + 1)) &&
+              !CozyRules.searchable(map, lay.id, s.town.sky.day, x, y)) {
+            plain = (x, y);
+          }
+        }
+      }
+      final (ux, uy) = plain!;
+      var s2 = moveTo(e, s, 'p0', (ux + 0.5) * 16, (uy + 1.5) * 16);
+      expect(e.apply(s2, 'p0', CozyAction(CozyOp.search, x: ux, y: uy)),
+          isNull,
+          reason: 'not searchable today');
       // Not a tree: refused.
       expect(e.apply(s, 'p0', CozyAction(CozyOp.search, x: tx, y: ty + 1)),
           isNull);
+    });
+  });
+
+  group('searchable trees (§ 3)', () {
+    test('about treeSearchFraction of the trees; stable per day, new '
+        'next day; only reachable ones', () {
+      final e = sessionEngine(zones: true);
+      var s =
+          e.addPlayer(e.create(), 'p0', newProfile('Ana', 'guerrero'))!.state;
+      s = act(e, s, 'p0', const TravelAction(kBosque));
+      final lay = biomeLayout(s.place)!;
+      final map = e.mapFor(s);
+      Set<(int, int)> pick(int day) => {
+            for (var y = 0; y < map.height; y++)
+              for (var x = 0; x < map.width; x++)
+                if (CozyRules.searchable(map, lay.id, day, x, y)) (x, y)
+          };
+      var reach = 0;
+      for (var y = 0; y < map.height; y++) {
+        for (var x = 0; x < map.width; x++) {
+          if (map.tileAt(x, y) != Tile.tree) continue;
+          final side = [(0, 1), (0, -1), (1, 0), (-1, 0)].any((d) =>
+              map.contains(x + d.$1, y + d.$2) &&
+              Tile.isWalkable(map.tileAt(x + d.$1, y + d.$2)));
+          if (side) reach++;
+        }
+      }
+      final d1 = pick(1);
+      expect(pick(1), d1, reason: 'same day, same trees');
+      expect(pick(2), isNot(d1), reason: 'next day, other trees');
+      final share = d1.length / reach;
+      expect(share, closeTo(t.d('treeSearchFraction'), 0.06));
+      for (final (x, y) in d1) {
+        expect(map.tileAt(x, y), Tile.tree);
+      }
+    });
+
+    test('rustle: only searchable, unsearched, on-screen trees', () {
+      final e = sessionEngine(zones: true);
+      var s =
+          e.addPlayer(e.create(), 'p0', newProfile('Ana', 'guerrero'))!.state;
+      s = act(e, s, 'p0', const TravelAction(kBosque));
+      final lay = biomeLayout(s.place)!;
+      final map = e.mapFor(s);
+      final day = s.town.sky.day;
+      final layer = TreeRustleLayer();
+      void run(bool Function(int, int) searched, [int w = 0]) {
+        final rec = ui.PictureRecorder();
+        layer.draw(ui.Canvas(rec), map, lay.id, day, 0, 0,
+            w == 0 ? map.width - 1 : w, w == 0 ? map.height - 1 : w, 1.0,
+            searched: searched);
+        rec.endRecording().dispose();
+      }
+      var n = 0;
+      for (var y = 0; y < map.height; y++) {
+        for (var x = 0; x < map.width; x++) {
+          if (CozyRules.searchable(map, lay.id, day, x, y)) n++;
+        }
+      }
+      run((_, __) => false);
+      expect(layer.lastDrawn, n);
+      run((_, __) => true);
+      expect(layer.lastDrawn, 0, reason: 'searched trees stop rustling');
+      run((_, __) => false, 10);
+      expect(layer.lastDrawn, lessThan(n), reason: 'only visible tiles');
     });
   });
 
