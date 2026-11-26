@@ -259,6 +259,19 @@ verde / rojo; la esquina va en el tile del mouse.
   de quien vive ahí.
 - Los pedidos de camino, faro, huerta o muelle se cumplen construyendo
   eso a menos de 6 tiles de su casa.
+- Arte (v0.49.26): casa de frontón con tejas, en el estilo de la ARMERÍA
+  y la TIENDA (`tool/export_house_sprites.dart`). Nivel 1: una ventana,
+  farol y leña; nivel 2: dos ventanas con jardineras, chimenea y ojo de
+  buey en el frontón; nivel 3: además ojo de buey iluminado, alero sobre
+  la puerta, barril y macetero. Tres variantes de color: v0 tejas
+  terracota sobre entramado de yeso (`items.vida_casa_<nivel>`), v1
+  pizarra sobre tablas y v2 musgo sobre piedra
+  (`items.vida_casa_<nivel>_v<1|2>`). La variante sale de la esquina de
+  la casa (`MapFarmLayer.houseVariant`: `(7x + 13y) mod 3`), así que no
+  se guarda nada; si falta la variante en el manifest se usa la v0.
+  Mismo tamaño (48 × 48) y puerta abajo al medio. Capturas:
+  `docs/preview/town_houses_v2.png` y `town_houses_before_after.png`
+  (`shop_interior_art_test.dart` con `PREVIEW=1`).
 
 ## 4. Mapa (`TownPlan`, determinista)
 ### 4.1 Caminos procedurales

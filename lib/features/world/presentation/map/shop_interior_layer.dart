@@ -7,10 +7,13 @@ import '../../../../game_engine/data/farming_catalog.dart' show parseCropKey;
 import '../../../../game_engine/rules/shop_interior_rules.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 
-/// Draws the shop interior (player_shop.md § 6) over its tiles: plank
-/// floor, walls with shelves, the exit door and one counter per player
-/// with their name and what they have on sale as small icons. 8-bit
-/// flat colours; item icons come from the sprite manifest via [icon].
+/// Draws the shop interior (player_shop.md § 6.1) over its tiles: the
+/// room sprite (`items.vida_shop_room`: floor, walls, shelves, cash
+/// counter, lamps, plants, rug, door) and one display table per player
+/// (`items.vida_shop_table_<piece>_<cloth>`, autotiled) with their name
+/// and what they have on sale as icons with gold price tags. Every image
+/// comes from the sprite manifest via [icon]; without them (tests, a
+/// missing file) it falls back to flat 8-bit shapes.
 class ShopInteriorLayer {
   ShopInteriorLayer(this.icon);
 
@@ -55,8 +58,32 @@ class ShopInteriorLayer {
     };
   }
 
+  /// Table pieces (`l` / `m` / `r` or `s` alone) of a counter [n] tiles
+  /// wide: the autotile of the display tables.
+  static List<String> tablePieces(int n) => n <= 1
+      ? const ['s']
+      : ['l', for (var i = 0; i < n - 2; i++) 'm', 'r'];
+
+  /// Cloth of the display table in counter [slot]; `bare` when free.
+  static String clothOf(int slot, {required bool owned}) =>
+      owned ? '${slot % 4}' : 'bare';
+
+  void _sprite(Canvas c, ui.Image im, double x, double y) => c.drawImageRect(
+      im,
+      Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
+      Rect.fromLTWH(x, y, im.width.toDouble(), im.height.toDouble()),
+      SpriteCatalog.pixelPaint());
+
   /// Floor, walls, shelves and door (under the actors).
   void drawRoom(Canvas c) {
+    if (icon('shop_room', '') case final room?) {
+      _sprite(c, room, 0, 0);
+      return;
+    }
+    _flatRoom(c);
+  }
+
+  void _flatRoom(Canvas c) {
     const rows = ShopInteriorRules.rows;
     for (var y = 0; y < rows.length; y++) {
       for (var x = 0; x < rows[y].length; x++) {
@@ -105,18 +132,32 @@ class ShopInteriorLayer {
     for (var i = 0; i < ShopInteriorRules.counters; i++) {
       final (tx, ty) = ShopInteriorRules.counterTiles[i];
       final x0 = tx * _ts, y0 = ty * _ts;
-      _rect(c, x0 - 1, y0 - 1, 2 * _ts + 2, _ts + 2, _outline);
-      _rect(c, x0, y0, 2 * _ts, _ts, _counter);
-      _rect(c, x0, y0, 2 * _ts, 5, _counterTop);
       final o = i < owners.length ? players[owners[i]] : null;
-      label(o?.name.toUpperCase() ?? freeLabel, x0 + _ts, y0 + _ts + 7,
+      final cloth = clothOf(i, owned: o != null);
+      final pieces = tablePieces(2);
+      final ims = [for (final pc in pieces) icon('shop_table_${pc}_$cloth', '')];
+      final sprites = !ims.contains(null);
+      if (sprites) {
+        // Sprite bottom 3 px under the counter tile (its floor shadow).
+        for (var k = 0; k < ims.length; k++) {
+          _sprite(c, ims[k]!, x0 + k * _ts, y0 + _ts + 3 - ims[k]!.height);
+        }
+      } else {
+        _rect(c, x0 - 1, y0 - 1, 2 * _ts + 2, _ts + 2, _outline);
+        _rect(c, x0, y0, 2 * _ts, _ts, _counter);
+        _rect(c, x0, y0, 2 * _ts, 5, _counterTop);
+      }
+      label(o?.name.toUpperCase() ?? freeLabel, x0 + _ts, y0 + _ts + 9,
           o == null ? const Color(0xFF8A8F9A) : const Color(0xFFFFE9A8), 6);
       if (o == null) continue;
+      final tag = sprites ? icon('shop_tag', '') : null;
       final ls = o.profile.life.stall.listings;
       for (var k = 0; k < ls.length && k < 4; k++) {
         final key = iconOf(ls[k].cell);
         final im = key == null ? null : icon(key.$1, key.$2);
+        // Goods sit on the tabletop; a gold tag hangs on the cloth.
         final r = Rect.fromLTWH(x0 + 1 + k * 7.5, y0 - 4, 7, 7);
+        if (tag != null) _sprite(c, tag, r.left + 1, y0 + 7);
         if (im == null) {
           _rect(c, r.left + 1, r.top + 2, 5, 4, _goods[k % _goods.length]);
           continue;

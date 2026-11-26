@@ -40,6 +40,11 @@ abstract final class ShopInteriorRules {
   /// Counter corners (2 x 1 tiles), in slot order.
   static const counterTiles = [(3, 3), (11, 3), (3, 6), (11, 6)];
 
+  /// Wall lamps of the room (tile coordinates of their light, just in
+  /// front of each lamp): two by the alcove, one on each side wall. Lit
+  /// by the light system at night (`LightId.lamparaTienda`).
+  static const lamps = [(5.6, 1.4), (10.4, 1.4), (1.2, 5.6), (14.8, 5.6)];
+
   /// How many counters are in use (tunable, at most [counterTiles]).
   static int get counters => tuning(TuningId.town)
       .i('shopCounters')

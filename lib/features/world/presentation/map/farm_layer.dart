@@ -381,6 +381,20 @@ class MapFarmLayer {
     }
   }
 
+  /// Sprite id of a resident's house (town_editor.md § 3.4): its level
+  /// and a colour variant picked from where it stands, so neighbouring
+  /// houses differ without saving anything. Falls back to the plain
+  /// level sprite when the variant is not in the manifest.
+  static String houseSprite(TownBuild b, bool Function(String id) has) {
+    final lv = b.level.clamp(1, 3);
+    final v = houseVariant(b.bounds.x, b.bounds.y);
+    final id = v == 0 ? 'casa_$lv' : 'casa_${lv}_v$v';
+    return v == 0 || has(id) ? id : 'casa_$lv';
+  }
+
+  /// Colour variant (0-2) of a house whose top-left tile is ([x], [y]).
+  static int houseVariant(int x, int y) => ((x * 7 + y * 13) & 0x7fffffff) % 3;
+
   /// Los ayudantes (farming.md § 8, v0.25.5): granjeros caminando por
   /// su área y pescadores en su lugar de la orilla, con sus sprites
   /// (`items.vida_npc_*` del manifest; [sprite] los resuelve), el cofre
@@ -409,8 +423,8 @@ class MapFarmLayer {
       if (b.kind == BuildKind.casa) {
         // Casa de habitante (town_editor.md § 3.4): sprite por nivel.
         final bb = b.bounds;
-        img('casa_${b.level.clamp(1, 3)}', (bb.x + ox + bb.w / 2) * ts,
-            (bb.bottom + oy) * ts);
+        final cx = (bb.x + ox + bb.w / 2) * ts, bottom = (bb.bottom + oy) * ts;
+        img(houseSprite(b, (id) => sprite(id) != null), cx, bottom);
         continue;
       }
       // Cofre al lado del cartel, con cuántas cosas tiene.
