@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/ds_tokens.dart';
 import '../../../../app/theme/map_palette.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
@@ -60,7 +61,7 @@ List<Widget> explorationLines(MissionRun m, MapFloor? f, double time) {
       child: Builder(
           builder: (context) => Text(
               retroText(context.t('ui.world.hud.optional')),
-              style: const TextStyle(color: ProtoColors.dim))),
+              style: const TextStyle(color: DsColors.textMuted))),
     ));
   }
   for (final q in f.quests) {

@@ -78,7 +78,7 @@ class _HouseAssignViewState extends State<HouseAssignView> {
           for (final h in houses)
             DsTooltip(
               card: DsTooltipCard(title: h.title, children: [
-                Text(h.line, style: DsText.detail()),
+                DsGoldText(h.line, style: DsText.body()),
               ]),
               child: GestureDetector(
                 key: ValueKey('houses-cell-${h.id}'),

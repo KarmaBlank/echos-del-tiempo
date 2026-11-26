@@ -91,12 +91,18 @@ Colores de texto (`DsTextColor`, siguen al tema):
 
 | rol | AZUL | OSCURO | ALTO CONTRASTE |
 |---|---|---|---|
-| Título | #FFE3A8 | #F5D99A | #FFF1A8 |
-| Subtítulo | #8FD3F4 | #8EC5E6 | #9FE7FF |
-| Cuerpo | #E8ECFF | #EDEDED | #FFFFFF |
-| Detalle | #B3ACE6 | #B8B2DC | #D4CCFF |
+| Título | #FFFFFF | #FFFFFF | #FFFFFF |
+| Subtítulo | #B0BEE8 | #B0BEE8 | #B0BEE8 |
+| Cuerpo | #E8ECFF | #E8ECFF | #FFFFFF |
+| Detalle / Apagado | #A0A8C8 | #A0A8C8 | #B4B4D8 |
+| CLAVE | #FF70C8 | #FF70C8 | #FF8AD8 |
 
-Todos ≥ 7:1 sobre el fondo de su tema. Desactivado: Detalle al 55 %.
+v0.49.32 (pedido del dueño, "jerarquía de texto"): el Título dejó de
+ser dorado claro (#FFE3A8 era casi el Sagrado #FFF3B0 / Aturdir
+#FFEAA7) y el Subtítulo dejó de ser celeste (se confundía con Hielo /
+Mágico). Ver § 3.4. Contraste: Título / Cuerpo ≥ 12:1, Subtítulo,
+Detalle y CLAVE ≥ 4.9:1 sobre el botón y ≥ 6.6:1 sobre el panel
+(`ds_text_contrast_test.dart`). Desactivado: Detalle al 55 %.
 
 Jerarquía de texto de pantallas de contenido (v0.49.27, pedido del
 dueño: "no todo blanco"). Además de los cuatro de arriba, tres estilos
@@ -107,11 +113,12 @@ con nombre en `DsText` (`DsText.hierarchy` los lista para la galería):
 | Título | `DsText.title` / `subtitle(textTitle)` | nombre del encargo, del ítem |
 | Subtítulo | `DsText.subtitle` | encabezados (PIDE, RECOMPENSA) |
 | Cuerpo | `DsText.body` | líneas de la lista de objetivos |
-| Descripción | `DsText.description` (fuente de lectura, lavanda) | texto propio del encargo ("Necesito…") |
+| Descripción | `DsText.description` (fuente de lectura, color del Cuerpo) | texto propio del encargo ("Necesito…") |
 | Meta | `DsText.meta` (chico, Detalle al 55 %) | quién lo pide, día, estado corto, cuentas que faltan |
 | Acento | `DsText.accent` (dorado `DsColors.reward`) | recompensas, oro |
 
 ### 3.3 Roles de color (`DsColors`)
+
 
 Todos son tokens de `ProtoColors` (siguen al tema y al modo daltónico).
 
@@ -136,6 +143,72 @@ Todos son tokens de `ProtoColors` (siguen al tema y al modo daltónico).
 
 Regla: el color dice qué es (MP, Pulso, peligro) y también qué nivel de
 jerarquía es (Título, Subtítulo, Cuerpo, Detalle).
+
+### 3.4 Roles de texto semánticos y paletas reservadas (v0.49.32)
+
+Problema (dueño): casi todo el texto, sobre todo en tooltips, era blanco
+o gris y se veía igual; un amigo no vio que el granjero "solo atiende
+12 parcelas, marcadas en verde". Cada línea tiene ahora un ROL, y los
+roles tienen colores que nunca son los de un elemento ni una rareza.
+
+| rol | estilo | fuente / tamaño nominal | color (AZUL) | dónde |
+|---|---|---|---|---|
+| Título | `DsText.title` | Press Start 2P 16 | blanco #FFFFFF | nombre de pantalla / detalle |
+| Título compacto | `DsText.heading` | Press Start 2P 9 | blanco #FFFFFF | nombre en un tooltip (`DsTooltipCard.title`) |
+| Subtítulo | `DsText.subtitle` / `body(textSubtitle)` / `<sub>` / `class="k"` | Press Start 2P 9 o lectura 11 | pizarra #B0BEE8 | tipo · nivel, encabezados de sección (Mods, Habilidades) |
+| Cuerpo / Descripción | `DsText.body` / `description` | lectura 11 | tinta #E8ECFF | qué hace el objeto |
+| Apagado (stats, ambientación) | `DsText.muted` (= `detail`) / `<muted>` | lectura 10 | gris lavanda #A0A8C8 | stats, "(con tus atributos)", historia |
+| Meta | `DsText.meta` | lectura 10 | Apagado al 55 % | quién pide, día |
+| CLAVE | `DsText.key` / `<key>` / `**…**` | lectura 11 | rosa magenta #FF70C8 | límites, requisitos, por qué un botón está desactivado |
+| Acento | `DsText.accent` | lectura 11 | dorado `reward` | oro, recompensas (valor, no jerarquía) |
+
+Sin negritas (fuentes pixel): la jerarquía es color + fuente + tamaño.
+
+**Paletas reservadas** (identifican cosas del juego; el texto de UI
+nunca las usa para un rol):
+
+- Elementos (`elementColor`): Físico #DFE6E9, Fuego #FF7B29, Hielo
+  #74B9FF, Veneno #7BED9F, Sagrado #FFF3B0, Agua #3FA9F5, Electro
+  #C39BFF.
+- Rarezas (`LootFilterRules.rarityColor`): Común #DCDCDC, Mágico
+  #7896FF, Raro #FFD23C, Épico #BE6EFF, Legendario #FF8C28; Eco
+  #5AE6D2.
+- Estados (`statusColor`): Quemadura, Veneno, Congelación, Aturdir
+  #FFEAA7, Sagrado, Regeneración #55EFC4, Mojado, Cargado #C77DFF.
+
+Regla: un rol de texto nunca reutiliza un color reservado. Los roles
+con tono (Subtítulo, Apagado, CLAVE) quedan a ΔE (CIE76, Lab) ≥ 20 de
+todos; los neutros (Título, Cuerpo) son tinta acromática (croma ≤ 12)
+y a ΔE ≥ 8 (blanco = "sin color"; Físico y Común son los únicos grises
+reservados). La CLAVE queda a ΔE > 40 del resto de los roles y a ΔE > 25 del rojo de
+peligro y el verde de éxito (no se lee como error). Lo
+verifica `test/design/ds_text_roles_test.dart` en los tres temas. El
+color de rareza va solo donde es el punto: la palabra de rareza de la
+línea de tipo (y el borde de la casilla), nunca el nombre del título.
+
+**CLAVE en línea.** Cualquier markup (`ProtoText`, `RetroTooltip`,
+`DsRichText`) y cualquier `DsGoldText` (líneas de `LifeItemDetail`,
+filas de `DsCollectionTemplate`) entiende `**…**`: ese tramo va en
+CLAVE. Así los textos i18n marcan lo que importa sin tocar Dart
+(`ui.world.ctl.helper.farmer_area`: "Solo atiende **{n} parcelas**,
+marcadas en verde."). `**` sin cerrar queda como texto. El markup
+también acepta `<title>`, `<sub>`, `<muted>` y `<key>`.
+
+**Organismo de tooltip.** `DsTooltipCard`: `title` = Título compacto
+(`titleColor` solo si el color es el punto), `subtitle` = Subtítulo,
+`children` en Cuerpo (`DsRichText` para CLAVE en línea);
+`DsTooltipCard.text` (y `.tip()`) para tooltips de una línea, con
+`isKey` para motivos. `DsButton` desactivado con `tooltip`: el motivo
+va en CLAVE. Ancho y alto máximos de siempre; nunca se trunca.
+
+Migrado (v0.49.32): tooltip de armas (nombre Título, rareza en su color
++ tipo en Subtítulo, "Requiere:" CLAVE, secciones Subtítulo), ayudantes
+del mapa (granjero / pescador), semillas y cultivos (estaciones, solo
+invierno), mejoras del ayudante (nivel pedido), paleta de construcción
+(nombre Título, costo que no alcanza y motivo en CLAVE), árbol de
+oficios (motivo de bloqueo en CLAVE), casas, colecciones, paneles NPC
+(vía `LifeItemDetail`), y todo `TextStyle(color: ProtoColors.dim/ink)`
+de `lib/features` y `lib/app` a `DsColors.textMuted` / `text`.
 
 ## 4. Disposición de un panel
 
@@ -420,7 +493,8 @@ Pantalla `DsGalleryScreen`: botón GALERÍA en la pantalla de título solo
 con `FeatureFlags.devTools` (flavor dev), o directo con
 `main_gallery.dart`. Arriba: selector de TAMAÑO DEL TEXTO, TEMA
 (AZUL / OSCURO / ALTO CONTRASTE) y ESPACIADO. Secciones: Paleta,
-Tipografía, Botones, Pestañas y barra, Campos y filas, Valores,
+Tipografía (cada rol de texto, CLAVE en línea, y al lado los muestrarios
+reservados de elementos, rarezas y roles), Botones, Pestañas y barra, Campos y filas, Valores,
 Superficies, Ejemplos (mockups: barra de PERSONAJE, fila de inventario
 con tooltip, menú de habilidades de batalla, plantilla TRASPASO con datos de ejemplo
 — ver ui_minimal.md § 9).
@@ -435,6 +509,8 @@ defecto del jugador: ALTO CONTRASTE + colores REDUCIDOS), generadas por
   ≥ 8 libres, insignia sin superponer, TAMAÑO DEL TEXTO ENORME sin
   desbordes.
 - `test/design/ds_golden_test.dart`: goldens de cada componente.
+- `test/design/ds_text_roles_test.dart`: roles de texto lejos de
+  elementos / rarezas / estados (ΔE Lab), CLAVE distinta y `**…**`.
 
 ## 10. Migración (v0.11)
 

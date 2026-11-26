@@ -39,7 +39,8 @@ class DsGold extends StatelessWidget {
 }
 
 /// Molécula: texto donde cada `₵N` se dibuja como [DsGold] (moneda + N).
-/// El resto pasa por `retroText` como cualquier texto de la UI.
+/// El resto pasa por `retroText` como cualquier texto de la UI; `**…**`
+/// marca KEY INFO ([DsText.key]).
 class DsGoldText extends StatelessWidget {
   const DsGoldText(this.text,
       {super.key, this.style, this.maxLines, this.textAlign});
@@ -78,8 +79,24 @@ class DsGoldText extends StatelessWidget {
     return [
       for (var i = 0; i < parts.length; i++) ...[
         if (i > 0) coinSpan(st),
-        if (parts[i].isNotEmpty) TextSpan(text: retroText(parts[i])),
+        ...keySpans(parts[i]),
       ],
+    ];
+  }
+
+  /// [s] with each `**…**` run in the KEY INFO colour
+  /// (design_system.md § 3.4); the rest plain.
+  static List<InlineSpan> keySpans(String s) {
+    if (s.isEmpty) return const [];
+    final runs = s.split('**');
+    // Unbalanced `**`: plain text, nothing eaten.
+    if (runs.length.isEven) return [TextSpan(text: retroText(s))];
+    return [
+      for (var j = 0; j < runs.length; j++)
+        if (runs[j].isNotEmpty)
+          TextSpan(
+              text: retroText(runs[j]),
+              style: j.isOdd ? const TextStyle(color: DsColors.textKey) : null),
     ];
   }
 
