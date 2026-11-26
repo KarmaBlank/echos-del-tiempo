@@ -192,6 +192,7 @@
   "ui.world.ctl.achievement": "Hazaña: {name}",
   "ui.world.ctl.save_failed": "No se pudo guardar",
   "ui.world.ctl.prompt_travel": "[E] Mapa de viaje",
+  "ui.world.ctl.prompt_read": "[E] Leer cartel",
   "ui.world.ctl.prompt_talk": "[E] Hablar con {name}",
   "ui.world.ctl.chest_empty": "Cofre vacío",
   "ui.world.ctl.chest_collect": "[E] Recoger cofre ({n})",

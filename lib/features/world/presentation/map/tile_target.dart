@@ -51,3 +51,13 @@ void drawSpriteOutline(Canvas c, ui.Image im, Rect dst) {
     c.drawImageRect(im, src, dst.shift(o), _outlinePaint);
   }
 }
+
+final _boxOutline = Paint()
+  ..color = const Color(0xFFFFFFFF)
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = 1;
+
+/// The selected wilds chest (painted into tile ([x], [y]), 12 x 8 px from
+/// (2, 6)): the white 1 px outline around its box, like a sprite's.
+void drawBoxOutline(Canvas c, int x, int y) => c.drawRect(
+    Rect.fromLTWH(x * _ts + 1.5, y * _ts + 5.5, 13, 9), _boxOutline);

@@ -54,6 +54,7 @@ import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
 import '../../../game_engine/rules/resident_rules.dart';
 import '../../../game_engine/rules/biome_fisher_rules.dart';
+import '../../../game_engine/models/custom_npc.dart';
 import '../../../game_engine/rules/custom_npc_rules.dart';
 import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
@@ -1428,46 +1429,23 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// El habitante del exterior frente al jugador local (§ 9), o `null`.
   BiomeNpcDef? get nearNpc {
-    final s = _s;
-    final lay = biomeLayout(s?.place);
-    if (s == null || s.mode != SessionMode.lobby) return null;
-    if (lay == null) {
-      // En el pueblo: el habitante que camina frente a su casa (§ 10.1).
-      if (s.place != null || editingTown) return null;
-      // Two side by side: the hovered one, the one in the last WASD
-      // direction, else the nearest (controls.md § Cursor de acción).
-      final night = SkyRules.isNight(s.town.sky);
-      final living = ResidentRules.living(s.town).toList();
-      final (px, py) = _myTile;
-      final near = <ActionTarget>[];
-      for (var i = 0; i < living.length; i++) {
-        final pos =
-            ResidentRules.position(s.town, living[i].id, s.time, night: night);
-        if (pos == null) continue;
-        if (WorldRules.distance(local.x, local.y, pos.$1, pos.$2) >= 26) {
-          continue;
-        }
-        near.add(ActionTarget((pos.$1 / 16).floor(), (pos.$2 / 16).floor(),
-            ActionTargetKind.npc,
-            id: i));
-      }
-      final pick = ActionTargeting.select(
-        px: px,
-        py: py,
-        candidates: near,
-        hover: _hover,
-        facing: _facingStep,
-        reach: 3,
-      );
-      return pick == null ? null : living[pick.id];
+    // Two side by side: the hovered one, the one in the last WASD
+    // direction, else the nearest (controls.md § Cursor de acción).
+    final near = _npcTargets();
+    if (near.isEmpty) return null;
+    final (px, py) = _myTile;
+    final pick = ActionTargeting.select(
+      px: px,
+      py: py,
+      candidates: [for (final (t, _) in near) t],
+      hover: _hover,
+      facing: _facingStep,
+      reach: _actReach,
+    );
+    for (final (t, n) in near) {
+      if (t == pick) return n;
     }
-    // Ya vive en el pueblo: no está más en su bioma (§ 10.1).
-    if (s.town.resident(lay.npc.id).invited) return null;
-    // Paseo alrededor del campamento (§ 9.2).
-    final at = NpcCampRules.state(lay.npc, s.time);
-    return WorldRules.distance(local.x, local.y, at.x, at.y) < 26
-        ? lay.npc
-        : null;
+    return null;
   }
 
   /// El habitante parado sobre el tile ([tx], [ty]) del mapa (o el de al
@@ -1938,6 +1916,8 @@ class SessionController extends StateNotifier<SessionView?> {
   bool mineUse({(int, int)? at}) {
     final lvl = mineLevel;
     if (lvl == null || !inMine) return false;
+    // A new use: only a find / the station below makes it single-press.
+    _holdInteracted = false;
     // A click on a tile next to the player aims there (§ 1.12).
     _mineAim = null;
     if (at case (final ax, final ay)) {
@@ -2585,6 +2565,9 @@ class SessionController extends StateNotifier<SessionView?> {
       return;
     }
     if (gathering) return;
+    // A hold that began by talking, opening or travelling never repeats
+    // (controls.md § Cursor de acción).
+    if (_holdInteracted) return;
     if (inMine) {
       // A hold that began on an interaction never turns into swings.
       if (_holdInteracted || mineStationSpot != null) return;
@@ -4011,6 +3994,529 @@ class SessionController extends StateNotifier<SessionView?> {
     };
   }
 
+  // ------ every interactable under one cursor (controls.md) ------
+
+  /// Unified reach (tiles) for the selection: each source already keeps
+  /// its own range (px) when it offers a candidate.
+  static const _actReach = 3;
+
+  /// Kinds worked with a tool / a hold (E held repeats on them).
+  static const _toolKinds = {
+    ActionTargetKind.tree,
+    ActionTargetKind.forage,
+    ActionTargetKind.plot,
+    ActionTargetKind.rock,
+  };
+
+  Object? _actKey;
+  _Act? _actPick;
+
+  /// Every interactable in reach of the local player in the World, with
+  /// what E / the click does there and what the prompt says
+  /// (controls.md § Cursor de acción).
+  List<_Act> _actables() {
+    final s = _s;
+    if (s == null ||
+        s.mode != SessionMode.lobby ||
+        _panel != null ||
+        editingTown ||
+        onRaft) {
+      return const [];
+    }
+    final out = <_Act>[];
+    void add(ActionTarget t, void Function() run,
+            [(WorldPrompt?, String?) Function()? prompt]) =>
+        out.add(_Act(t, run, prompt));
+    String talk(String name) =>
+        strings.t('ui.world.ctl.prompt_talk', {'name': name});
+    (int, int) tileOf(double x, double y) =>
+        ((x / 16).floor(), (y / 16).floor());
+    final lay = biomeLayout(s.place);
+
+    // Town places (buildings, fountain, portal, travel road, signs).
+    if (townSpot case final spot?) {
+      final t = _spotTile(spot);
+      ActionTarget at(ActionTargetKind k, {bool outline = false}) =>
+          ActionTarget(t.$1, t.$2, k,
+              key: 'spot:${spot.name}', outline: outline);
+      switch (spot) {
+        case TownSpot.board:
+          add(at(ActionTargetKind.shop),
+              () => openPanel(WorldPanel.missionBoard),
+              () => (WorldPrompt.missionBoard, null));
+        case TownSpot.armory:
+          add(at(ActionTargetKind.shop, outline: true),
+              () => openPanel(WorldPanel.armory),
+              () => (WorldPrompt.armory, null));
+        case TownSpot.forge:
+          add(at(ActionTargetKind.shop, outline: true),
+              () => openPanel(WorldPanel.forge),
+              () => (WorldPrompt.forge, null));
+        case TownSpot.workshop:
+          add(at(ActionTargetKind.shop, outline: true),
+              () => openPanel(WorldPanel.workshop),
+              () => (WorldPrompt.workshop, null));
+        case TownSpot.portal:
+          add(at(ActionTargetKind.portal),
+              () => openPanel(WorldPanel.ecoPortal),
+              () => (WorldPrompt.ecoPortal, null));
+        case TownSpot.statue:
+          add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.ascension),
+              () => (WorldPrompt.statue, null));
+        case TownSpot.lostLoot:
+          add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.lostLoot),
+              () => (WorldPrompt.lostLoot, null));
+        case TownSpot.stall:
+          add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.stall),
+              () => (WorldPrompt.stall, null));
+        case TownSpot.trader:
+          add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.trader),
+              () => (WorldPrompt.trader, null));
+        case TownSpot.fountain:
+          add(at(ActionTargetKind.fountain),
+              () => openPanel(WorldPanel.fountain),
+              () => (WorldPrompt.fountain, null));
+        case TownSpot.travel:
+          add(at(ActionTargetKind.travel), () => openPanel(WorldPanel.travel),
+              () => (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel')));
+        case TownSpot.carts:
+          add(at(ActionTargetKind.station), () {
+            if (!unloadCart()) {
+              addLocalNotice(strings.t('ui.world.mine.no_cart'));
+            }
+          }, () {
+            final c = parkedCart;
+            return (
+              WorldPrompt.poi,
+              c == null
+                  ? strings.t('ui.world.mine.no_cart')
+                  : strings.t(
+                      'ui.world.mine.prompt_unload', {'name': cartLabel(c)})
+            );
+          });
+        case TownSpot.sign:
+          final info = signAt(t.$1, t.$2);
+          add(
+              at(ActionTargetKind.sign),
+              () => addLocalNotice(
+                  info == null ? signText : '${info.$1}: ${info.$2}'),
+              () => (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_read')));
+        default:
+          break;
+      }
+    }
+    // Eco portal of a biome exterior.
+    if (nearEcoPortal case final z?) {
+      if (EcoPortalRules.of(z) case final p?) {
+        add(ActionTarget(p.x, p.y, ActionTargetKind.portal, key: 'eco:$z'),
+            () {
+          ecoZone = z;
+          openPanel(WorldPanel.ecoZone);
+        }, () => (WorldPrompt.ecoZone, null));
+      }
+    }
+    // Data-made NPCs (npc_editor.md § 6).
+    for (final n in customNpcsHere) {
+      if (WorldRules.distance(local.x, local.y, n.x, n.y) >= 26) continue;
+      final (tx, ty) = tileOf(n.x, n.y);
+      add(
+          ActionTarget(tx, ty, ActionTargetKind.npc,
+              key: 'custom:${n.def.id}'),
+          () => openCustomNpc(n.def.id),
+          () => (WorldPrompt.poi, talk(n.def.name.text)));
+    }
+    // World event actors (visitors, wanderers, elites, rift portals).
+    for (final a in s.town.events.at(s.place ?? kPueblo)) {
+      final d = kWorldEvents.def(a.def);
+      if (d == null || !WorldEventRules.hasActor(d.category)) continue;
+      final rift = d.category == WorldEventCategory.echoPortal;
+      if (rift && s.town.events.clearedBy(a.uid, localId)) continue;
+      // A linked data NPC stars in the visit (npc_editor.md § 6.4).
+      if (!rift &&
+          kCustomNpcs.values.any(
+              (n) => n.spawn == CustomNpcSpawn.event && n.place == d.id)) {
+        continue;
+      }
+      final p = WorldEventRules.spot(s.town, a);
+      if (p == null ||
+          WorldRules.distance(local.x, local.y, p.$1, p.$2) >
+              WorldEventRules.range) {
+        continue;
+      }
+      final (tx, ty) = tileOf(p.$1, p.$2);
+      final fights = !WorldEventRules.talks(d);
+      add(
+          ActionTarget(
+              tx, ty, rift ? ActionTargetKind.portal : ActionTargetKind.npc,
+              key: 'event:${a.uid}'),
+          () => fights ? enterRift(a.uid) : openWorldEvent(a),
+          () => (
+                WorldPrompt.poi,
+                rift
+                    ? strings.t('ui.town.events.prompt_rift')
+                    : fights
+                        ? strings.t('ui.town.events.prompt_fight',
+                            {'name': d.title.text})
+                        : talk(d.title.text)
+              ));
+    }
+    // Biome NPC / town residents.
+    for (final (t, n) in _npcTargets()) {
+      add(t, () => openResident(n), () => (WorldPrompt.poi, talk(n.name)));
+    }
+    if (lay != null) {
+      // Native fisher of the biome (fishing.md § 12).
+      if (kBiomeFishers[lay.id] case final f?) {
+        final (x, y) = BiomeFisherRules.position(lay, s.time);
+        if (WorldRules.distance(local.x, local.y, x, y) < 26) {
+          final (tx, ty) = tileOf(x, y);
+          add(
+              ActionTarget(tx, ty, ActionTargetKind.npc,
+                  key: 'fisher:${lay.id}'),
+              () => openPanel(WorldPanel.biomeFisher),
+              () => (WorldPrompt.poi, talk(f.name)));
+        }
+      }
+      // Mine mouths.
+      final mouths = MiningRules.entrances(lay);
+      for (var i = 0; i < mouths.length; i++) {
+        final (x, y) = mouths[i];
+        if (_tileDist(local.x, local.y, x, y) >= 26) continue;
+        add(ActionTarget(x, y, ActionTargetKind.mine, key: 'mine:$i'),
+            () => travelMine(i),
+            () => (WorldPrompt.poi, strings.t('ui.world.mine.prompt_enter')));
+      }
+      // Region waystone.
+      if (nearWaystone case final i?) {
+        final w = lay.waystones[i];
+        add(ActionTarget(w.x, w.y, ActionTargetKind.waystone, key: 'way:$i'),
+            () => useWaystone(i),
+            () => (
+                  WorldPrompt.poi,
+                  strings.t(waystoneActive(i)
+                      ? 'ui.world.way.prompt_use'
+                      : 'ui.world.way.prompt_activate')
+                ));
+      }
+      // Wilds chests and shrines (biome_exploration.md § 3.3–3.4).
+      for (final (list, shrine) in [
+        (lay.chestSpots, false),
+        (lay.shrines, true)
+      ]) {
+        for (var i = 0; i < list.length; i++) {
+          final (tx, ty) = list[i];
+          if (_tileDist(local.x, local.y, tx, ty) > WildLootRules.reach) {
+            continue;
+          }
+          final done =
+              WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
+          add(
+              ActionTarget(tx, ty,
+                  shrine ? ActionTargetKind.shrine : ActionTargetKind.chest,
+                  ok: !done,
+                  key: '${shrine ? 'shrine' : 'wild'}:$i',
+                  // The chest box is outlined; the shrine keeps the
+                  // tile cursor (its glow fills the tile).
+                  outline: !shrine),
+              () => useWildLoot(i, shrine: shrine),
+              () => (
+                    done ? WorldPrompt.spent : WorldPrompt.poi,
+                    strings.t(done
+                        ? 'ui.world.wild.prompt_done'
+                        : shrine
+                            ? 'ui.world.wild.prompt_shrine'
+                            : 'ui.world.wild.prompt_chest')
+                  ));
+        }
+      }
+      // Raft dock.
+      if (nearRaftDock case final d?) {
+        add(ActionTarget(d.x, d.y, ActionTargetKind.dock, key: 'dock'),
+            boardRaft,
+            () => (WorldPrompt.poi, strings.t('ui.world.raft.prompt_board')));
+      }
+      // Bushes and searchable trees (hold to gather).
+      for (final g in _gatherCandidates()) {
+        add(g, () => _gatherStart(g), () {
+          if (g.kind == ActionTargetKind.forage) {
+            return (WorldPrompt.poi, forageHint(g.id));
+          }
+          return (
+            g.ok ? WorldPrompt.poi : WorldPrompt.spent,
+            strings.t(g.ok
+                ? 'ui.world.cozy.search_prompt'
+                : 'ui.world.cozy.searched')
+          );
+        });
+      }
+    }
+    // Mines: way up, shaft, the mine NPC and the rocks / finds.
+    if (mineLevel case final m?) {
+      if (nearMineExit) {
+        add(
+            ActionTarget(m.exit.$1, m.exit.$2, ActionTargetKind.mine,
+                key: 'exit'),
+            () => travelMine(null),
+            () => (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit')));
+      }
+      if (nearShaft) {
+        final sh = m.shaft!;
+        add(ActionTarget(sh.$1, sh.$2, ActionTargetKind.mine, key: 'shaft'),
+            () => travelMine(null, down: true),
+            () => (WorldPrompt.poi, strings.t('ui.world.mine.prompt_down')));
+      }
+      if (nearMineNpc case final id?) {
+        final npc = m.npc!;
+        add(
+            ActionTarget(npc.$2, npc.$3, ActionTargetKind.npc,
+                key: 'minenpc:$id'),
+            () => talkMineNpc(id),
+            () => (
+                  WorldPrompt.poi,
+                  talk(strings.t('ui.world.mine.npc.$id.name'))
+                ));
+      }
+      if (inMine) {
+        for (final r in _mineCandidates()) {
+          add(r, () => mineUse(at: r.tile));
+        }
+      }
+    }
+    // Town: craft chests, build signs and the farm plot.
+    if (!isRun && s.place == null) {
+      final (ox, oy) = town.origin;
+      if (nearChest case final b?) {
+        final (cx, cy) = TownRules.chestOf(town, b);
+        add(
+            ActionTarget(cx + ox, cy + oy, ActionTargetKind.chest,
+                ok: b.chest.isNotEmpty, key: 'chest:${b.id}', outline: true),
+            () {
+          if (b.chest.isNotEmpty) collectChest(b.id);
+        },
+            () => (
+                  WorldPrompt.chest,
+                  b.chest.isEmpty
+                      ? strings.t('ui.world.ctl.chest_empty')
+                      : strings.t(
+                          'ui.world.ctl.chest_collect', {'n': b.chestTotal})
+                ));
+      }
+      final (px, py) = _myTile;
+      for (final b in town.builds) {
+        final (sx, sy) = TownPlan.signOf(town, b);
+        final tx = sx + ox, ty = sy + oy;
+        if (!ActionTargeting.inReach(px, py, tx, ty)) continue;
+        if (out.any((a) => a.target.tile == (tx, ty))) continue;
+        final info = signAt(tx, ty);
+        if (info == null) continue;
+        add(ActionTarget(tx, ty, ActionTargetKind.sign, key: 'sign:${b.id}'),
+            () => addLocalNotice('${info.$1}: ${info.$2}'),
+            () => (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_read')));
+      }
+      if (farmTile case final t?) {
+        add(ActionTarget(t.$1, t.$2, ActionTargetKind.plot, key: 'plot'),
+            farmWork, () {
+          final tip = nearHelper == null
+              ? ''
+              : ' · ${strings.t(WorldPrompt.helper.key)}';
+          if (farmHint() case final h?) return (WorldPrompt.farm, '$h$tip');
+          if (nearHelper != null) return (WorldPrompt.helper, null);
+          return (null, null);
+        });
+      }
+    }
+    // Mission entrances (zone arches).
+    if (nearEntrance case final e?) {
+      add(
+          ActionTarget(e.tx, e.ty, ActionTargetKind.portal,
+              key: 'zone:${e.zone}'),
+          () => enterZone(e), () {
+        final z = zoneStatus(e.zone);
+        if (z == null) return (null, null);
+        return (WorldPrompt.entrance, entrancePromptText(z, s.vote, localId));
+      });
+    }
+    return out;
+  }
+
+  /// The tile of the town place [spot] nearest to the local player.
+  (int, int) _spotTile(TownSpot spot) {
+    final s = _s!;
+    final map = engine.mapFor(s);
+    final (px, py) = _myTile;
+    final (ox, oy) = map.townOrigin;
+    (int, int)? best;
+    var bd = 1 << 30;
+    void consider(int x, int y) {
+      final d = (x - px) * (x - px) + (y - py) * (y - py);
+      if (d < bd) (bd, best) = (d, (x, y));
+    }
+
+    if (map.place == null) {
+      for (final l in map.townMarks ?? TownLayout.landmarks) {
+        if (l.spot != spot) continue;
+        consider(px.clamp(l.x + ox, l.x + ox + l.w - 1),
+            py.clamp(l.y + oy, l.y + oy + l.h - 1));
+      }
+    }
+    if (best == null) {
+      final want = switch (spot) {
+        TownSpot.sign => Tile.sign,
+        TownSpot.travel => Tile.path,
+        _ => null,
+      };
+      if (want != null) {
+        for (var y = py - 2; y <= py + 2; y++) {
+          for (var x = px - 2; x <= px + 2; x++) {
+            if (map.contains(x, y) && map.tileAt(x, y) == want) consider(x, y);
+          }
+        }
+      }
+    }
+    return best ?? (px + _facingStep.$1, py + _facingStep.$2);
+  }
+
+  /// The biome NPC (or the town residents) in talking reach.
+  List<(ActionTarget, BiomeNpcDef)> _npcTargets() {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby) return const [];
+    final lay = biomeLayout(s.place);
+    if (lay == null) {
+      // In town: the residents walking in front of their houses (§ 10.1).
+      if (s.place != null || editingTown) return const [];
+      final night = SkyRules.isNight(s.town.sky);
+      final out = <(ActionTarget, BiomeNpcDef)>[];
+      for (final n in ResidentRules.living(s.town)) {
+        final pos = ResidentRules.position(s.town, n.id, s.time, night: night);
+        if (pos == null) continue;
+        if (WorldRules.distance(local.x, local.y, pos.$1, pos.$2) >= 26) {
+          continue;
+        }
+        out.add((
+          ActionTarget((pos.$1 / 16).floor(), (pos.$2 / 16).floor(),
+              ActionTargetKind.npc,
+              key: 'npc:${n.id}'),
+          n
+        ));
+      }
+      return out;
+    }
+    // Already lives in town: no longer in its biome (§ 10.1).
+    if (s.town.resident(lay.npc.id).invited) return const [];
+    // Walking around its camp (§ 9.2).
+    final at = NpcCampRules.state(lay.npc, s.time);
+    if (WorldRules.distance(local.x, local.y, at.x, at.y) >= 26) {
+      return const [];
+    }
+    return [
+      (
+        ActionTarget((at.x / 16).floor(), (at.y / 16).floor(),
+            ActionTargetKind.npc,
+            key: 'npc:${lay.npc.id}'),
+        lay.npc
+      )
+    ];
+  }
+
+  /// Rocks and finds next to the player in a mine (`mineTarget`'s
+  /// candidates), typed for the cursor.
+  List<ActionTarget> _mineCandidates() {
+    final lvl = mineLevel;
+    if (lvl == null) return const [];
+    final (px, py) = _myTile;
+    final r = CozyRules.actionReach;
+    final out = <ActionTarget>[];
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        final c = MiningRules.tileAt(lvl, mineState, px + dx, py + dy);
+        if (c == Tile.floor || c == MineTile.torch) continue;
+        final kind = switch (c) {
+          MineTile.chest ||
+          MineTile.relic ||
+          MineTile.mushroom ||
+          MineTile.lore ||
+          MineTile.station =>
+            ActionTargetKind.find,
+          _ => ActionTargetKind.rock,
+        };
+        out.add(ActionTarget(px + dx, py + dy, kind));
+      }
+    }
+    return out;
+  }
+
+  _Act? get _selectedAct {
+    final s = _s;
+    if (s == null) return null;
+    final key = (
+      identityHashCode(s),
+      local.x,
+      local.y,
+      local.fx,
+      local.fy,
+      _hover,
+      _panel,
+      editingTown,
+      holding,
+    );
+    if (key == _actKey) return _actPick;
+    final list = _actables();
+    final (px, py) = _myTile;
+    final t = ActionTargeting.select(
+      px: px,
+      py: py,
+      candidates: [for (final a in list) a.target],
+      hover: _hover,
+      facing: _facingStep,
+      reach: _actReach,
+    );
+    _actKey = key;
+    _actPick = t == null ? null : list.firstWhere((a) => a.target == t);
+    return _actPick;
+  }
+
+  /// What E / the click acts on now (controls.md § Cursor de acción), or
+  /// `null`: the prompt and the map's cursor / outline read this.
+  ActionTarget? get actionTarget => _selectedAct?.target;
+
+  /// The selection's key without [prefix] when it is of that family
+  /// (`npc:`, `event:`, `custom:`, `fisher:`, `minenpc:`, `chest:`,
+  /// `spot:`), else `null`.
+  String? selectedOf(String prefix) {
+    final k = actionTarget?.key;
+    return k != null && k.startsWith(prefix)
+        ? k.substring(prefix.length)
+        : null;
+  }
+
+  /// No selection, or a tool target: the farm and mine markers show only
+  /// then (one marker on the map at a time).
+  bool get toolCursor => switch (actionTarget?.kind) {
+        null ||
+        ActionTargetKind.plot ||
+        ActionTargetKind.rock ||
+        ActionTargetKind.find =>
+          true,
+        _ => false,
+      };
+
+  /// Click on tile [tile] in reach: acts on the selection when the
+  /// cursor sits there (same as E). Returns whether it was used.
+  bool clickAction((int, int) tile) {
+    final s = _s;
+    if (s == null || _panel != null || s.mode != SessionMode.lobby) {
+      return false;
+    }
+    aimHover(tile);
+    final a = _selectedAct;
+    if (a == null || a.target.tile != tile) return false;
+    if (_toolKinds.contains(a.target.kind)) return false;
+    _holdInteracted = true;
+    a.run();
+    return true;
+  }
+
   /// E / Espacio.
   void interact() {
     final s = _s;
@@ -4026,82 +4532,16 @@ class SessionController extends StateNotifier<SessionView?> {
         }
         return;
       }
-      if (nearCounter) {
-        openPanel(WorldPanel.missionBoard);
-      } else if (nearArmory) {
-        openPanel(WorldPanel.armory);
-      } else if (nearForge) {
-        openPanel(WorldPanel.forge);
-      } else if (nearWorkshop) {
-        openPanel(WorldPanel.workshop);
-      } else if (nearPortal) {
-        openPanel(WorldPanel.ecoPortal);
-      } else if (nearEcoPortal case final z?) {
-        ecoZone = z;
-        openPanel(WorldPanel.ecoZone);
-      } else if (nearStatue) {
-        openPanel(WorldPanel.ascension);
-      } else if (nearLostLoot) {
-        openPanel(WorldPanel.lostLoot);
-      } else if (nearStall) {
-        openPanel(WorldPanel.stall);
-      } else if (nearFountain) {
-        openPanel(WorldPanel.fountain);
-      } else if (nearTravel) {
-        openPanel(WorldPanel.travel);
-      } else if (nearCustomNpc case final n?) {
-        // Antes que el evento: un NPC de datos vinculado a una visita es
-        // quien la protagoniza (npc_editor.md § 6.4).
-        openCustomNpc(n.def.id);
-      } else if (nearWorldEvent case final a?) {
-        final d = kWorldEvents.def(a.def);
-        // A roaming foe fights on E, no talk (biome_exploration.md § 6).
-        if (d != null && !WorldEventRules.talks(d)) {
-          enterRift(a.uid);
-        } else {
-          openWorldEvent(a);
-        }
-      } else if (nearNpc case final n?) {
-        talkNpc = n;
-        openPanel(WorldPanel.biomeNpc);
-      } else if (nearFisher != null) {
-        openPanel(WorldPanel.biomeFisher);
-      } else if (nearMineEntrance case final i?) {
-        // Before the waystone: the mine's own stone stands one tile off
-        // the mouth, inside its reach (mining_smithing.md § 1.1).
-        travelMine(i);
-      } else if (nearWaystone case final i?) {
-        useWaystone(i);
-      } else if (nearWildLoot case (final i, final shrine)?) {
-        useWildLoot(i, shrine: shrine);
-      } else if (nearRaftDock != null) {
-        boardRaft();
-      } else if (gatherTarget case final g?) {
-        _gatherStart(g);
-      } else if (nearMineExit) {
-        travelMine(null);
-      } else if (nearShaft) {
-        travelMine(null, down: true);
-      } else if (nearMineNpc case final n?) {
-        talkMineNpc(n);
+      // Whatever the cursor selected (controls.md § Cursor de acción): no
+      // fixed priority between kinds. Talking, opening and travelling
+      // never repeat while E is held.
+      if (_selectedAct case final a?) {
+        _holdInteracted = !_toolKinds.contains(a.target.kind);
+        a.run();
       } else if (inMine) {
         mineUse();
-      } else if (nearCartStation) {
-        if (!unloadCart()) {
-          addLocalNotice(strings.t('ui.world.mine.no_cart'));
-        }
-      } else if (nearChest case final b? when b.chest.isNotEmpty) {
-        collectChest(b.id);
-      } else if (farmTile != null) {
-        farmWork();
-      } else if (facingWater) {
+      } else if (facingWater || canFish) {
         startFishing();
-      } else if (nearTrader) {
-        openPanel(WorldPanel.trader);
-      } else if (canFish) {
-        startFishing();
-      } else if (nearEntrance case final e?) {
-        enterZone(e);
       }
     } else if (s.mode == SessionMode.field) {
       final seal = nearSeal;
@@ -5810,119 +6250,18 @@ class SessionController extends StateNotifier<SessionView?> {
       }
       return (WorldPrompt.fishing, strings.t('ui.world.raft.prompt_fish'));
     }
-    if (nearArmory) return (WorldPrompt.armory, null);
-    if (nearForge) return (WorldPrompt.forge, null);
-    if (nearWorkshop) return (WorldPrompt.workshop, null);
-    if (nearPortal) return (WorldPrompt.ecoPortal, null);
-    if (nearEcoPortal != null) return (WorldPrompt.ecoZone, null);
-    if (nearStatue) return (WorldPrompt.statue, null);
-    if (nearLostLoot) return (WorldPrompt.lostLoot, null);
-    if (nearStall) return (WorldPrompt.stall, null);
-    if (nearCounter) return (WorldPrompt.missionBoard, null);
-    if (nearFountain) return (WorldPrompt.fountain, null);
-    if (nearTravel) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_travel'));
-    if (nearCustomNpc != null) {
-      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk',
-          {'name': nearCustomNpc!.def.name.text}));
-    }
-    if (nearWorldEvent case final a?) {
-      final d = kWorldEvents.def(a.def);
-      return (
-        WorldPrompt.poi,
-        d?.category == WorldEventCategory.echoPortal
-            ? strings.t('ui.town.events.prompt_rift')
-            : d != null && !WorldEventRules.talks(d)
-                ? strings.t('ui.town.events.prompt_fight',
-                    {'name': d.title.text})
-                : strings.t('ui.world.ctl.prompt_talk',
-                {'name': d?.title.text ?? a.def})
-      );
-    }
-    if (nearNpc case final n?) {
-      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': n.name}));
-    }
-    if (nearFisher case final f?) {
-      return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_talk', {'name': f.name}));
-    }
-    // Same order as `interact`: the mine mouth wins over its waystone.
-    if (nearMineEntrance != null) {
-      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_enter'));
-    }
-    if (nearWaystone case final i?) {
-      return (
-        WorldPrompt.poi,
-        strings.t(waystoneActive(i)
-            ? 'ui.world.way.prompt_use'
-            : 'ui.world.way.prompt_activate')
-      );
-    }
-    if (nearWildLoot case (final i, final shrine)?) {
-      final lay = biomeLayout(_s?.place);
-      final done = lay != null &&
-          WildLootRules.taken(town, _me, lay.id, i, shrine: shrine);
-      // Used today: a grey line, no key (biome_exploration.md § 3.4).
-      return (
-        done ? WorldPrompt.spent : WorldPrompt.poi,
-        strings.t(done
-            ? 'ui.world.wild.prompt_done'
-            : shrine
-                ? 'ui.world.wild.prompt_shrine'
-                : 'ui.world.wild.prompt_chest')
-      );
-    }
-    if (nearRaftDock != null) {
-      return (WorldPrompt.poi, strings.t('ui.world.raft.prompt_board'));
-    }
-    // The cursor's target (controls.md § Cursor de acción): the line says
-    // what E / the click does there; a searched tree is grey.
-    if (gatherTarget case final g?) {
-      if (g.kind == ActionTargetKind.forage) {
-        return (WorldPrompt.poi, forageHint(g.id));
+    // The action cursor's selection (controls.md § Cursor de acción):
+    // the line always describes what E / the click does there.
+    if (_selectedAct case final a?) {
+      if (a.prompt case final p?) {
+        final r = p();
+        if (r.$1 != null || r.$2 != null) return r;
       }
-      return (
-        g.ok ? WorldPrompt.poi : WorldPrompt.spent,
-        strings.t(
-            g.ok ? 'ui.world.cozy.search_prompt' : 'ui.world.cozy.searched')
-      );
     }
-    if (nearMineExit) {
-      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_exit'));
-    }
-    if (nearShaft) {
-      return (WorldPrompt.poi, strings.t('ui.world.mine.prompt_down'));
-    }
-    if (nearCartStation) {
-      final c = parkedCart;
-      return (
-        WorldPrompt.poi,
-        c == null
-            ? strings.t('ui.world.mine.no_cart')
-            : strings.t('ui.world.mine.prompt_unload', {'name': cartLabel(c)})
-      );
-    }
-    if (nearMineNpc case final n?) {
-      return (
-        WorldPrompt.poi,
-        strings.t('ui.world.ctl.prompt_talk',
-            {'name': strings.t('ui.world.mine.npc.$n.name')})
-      );
-    }
-    final helperTip = nearHelper == null
-        ? ''
-        : ' · ${strings.t(WorldPrompt.helper.key)}';
-    if (farmHint() case final h?) return (WorldPrompt.farm, '$h$helperTip');
+    if (farmHint() case final h?) return (WorldPrompt.farm, h);
     if (nearHelper != null) return (WorldPrompt.helper, null);
-    if (nearChest case final b?) {
-      return (
-        WorldPrompt.chest,
-        b.chest.isEmpty
-            ? strings.t('ui.world.ctl.chest_empty')
-            : strings.t('ui.world.ctl.chest_collect', {'n': b.chestTotal})
-      );
-    }
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
     if (facingWater) return (WorldPrompt.fishing, null);
-    if (nearTrader) return (WorldPrompt.trader, null);
     if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearOffering) return (WorldPrompt.poi, strings.t('ui.world.ctl.prompt_offering'));
@@ -5940,18 +6279,18 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStairs case final k?) {
       return (WorldPrompt.stairs, stairsPromptText(k, _s!.mission!.floor));
     }
-    if (nearEntrance case final e?) {
-      final z = zoneStatus(e.zone);
-      if (z != null) {
-        return (
-          WorldPrompt.entrance,
-          entrancePromptText(z, _s!.vote, localId),
-        );
-      }
-    }
     if (nearMerchant) return (WorldPrompt.merchant, null);
     return (null, null);
   }
+}
+
+/// One interactable for the action cursor: where it is, what E / the
+/// click does and what the prompt says (`null` = the default line).
+class _Act {
+  const _Act(this.target, this.run, this.prompt);
+  final ActionTarget target;
+  final void Function() run;
+  final (WorldPrompt?, String?) Function()? prompt;
 }
 
 /// Una operación del alijo esperando confirmación.
