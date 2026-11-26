@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -105,6 +106,10 @@ class WorldHud extends StatelessWidget {
   /// compactas (v0.13).
   static const maxPartyRows = 2;
 
+  /// Smallest scale of the party row when many members do not fit
+  /// (v0.49.22): below this the text is no longer readable.
+  static const minPartyScale = 0.8;
+
   @override
   Widget build(BuildContext context) {
     final s = view.session;
@@ -144,9 +149,16 @@ class WorldHud extends StatelessWidget {
       // Una sola fila (v0.49.21): presentes + los que están en otro lugar,
       // misma caja para todos; si no entra, la fila entera se achica.
       final n = players.length + s.away.length;
+      // Compact cards as wide as the longest first line (v0.49.22): the
+      // text keeps its size; same width for every card.
+      var compactW = PartyBox.compactWidthOf(context);
+      for (final p in players) {
+        final w = CompactPlayerBox.naturalWidthOf(
+            context, p, controller.engine.progression);
+        if (w > compactW) compactW = w;
+      }
       double rowWidth(bool exp) {
-        final w =
-            exp ? PartyBox.widthOf(context) : PartyBox.compactWidthOf(context);
+        final w = exp ? PartyBox.widthOf(context) : compactW;
         return (n == 0 ? 1 : n) * (w + 6);
       }
 
@@ -155,13 +167,16 @@ class WorldHud extends StatelessWidget {
               .clamp(PartyBox.compactWidthOf(context), double.infinity);
       // Desplegadas solo si la fila entra entera.
       final expanded = expandedPref && rowWidth(true) <= roomFor(true);
-      final boxW = expanded
-          ? PartyBox.widthOf(context)
-          : PartyBox.compactWidthOf(context);
+      final boxW = expanded ? PartyBox.widthOf(context) : compactW;
       final chatMin = RetroType.width(context, expanded ? 240 : 200);
       final natural = rowWidth(expanded);
       final room = roomFor(expanded);
-      final partyWidth = natural < room ? natural : room;
+      // Only a row wider than its room shrinks, down to [minPartyScale]
+      // (still readable) by taking chat room; never past the screen.
+      final partyWidth = natural <= room
+          ? natural
+          : math.min(math.max(room, natural * minPartyScale),
+              math.max(room, box.maxWidth - _gap * 2));
       final cardH = expanded ? null : PartyBox.compactHeightOf(context);
       // Con una herramienta en la mano el chat cede lugar a la barra de
       // abajo al centro (v0.24.4).
@@ -608,7 +623,7 @@ class WorldHud extends StatelessWidget {
                             for (final p in players)
                               Memo(
                                 key: ValueKey('hud-party-memo-${p.id}'),
-                                deps: [_boxKey(p, expanded)],
+                                deps: [_boxKey(p, expanded), boxW],
                                 builder: (_) => Consumer(
                                   builder: (context, ref, _) => _Toggle(
                                     key: ValueKey('hud-party-${p.id}'),
@@ -628,6 +643,7 @@ class WorldHud extends StatelessWidget {
                                               local: p.id == view.localId,
                                               progression:
                                                   controller.engine.progression,
+                                              width: boxW,
                                             ),
                                     ),
                                   ),
@@ -1373,11 +1389,88 @@ class CompactPlayerBox extends StatelessWidget {
     required this.player,
     required this.local,
     required this.progression,
+    this.width,
   });
 
   final SessionPlayer player;
   final bool local;
   final ProgressionRules progression;
+
+  /// Fixed width; `null` = [PartyBox.compactWidthOf].
+  final double? width;
+
+  /// Text of the first line as laid out by the box (tight line height).
+  static TextStyle _lineStyle() => TextStyle(
+      fontFamily: RetroType.bodyFamily,
+      letterSpacing: RetroType.letterSpacing,
+      fontFamilyFallback: RetroType.bodyFallback,
+      fontSize: RetroType.small,
+      height: RetroType.lineTight);
+
+  /// Name, ascension and class.
+  static TextSpan _nameSpan(SessionPlayer p, ProgressionRules progression) {
+    final prof = p.profile;
+    final cls = progression.catalog.classes[prof.classId]?.name ?? prof.classId;
+    final asc = ascensionFor(prof.classId, prof.ascension.id);
+    return TextSpan(children: [
+      TextSpan(
+          text: retroText(p.name),
+          style: const TextStyle(color: DsColors.textTitle)),
+      if (asc != null)
+        TextSpan(
+            text: retroText(', ${asc.name}'),
+            style: TextStyle(color: Color(asc.color))),
+      TextSpan(
+          text: retroText(' $cls'),
+          style: const TextStyle(color: DsColors.textSecondary)),
+    ]);
+  }
+
+  /// Level, status chips and `[+]`.
+  static TextSpan _levelSpan(BuildContext context, SessionPlayer p) {
+    final prof = p.profile;
+    return TextSpan(children: [
+      TextSpan(
+          text: ' ${context.t('ui.world.hud.level', {'n': prof.level})}',
+          style: const TextStyle(color: DsColors.textPrimary)),
+      // Chips de estado: texto de color (sin caja: no agranda la línea).
+      if (!p.alive)
+        const TextSpan(
+            text: ' K.O.', style: TextStyle(color: DsColors.danger)),
+      if (prof.points > 0)
+        TextSpan(
+            text: ' +${prof.points}',
+            style: const TextStyle(color: DsColors.reward)),
+      const TextSpan(
+          text: ' [+]', style: TextStyle(color: DsColors.textSecondary)),
+    ]);
+  }
+
+  /// Width the box needs so its first line fits at full size (v0.49.22):
+  /// never less than [PartyBox.compactWidthOf], at most twice it.
+  static double naturalWidthOf(BuildContext context, SessionPlayer p,
+      ProgressionRules progression) {
+    final scaler = MediaQuery.textScalerOf(context);
+    double measure(TextSpan span) {
+      final tp = TextPainter(
+          text: TextSpan(style: _lineStyle(), children: [span]),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+          maxLines: 1)
+        ..layout();
+      final w = tp.width;
+      tp.dispose();
+      return w;
+    }
+
+    // 6 + 6 of padding, 2 + 2 of border and air for the spacing the
+    // laid-out line adds over a bare measure.
+    final need = measure(_nameSpan(p, progression)) +
+        measure(_levelSpan(context, p)) +
+        40;
+    final min = PartyBox.compactWidthOf(context);
+    return need.clamp(min, min * 2);
+  }
 
   /// Barra fina + `n/max` a la derecha; el número toma a lo sumo el 65 %
   /// (cifras grandes o texto ENORME: se recorta antes que desbordar).
@@ -1402,14 +1495,12 @@ class CompactPlayerBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = player;
     final prof = p.profile;
-    final cls = progression.catalog.classes[prof.classId]?.name ?? prof.classId;
     final tight = TextStyle(height: RetroType.lineTight);
-    final asc = ascensionFor(prof.classId, prof.ascension.id);
     return PartyBox(
       key: ValueKey('hud-compact-${p.id}'),
       local: local,
       knockedOut: !p.alive,
-      width: PartyBox.compactWidthOf(context),
+      width: width ?? PartyBox.compactWidthOf(context),
       padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
       children: [
         DefaultTextStyle.merge(
@@ -1426,19 +1517,7 @@ class CompactPlayerBox extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text.rich(
-                      TextSpan(children: [
-                        TextSpan(
-                            text: retroText(p.name),
-                            style: const TextStyle(color: DsColors.textTitle)),
-                        if (asc != null)
-                          TextSpan(
-                              text: retroText(', ${asc.name}'),
-                              style: TextStyle(color: Color(asc.color))),
-                        TextSpan(
-                            text: retroText(' $cls'),
-                            style:
-                                const TextStyle(color: DsColors.textSecondary)),
-                      ]),
+                      _nameSpan(p, progression),
                       maxLines: 1,
                       softWrap: false,
                     ),
@@ -1450,26 +1529,7 @@ class CompactPlayerBox extends StatelessWidget {
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: w * 0.6),
                   child: Text.rich(
-                    TextSpan(children: [
-                      TextSpan(
-                          text: ' ${context.t('ui.world.hud.level', {
-                                'n': prof.level
-                              })}',
-                          style: const TextStyle(color: DsColors.textPrimary)),
-                      // Chips de estado: texto de color (sin caja: no
-                      // agranda la línea).
-                      if (!p.alive)
-                        const TextSpan(
-                            text: ' K.O.',
-                            style: TextStyle(color: DsColors.danger)),
-                      if (prof.points > 0)
-                        TextSpan(
-                            text: ' +${prof.points}',
-                            style: const TextStyle(color: DsColors.reward)),
-                      const TextSpan(
-                          text: ' [+]',
-                          style: TextStyle(color: DsColors.textSecondary)),
-                    ]),
+                    _levelSpan(context, p),
                     key: ValueKey('hud-level-${p.id}'),
                     maxLines: 1,
                     softWrap: false,

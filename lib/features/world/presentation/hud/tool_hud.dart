@@ -7,7 +7,6 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/data/mine_catalog.dart';
 import '../../../../game_engine/rules/profession_gear_rules.dart';
-import '../../../inventory/domain/item_names.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
 import '../panels/life_icon.dart';
@@ -240,15 +239,7 @@ class ToolHud extends StatelessWidget {
     return null;
   }
 
-  String _seedName(String id) {
-    if (kCrops[id] case final c?) return c.seedName;
-    if (kWeaponSeeds.containsKey(id)) {
-      return CatalogText.of(
-          'data.items.gear.seed.$id', kWeaponSeedNames[id] ?? id);
-    }
-    final it = profile.itemByUid(id.substring(kRegrowItem.length));
-    return it == null ? id : localItemName(controller.engine.progression.items, it);
-  }
+  String _seedName(String id) => controller.plantableName(id);
 
   int _seedCount(String id) => kCrops.containsKey(id)
       ? profile.life.farm.seedCount(id)
