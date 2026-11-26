@@ -198,6 +198,9 @@ abstract final class CozyRules {
     return math.max(t.d('gatherHoldMinSec'), base * k);
   }
 
+  /// Seconds between repeats of a held E / click (§ 3, hold = repeat).
+  static double get holdRepeatSec => t.d('holdRepeatSec');
+
   // ---------------- tree search (§ 3) ----------------
 
   /// `town.daily` key of [player] searching tree ([x], [y]) of [biome] on
