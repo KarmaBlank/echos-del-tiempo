@@ -348,6 +348,8 @@
   "ui.town.fountain.edit_line": "",
   "ui.town.fountain.hire_farmer": "",
   "ui.town.fountain.hire_farmer_line": "",
+  "ui.town.fountain.need_farming": "需要将你的种植职业提升到 {need} 级（当前：{now} 级）",
+  "ui.town.fountain.need_fishing": "需要将你的钓鱼职业提升到 {need} 级（当前：{now} 级）",
   "ui.town.fountain.hire_fisher": "",
   "ui.town.fountain.hire_fisher_line": "",
   "ui.town.fountain.board": "",
