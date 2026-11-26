@@ -144,7 +144,7 @@ jugable ni es sólida; va sobre pasto, nunca sobre camino.
 | Nivel | Camino | Cercas | Faroles | Pozo / tablón | Plaza | Techos | Estandartes |
 |---|---|---|---|---|---|---|---|
 | Caserío | tierra | no | 0 | no | no | lisos | 0 |
-| Aldea | grava | sí | 2 | no | no | chimenea | 2 |
+| Aldea | grava | sí | 2 | no | no | lisos (la chimenea la trae el sprite de la casa de nivel 2-3) | 2 |
 | Pueblo | grava | sí | 4 | sí | no | + cumbrera | 2 |
 | Ciudad | empedrado | sí | 6 | sí | empedrada (radio 2 de la fuente) | + veleta | 4 |
 
