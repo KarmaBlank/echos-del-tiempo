@@ -976,6 +976,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'gatherHoldSec': 1.2,
     'gatherSpeedPerLevel': 0.03,
     'gatherHoldMinSec': 0.4,
+    // Hold = repeat (§ 3): seconds between repeats of a held E / click.
+    'holdRepeatSec': 0.25,
     // Tree search (§ 3): chance of each find (rest = nothing) and XP.
     'searchSeedChance': 0.3,
     'searchMushroomChance': 0.2,

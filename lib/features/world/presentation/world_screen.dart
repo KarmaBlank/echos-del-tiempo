@@ -56,6 +56,7 @@ import 'panels/fountain_panel.dart';
 import 'panels/house_assign_panel.dart';
 import 'panels/biome_npc_panel.dart';
 import 'panels/biome_fisher_panel.dart';
+import 'panels/mine_npc_panel.dart';
 import 'panels/custom_npc_panel.dart';
 import 'panels/world_event_panel.dart';
 import 'panels/quest_log_panel.dart';
@@ -270,7 +271,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     if (event is KeyUpEvent &&
         (event.logicalKey == LogicalKeyboardKey.keyE ||
             event.logicalKey == LogicalKeyboardKey.space)) {
-      tc.mineHoldEnd();
+      tc.holdRelease();
     }
     if (event is KeyUpEvent &&
         (event.logicalKey == LogicalKeyboardKey.keyE ||
@@ -337,6 +338,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       used = _battleKey.currentState?.handleKey(event.logicalKey) ?? false;
     } else {
       used = controller.handleKey(event.logicalKey);
+      // Hold = repeat (cozy_life.md § 3): E held keeps working; the
+      // key-up above releases it.
+      if (event.logicalKey == LogicalKeyboardKey.keyE ||
+          event.logicalKey == LogicalKeyboardKey.space) {
+        if (!controller.holding) controller.holdStart();
+      }
     }
     return used ? KeyEventResult.handled : KeyEventResult.ignored;
   }
@@ -505,14 +512,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   } else if (controller.customNpcAt(tile.$1, tile.$2)
                       case final n?) {
                     controller.openCustomNpc(n.def.id);
+                  } else if (controller.mineNpcAt(tile.$1, tile.$2)
+                      case final n?) {
+                    // Click on the mine NPC in reach: talk (like E).
+                    controller.talkMineNpc(n);
                   } else if (controller.activeTool == null) {
                     // Hold the click on a bush / tree to gather, or click
-                    // a ripe plot to harvest (cozy_life.md § 3).
+                    // a ripe plot to harvest; held, it keeps going onto
+                    // the next one (cozy_life.md § 3).
                     controller.gatherPress(tile);
+                    controller.holdStart(tile: tile, pointer: true);
                   }
                 },
-                onPointerUp: (_) => controller.gatherHoldEnd(),
-                onPointerCancel: (_) => controller.gatherHoldEnd(),
+                onPointerMove: (e) =>
+                    controller.holdAim(game.tileAtScreen(e.localPosition)),
+                onPointerUp: (_) => controller.holdRelease(),
+                onPointerCancel: (_) => controller.holdRelease(),
                 child: MouseRegion(
                   opaque: false,
                   hitTestBehavior: HitTestBehavior.translucent,
@@ -575,18 +590,25 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (tile != null &&
                       (controller.residentAt(tile.$1, tile.$2) != null ||
                           controller.fisherAt(tile.$1, tile.$2) ||
-                          controller.customNpcAt(tile.$1, tile.$2) != null)) {
+                          controller.customNpcAt(tile.$1, tile.$2) != null ||
+                          controller.mineNpcAt(tile.$1, tile.$2) != null)) {
                     return;
                   }
                   if (controller.activeTool == ActiveTool.mine) {
                     controller.mineUse(at: tile);
                   } else if (controller.activeTool == ActiveTool.rod) {
                     controller.startFishing();
+                    return;
                   } else {
                     controller.farmWork();
                   }
+                  // Held, it keeps working the next target (cozy_life.md § 3).
+                  controller.holdStart(tile: tile, pointer: true);
                 },
-                onPointerUp: (_) => controller.mineHoldEnd(),
+                onPointerMove: (e) =>
+                    controller.holdAim(game.tileAtScreen(e.localPosition)),
+                onPointerUp: (_) => controller.holdRelease(),
+                onPointerCancel: (_) => controller.holdRelease(),
                 onPointerSignal: (e) {
                   if (e is PointerScrollEvent &&
                       controller.activeTool == ActiveTool.mine) {
@@ -1136,6 +1158,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return WaystonePanel(view: view, controller: controller);
       case WorldPanel.biomeNpc:
         return BiomeNpcPanel(view: view, controller: controller);
+      case WorldPanel.mineNpc:
+        return MineNpcPanel(controller: controller);
       case WorldPanel.biomeFisher:
         return BiomeFisherPanel(view: view, controller: controller);
       case WorldPanel.customNpc:

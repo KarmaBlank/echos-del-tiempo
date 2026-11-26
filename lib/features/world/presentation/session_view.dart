@@ -73,6 +73,9 @@ enum WorldPanel {
   /// Pescador nativo del bioma (fishing.md § 12).
   biomeFisher,
 
+  /// Mine NPC dialogue (cozy_life.md § 3).
+  mineNpc,
+
   /// NPC hecho con datos (npc_editor.md § 6): charla del cuadro de diálogo.
   customNpc,
 

@@ -1678,11 +1678,27 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(TravelAction(to));
   }
 
-  /// A line of the mine NPC [id] (changes with the world day): BORRADOR.
+  /// The mine NPC whose dialogue is open (panel `mineNpc`).
+  String? talkMineNpcId;
+
+  /// The i18n key of the line of the mine NPC [id] (changes with the
+  /// world day).
+  String mineNpcLineKey(String id) =>
+      'ui.world.mine.npc.$id.${(town.sky.day + id.length) % kMineNpcLines}';
+
+  /// Talk to the mine NPC [id]: opens its dialogue box (cozy_life.md § 3).
   void talkMineNpc(String id) {
-    final n = (town.sky.day + id.length) % kMineNpcLines;
-    addLocalNotice('${strings.t('ui.world.mine.npc.$id.name')}: '
-        '${strings.t('ui.world.mine.npc.$id.$n')}');
+    mineHoldEnd();
+    talkMineNpcId = id;
+    openPanel(WorldPanel.mineNpc);
+  }
+
+  /// The mine NPC standing on tile ([x], [y]) within talking reach, or
+  /// `null` (a click on her talks, like E).
+  String? mineNpcAt(int x, int y) {
+    final npc = mineLevel?.npc;
+    if (npc == null || npc.$2 != x || npc.$3 != y) return null;
+    return nearMineNpc;
   }
 
   /// What the local player holds in a mine (HUD slots, § 1.6).
@@ -2302,6 +2318,7 @@ class SessionController extends StateNotifier<SessionView?> {
       if (_gatherClock.elapsedMilliseconds >= gatherSec * 1000) {
         final f = _gatherForage, t = _gatherTree;
         gatherHoldEnd();
+        _holdDone.add(t ?? (-1, f!));
         if (t != null) {
           _apply(CozyAction(CozyOp.search, x: t.$1, y: t.$2));
         } else if (f != null) {
@@ -2345,6 +2362,114 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   bool get gathering => _gatherTimer != null;
+
+  // ---------------- hold = repeat (cozy_life.md § 3) ----------------
+
+  Timer? _holdTimer;
+
+  /// Held with the mouse: the tile under the cursor (`null` = E held).
+  (int, int)? _holdTile;
+  bool _holdPointer = false;
+
+  /// Targets already worked in this hold (farm tiles, trees; bushes as
+  /// `(-1, index)`): each one once per hold.
+  final _holdDone = <(int, int)>{};
+
+  /// Whether E / the click is held (repeating).
+  bool get holding => _holdTimer != null;
+
+  /// E / the click went down: keep repeating the tool action every
+  /// `holdRepeatSec` while held ([holdRelease] ends it). [tile] = the
+  /// tile under the cursor for a click.
+  void holdStart({(int, int)? tile, bool pointer = false}) {
+    _holdPointer = pointer;
+    _holdTile = tile;
+    _holdDone.clear();
+    final t = farmTile;
+    if (t != null && farmOp != null) _holdDone.add(t);
+    if (facingTree case final tr?) _holdDone.add(tr);
+    _holdTimer?.cancel();
+    final ms = (CozyRules.holdRepeatSec * 1000).round().clamp(16, 5000);
+    _holdTimer =
+        Timer.periodic(Duration(milliseconds: ms), (_) => holdRepeat());
+  }
+
+  /// The cursor moved while the click is held.
+  void holdAim((int, int)? tile) {
+    if (_holdPointer) _holdTile = tile;
+  }
+
+  /// E / the click released: ends the repeat, the pick and any bar.
+  void holdRelease() {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+    _holdDone.clear();
+    mineHoldEnd();
+  }
+
+  /// One repeat of the held E / click: re-reads the target and, if valid,
+  /// does the tool action again. Never talks, opens or travels.
+  void holdRepeat() {
+    final s = _s;
+    if (s == null || !mounted) return holdRelease();
+    if (_panel != null ||
+        s.mode != SessionMode.lobby ||
+        _fishing != null ||
+        editingTown ||
+        onRaft) {
+      return;
+    }
+    if (gathering) return;
+    if (inMine) {
+      if (mineHand != MineHand.pick) return;
+      // A held click aims at the tile next to the player under the cursor.
+      _mineAim = null;
+      if (_holdTile case (final ax, final ay) when _holdPointer) {
+        final px = (local.x / 16).floor(), py = (local.y / 16).floor();
+        if ((ax - px).abs() <= 1 &&
+            (ay - py).abs() <= 1 &&
+            (ax, ay) != (px, py)) {
+          _mineAim = (ax, ay);
+        }
+      }
+      _mineHold ??= Timer.periodic(const Duration(milliseconds: 40), (_) {
+        if (!inMine) return mineHoldEnd();
+        mineSwing();
+      });
+      mineSwing();
+      return;
+    }
+    // Bushes and trees: start the bar on the next one.
+    final lay = biomeLayout(s.place);
+    if (lay != null && (!_holdPointer || activeTool == null)) {
+      if (nearForage case final i? when !_holdDone.contains((-1, i))) {
+        final f = lay.forage[i];
+        final tile = _holdTile;
+        if (!_holdPointer ||
+            tile == null ||
+            ((f.x - tile.$1).abs() <= 1 && (f.y - tile.$2).abs() <= 1)) {
+          gatherHoldStart(forage: i);
+          return;
+        }
+      }
+      if (facingTree case final t?
+          when !_holdDone.contains(t) && !searchedToday(t)) {
+        if (!_holdPointer || _holdTile == null || _holdTile == t) {
+          gatherHoldStart(tree: t);
+          return;
+        }
+      }
+    }
+    // Farm plots: the one in front, once per hold.
+    final t = farmTile;
+    if (t != null && !_holdDone.contains(t) && farmOp != null) {
+      if (_holdPointer && activeTool == null && farmOp != FarmOp.harvest) {
+        return;
+      }
+      // A press inside the farm cooldown just tries again next repeat.
+      if (farmWork()) _holdDone.add(t);
+    }
+  }
 
   /// Buy / toggle a raft decoration (cozy_life.md § 1).
   bool raftDeco(String id) => _apply(CozyAction(CozyOp.raftDeco, id: id));

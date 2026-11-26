@@ -57,6 +57,24 @@ escritorio, tienda, jefes e invocaciones.
   madura cosecha, como E. Los avisos dicen `[Mantené E/Clic]`.
 - Duración: `gatherHoldSec × (1 − gatherSpeedPerLevel × (nivel de Cultivo
   − 1))`, nunca menos que `gatherHoldMinSec`.
+- **Mantener = repetir (v0.49.16):** mientras E o el botón del mouse
+  siguen apretados, cada `holdRepeatSec` s se vuelve a mirar el objetivo
+  (E: lo de enfrente; clic: el tile bajo el cursor con las mismas reglas
+  del clic, si no lo de enfrente) y, si hay uno válido, se hace la acción
+  de nuevo: picar (el pico sigue a su ritmo de golpe y, con el mouse,
+  apunta al tile al lado bajo el cursor), arar / plantar / regar /
+  cosechar la parcela de enfrente, o empezar la barrita en la próxima
+  mata o árbol. Caminar no corta el mantener; solo una barrita en curso
+  se reinicia si cambia su objetivo. Cada objetivo se trabaja una vez por
+  mantener (la misma parcela no pasa de plantar a regar sola; un árbol ya
+  buscado hoy se saltea sin aviso). Hablar, abrir cofres o paneles,
+  viajar y los santuarios siguen siendo de un solo toque: el repetir
+  nunca llama a `interact`. En co-op cada repetición manda la misma
+  acción que un toque.
+- **PNJ de la mina** (minera / ermitaño): E o clic a su lado abre su
+  cuadro de diálogo (panel `mineNpc`) con su frase del día; hablar tiene
+  prioridad sobre picar (antes solo dejaba una línea en el chat y el clic
+  con el pico picaba).
 - **Buscar en árboles:** mantener E frente a un árbol común del exterior
   (tile `T`) busca. El anfitrión tira (`CozyRules.searchRoll`):
   semilla del bioma (`searchSeedChance`), hongo (`searchMushroomChance`),
