@@ -66,6 +66,9 @@ abstract final class LightId {
 
   /// A torch placed in a mine: brighter than a dungeon wall torch.
   static const antorchaMina = 'antorcha_mina';
+
+  /// Wall lamp inside the players' shop (player_shop.md § 6.1).
+  static const lamparaTienda = 'lampara_tienda';
 }
 
 /// Ceiling openings of an indoor place (biome_regions.md § 7): light
@@ -132,6 +135,8 @@ const Map<String, LightDef> kLightDefs = {
   LightId.veta: LightDef(radius: 1.7, intensity: 0.55, tint: 'botin'),
   LightId.campfire:
       LightDef(radius: 5, intensity: 0.9, tint: 'brasa', flicker: 0.12),
+  LightId.lamparaTienda:
+      LightDef(radius: 5, intensity: 0.85, tint: 'calida', flicker: 0.04),
 };
 
 /// Luz natural de un tema (lighting.md § 3.3): una luz [light] en los

@@ -5,6 +5,7 @@ import '../data/light_catalog.dart';
 import '../data/mine_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
+import 'shop_interior_rules.dart';
 
 /// Una luz puesta en el mapa, en coordenadas de tile (con fracción: el
 /// centro del tile (3, 4) es (3.5, 4.5)).
@@ -301,6 +302,14 @@ abstract final class LightRules {
 
     if (map.floors.isEmpty) {
       anchor(map.spawn);
+    }
+    // Wall lamps of the shop interior (player_shop.md § 6.1).
+    if (ShopInteriorRules.isShop(map.place)) {
+      final lamp = kLightDefs[LightId.lamparaTienda]!;
+      for (final (lx, ly) in ShopInteriorRules.lamps) {
+        if (lx < x0 || ly < y0 || lx >= x1 || ly >= y1) continue;
+        out.add(LightSource(lx, ly, lamp));
+      }
     }
     for (final f in map.floors) {
       anchor(f.spawn);

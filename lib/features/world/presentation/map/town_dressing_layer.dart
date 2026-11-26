@@ -196,13 +196,12 @@ class TownDressingLayer {
   }
 
   void _paintOverhead(Canvas c, TownDressing d) {
-    // Roof trim (§ 5.2): chimney, ridge, weathervane by tier.
+    // Roof trim (§ 5.2): ridge and weathervane by tier. The chimney is
+    // part of the house sprite itself (levels 2-3), never drawn here.
     final v = d.tier.roofVariant;
     if (v > 0) {
       for (final (x, y) in layout.roofs) {
         final px = x * ts, py = y * ts;
-        _r(c, DressingPalette.stoneDark, px + 20, py - 4, 4, 7);
-        _r(c, DressingPalette.stone, px + 19, py - 5, 6, 2);
         if (v >= 2) _r(c, DressingPalette.woodDark, px + 4, py - 1, 24, 1);
         if (v >= 3) {
           _r(c, DressingPalette.iron, px + 9, py - 9, 1, 8);

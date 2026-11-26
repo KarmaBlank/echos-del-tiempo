@@ -132,3 +132,35 @@ Captura: `docs/preview/player_shop.png` (test con `PREVIEW=1`).
 Capturas: `docs/preview/shop_exterior.png` y
 `docs/preview/shop_interior.png` (test `shop_preview_test.dart` con
 `PREVIEW=1`).
+
+### 6.1 Arte del interior (v0.49.26)
+
+Lo pinta `tool/export_shop_interior_sprites.dart`; el juego solo nombra
+ids del manifest. Sin esos sprites (tests) se dibuja el decorado plano de
+antes. La jugabilidad no cambia: mismas filas, mostradores, puerta y
+llegada.
+
+- **Sala** (`items.vida_shop_room`, 256 × 176, la sala entera): piso de
+  tablas con veta y nudos, sombra al pie de las paredes; pared del fondo
+  con viga, yeso y zócalo de madera; dos estanterías (columnas 1-4 y
+  11-14) con frascos, botellas, cajas, bolsas y telas; en el nicho del
+  fondo un cartel con monedas y el mostrador de caja (campanilla, libro
+  de cuentas, pilas de monedas, balanza); paredes laterales con dos
+  ventanas cada una que dejan manchas de luz en el piso; alfombra
+  central con borde dorado y medallón; macetas junto a las estanterías,
+  un arbolito en maceta, barril con manzanas, caja y bolsa junto a la
+  puerta; felpudo adentro de la puerta y luz de afuera en el umbral.
+- **Lámparas:** cuatro faroles de pared (dos en el nicho, uno en cada
+  pared lateral) en `ShopInteriorRules.lamps`. De noche las prende el
+  sistema de luces (`LightId.lamparaTienda`, radio 5, cálida).
+- **Mesas de exhibición:** una por mostrador, autotile por piezas
+  (`items.vida_shop_table_<pieza>_<tela>`: `l` / `m` / `r` o `s` sola;
+  `ShopInteriorLayer.tablePieces`), 16 × 22 con la base 3 px bajo el
+  tile. Tela por lugar (0 roja, 1 azul, 2 verde, 3 ciruela) con faldón,
+  pliegues y ribete dorado; un mostrador LIBRE es una mesa de madera sin
+  tela (`bare`). Lo publicado se apoya sobre la mesa y cuelga una
+  etiqueta de precio dorada (`items.vida_shop_tag`) en el faldón.
+
+Capturas: `docs/preview/shop_interior_v2.png` (con los sprites de los
+personajes) y `docs/preview/shop_interior_before_after.png` (test
+`shop_interior_art_test.dart` con `PREVIEW=1`).

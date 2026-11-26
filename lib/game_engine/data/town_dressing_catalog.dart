@@ -27,7 +27,8 @@ class TownTierDressing {
   /// Lamp posts along the paths (max; fewer if the map has no room).
   final int lampPosts;
 
-  /// 0 plain roofs, 1 chimneys, 2 + ridge trim, 3 + weathervanes.
+  /// 0-1 plain roofs (the chimney comes with the house sprite),
+  /// 2 + ridge trim, 3 + weathervanes.
   final int roofVariant;
 
   /// Banners at the town entrance.

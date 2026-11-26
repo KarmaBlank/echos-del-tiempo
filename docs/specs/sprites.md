@@ -448,3 +448,14 @@ una sola vez al cargar, cacheada como `ui.Image` con el mismo id de
 sprite. La entrada `items.vida_<id>` del manifest queda de respaldo; un
 override PNG del Editor le gana a la variante. Los habitantes conservan su
 sprite a mano. Detalle, editor y tests: docs/specs/npc_variants.md.
+
+## Casas y tienda por dentro (v0.49.26)
+
+- `tool/pixel_pen.dart`: lápiz de píxeles compartido (rectángulos con
+  esquinas cortadas, óvalos, mezcla con alfa, contorno, `blit`).
+- `tool/export_house_sprites.dart`: casas de habitantes por nivel y
+  variante de color (town_editor.md § 3.4).
+- `tool/export_shop_interior_sprites.dart`: sala, mesas de exhibición
+  (autotile) y etiqueta de precio de la TIENDA (player_shop.md § 6.1).
+- Mismo criterio que la ARMERÍA: rampas de 2-3 tonos, contorno oscuro,
+  esquinas redondeadas y detalles chicos; nunca rectángulos planos.
