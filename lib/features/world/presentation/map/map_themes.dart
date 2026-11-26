@@ -411,9 +411,22 @@ abstract final class TownEditPalette {
 abstract final class FarmPalette {
   static const soil = Color(0xFF7A5534);
   static const soilDark = Color(0xFF5C3D24);
-  static const tilled = Color(0xFF5A3A22);
-  static const furrow = Color(0xFF3E2716);
-  static const wet = Color(0xFF3A2414);
+  static const tilled = Color(0xFF6E4A2A);
+  static const furrow = Color(0xFF46301C);
+
+  /// Dusty crumbs on the ridges of dry tilled soil.
+  static const dust = Color(0xFFA88A62);
+
+  /// Watered soil: a deep, desaturated wet brown (farming.md § 2.3).
+  static const wet = Color(0xFF34261C);
+  static const wetFurrow = Color(0xFF17110E);
+
+  /// Damp rim the water leaves around a watered plot.
+  static const wetRim = Color(0x6618120E);
+
+  /// Cool specular glints of the wet sheen.
+  static const wetShine = Color(0xFF8FA6B4);
+  static const wetShineSoft = Color(0xFF4E5A60);
   static const fert = Color(0xFFB8A27A);
   static const sprout = Color(0xFF7BD36B);
   static const leaf = Color(0xFF3E9B45);
