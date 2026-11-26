@@ -44,7 +44,7 @@ import 'item_grid.dart';
 import 'item_hover_tip.dart';
 import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
-import 'weapon_compare_view.dart';
+import 'weapon_compare_view.dart';
 import '../domain/eco_text.dart';
 
 /// Pestaña INVENTARIO del personaje (tecla I): grilla de 8 × 5 con la
@@ -896,6 +896,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               sideMin: MediaQuery.textScalerOf(context).scale(240));
           _mode = l.mode;
           _scale = l.scale;
+          // Every other item grid takes this cell (design_system.md §
+          // "Grilla de ítems").
+          DsSizes.rememberInventoryScale(MediaQuery.sizeOf(context),
+              MediaQuery.textScalerOf(context).scale(240), l.scale);
           final strip = _strip(me, attrs);
           final main = SizedBox(
               key: const ValueKey('inv-main'),

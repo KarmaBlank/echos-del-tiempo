@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'ds_button.dart';
 import 'ds_components.dart';
+import 'ds_collection_template.dart' show DsGridDetailLayout;
 import 'ds_detail_pane.dart';
 import 'ds_tokens.dart';
 import 'ds_transfer_template.dart' show DsItemCell, DsTransferFilter;
@@ -123,7 +124,8 @@ class DsCraftGridTemplate extends StatefulWidget {
   final String empty;
 
   /// Ancho del detalle y desde qué ancho va al costado.
-  static const detailWidth = 300.0, wideFrom = 560.0;
+  static const detailWidth = DsSizes.detailPaneWidth;
+  static double get wideFrom => DsSizes.gridDetailWideFrom;
 
   @override
   State<DsCraftGridTemplate> createState() => _DsCraftGridTemplateState();
@@ -138,9 +140,10 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
 
   String _p(String s) => '${widget.keyPrefix}-$s';
 
-  Widget _cell(DsCraftItem i, DsCraftItem? sel) {
+  Widget _cell(DsCraftItem i, DsCraftItem? sel, double size) {
     Widget cell = DsItemCell(
       key: ValueKey(_p('cell-${i.id}')),
+      dimension: size,
       icon: i.icon,
       border: i.border,
       count: i.count,
@@ -170,16 +173,6 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
     ];
     final sel = shown.where((i) => i.id == _id).firstOrNull ??
         shown.firstOrNull;
-    final grid = shown.isEmpty
-        ? Text(widget.empty,
-            key: ValueKey(_p('empty')), style: DsText.detail())
-        : Wrap(
-            spacing: DsSpace.xs,
-            runSpacing: DsSpace.xs,
-            children: [
-              for (final i in shown) _cell(i, sel),
-            ],
-          );
     final detail = sel == null
         ? null
         : KeyedSubtree(
@@ -188,70 +181,40 @@ class _DsCraftGridTemplateState extends State<DsCraftGridTemplate> {
     final side = widget.side == null
         ? null
         : KeyedSubtree(key: ValueKey(_p('side')), child: widget.side!(focus));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (widget.searchHint != null || widget.filters.length > 1) ...[
-          Wrap(
-              spacing: DsSpace.xs,
-              runSpacing: DsSpace.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-            if (widget.searchHint != null)
-              DsSearchField(
-                  key: ValueKey(_p('search')),
-                  hint: widget.searchHint!,
-                  width: 200,
-                  onChanged: (v) =>
-                      setState(() => _query = v.trim().toLowerCase())),
-            if (widget.filters.length > 1)
-            for (var i = 0; i < widget.filters.length; i++)
-              DsButton(widget.filters[i].label,
-                  key: ValueKey(_p('filter-$i')),
-                  size: DsButtonSize.compact,
-                  selected: _filter == i,
-                  onPressed: () => setState(() => _filter = i)),
-          ]),
-          SizedBox(height: DsSpace.sm),
-        ],
-        Expanded(
-          child: LayoutBuilder(builder: (context, box) {
-            if (box.maxWidth >= DsCraftGridTemplate.wideFrom) {
-              return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    final hasHeader = widget.searchHint != null || widget.filters.length > 1;
+    return DsGridDetailLayout(
+      keyPrefix: widget.keyPrefix,
+      header: !hasHeader
+          ? null
+          : Padding(
+              padding: EdgeInsets.only(bottom: DsSpace.xs),
+              child: Wrap(
+                  spacing: DsSpace.xs,
+                  runSpacing: DsSpace.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    if (side != null) ...[
-                      SingleChildScrollView(child: side),
-                      SizedBox(width: DsSpace.sm),
-                    ],
-                    Expanded(child: SingleChildScrollView(child: grid)),
-                    if (detail != null) ...[
-                      SizedBox(width: DsSpace.sm),
-                      SizedBox(
-                          width: DsCraftGridTemplate.detailWidth,
-                          height: box.maxHeight,
-                          child: detail),
-                    ],
-                  ]);
-            }
-            return SingleChildScrollView(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (detail != null) ...[
-                      detail,
-                      SizedBox(height: DsSpace.sm)
-                    ],
-                    if (side != null) ...[
-                      Align(alignment: Alignment.topLeft, child: side),
-                      SizedBox(height: DsSpace.sm),
-                    ],
-                    grid,
+                    if (widget.searchHint != null)
+                      DsSearchField(
+                          key: ValueKey(_p('search')),
+                          hint: widget.searchHint!,
+                          width: 200,
+                          onChanged: (v) => setState(
+                              () => _query = v.trim().toLowerCase())),
+                    if (widget.filters.length > 1)
+                      for (var i = 0; i < widget.filters.length; i++)
+                        DsButton(widget.filters[i].label,
+                            key: ValueKey(_p('filter-$i')),
+                            size: DsButtonSize.compact,
+                            selected: _filter == i,
+                            onPressed: () => setState(() => _filter = i)),
                   ]),
-            );
-          }),
-        ),
-      ],
+            ),
+      count: shown.length,
+      empty: Text(widget.empty,
+          key: ValueKey(_p('empty')), style: DsText.detail()),
+      cell: (context, i, size) => _cell(shown[i], sel, size),
+      leading: side,
+      detail: detail,
     );
   }
 }

@@ -55,9 +55,11 @@ void main() {
       await _open(tester, size);
       expect(tester.takeException(), isNull);
       final s = _seeds.first;
-      // Same cell as INVENTARIO: 44 px, icon only.
-      expect(tester.getSize(find.byKey(ValueKey('trade-seed-${s.id}-tip'))),
-          const Size(44, 44));
+      // INVENTARIO's cell (44 px at x1, scaled in its steps).
+      final cell =
+          tester.getSize(find.byKey(ValueKey('trade-seed-${s.id}-tip')));
+      expect(cell.width, cell.height);
+      expect(cell.width, greaterThanOrEqualTo(44));
     });
   }
 

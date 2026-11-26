@@ -24,8 +24,8 @@ void main() {
         home: Scaffold(
           body: Center(child: Builder(builder: (c) {
             std = RetroType.width(c, RetroHoverCard.textWidth);
-            titleSize = MediaQuery.textScalerOf(c)
-                .scale(DsText.body().fontSize!);
+            titleSize =
+                MediaQuery.textScalerOf(c).scale(DsText.body().fontSize!);
             return DsTooltip(
               card: DsTooltipCard(
                   title: 'Volver a tirar', children: [Text('x ' * 400)]),
