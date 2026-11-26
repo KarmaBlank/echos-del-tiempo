@@ -964,12 +964,15 @@ const Map<String, TuningDef> kTuningDefaults = {
     // checked again after forageRecheckSec.
     'forageHideRadius': 360,
     'forageRecheckSec': 6,
-    // Cozy life (cozy_life.md § 1): while fishing the camera shows this
-    // fraction of the map (< 1 = closer), the HUD fades / shrinks, up to
-    // cozyFireflies fireflies at night, the cozy music level and the gap
-    // between ambience sounds (s).
-    'cozyFishZoom': 0.85,
-    'cozyFishZoomSec': 0.6,
+    // Pixel-perfect world zoom (exploration.md § Cámara): integer levels
+    // over the base pixel scale (Ctrl + wheel) and how many levels
+    // closer the fishing calm goes (cozy_life.md § 1).
+    'worldZoomMin': -1,
+    'worldZoomMax': 2,
+    'worldZoomFishSteps': 1,
+    // Cozy life (cozy_life.md § 1): while fishing the HUD fades / shrinks,
+    // up to cozyFireflies fireflies at night, the cozy music level and
+    // the gap between ambience sounds (s).
     'cozyHudOpacity': 0.45,
     'cozyFireflies': 10,
     'cozyMusicLevel': 0.6,

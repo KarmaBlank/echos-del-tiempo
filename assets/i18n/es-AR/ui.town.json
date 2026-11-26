@@ -348,6 +348,8 @@
   "ui.town.fountain.edit_line": "Ampliá, poné y mové lagos y huertas, soltá peces.",
   "ui.town.fountain.hire_farmer": "CONTRATAR GRANJERO",
   "ui.town.fountain.hire_farmer_line": "Elegí la huerta: siembra, riega y cosecha en su cofre.",
+  "ui.town.fountain.need_farming": "Necesitás subir tu oficio de Cultivo a nivel {need} (ahora: nivel {now})",
+  "ui.town.fountain.need_fishing": "Necesitás subir tu oficio de Pesca a nivel {need} (ahora: nivel {now})",
   "ui.town.fountain.hire_fisher": "CONTRATAR PESCADOR",
   "ui.town.fountain.hire_fisher_line": "Elegí el lago: pesca solo y deja lo que saca en su cofre.",
   "ui.town.fountain.board": "TABLERO DE ENCARGOS",
@@ -907,5 +909,11 @@
   "ui.town.edit.hire_rancher": "CONTRATAR GRANJERO DE CORRAL",
   "ui.town.edit.hint_hire_rancher": "Elegí un gallinero o un establo para el granjero de corral",
   "ui.town.fountain.hire_rancher": "CONTRATAR GRANJERO DE CORRAL",
-  "ui.town.fountain.hire_rancher_line": "Elegí el gallinero o el establo: da de comer del depósito de heno, acaricia y junta en su cofre."
+  "ui.town.fountain.hire_rancher_line": "Elegí el gallinero o el establo: da de comer del depósito de heno, acaricia y junta en su cofre.",
+  "ui.town.quest.giver": "Pide: {name}",
+  "ui.town.quest.obj_items": "{item} — tenés {have} / pide {need}",
+  "ui.town.quest.obj_progress": "{what} — {n} / {goal}",
+  "ui.town.quest.needs": "PIDE",
+  "ui.town.quest.rewards": "RECOMPENSA",
+  "ui.town.quest.incomplete": "Falta completar la lista"
 }

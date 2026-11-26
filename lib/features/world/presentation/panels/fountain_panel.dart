@@ -12,7 +12,8 @@ import '../world_strings.dart';
 /// FUENTE RÚNICA (town_editor.md § 1, farming.md § 8): panel chico con
 /// acciones grandes, una línea cada una: EDITAR PUEBLO, CONTRATAR
 /// GRANJERO / PESCADOR (elegir la huerta o el lago en el mapa) y el
-/// TABLERO DE ENCARGOS. Bloqueada = gris con el motivo en su línea.
+/// TABLERO DE ENCARGOS. Bloqueada = gris con el motivo en su línea y en
+/// el tooltip (oficio y nivel actual al contratar, § 1.6).
 class FountainPanel extends StatelessWidget {
   const FountainPanel({super.key, required this.view, required this.controller});
 
@@ -100,10 +101,9 @@ class FountainPanel extends StatelessWidget {
                     key: ValueKey(key),
                     kind: DsButtonKind.primary,
                     details: [why ?? line],
-                    // Bloqueada porque otro edita (town_editor.md § 1.3).
-                    tooltip: why != null && why.startsWith('Está editando')
-                        ? why
-                        : null,
+                    // Locked: grey with the exact reason and the current
+                    // progress in its tooltip (town_editor.md § 1.6).
+                    tooltip: why,
                     onPressed: why == null ? () => go() : null),
               ),
           ],

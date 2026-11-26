@@ -58,6 +58,7 @@ import '../../../game_engine/rules/biome_fisher_rules.dart';
 import '../../../game_engine/rules/custom_npc_rules.dart';
 import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
+import '../../../game_engine/rules/quest_track_rules.dart';
 import 'town_edit.dart';
 
 export 'town_edit.dart';
@@ -3442,10 +3443,32 @@ class SessionController extends StateNotifier<SessionView?> {
     return true;
   }
 
+  /// Gold "!" over the rune fountain until the local player opens its
+  /// panel once (town_editor.md § 1.5); per player, saved in the profile.
+  bool get fountainAlert {
+    final p = _s?.players[localId]?.profile;
+    return p != null && !QuestTrackRules.seenFountain(p);
+  }
+
+  /// Why the local player can't hire a [kind] helper yet because of the
+  /// PROFESSION level (or `null`), with the current level
+  /// (town_editor.md § 1.6).
+  String? hireLevelWhy(BuildKind kind) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return null;
+    final need = HelperRules.hireCost(kind).level;
+    final farm = kind == BuildKind.huerta || kind.ranch;
+    final now = farm ? FarmingRules.level(p) : FishingRules.level(p);
+    if (now >= need) return null;
+    return strings.t(
+        farm ? 'ui.town.fountain.need_farming' : 'ui.town.fountain.need_fishing',
+        {'need': need, 'now': now});
+  }
   /// Por qué no se puede elegir dónde contratar un ayudante de [kind]
   /// (o `null`): solo el dueño, y tiene que haber alguna huerta o lago.
   String? cannotPickHire(BuildKind kind) {
     if (cannotEditTown case final why?) return why;
+    if (hireLevelWhy(kind) case final why?) return why;
     if (kind.ranch) {
       // Ranch helper (animals.md § 6): any coop or barn.
       if (!town.builds.any((b) => b.kind.ranch)) {
@@ -3540,7 +3563,7 @@ class SessionController extends StateNotifier<SessionView?> {
   String? hireWhy(TownBuild b) {
     final p = _s?.players[localId]?.profile;
     if (p == null) return 'Sin personaje';
-    return TownRules.cannotHire(p, town, b.id);
+    return hireLevelWhy(b.kind) ?? TownRules.cannotHire(p, town, b.id);
   }
 
   void exitTownEdit() {
@@ -4596,6 +4619,10 @@ class SessionController extends StateNotifier<SessionView?> {
   void openPanel(WorldPanel panel) {
     if (_s == null) return;
     _panel = panel;
+    // First visit clears the fountain's onboarding "!" (town_editor.md § 1.5).
+    if (panel == WorldPanel.fountain && fountainAlert) {
+      markNpcSeen(QuestTrackRules.fountainKey);
+    }
     _emit();
   }
 

@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/retro_theme.dart';
 import 'ds_components.dart';
 import 'ds_tokens.dart';
 import 'ds_transfer_template.dart' show DsItemCell;
@@ -28,40 +29,72 @@ class DsCostEntry {
   bool get enough => have >= need;
 }
 
-/// Molecule: what something costs, as item cells (the same [DsItemCell]
-/// as INVENTARIO) with `have/need` under each one, green when it is
-/// enough and red when it is not. Hovering a cell shows its [card].
+/// Organism: required items (a cost, an order, a quest objective) as
+/// the INVENTARIO item cell ([DsItemCell]), top-left anchored, with no
+/// text under the cells (design_system.md § "Grilla de ítems"). Each
+/// cell carries `have/need` as a small corner count: greyed (icon and
+/// count) while it is not enough, and a check mark on the top-right
+/// once it is. Hovering a cell shows its fixed-size [DsCostEntry.card].
 class DsCostGrid extends StatelessWidget {
-  const DsCostGrid(this.entries, {super.key});
+  const DsCostGrid(this.entries, {super.key, this.size = cell});
 
-  /// Cell side (same as the life item grids).
-  static const cell = 44.0;
+  /// Cell side (same as INVENTARIO and the life item grids).
+  static const cell = DsSizes.itemCell;
 
   final List<DsCostEntry> entries;
 
+  /// Cell side (default [cell]).
+  final double size;
+
   @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: DsSpace.sm,
-        runSpacing: DsSpace.sm,
+  Widget build(BuildContext context) {
+    final fixed = RetroType.fixedScaler(context);
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Wrap(
+        spacing: DsSizes.itemGap,
+        runSpacing: DsSizes.itemGap,
         children: [
           for (final e in entries)
             DsTooltip(
               card: e.card,
-              child: Column(
+              child: SizedBox.square(
                 key: ValueKey('cost-${e.id}'),
-                mainAxisSize: MainAxisSize.min,
-                children: [
+                dimension: size,
+                child: Stack(children: [
                   DsItemCell(
-                      icon: e.icon,
-                      border: e.enough ? e.border : DsColors.danger,
-                      dimension: cell),
-                  Text('${e.have}/${e.need}',
-                      key: ValueKey('cost-${e.id}-count'),
-                      style: DsText.detail(
-                          e.enough ? DsColors.success : DsColors.danger)),
-                ],
+                      icon: Opacity(
+                          opacity: e.enough ? 1 : 0.45, child: e.icon),
+                      border: e.enough ? DsColors.success : e.border,
+                      dimension: size),
+                  Positioned(
+                    right: 2,
+                    bottom: 0,
+                    child: Text('${e.have}/${e.need}',
+                        key: ValueKey('cost-${e.id}-count'),
+                        textScaler: fixed,
+                        style: DsText.meta(e.enough
+                                ? DsColors.success
+                                : DsColors.textDisabled)
+                            .copyWith(
+                                fontSize: RetroType.small,
+                                height: 1,
+                                shadows: const [Shadow(offset: Offset(1, 1))])),
+                  ),
+                  if (e.enough)
+                    Positioned(
+                      right: 1,
+                      top: 1,
+                      child: Icon(Icons.check,
+                          key: ValueKey('cost-${e.id}-done'),
+                          size: 12,
+                          color: DsColors.success),
+                    ),
+                ]),
               ),
             ),
         ],
-      );
+      ),
+    );
+  }
 }

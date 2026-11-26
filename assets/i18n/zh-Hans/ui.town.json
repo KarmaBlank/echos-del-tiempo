@@ -348,6 +348,8 @@
   "ui.town.fountain.edit_line": "",
   "ui.town.fountain.hire_farmer": "",
   "ui.town.fountain.hire_farmer_line": "",
+  "ui.town.fountain.need_farming": "需要将你的种植职业提升到 {need} 级（当前：{now} 级）",
+  "ui.town.fountain.need_fishing": "需要将你的钓鱼职业提升到 {need} 级（当前：{now} 级）",
   "ui.town.fountain.hire_fisher": "",
   "ui.town.fountain.hire_fisher_line": "",
   "ui.town.fountain.board": "",
@@ -1087,5 +1089,11 @@
   "ui.town.edit.hire_rancher": "雇佣牧场帮工",
   "ui.town.edit.hint_hire_rancher": "为牧场帮工选择一个鸡舍或畜棚",
   "ui.town.fountain.hire_rancher": "雇佣牧场帮工",
-  "ui.town.fountain.hire_rancher_line": "选择鸡舍或畜棚：用干草仓喂食、抚摸，并把产品收进箱子。"
+  "ui.town.fountain.hire_rancher_line": "选择鸡舍或畜棚：用干草仓喂食、抚摸，并把产品收进箱子。",
+  "ui.town.quest.giver": "委托人：{name}",
+  "ui.town.quest.obj_items": "{item} — 已有 {have} / 需要 {need}",
+  "ui.town.quest.obj_progress": "{what} — {n} / {goal}",
+  "ui.town.quest.needs": "需要",
+  "ui.town.quest.rewards": "奖励",
+  "ui.town.quest.incomplete": "清单尚未完成"
 }

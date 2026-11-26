@@ -32,6 +32,8 @@ import 'tile_target.dart';
 import '../../../../game_engine/data/cozy_catalog.dart';
 import '../../../../game_engine/models/life_skills.dart';
 import '../../../../game_engine/rules/cozy_rules.dart';
+import '../../../../game_engine/rules/world_zoom_rules.dart';
+import 'world_frame.dart';
 import 'region_light_layer.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -306,7 +308,7 @@ class MapGame extends Game {
 
   /// Un rectángulo del mundo (px) en px de pantalla (con cámara y zoom).
   Rect worldToScreen(Rect w) {
-    final r = viewRect(Size(size.x, size.y));
+    final r = worldFrame(Size(size.x, size.y)).dst;
     final k = r.width / vw / zoom;
     Offset p(Offset o) => Offset(r.left + (o.dx - camDrawX) * k,
         r.top + (o.dy - camDrawY) * k);
@@ -319,8 +321,9 @@ class MapGame extends Game {
   /// El tile del mundo bajo el punto [p] de la pantalla (para el tooltip
   /// de las parcelas; farming.md § 2.4).
   (int, int)? tileAtScreen(Offset p) {
-    final r = viewRect(Size(size.x, size.y));
-    if (!r.contains(p) || r.width <= 0) return null;
+    if (!viewRect(Size(size.x, size.y)).contains(p)) return null;
+    final r = worldFrame(Size(size.x, size.y)).dst;
+    if (r.width <= 0) return null;
     final k = vw / r.width * zoom;
     final wx = (p.dx - r.left) * k + camDrawX;
     final wy = (p.dy - r.top) * k + camDrawY;
@@ -332,24 +335,13 @@ class MapGame extends Game {
 
   /// Camera offset actually drawn: the continuous camera snapped to
   /// whole pixels once (exploration.md § Cámara).
-  double get camDrawX => zoomMoving ? camX : camX.roundToDouble();
-  double get camDrawY => zoomMoving ? camY : camY.roundToDouble();
-
-  /// The fishing zoom is mid-animation (cozy_life.md § 1): the camera and
-  /// the local hero stay continuous (no whole-pixel snap) so the world
-  /// scales smoothly around a still player; once settled they snap again.
-  bool get zoomMoving =>
-      !controller.editingTown && _fishZoomP > 0 && _fishZoomP < 1;
+  double get camDrawX => camX.roundToDouble();
+  double get camDrawY => camY.roundToDouble();
 
   /// Camera corner after the zoom goes from [z0] to [z1] on an axis of
   /// [v] virtual px, keeping the view center still.
   static double zoomRecenter(double cam, double v, double z0, double z1) =>
       cam + v * (z0 - z1) / 2;
-
-  /// Where the local hero is drawn (world px) for [focus] and camera
-  /// [cam]: continuous while the zoom animates, else [snapFocus].
-  static double heroDraw(double focus, double cam, {required bool zooming}) =>
-      zooming ? focus : snapFocus(focus, cam);
 
   /// Where the followed hero is drawn (world px) for a continuous camera
   /// [cam]: the drawn camera plus the rounded lag, so a steady walk moves
@@ -361,14 +353,34 @@ class MapGame extends Game {
   double editZoom = 1;
   static const editZooms = [1.0, 1.5, 2.0];
 
-  /// El zoom en uso: el de la edición del pueblo, o el acercamiento suave
-  /// mientras se pesca (cozy_life.md § 1).
-  double get zoom => controller.editingTown ? editZoom : cozyZoom;
+  /// World px per virtual px in use: the town editor's [editZoom], or
+  /// the pixel-perfect world zoom (exploration.md § Cámara).
+  double get zoom => hasLayout
+      ? worldFrame(Size(size.x, size.y)).zoom
+      : (controller.editingTown ? editZoom : 1);
 
-  /// Map fraction shown outside the editor: eases toward
-  /// `cozyFishZoom` while fishing and back to 1.
-  double cozyZoom = 1;
-  double _fishZoomP = 0;
+  /// The player's world zoom level (setting "Zoom del mundo"; Ctrl +
+  /// wheel). An integer offset over the base pixel scale.
+  int worldZoomLevel = 0;
+
+  /// The level drawn now: [worldZoomLevel], one step closer while
+  /// fishing when allowed (cozy_life.md § 1). Changes snap instantly.
+  int get activeZoomLevel => controller.editingTown
+      ? 0
+      : WorldZoomRules.effective(worldZoomLevel,
+          fishing: controller.isFishing);
+
+  /// How the world is rasterized for [screen] (see [WorldFrame]).
+  WorldFrame worldFrame(Size screen) {
+    final view = viewRect(screen);
+    if (controller.editingTown) {
+      return WorldFrame(dst: view, clip: view, zoom: editZoom, imageScale: 1);
+    }
+    return WorldFrame.of(view, Size(vw.toDouble(), vh.toDouble()),
+        activeZoomLevel);
+  }
+
+  double _lastZoom = 1;
 
   /// Rueda del mouse en la edición: [dir] > 0 aleja.
   void zoomBy(int dir) {
@@ -798,17 +810,15 @@ class MapGame extends Game {
       fx = fall.x;
       fy = fall.y;
     }
-    // Eased, time-based zoom (cozy_life.md § 1) that keeps the view
-    // center still: the follow below never fights the zoom.
-    _fishZoomP = CozyRules.fishZoomStep(_fishZoomP,
-        fishing: controller.isFishing, dt: dt);
-    final z0 = cozyZoom;
-    cozyZoom = CozyRules.fishZoomAt(_fishZoomP);
-    if (cozyZoom != z0 && !controller.editingTown) {
-      camX = zoomRecenter(camX, MapGame.vw.toDouble(), z0, cozyZoom);
-      camY = zoomRecenter(camY, MapGame.vh.toDouble(), z0, cozyZoom);
+    // Integer zoom levels snap instantly (exploration.md § Cámara): keep
+    // the view center still so the follow below never fights the zoom.
+    final z = zoom, z0 = _lastZoom;
+    _lastZoom = z;
+    if (z != z0) {
+      camX = zoomRecenter(camX, MapGame.vw.toDouble(), z0, z);
+      camY = zoomRecenter(camY, MapGame.vh.toDouble(), z0, z);
     }
-    final vw = MapGame.vw * cozyZoom, vh = MapGame.vh * cozyZoom;
+    final vw = MapGame.vw * z, vh = MapGame.vh * z;
     final tx =
         mw < vw ? bx + (mw - vw) / 2 : (fx - vw / 2).clamp(bx, bx + mw - vw);
     final ty =
@@ -862,32 +872,50 @@ class MapGame extends Game {
     // the world (tiles, lighting, actors) behind it only costs frames.
     if (view.session.mode == SessionMode.battle) return;
 
+    final frame = worldFrame(Size(size.x, size.y));
     final recorder = ui.PictureRecorder();
     final c =
         Canvas(recorder, Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()));
     drawWorld(c, view);
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync(vw, vh);
+    var picture = recorder.endRecording();
+    final iw = frame.imageW, ih = frame.imageH;
+    if (frame.imageScale != 1) {
+      // Pixel-perfect zoom (exploration.md § Cámara): rasterize at one
+      // image px per world px, so the image scales by a whole factor.
+      final r2 = ui.PictureRecorder();
+      Canvas(r2, Rect.fromLTWH(0, 0, iw.toDouble(), ih.toDouble()))
+        ..drawRect(Rect.fromLTWH(0, 0, iw.toDouble(), ih.toDouble()),
+            Paint()..color = kMapBackground)
+        ..scale(frame.imageScale)
+        ..drawPicture(picture);
+      picture.dispose();
+      picture = r2.endRecording();
+    }
+    final image = picture.toImageSync(iw, ih);
     picture.dispose();
 
     // Entero (PIXEL PERFECT) o fraccional (AJUSTAR), siempre con vecino
     // más cercano y centrado (docs/specs/settings.md § 3.1).
-    final dst = viewRect(Size(size.x, size.y));
+    final dst = frame.dst;
+    canvas.save();
+    canvas.clipRect(frame.clip);
     canvas.drawImageRect(
         image,
-        Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
+        Rect.fromLTWH(0, 0, iw.toDouble(), ih.toDouble()),
         dst,
         SpriteCatalog.pixelPaint());
+    canvas.restore();
     image.dispose();
     // Nombres, carteles y loot: en px de pantalla, nítidos y finos (el
     // estilo de los nombres de la batalla; ui_style.md § "Etiquetas en
     // el mundo").
     canvas.save();
-    canvas.clipRect(dst);
+    canvas.clipRect(frame.clip);
     paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen,
         backdrop: labelBackdrop, zoom: zoom);
     canvas.translate(dst.left, dst.top);
-    canvas.scale(dst.width / vw, dst.height / vh);
+    canvas.scale(dst.width / vw,
+        frame.imageScale == 1 ? dst.height / vh : dst.width / vw);
     fishing.drawOverlay(canvas);
     canvas.restore();
   }
@@ -1123,6 +1151,15 @@ class MapGame extends Game {
       for (final l in map.townMarks ?? TownLayout.landmarks) {
         _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
             TownPalette.label, 6, rank++);
+      }
+      // Onboarding (town_editor.md § 1.5): gold "!" over the rune
+      // fountain until this player opens its panel once.
+      if (controller.fountainAlert) {
+        for (final l in map.townMarks ?? TownLayout.landmarks) {
+          if (l.spot != TownSpot.fountain) continue;
+          drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+        }
       }
       farm.drawZoneLabels(
           c,
@@ -1383,8 +1420,8 @@ class MapGame extends Game {
       final double px, py;
       if (mine) {
         // Whole pixels, locked to the camera (snapFocus): no wobble.
-        px = heroDraw(controller.local.x, camX, zooming: zoomMoving);
-        py = heroDraw(controller.local.y, camY, zooming: zoomMoving);
+        px = snapFocus(controller.local.x, camX);
+        py = snapFocus(controller.local.y, camY);
       } else {
         final d = _lerpPos('p${p.id}', p.x, p.y);
         px = d.x;
