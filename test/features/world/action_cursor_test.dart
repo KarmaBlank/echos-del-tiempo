@@ -7,9 +7,8 @@ import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/action_targeting.dart';
-import 'package:echos_del_tiempo/game_engine/rules/biome_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/cozy_rules.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../game_engine/session_test_helpers.dart';
