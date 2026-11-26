@@ -180,6 +180,7 @@
   "ui.world.ctl.fish.lost": "",
   "ui.world.ctl.fish.escaped": "",
   "ui.world.ctl.caught": "",
+  "ui.world.ctl.rod_redirect": "避雷针引开了一道雷电：地块安然无恙。",
   "ui.world.ctl.caught_cm": "",
   "ui.world.ctl.fish.auto": "自动钓鱼：站着不动时自己钓 · [R] 停止",
   "ui.world.ctl.autofish.tag": "",

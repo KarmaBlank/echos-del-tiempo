@@ -70,7 +70,8 @@ el pronóstico.
 
 - Llueve igual. Cada `boltEverySec` (12 s) se tira un rayo con chance
   `boltChance` (0.4) sobre una parcela al azar de las huertas: vuelve a
-  pasto sin arar y se pierde lo plantado (`TownRules.strike`). Evento
+  pasto sin arar y se pierde lo plantado (`TownRules.strike`), salvo que
+  un pararrayos la proteja (cozy_life.md § 2.1: cae en el pararrayos). Evento
   `LightningEvent` (`bolt`): rayo dibujado, destello de pantalla (con el
   factor de destellos de accesibilidad; 0 = sin destello) y sonido.
 - Pesca: cada lance pica con chance `stormBite` (0.3); si no, "Con la

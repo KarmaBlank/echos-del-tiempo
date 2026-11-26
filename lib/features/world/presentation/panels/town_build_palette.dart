@@ -136,12 +136,18 @@ class TownBuildPalette extends StatefulWidget {
           name: s.t('ui.town.decor.${d.id}.name'),
           w: 1,
           h: 1,
-          detail: s.t('ui.town.decor.${d.id}.info'),
+          detail: s.t('ui.town.decor.${d.id}.info',
+              {'radius': CozyRules.lightningRodRadius}),
           cost: s.t('ui.town.edit.lamp_detail',
               {'cost': CozyRules.decorCost(d.id)}),
           why: p == null
               ? s.t('ui.town.edit.no_character')
-              : p.credits < CozyRules.decorCost(d.id)
+              : CozyRules.decorLocked(p, d.id) != null
+                  ? (CozyRules.t.i('lightningRodBuyable') == 0
+                      ? s.t('ui.town.decor.${d.id}.not_sold')
+                      : s.t('ui.town.decor.${d.id}.needs_level',
+                          {'n': CozyRules.lightningRodLevel}))
+                  : p.credits < CozyRules.decorCost(d.id)
                   ? s.t('ui.town.edit.missing_gold',
                       {'have': p.credits, 'need': CozyRules.decorCost(d.id)})
                   : null,

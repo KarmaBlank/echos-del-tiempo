@@ -588,6 +588,7 @@ items:
   vida_decor_fence_gate_h: { idle: items/vida_decor_fence_gate_h.png, size: [16, 16] }
   vida_decor_fence_gate_v: { idle: items/vida_decor_fence_gate_v.png, size: [16, 16] }
   vida_decor_scarecrow: { idle: items/vida_decor_scarecrow.png, size: [16, 16] }
+  vida_decor_lightning_rod: { idle: items/vida_decor_lightning_rod.png, size: [16, 16] }
   vida_decor_pot: { idle: items/vida_decor_pot.png, size: [16, 16] }
   vida_decor_stone_path: { idle: items/vida_decor_stone_path.png, size: [16, 16] }
   vida_decor_lamp: { idle: items/vida_decor_lamp.png, size: [16, 16] }

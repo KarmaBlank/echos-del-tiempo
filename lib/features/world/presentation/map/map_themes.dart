@@ -1056,6 +1056,9 @@ abstract final class SkyPalette {
   static const fog = Color(0xFFC8D0DA);
   static const bolt = Color(0xFFF4F7FF);
   static const boltGlow = Color(0x88B5C8FF);
+  // Pararrayos que desvía un rayo (cozy_life.md § 2.1).
+  static const rodGlow = Color(0xFF6FD3FF);
+  static const rodSpark = Color(0xFFE4F8FF);
   static const flash = Color(0xFFFFFFFF);
 
   /// Máscara de las luces (lo que "come" la noche).

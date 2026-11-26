@@ -4,6 +4,7 @@ import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/world_save.dart';
+import '../../../../game_engine/rules/cozy_rules.dart';
 import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
@@ -16,6 +17,49 @@ import 'map_themes.dart';
 /// entra, rojo si no). Colores en [TownEditPalette].
 abstract final class TownEditLayer {
   static const ts = 16.0;
+
+  /// Lightning rods (map tiles) whose coverage the editor shows
+  /// (cozy_life.md § 2.1): the one being placed or moved under the cursor,
+  /// the selected one and the one hovered.
+  static List<(int, int)> rodCoverageCenters(TownState town, TownEdit e) {
+    final g = e.ghost;
+    final (ox, oy) = town.origin;
+    final out = <(int, int)>[];
+    final moving = TownState.parseDecorId(e.selected);
+    final movingRod = e.step == TownEditStep.moving &&
+        moving != null &&
+        town.decor.any((d) => d.$1 == 'lightning_rod' && (d.$2, d.$3) == moving);
+    if (g != null &&
+        (e.step == TownEditStep.placing && e.placeDef == 'lightning_rod' ||
+            movingRod)) {
+      out.add(g);
+    }
+    for (final d in town.decor) {
+      if (d.$1 != 'lightning_rod') continue;
+      final at = (d.$2 + ox, d.$3 + oy);
+      if (movingRod && (d.$2, d.$3) == moving) continue;
+      if (e.selected == TownState.decorId(d.$2, d.$3) ||
+          e.step != TownEditStep.placing && g == at) {
+        if (!out.contains(at)) out.add(at);
+      }
+    }
+    return out;
+  }
+
+  /// Green tiles of a lightning rod's reach on map tile ([mx], [my]), the
+  /// same mark as a helper's area (farming.md § 8).
+  static void drawRodCoverage(Canvas c, int mx, int my) {
+    final fill = Paint()..color = TownEditPalette.valid;
+    final line = Paint()
+      ..color = FarmPalette.targetOk
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final (x, y) in CozyRules.lightningRodArea(mx, my)) {
+      final r = Rect.fromLTWH(x * ts + 0.5, y * ts + 0.5, ts - 1, ts - 1);
+      c.drawRect(r, fill);
+      c.drawRect(r, line);
+    }
+  }
 
   /// La franja fantasma de [side] en px del mundo para un mapa de
   /// [w] × [h] px.
@@ -134,6 +178,9 @@ abstract final class TownEditLayer {
           line);
     }
     final g = e.ghost;
+    for (final (cx, cy) in rodCoverageCenters(town, e)) {
+      drawRodCoverage(c, cx, cy);
+    }
     if (g == null) return;
     final List<TownRect> parts;
     if (e.step == TownEditStep.placing &&

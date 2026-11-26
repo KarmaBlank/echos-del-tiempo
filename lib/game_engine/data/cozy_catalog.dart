@@ -45,6 +45,9 @@ const kFarmDecos = <String, FarmDecoDef>{
   // A fence gate: joins the fence run it sits in (town_editor.md § Cercos).
   'fence_gate': FarmDecoDef('fence_gate', 'decorFenceCost'),
   'scarecrow': FarmDecoDef('scarecrow', 'decorScarecrowCost'),
+  // Magitec lightning rod (§ 2.1): storm bolts aimed at a plot within
+  // `lightningRodRadius` hit it instead.
+  'lightning_rod': FarmDecoDef('lightning_rod', 'decorLightningRodCost'),
   'pot': FarmDecoDef('pot', 'decorPotCost'),
   'stone_path': FarmDecoDef('stone_path', 'decorPathCost'),
   'lamp': FarmDecoDef('lamp', 'decorLampCost'),

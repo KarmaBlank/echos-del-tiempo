@@ -162,6 +162,13 @@ extension _FarmingOp on _Op {
           .clamp(0, keys.length - 1)];
       final xy = parsePlotKey(k);
       if (xy == null) continue;
+      // A lightning rod in reach catches it (cozy_life.md § 2.1).
+      if (CozyRules.lightningRodFor(s.town, xy.$1, xy.$2) case (final rx, final ry)) {
+        // Every peer adds the chat line in its own language
+        // (SessionController).
+        events.add(LightningEvent(rx, ry, from: xy));
+        continue;
+      }
       final hit = s.town.plots[k]!;
       s.town = TownRules.strike(s.town, k);
       events.add(LightningEvent(xy.$1, xy.$2, lost: hit.planted));

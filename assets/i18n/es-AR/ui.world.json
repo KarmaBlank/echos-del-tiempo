@@ -180,6 +180,7 @@
   "ui.world.ctl.fish.lost": "{reason} [E o clic] para tirar de nuevo",
   "ui.world.ctl.fish.escaped": "Se escapó.",
   "ui.world.ctl.caught": "Pescaste {what}",
+  "ui.world.ctl.rod_redirect": "El pararrayos desvió un rayo: la parcela está a salvo.",
   "ui.world.ctl.caught_cm": "Pescaste {what} ({cm} cm)",
   "ui.world.ctl.fish.auto": "Auto-pesca: pesca sola mientras no te muevas · [R] Detener",
   "ui.world.ctl.autofish.tag": "AUTO-PESCA · {n}",

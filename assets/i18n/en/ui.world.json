@@ -180,6 +180,7 @@
   "ui.world.ctl.fish.lost": "{reason} [E or click] to cast again",
   "ui.world.ctl.fish.escaped": "It got away.",
   "ui.world.ctl.caught": "You caught {what}",
+  "ui.world.ctl.rod_redirect": "The lightning rod deflected a bolt: the plot is safe.",
   "ui.world.ctl.caught_cm": "You caught {what} ({cm} cm)",
   "ui.world.ctl.fish.auto": "Auto-fishing: fishes by itself while you stand still · [R] Stop",
   "ui.world.ctl.autofish.tag": "AUTO-FISH · {n}",

@@ -5931,8 +5931,12 @@ class SessionController extends StateNotifier<SessionView?> {
             when playerId == localId:
           _messages.add(strings.t('ui.world.ctl.caught', {'what': label}));
           if (_messages.length > maxMessages) _messages.removeAt(0);
-        case LightningEvent():
+        case LightningEvent(:final redirected):
           fishSfx?.call(Sfx.impactBolt);
+          if (redirected) {
+            _messages.add(strings.t('ui.world.ctl.rod_redirect'));
+            if (_messages.length > maxMessages) _messages.removeAt(0);
+          }
         case FishAutoStoppedEvent(:final playerId, :final reason, :final caught)
             when playerId == localId:
           _autoFish = false;

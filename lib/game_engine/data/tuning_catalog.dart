@@ -984,6 +984,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'decorLampCost': 40,
     'scarecrowQualityBias': 0.05,
     'scarecrowRadius': 4,
+    // Lightning rod (§ 2.1): price, reach (tiles), Cultivo level to place
+    // it and whether the EDITAR PUEBLO farm palette sells it (1) or not (0).
+    'decorLightningRodCost': 150,
+    'lightningRodRadius': 5,
+    'lightningRodLevel': 3,
+    'lightningRodBuyable': 1,
     // Hold-to-gather (§ 3): base hold (s), speed per Cultivo level, floor.
     'gatherHoldSec': 1.2,
     'gatherSpeedPerLevel': 0.03,

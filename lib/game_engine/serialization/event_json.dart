@@ -125,6 +125,7 @@ class EventJson {
             'x': e.tx,
             'y': e.ty,
             if (e.lost) 'l': true,
+            if (e.from case (final fx, final fy)) 'f': [fx, fy],
           },
         FishAutoStoppedEvent() => {
             't': 'fAutoOff',
@@ -298,8 +299,12 @@ class EventJson {
         return FarmLootEvent(j.str('id'), j.str('l'), j.integer('r'),
             j.integer('x'), j.integer('y'));
       case 'bolt':
+        final f = j['f'];
         return LightningEvent(j.integer('x'), j.integer('y'),
-            lost: j['l'] == true);
+            lost: j['l'] == true,
+            from: f is List && f.length == 2 && f[0] is int && f[1] is int
+                ? (f[0] as int, f[1] as int)
+                : null);
       case 'fAutoOff':
         final r = j.integer('r').clamp(0, AutoFishStop.values.length - 1);
         return FishAutoStoppedEvent(

@@ -822,6 +822,22 @@
     "text": "守护附近的地块：收获品质略微提升。",
     "status": "draft"
   },
+  "ui.town.decor.lightning_rod.name": {
+    "text": "避雷针",
+    "status": "draft"
+  },
+  "ui.town.decor.lightning_rod.info": {
+    "text": "保护半径 {radius} 格内的地块免遭雷击：雷电落在避雷针上，不造成伤害。守护风暴的魔导回响。",
+    "status": "draft"
+  },
+  "ui.town.decor.lightning_rod.needs_level": {
+    "text": "需要种植 {n} 级",
+    "status": "draft"
+  },
+  "ui.town.decor.lightning_rod.not_sold": {
+    "text": "暂不出售",
+    "status": "draft"
+  },
   "ui.town.decor.pot.name": {
     "text": "花盆",
     "status": "draft"

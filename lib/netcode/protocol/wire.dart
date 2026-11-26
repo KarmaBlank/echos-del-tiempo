@@ -236,7 +236,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-const kProtocolVersion = 99;
+/// 102 (100 and 101 are taken by pending branches): lightning rod
+/// (cozy_life.md § 2.1): the `bolt` event carries `f` (the plot it was
+/// aimed at) when a rod caught it; a 99 peer would draw it as a strike.
+const kProtocolVersion = 102;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

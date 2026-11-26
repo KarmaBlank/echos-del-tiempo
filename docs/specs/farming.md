@@ -461,7 +461,9 @@ Pueblo.
   último con lo suyo.
 - Clima (day_night_weather.md § 3): con lluvia no hay nada que regar; con
   tormenta los pescadores sacan `stormFisher` de lo de siempre y los
-  rayos pueden pegarle a una parcela.
+  rayos pueden pegarle a una parcela, salvo que un PARARRAYOS a
+  `lightningRodRadius` tiles la proteja: el rayo cae en el pararrayos y
+  no hace daño (cozy_life.md § 2.1).
 
 ### 8.6 Ayudante bloqueado (v0.33.1)
 

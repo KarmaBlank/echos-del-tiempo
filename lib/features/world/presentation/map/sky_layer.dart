@@ -11,9 +11,12 @@ import '../../../../game_engine/rules/sky_rules.dart';
 import 'map_themes.dart';
 
 /// Un rayo que cayó (px del mundo) y cuándo (ms del reloj del mapa).
+/// [rod]: lo atrapó un pararrayos (cozy_life.md § 2.1): cae en su punta
+/// y suelta un anillo de chispas.
 class SkyBolt {
-  SkyBolt(this.x, this.y, this.t0);
+  SkyBolt(this.x, this.y, this.t0, {this.rod = false});
   final double x, y, t0;
+  final bool rod;
 }
 
 /// La noche, la lluvia y la tormenta sobre el mapa al aire libre
@@ -33,8 +36,9 @@ class MapSkyLayer {
   /// mapa antes de pedir las luciérnagas.
   List<(double, double)> placedLights = const [];
 
-  void addBolt(int tx, int ty, double t) {
-    bolts.add(SkyBolt((tx + 0.5) * ts, (ty + 0.5) * ts, t));
+  void addBolt(int tx, int ty, double t, {bool rod = false}) {
+    bolts.add(SkyBolt((tx + 0.5) * ts, rod ? ty * ts + 1 : (ty + 0.5) * ts, t,
+        rod: rod));
     if (bolts.length > 6) bolts.removeAt(0);
   }
 
@@ -351,6 +355,24 @@ class MapSkyLayer {
       final a = (1 - q).clamp(0.0, 1.0);
       c.drawPath(path, line..strokeWidth = 3..color = SkyPalette.boltGlow.withValues(alpha: a * 0.6));
       c.drawPath(path, line..strokeWidth = 1..color = SkyPalette.bolt.withValues(alpha: a));
+      if (b.rod) _rodSparks(c, b, q);
+    }
+  }
+
+  /// Anillo de chispas del pararrayos que desvió un rayo, en px enteros.
+  void _rodSparks(Canvas c, SkyBolt b, double q) {
+    final a = (1 - q).clamp(0.0, 1.0);
+    final glow = Paint()..color = SkyPalette.rodGlow.withValues(alpha: a * 0.5);
+    c.drawCircle(Offset(b.x, b.y + 2), 3 + 3 * (1 - q), glow);
+    final spark = Paint()..color = SkyPalette.rodSpark.withValues(alpha: a);
+    final r = 4 + 14 * q;
+    final cy = b.y + 14;
+    for (var k = 0; k < 8; k++) {
+      final ang = k * math.pi / 4 + 0.3;
+      c.drawRect(
+          Rect.fromLTWH((b.x + math.cos(ang) * r).roundToDouble(),
+              (cy + math.sin(ang) * r * 0.5).roundToDouble(), 2, 2),
+          spark);
     }
   }
 }

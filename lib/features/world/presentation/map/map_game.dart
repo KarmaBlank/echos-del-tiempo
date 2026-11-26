@@ -682,8 +682,8 @@ class MapGame extends Game {
       farm.addPop(playerId, tx, ty, label, RarityColors.of(r),
           RarityColors.of(r), t + 250);
     }
-    if (e case LightningEvent(:final tx, :final ty)) {
-      sky.addBolt(tx, ty, t);
+    if (e case LightningEvent(:final tx, :final ty, :final redirected)) {
+      sky.addBolt(tx, ty, t, rod: redirected);
     }
     if (e case QuestDoneEvent(:final kind)) {
       _questT0 = t;

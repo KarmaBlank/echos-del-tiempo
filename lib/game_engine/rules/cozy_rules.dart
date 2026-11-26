@@ -8,6 +8,7 @@ import '../models/life_skills.dart';
 import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'autotile.dart';
+import 'farming_rules.dart' show FarmingRules;
 import 'biome_regions.dart' show BiomeLayout;
 import 'town_rules.dart';
 import 'wild_loot_rules.dart';
@@ -112,10 +113,55 @@ abstract final class CozyRules {
     return TownRules.lightError(s, x, y);
   }
 
+  /// Why [p] can't buy decoration [id] yet (`null` = can): the lightning
+  /// rod needs `lightningRodLevel` of Cultivo and `lightningRodBuyable`.
+  static String? decorLocked(PlayerProfile p, String id) {
+    if (id != 'lightning_rod') return null;
+    if (t.i('lightningRodBuyable') == 0) return 'No se vende';
+    final need = lightningRodLevel;
+    if (FarmingRules.level(p) < need) return 'Cultivo $need';
+    return null;
+  }
+
+  static int get lightningRodRadius => t.i('lightningRodRadius').clamp(0, 30);
+  static int get lightningRodLevel => t.i('lightningRodLevel');
+
+  /// Map tiles a lightning rod on map tile ([mx], [my]) protects: within
+  /// `lightningRodRadius` (euclidean, like the scarecrow).
+  static Iterable<(int, int)> lightningRodArea(int mx, int my) sync* {
+    final r = lightningRodRadius;
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy <= r * r) yield (mx + dx, my + dy);
+      }
+    }
+  }
+
+  /// The lightning rod (map tile) that catches a bolt aimed at map tile
+  /// ([mx], [my]), or `null`: the nearest within reach (ties: first
+  /// placed).
+  static (int, int)? lightningRodFor(TownState s, int mx, int my) {
+    final (ox, oy) = s.origin;
+    final r = lightningRodRadius;
+    (int, int)? best;
+    var bestD = 1 << 30;
+    for (final d in s.decor) {
+      if (d.$1 != 'lightning_rod') continue;
+      final dx = d.$2 + ox - mx, dy = d.$3 + oy - my;
+      final dd = dx * dx + dy * dy;
+      if (dd <= r * r && dd < bestD) {
+        bestD = dd;
+        best = (d.$2 + ox, d.$3 + oy);
+      }
+    }
+    return best;
+  }
+
   /// Buy and place [id] on map tile ([mx], [my]).
   static (PlayerProfile, TownState)? placeDecor(
       PlayerProfile p, TownState s, String id, int mx, int my) {
     if (!kFarmDecos.containsKey(id)) return null;
+    if (decorLocked(p, id) != null) return null;
     final (ox, oy) = s.origin;
     if (decorError(s, mx - ox, my - oy) != null) return null;
     final cost = decorCost(id);

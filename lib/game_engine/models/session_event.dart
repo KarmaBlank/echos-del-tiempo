@@ -384,11 +384,14 @@ class FarmLootEvent extends SessionEvent {
 }
 
 /// Cayó un rayo en la parcela ([tx], [ty]) del mapa (day_night_weather.md
-/// § 3.3); [lost]: había algo plantado.
+/// § 3.3); [lost]: había algo plantado. [from]: el rayo iba a la parcela
+/// [from] y un pararrayos en ([tx], [ty]) lo desvió (cozy_life.md § 2.1).
 class LightningEvent extends SessionEvent {
   final int tx, ty;
   final bool lost;
-  const LightningEvent(this.tx, this.ty, {this.lost = false});
+  final (int, int)? from;
+  bool get redirected => from != null;
+  const LightningEvent(this.tx, this.ty, {this.lost = false, this.from});
 }
 
 /// `fAutoOff`: [playerId]'s auto-fishing stopped ([reason]) after

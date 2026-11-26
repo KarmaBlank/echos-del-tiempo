@@ -256,7 +256,7 @@ void main() {
     await _picShot(tester, rec.endRecording(), (view.width * scale).round(),
         (view.height * scale).round(), 'cozy_farm_decor');
     expect(town.decor.length, greaterThan(5));
-    expect(kFarmDecos.length, 6);
+    expect(kFarmDecos.length, 7);
   });
 
   testWidgets('map: hold-to-gather bar on a forage bush', (tester) async {

@@ -51,6 +51,41 @@ escritorio, tienda, jefes e invocaciones.
   parcelas a `scarecrowRadius` tiles o menos (no se acumula). Opcional y
   chico (pilar 4).
 
+### 2.1 Pararrayos (decoración magitec; protocolo Mundo 102)
+
+Un mástil de bronce con un cristal de eco: un resto magitec del pasado
+que todavía guarda la tormenta. Decoración nueva (`lightning_rod`), no un
+nivel del espantapájaros: el espantapájaros no tiene niveles y el
+pararrayos hace otra cosa (proteger, no sesgar la calidad).
+
+- **Dónde se consigue:** en EDITAR PUEBLO, categoría huerta, como las
+  demás decoraciones (mismo flujo: elegir, apoyar, mover, borrar). Precio
+  `decorLightningRodCost` (150 de oro). Pide nivel `lightningRodLevel`
+  (3) de Cultivo (`FarmingRules.level`); si no, la ficha queda gris con
+  `Pide Cultivo N`. `lightningRodBuyable` (1): 0 lo saca de la venta
+  (`No se vende todavía`) para una futura receta de taller.
+- **Qué hace:** con tormenta, el rayo que iba a caer en una parcela a
+  `lightningRodRadius` tiles o menos (5; distancia euclídea, como el
+  espantapájaros) de un pararrayos cae en el pararrayos más cercano
+  (empate: el primero puesto) y no hace daño: la parcela queda como
+  estaba. Varios pararrayos no se suman: alcanza con uno en el radio.
+  `CozyRules.lightningRodFor`.
+- **Lo dice explícitamente:** la ficha dice "Protege las parcelas de los
+  rayos en un radio de N tiles" (N = `lightningRodRadius`; en `main` no
+  hay markup `**…**`, va en texto plano). Al ponerlo o moverlo, y con el
+  cursor encima o elegido en EDITAR PUEBLO, los tiles que cubre se marcan
+  en verde como el área de un ayudante (`TownEditLayer.drawRodCoverage`).
+- **Al desviar:** el rayo se dibuja cayendo en la punta del pararrayos con
+  un anillo de chispas celestes, suena el trueno y cada par agrega en el
+  chat, en su idioma, "El pararrayos desvió un rayo: la parcela está a
+  salvo." (`ui.world.ctl.rod_redirect`).
+- **Red:** el evento `bolt` lleva `f: [x, y]` (la parcela a la que iba)
+  cuando lo desvió un pararrayos; `x, y` son entonces el pararrayos.
+  Protocolo Mundo 102 (100 y 101 los usan ramas pendientes).
+- **Arte:** `items.vida_decor_lightning_rod` (16×16) en
+  sprite_manifest.yaml, generado por
+  `tool/export_lightning_rod_sprite.dart`.
+
 ## 3. Recolectar manteniendo E
 
 - Las matas del exterior ya no se toman con un toque: **mantener E** (o el
