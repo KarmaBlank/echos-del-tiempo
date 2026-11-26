@@ -1,11 +1,13 @@
-﻿// Barra de herramienta abajo al centro (farming.md § 2.5, v0.24.4): a
-// tamaño completo y sin tapar pociones, grupo ni chat a 1280×720 y
-// 1024×640. Con HUD_SHOTS=<carpeta> guarda hud_huerta.png y hud_pesca.png:
+// Columna de herramienta a la derecha bajo el reloj (farming.md § 2.5,
+// v0.49.21): ancho fijo, sin tapar reloj, minimapa, pociones, grupo ni
+// chat a 1280×720 y 1024×640. Con HUD_SHOTS=<carpeta> guarda hud_huerta.png y hud_pesca.png:
 //   $env:HUD_SHOTS = "docs\release_shots\v0.24.4"; flutter test test/features/world/tool_hud_layout_test.dart
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:echos_del_tiempo/features/world/presentation/hud/chat_box.dart';
+import 'package:echos_del_tiempo/features/world/presentation/hud/day_clock.dart';
+import 'package:echos_del_tiempo/features/world/presentation/hud/minimap.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/tool_hud.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
@@ -59,13 +61,19 @@ void main() {
           expect(c.activeTool, ActiveTool.rod);
         }
         final hud = tester.getRect(find.byKey(const ValueKey('hud-tool')));
-        // Sin achicar: los íconos se ven a 32/40 px.
-        expect(hud.width, closeTo(ToolHud.width, 0.5));
-        expect(hud.bottom, greaterThan(size.height - 40));
+        expect(hud.width, closeTo(ToolHud.columnWidth, 0.5));
+        expect(hud.right, greaterThan(size.width - 40));
+        expect(hud.top, lessThan(size.height / 2));
+        for (final e in find.byType(DayClock).evaluate()) {
+          final clock = tester.getRect(find.byWidget(e.widget));
+          expect(hud.top, greaterThanOrEqualTo(clock.bottom));
+        }
         for (final f in [
           find.byKey(const ValueKey('hud-potions')),
           find.byKey(const ValueKey('hud-party-boxes')),
           find.byType(ChatBox),
+          find.byType(DayClock),
+          find.byType(Minimap),
         ]) {
           for (final e in f.evaluate()) {
             final r = tester.getRect(find.byWidget(e.widget));

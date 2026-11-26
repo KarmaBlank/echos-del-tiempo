@@ -44,13 +44,15 @@ void main() {
     expect(c.farmHandManual, isFalse);
     expect(find.textContaining('[E o clic] Arar'), findsOneWidget);
     expect(c.farmTarget!.ok, isTrue);
-    // Barra abajo al centro (v0.24.4); el aviso, una línea arriba de ella.
+    // Columna a la derecha (v0.49.21); el aviso, abajo al centro.
     expect(find.byKey(const ValueKey('hud-prompt')), findsNothing);
     final prompt =
         tester.getRect(find.byKey(const ValueKey('hud-tool-prompt')));
     final bar = tester.getRect(find.byKey(const ValueKey('hud-farm-bar')));
-    expect(prompt.bottom, lessThanOrEqualTo(bar.top));
-    expect((prompt.center.dx - bar.center.dx).abs(), lessThan(1));
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    expect(bar.top, lessThan(prompt.top));
+    expect(bar.center.dx, greaterThan(screen.width / 2));
+    expect(prompt.bottom, greaterThan(screen.height - 40));
     final seed = c.session!.players[c.localId]!.profile.life.farm.activeSeed;
     c.cycleSeed();
     await h.frames(2);

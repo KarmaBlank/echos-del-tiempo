@@ -69,6 +69,10 @@ String clockText(double seconds) {
 /// HUD del mapa como overlays Flutter (`hud()`, `drawObjectives`,
 /// `drawMinimap` y los avisos de `render`). Ver
 /// docs/specs/exploration.md § "HUD".
+/// Ancho fijo de la fila de atajos (pociones y faroles) sobre el grupo:
+/// entran en un renglón y no cambia con el tamaño del grupo (v0.49.21).
+const kQuickSlotsWidth = 440.0;
+
 class WorldHud extends StatelessWidget {
   const WorldHud({
     super.key,
@@ -137,31 +141,35 @@ class WorldHud extends StatelessWidget {
       // pisar el chat (mínimo 240 px de chat).
       // Compactas (v0.8.2): el chat cede un poco más (es una píldora por
       // defecto), así con texto ENORME entran dos cajas por fila.
-      final n = players.length;
-      int perRowFor(bool exp) {
+      // Una sola fila (v0.49.21): presentes + los que están en otro lugar,
+      // misma caja para todos; si no entra, la fila entera se achica.
+      final n = players.length + s.away.length;
+      double rowWidth(bool exp) {
         final w =
             exp ? PartyBox.widthOf(context) : PartyBox.compactWidthOf(context);
-        final chatMin = RetroType.width(context, exp ? 240 : 200);
-        final room =
-            (box.maxWidth - chatMin - _gap * 3).clamp(w, double.infinity);
-        return ((room + 6) / (w + 6)).floor().clamp(1, n == 0 ? 1 : n);
+        return (n == 0 ? 1 : n) * (w + 6);
       }
 
-      // Grupo grande (v0.13, cualquier n): desplegadas solo si entran en
-      // [maxPartyRows] filas; si no, compactas aunque estén desplegadas.
-      final expanded =
-          expandedPref && (n / perRowFor(true)).ceil() <= maxPartyRows;
+      double roomFor(bool exp) =>
+          (box.maxWidth - RetroType.width(context, exp ? 240 : 200) - _gap * 3)
+              .clamp(PartyBox.compactWidthOf(context), double.infinity);
+      // Desplegadas solo si la fila entra entera.
+      final expanded = expandedPref && rowWidth(true) <= roomFor(true);
       final boxW = expanded
           ? PartyBox.widthOf(context)
           : PartyBox.compactWidthOf(context);
       final chatMin = RetroType.width(context, expanded ? 240 : 200);
-      final perRow = perRowFor(expanded);
-      final partyWidth = perRow * (boxW + 6);
+      final natural = rowWidth(expanded);
+      final room = roomFor(expanded);
+      final partyWidth = natural < room ? natural : room;
+      final cardH = expanded ? null : PartyBox.compactHeightOf(context);
       // Con una herramienta en la mano el chat cede lugar a la barra de
       // abajo al centro (v0.24.4).
       // A la derecha, lo más ancho entre el grupo y las pociones.
-      final rightWidth = partyWidth < RetroType.width(context, 280)
-          ? RetroType.width(context, 280)
+      final quickW = RetroType.width(context, kQuickSlotsWidth)
+          .clamp(0.0, room > partyWidth ? room : partyWidth);
+      final rightWidth = partyWidth < quickW
+          ? quickW
           : partyWidth;
       final toolRoom =
           controller.activeTool == null ? 0.0 : ToolHud.width + _gap;
@@ -422,6 +430,13 @@ class WorldHud extends StatelessWidget {
                               const SizedBox(height: 4),
                               DayClock(sky: s.town.sky, place: s.place),
                             ],
+                            // Herramienta en la mano (v0.49.21): columna
+                            // fija bajo el reloj; el aviso sigue abajo.
+                            if (controller.activeTool != null)
+                              if (view.me?.profile case final prof?) ...[
+                                const SizedBox(height: 4),
+                                ToolHud(controller: controller, profile: prof),
+                              ],
                             // Encargos seguidos (roles.md § 8.2).
                             if (s.mode == SessionMode.lobby &&
                                 view.me?.profile != null) ...[
@@ -536,11 +551,15 @@ class WorldHud extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: ToolHud(controller: controller, profile: me.profile),
+                    child: ToolPrompt(
+                        key: ValueKey('hud-tool-prompt-${me.id}'),
+                        controller: controller),
                   ),
                 ),
               ),
-            // `#party`: una fila de `.pbox` (compactas por defecto).
+            // `#party`: UNA fila fija de cajas del mismo tamaño
+            // (free_movement.md § 4): no salta de alto ni de ancho cuando
+            // alguien cambia de lugar.
             Positioned(
               right: _gap,
               bottom: _gap,
@@ -554,58 +573,72 @@ class WorldHud extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: SizedBox(
-                            width: partyWidth,
+                            key: const ValueKey('hud-quick-slots'),
+                            width: quickW,
                             child: PotionShortcuts(
                                 controller: controller, player: me)),
                       ),
                   SizedBox(
                     key: const ValueKey('hud-party-boxes'),
                     width: partyWidth,
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      crossAxisAlignment: WrapCrossAlignment.end,
-                      verticalDirection: VerticalDirection.up,
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        // Los que están en otro lugar: caja atenuada con
-                        // dónde y IR CON (free_movement.md § 4, § 2.5).
-                        for (final a in s.away)
-                          _AwayBox(
-                              key: ValueKey('hud-away-${a.id}'),
-                              player: a,
-                              width: boxW,
-                              onJoin: controller.canJoinPlayer(a)
-                                  ? () => controller.joinPlayer(a)
-                                  : null,
-                              blocked: controller.joinPlayerBlock(a)),
-                        // Cada caja se arma solo si cambió lo que muestra.
-                        for (final p in players)
-                          Memo(
-                            key: ValueKey('hud-party-memo-${p.id}'),
-                            deps: [_boxKey(p, expanded)],
-                            builder: (_) => Consumer(
-                              builder: (context, ref, _) => _Toggle(
-                                key: ValueKey('hud-party-${p.id}'),
-                                expanded: expanded,
-                                onTap: () => togglePartyBoxes(ref),
-                                child: expanded
-                                    ? _PlayerBox(
-                                        player: p,
-                                        local: p.id == view.localId,
-                                        progression:
-                                            controller.engine.progression,
-                                      )
-                                    : CompactPlayerBox(
-                                        player: p,
-                                        local: p.id == view.localId,
-                                        progression:
-                                            controller.engine.progression,
-                                      ),
+                    height: cardH == null
+                        ? null
+                        : cardH * (partyWidth / natural).clamp(0.0, 1.0),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.bottomRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          for (final c in [
+                            // Los que están en otro lugar: misma caja,
+                            // atenuada, con dónde y UNIRSE (§ 2.5).
+                            for (final a in s.away)
+                              _AwayBox(
+                                  key: ValueKey('hud-away-${a.id}'),
+                                  player: a,
+                                  width: boxW,
+                                  height: cardH,
+                                  onJoin: controller.canJoinPlayer(a)
+                                      ? () => controller.joinPlayer(a)
+                                      : null,
+                                  blocked: controller.joinPlayerBlock(a)),
+                            // Cada caja se arma solo si cambió lo que muestra.
+                            for (final p in players)
+                              Memo(
+                                key: ValueKey('hud-party-memo-${p.id}'),
+                                deps: [_boxKey(p, expanded)],
+                                builder: (_) => Consumer(
+                                  builder: (context, ref, _) => _Toggle(
+                                    key: ValueKey('hud-party-${p.id}'),
+                                    expanded: expanded,
+                                    onTap: () => togglePartyBoxes(ref),
+                                    child: SizedBox(
+                                      height: cardH,
+                                      child: expanded
+                                          ? _PlayerBox(
+                                              player: p,
+                                              local: p.id == view.localId,
+                                              progression:
+                                                  controller.engine.progression,
+                                            )
+                                          : CompactPlayerBox(
+                                              player: p,
+                                              local: p.id == view.localId,
+                                              progression:
+                                                  controller.engine.progression,
+                                            ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                      ],
+                          ])
+                            Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: c),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1385,10 +1418,13 @@ class CompactPlayerBox extends StatelessWidget {
             final w = c.maxWidth;
             return Row(
               children: [
-                // Nombre (y ascensión) con elipsis; el nivel siempre se ve.
+                // Nombre (y ascensión) entero: se achica antes que cortarse.
                 Expanded(
                   child: KeyedSubtree(
                     key: ValueKey('hud-name-${p.id}'),
+                    child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Text.rich(
                       TextSpan(children: [
                         TextSpan(
@@ -1404,8 +1440,8 @@ class CompactPlayerBox extends StatelessWidget {
                                 const TextStyle(color: DsColors.textSecondary)),
                       ]),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       softWrap: false,
+                    ),
                     ),
                   ),
                 ),
@@ -1828,43 +1864,65 @@ class _AwayBox extends StatelessWidget {
       {super.key,
       required this.player,
       required this.width,
+      this.height,
       this.onJoin,
       this.blocked});
 
   final AwayPlayer player;
   final double width;
+
+  /// Alto fijo de la fila compacta (`null` = desplegadas).
+  final double? height;
   final VoidCallback? onJoin;
 
   /// Why UNIRSE is off (grey button + tooltip), or `null`.
   final String? blocked;
 
   @override
-  Widget build(BuildContext context) => Opacity(
-        opacity: 0.6,
-        child: Container(
-          width: width,
-          color: DsColors.surface,
-          padding: EdgeInsets.all(DsSpace.xs),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(retroText(player.name),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DsText.body(DsColors.textPrimary)),
-              Text(retroText(player.where),
-                  key: ValueKey('hud-away-where-${player.id}'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DsText.detail()),
-              SizedBox(height: DsSpace.xs),
-              DsButton(context.t('ui.world.hud.join', {'name': player.name}),
-                  key: ValueKey('hud-join-${player.id}'),
-                  size: DsButtonSize.compact,
-                  tooltip: onJoin == null ? blocked : null,
-                  onPressed: onJoin),
-            ],
+  Widget build(BuildContext context) => SizedBox(
+        width: width,
+        height: height,
+        child: Opacity(
+          opacity: 0.6,
+          child: Container(
+            color: DsColors.surface,
+            padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
+            child: Row(
+              children: [
+                // Nombre y lugar enteros: se achican antes que cortarse.
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(retroText(player.name),
+                            maxLines: 1,
+                            softWrap: false,
+                            style: DsText.body(DsColors.textPrimary)),
+                        Text(retroText(player.where),
+                            key: ValueKey('hud-away-where-${player.id}'),
+                            maxLines: 1,
+                            softWrap: false,
+                            style: DsText.detail()),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(width: DsSpace.xs),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: DsButton(
+                      context.t('ui.world.hud.join', {'name': player.name}),
+                      key: ValueKey('hud-join-${player.id}'),
+                      size: DsButtonSize.compact,
+                      tooltip: onJoin == null ? blocked : null,
+                      onPressed: onJoin),
+                ),
+              ],
+            ),
           ),
         ),
       );
