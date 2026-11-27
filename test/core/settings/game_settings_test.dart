@@ -242,7 +242,8 @@ void main() {
       final c = AudioSettingsController(
           store: InMemoryAudioSettingsStore(),
           music: MusicService(autoTick: false),
-          sfx: SfxService(player: rec));
+          sfx: SfxService(player: rec),
+          clock: () => DateTime(2026)); // reloj quieto: sin flakes
       c.setSfx(0.3);
       c.preview();
       c.preview(); // enseguida: no repite
