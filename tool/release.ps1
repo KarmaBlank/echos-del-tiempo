@@ -9,7 +9,8 @@
      origin/main, `gh` autenticado y que el tag vX.Y.Z no exista.
   2. Escribe la versión en pubspec.yaml (`version: X.Y.Z+N`, N = build
      anterior + 1) y en lib/app/app_version.dart.
-  3. flutter analyze + flutter test (salvo -SkipChecks).
+  3. flutter analyze + flutter test (salvo -SkipChecks): todo en paralelo
+     salvo test/perf, que corre después solo y en serie.
   4. flutter build windows --release -t lib/app/flavors/main_p2p.dart
   5. Copia el runtime de MSVC (msvcp140, vcruntime140, vcruntime140_1) a
      dist\runtime y compila installer\ecos_del_tiempo.iss con Inno Setup 6.
@@ -166,8 +167,18 @@ Write-Host "pubspec: $oldVersion+$oldBuild -> $Version+$build"
 if (-not $SkipChecks) {
   Step 'flutter analyze'
   Run $Flutter @('analyze')
-  Step 'flutter test'
-  Run $Flutter @('test')
+  # Tests en paralelo (un worker por núcleo), salvo los de rendimiento
+  # (test/perf): esos miden tiempos y corren después, solos y en serie,
+  # para que la carga de los demás no los haga fallar.
+  $cores = [Math]::Max(1, [Environment]::ProcessorCount)
+  $suites = Get-ChildItem (Join-Path $Root 'test') -Directory |
+    Where-Object { $_.Name -ne 'perf' -and
+      (Get-ChildItem $_.FullName -Recurse -Filter '*_test.dart' | Select-Object -First 1) } |
+    ForEach-Object { "test/$($_.Name)" }
+  Step "flutter test (paralelo x$cores, sin perf)"
+  Run $Flutter (@('test', "--concurrency=$cores") + $suites)
+  Step 'flutter test test/perf (solos, en serie)'
+  Run $Flutter @('test', '--concurrency=1', 'test/perf')
 }
 
 # --- 3. Build release (flavor del juego) ----------------------------------

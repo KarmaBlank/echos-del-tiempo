@@ -265,7 +265,7 @@ Complementa la de siempre (overworld_biomes.md § 3.2). Clases
   los haces de un mapa se calculan una vez (`Expando` por filas).
 - Sin asignaciones por cuadro en el dibujo: pinturas, trazado del haz y
   rectángulos son fijos; la lista de visibles se reutiliza.
-- Test de rendimiento: `test/features/world/region_light_perf_test.dart`.
+- Test de rendimiento: `test/perf/region_light_perf_test.dart`.
 
 ## 8. Red y guardado (protocolo 76)
 - El plano sale de la semilla: cambia el mapa de todos los exteriores.
@@ -280,6 +280,6 @@ principal alcanzable y corto; lagos, minas, piedras, matas, campamento y
 puntos de eventos alcanzables; variantes de lago con agua brillante
 válida; activar y viajar entre piedras; rebrote fuera de la vista;
 recolección de estación; haces solo donde hay aberturas.
-`test/features/world/region_light_perf_test.dart`: rendimiento.
+`test/perf/region_light_perf_test.dart`: rendimiento.
 
 - **Sombras de nubes pixeladas (v0.48.4):** cada nube es una grilla de celdas de 8 px con borde irregular (ruido que viaja con la nube) y 4 escalones de alfa hacia el borde; se dibujan en lotes de puntos, una llamada por escalón.
