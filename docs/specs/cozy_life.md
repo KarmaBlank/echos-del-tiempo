@@ -37,6 +37,10 @@ escritorio, tienda, jefes e invocaciones.
   (`raftRoofCost`) y pintura (`raftPaintCost`, 4 colores). Comprar una pieza
   la prende; tocar una comprada la prende/apaga (la pintura es una sola a
   la vez). Se guarda en el perfil (`life.rd` compradas, `life.ro` puestas).
+  Pantalla (v0.49.33): grilla de INVENTARIO (`LifeItemGrid`), sin precio
+  debajo de la casilla; el precio (`₵`), si la tenés y si está puesta
+  van en la ficha del mouse y en el detalle. COMPRAR gris sin oro, con
+  el motivo en el tooltip.
 
 ## 2. Huerta cozy
 

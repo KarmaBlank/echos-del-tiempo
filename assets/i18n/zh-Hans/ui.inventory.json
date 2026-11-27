@@ -657,7 +657,7 @@
     "status": "draft"
   },
   "ui.inventory.smith.brann_extra": {
-    "text": "委托：布兰的工钱 +{gold} 金币",
+    "text": "委托：布兰的工钱 +₵{gold}",
     "status": "draft"
   },
   "ui.inventory.smith.brann_name": {

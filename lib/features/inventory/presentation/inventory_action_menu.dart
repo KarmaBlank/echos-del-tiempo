@@ -112,9 +112,13 @@ class _RowState extends State<InventoryActionRow> {
     return KeyedSubtree(
       key: ValueKey(on ? 'menu-row-on' : 'menu-row-off'),
       child: DsListRow(
-        title: retroText(e.label),
+        title: DsGoldText.hasGold(e.label) ? e.label : retroText(e.label),
         titleColor: e.color,
-        detail: tail == null ? null : retroText(tail),
+        detail: tail == null
+            ? null
+            : DsGoldText.hasGold(tail)
+                ? tail
+                : retroText(tail),
         enabled: on,
         autofocus: widget.autofocus,
         onTap: on ? _tap : null,

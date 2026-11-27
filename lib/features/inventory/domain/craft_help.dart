@@ -78,7 +78,7 @@ class CraftOpHelp {
     if (reason.startsWith('Falta ')) {
       return h('material', '(Mira dónde se consigue en el contador de materiales.)');
     }
-    if (reason.startsWith('Faltan \$')) {
+    if (reason.startsWith('Faltan ₵')) {
       return h('credits', '(Vende o desarma armas que no uses para juntar créditos.)');
     }
     if (reason == 'Está equipada') {

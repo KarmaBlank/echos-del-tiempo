@@ -41,7 +41,7 @@ class ShopGuards {
   /// Desarmar / vender / limpiar: también en la aventura (no en batalla).
   bool get canDiscard => canShop || mode == SessionMode.field;
 
-  static String _missing(int need, int have) => 'Faltan \$${need - have}';
+  static String _missing(int need, int have) => 'Faltan ₵${need - have}';
 
   /// `BuyWeaponAction`: cualquier base a la venta (loot v2: sin clase).
   String? buyWeapon(PlayerProfile p, String weaponId) {

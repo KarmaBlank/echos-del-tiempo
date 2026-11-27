@@ -28,8 +28,6 @@ List<LifeItemCellData> raftDecoCells(
           border: on ? DsColors.success : DsColors.selected,
           search: name,
           equipped: on,
-          caption:
-              owned ? null : context.t('ui.town.npc.gold_short', {'n': cost}),
           detail: LifeItemDetail(
             name: name,
             nameColor: DsColors.textTitle,

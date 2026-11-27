@@ -91,7 +91,7 @@ class RunScreen extends ConsumerWidget {
         runSpacing: DsSpace.xs,
         children: [
           for (final p in s.playerList)
-            Text(
+            DsGoldText(
               t.t('ui.run.party_line', {
                 'name': p.name,
                 'hp': p.hp.ceil(),

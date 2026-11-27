@@ -124,7 +124,11 @@ void main() {
               of: c, matching: find.byKey(ValueKey('town-piece-preview-$id'))),
           findsOneWidget,
           reason: id);
-      // El detalle muestra la miniatura grande de la pieza bajo el mouse.
+      // El detalle muestra la miniatura grande de la pieza bajo el mouse
+      // (afuera primero: la ficha de la casilla anterior no tapa).
+      await mouse.moveTo(Offset.zero);
+      await tester.pump(const Duration(seconds: 1));
+      await h.frames(2);
       await mouse.moveTo(tester.getRect(c).center);
       await h.frames(2);
       final big = find.byKey(const ValueKey('town-build-detail-preview'));

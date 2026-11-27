@@ -90,7 +90,11 @@ Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
   del pueblo base, al sur del camino norte, entre el portal y el lago.
   Sin cartel ni cofre (es un lugar, no una construcción).
 - `[E] Taller de oficios` abre `WorldPanel.workshop` (`WorkshopPanel`):
-  plantilla `DsCraftGridTemplate` (ui_minimal.md § 4.1). Hoy las
+  plantilla `DsCraftGridTemplate` (ui_minimal.md § 4.1); desde
+  v0.49.33 la pestaña CRAFTEO es `DsGridDetailLayout` (prefijo
+  `workshop`): filtros TODOS / CULTIVO / PESCA arriba, 6 casillas de
+  INVENTARIO arriba a la izquierda y el detalle con CRAFTEAR ocupando el
+  resto del ancho. El oro del costo se dibuja con la moneda. Hoy las
   recetas son las de materials_economy.md § 4.4; las recetas nuevas de
   oficio van acá, nunca en la armería.
 

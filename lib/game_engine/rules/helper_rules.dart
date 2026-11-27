@@ -81,7 +81,7 @@ abstract final class HelperRules {
       );
 
   static String costText(HelperCost c) => [
-        '${c.gold} de oro',
+        '₵${c.gold}',
         for (final e in c.mats.entries)
           '${e.value} ${kLifeMaterials[e.key]?.name.toLowerCase() ?? e.key}',
       ].join(' + ');

@@ -317,6 +317,20 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   `COMPRAR ×3 · [moneda] 12` (la cantidad siempre explícita con `×`).
   Las fichas de detalle (oficios, TALLER) también pintan sus líneas con
   `DsGoldText`.
+  Moneda en todos lados (v0.49.33): `₵N` es la ÚNICA forma de escribir
+  dinero en strings (i18n es-AR / en / zh-Hans y textos armados en
+  Dart: `Faltan ₵N`, costos de TALLER, ARMERÍA, ULT y FORJA, `+₵N` de
+  los avisos de botín, `HelperRules.costText`, `TownRules.costText`);
+  nunca "$", "N de oro", "N gold" ni un número pelado. Los átomos que
+  pintan texto lo detectan solos con `DsGoldText.auto` /
+  `DsGoldText.hasGold`: `DsListRow` (título, dato y subtítulo; el menú
+  contextual de INVENTARIO "Vender · [moneda] N"), `DsTag` (costos de
+  `DsActionRow.costTag`), `DsToast`, el tooltip y el label de
+  `DsButton`, el motivo de `PanelButton`, `ProtoText` (markup: cada `₵`
+  del texto es la moneda) y el aviso de botín del mapa. Un `Text` suelto
+  con dinero usa `DsGoldText`. `retroText` cambia `₵` por "$" solo como
+  último recurso para la fuente; si aparece un "$" en pantalla es un
+  `Text` que falta migrar.
 - DsTag: etiqueta en mayúsculas, Subtítulo chico dentro de borde del
   color del tipo: INSTANTE (celeste), PUEDE QUEBRAR (naranja), NUEVO
   (dorado).
@@ -436,10 +450,29 @@ Pantallas: caravana / tiendas de NPC de bioma (COMPRAR), AGROPECUARIO,
 PESCA Y CULTIVO, menús de NPC, minero, MI PUESTO, ayudantes, diarios de
 oficio, registro de misiones, tienda de herramientas, ARMERÍA y
 HERRERÍA (TALLER), cocina, ofrendas, colecciones, ECOS MEJORAR /
-FUSIONAR. Pendientes (layout propio todavía): INVENTARIO y ALIJO
-(grilla 8 × 5 / tablero con arrastre), FORJA y COMPRAR de Brann
-(`craft_bench`, `shop_sections` sobre `PanelSplit`), botín perdido,
-decoración de balsa, paleta de construcción y casas.
+FUSIONAR, y desde v0.49.33 TALLER DE OFICIOS (CRAFTEO, filtros arriba),
+resultado de misión (BOTÍN), loot perdido, decoración de balsa (sin
+precio debajo de la casilla), paleta CONSTRUIR (casilla de INVENTARIO
+con la miniatura; nombre, tamaño y costo en la ficha; flechas de a 6) y
+ASIGNAR CASAS (sprite de la casa por nivel, sin texto en la casilla).
+Pendientes (layout propio todavía): INVENTARIO y ALIJO (grilla 8 × 5 /
+tablero con arrastre), FORJA y COMPRAR de Brann (`craft_bench`,
+`shop_sections` sobre `PanelSplit`).
+
+Reglas comunes de la migración (v0.49.33):
+
+- Nada de secciones apiladas: lo que antes eran cajas una debajo de la
+  otra pasa a subtabs (`DsTabBar`) o filtros. Ej.: resultado de misión
+  = RESUMEN / PROGRESO / BOTÍN (`results-tab-<id>`), cuerpo de alto fijo.
+- Botones deshabilitados: gris con el motivo en el tooltip
+  (`DsButton.tooltip`); p. ej. ASIGNAR sin habitante elegido
+  (`ui.town.houses.pick_resident`), COLOCAR sin oro (`TownPiece.why`).
+- Mover ítems entre dos contenedores (cofre ↔ bolso, ayudante ↔ vos)
+  siempre con `DsTransferTemplate`; las pantallas de esta tanda no
+  mueven entre contenedores (TOMAR del loot perdido va directo al
+  bolso).
+- Texto solo con roles semánticos (`DsText.*`) y colores `DsColors.*`;
+  nunca cortar texto con "…" en el detalle.
 
 Galería: página GRILLAS (`GridTemplatesMockup`).
 

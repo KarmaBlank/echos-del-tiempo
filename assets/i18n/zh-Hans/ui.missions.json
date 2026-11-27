@@ -98,5 +98,13 @@
   "ui.missions.hud.stairs_open": "",
   "ui.missions.hud.stairs_closed": "",
   "ui.missions.hud.go_boss": "",
-  "ui.missions.hud.boss_locked": ""
+  "ui.missions.hud.boss_locked": "",
+  "ui.missions.results.tab_summary": {
+    "text": "总结",
+    "status": "draft"
+  },
+  "ui.missions.results.loot_empty": {
+    "text": "本次任务没有获得物品。",
+    "status": "draft"
+  }
 }

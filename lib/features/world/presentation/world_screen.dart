@@ -38,6 +38,7 @@ import '../../endgame/presentation/eco_zone_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/workshop_panel.dart';
+import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/domain/mission_text.dart';
@@ -1044,6 +1045,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   controller.engine
                       .lootVerdict(me.profile, d, wants: controller.localWants),
                   exclusive: kUniques[d.item?.uniqueId]?.exclusive ?? false,
+                  cell: (size, selected) => ItemSlot(
+                      rules: controller.engine.progression,
+                      size: size,
+                      data: ItemSlotData(
+                          content: dropCellContent(d), selected: selected)),
                   tooltip: d.eco != null
                       ? ecoTooltipMarkup(controller.engine.progression, d.eco!)
                       : d.item == null

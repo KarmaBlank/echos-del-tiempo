@@ -21,7 +21,13 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   invitados al pueblo sin casa) y el botón ASIGNAR, que manda la misma
   acción del diálogo (`TownOp.assign`, validada por el anfitrión; sin
   protocolo nuevo). Si el jugador no tiene el candado lo toma solo para
-  esa acción. ASIGNAR gris sin habitante elegido o si otro edita. Sin
+  esa acción. ASIGNAR gris sin habitante elegido (tooltip
+  `ui.town.houses.pick_resident`) o si otro edita (tooltip con el
+  motivo). Desde v0.49.33 la grilla es la de INVENTARIO
+  (`DsGridDetailLayout`, prefijo `houses`): casilla con el sprite de la
+  casa por nivel (`vida_casa_<nivel>`), sin texto en ni debajo de la
+  casilla (CASA n y su nivel en la ficha del mouse); el detalle ocupa
+  el resto del ancho. Sin
   nadie para asignar: "No hay nadie para asignar"; sin casas libres:
   "No hay casas libres".
 - EDITAR PUEBLO (v0.28.0): cualquiera de la sala, de a uno (§ 1.3).
@@ -55,9 +61,13 @@ revés: clic en un tile libre y después la lista).
 - Al entrar se abre la ventana CONSTRUIR (v0.42.7): una ventana GRANDE
   centrada en la pantalla, como el INVENTARIO, con la PALETA
   (`TownBuildPalette`): todo lo que se puede poner (`kConstructions` +
-  el faro) en una grilla de casillas amplias (`DsItemCell` + nombre) a
-  la izquierda y el detalle (`DsDetailPane`, ~42 % del ancho, 280–460 px)
-  a la derecha. Casillas de 80 px (miniatura + nombre en Cuerpo). El
+  el faro) en la grilla de INVENTARIO (v0.49.33, `DsGridDetailLayout`,
+  prefijo `town-build`): 6 casillas `DsItemCell` del tamaño de
+  INVENTARIO arriba a la izquierda, solo con la miniatura (sin nombre ni
+  etiqueta de tamaño; nombre, tamaño, costo con `₵` y motivo van en la
+  ficha de tamaño fijo del mouse) y el detalle (`DsDetailPane`)
+  ocupando todo el ancho que sobra. Flechas: ±1 y ±6. COLOCAR gris con
+  el motivo (`TownPiece.why`) en el tooltip. El
   detalle usa la tipografía del sistema: nombre en Título, tamaño y costo
   en Detalle, descripción en Cuerpo; entra sin scroll desde 1280×720 a
   escala 1.0 (el scroll queda solo de reserva para escalas enormes).

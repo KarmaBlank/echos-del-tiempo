@@ -355,6 +355,8 @@ void main() {
             unlocked: zoneUnlockedText(worldFallbackStrings(), 10, _cat.zone(10)!.name),
             finalVictory: ResultsPanel.isFinalVictory(r),
           ));
+      await tester.tap(find.byKey(const ValueKey('results-tab-progress')));
+      await tester.pumpAndSettle();
       expect(find.text('¡Zona 10 desbloqueada! Corazón del Tiempo'),
           findsOneWidget);
       expect(find.byKey(const ValueKey('results-final')), findsNothing);

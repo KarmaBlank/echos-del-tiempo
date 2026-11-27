@@ -154,7 +154,7 @@ class _PlayerStallPanelState extends State<PlayerStallPanel> {
                   key: const ValueKey('stall-earned'),
                   style: DsText.detail()),
             const Spacer(),
-            Text(context.t('ui.town.trader.gold', {'n': p?.credits ?? 0}),
+            DsGoldText(context.t('ui.town.trader.gold', {'n': p?.credits ?? 0}),
                 key: const ValueKey('stall-gold'), style: DsText.detail()),
           ]),
           SizedBox(height: DsSpace.xs),

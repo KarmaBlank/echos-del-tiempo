@@ -19,8 +19,12 @@ import '../world_strings.dart';
 /// que se muestra es `ui.world.lost_loot.notice`.
 const kLostLootNotice = 'Se borra al empezar la próxima misión.';
 
-/// Casillas por fila de la grilla del Loot perdido.
-const kLostLootColumns = 8;
+/// The INVENTARIO cell content of a mission drop (item, Eco or stack).
+CellContent dropCellContent(LootDrop d) => d.item != null
+    ? CellContent.item(d.item!)
+    : d.eco != null
+        ? CellContent.eco(d.eco!)
+        : CellContent.stack(d.stack!, d.count);
 
 /// Panel LOOT PERDIDO de la torrecita del pueblo: lo que quedó en el piso
 /// al volver de la misión, compartido por toda la sala. Grilla de
@@ -42,11 +46,7 @@ class _LostLootPanelState extends State<LostLootPanel> {
   /// Id del [GroundLoot] elegido.
   int? _sel;
 
-  static CellContent _content(LootDrop d) => d.item != null
-      ? CellContent.item(d.item!)
-      : d.eco != null
-          ? CellContent.eco(d.eco!)
-          : CellContent.stack(d.stack!, d.count);
+  static CellContent _content(LootDrop d) => dropCellContent(d);
 
   String _markup(ProgressionRules rules, LootDrop d, PlayerProfile? viewer,
       PlayerAttributes attrs) {
@@ -95,20 +95,23 @@ class _LostLootPanelState extends State<LostLootPanel> {
           child: child);
     }
 
-    final grid = DsItemGrid(
-      rules: rules,
-      count: pool.length,
-      columns: kLostLootColumns,
-      width: kLostLootColumns * 48.0,
-      focusKeyPrefix: 'lost-focus-',
-      cellKey: (i) => ValueKey('lost-cell-${pool[i].id}'),
-      slot: (i) => ItemSlotData(
-          content: _content(pool[i].drop), selected: pool[i] == sel),
-      tip: tip,
-      onTap: (i) => setState(() => _sel = pool[i].id),
-      onFocusCell: (i) => setState(() => _sel = pool[i].id),
-      onActivate: (i) => controller.takeLostLoot(pool[i].id),
-    );
+    Widget cell(BuildContext context, int i, double size) {
+      final g = pool[i];
+      return tip(
+          i,
+          GestureDetector(
+            key: ValueKey('lost-cell-${g.id}'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _sel = g.id),
+            onDoubleTap: () => controller.takeLostLoot(g.id),
+            child: ItemSlot(
+                rules: rules,
+                size: size,
+                data: ItemSlotData(
+                    content: _content(g.drop), selected: g == sel)),
+          ),
+          false);
+    }
 
     final detail = sel == null
         ? const SizedBox.shrink()
@@ -124,7 +127,7 @@ class _LostLootPanelState extends State<LostLootPanel> {
     return PanelFrame(
       key: const ValueKey('panel-lost-loot'),
       title: context.t('ui.world.lost_loot.title'),
-      width: 720,
+      width: 1000,
       fill: true,
       onClose: controller.closePanel,
       actions: [
@@ -134,34 +137,31 @@ class _LostLootPanelState extends State<LostLootPanel> {
         PanelButton(context.t('ui.world.lost_loot.close'),
             key: const ValueKey('lost-close'), onPressed: controller.closePanel),
       ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(children: [
-            Text(context.t('ui.world.lost_loot.header'), style: DsText.subtitle()),
-            const SizedBox(width: 8),
-            DsBadge(pool.length.toString(), key: const ValueKey('lost-count')),
-          ]),
-          const SizedBox(height: 4),
-          Text(context.t('ui.world.lost_loot.notice'),
-              key: const ValueKey('lost-notice'), style: DsText.detail()),
-          const SizedBox(height: 6),
-          if (pool.isEmpty)
-            Text(context.t('ui.world.lost_loot.empty'),
-                key: const ValueKey('lost-empty'), style: DsText.detail())
-          else
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SingleChildScrollView(child: grid),
-                  SizedBox(width: DsSpace.md),
-                  Expanded(child: detail),
-                ],
-              ),
-            ),
-        ],
+      // INVENTARIO grid (design_system.md § DsGridDetailLayout): 6 cells
+      // top-left, the detail with TOMAR takes the rest of the width.
+      child: DsGridDetailLayout(
+        keyPrefix: 'lost',
+        header: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              Text(context.t('ui.world.lost_loot.header'),
+                  style: DsText.subtitle()),
+              SizedBox(width: DsSpace.sm),
+              DsBadge(pool.length.toString(),
+                  key: const ValueKey('lost-count')),
+            ]),
+            SizedBox(height: DsSpace.xs),
+            Text(context.t('ui.world.lost_loot.notice'),
+                key: const ValueKey('lost-notice'), style: DsText.detail()),
+          ],
+        ),
+        count: pool.length,
+        empty: Text(context.t('ui.world.lost_loot.empty'),
+            key: const ValueKey('lost-empty'), style: DsText.detail()),
+        cell: cell,
+        detail: pool.isEmpty ? null : detail,
       ),
     );
   }
