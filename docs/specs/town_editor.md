@@ -71,6 +71,18 @@ revés: clic en un tile libre y después la lista).
   detalle usa la tipografía del sistema: nombre en Título, tamaño y costo
   en Detalle, descripción en Cuerpo; entra sin scroll desde 1280×720 a
   escala 1.0 (el scroll queda solo de reserva para escalas enormes).
+  Cada pieza tiene UNA fuente de verdad (v0.49.38): id del catálogo →
+  sprite del manifest → texto i18n. Miniatura: huertas, lagos y faro con
+  los pintores del mapa; casa, gallinero, establo y decoraciones con su
+  sprite (`items.vida_casa_1`, `vida_gallinero`, `vida_establo`,
+  `vida_decor_<id>`); nunca la tierra arada fuera de una huerta. Nombre
+  y descripción: `ui.town.build.<id>.*`, `ui.town.ranch.<id>.*`,
+  `ui.town.decor.<id>.*`. Tamaño: la huella del catálogo (deco y faro
+  1×1). Costo: solo el precio, `ui.town.edit.gold` (`₵{cost}`, con
+  `DsGoldText`). Rasgos (`TownPiece.flags`), solo los que aplican:
+  "Alumbra de noche" (faro y farolito), "Bloquea el paso" (cerco), "Se
+  puede cruzar" (tranquera), "Se camina encima" (caminito). Test:
+  `test/features/world/town_build_palette_entries_test.dart`.
   Categorías con filtros arriba (TODO · CULTIVO · AGUA · HOGAR · LUZ),
   nunca secciones apiladas. Tamaño: ancho de la pantalla − 64
   (320–1100) por alto − 48 (240–680).
@@ -398,6 +410,16 @@ mapa no es decorado y no cambia.
   manifest sin tocar Dart.
 - Guardado y red: sin cambios de formato (`dc: [id, x, y]`); un save
   viejo con cercos se ve conectado al cargarlo.
+- **Colisión (v0.49.38):** el CERCO es sólido; la TRANQUERA y los huecos
+  que deja el jugador al construir se cruzan. Lo mismo el cerco del
+  patio de gallinero / establo (su tranquera abajo se cruza). El mapa
+  del pueblo lleva esas casillas en `GameMap.blocked`
+  (`MapGenerator.fenceSolids`); `WorldRules.isSolid` las cuenta, así
+  que la predicción del cliente (`stepPlayer`) frena ahí, y el host
+  rechaza un `MoveAction` que entra en un cerco
+  (`WorldRules.hitsFence`). Quien quedó encima de un cerco recién puesto
+  puede salir caminando. El resto de las decoraciones no es sólido.
+  Test: `test/game_engine/fence_collision_test.dart`.
 
 ## 6. Carteles con el mouse
 Solo el mouse sobre un cartel (jugando o editando) muestra un tooltip

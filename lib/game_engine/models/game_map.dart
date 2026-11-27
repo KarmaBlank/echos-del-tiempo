@@ -441,6 +441,7 @@ class GameMap {
     this.townOrigin = (0, 0),
     this.place,
     this.townMarks,
+    this.blocked = const {},
   })  : rows = List.unmodifiable(rows),
         floors = List.unmodifiable(floors),
         entrances = List.unmodifiable(entrances);
@@ -459,6 +460,10 @@ class GameMap {
   /// Pueblo: los lugares en su posición de este mundo (coordenadas del
   /// pueblo base; town_editor.md § 3.3). `null` = los de siempre.
   final List<TownLandmark>? townMarks;
+
+  /// Extra solid cells (map coordinates) that are not tiles: the town's
+  /// fences (town_editor.md § 5.1). The tile under them is drawn as is.
+  final Set<(int, int)> blocked;
 
   /// Una fila por `y`, un carácter por `x` (ver [Tile]).
   final List<String> rows;

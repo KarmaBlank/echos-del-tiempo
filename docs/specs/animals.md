@@ -94,6 +94,13 @@ trufas en el patio en vez de dar un producto fijo.
 - Salen en la paleta CONSTRUIR con su precio en oro y el nivel de
   Granjero pedido. Sin el nivel o sin oro, el botón gris con el motivo
   ("Necesitás Granjero nivel 6", "Falta oro (120/1500)").
+- En la paleta (v0.49.38) la casilla y el detalle muestran el sprite de
+  la casa (`items.vida_gallinero`, `items.vida_establo`, de
+  `tool/export_animal_sprites.dart`), nunca la tierra arada. Detalle:
+  su huella real (gallinero 5×4, establo 7×5), costo `₵{precio}` y sin
+  rasgos de luz (town_editor.md § 1.2).
+- El cerco del patio es sólido; se entra por la tranquera de abajo
+  (town_editor.md § 5.1).
 - Se mueven como las demás: los animales, el heno y el cofre viajan con
   la construcción. No se funden entre sí (como las casas).
 - **Borrar** una construcción con animales no se puede (botón gris:
