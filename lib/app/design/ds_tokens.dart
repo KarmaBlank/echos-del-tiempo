@@ -79,6 +79,10 @@ abstract final class DsColors {
   /// the selected key and the changed values (game_editor.md § 7.7).
   static const editSelection = ProtoColors.green;
 
+  /// The 1 px silhouette outline of the E / click target on the map
+  /// (controls.md § Cursor de acción).
+  static const targetOutline = Color(0xFFFFFFFF);
+
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
         'superficie': surface,

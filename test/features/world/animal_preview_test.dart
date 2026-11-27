@@ -80,7 +80,8 @@ void _text(Canvas c, String s, double x, double y, Color col, double size) {
   tp.paint(c, Offset(x - tp.width / 2, y - tp.height / 2));
 }
 
-Future<void> _map(WidgetTester tester, TownBuild b, String name) async {
+Future<ui.Image> _map(WidgetTester tester, TownBuild b, String name,
+    {String? selectedHouse, bool write = true}) async {
   await loadRealFonts(tester);
   final town = TownState(builds: [b]);
   final ids = <String>{
@@ -104,14 +105,29 @@ Future<void> _map(WidgetTester tester, TownBuild b, String name) async {
       Rect.fromLTWH((r.x + ox - pad) * _ts, (r.y + oy - pad) * _ts, w, h),
       Paint()..color = const Color(0xFF4E8A3C));
   AnimalLayer().draw(c, town, 12.0, 0, (id) => imgs[id],
-      asleep: false, text: (s, x, y, col, size) => _text(c, s, x, y, col, size));
-  await tester.runAsync(() async {
+      asleep: false,
+      selectedHouse: selectedHouse,
+      text: (s, x, y, col, size) => _text(c, s, x, y, col, size));
+  return (await tester.runAsync(() async {
     final img = await rec.endRecording()
         .toImage((w * scale).round(), (h * scale).round());
-    final png = await img.toByteData(format: ui.ImageByteFormat.png);
-    Directory(_out).createSync(recursive: true);
-    File('$_out/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
-  });
+    if (write) {
+      final png = await img.toByteData(format: ui.ImageByteFormat.png);
+      Directory(_out).createSync(recursive: true);
+      File('$_out/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
+    }
+    return img;
+  }))!;
+}
+
+Future<int> _whites(WidgetTester tester, ui.Image im) async {
+  final px = (await tester.runAsync(
+      () => im.toByteData(format: ui.ImageByteFormat.rawRgba)))!;
+  var n = 0;
+  for (var i = 0; i < px.lengthInBytes; i += 4) {
+    if (px.getUint32(i) == 0xFFFFFFFF) n++;
+  }
+  return n;
 }
 
 Future<GameSprites?> _sprites(WidgetTester tester) => tester.runAsync(() async {
@@ -141,6 +157,24 @@ void main() {
   testWidgets('preview: barn with a cow and sheep', (tester) async {
     if (!_on) return;
     await _map(tester, _barn(4, 4), 'barn');
+  });
+
+  testWidgets('preview: barn targeted (white outline)', (tester) async {
+    if (!_on) return;
+    await _map(tester, _barn(4, 4), 'barn_targeted', selectedHouse: 'e0');
+  });
+
+  // controls.md § Cursor de acción: the targeted barn gets a white 1 px
+  // silhouette outline instead of the green tile box.
+  testWidgets('the targeted barn house is outlined in white', (tester) async {
+    final plain = await _map(tester, _barn(4, 4), 'x', write: false);
+    final sel = await _map(tester, _barn(4, 4), 'x',
+        selectedHouse: 'e0', write: false);
+    final other = await _map(tester, _barn(4, 4), 'x',
+        selectedHouse: 'g9', write: false);
+    final base = await _whites(tester, plain);
+    expect(await _whites(tester, sel), greaterThan(base + 40));
+    expect(await _whites(tester, other), base);
   });
 
   testWidgets('preview: coop panel', (tester) async {
