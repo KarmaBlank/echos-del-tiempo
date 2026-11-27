@@ -313,9 +313,14 @@ class TownPlan {
             p,
             water
                 ? Tile.water
-                : b.kind == BuildKind.casa
+                : b.kind == BuildKind.casa || b.kind == BuildKind.home
                     ? Tile.house
                     : Tile.soil);
+      }
+      if (b.kind == BuildKind.home) {
+        // Player house (player_house.md § 1): its door, bottom middle.
+        final r = b.bounds;
+        put(TownRect(r.x + r.w ~/ 2, r.bottom - 1, 1, 1), Tile.homeDoor);
       }
       if (!water) continue;
       bool inLake(int x, int y) => b.contains(x, y);

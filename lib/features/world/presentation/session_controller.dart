@@ -41,6 +41,7 @@ import '../../../game_engine/rules/mine_work_rules.dart';
 import '../../../game_engine/data/mine_catalog.dart';
 import '../../../game_engine/rules/mining_rules.dart';
 import '../../../game_engine/rules/shop_interior_rules.dart';
+import '../../../game_engine/rules/home_interior_rules.dart';
 import '../../../game_engine/data/smithing_catalog.dart'
     show kMineNpcLines, kMineLoreLines;
 import '../../../game_engine/rules/eco_portal_rules.dart';
@@ -1418,6 +1419,31 @@ class SessionController extends StateNotifier<SessionView?> {
     return _apply(TravelAction(ShopInteriorRules.isShop(s.place)
         ? kPueblo
         : ShopInteriorRules.place));
+  }
+
+  /// Enters the player house from town, or leaves it back to town
+  /// (player_house.md § 2).
+  bool travelHome() {
+    final s = _s;
+    if (s == null || cannotTravel != null) return false;
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(
+        HomeInteriorRules.isHome(s.place) ? kPueblo : HomeInteriorRules.place));
+  }
+
+  /// The local player is lying in a bed of the house (§ 3).
+  bool get inBed => _s?.players[localId]?.inBed ?? false;
+
+  /// Gets into the bed in front (DORMIR) or out of it (§ 3).
+  bool toggleSleep() => _apply(SleepAction(!inBed));
+
+  /// "Esperando a los demás (x/n)" while in bed and others are not
+  /// (§ 4); `null` otherwise.
+  String? get sleepWaitText {
+    final w = _s?.sleepWait;
+    if (w == null || !inBed) return null;
+    return strings.t('ui.world.home.waiting', {'x': w.$1, 'n': w.$2});
   }
 
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
@@ -3861,6 +3887,10 @@ class SessionController extends StateNotifier<SessionView?> {
           'Nivel ${b.level}'
               '${b.resident == null ? ' · vacía' : ' · vive ${biomeNpcName(b.resident!)}'}'
         ),
+        BuildKind.home => (
+            strings.t('ui.town.home.name'),
+            strings.t('ui.town.home.info')
+          ),
         BuildKind.gallinero || BuildKind.establo => (
             strings.t('ui.town.ranch.${b.kind.name}.name'),
             strings.t('ui.town.ranch.sign', {
@@ -4363,6 +4393,26 @@ class SessionController extends StateNotifier<SessionView?> {
               () => ShopInteriorRules.isShop(_s?.place)
                   ? (WorldPrompt.poi, strings.t('ui.world.shop.prompt_exit'))
                   : (WorldPrompt.shop, null));
+        case TownSpot.home:
+          add(at(ActionTargetKind.travel), () => travelHome(),
+              () => (
+                    WorldPrompt.poi,
+                    strings.t(HomeInteriorRules.isHome(_s?.place)
+                        ? 'ui.world.home.prompt_exit'
+                        : 'ui.world.home.prompt_enter')
+                  ));
+        case TownSpot.bed:
+          add(at(ActionTargetKind.shop), () => toggleSleep(), () {
+            final night = SkyRules.isNight(town.sky);
+            return (
+              WorldPrompt.poi,
+              strings.t(inBed
+                  ? 'ui.world.home.prompt_wake'
+                  : night
+                      ? 'ui.world.home.prompt_sleep_morning'
+                      : 'ui.world.home.prompt_sleep_night')
+            );
+          });
         case TownSpot.trader:
           add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.trader),
               () => (WorldPrompt.trader, null));
@@ -6180,6 +6230,10 @@ class SessionController extends StateNotifier<SessionView?> {
           if (_messages.length > maxMessages) _messages.removeAt(0);
         case LightningEvent():
           fishSfx?.call(Sfx.impactBolt);
+        case SleptEvent(:final toMorning):
+          addLocalNotice(strings.t(toMorning
+              ? 'ui.world.home.slept_morning'
+              : 'ui.world.home.slept_night'));
         case FishAutoStoppedEvent(:final playerId, :final reason, :final caught)
             when playerId == localId:
           _autoFish = false;

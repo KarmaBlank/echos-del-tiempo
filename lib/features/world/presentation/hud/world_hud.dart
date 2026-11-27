@@ -486,6 +486,18 @@ class WorldHud extends StatelessWidget {
                 ],
               ),
             ),
+            // In bed waiting for the others (player_house.md § 4).
+            if (controller.sleepWaitText case final wait?)
+              Positioned(
+                top: _gap + 96,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: DsToast(wait,
+                      key: const ValueKey('home-sleep-wait'),
+                      closeFocusable: false),
+                ),
+              ),
             Positioned(
               left: _gap,
               bottom: _gap,

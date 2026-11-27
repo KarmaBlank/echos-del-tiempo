@@ -934,5 +934,9 @@
   "ui.town.ranch.machine.empty": "Buy a machine",
   "ui.town.ranch.machine.why.none": "You need the machine",
   "ui.town.ranch.machine.why.level": "You need Farmer level {n}",
-  "ui.town.ranch.machine.why.nothing": "Nothing to process"
+  "ui.town.ranch.machine.why.nothing": "Nothing to process",
+  "ui.town.home.name": "OWN HOUSE",
+  "ui.town.home.info": "Go in and sleep until morning or nightfall",
+  "ui.town.home.only_one": "The town already has your house",
+  "ui.town.home.cost": "₵{cost}"
 }

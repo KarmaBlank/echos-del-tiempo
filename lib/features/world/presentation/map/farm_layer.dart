@@ -443,6 +443,13 @@ class MapFarmLayer {
     }
 
     for (final b in town.builds) {
+      if (b.kind == BuildKind.home) {
+        // Player house (player_house.md § 1): its own sprite.
+        final bb = b.bounds;
+        final cx = (bb.x + ox + bb.w / 2) * ts, bottom = (bb.bottom + oy) * ts;
+        img('home_exterior', cx, bottom);
+        continue;
+      }
       if (b.kind == BuildKind.casa) {
         // Casa de habitante (town_editor.md § 3.4): sprite por nivel.
         final bb = b.bounds;

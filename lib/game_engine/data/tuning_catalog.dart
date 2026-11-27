@@ -321,6 +321,9 @@ const Map<String, TuningDef> kTuningDefaults = {
     'stallSlots': 6,
     // Counters inside the shop house (player_shop.md § 6), at most 4.
     'shopCounters': 4,
+    // Player house (player_house.md § 1): gold and how many per town.
+    'playerHouseGold': 1500,
+    'playerHouseMax': 1,
     'stallMaxMarkup': 3,
     'stallVisitors': 3,
     'stallBaseChance': 0.6,

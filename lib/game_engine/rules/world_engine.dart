@@ -17,6 +17,7 @@ import 'renown_rules.dart';
 import 'world_event_rules.dart';
 import 'mining_rules.dart';
 import 'shop_interior_rules.dart';
+import 'home_interior_rules.dart';
 import 'town_plan.dart';
 import 'zone_rules.dart';
 
@@ -144,7 +145,45 @@ class WorldEngine {
       SessionEngine.guardRule('room',
           () => op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split)));
     }
+    if (split) SessionEngine.guardRule('sleep', () => _sleep(w, op));
     return op.finish();
+  }
+
+  /// Beds across rooms (player_house.md § 4): the time skips only when
+  /// every human of the world is in bed; meanwhile each room shows the
+  /// wait count. The skip runs the town room's normal step.
+  void _sleep(SessionWorld w, _W op) {
+    final humans = [
+      for (final r in w.rooms.values)
+        for (final p in r.players.values)
+          if (!p.isCompanion) p
+    ];
+    final (x, n) = HomeInteriorRules.sleepers(humans);
+    final wait = x == 0 ? null : (x, n);
+    if (n > 0 && x == n) {
+      final town = w.rooms[kTownRoom];
+      if (town == null) return;
+      op.put(kTownRoom,
+          engine.fastForward(town, HomeInteriorRules.skipSeconds(town.town.sky)),
+          also: [for (final p in humans) p.id]);
+      for (final k in [...w.rooms.keys]) {
+        final r = w.rooms[k]!;
+        if (r.sleepWait == null && r.players.values.every((p) => !p.inBed)) {
+          continue;
+        }
+        final c = r.copy()..sleepWait = null;
+        for (final p in c.players.values) {
+          p.inBed = false;
+        }
+        w.rooms[k] = c;
+      }
+      return;
+    }
+    for (final k in [...w.rooms.keys]) {
+      final r = w.rooms[k]!;
+      if (r.sleepWait == wait) continue;
+      w.rooms[k] = r.copy()..sleepWait = wait;
+    }
   }
 
   /// El pueblo para guardar el mundo: con las mazmorras de zona que
@@ -398,7 +437,10 @@ class _W {
         s.run != null ||
         p.isCompanion ||
         SessionWorld.isDungeon(key) ||
-        !(ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)
+        !(HomeInteriorRules.isHome(place) || HomeInteriorRules.isHome(s.place)
+            ? HomeInteriorRules.canTravel(s.place, place) &&
+                HomeInteriorRules.housesOf(s.town).isNotEmpty
+            : ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)
             ? ShopInteriorRules.canTravel(s.place, place)
             : MiningRules.isMine(place) || MiningRules.isMine(s.place)
             ? MiningRules.canTravel(s.place, place)
@@ -426,6 +468,14 @@ class _W {
       }
       if (ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)) {
         arrive = ShopInteriorRules.safeLanding(place, s.town, arrive!);
+      }
+      // Into / out of the player house (player_house.md § 2).
+      if (HomeInteriorRules.isHome(place)) arrive = HomeInteriorRules.arrival;
+      if (HomeInteriorRules.isHome(s.place)) {
+        arrive = HomeInteriorRules.townFront(s.town);
+      }
+      if (HomeInteriorRules.isHome(place) || HomeInteriorRules.isHome(s.place)) {
+        arrive = HomeInteriorRules.safeLanding(place, s.town, arrive!);
       }
       if ((fromMine != null || arrive != null) &&
           w.rooms[to]!.players.containsKey(p.id)) {

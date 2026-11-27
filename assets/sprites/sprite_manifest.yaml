@@ -693,6 +693,10 @@ items:
   # precio. Las pinta tool/export_shop_interior_sprites.dart.
   vida_shop_room: { idle: items/vida_shop_room.png, size: [256, 176] }
   vida_shop_tag: { idle: items/vida_shop_tag.png, size: [5, 6] }
+  # Casa propia (player_house.md): el exterior de 4 × 3 tiles y la sala
+  # entera de 12 × 8 tiles. Las pinta tool/export_player_house_sprites.dart.
+  vida_home_exterior: { idle: items/vida_home_exterior.png, size: [64, 48] }
+  vida_home_room: { idle: items/vida_home_room.png, size: [192, 128] }
   vida_shop_table_l_0: { idle: items/vida_shop_table_l_0.png, size: [16, 22] }
   vida_shop_table_l_1: { idle: items/vida_shop_table_l_1.png, size: [16, 22] }
   vida_shop_table_l_2: { idle: items/vida_shop_table_l_2.png, size: [16, 22] }

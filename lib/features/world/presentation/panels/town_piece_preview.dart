@@ -31,6 +31,8 @@ class TownPiecePreview extends StatelessWidget {
         ? LifeIcon(decor.sprite, LifeIconKind.herramienta, size: size)
         : def?.kind == BuildKind.casa
         ? LifeIcon('casa_1', LifeIconKind.herramienta, size: size)
+        : def?.kind == BuildKind.home
+        ? LifeIcon('home_exterior', LifeIconKind.herramienta, size: size)
         : CustomPaint(size: Size.square(size), painter: _PiecePainter(id, def));
     // Never paints outside its box (town_editor.md § 1.2).
     return SizedBox.square(

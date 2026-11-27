@@ -199,6 +199,7 @@ abstract final class ActionJson {
           },
         // Protocolo 60 (v0.37.0): Llama errante.
         WispAction() => {'t': 'wisp', if (a.on) 'on': true},
+        SleepAction() => {'t': 'sleep', if (a.on) 'on': true},
         RaftAction() => {'t': 'raft', if (a.on) 'on': true},
         SellFishAction() => {
             't': 'fSell',
@@ -532,6 +533,8 @@ abstract final class ActionJson {
 
       case 'wisp':
         return WispAction(j['on'] == true);
+      case 'sleep':
+        return SleepAction(j['on'] == true);
       case 'raft':
         return RaftAction(j['on'] == true);
       case 'fSell':

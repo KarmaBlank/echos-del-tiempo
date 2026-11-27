@@ -247,7 +247,13 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`farm_f*`), the machines in `at` (`quesera`, `mayonesera`) and the
 /// processed products in `ag`, `FarmShopOp.processGoods` and
 /// `SmithOp.animalForge`; a 100 peer would drop them.
-const kProtocolVersion = 101;
+/// 102–104: taken by other branches (lightning rod, kitchen, town paths,
+/// town drops).
+/// 105: player house (player_house.md): `player_house` builds (`home`
+/// kind), the `home` place, `SleepAction` (`sleep`), the player's `bd`
+/// (in bed), the room's `slp` wait count and `SleptEvent` (`slept`); a
+/// 101 peer would drop them.
+const kProtocolVersion = 105;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

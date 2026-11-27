@@ -83,6 +83,7 @@ class SessionPlayer {
     this.raftEpoch = 0,
     this.stepX = 0,
     this.stepY = 0,
+    this.inBed = false,
   })  : trail = trail ?? const [],
         stashAcks = stashAcks ?? {};
 
@@ -109,6 +110,10 @@ class SessionPlayer {
   /// the player on the water with; `0` = on foot. Any other teleport
   /// bumps the epoch, so the raft is left behind on its own.
   int raftEpoch;
+
+  /// Lying in a bed of the player house (`bd`, player_house.md § 3): the
+  /// host skips the time once every human is in bed.
+  bool inBed;
 
   /// Steering a raft right now.
   bool get rafting => raftEpoch != 0 && raftEpoch == epoch;
@@ -207,6 +212,7 @@ class SessionPlayer {
         raftEpoch: raftEpoch,
         stepX: stepX,
         stepY: stepY,
+        inBed: inBed,
       );
 }
 
@@ -756,6 +762,7 @@ class GameSession {
     this.town = const TownState(),
     this.place,
     this.townEditor,
+    this.sleepWait,
     this.ownerId,
     this.instance = '',
     List<AwayPlayer>? away,
@@ -885,6 +892,11 @@ class GameSession {
   /// el candado lo tiene el anfitrión; uno a la vez. `null` = nadie.
   String? townEditor;
 
+  /// Players in bed and humans in the whole world (`slp`,
+  /// player_house.md § 4): "esperando a los demás (x/n)". Set by the host;
+  /// `null` = nobody in bed.
+  (int, int)? sleepWait;
+
   /// El dueño del mundo (free_movement.md § 2): el primer jugador de la
   /// sala, aunque esté en otra instancia. `null` = el primer humano de
   /// esta instancia. Viaja (`own`) para que la UI oculte lo del dueño.
@@ -997,6 +1009,7 @@ class GameSession {
         town: town,
         place: place,
         townEditor: townEditor,
+        sleepWait: sleepWait,
         ownerId: ownerId,
         instance: instance,
         away: away,

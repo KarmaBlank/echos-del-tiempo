@@ -934,5 +934,9 @@
   "ui.town.ranch.machine.empty": "Comprá una máquina",
   "ui.town.ranch.machine.why.none": "Te falta la máquina",
   "ui.town.ranch.machine.why.level": "Necesitás Granjero nivel {n}",
-  "ui.town.ranch.machine.why.nothing": "No tenés nada para procesar"
+  "ui.town.ranch.machine.why.nothing": "No tenés nada para procesar",
+  "ui.town.home.name": "CASA PROPIA",
+  "ui.town.home.info": "Entrá y dormí hasta la mañana o hasta la noche",
+  "ui.town.home.only_one": "Ya hay una casa propia en el pueblo",
+  "ui.town.home.cost": "₵{cost}"
 }

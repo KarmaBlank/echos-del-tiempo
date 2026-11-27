@@ -60,6 +60,8 @@ import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../../../game_engine/rules/shop_interior_rules.dart';
 import 'shop_interior_layer.dart';
+import '../../../../game_engine/rules/home_interior_rules.dart';
+import 'home_interior_layer.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -217,6 +219,9 @@ class MapGame extends Game {
 
   /// Shop interior room and counters (player_shop.md § 6).
   late final shopRoom = ShopInteriorLayer(sprites.lifeIcon);
+
+  /// Player house interior room (player_house.md § 2).
+  late final homeRoom = HomeInteriorLayer(sprites.lifeIcon);
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -1219,6 +1224,8 @@ class MapGame extends Game {
         shopRoom.drawCounters(c, s.players, controller.strings.t('ui.world.shop.free'),
             (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900));
       }
+      // Player house interior (player_house.md § 2).
+      if (HomeInteriorRules.isHome(map.place)) homeRoom.drawRoom(c);
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
         farm.drawPlots(c, s.town, worldView, t);

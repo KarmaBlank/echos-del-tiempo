@@ -1484,6 +1484,8 @@ const _farmLabels = {
 const _townLabels = {
   'stallSlots': 'Puesto: lugares para publicar',
   'shopCounters': 'Tienda: mostradores adentro',
+  'playerHouseGold': 'Casa propia: oro',
+  'playerHouseMax': 'Casa propia: cuántas por pueblo',
   'stallMaxMarkup': 'Puesto: precio máximo × referencia',
   'stallVisitors': 'Puesto: visitantes por día',
   'stallBaseChance': 'Puesto: chance de compra a precio de referencia',

@@ -391,6 +391,14 @@ class LightningEvent extends SessionEvent {
   const LightningEvent(this.tx, this.ty, {this.lost = false});
 }
 
+/// `slept`: everyone slept in the player house and the world skipped
+/// ahead (player_house.md § 4); [toMorning] = woke up at dawn, else at
+/// nightfall.
+class SleptEvent extends SessionEvent {
+  final bool toMorning;
+  const SleptEvent({this.toMorning = true});
+}
+
 /// `fAutoOff`: [playerId]'s auto-fishing stopped ([reason]) after
 /// [caught] fish (fishing.md § 6).
 class FishAutoStoppedEvent extends SessionEvent {

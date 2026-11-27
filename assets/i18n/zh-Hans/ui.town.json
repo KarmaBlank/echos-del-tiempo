@@ -1117,5 +1117,9 @@
   "ui.town.ranch.machine.empty": "购买一台机器",
   "ui.town.ranch.machine.why.none": "你需要这台机器",
   "ui.town.ranch.machine.why.level": "需要农夫等级 {n}",
-  "ui.town.ranch.machine.why.nothing": "没有可加工的物品"
+  "ui.town.ranch.machine.why.nothing": "没有可加工的物品",
+  "ui.town.home.name": "自家小屋",
+  "ui.town.home.info": "进屋睡到早上或天黑",
+  "ui.town.home.only_one": "城镇里已经有你的家了",
+  "ui.town.home.cost": "₵{cost}"
 }
