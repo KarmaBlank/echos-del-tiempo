@@ -81,7 +81,7 @@ abstract final class DsColors {
 
   /// The 1 px silhouette outline of the E / click target on the map
   /// (controls.md § Cursor de acción).
-  static const targetOutline = Color(0xFFFFFFFF);
+  static const targetOutline = ProtoColors.white;
 
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
