@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/ds_tokens.dart';
 import 'map_themes.dart';
 
 const _ts = 16.0;
@@ -35,7 +36,7 @@ void drawTileTarget(Canvas c, Iterable<(int, int)> tiles, bool ok,
 
 final _outlinePaint = Paint()
   ..filterQuality = FilterQuality.none
-  ..colorFilter = const ColorFilter.mode(Color(0xFFFFFFFF), BlendMode.srcIn);
+  ..colorFilter = const ColorFilter.mode(DsColors.targetOutline, BlendMode.srcIn);
 
 /// The selected NPC (controls.md § Cursor de acción): its silhouette
 /// drawn white 1 px off in the 4 directions, behind the sprite drawn

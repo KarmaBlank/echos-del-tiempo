@@ -7,6 +7,7 @@ import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/animal_rules.dart';
 import '../../../../game_engine/rules/autotile.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import 'tile_target.dart';
 
 /// Coops and barns on the town map (docs/specs/animals.md § 3–4): the
 /// fence of the yard (the town's autotile fence pieces), the house, the
@@ -22,11 +23,13 @@ class AnimalLayer {
       {required bool asleep,
       void Function(String text, double x, double y, Color color, double size)?
           text,
-      ({String build, int uid})? hover}) {
+      ({String build, int uid})? hover,
+      String? selectedHouse,
+      ({String build, int uid})? selectedAnimal}) {
     final (ox, oy) = town.origin;
     final paint = SpriteCatalog.pixelPaint();
     void img(ui.Image im, double left, double top,
-        {bool flip = false, double scale = 1}) {
+        {bool flip = false, double scale = 1, bool outline = false}) {
       final w = im.width * scale, h = im.height * scale;
       final dst = Rect.fromLTWH(left.roundToDouble(), top.roundToDouble(), w, h);
       if (flip) {
@@ -34,6 +37,8 @@ class AnimalLayer {
         c.translate(dst.center.dx * 2, 0);
         c.scale(-1, 1);
       }
+      // The E / click target: white 1 px silhouette (controls.md).
+      if (outline) drawSpriteOutline(c, im, dst);
       c.drawImageRect(im, Rect.fromLTWH(0, 0, im.width.toDouble(),
           im.height.toDouble()), dst, paint);
       if (flip) c.restore();
@@ -59,7 +64,8 @@ class AnimalLayer {
       final house = AnimalRules.houseOf(b);
       if (sprite(home.sprite) case final im?) {
         img(im, (house.x + ox + house.w / 2) * ts - im.width / 2,
-            (house.bottom + oy) * ts - im.height);
+            (house.bottom + oy) * ts - im.height,
+            outline: selectedHouse == b.id);
       }
       if (asleep) {
         if (b.animals.isNotEmpty && text != null) {
@@ -86,7 +92,11 @@ class AnimalLayer {
         final cx = (pos.x + ox) * ts, bottom = (pos.y + oy) * ts + 6;
         if (im != null) {
           final bob = pos.walk ? 0.0 : (math.sin(t / 400 + a.uid) > 0.8 ? 1.0 : 0.0);
-          img(im, cx - im.width / 2, bottom - im.height + bob, flip: pos.dx < 0);
+          img(im, cx - im.width / 2, bottom - im.height + bob,
+              flip: pos.dx < 0,
+              outline: selectedAnimal != null &&
+                  selectedAnimal.build == b.id &&
+                  selectedAnimal.uid == a.uid);
           if (hover != null && hover.build == b.id && hover.uid == a.uid) {
             c.drawRect(
                 Rect.fromLTWH(cx - im.width / 2 - 1, bottom - im.height - 1,
