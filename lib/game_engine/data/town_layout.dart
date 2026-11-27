@@ -68,6 +68,15 @@ enum TownSpot {
 
   /// A bed inside the player house (player_house.md § 3): E offers DORMIR.
   bed,
+
+  /// The STASH CHEST of the house (player_house.md § 8.2): opens the stash.
+  homeStash,
+
+  /// The kitchen station of the house: opens the cooking.
+  homeKitchen,
+
+  /// A weapon rack of the house: pick the weapons it shows.
+  homeRack,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su

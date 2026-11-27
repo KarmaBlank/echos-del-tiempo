@@ -764,8 +764,9 @@ class MapGame extends Game {
     final editing = controller.editingTown;
     // Edición del pueblo: el personaje se queda quieto y WASD mueve la
     // cámara.
+    final still = editing || controller.editingHome;
     controller.updateLocal(
-        math.min(0.05, dt), editing ? 0 : ix, editing ? 0 : iy);
+        math.min(0.05, dt), still ? 0 : ix, still ? 0 : iy);
     if (!editing && _pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
     if (view != null) {
@@ -1225,7 +1226,15 @@ class MapGame extends Game {
             (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900));
       }
       // Player house interior (player_house.md § 2).
-      if (HomeInteriorRules.isHome(map.place)) homeRoom.drawRoom(c);
+      if (HomeInteriorRules.isHome(map.place)) {
+        homeRoom.drawRoom(c,
+            layout: HomeInteriorRules.layoutOfMap(map),
+            sky: s.town.sky,
+            weaponShape: controller.homeWeaponShape,
+            stashLabel: controller.strings.t('ui.town.home.stash_tag'),
+            ghost: controller.homeGhost,
+            selected: controller.homeEdit?.selected);
+      }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
         farm.drawPlots(c, s.town, worldView, t);

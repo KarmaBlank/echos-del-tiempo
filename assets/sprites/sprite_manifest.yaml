@@ -696,7 +696,31 @@ items:
   # Casa propia (player_house.md): el exterior de 4 × 3 tiles y la sala
   # entera de 12 × 8 tiles. Las pinta tool/export_player_house_sprites.dart.
   vida_home_exterior: { idle: items/vida_home_exterior.png, size: [64, 48] }
-  vida_home_room: { idle: items/vida_home_room.png, size: [192, 128] }
+  vida_home_armor_stand: { idle: items/vida_home_armor_stand.png, size: [16, 20] }
+  vida_home_bed_basic: { idle: items/vida_home_bed_basic.png, size: [16, 32] }
+  vida_home_bed_canopy: { idle: items/vida_home_bed_canopy.png, size: [32, 36] }
+  vida_home_bed_quilted: { idle: items/vida_home_bed_quilted.png, size: [16, 32] }
+  vida_home_bookshelf: { idle: items/vida_home_bookshelf.png, size: [32, 20] }
+  vida_home_candelabra: { idle: items/vida_home_candelabra.png, size: [16, 20] }
+  vida_home_floor_carpet: { idle: items/vida_home_floor_carpet.png, size: [16, 16] }
+  vida_home_floor_planks: { idle: items/vida_home_floor_planks.png, size: [16, 16] }
+  vida_home_floor_stone: { idle: items/vida_home_floor_stone.png, size: [16, 16] }
+  vida_home_floor_tiles: { idle: items/vida_home_floor_tiles.png, size: [16, 16] }
+  vida_home_kitchen: { idle: items/vida_home_kitchen.png, size: [32, 16] }
+  vida_home_picture_clock: { idle: items/vida_home_picture_clock.png, size: [32, 16] }
+  vida_home_picture_meadow: { idle: items/vida_home_picture_meadow.png, size: [16, 16] }
+  vida_home_picture_portrait: { idle: items/vida_home_picture_portrait.png, size: [16, 16] }
+  vida_home_plant: { idle: items/vida_home_plant.png, size: [16, 20] }
+  vida_home_rug: { idle: items/vida_home_rug.png, size: [48, 32] }
+  vida_home_stash_chest: { idle: items/vida_home_stash_chest.png, size: [16, 16] }
+  vida_home_table: { idle: items/vida_home_table.png, size: [32, 16] }
+  vida_home_wall_brick: { idle: items/vida_home_wall_brick.png, size: [16, 16] }
+  vida_home_wall_plaster: { idle: items/vida_home_wall_plaster.png, size: [16, 16] }
+  vida_home_wall_stone: { idle: items/vida_home_wall_stone.png, size: [16, 16] }
+  vida_home_wall_wood: { idle: items/vida_home_wall_wood.png, size: [16, 16] }
+  vida_home_weapon_rack: { idle: items/vida_home_weapon_rack.png, size: [32, 16] }
+  vida_home_window: { idle: items/vida_home_window.png, size: [16, 16] }
+  vida_home_window_wide: { idle: items/vida_home_window_wide.png, size: [32, 16] }
   vida_shop_table_l_0: { idle: items/vida_shop_table_l_0.png, size: [16, 22] }
   vida_shop_table_l_1: { idle: items/vida_shop_table_l_1.png, size: [16, 22] }
   vida_shop_table_l_2: { idle: items/vida_shop_table_l_2.png, size: [16, 22] }

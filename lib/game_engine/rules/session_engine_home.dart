@@ -16,7 +16,8 @@ extension _HomeOp on _Op {
     if (!HomeInteriorRules.isHome(s.place) ||
         s.mode != SessionMode.lobby ||
         p.inBed ||
-        HomeInteriorRules.bedNear(p.x, p.y) == null) {
+        HomeInteriorRules.bedNear(HomeInteriorRules.layoutOf(s), p.x, p.y) ==
+            null) {
       return false;
     }
     p.inBed = true;
@@ -32,7 +33,9 @@ extension _HomeOp on _Op {
     final home = HomeInteriorRules.isHome(s.place);
     for (final p in players) {
       if (!p.inBed) continue;
-      if (!home || HomeInteriorRules.bedNear(p.x, p.y) == null) {
+      if (!home ||
+          HomeInteriorRules.bedNear(HomeInteriorRules.layoutOf(s), p.x, p.y) ==
+              null) {
         p.inBed = false;
       }
     }
@@ -72,5 +75,42 @@ extension _HomeOp on _Op {
     say(toMorning
         ? 'Durmieron hasta la mañana.'
         : 'Descansaron hasta que cayó la noche.');
+  }
+}
+
+extension _HomeEditOp on _Op {
+  /// EDITAR CASA (player_house.md § 8): only inside the house, in the
+  /// lobby, and only the player whose layout the room shows.
+  bool homeEdit(SessionPlayer p, HomeEditAction a) {
+    if (p.isCompanion ||
+        !HomeInteriorRules.isHome(s.place) ||
+        s.mode != SessionMode.lobby ||
+        HomeInteriorRules.layoutOwner(s) != p.id) {
+      return false;
+    }
+    final prof = p.profile;
+    final PlayerProfile? next = switch (a.op) {
+      HomeOp.place => a.id == null || a.x == null || a.y == null
+          ? null
+          : HomeInteriorRules.placePiece(prof, s.town, a.id!, a.x!, a.y!)
+              .profile,
+      HomeOp.move => a.uid == null || a.x == null || a.y == null
+          ? null
+          : HomeInteriorRules.move(prof, a.uid!, a.x!, a.y!),
+      HomeOp.remove =>
+        a.uid == null ? null : HomeInteriorRules.remove(prof, a.uid!),
+      HomeOp.surface => a.id == null
+          ? null
+          : HomeInteriorRules.surface(prof, s.town, a.id!).profile,
+      HomeOp.paint => a.n == null ? null : HomeInteriorRules.paint(prof, a.n!),
+      HomeOp.rack => a.uid == null
+          ? null
+          : HomeInteriorRules.rack(prof, a.uid!, a.weapons),
+    };
+    if (next == null) return false;
+    _profileChange(p, next);
+    // Whoever lay in a bed that moved or went away gets up.
+    leaveBedsOutside();
+    return true;
   }
 }

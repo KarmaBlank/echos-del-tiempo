@@ -251,8 +251,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// town drops).
 /// 105: player house (player_house.md): `player_house` builds (`home`
 /// kind), the `home` place, `SleepAction` (`sleep`), the player's `bd`
-/// (in bed), the room's `slp` wait count and `SleptEvent` (`slept`); a
-/// 101 peer would drop them.
+/// (in bed), the room's `slp` wait count, `SleptEvent` (`slept`), the
+/// EDITAR CASA action `HomeEditAction` (`hEd`) and the profile's house
+/// layout `hl`; a 101 peer would drop them.
 const kProtocolVersion = 105;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en

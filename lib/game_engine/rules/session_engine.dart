@@ -595,7 +595,9 @@ class SessionEngine {
       // Shop interior (player_shop.md § 6).
       if (ShopInteriorRules.isShop(s.place)) return ShopInteriorRules.map();
       // Player house interior (player_house.md § 2).
-      if (HomeInteriorRules.isHome(s.place)) return HomeInteriorRules.map();
+      if (HomeInteriorRules.isHome(s.place)) {
+        return HomeInteriorRules.map(HomeInteriorRules.layoutOf(s));
+      }
       // Mine (mining_smithing.md § 1): a calm lobby map, no enemies.
       if (MiningRules.level(s.place, worldId: s.worldId) case final lvl?) {
         return MiningRules.mapOf(lvl, s.town.mine(s.place!));
@@ -1548,6 +1550,9 @@ class _Op {
 
       case SleepAction(:final on):
         return sleep(p, on);
+
+      case HomeEditAction():
+        return homeEdit(p, a);
 
       case RaftAction(:final on):
         return _raft(p, on);

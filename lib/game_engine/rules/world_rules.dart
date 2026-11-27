@@ -4,6 +4,7 @@ import '../models/game_map.dart';
 import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import 'map_generator.dart';
+import '../data/home_furniture_catalog.dart';
 import 'home_interior_rules.dart';
 import 'shop_interior_rules.dart';
 
@@ -138,7 +139,15 @@ abstract final class WorldRules {
     // Inside the player house (player_house.md § 3): beds and the door.
     if (HomeInteriorRules.isHome(map?.place)) {
       if (HomeInteriorRules.nearDoor(x, y)) return TownSpot.home;
-      return HomeInteriorRules.bedNear(x, y) == null ? null : TownSpot.bed;
+      final l = HomeInteriorRules.layoutOfMap(map);
+      return switch (furniture(
+          HomeInteriorRules.pieceNear(l, x, y)?.id ?? '')?.kind) {
+        FurnitureKind.bed => TownSpot.bed,
+        FurnitureKind.chest => TownSpot.homeStash,
+        FurnitureKind.kitchen => TownSpot.homeKitchen,
+        FurnitureKind.rack => TownSpot.homeRack,
+        _ => null,
+      };
     }
     // Exterior de bioma: sin los lugares del pueblo.
     if (map?.place == null) {

@@ -62,6 +62,13 @@ import '../../../game_engine/rules/npc_camp_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import '../../../game_engine/rules/quest_track_rules.dart';
 import 'town_edit.dart';
+import 'home_edit.dart';
+import 'map/home_interior_layer.dart' show HomeGhost;
+import '../../../core/procedural/item_icons.dart' show ItemIconImages;
+import '../../../game_engine/data/home_furniture_catalog.dart';
+import '../../../game_engine/data/weapons_catalog.dart' show kWeapons;
+import '../../../game_engine/models/home_layout.dart';
+import '../../../game_engine/rules/life_craft_rules.dart' show kLifeMaterials;
 
 export 'town_edit.dart';
 import '../../../game_engine/serialization/json_read.dart';
@@ -1444,6 +1451,280 @@ class SessionController extends StateNotifier<SessionView?> {
     final w = _s?.sleepWait;
     if (w == null || !inBed) return null;
     return strings.t('ui.world.home.waiting', {'x': w.$1, 'n': w.$2});
+  }
+
+  // ---- EDITAR CASA (player_house.md § 8) ----
+
+  HomeEdit? _homeEdit;
+
+  /// The house edit in progress (`null` = playing).
+  HomeEdit? get homeEdit => _homeEdit != null &&
+          HomeInteriorRules.isHome(_s?.place) &&
+          _s?.mode == SessionMode.lobby
+      ? _homeEdit
+      : null;
+
+  bool get editingHome => homeEdit != null;
+
+  /// The layout the room shows (its owner's, § 8.1).
+  HomeLayout get homeLayout {
+    final s = _s;
+    return s == null ? kDefaultHomeLayout : HomeInteriorRules.layoutOf(s);
+  }
+
+  /// The local player's profile (for costs and gates).
+  PlayerProfile? get _homeMe => _s?.players[localId]?.profile;
+
+  /// Why EDITAR CASA is grey (`null` = it can open): only the player
+  /// whose layout the room shows, and only out of fights and votes.
+  String? get cannotEditHome {
+    final s = _s;
+    if (s == null || !HomeInteriorRules.isHome(s.place)) {
+      return strings.t('ui.town.home.edit.busy');
+    }
+    if (s.mode != SessionMode.lobby) return strings.t('ui.town.home.edit.busy');
+    final o = HomeInteriorRules.layoutOwner(s);
+    if (o != localId) {
+      return strings.t(
+          'ui.town.home.edit.not_owner', {'name': s.players[o]?.name ?? '?'});
+    }
+    return null;
+  }
+
+  bool enterHomeEdit() {
+    if (cannotEditHome != null) return false;
+    _panel = null;
+    _homeEdit = HomeEdit();
+    stopFishing();
+    _emit();
+    return true;
+  }
+
+  void exitHomeEdit() {
+    if (_homeEdit == null) return;
+    _homeEdit = null;
+    _emit();
+  }
+
+  /// Esc in the house edit: drop the piece, then the selection, then
+  /// close the palette, then leave.
+  void homeEditBack() {
+    final e = _homeEdit;
+    if (e == null) return;
+    if (e.step != HomeEditStep.browse || e.selected != null) {
+      e.reset();
+    } else if (e.paletteOpen) {
+      e.paletteOpen = false;
+    } else {
+      _homeEdit = null;
+    }
+    _emit();
+  }
+
+  void homeEditTogglePalette() {
+    final e = _homeEdit;
+    if (e == null) return;
+    e.paletteOpen = !e.paletteOpen;
+    _emit();
+  }
+
+  void homeEditFilter(String f) {
+    final e = _homeEdit;
+    if (e == null) return;
+    e.filter = f;
+    _emit();
+  }
+
+  void homeEditPick(String? id) {
+    final e = _homeEdit;
+    if (e == null) return;
+    e.picked = id;
+    _emit();
+  }
+
+  /// The localized reason behind an engine reason (§ 8.3).
+  String homeReason(String why) => switch (why) {
+        'Va en la pared del fondo' => strings.t('ui.town.home.why.wall'),
+        'Fuera de la casa' => strings.t('ui.town.home.why.outside'),
+        'Tapa la puerta' => strings.t('ui.town.home.why.door'),
+        'Se pisa con otro mueble' => strings.t('ui.town.home.why.overlap'),
+        'Así queda un rincón sin paso' => strings.t('ui.town.home.why.blocked'),
+        'Tiene que quedar una cama' => strings.t('ui.town.home.why.one_bed'),
+        'Ya está puesto' => strings.t('ui.town.home.why.already'),
+        _ => why,
+      };
+
+  /// Why the local player cannot buy [id] now (`null` = can): town level,
+  /// gold, craft material (§ 8.2, § 8.4).
+  String? homeBuyWhy(String id) {
+    final p = _homeMe;
+    if (p == null) return strings.t('ui.town.edit.no_character');
+    final need = HomeInteriorRules.levelOf(id);
+    final now = HomeInteriorRules.level(town);
+    if (now < need) {
+      return strings.t('ui.town.home.why.level', {'need': need, 'now': now});
+    }
+    final c = HomeInteriorRules.costOf(id);
+    if (p.credits < c.gold) {
+      return strings.t(
+          'ui.town.edit.missing_gold', {'have': p.credits, 'need': c.gold});
+    }
+    for (final m in c.mats.entries) {
+      final have = p.life.craft(m.key);
+      if (have < m.value) {
+        return strings.t('ui.town.home.why.mat', {
+          'name': kLifeMaterials[m.key]?.name ?? m.key,
+          'have': have,
+          'need': m.value
+        });
+      }
+    }
+    return null;
+  }
+
+  /// Starts placing furniture [id] (closes the palette, § 8.3).
+  bool homeStartPlacing(String id) {
+    final e = _homeEdit;
+    if (e == null || furniture(id) == null || homeBuyWhy(id) != null) {
+      return false;
+    }
+    e
+      ..reset()
+      ..step = HomeEditStep.placing
+      ..placeDef = id
+      ..paletteOpen = false;
+    _emit();
+    return true;
+  }
+
+  /// Wall or floor material, or paint `paint:<n>` (§ 8.4).
+  bool homeApplySurface(String id) {
+    if (id.startsWith('paint:')) {
+      final n = int.tryParse(id.substring(6));
+      return n != null && _apply(HomeEditAction(HomeOp.paint, n: n));
+    }
+    return _apply(HomeEditAction(HomeOp.surface, id: id));
+  }
+
+  /// The ghost under the mouse while placing or moving.
+  HomeGhost? get homeGhost {
+    final e = homeEdit;
+    final h = e?.hover;
+    if (e == null || h == null) return null;
+    final l = homeLayout;
+    String? id;
+    int? moving;
+    if (e.step == HomeEditStep.placing) id = e.placeDef;
+    if (e.step == HomeEditStep.moving) {
+      moving = e.selected;
+      id = l.piece(moving ?? -1)?.id;
+    }
+    if (id == null) return null;
+    final d = furniture(id)!;
+    final y = d.onWall ? 0 : h.$2;
+    return (
+      id: id,
+      x: h.$1,
+      y: y,
+      ok: HomeInteriorRules.cannotPlace(l, id, h.$1, y, moving: moving) == null
+    );
+  }
+
+  /// Why the ghost is red (localized), or `null`.
+  String? get homeGhostWhy {
+    final g = homeGhost;
+    final e = homeEdit;
+    if (g == null || e == null || g.ok) return null;
+    final why = HomeInteriorRules.cannotPlace(homeLayout, g.id, g.x, g.y,
+        moving: e.step == HomeEditStep.moving ? e.selected : null);
+    return why == null ? null : homeReason(why);
+  }
+
+  void homeHover((int, int)? tile) {
+    final e = _homeEdit;
+    if (e == null || e.hover == tile) return;
+    e.hover = tile;
+    _emit();
+  }
+
+  /// A click on the room while editing (§ 8.3).
+  void homeClick(int tx, int ty) {
+    final e = homeEdit;
+    if (e == null) return;
+    e.hover = (tx, ty);
+    final g = homeGhost;
+    switch (e.step) {
+      case HomeEditStep.placing:
+        if (g == null || !g.ok) return;
+        _apply(HomeEditAction(HomeOp.place, id: g.id, x: g.x, y: g.y));
+        // The piece stays picked to place another, while it can be paid.
+        if (homeBuyWhy(g.id) != null) e.reset();
+      case HomeEditStep.moving:
+        if (g == null || !g.ok) return;
+        _apply(HomeEditAction(HomeOp.move, uid: e.selected, x: g.x, y: g.y));
+        e.reset();
+      case HomeEditStep.browse:
+        e.selected = HomeInteriorRules.pieceAt(homeLayout, tx, ty)?.uid;
+    }
+    _emit();
+  }
+
+  void homeStartMove() {
+    final e = homeEdit;
+    if (e == null || e.selected == null) return;
+    e.step = HomeEditStep.moving;
+    _emit();
+  }
+
+  /// Why the selected piece cannot be removed (localized), or `null`.
+  String? get homeRemoveWhy {
+    final uid = homeEdit?.selected;
+    if (uid == null) return null;
+    final why = HomeInteriorRules.cannotRemove(homeLayout, uid);
+    return why == null ? null : homeReason(why);
+  }
+
+  bool homeRemoveSelected() {
+    final e = homeEdit;
+    final uid = e?.selected;
+    if (e == null || uid == null || homeRemoveWhy != null) return false;
+    final ok = _apply(HomeEditAction(HomeOp.remove, uid: uid));
+    e.reset();
+    _emit();
+    return ok;
+  }
+
+  /// The icon shape key of weapon [uid] of the room owner (racks, § 8.2).
+  String? homeWeaponShape(String uid) {
+    final s = _s;
+    if (s == null) return null;
+    final owner = s.players[HomeInteriorRules.layoutOwner(s)]?.profile;
+    final it = owner?.items.where((i) => i.uid == uid).firstOrNull;
+    final type = it == null ? null : kWeapons[it.baseId]?.type;
+    return type == null ? null : ItemIconImages.keyOf(type.split('+').first);
+  }
+
+  /// The rack whose panel is open (§ 8.2).
+  int? homeRackUid;
+
+  bool openHomeRack() {
+    final s = _s;
+    if (s == null || HomeInteriorRules.layoutOwner(s) != localId) {
+      addLocalNotice(strings.t('ui.town.home.rack.not_owner'));
+      return false;
+    }
+    final p = HomeInteriorRules.pieceNear(homeLayout, local.x, local.y,
+        kind: FurnitureKind.rack);
+    if (p == null) return false;
+    homeRackUid = p.uid;
+    openPanel(WorldPanel.homeRack);
+    return true;
+  }
+
+  bool setHomeRack(List<String> weapons) {
+    final uid = homeRackUid;
+    if (uid == null) return false;
+    return _apply(HomeEditAction(HomeOp.rack, uid: uid, weapons: weapons));
   }
 
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
@@ -4413,6 +4694,16 @@ class SessionController extends StateNotifier<SessionView?> {
                       : 'ui.world.home.prompt_sleep_night')
             );
           });
+        case TownSpot.homeStash:
+          add(at(ActionTargetKind.shop), () => openStash(),
+              () => (WorldPrompt.poi, strings.t('ui.town.home.prompt_stash')));
+        case TownSpot.homeKitchen:
+          add(at(ActionTargetKind.shop),
+              () => openPanel(WorldPanel.homeKitchen),
+              () => (WorldPrompt.poi, strings.t('ui.town.home.prompt_kitchen')));
+        case TownSpot.homeRack:
+          add(at(ActionTargetKind.shop), () => openHomeRack(),
+              () => (WorldPrompt.poi, strings.t('ui.town.home.prompt_rack')));
         case TownSpot.trader:
           add(at(ActionTargetKind.shop), () => openPanel(WorldPanel.trader),
               () => (WorldPrompt.trader, null));
@@ -4978,6 +5269,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool handleKey(LogicalKeyboardKey key) {
     final s = _s;
     if (s == null) return false;
+    // EDITAR CASA (player_house.md § 8.3): Esc goes back one step.
+    if (editingHome) {
+      if (key == LogicalKeyboardKey.escape) homeEditBack();
+      return key == LogicalKeyboardKey.escape;
+    }
     // Edición del pueblo: Esc vuelve un paso o sale; el resto no juega.
     if (editingTown) {
       if (key == LogicalKeyboardKey.escape) {

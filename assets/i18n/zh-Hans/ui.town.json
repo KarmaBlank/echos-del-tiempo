@@ -1121,5 +1121,177 @@
   "ui.town.home.name": "自家小屋",
   "ui.town.home.info": "进屋睡到早上或天黑",
   "ui.town.home.only_one": "城镇里已经有你的家了",
-  "ui.town.home.cost": "₵{cost}"
+  "ui.town.home.cost": "₵{gold}",
+  "ui.town.home.edit.apply": "应用",
+  "ui.town.home.edit.busy": "现在无法编辑房屋",
+  "ui.town.home.edit.button": "编辑房屋",
+  "ui.town.home.edit.cancel": "取消",
+  "ui.town.home.edit.done": "完成 [ESC]",
+  "ui.town.home.edit.hint": "在“布置”中选择家具，或点击已摆放的家具",
+  "ui.town.home.edit.hint_move": "点击放置位置 · Esc 取消",
+  "ui.town.home.edit.hint_place": "点击放置 · Esc 放下",
+  "ui.town.home.edit.move": "移动",
+  "ui.town.home.edit.not_owner": "只有 {name} 能编辑这间房屋",
+  "ui.town.home.edit.palette": "布置",
+  "ui.town.home.edit.place": "放置",
+  "ui.town.home.edit.remove": "移除",
+  "ui.town.home.edit.title": "房屋编辑",
+  "ui.town.home.filter.all": "全部",
+  "ui.town.home.filter.bed": "床",
+  "ui.town.home.filter.wall": "墙面",
+  "ui.town.home.filter.use": "实用",
+  "ui.town.home.filter.decor": "装饰",
+  "ui.town.home.filter.surface": "墙与地板",
+  "ui.town.home.kitchen.title": "厨房",
+  "ui.town.home.level": "城镇等级 {n}",
+  "ui.town.home.paint.info": "把墙刷成这个颜色。",
+  "ui.town.home.paint.name": "涂料 {n}",
+  "ui.town.home.prompt_kitchen": "[E] 烹饪",
+  "ui.town.home.prompt_rack": "[E] 选择武器架上的武器",
+  "ui.town.home.prompt_stash": "[E] 打开仓库",
+  "ui.town.home.rack.empty": "你没有可挂的武器",
+  "ui.town.home.rack.full": "武器架已挂满 3 把",
+  "ui.town.home.rack.hang": "挂上",
+  "ui.town.home.rack.help": "最多选择 3 把武器展示在武器架上。",
+  "ui.town.home.rack.not_owner": "这个武器架属于布置房屋的人",
+  "ui.town.home.rack.on_rack": "已挂上",
+  "ui.town.home.rack.save": "保存",
+  "ui.town.home.rack.take_off": "取下",
+  "ui.town.home.rack.title": "武器架",
+  "ui.town.home.size": "{w}×{h}",
+  "ui.town.home.stash_tag": "仓库",
+  "ui.town.home.why.already": "已经使用中",
+  "ui.town.home.why.blocked": "这样会有角落无法通行",
+  "ui.town.home.why.door": "挡住了门",
+  "ui.town.home.why.level": "需要城镇等级 {need}（当前：{now}）",
+  "ui.town.home.why.mat": "缺少 {name}（{have}/{need}）",
+  "ui.town.home.why.one_bed": "至少要保留一张床",
+  "ui.town.home.why.outside": "超出房屋范围",
+  "ui.town.home.why.overlap": "与其他家具重叠",
+  "ui.town.home.why.wall": "只能放在后墙上",
+  "ui.town.home.f.bed_basic.name": "简易床",
+  "ui.town.home.f.bed_basic.info": {
+    "text": "木制小床，配一条羊毛毯。",
+    "status": "draft"
+  },
+  "ui.town.home.f.bed_quilted.name": "棉被床",
+  "ui.town.home.f.bed_quilted.info": {
+    "text": "厚床垫和手工缝制的棉被。",
+    "status": "draft"
+  },
+  "ui.town.home.f.bed_canopy.name": "华盖床",
+  "ui.town.home.f.bed_canopy.info": {
+    "text": "带帷幔的双人床，睡得像国王一样。",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_meadow.name": "草原画",
+  "ui.town.home.f.picture_meadow.info": {
+    "text": "一幅描绘城镇田野的油画。",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_portrait.name": "肖像画",
+  "ui.town.home.f.picture_portrait.info": {
+    "text": "家族中的某人从墙上注视着你。",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_clock.name": "挂钟",
+  "ui.town.home.f.picture_clock.info": {
+    "text": "一座滴答作响的齿轮钟。",
+    "status": "draft"
+  },
+  "ui.town.home.f.window.name": "窗户",
+  "ui.town.home.f.window.info": {
+    "text": "白天阳光洒在地板上，夜里则没有。",
+    "status": "draft"
+  },
+  "ui.town.home.f.window_wide.name": "大窗",
+  "ui.town.home.f.window_wide.info": {
+    "text": "双扇窗：白天更明亮。",
+    "status": "draft"
+  },
+  "ui.town.home.f.weapon_rack.name": "武器架",
+  "ui.town.home.f.weapon_rack.info": {
+    "text": "展示最多 3 把你的武器，按 E 选择。",
+    "status": "draft"
+  },
+  "ui.town.home.f.stash_chest.name": "仓库箱",
+  "ui.town.home.f.stash_chest.info": {
+    "text": "打开与 B 键相同的仓库。",
+    "status": "draft"
+  },
+  "ui.town.home.f.kitchen.name": "厨房",
+  "ui.town.home.f.kitchen.info": {
+    "text": "像在工坊一样烹饪。",
+    "status": "draft"
+  },
+  "ui.town.home.f.bookshelf.name": "书架",
+  "ui.town.home.f.bookshelf.info": {
+    "text": "旧书和卷起的地图。",
+    "status": "draft"
+  },
+  "ui.town.home.f.armor_stand.name": "盔甲架",
+  "ui.town.home.f.armor_stand.info": {
+    "text": "一套擦得锃亮的板甲。",
+    "status": "draft"
+  },
+  "ui.town.home.f.rug.name": "地毯",
+  "ui.town.home.f.rug.info": {
+    "text": "可以踩在上面，让地板更温暖。",
+    "status": "draft"
+  },
+  "ui.town.home.f.plant.name": "盆栽",
+  "ui.town.home.f.plant.info": {
+    "text": "让角落更有生气的盆栽。",
+    "status": "draft"
+  },
+  "ui.town.home.f.candelabra.name": "烛台",
+  "ui.town.home.f.candelabra.info": {
+    "text": "青铜底座上的三支蜡烛。",
+    "status": "draft"
+  },
+  "ui.town.home.f.table.name": "桌子",
+  "ui.town.home.f.table.info": {
+    "text": "一张用来吃饭或读书的橡木桌。",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_plaster.name": "灰泥墙",
+  "ui.town.home.s.wall_plaster.info": {
+    "text": "浅色灰泥，可以刷漆。",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_wood.name": "木墙",
+  "ui.town.home.s.wall_wood.info": {
+    "text": "企口木板。",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_stone.name": "石墙",
+  "ui.town.home.s.wall_stone.info": {
+    "text": "切割石材，夏天凉爽。",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_brick.name": "砖墙",
+  "ui.town.home.s.wall_brick.info": {
+    "text": "裸露的红砖。",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_planks.name": "木板地",
+  "ui.town.home.s.floor_planks.info": {
+    "text": "松木地板。",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_stone.name": "石板地",
+  "ui.town.home.s.floor_stone.info": {
+    "text": "灰色石板。",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_tiles.name": "瓷砖地",
+  "ui.town.home.s.floor_tiles.info": {
+    "text": "棋盘格瓷砖。",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_carpet.name": "地毯地板",
+  "ui.town.home.s.floor_carpet.info": {
+    "text": "满铺地毯。",
+    "status": "draft"
+  }
 }

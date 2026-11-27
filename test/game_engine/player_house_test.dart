@@ -1,5 +1,7 @@
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/home_furniture_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/home_layout.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/farm_animal.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
@@ -22,6 +24,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'session_test_helpers.dart';
 
 /// The player house and sleeping (docs/specs/player_house.md).
+/// Head tiles of the beds of the default layout.
+final _beds = [
+  for (final p in kDefaultHomePieces)
+    if (furniture(p.id)?.kind == FurnitureKind.bed) (p.x, p.y)
+];
+
 void main() {
   final errors = <String>[];
   setUp(() {
@@ -63,7 +71,7 @@ void main() {
     expect(s.place, HomeInteriorRules.place);
     var i = 0;
     for (final p in s.players.values) {
-      final (bx, by) = HomeInteriorRules.bedTiles[i++];
+      final (bx, by) = _beds[i++];
       p
         ..x = bx * 16 + 8.0
         ..y = (by + 2) * 16 + 4.0;
@@ -220,7 +228,7 @@ void main() {
         isNotNull);
     final home = w.rooms[HomeInteriorRules.place]!;
     final p0 = home.players['p0']!;
-    final (bx, by) = HomeInteriorRules.bedTiles.first;
+    final (bx, by) = _beds.first;
     p0
       ..x = bx * 16 + 8.0
       ..y = (by + 2) * 16 + 4.0;
@@ -233,7 +241,7 @@ void main() {
     expect(we.apply(w, 'p1', const TravelAction(HomeInteriorRules.place)),
         isNotNull);
     final p1 = w.rooms[HomeInteriorRules.place]!.players['p1']!;
-    final (cx, cy) = HomeInteriorRules.bedTiles[1];
+    final (cx, cy) = _beds[1];
     p1
       ..x = cx * 16 + 8.0
       ..y = (cy + 2) * 16 + 4.0;
