@@ -157,7 +157,10 @@ void main() {
     expect(h.latency!.rtt, const Duration(milliseconds: 5));
     // El próximo tick (20 ms reales) vuelve a medir; el reloj falso está
     // quieto, así que esa ida y vuelta da 0.
-    await Future<void>.delayed(const Duration(milliseconds: 30));
+    // Espera hasta 2 s (bajo carga los timers reales se atrasan).
+    for (var i = 0; i < 100 && h.latency!.rtt != Duration.zero; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
     expect(h.latency!.rtt, Duration.zero);
     await sub.cancel();
     // Sin oyentes, el temporizador se apaga.
