@@ -205,7 +205,7 @@ void main() {
         build: (v, c) =>
             ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.items));
     expect(button(tester, 'item-pot').reason, 'Máximo 9');
-    expect(button(tester, 'item-eter').reason, 'Faltan \$5');
+    expect(button(tester, 'item-eter').reason, 'Faltan ₵5');
     expect(find.text('Máximo 9'), findsOneWidget);
     await tapVisible(tester, find.byKey(const ValueKey('item-pot')));
     expect(c.view!.me!.profile.potions, 9);

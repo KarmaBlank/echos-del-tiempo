@@ -251,7 +251,7 @@ String localGoodsName(LootDrop d) {
   final (kind, id) = GoodsRules.split(d.goods ?? '');
   final n = d.count;
   if (kind == GoodsRules.gold) {
-    return CatalogText.of('ui.world.loot.gold', '$n de oro', {'n': n});
+    return CatalogText.of('ui.world.loot.gold', '₵$n', {'n': n});
   }
   final base = switch (kind) {
     'ore' => CatalogText.of(

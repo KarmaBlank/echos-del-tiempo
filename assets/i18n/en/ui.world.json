@@ -347,7 +347,7 @@
   "ui.world.mine.prompt_dig": "[E] Dig (hold to keep going)",
   "ui.world.mine.prompt_down": "[E] Go down a level",
   "ui.world.mine.prompt_lore": "[E] Read the stone",
-  "ui.world.mine.prompt_miners": "[G] Hire miner ({n}/{max}, {gold} gold) · [Shift+G] dismiss",
+  "ui.world.mine.prompt_miners": "[G] Hire miner ({n}/{max}, ₵{gold}) · [Shift+G] dismiss",
   "ui.world.mine.prompt_mushroom": "[E] Pick mushrooms",
   "ui.world.mine.prompt_oil": "[E] Use vein oil",
   "ui.world.mine.prompt_station": "[E] Build cart station (₵{gold}, {n} ingots)",
@@ -370,7 +370,7 @@
   "ui.world.tools.torch": "Torch",
   "ui.world.tools.torch_tip": "Torch: lights the mine and stays · [2]",
   "ui.world.mine.need_tier": "You need a better pick (tier {n})",
-  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} ({gold} gold, {n} × {ingot})",
+  "ui.world.mine.prompt_miner_up": "[U] Upgrade a miner's pick to tier {tier} (₵{gold}, {n} × {ingot})",
   "ui.world.mine.prompt_open_miners": "[E] Miners",
   "ui.world.miners.title": "MINERS",
   "ui.world.miners.gone": "There is no miners' station here.",
@@ -426,6 +426,6 @@
   "ui.world.cozy.search_prompt": "[Hold E/Click] Search the tree",
   "ui.world.cozy.searched": "You already searched this tree today",
   "ui.world.prompt.spent": "Already used",
-  "ui.world.loot.gold": "{n} gold",
+  "ui.world.loot.gold": "₵{n}",
   "ui.world.ctl.no_ranch": "There are no coops or barns in town"
 }

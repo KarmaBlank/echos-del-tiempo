@@ -127,12 +127,14 @@ ActionRef button(WidgetTester tester, String key) =>
       final w => throw StateError('$key no es un botón: ${w.runtimeType}'),
     };
 
-/// Texto plano de los `Text` / `ProtoText` debajo de [key].
+/// Texto plano de los `Text` / `ProtoText` debajo de [key]. La moneda
+/// (`DsGold`, un `WidgetSpan`) se lee como `$`.
 String plain(WidgetTester tester, String key) => tester
     .widgetList<Text>(find.descendant(
         of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
     .map((t) => t.textSpan?.toPlainText() ?? t.data ?? '')
-    .join(' ');
+    .join(' ')
+    .replaceAll('￼', '\$');
 
 /// Abre "MÁS DETALLE" de la mejora elegida en FORJA.
 Future<void> openForgeMore(WidgetTester tester) async {

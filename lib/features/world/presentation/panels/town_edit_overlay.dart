@@ -228,7 +228,7 @@ class TownEditOverlay extends StatelessWidget {
           children: [
             DsSectionHeader(b.kind.text),
             Text(TownRules.helperLine(b), style: DsText.detail()),
-            Text(
+            DsGoldText(
                 why ??
                     s.t('ui.town.edit.hire_info', {
                       'cost': HelperRules.costText(HelperRules.hireCost(b.kind))
@@ -343,7 +343,7 @@ class TownEditOverlay extends StatelessWidget {
         final why = c.cannotExpandTown(side);
         return col([
           DsSectionHeader(s.t('ui.town.edit.expand_title', {'side': side.label})),
-          Text(
+          DsGoldText(
               s.t('ui.town.edit.expand_text', {
                 'tiles': kTownStrip,
                 'cost': TownRules.costText(TownRules.cost(town.expansions + 1))

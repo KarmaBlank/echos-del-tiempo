@@ -10,6 +10,7 @@ import '../theme/retro_theme.dart';
 import '../theme/ui_theme.dart';
 import 'ds_button.dart';
 import 'ds_focus.dart';
+import 'ds_gold.dart';
 import 'ds_tokens.dart';
 
 // Catálogo de componentes (docs/specs/design_system.md § 6).
@@ -302,7 +303,7 @@ class DsToast extends StatelessWidget {
             child: Padding(
           padding: EdgeInsets.symmetric(vertical: DsSpace.xs),
           child: content ??
-              Text(message,
+              DsGoldText.auto(message,
                   style: DsText.body(textColor ?? DsColors.textPrimary)),
         )),
         if (close != null) ...[
@@ -469,7 +470,7 @@ class DsListRow extends StatelessWidget {
             Expanded(child: () {
               final line = Row(children: [
               Flexible(
-                child: Text(title,
+                child: DsGoldText.auto(title,
                     maxLines: wrap ? null : 1,
                     overflow: wrap ? null : TextOverflow.ellipsis,
                     style: DsText.body(!enabled
@@ -482,7 +483,7 @@ class DsListRow extends StatelessWidget {
                 SizedBox(width: DsSpace.sm),
                 // Un dato largo se corta con "…" (nunca desborda la fila).
                 Flexible(
-                  child: Text(detail!,
+                  child: DsGoldText.auto(detail!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: DsText.detail(detailColor ??
@@ -501,7 +502,7 @@ class DsListRow extends StatelessWidget {
                     if (subtitle == null)
                       subtitleWidget!
                     else
-                    Text(subtitle!,
+                    DsGoldText.auto(subtitle!,
                         maxLines: wrap ? null : 1,
                         overflow: wrap ? null : TextOverflow.ellipsis,
                         style: DsText.detail(subtitleColor ??
@@ -792,7 +793,9 @@ class DsTag extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 3),
       decoration: BoxDecoration(border: Border.all(color: color, width: 2)),
-      child: Text(retroText(shown), style: DsText.subtitle(color)),
+      child: DsGoldText.hasGold(shown)
+          ? DsGoldText(shown, style: DsText.subtitle(color))
+          : Text(retroText(shown), style: DsText.subtitle(color)),
     );
   }
 }

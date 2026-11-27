@@ -25,7 +25,8 @@ import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
 import 'character_strings.dart';
-import 'stash_layout.dart';
+import 'stash_layout.dart';
+
 import '../../inventory/domain/eco_text.dart';
 
 /// Lo que el tablero del alijo necesita de quien lo abre: fuera de la
@@ -515,9 +516,9 @@ class StashBoardState extends State<StashBoard> {
             blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
             onTap: () => _tapCharacter(eq?.uid, null),
           ),
-          Text(
-              retroText(_s.t('ui.characters.stash.credits',
-                  {'amount': '₵${p.credits}'})),
+          DsGoldText(
+              _s.t('ui.characters.stash.credits',
+                  {'amount': '₵${p.credits}'}),
               style: DsText.body(DsColors.reward)),
         ]);
   }

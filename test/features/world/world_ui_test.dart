@@ -350,6 +350,8 @@ void main() {
             othersUnlocked: 'También desbloquearon · Bo: Zona 2',
           ));
       expect(find.text('Zona 1 · Pradera Esmeralda · Piso 2/2'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('results-tab-progress')));
+      await tester.pumpAndSettle();
       expect(find.text('¡Zona 2 desbloqueada! Bosque Hondo'), findsOneWidget);
       expect(find.textContaining('Bo: Zona 2'), findsOneWidget);
     });

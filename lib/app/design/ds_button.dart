@@ -225,8 +225,16 @@ class DsButton extends StatelessWidget {
         : DsFocusScope(child: button);
     final tip = tooltip;
     if (tip == null) return ringed;
-    // Disabled: the reason is KEY INFO (design_system.md § 3.4).
-    if (onPressed == null) {
+    // Disabled: the reason is KEY INFO (design_system.md § 3.4); a gold
+    // amount in the reason draws the coin, never "\$".
+    final disabled = onPressed == null;
+    if (DsGoldText.hasGold(tip)) {
+      return Tooltip(
+          richMessage: TextSpan(
+              children: DsGoldText.spans(tip, disabled ? DsText.key() : null)),
+          child: ringed);
+    }
+    if (disabled) {
       return Tooltip(
           richMessage: protoSpan(tip, style: DsText.key()), child: ringed);
     }

@@ -250,8 +250,15 @@ void main() {
         ),
       ),
     )));
+    await tester.tap(find.byKey(const ValueKey('results-tab-loot')));
+    await tester.pumpAndSettle();
     expect(find.text('TUS DROPS (2)'), findsOneWidget);
-    expect(find.byType(LootLabel), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('results-drop-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('results-drop-1')), findsOneWidget);
+    // The detail shows the chosen drop with the filter's label.
+    expect(find.byType(LootLabel), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('results-drop-1')));
+    await tester.pumpAndSettle();
     expect(find.textContaining('(oculto por tu filtro)'), findsOneWidget);
   });
 
