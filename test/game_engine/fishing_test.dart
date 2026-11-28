@@ -326,7 +326,11 @@ void main() {
       final e = sessionEngine();
       var s = e.addPlayer(e.create(), 'p0', newProfile('Ana', 'guerrero'))!.state;
       s = moveTo(e, s, 'p0', x, y);
-      expect(e.apply(s, 'p0', const FishAutoAction(true)), isNull);
+      // Refused with a reason (v0.49.42), never silently.
+      final no = e.apply(s, 'p0', const FishAutoAction(true))!;
+      expect(no.events.whereType<FishAutoStoppedEvent>().single.reason,
+          AutoFishStop.refused);
+      expect(no.state.players['p0']!.fishLine, isNull);
       s = act(e, s, 'p0', const FishLineAction(FishLine(FishLineStage.rod)));
       s = act(e, s, 'p0', const FishAutoAction(true));
       expect(e.apply(s, 'p0', const FishBiteAction(1)), isNull);
@@ -411,6 +415,43 @@ void main() {
       final after = <SessionEvent>[];
       wait(e, s, 120, log: after);
       expect(after.whereType<FishCaughtEvent>(), isEmpty);
+    });
+
+    test('180 s of auto in town brings ~10+ catches', () {
+      final (_, log) = autoFor(sessionEngine(), 180);
+      expect(log.whereType<FishCaughtEvent>().length, greaterThanOrEqualTo(8));
+      expect(log.whereType<FishAutoStoppedEvent>(), isEmpty);
+    });
+
+    test('another room ticking never drops it (v0.49.42 root cause)', () {
+      // The host ticks every room with one engine; a room without the
+      // angler (the town while fishing in a biome, or an interior / a
+      // friend's dungeon while fishing in town) used to delete the state.
+      final e = sessionEngine();
+      var s = rodOut(e)..instance = 'pueblo';
+      s = act(e, s, 'p0', const FishAutoAction(true));
+      var other = e.create()..instance = 'zona1';
+      final log = <SessionEvent>[];
+      for (var t = 0.0; t < 180; t += 0.5) {
+        other = e.tick(other, 0.5).state;
+        final step = e.tick(s, 0.5);
+        log.addAll(step.events);
+        s = step.state;
+        other = e.tick(other, 0.0).state;
+      }
+      expect(log.whereType<FishCaughtEvent>().length, greaterThanOrEqualTo(8));
+      expect(s.players['p0']!.fishLine?.auto, isTrue);
+    });
+
+    test('autoBiteFloor keeps catching; refused survives JSON', () {
+      townTuning({'autoBiteFloor': 0.25});
+      final (_, log) = autoFor(sessionEngine(), 600);
+      expect(log.whereType<FishCaughtEvent>(), isNotEmpty);
+      const ej = EventJson();
+      final r = ej.fromJson(ej.toJson(
+          const FishAutoStoppedEvent('p0', AutoFishStop.refused, 0)))
+          as FishAutoStoppedEvent;
+      expect(r.reason, AutoFishStop.refused);
     });
 
     test('R again (fAuto off) stops it; JSON round trip', () {

@@ -247,6 +247,22 @@ Se fue en v0.25.5 (la reemplazó el PESCADOR de cada lago, farming.md
   manda `fAuto {r}` (motivo) al cortarla; el anfitrión manda
   `fAutoOff {id, r, n}` siempre (también cuando la corta él: pelea,
   caminar, `fLn` vacío). Cada uno de la sala tiene la suya.
+- **Salas (v0.49.42, protocolo 109).** El estado de la auto-pesca guarda
+  la sala (instancia) donde se prendió y solo el tick de esa sala la
+  tira o la corta. Antes el tick de cualquier otra sala (el pueblo
+  mientras pescabas en un bioma, o un interior / bioma / mazmorra
+  abierto mientras pescabas en el pueblo) no encontraba al jugador y
+  borraba su auto-pesca sin avisar: el HUD seguía en AUTO y no picaba
+  nada.
+- **Rechazo con motivo (v0.49.42).** Si el anfitrión no puede prenderla
+  (sin `fl`, lejos del agua, fuera del pueblo / bioma, sin caña) manda
+  `fAutoOff` con motivo `refused` (0 peces) y el cliente apaga AUTO y
+  lo dice en el registro; nunca queda prendida en silencio.
+- **Clima (v0.49.42).** La chance de picada del clima
+  (`SkyRules.biteChance`) ya no tira ciclos enteros: alarga la espera
+  (`espera / max(autoBiteFloor, chance)`, `autoBiteFloor` 0.25 en
+  Editor → Balance → Pueblo) y cada tirada da pez. El peor clima, como
+  mucho, cuadruplica la espera y nunca la bloquea.
 - Estado no persistido (`FishingHostState.auto`).
 
 ## 7. Red (protocolo 43; auto-pesca en 67)

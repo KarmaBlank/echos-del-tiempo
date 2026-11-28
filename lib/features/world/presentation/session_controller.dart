@@ -4333,9 +4333,14 @@ class SessionController extends StateNotifier<SessionView?> {
     }.contains(f.phase)) {
       return false;
     }
-    if (!_apply(const FishAutoAction(true))) return false;
+    // On before applying: on the host the refusal (`fAutoOff refused`)
+    // arrives inside _apply and must win over this.
     _autoFish = true;
     _autoCaught = 0;
+    if (!_apply(const FishAutoAction(true))) {
+      _autoFish = false;
+      return false;
+    }
     _emit();
     return true;
   }

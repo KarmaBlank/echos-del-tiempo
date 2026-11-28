@@ -189,6 +189,7 @@
   "ui.world.ctl.autofish.stop.menu": "Auto-fishing stopped: you opened a menu ({n} fish).",
   "ui.world.ctl.autofish.stop.battle": "Auto-fishing stopped: you entered a battle ({n} fish).",
   "ui.world.ctl.autofish.stop.left": "Auto-fishing stopped: you left the water ({n} fish).",
+  "ui.world.ctl.autofish.stop.refused": "Auto-fishing can't start here: cast from the shore with the rod out.",
   "ui.world.ctl.achievement": "Feat: {name}",
   "ui.world.ctl.save_failed": "Couldn't save",
   "ui.world.ctl.prompt_travel": "[E] Travel map",

@@ -16,10 +16,14 @@ class FishPending {
 
 /// One player's auto-fishing on the host (fishing.md § 6).
 class AutoFishState {
-  AutoFishState(this.nextAt);
+  AutoFishState(this.nextAt, this.room);
 
-  /// Session time of the next bite roll.
+  /// Session time of the next bite roll (the [room]'s clock).
   double nextAt;
+
+  /// Room (`GameSession.instance`) it was turned on in: only that room's
+  /// tick rolls or stops it (v0.49.42; other rooms used to drop it).
+  final String room;
 
   /// Fish caught since it was turned on.
   int caught = 0;
@@ -83,7 +87,11 @@ extension _FishingOp on _Op {
           stopAutoFish(p, reason);
           return true;
         }
-        return _autoFishOn(p);
+        if (_f.auto.containsKey(p.id)) return false;
+        if (_autoFishOn(p)) return true;
+        // Refused: say so, so the client never stays on silently.
+        events.add(FishAutoStoppedEvent(p.id, AutoFishStop.refused, 0));
+        return true;
       case SellFishAction(:final species, :final materials):
         if (!_inTown(p)) return false;
         final r = FishingRules.sell(p.profile,
@@ -249,8 +257,13 @@ extension _FishingOp on _Op {
     final bite =
         FishingRules.rodBonus(p.profile).bite * _at.d('autoPassiveMult') +
             (bait == null ? 0.0 : BaitRules.bite(bait));
+    // Weather bite chance lengthens the wait instead of wasting whole
+    // cycles; `autoBiteFloor` keeps the worst sky from blocking it.
+    final chance = math.max(math.max(0.05, _at.d('autoBiteFloor')),
+        SkyRules.biteChance(s.town.sky, s.place).clamp(0.0, 1.0));
     return FishingRules.biteDelay(_rand(), bite) *
-        math.max(0.1, _at.d('autoWaitMult')) *
+        math.max(0.1, _at.d('autoWaitMult')) /
+        chance *
         // Calma sub-path A (life_trees_v2.md § 2.1): calmer, faster bites.
         GearRules.calmMult(p.profile);
   }
@@ -267,7 +280,7 @@ extension _FishingOp on _Op {
     }
     _f.pending.remove(p.id);
     p.fishLine = line.withAuto(true);
-    _f.auto[p.id] = AutoFishState(s.time + _autoWait(p));
+    _f.auto[p.id] = AutoFishState(s.time + _autoWait(p), s.instance);
     return true;
   }
 
@@ -284,8 +297,10 @@ extension _FishingOp on _Op {
   void autoFishTick() {
     if (_f.auto.isEmpty) return;
     for (final id in [..._f.auto.keys]) {
-      final p = s.players[id];
       final st = _f.auto[id]!;
+      // Another room's angler: not ours to roll or drop (v0.49.42).
+      if (st.room != s.instance) continue;
+      final p = s.players[id];
       if (p == null) {
         _f.auto.remove(id);
         continue;
@@ -301,7 +316,6 @@ extension _FishingOp on _Op {
       }
       if (s.time < st.nextAt) continue;
       st.nextAt = s.time + _autoWait(p);
-      if (_rand() >= SkyRules.biteChance(s.town.sky, s.place)) continue;
       final w = _waterSpot(p, 0, passive: _at.d('autoPassiveMult'));
       final fish = FishingRules.roll(_rand, w.table,
           rareBonus: w.rare,

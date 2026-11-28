@@ -263,7 +263,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// `TownOp.seen` with id `~kitchen` stores its first open in `npcSeen`;
 /// cooking left the OFICIOS menu (the house's kitchen furniture opens the
 /// same cooking screen), so an older peer has no cooking entry.
-const kProtocolVersion = 108;
+/// 109: auto-fishing per room (fishing.md § 6): `fAutoOff` gains reason
+/// `refused` (index 5) when the host can't turn it on; a 108 peer would
+/// fail to decode it and stay on AUTO silently.
+const kProtocolVersion = 109;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
