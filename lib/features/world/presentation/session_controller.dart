@@ -1349,6 +1349,9 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente al TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3).
   bool get nearWorkshop => townSpot == TownSpot.workshop;
 
+  /// Next to the town kitchen (farming.md § 17).
+  bool get nearKitchen => nearKitchenBuild != null;
+
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
 
@@ -3470,7 +3473,7 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     final (ox, oy) = town.origin;
     for (final b in town.builds) {
-      if (b.kind == BuildKind.casa) continue;
+      if (b.kind.house) continue;
       if (TownRules.chestOf(town, b) == (tx - ox, ty - oy)) return b;
     }
     return null;
@@ -3621,6 +3624,24 @@ class SessionController extends StateNotifier<SessionView?> {
     return null;
   }
 
+  /// The town kitchen next to the local player (farming.md § 17; E opens
+  /// the cooking screen).
+  TownBuild? get nearKitchenBuild {
+    if (!_townFree() || _s?.place != null) return null;
+    final (px, py) = _myTile;
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      if (b.kind != BuildKind.cocina) continue;
+      if (b.bounds.inflate(1).contains(px - ox, py - oy)) return b;
+    }
+    return null;
+  }
+
+  /// Opens the cooking screen (farming.md § 17). The one entry point for
+  /// every cooking spot: the town kitchen and any furniture that reuses it
+  /// (the player house's stove calls this too).
+  void openKitchen() => openPanel(WorldPanel.kitchen);
+
   /// The coop / barn whose house is next to the local player (E: panel).
   TownBuild? get nearRanchHouse {
     if (!_townFree() || _s?.place != null) return null;
@@ -3760,6 +3781,13 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get fountainAlert {
     final p = _s?.players[localId]?.profile;
     return p != null && !QuestTrackRules.seenFountain(p);
+  }
+
+  /// Gold "!" over the town kitchen until the local player opens it once
+  /// (farming.md § 17).
+  bool get kitchenAlert {
+    final p = _s?.players[localId]?.profile;
+    return p != null && !QuestTrackRules.seenKitchen(p);
   }
 
   /// Why the local player can't hire a [kind] helper yet because of the
@@ -4168,6 +4196,10 @@ class SessionController extends StateNotifier<SessionView?> {
           'Nivel ${b.level}'
               '${b.resident == null ? ' · vacía' : ' · vive ${biomeNpcName(b.resident!)}'}'
         ),
+        BuildKind.cocina => (
+            strings.t('ui.town.build.cocina.name'),
+            strings.t('ui.town.build.cocina.info')
+          ),
         BuildKind.home => (
             strings.t('ui.town.home.name'),
             strings.t('ui.town.home.info')
@@ -4698,8 +4730,8 @@ class SessionController extends StateNotifier<SessionView?> {
           add(at(ActionTargetKind.shop), () => openStash(),
               () => (WorldPrompt.poi, strings.t('ui.town.home.prompt_stash')));
         case TownSpot.homeKitchen:
-          add(at(ActionTargetKind.shop),
-              () => openPanel(WorldPanel.homeKitchen),
+          // Same cooking screen as the COCINA building (farming.md § 17).
+          add(at(ActionTargetKind.shop), openKitchen,
               () => (WorldPrompt.poi, strings.t('ui.town.home.prompt_kitchen')));
         case TownSpot.homeRack:
           add(at(ActionTargetKind.shop), () => openHomeRack(),
@@ -4973,6 +5005,15 @@ class SessionController extends StateNotifier<SessionView?> {
                   t.ok ? WorldPrompt.poi : WorldPrompt.spent,
                   animalPrompt(b, a)
                 ));
+      }
+      if (nearKitchenBuild case final b?) {
+        final (ox, oy) = town.origin;
+        final (px, py) = _myTile;
+        final r = b.bounds;
+        final tx = (px - ox).clamp(r.x, r.x + r.w - 1) + ox;
+        final ty = (py - oy).clamp(r.y, r.y + r.h - 1) + oy;
+        add(ActionTarget(tx, ty, ActionTargetKind.shop, key: 'kitchen:${b.id}'),
+            openKitchen, () => (WorldPrompt.kitchen, null));
       }
       if (nearRanchHouse case final b?) {
         final (ox, oy) = town.origin;
@@ -5505,6 +5546,9 @@ class SessionController extends StateNotifier<SessionView?> {
     // First visit clears the fountain's onboarding "!" (town_editor.md § 1.5).
     if (panel == WorldPanel.fountain && fountainAlert) {
       markNpcSeen(QuestTrackRules.fountainKey);
+    }
+    if (panel == WorldPanel.kitchen && kitchenAlert) {
+      markNpcSeen(QuestTrackRules.kitchenKey);
     }
     _emit();
   }
@@ -6863,6 +6907,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.workshop ||
+            _panel == WorldPanel.kitchen ||
             _panel == WorldPanel.forge ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ecoZone ||

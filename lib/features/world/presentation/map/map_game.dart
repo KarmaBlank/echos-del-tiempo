@@ -39,7 +39,7 @@ import 'world_frame.dart';
 import 'region_light_layer.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
-import '../../../../game_engine/models/town_build.dart' show kTownStrip;
+import '../../../../game_engine/models/town_build.dart' show BuildKind, kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
 import '../../../../game_engine/rules/world_event_rules.dart';
@@ -1190,6 +1190,17 @@ class MapGame extends Game {
               NpcMark.news, mx, my, t);
         }
       }
+      // Same gold "!" over the kitchen until its first open (farming.md
+      // § 17), over the built kitchen's roof.
+      if (controller.kitchenAlert) {
+        final (tox, toy) = s.town.origin;
+        for (final b in s.town.builds) {
+          if (b.kind != BuildKind.cocina) continue;
+          final r = b.bounds;
+          drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
+              NpcMark.news, (r.x + tox + r.w / 2) * ts, (r.y + toy) * ts - 12, t);
+        }
+      }
       farm.drawZoneLabels(
           c,
           s.town,
@@ -1805,6 +1816,7 @@ class MapGame extends Game {
       // The pick shows through a swing, and stays raised while held.
       final swinging = ms < period + 150 || controller.mineHolding;
       mine.drawMine(c, lvl, s.town.mine(map.place!), t,
+          time: s.time,
           cracks: controller.mineCracks,
           playerAt: (id) => _lastDrawn[id],
           minerSprite: sprites.lifeIcon('npc_mina_miner', 'herramienta'),

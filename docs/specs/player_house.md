@@ -132,7 +132,7 @@ renombre del pueblo + 1.
 - **Armero** (2x1): muestra hasta 3 armas propias del dueño; E abre la
   grilla para elegirlas.
 - **Cofre del alijo**: E abre el mismo alijo que B; lleva la placa ALIJO.
-- **Cocina** (2x1): E abre la misma cocina del TALLER DE OFICIOS.
+- **Cocina** (2x1): E abre la misma pantalla de cocina que el edificio COCINA (`SessionController.openKitchen()`, farming.md § 17).
 - **Decoración**: biblioteca, maniquí de armadura, alfombra (se pisa),
   planta, candelabro, mesa.
 

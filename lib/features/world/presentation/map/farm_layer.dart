@@ -458,6 +458,12 @@ class MapFarmLayer {
         img(houseSprite(b, (id) => sprite(id) != null), cx, bottom);
         continue;
       }
+      if (b.kind == BuildKind.cocina) {
+        // The town kitchen (farming.md § 17): its own brick house sprite.
+        final bb = b.bounds;
+        img('cocina', (bb.x + ox + bb.w / 2) * ts, (bb.bottom + oy) * ts);
+        continue;
+      }
       // Cofre al lado del cartel, con cuántas cosas tiene.
       final (cx, cy) = TownRules.chestOf(town, b);
       final px = (cx + ox + 0.5) * ts, py = (cy + oy + 1) * ts;

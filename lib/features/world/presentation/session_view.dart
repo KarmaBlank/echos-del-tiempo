@@ -17,7 +17,6 @@ import '../../../game_engine/rules/atlas_rules.dart';
 /// docs/specs/ascension.md).
 enum WorldPanel {
   /// Kitchen station of the player house (player_house.md § 8.2).
-  homeKitchen,
 
   /// Weapon rack of the player house: pick what it shows (§ 8.2).
   homeRack,
@@ -38,6 +37,9 @@ enum WorldPanel {
 
   /// TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3).
   workshop,
+
+  /// The town kitchen (farming.md § 17): RECETAS / COMIDAS / COLECCIÓN.
+  kitchen,
   character,
   prep,
   inventory,
@@ -123,6 +125,9 @@ enum WorldPrompt {
   armory('[E] Armería'),
   forge('[E] Forja'),
   workshop('[E] Taller de oficios'),
+
+  /// The town kitchen door (farming.md § 17).
+  kitchen('[E] Cocina'),
   seal('[E] Activar sello'),
   merchant('[E] Tienda y herrería'),
 

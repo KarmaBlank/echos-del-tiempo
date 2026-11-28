@@ -7,30 +7,7 @@ import '../../../../game_engine/data/weapons_catalog.dart' show kWeapons;
 import '../../../../game_engine/models/player_profile.dart';
 import '../session_controller.dart';
 import '../world_strings.dart';
-import 'cooking_view.dart';
 import 'life_item_grid.dart';
-
-/// The kitchen station of the player house (player_house.md § 8.2): the
-/// same cooking as the TALLER DE OFICIOS (`CookingView`).
-class HomeKitchenPanel extends StatelessWidget {
-  const HomeKitchenPanel(
-      {super.key, required this.controller, required this.profile});
-
-  final SessionController controller;
-  final PlayerProfile profile;
-
-  @override
-  Widget build(BuildContext context) => PanelFrame(
-        key: const ValueKey('panel-home-kitchen'),
-        title: context.t('ui.town.home.kitchen.title'),
-        width: 960,
-        onClose: controller.closePanel,
-        child: SizedBox(
-          height: 460,
-          child: CookingView(profile: profile, controller: controller),
-        ),
-      );
-}
 
 /// A weapon rack of the player house (player_house.md § 8.2): pick up to
 /// three weapons of the owner to show on it. INVENTARIO grid with the

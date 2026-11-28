@@ -59,7 +59,8 @@ class TownPiece {
   static TownPieceCategory categoryOf(BuildKind k) => switch (k) {
         BuildKind.huerta => TownPieceCategory.farm,
         BuildKind.lago => TownPieceCategory.water,
-        BuildKind.casa || BuildKind.home => TownPieceCategory.home,
+        BuildKind.casa || BuildKind.cocina || BuildKind.home =>
+          TownPieceCategory.home,
         BuildKind.gallinero || BuildKind.establo => TownPieceCategory.farm,
       };
 }
@@ -123,6 +124,25 @@ class TownBuildPalette extends StatefulWidget {
             why: p != null && FarmingRules.level(p) < h.level
                 ? s.t('ui.town.ranch.need_level', {'n': h.level})
                 : cantPay(h.price),
+          )
+        else if (d.kind == BuildKind.cocina)
+          // The town kitchen (farming.md § 17): gold, one per town.
+          TownPiece(
+            id: d.id,
+            category: TownPieceCategory.home,
+            name: s.t('ui.town.build.${d.id}.name'),
+            w: d.w,
+            h: d.h,
+            detail: s.t('ui.town.build.${d.id}.info'),
+            cost: gold(TownRules.kitchenCost),
+            flags: [
+              s.t('ui.town.edit.flag_cooking'),
+              s.t('ui.town.edit.flag_unique'),
+              s.t('ui.town.edit.flag_blocks'),
+            ],
+            why: TownRules.hasKitchen(c.town)
+                ? s.t('ui.town.edit.kitchen_built')
+                : cantPay(TownRules.kitchenCost),
           )
         else if (d.kind == BuildKind.home)
           // Player house (player_house.md § 1): gold, one per town.

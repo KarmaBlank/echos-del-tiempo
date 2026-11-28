@@ -73,15 +73,17 @@ revés: clic en un tile libre y después la lista).
   escala 1.0 (el scroll queda solo de reserva para escalas enormes).
   Cada pieza tiene UNA fuente de verdad (v0.49.39): id del catálogo →
   sprite del manifest → texto i18n. Miniatura: huertas, lagos y faro con
-  los pintores del mapa; casa, gallinero, establo y decoraciones con su
-  sprite (`items.vida_casa_1`, `vida_gallinero`, `vida_establo`,
+  los pintores del mapa; casa, cocina, gallinero, establo y decoraciones
+  con su sprite (`items.vida_casa_1`, `vida_cocina`, `vida_gallinero`, `vida_establo`,
   `vida_decor_<id>`); nunca la tierra arada fuera de una huerta. Nombre
   y descripción: `ui.town.build.<id>.*`, `ui.town.ranch.<id>.*`,
   `ui.town.decor.<id>.*`. Tamaño: la huella del catálogo (deco y faro
   1×1). Costo: solo el precio, `ui.town.edit.gold` (`₵{cost}`, con
   `DsGoldText`). Rasgos (`TownPiece.flags`), solo los que aplican:
   "Alumbra de noche" (faro y farolito), "Bloquea el paso" (cerco), "Se
-  puede cruzar" (tranquera), "Se camina encima" (caminito). Test:
+  puede cruzar" (tranquera), "Se camina encima" (caminito); la COCINA
+  (farming.md § 17, ₵ `kitchenCost`) "Abre la pantalla de cocina", "Una
+  por pueblo" y "Bloquea el paso". Test:
   `test/features/world/town_build_palette_entries_test.dart`.
   Categorías con filtros arriba (TODO · CULTIVO · AGUA · HOGAR · LUZ),
   nunca secciones apiladas. Tamaño: ancho de la pantalla − 64
@@ -257,7 +259,7 @@ se dibuja en `TownPlan`. Poner es gratis: lo que se paga es el terreno.
 ### 3.3 Lugares fijos (v0.25.2)
 Todos los lugares de `TownLayout.landmarks` (FUENTE RÚNICA, PORTAL,
 TABLERO DE ENCARGOS, FORJA, ESTATUA DEL TIEMPO, el puesto del
-comerciante, LOOT PERDIDO y, desde v0.32.3, TALLER DE OFICIOS y ARMERÍA) se pueden
+comerciante, LOOT PERDIDO y, desde v0.32.3, TALLER DE OFICIOS y ARMERÍA; luego TIENDA) se pueden
 mover; nunca borrar. Id de
 edición: `@` + el `TownSpot` (`@forge`, `@fountain`, …). Mismo fantasma
 verde / rojo; la esquina va en el tile del mouse.
@@ -266,7 +268,7 @@ verde / rojo; la esquina va en el tile del mouse.
   el TALLER DE OFICIOS sin marca va a (6, 6) y la ARMERÍA a (26, 6)
   (`TownLayout.lateSpots`, en ese orden; también VAGONETAS, la
   estación chica de 2 × 1 en (14, 19), pegada al oeste de la salida
-  sur, mining_smithing.md § 1.8); si ahí ya hay algo (una
+  sur, mining_smithing.md § 1.8; la TIENDA en (20, 13)); si ahí ya hay algo (una
   construcción a menos de 2 tiles, un faro, un árbol, un camino fijo u
   otro lugar movido a menos de 1), va al hueco libre más cercano
   (distancia Manhattan) sin guardar marca, hasta que el dueño lo mueva. De ahí salen el dibujo, las

@@ -10,6 +10,7 @@ import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'animal_rules.dart';
 import 'farming_rules.dart';
+import 'helper_motion.dart';
 import 'helper_rules.dart';
 import 'fishing_rules.dart';
 import 'life_tree_rules.dart';
@@ -128,6 +129,7 @@ abstract final class TownRules {
       BuildKind.casa => 'c',
       BuildKind.gallinero => 'g',
       BuildKind.establo => 'e',
+      BuildKind.cocina => 'k',
       BuildKind.home => 'p',
     }}$n';
   }
@@ -187,10 +189,7 @@ abstract final class TownRules {
       while (grew) {
         grew = false;
         for (final o in [...rest]) {
-          if (o.kind != b.kind ||
-              b.kind == BuildKind.casa ||
-              b.kind == BuildKind.home ||
-              b.kind.ranch) {
+          if (o.kind != b.kind || b.kind.house || b.kind.ranch) {
             continue;
           }
           final touch = o.parts
@@ -260,6 +259,9 @@ abstract final class TownRules {
       TownState s, String defId, int mx, int my) {
     final def = construction(defId);
     if (def == null) return (town: null, id: null, error: 'No existe');
+    if (def.kind == BuildKind.cocina && hasKitchen(s)) {
+      return (town: null, id: null, error: 'Ya hay una cocina');
+    }
     final (ox, oy) = s.origin;
     final b = TownBuild(_newId(s, def.kind), def.kind,
         [TownRect(mx - ox, my - oy, def.w, def.h)]);
@@ -295,6 +297,18 @@ abstract final class TownRules {
   // ---------------- faros (day_night_weather.md § 5) ----------------
 
   static int get faroCost => t.i('faroCost');
+
+  /// Gold for the town kitchen (farming.md § 17).
+  static int get kitchenCost => t.i('kitchenCost');
+
+  /// Whether [s] already has its kitchen (one per town).
+  static bool hasKitchen(TownState s) =>
+      s.builds.any((b) => b.kind == BuildKind.cocina);
+
+  /// [p] pays the kitchen, or `null` if short on gold.
+  static PlayerProfile? payKitchen(PlayerProfile p) => p.credits < kitchenCost
+      ? null
+      : p.copyWith(credits: p.credits - kitchenCost);
 
   /// El faro en el tile del mapa ([mx], [my]), o `null`.
   static (int, int)? lightAt(TownState s, int mx, int my) {
@@ -791,13 +805,8 @@ abstract final class TownRules {
       final k = time / 5 + i * 2.3;
       final n = yard.length;
       final a = yard[(k.floor() * 7) % n], z = yard[((k.floor() + 1) * 7) % n];
-      final f = k - k.floor();
-      final m = f < 0.6 ? 0.0 : (f - 0.6) / 0.4;
-      return (
-        x: (a.$1 + (z.$1 - a.$1) * m + ox + 0.5) * 16,
-        y: (a.$2 + (z.$2 - a.$2) * m + oy + 0.5) * 16,
-        work: f < 0.6
-      );
+      final p = HelperMotion.workThenWalk(a, z, k - k.floor());
+      return (x: (p.x + ox + 0.5) * 16, y: (p.y + oy + 0.5) * 16, work: p.work);
     }
     if (b.kind == BuildKind.lago) {
       final p = fisherAt(s, b, i, time);
@@ -819,14 +828,12 @@ abstract final class TownRules {
     final k = time / step + i * 1.7;
     final n = area.length;
     final a = area[k.floor() % n], z = area[(k.floor() + 1) % n];
-    final f = k - k.floor();
-    // Primero trabaja (60 %), después camina a la próxima parcela.
-    final m = f < 0.6 ? 0.0 : (f - 0.6) / 0.4;
-    final x = a.$1 + (z.$1 - a.$1) * m, y = a.$2 + (z.$2 - a.$2) * m;
+    // Works first, then walks to the next plot (HelperMotion).
+    final p = HelperMotion.workThenWalk(a, z, k - k.floor());
     return (
-      x: (ax + x + ox + 0.5) * 16,
-      y: (ay + y + oy + 0.5) * 16,
-      work: f < 0.6
+      x: (ax + p.x + ox + 0.5) * 16,
+      y: (ay + p.y + oy + 0.5) * 16,
+      work: p.work
     );
   }
 
@@ -883,7 +890,7 @@ abstract final class TownRules {
       {double r = 18}) {
     final (ox, oy) = s.origin;
     for (final b in s.builds) {
-      if (b.kind == BuildKind.casa || b.kind == BuildKind.home) continue;
+      if (b.kind.house) continue;
       final (cx, cy) = chestOf(s, b);
       final px = (cx + ox + 0.5) * 16, py = (cy + oy + 0.5) * 16;
       if ((px - x).abs() <= r && (py - y).abs() <= r) return b;
@@ -906,9 +913,7 @@ abstract final class TownRules {
     final b = s.build(id);
     if (b == null) return 'No existe';
     final farm = b.kind == BuildKind.huerta || b.kind.ranch;
-    if (b.kind == BuildKind.casa || b.kind == BuildKind.home) {
-      return 'No es una huerta ni un lago';
-    }
+    if (b.kind.house) return 'No es una huerta ni un lago';
     if (b.helper >= helperCap(b)) {
       if (b.kind.ranch) return 'Ya tiene su granjero de corral';
       return 'No hay más lugar: agrandá ${farm ? 'la huerta' : 'el lago'}';
