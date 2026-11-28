@@ -1652,6 +1652,7 @@ const _townLabels = {
   'stormBite': 'Tormenta: chance de que pique',
   'stormFisher': 'Tormenta: parte de la pesca de los pescadores',
   'autoWaitMult': 'Auto-pesca: × espera de la picada',
+  'autoBiteFloor': 'Auto-pesca: piso de la chance de picada del clima',
   'autoPassiveMult': 'Auto-pesca: × bonus de caña y pasivas',
   'autoEpicMult': 'Auto-pesca: × chance de épico',
   'autoXpMult': 'Auto-pesca: × XP',

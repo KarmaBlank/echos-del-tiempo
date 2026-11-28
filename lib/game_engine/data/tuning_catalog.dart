@@ -524,6 +524,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Auto-fishing (fishing.md § 6): × bite wait, × rod / tree bonuses,
     // × epic weight and × XP (Fishing and character).
     'autoWaitMult': 2.0,
+    // Floor of the weather bite chance for auto: wait / max(floor, chance).
+    'autoBiteFloor': 0.25,
     'autoPassiveMult': 0.5,
     'autoEpicMult': 0.25,
     'autoXpMult': 0.5,

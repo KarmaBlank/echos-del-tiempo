@@ -34,6 +34,10 @@ enum AutoFishStop {
 
   /// Left the town or the shore.
   left,
+
+  /// The host could not turn it on (no rod out, away from the water...).
+  /// Protocol 109.
+  refused,
 }
 
 class FishLine {

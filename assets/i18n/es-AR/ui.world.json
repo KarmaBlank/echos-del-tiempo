@@ -189,6 +189,7 @@
   "ui.world.ctl.autofish.stop.menu": "Auto-pesca cortada: abriste un menú ({n} peces).",
   "ui.world.ctl.autofish.stop.battle": "Auto-pesca cortada: entraste en pelea ({n} peces).",
   "ui.world.ctl.autofish.stop.left": "Auto-pesca cortada: te alejaste del agua ({n} peces).",
+  "ui.world.ctl.autofish.stop.refused": "La auto-pesca no arranca acá: pescá desde la orilla con la caña afuera.",
   "ui.world.ctl.achievement": "Hazaña: {name}",
   "ui.world.ctl.save_failed": "No se pudo guardar",
   "ui.world.ctl.prompt_travel": "[E] Mapa de viaje",
