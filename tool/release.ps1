@@ -176,9 +176,11 @@ if (-not $SkipChecks) {
       (Get-ChildItem $_.FullName -Recurse -Filter '*_test.dart' | Select-Object -First 1) } |
     ForEach-Object { "test/$($_.Name)" }
   Step "flutter test (paralelo x$cores, sin perf)"
-  Run $Flutter (@('test', "--concurrency=$cores") + $suites)
+  Run $Flutter (@('test', "--concurrency=$cores", '--exclude-tags', 'perf') + $suites)
   Step 'flutter test test/perf (solos, en serie)'
   Run $Flutter @('test', '--concurrency=1', 'test/perf')
+  Step 'flutter test --tags perf (solos, en serie)'
+  Run $Flutter (@('test', '--concurrency=1', '--tags', 'perf') + $suites)
 }
 
 # --- 3. Build release (flavor del juego) ----------------------------------
