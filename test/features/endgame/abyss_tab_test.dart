@@ -167,8 +167,12 @@ void main() {
         ),
       ),
     )));
+    await tester.tap(find.byKey(const ValueKey('results-tab-loot')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('results-exclusive')), findsOneWidget);
     expect(find.textContaining('EXCLUSIVO DEL ABISMO'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('results-tab-progress')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('results-abyss')), findsOneWidget);
     expect(ResultsPanel.isFinalVictory(r), isFalse);
     expect(tester.takeException(), isNull);

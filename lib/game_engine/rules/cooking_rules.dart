@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../data/cooking_catalog.dart';
 import '../data/tuning_catalog.dart';
+import '../models/farm_animal.dart' show animalGoodsKey;
 import '../models/meal_buff.dart';
 import '../models/player_profile.dart';
 import 'life_tree_rules.dart' show LifeTreeRules, LifeFx;
@@ -10,7 +11,7 @@ export '../data/cooking_catalog.dart';
 export '../models/meal_buff.dart';
 
 /// Why a recipe can't be cooked right now.
-enum CookBlock { unknown, crops, fish }
+enum CookBlock { unknown, crops, fish, goods }
 
 /// Cooking (docs/specs/farming.md § 17). Pure: the numbers come from
 /// `kTuning[TuningId.farming]` (Editor → Balance → Cultivo).
@@ -99,6 +100,11 @@ abstract final class CookingRules {
     for (final e in m.fish.entries) {
       if (p.life.count(e.key) < need(e.value, mult)) return CookBlock.fish;
     }
+    for (final e in m.goods.entries) {
+      if (f.goodsCount(animalGoodsKey(e.key, q)) < need(e.value, mult)) {
+        return CookBlock.goods;
+      }
+    }
     return null;
   }
 
@@ -117,6 +123,12 @@ abstract final class CookingRules {
       crops[k] = (crops[k] ?? 0) - need(e.value, mult);
       if (crops[k]! <= 0) crops.remove(k);
     }
+    final goods = {...f.goods};
+    for (final e in m.goods.entries) {
+      final k = animalGoodsKey(e.key, q);
+      goods[k] = (goods[k] ?? 0) - need(e.value, mult);
+      if (goods[k]! <= 0) goods.remove(k);
+    }
     var life = p.life;
     for (final e in m.fish.entries) {
       life = life.copyWith(
@@ -125,6 +137,7 @@ abstract final class CookingRules {
     final best = f.mealLog[id];
     final farm = f.copyWith(
         crops: crops,
+        goods: goods,
         mealLog: best != null && best >= q.index
             ? null
             : {...f.mealLog, id: q.index});

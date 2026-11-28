@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_gold.dart';
+import '../design/ds_tokens.dart' show DsColors, DsTextColor, DsTextRole;
 import 'proto_colors.dart';
 import 'retro_text.dart';
 import 'retro_type.dart';
@@ -31,8 +33,10 @@ final _classAttr = RegExp('class=["\']([^"\']*)["\']');
 ///
 /// Etiquetas: `b` (resaltado SOLO con color, sin peso: [boldColor] o
 /// `gold` si no trae color propio),
-/// `span`/`b` con `style="color:#hex"`, `class="k"` (`sky`),
-/// `class="sys"` (`green`), `small` (`sky`), `br`.
+/// `span`/`b` con `style="color:#hex"`, `class="k"` (rol Subtítulo),
+/// `class="sys"` (`green`), `small` (`sky`), `br`, y los roles de texto
+/// `title`, `sub`, `muted`, `key` (`**…**` = `key`; design_system.md
+/// § 3.4).
 /// Entidades `&nbsp; &amp; &lt; &gt; &quot; &#39;`. Cada trozo de texto
 /// pasa por [retroText]. Lo que no entiende lo deja como texto.
 ///
@@ -90,8 +94,30 @@ abstract final class ProtoSpanCache {
   }
 }
 
+/// `**text**` → `<key>text</key>` (KEY INFO role, design_system.md
+/// § 3.4). Lets i18n strings mark the rule or number that matters.
+final _keyStars = RegExp(r'\*\*(.+?)\*\*');
+
+/// [markup] with `**…**` turned into `<key>…</key>`.
+String protoKeyMarkup(String markup) => markup.contains('**')
+    ? markup.replaceAllMapped(_keyStars, (m) => '<key>${m.group(1)}</key>')
+    : markup;
+
+/// Semantic text-role tags (design_system.md § 3.4): `<title>`,
+/// `<sub>`, `<muted>`, `<key>` (also `**…**`).
+const _roleTags = {
+  'title': DsTextRole.title,
+  'sub': DsTextRole.subtitle,
+  'muted': DsTextRole.detail,
+  'key': DsTextRole.key,
+};
+
+/// Every tag the parser understands (the rest stays as text).
+const _tags = {'b', 'span', 'small', 'title', 'sub', 'muted', 'key'};
+
 TextSpan _parseProtoSpan(String markup,
     {TextStyle? style, Color? boldColor}) {
+  markup = protoKeyMarkup(markup);
   final root = <InlineSpan>[];
   // (etiqueta, hijos, estilo)
   final stack = <(String, List<InlineSpan>, TextStyle?)>[];
@@ -105,7 +131,12 @@ TextSpan _parseProtoSpan(String markup,
   void flush() {
     if (buf.isEmpty) return;
     final t = _unescape(buf.toString());
-    children.addAll(symbolSpans(retroText(t)));
+    // Each `₵` is the gold coin (design_system.md § DsGold), never "$".
+    final parts = t.split('₵');
+    for (var k = 0; k < parts.length; k++) {
+      if (k > 0) children.add(DsGoldText.coinSpan(style));
+      if (parts[k].isNotEmpty) children.addAll(symbolSpans(retroText(parts[k])));
+    }
     buf.clear();
     final nl = t.lastIndexOf('\n');
     if (nl >= 0) lineStart = true;
@@ -132,7 +163,7 @@ TextSpan _parseProtoSpan(String markup,
       buf.write('\n');
       continue;
     }
-    if (!const {'b', 'span', 'small'}.contains(name)) {
+    if (!_tags.contains(name)) {
       buf.write(m.group(0));
       continue;
     }
@@ -149,15 +180,21 @@ TextSpan _parseProtoSpan(String markup,
     final col = _colorAttr.firstMatch(attrs);
     final cls = _classAttr.firstMatch(attrs)?.group(1)?.split(' ') ?? const [];
     var c = col == null ? null : ProtoColors.parse(col.group(1)!);
-    if (c == null && cls.contains('k')) c = ProtoColors.sky;
+    // `class="k"` (section label) is the Subtitle role (§ 3.4): never
+    // the sky blue that reads as Magic / ice.
+    final isLabel = c == null && cls.contains('k');
+    if (isLabel) c = DsColors.textSubtitle;
     if (c == null && cls.contains('sys')) c = ProtoColors.green;
     if (name == 'small') c ??= ProtoColors.sky;
     final bold = name == 'b';
     if (bold) c ??= boldColor ?? ProtoColors.gold;
-    if (roles && c != null) {
+    if (roles && c != null && !isLabel) {
       final inBold = stack.any((e) => e.$1 == 'b');
       c = UiTheme.role(c, bold: bold || inBold, lineStart: lineStart);
     }
+    // Text-role tags: their own role colour, never remapped
+    // (design_system.md § 3.4).
+    if (_roleTags[name] case final role?) c = DsTextColor(role);
     // Sin peso (las fuentes pixel se "engordan" con negrita sintética):
     // `<b>` resalta solo con el color (ui_style.md).
     final TextStyle? st = c == null ? null : TextStyle(color: c);
@@ -208,6 +245,7 @@ String _unescape(String s) => s
 /// un markup válido con el mismo aspecto. Para repartir un tip largo en
 /// columnas (`RetroTipText`).
 List<String> protoSplitLines(String markup) {
+  markup = protoKeyMarkup(markup);
   final out = <String>[];
   // (nombre, etiqueta de apertura tal cual)
   final open = <(String, String)>[];
@@ -230,7 +268,7 @@ List<String> protoSplitLines(String markup) {
       continue;
     }
     line.write(m.group(0));
-    if (!const {'b', 'span', 'small'}.contains(name)) continue;
+    if (!_tags.contains(name)) continue;
     if (closing) {
       final at = open.lastIndexWhere((e) => e.$1 == name);
       if (at >= 0) open.removeRange(at, open.length);

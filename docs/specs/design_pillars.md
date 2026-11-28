@@ -30,4 +30,5 @@ jugador elige cómo:
    del manifiesto de sprites; nada fijo en el código.
 
 Los specs de cada sistema citan este archivo cuando una decisión sale de
-uno de estos pilares (p. ej. `cozy_life.md`).
+uno de estos pilares (p. ej. `cozy_life.md`, `animals.md`: gallinero y
+establo con una tecla, nada obligatorio y animales que nunca se pierden).

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/house_assign_panel.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -13,7 +14,8 @@ import '../../real_fonts.dart';
 /// `HOUSES_PREVIEW=1 flutter test <this file>`.
 final _preview = Platform.environment['HOUSES_PREVIEW'] != null;
 
-Widget _host(Widget child, {GlobalKey? key}) => MaterialApp(
+Widget _host(Widget child, {GlobalKey? key}) => ProviderScope(
+    child: MaterialApp(
       home: Scaffold(
         backgroundColor: DsColors.background,
         body: Center(
@@ -29,7 +31,7 @@ Widget _host(Widget child, {GlobalKey? key}) => MaterialApp(
           ),
         ),
       ),
-    );
+    ));
 
 const _houses = [
   HouseCellData('h1', 'CASA 1', 'Nivel 1'),

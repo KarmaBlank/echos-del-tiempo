@@ -94,6 +94,10 @@ enum WorldPanel {
   /// (farming.md § 8, v0.25.5).
   helper,
 
+  /// Coop / barn: the animals, their care and the hay store
+  /// (animals.md § 5).
+  animals,
+
   /// Altar de la Ofrenda del jefe vencido (persistent_dungeons.md § 4).
   offering,
 }

@@ -156,10 +156,10 @@
   "ui.world.ctl.farm.water": "",
   "ui.world.ctl.helper.fisher_title": "",
   "ui.world.ctl.helper.fisher_line": "",
-  "ui.world.ctl.helper.fisher_catch": "",
+  "ui.world.ctl.helper.fisher_catch": "每轮 {n} 条鱼 · **没有传说品质**",
   "ui.world.ctl.helper.chest_next": "",
   "ui.world.ctl.helper.farmer_title": "",
-  "ui.world.ctl.helper.farmer_area": "",
+  "ui.world.ctl.helper.farmer_area": "只照料 **{n} 块田地**，以绿色标出。",
   "ui.world.ctl.helper.farmer_seeds": "",
   "ui.world.ctl.helper.farmer_tasks": "",
   "ui.world.ctl.helper.none": "",
@@ -451,7 +451,7 @@
     "status": "draft"
   },
   "ui.world.mine.prompt_miners": {
-    "text": "[G] 雇佣矿工（{n}/{max}，{gold} 金币）· [Shift+G] 解雇",
+    "text": "[G] 雇佣矿工（{n}/{max}，₵{gold}）· [Shift+G] 解雇",
     "status": "draft"
   },
   "ui.world.mine.prompt_mushroom": {
@@ -543,7 +543,7 @@
     "status": "draft"
   },
   "ui.world.mine.prompt_miner_up": {
-    "text": "[U] 将矿工的镐升级到等级 {tier}（{gold} 金币，{n} × {ingot}）",
+    "text": "[U] 将矿工的镐升级到等级 {tier}（₵{gold}，{n} × {ingot}）",
     "status": "draft"
   },
   "ui.world.mine.prompt_open_miners": {
@@ -674,7 +674,8 @@
     "status": "draft"
   },
   "ui.world.loot.gold": {
-    "text": "{n} 金币",
+    "text": "₵{n}",
     "status": "draft"
-  }
+  },
+  "ui.world.ctl.no_ranch": "城镇里没有鸡舍或畜棚"
 }

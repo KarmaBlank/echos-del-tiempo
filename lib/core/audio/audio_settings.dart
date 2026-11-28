@@ -141,13 +141,19 @@ class AudioSettingsController extends StateNotifier<AudioSettings> {
     required this.music,
     required this.sfx,
     AudioSettings initial = const AudioSettings(),
-  }) : super(initial) {
+    DateTime Function()? clock,
+  })  : _clock = clock ?? DateTime.now,
+        super(initial) {
     _apply(initial);
   }
 
   final AudioSettingsStore store;
   final MusicService music;
   final SfxService sfx;
+
+  /// Reloj del anti-ráfagas de [preview] (inyectable: los tests no
+  /// dependen de la carga de la máquina).
+  final DateTime Function() _clock;
 
   /// Carga lo guardado (si hay) y lo aplica.
   Future<void> load() async {
@@ -175,14 +181,15 @@ class AudioSettingsController extends StateNotifier<AudioSettings> {
 
   /// Separación mínima entre muestras al arrastrar.
   static const previewGap = Duration(milliseconds: 120);
-  Stopwatch? _sincePreview;
+  DateTime? _lastPreview;
 
   /// Toca [previewSfx] con el volumen actual (como mucho uno cada
   /// [previewGap] mientras se arrastra; [force] lo toca igual).
   void preview({bool force = false}) {
-    final w = _sincePreview;
-    if (!force && w != null && w.elapsed < previewGap) return;
-    _sincePreview = Stopwatch()..start();
+    final now = _clock();
+    final last = _lastPreview;
+    if (!force && last != null && now.difference(last) < previewGap) return;
+    _lastPreview = now;
     sfx.play(previewSfx);
   }
 

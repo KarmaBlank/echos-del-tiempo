@@ -10,6 +10,7 @@ import '../theme/retro_theme.dart';
 import '../theme/ui_theme.dart';
 import 'ds_button.dart';
 import 'ds_focus.dart';
+import 'ds_gold.dart';
 import 'ds_tokens.dart';
 
 // Catálogo de componentes (docs/specs/design_system.md § 6).
@@ -302,7 +303,7 @@ class DsToast extends StatelessWidget {
             child: Padding(
           padding: EdgeInsets.symmetric(vertical: DsSpace.xs),
           child: content ??
-              Text(message,
+              DsGoldText.auto(message,
                   style: DsText.body(textColor ?? DsColors.textPrimary)),
         )),
         if (close != null) ...[
@@ -469,7 +470,7 @@ class DsListRow extends StatelessWidget {
             Expanded(child: () {
               final line = Row(children: [
               Flexible(
-                child: Text(title,
+                child: DsGoldText.auto(title,
                     maxLines: wrap ? null : 1,
                     overflow: wrap ? null : TextOverflow.ellipsis,
                     style: DsText.body(!enabled
@@ -482,7 +483,7 @@ class DsListRow extends StatelessWidget {
                 SizedBox(width: DsSpace.sm),
                 // Un dato largo se corta con "…" (nunca desborda la fila).
                 Flexible(
-                  child: Text(detail!,
+                  child: DsGoldText.auto(detail!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: DsText.detail(detailColor ??
@@ -501,7 +502,7 @@ class DsListRow extends StatelessWidget {
                     if (subtitle == null)
                       subtitleWidget!
                     else
-                    Text(subtitle!,
+                    DsGoldText.auto(subtitle!,
                         maxLines: wrap ? null : 1,
                         overflow: wrap ? null : TextOverflow.ellipsis,
                         style: DsText.detail(subtitleColor ??
@@ -792,7 +793,9 @@ class DsTag extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 3),
       decoration: BoxDecoration(border: Border.all(color: color, width: 2)),
-      child: Text(retroText(shown), style: DsText.subtitle(color)),
+      child: DsGoldText.hasGold(shown)
+          ? DsGoldText(shown, style: DsText.subtitle(color))
+          : Text(retroText(shown), style: DsText.subtitle(color)),
     );
   }
 }
@@ -884,6 +887,23 @@ class _DsFoldState extends State<DsFold> {
   }
 }
 
+/// A line of text with inline KEY INFO: `**…**` or `<key>…</key>` is
+/// drawn in [DsText.key] (design_system.md § 3.4); the rest of the
+/// prototype markup also works. Never truncates.
+class DsRichText extends StatelessWidget {
+  const DsRichText(this.markup, {super.key, this.style});
+
+  /// Markup, already escaped where it holds free text.
+  final String markup;
+
+  /// Base style; [DsText.body] by default.
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) =>
+      ProtoText(markup, style: style ?? DsText.body());
+}
+
 /// Atajo del pie de un [DsTooltipCard]: tecla + qué hace.
 class DsShortcut {
   const DsShortcut(this.key, this.label);
@@ -898,19 +918,40 @@ class DsTooltipCard extends StatelessWidget {
     super.key,
     required this.title,
     this.titleColor,
+    this.subtitle,
+    this.subtitleColor,
     this.tags = const [],
     this.children = const [],
     this.shortcuts = const [],
     this.detail,
+    this.titleStyle,
   });
+
+  /// One-line tooltip: [text] as body markup (`**…**` = KEY); with
+  /// [isKey] the whole line is KEY INFO (why a control is disabled).
+  DsTooltipCard.text(String text, {Key? key, bool isKey = false})
+      : this(
+            key: key,
+            title: text,
+            titleStyle: isKey ? DsText.key() : DsText.body());
+
+  /// Overrides the title style ([DsTooltipCard.text]); the title is
+  /// then markup.
+  final TextStyle? titleStyle;
 
   /// Texto DETALLADO (plano) del objeto (ui_minimal.md § 8.3): con
   /// TEXTOS en RESUMIDO va plegado en `MÁS DETALLE` debajo de
   /// [children]; en DETALLADO no se dibuja (ya se ve todo).
   final String? detail;
 
+  /// Name of the thing: title role ([DsText.heading]). [titleColor]
+  /// only where the colour is the point (rarity).
   final String title;
   final Color? titleColor;
+
+  /// Type / rarity line: subtitle role. Markup (`**…**` = KEY).
+  final String? subtitle;
+  final Color? subtitleColor;
   final List<Widget> tags;
   final List<Widget> children;
   final List<DsShortcut> shortcuts;
@@ -937,8 +978,15 @@ class DsTooltipCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Estilos fijos del DS: nunca el DefaultTextStyle del panel.
-          Text(title,
-              style: DsText.body(titleColor ?? DsColors.textPrimary)),
+          if (titleStyle case final ts?)
+            DsRichText(title, style: ts)
+          else
+            Text(title, style: DsText.heading(titleColor)),
+          if (subtitle != null) ...[
+            SizedBox(height: DsSpace.xs),
+            DsRichText(subtitle!,
+                style: DsText.body(subtitleColor ?? DsColors.textSubtitle)),
+          ],
           if (tags.isNotEmpty) ...[
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: tags),
@@ -1013,5 +1061,5 @@ class DsTooltip extends StatelessWidget {
 /// todo control del Editor dice qué hace.
 extension DsTipX on Widget {
   Widget tip(String text) =>
-      DsTooltip(card: DsTooltipCard(title: text), child: this);
+      DsTooltip(card: DsTooltipCard.text(text), child: this);
 }

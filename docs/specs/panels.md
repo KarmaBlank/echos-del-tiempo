@@ -1301,12 +1301,22 @@ cortado, y todo usable con teclado. Piezas en `lib/app/widgets/`
   `GRUPO · n/m listos` (una fila enmarcada por jugador, verde si está
   listo), `TU EQUIPO` (`Arma`, `Consumibles`, `Créditos` en columna) y
   `AVISO` (naranja).
-- **Resultado**: 900 px. Nombre y zona arriba; `RANGO` (letra grande
-  `display`, tiempo y K.O.) │ `RECOMPENSAS` (XP, créditos, bonus en
-  columna); `PROGRESO` (zona desbloqueada, Prueba, Atlas) y `BOTÍN`
-  (obtuviste, drops del grupo, élites, TUS DROPS). Abre con el foco en
-  `VOLVER AL LOBBY` (`Enter` vuelve). Sin tamaños a mano (`title` /
-  `display`).
+- **Resultado** (v0.49.33): 1000 px. Nombre y zona arriba; debajo,
+  subtabs (nunca secciones apiladas; design_system.md § 6.2) con cuerpo
+  de alto fijo (`ResultsPanel.bodyHeight`): `RESUMEN` = `RANGO` (letra
+  grande `display`, tiempo y K.O.) │ `RECOMPENSAS` (XP, créditos y
+  bonus con la moneda `₵`); `PROGRESO` (solo si hay: zona desbloqueada,
+  Prueba, Atlas, Abismo); `BOTÍN` (solo si hay: obtuviste, drops del
+  grupo y élites arriba, y TUS DROPS como grilla de INVENTARIO,
+  `DsGridDetailLayout` con prefijo `results`, 6 columnas arriba a la
+  izquierda, la casilla con el sprite del ítem; sin texto debajo, el
+  nombre en la ficha del mouse; lo oculto por tu filtro va atenuado).
+  A la derecha, el detalle del drop elegido con la etiqueta de tu filtro
+  (`LootLabel`) y su ficha; el legendario exclusivo del Abismo va
+  primero, con marco dorado y la etiqueta `EXCLUSIVO DEL ABISMO`
+  (`results-exclusive`). Claves `results-tab-<summary|progress|loot>`,
+  `results-drop-<i>`, `results-drop-detail`. Abre con el foco en
+  `VOLVER AL LOBBY` (`Enter` vuelve). Solo roles `DsText` y `DsColors`.
 - **Creador de clase (título)**: `1 · CLASE` (tarjetas: sprite, nombre,
   arma inicial y su atajo `[n]`; flechas o `1`..`9` la eligen) │
   `DETALLE` (descripción entera, atributos base en barras, arma inicial

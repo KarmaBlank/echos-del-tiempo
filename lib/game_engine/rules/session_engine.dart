@@ -94,6 +94,7 @@ import 'life_tree_rules.dart';
 import 'biome_fisher_rules.dart';
 import 'life_time_rules.dart';
 import 'helper_rules.dart';
+import 'animal_rules.dart';
 import 'light_rules.dart';
 import 'mining_rules.dart';
 import 'mine_work_rules.dart';
@@ -118,6 +119,7 @@ part 'session_engine_tutorial.dart';
 part 'session_engine_run.dart';
 part 'session_engine_fishing.dart';
 part 'session_engine_farming.dart';
+part 'session_engine_animals.dart';
 part 'session_engine_biome.dart';
 part 'session_engine_mining.dart';
 part 'session_engine_cozy.dart';
@@ -382,6 +384,9 @@ class SessionEngine {
 
   /// Huerta del anfitrión (farming.md § 10): tiempos y acumuladores.
   final farming = FarmingHostState();
+
+  /// Farm animals (animals.md): host-only XP bookkeeping.
+  final animals = AnimalHostState();
 
   /// Mining of the host (mining_smithing.md § 1): swings, cracks, bombs.
   final mining = MiningHostState();
@@ -1290,6 +1295,17 @@ class _Op {
           return false;
         }
         final ox = p.x, oy = p.y;
+        // Fences block (town_editor.md § 5.1): the host refuses a step
+        // into one (a player already inside may walk out).
+        {
+          final nx = a.x.isFinite && a.x != 0 ? a.x : p.x;
+          final ny = a.y.isFinite && a.y != 0 ? a.y : p.y;
+          final fm = e.mapFor(s);
+          if (WorldRules.hitsFence(fm, nx, ny) &&
+              !WorldRules.hitsFence(fm, ox, oy)) {
+            return false;
+          }
+        }
         if (a.x.isFinite && a.x != 0) p.x = a.x;
         if (a.y.isFinite && a.y != 0) p.y = a.y;
         // Encounter initiative: remember the last real step.

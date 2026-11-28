@@ -47,6 +47,12 @@ abstract final class DsColors {
 
   /// Detalle / secundario: lavanda.
   static const textSecondary = DsTextColor(DsTextRole.detail);
+  /// KEY INFO: the rule, limit or number that matters (rose; never an
+  /// element or rarity colour, design_system.md § 3.4).
+  static const textKey = DsTextColor(DsTextRole.key);
+
+  /// Muted / meta text (stats, flavour, who / when).
+  static const textMuted = textSecondary;
   static Color get textDisabled => textSecondary.withValues(alpha: 0.55);
 
   /// Acción principal: misma caja que el resto, borde y texto dorados.
@@ -72,6 +78,10 @@ abstract final class DsColors {
   /// What an editor is acting on: selection box and handles on a canvas,
   /// the selected key and the changed values (game_editor.md § 7.7).
   static const editSelection = ProtoColors.green;
+
+  /// The 1 px silhouette outline of the E / click target on the map
+  /// (controls.md § Cursor de acción).
+  static const targetOutline = ProtoColors.white;
 
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
@@ -99,7 +109,11 @@ abstract final class DsColors {
 }
 
 /// Rol de un color de texto del sistema.
-enum DsTextRole { title, subtitle, body, detail }
+///
+/// The colours never reuse an element, rarity or status colour
+/// (design_system.md § 3.4); `test/design/ds_text_roles_test.dart`
+/// checks it.
+enum DsTextRole { title, subtitle, body, detail, key }
 
 /// Color de texto por rol que sigue al tema de interfaz activo
 /// (design_system.md § 3.3). `const` como `ThemeColor`.
@@ -110,13 +124,27 @@ class DsTextColor extends Color {
 
   /// ARGB por tema, en el orden de [DsTextRole].
   static const table = <InterfaceTheme, List<int>>{
-    InterfaceTheme.blue: [0xFFFFE3A8, 0xFF8FD3F4, 0xFFE8ECFF, 0xFFB3ACE6],
-    InterfaceTheme.dark: [0xFFF5D99A, 0xFF8EC5E6, 0xFFEDEDED, 0xFFB8B2DC],
-    InterfaceTheme.highContrast: [
-      0xFFFFF1A8,
-      0xFF9FE7FF,
+    // title, subtitle, body, detail (muted), key
+    InterfaceTheme.blue: [
       0xFFFFFFFF,
-      0xFFD4CCFF
+      0xFFB0BEE8,
+      0xFFE8ECFF,
+      0xFFA0A8C8,
+      0xFFFF70C8
+    ],
+    InterfaceTheme.dark: [
+      0xFFFFFFFF,
+      0xFFB0BEE8,
+      0xFFE8ECFF,
+      0xFFA0A8C8,
+      0xFFFF70C8
+    ],
+    InterfaceTheme.highContrast: [
+      0xFFFFFFFF,
+      0xFFB0BEE8,
+      0xFFFFFFFF,
+      0xFFB4B4D8,
+      0xFFFF8AD8
     ],
   };
 
@@ -164,15 +192,29 @@ abstract final class DsText {
   static TextStyle detail([Color? c]) =>
       RetroType.style(RetroType.small, color: c ?? DsColors.textSecondary);
 
-  /// Descripción: fuente de lectura 11, en el lavanda del detalle (texto
-  /// de ambientación de un encargo: "Necesito…"). Distinto del Cuerpo.
+  /// Descripción: fuente de lectura 11 en el color del Cuerpo (texto
+  /// propio de un objeto o encargo: "Necesito…").
   static TextStyle description([Color? c]) =>
-      RetroType.style(RetroType.body, color: c ?? DsColors.textSecondary);
+      RetroType.style(RetroType.body, color: c ?? DsColors.text);
 
   /// Meta / apagado: fuente de lectura 10 en gris (quién lo pide, día,
   /// estado corto de una fila). El escalón más bajo de la jerarquía.
   static TextStyle meta([Color? c]) =>
       RetroType.style(RetroType.small, color: c ?? DsColors.textDisabled);
+
+  /// KEY INFO: reading font 11 in [DsColors.textKey]. The restriction,
+  /// limit or requirement a player must not miss ("only 12 plots").
+  /// Inline: `**…**` or `<key>…</key>` in any markup ([DsRichText]).
+  static TextStyle key([Color? c]) =>
+      RetroType.style(RetroType.body, color: c ?? DsColors.textKey);
+
+  /// Muted: alias of [detail] (stats, flavour).
+  static TextStyle muted([Color? c]) => detail(c);
+
+  /// Compact title (tooltip / card name): pixel font 9 in the title
+  /// colour. Same role as [title], sized for a tooltip.
+  static TextStyle heading([Color? c]) =>
+      RetroType.style(RetroType.label, color: c ?? DsColors.textTitle);
 
   /// Acento / recompensa: fuente de lectura 11 en dorado (oro, rep,
   /// lo que se gana).
@@ -182,11 +224,14 @@ abstract final class DsText {
   /// La jerarquía de texto completa, para la galería: nombre → estilo.
   static Map<String, TextStyle> get hierarchy => {
         'Título': title(),
+        'Título compacto': heading(),
         'Subtítulo': subtitle(),
         'Cuerpo': body(),
         'Descripción': description(),
+        'Apagado / stats': muted(),
         'Meta': meta(),
-        'Acento': accent(),
+        'CLAVE': key(),
+        'Acento (oro)': accent(),
       };
 }
 

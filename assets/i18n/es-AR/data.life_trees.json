@@ -226,5 +226,22 @@
   "data.life_trees.node.smith_e7s.name": "Gremio agradecido",
   "data.life_trees.node.smith_e8.name": "Ancla de la fragua",
   "data.life_trees.node.smith_e9.name": "Herrero del pueblo",
-  "data.life_trees.node.smith_r.name": "Aprendiz de fragua"
+  "data.life_trees.node.smith_r.name": "Aprendiz de fragua",
+  "data.life_trees.branch.cultivo.f": "Corral",
+  "data.life_trees.group.crops": "CULTIVOS",
+  "data.life_trees.group.animals": "ANIMALES",
+  "data.life_trees.node.farm_f1.name": "Mano tibia",
+  "data.life_trees.node.farm_f2.name": "Fardo ordenado",
+  "data.life_trees.node.farm_f3.name": "Ojo de pastor",
+  "data.life_trees.node.farm_f4.name": "Pluma suelta",
+  "data.life_trees.node.farm_f5.name": "Rebaño que recuerda",
+  "data.life_trees.node.farm_f6.name": "Cepillo de cerda",
+  "data.life_trees.node.farm_f7.name": "Muda del eco",
+  "data.life_trees.node.farm_f4s.name": "Nido doble",
+  "data.life_trees.node.farm_f5s.name": "Ubre generosa",
+  "data.life_trees.node.farm_f6s.name": "Doble esquila",
+  "data.life_trees.node.farm_f7s.name": "Corral que rinde",
+  "data.life_trees.node.farm_f8.name": "Granero del ayer",
+  "data.life_trees.node.farm_f9.name": "Pastor del tiempo",
+  "data.life_trees.node.farm_f10.name": "Corral de las eras"
 }

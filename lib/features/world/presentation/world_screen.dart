@@ -38,6 +38,7 @@ import '../../endgame/presentation/eco_zone_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/workshop_panel.dart';
+import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/domain/mission_text.dart';
@@ -83,6 +84,7 @@ import 'session_view.dart';
 import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
 import 'hud/map_hover_tip.dart';
+import 'panels/animal_panel.dart';
 import '../../../core/i18n/i18n_providers.dart';
 import '../domain/player_locations.dart';
 
@@ -671,8 +673,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                         return DsTooltipCard(
                           title: title,
                           children: [
-                            for (final l in lines)
-                              Text(l, style: DsText.detail())
+                            for (final l in lines) DsRichText(l)
                           ],
                         );
                       }(),
@@ -1045,6 +1046,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   controller.engine
                       .lootVerdict(me.profile, d, wants: controller.localWants),
                   exclusive: kUniques[d.item?.uniqueId]?.exclusive ?? false,
+                  cell: (size, selected) => ItemSlot(
+                      rules: controller.engine.progression,
+                      size: size,
+                      data: ItemSlotData(
+                          content: dropCellContent(d), selected: selected)),
                   tooltip: d.eco != null
                       ? ecoTooltipMarkup(controller.engine.progression, d.eco!)
                       : d.item == null
@@ -1235,6 +1241,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             view: view,
             controller: controller,
             initialTab: RunCharacterTab.inventory);
+      case WorldPanel.animals:
+        return AnimalPanel(
+            key: const ValueKey('panel-animals-root'),
+            view: view,
+            controller: controller);
       case WorldPanel.character:
         return CharacterPanel(
             key: const ValueKey('panel-character'),

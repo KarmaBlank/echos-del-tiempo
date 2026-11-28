@@ -5,7 +5,9 @@
 /// Profession with its own tree.
 enum LifeSkillKind {
   pesca('PESCA'),
-  cultivo('CULTIVO'),
+  // The Granjero profession (crops + animals); the id stays `cultivo` so
+  // saves and the wire keep working (animals.md § 12).
+  cultivo('GRANJERO'),
   herreria('HERRERÍA');
 
   const LifeSkillKind(this.label);
@@ -14,6 +16,21 @@ enum LifeSkillKind {
 
 /// Branch letters of every tree, left to right (life_trees_v2.md § 2).
 const kLifeBranches = ['a', 'b', 'c', 'd', 'e'];
+
+/// Extra branches of a tree after the five shared ones: the Granjero
+/// tree adds ANIMALES (`f`, animals.md § 8).
+const kLifeExtraBranches = <LifeSkillKind, List<String>>{
+  LifeSkillKind.cultivo: ['f'],
+};
+
+/// Branch letters of [k], left to right.
+List<String> lifeBranchesOf(LifeSkillKind k) =>
+    [...kLifeBranches, ...?kLifeExtraBranches[k]];
+
+/// The group a branch of [k] belongs to, for the canvas headings: the
+/// Granjero tree splits into CULTIVOS (a–e) and ANIMALES (f).
+String? lifeBranchGroup(LifeSkillKind k, String b) =>
+    k != LifeSkillKind.cultivo ? null : (b == 'f' ? 'animals' : 'crops');
 
 /// Tiers of a branch (1..[kLifeTiers]); the root is tier 0.
 const kLifeTiers = 10;
@@ -111,6 +128,13 @@ abstract final class LifeFx {
   static const livingRarity = 'livingRarity'; // living weapon quality
   static const livingAffix = 'livingAffix'; // living weapon extra affixes
   static const mealPower = 'mealPower'; // every meal buffs more
+  // Granjero, ANIMALES branch (animals.md § 8)
+  static const petCare = 'petCare'; // × affection per pet
+  static const haySilo = 'haySilo'; // + bales in each hay store
+  static const animalQuality = 'animalQuality'; // chance of +1 quality
+  static const partDrop = 'partDrop'; // × part drop chance
+  static const animalDouble = 'animalDouble'; // chance of a double product
+  static const animalLegend = 'animalLegend'; // legendary products / forge
   // Herrería
   static const forgeAffix = 'forgeAffix'; // forged: extra affix / tier
   static const veinArea = 'veinArea'; // pickaxe area (1 = 3 veins)
@@ -131,6 +155,7 @@ abstract final class LifeFx {
     compostArea,
     veinArea,
     detect,
+    haySilo,
   };
 }
 
@@ -307,7 +332,7 @@ const _pesca = <LifeTreeNode>[
 
 const _cultivo = <LifeTreeNode>[
   LifeTreeNode('farm_r', 'Granjero',
-      x: 0, y: 0, cost: 0, links: ['farm_a1', 'farm_b1', 'farm_c1', 'farm_d1', 'farm_e1'],
+      x: 0, y: 0, cost: 0, links: ['farm_a1', 'farm_b1', 'farm_c1', 'farm_d1', 'farm_e1', 'farm_f1'],
       effects: {LifeFx.xp: 'farm_r'}, root: true),
   LifeTreeNode('farm_a1', 'Surco parejo',
       x: -2, y: 1, cost: 1, links: ['farm_r', 'farm_a2'],
@@ -471,6 +496,40 @@ const _cultivo = <LifeTreeNode>[
       x: 2, y: 10, cost: 3, links: ['farm_e9'],
       effects: {LifeFx.meal: 'farm_e10'},
       grants: {'meal:caldo_invierno:3': 'farm_e10_2'}, branch: 'e', major: true, exclusive: 'cap'),
+  // ANIMALES (animals.md § 8): care, hay, quality, parts and doubles,
+  // the legendary products at the top.
+  LifeTreeNode('farm_f1', 'Mano tibia',
+      x: 3, y: 1, cost: 1, links: ['farm_r', 'farm_f2'],
+      effects: {LifeFx.petCare: 'farm_f1'}, branch: 'f'),
+  LifeTreeNode('farm_f2', 'Fardo ordenado',
+      x: 3, y: 2, cost: 1, links: ['farm_f1', 'farm_f3'],
+      effects: {LifeFx.haySilo: 'farm_f2'}, branch: 'f'),
+  LifeTreeNode('farm_f3', 'Ojo de pastor',
+      x: 3, y: 3, cost: 1, links: ['farm_f2', 'farm_f4'],
+      effects: {LifeFx.animalQuality: 'farm_f3'}, branch: 'f'),
+  LifeTreeNode('farm_f4', 'Pluma suelta',
+      x: 3, y: 4, cost: 1, links: ['farm_f3', 'farm_f5'],
+      effects: {LifeFx.partDrop: 'farm_f4'}, branch: 'f'),
+  LifeTreeNode('farm_f5', 'Rebaño que recuerda',
+      x: 3, y: 5, cost: 1, links: ['farm_f4', 'farm_f6'],
+      effects: {LifeFx.partDrop: 'farm_f5'}, branch: 'f', major: true),
+  LifeTreeNode('farm_f6', 'Cepillo de cerda',
+      x: 3, y: 6, cost: 1, links: ['farm_f5', 'farm_f7'],
+      effects: {LifeFx.partDrop: 'farm_f6'}, branch: 'f'),
+  LifeTreeNode('farm_f7', 'Muda del eco',
+      x: 3, y: 7, cost: 2, links: ['farm_f6', 'farm_f8'],
+      effects: {LifeFx.partDrop: 'farm_f7'}, branch: 'f'),
+  LifeTreeNode('farm_f8', 'Granero del ayer',
+      x: 3, y: 8, cost: 2, links: ['farm_f7', 'farm_f9'],
+      effects: {LifeFx.haySilo: 'farm_f8', LifeFx.petCare: 'farm_f8_2'},
+      branch: 'f'),
+  LifeTreeNode('farm_f9', 'Pastor del tiempo',
+      x: 3, y: 9, cost: 2, links: ['farm_f8', 'farm_f10'],
+      effects: {LifeFx.animalQuality: 'farm_f9'}, branch: 'f'),
+  LifeTreeNode('farm_f10', 'Corral de las eras',
+      x: 3, y: 10, cost: 3, links: ['farm_f9'],
+      effects: {LifeFx.animalLegend: 'farm_f10', LifeFx.animalQuality: 'farm_f10_2'},
+      branch: 'f', major: true, exclusive: 'cap'),
 ];
 
 const _herreria = <LifeTreeNode>[
@@ -780,6 +839,14 @@ const kLifeTreeTuning = <String, num>{
   'farm_e9': 0.1,
   'farm_e10': 2,
   'farm_e10_2': 3,
+  'farm_f1': 0.15,
+  'farm_f2': 20,
+  'farm_f3': 0.05,
+  'farm_f8': 30,
+  'farm_f8_2': 0.15,
+  'farm_f9': 0.08,
+  'farm_f10': 0.02,
+  'farm_f10_2': 0.1,
   'smith_r': 0.05,
   'smith_a1': 0.03,
   'smith_a2': 0.03,
@@ -929,6 +996,15 @@ const kLifeTreeTuning = <String, num>{
   'farm_e5s': 1,
   'farm_e6s': 1,
   'farm_e7s': 1,
+  // ANIMALES sub-paths: parts (main) or double products (second).
+  'farm_f4x': 0.15,
+  'farm_f5x': 0.15,
+  'farm_f6x': 0.2,
+  'farm_f7x': 0.25,
+  'farm_f4s': 0.04,
+  'farm_f5s': 0.04,
+  'farm_f6s': 0.05,
+  'farm_f7s': 0.07,
   'smith_a4x': 0.03,
   'smith_a5x': 0.03,
   'smith_a6x': 0.04,
@@ -995,6 +1071,7 @@ const kLifeForkFx = <String, (String, String)>{
   'farm_c': (LifeFx.compost, LifeFx.compostArea),
   'farm_d': (LifeFx.livingRarity, LifeFx.livingAffix),
   'farm_e': (LifeFx.mealPower, LifeFx.meal),
+  'farm_f': (LifeFx.partDrop, LifeFx.animalDouble),
   'smith_a': (LifeFx.forge, LifeFx.forgeAffix),
   'smith_b': (LifeFx.veinArea, LifeFx.rareOre),
   'smith_c': (LifeFx.smeltDouble, LifeFx.salvage),
@@ -1053,9 +1130,13 @@ List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
   String main(String b, int t) => '${pre}_$b$t';
   String fork(String b, int t) => '${pre}_$b${t}s';
 
+  final branches = [
+    for (final b in [...kLifeBranches, 'f'])
+      if (byId.containsKey(main(b, 1))) b
+  ];
   final extra = <String, List<String>>{};
   final out = <LifeTreeNode>[];
-  for (final b in kLifeBranches) {
+  for (final b in branches) {
     extra[main(b, kLifeForkFrom - 1)] = [fork(b, kLifeForkFrom)];
     extra[main(b, kLifeForkTo + 1)] = [fork(b, kLifeForkTo)];
   }
@@ -1081,7 +1162,7 @@ List<LifeTreeNode> growLifeTree(List<LifeTreeNode> base) {
         major: n.major || rejoin,
         root: n.root));
   }
-  for (final b in kLifeBranches) {
+  for (final b in branches) {
     for (var t = kLifeForkFrom; t <= kLifeForkTo; t++) {
       final id = fork(b, t);
       final twin = byId[main(b, t)]!;
@@ -1160,6 +1241,10 @@ const kLifeForkNames = <String, String>{
   'farm_e5s': 'Conserva',
   'farm_e6s': 'Caldo de huerta',
   'farm_e7s': 'Sobremesa larga',
+  'farm_f4s': 'Nido doble',
+  'farm_f5s': 'Ubre generosa',
+  'farm_f6s': 'Doble esquila',
+  'farm_f7s': 'Corral que rinde',
   'smith_a4s': 'Runa en caliente',
   'smith_a5s': 'Doble temple',
   'smith_a6s': 'Grabado fino',

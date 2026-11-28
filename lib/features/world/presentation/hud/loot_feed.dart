@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/ds_gold.dart';
+import '../../../../app/design/ds_tokens.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
@@ -333,10 +335,11 @@ class _LootLogState extends State<LootLog> with _FeedTicker<LootLog> {
                   TextSpan(children: [
                     TextSpan(
                         text: retroText(l.prefix),
-                        style: const TextStyle(color: ProtoColors.ink)),
+                        style: const TextStyle(color: DsColors.text)),
                     TextSpan(
-                        text: retroText(l.item),
-                        style: TextStyle(color: l.color)),
+                        style: TextStyle(color: l.color),
+                        children: DsGoldText.spans(
+                            l.item, DefaultTextStyle.of(context).style)),
                   ]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -457,8 +460,8 @@ class LootToastBox extends StatelessWidget {
                           ? _legendary
                           : ProtoColors.ink)),
             ),
-          Text(
-            retroText(toast.title == '+' ? '+ ${toast.name}' : toast.name),
+          DsGoldText(
+            toast.title == '+' ? '+ ${toast.name}' : toast.name,
             style: TextStyle(fontSize: toastFontSize(st.size), color: text),
           ),
         ],

@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/ds_gold.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:flutter/services.dart';
@@ -78,11 +79,13 @@ void main() {
         PanelFrame(
           title: 'X',
           actions: [
-            PanelButton('COMPRAR', reason: 'Faltan \$5', onPressed: () {}),
+            PanelButton('COMPRAR', reason: 'Faltan ₵5', onPressed: () {}),
           ],
           child: const SizedBox(),
         ));
-    expect(find.text('Faltan \$5'), findsOneWidget);
+    // The gold amount draws the coin (DsGoldText), never "$".
+    expect(find.textContaining('Faltan', findRichText: true), findsOneWidget);
+    expect(find.byKey(DsGold.coinKey), findsOneWidget);
     final btn = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(btn.onPressed, isNull);
   });

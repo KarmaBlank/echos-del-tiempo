@@ -4,9 +4,10 @@ import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 import '../../../../game_engine/rules/cozy_rules.dart';
 
 import '../../../../app/design/design.dart';
-import '../../../../app/theme/retro_type.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
 import '../../../../game_engine/models/town_build.dart';
+import '../../../../game_engine/rules/animal_rules.dart';
+import '../../../../game_engine/rules/farming_rules.dart' show FarmingRules;
 import '../../../../game_engine/rules/helper_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
@@ -29,6 +30,7 @@ class TownPiece {
     required this.detail,
     this.cost,
     this.costItems = const {},
+    this.flags = const [],
     this.why,
   });
 
@@ -44,6 +46,10 @@ class TownPiece {
   /// Items it costs (id → amount), shown as a cost grid.
   final Map<String, int> costItems;
 
+  /// Its own traits (lights up at night, blocks the way...), already
+  /// translated; only the ones that apply to this piece.
+  final List<String> flags;
+
   /// Por qué no se puede poner ahora (o `null`).
   final String? why;
 
@@ -53,6 +59,7 @@ class TownPiece {
         BuildKind.huerta => TownPieceCategory.farm,
         BuildKind.lago => TownPieceCategory.water,
         BuildKind.casa => TownPieceCategory.home,
+        BuildKind.gallinero || BuildKind.establo => TownPieceCategory.farm,
       };
 }
 
@@ -72,24 +79,8 @@ class TownBuildPalette extends StatefulWidget {
   /// Botón CERRAR de la cabecera (y Esc) (`null`: sin botón).
   final VoidCallback? onClose;
 
-  /// Lado del cuadro de una casilla.
-  static const cell = 80.0;
-
-  /// Ancho de una casilla con su nombre (fijo: el hover no la mueve).
-  static const cellWidth = 116.0;
-
-  /// Alto de una casilla: cuadro + dos renglones de nombre.
-  static const cellHeight = cell + 44.0;
-
-  /// Separación entre casillas.
-  static const gap = 8.0;
-
   /// Lado de la miniatura grande del detalle.
   static const detailPreview = 128.0;
-
-  /// Ancho de la columna de detalle para una ventana de ancho [w]: usa
-  /// el espacio (la grilla puede ser más angosta).
-  static double detailWidth(double w) => (w * 0.42).clamp(280.0, 460.0);
 
   /// Ventana entre dos clics para el doble clic que coloca.
   static const doubleClick = Duration(milliseconds: 400);
@@ -103,16 +94,43 @@ class TownBuildPalette extends StatefulWidget {
   /// Las piezas que se pueden poner, con su costo y motivo.
   static List<TownPiece> pieces(Strings s, SessionController c) {
     final p = c.view?.me?.profile;
+    String gold(int n) => s.t('ui.town.edit.gold', {'cost': n});
+    String? cantPay(int n) => p == null
+        ? s.t('ui.town.edit.no_character')
+        : p.credits < n
+            ? s.t('ui.town.edit.missing_gold', {'have': p.credits, 'need': n})
+            : null;
+    List<String> decorFlags(String id) => [
+          if (id == 'lamp') s.t('ui.town.edit.flag_light'),
+          if (id == 'fence') s.t('ui.town.edit.flag_blocks'),
+          if (id == 'fence_gate') s.t('ui.town.edit.flag_passable'),
+          if (id == 'stone_path') s.t('ui.town.edit.flag_walkable'),
+        ];
     return [
       for (final d in kConstructions)
-        if (d.kind == BuildKind.casa)
+        if (animalHomeById(d.id) case final h?)
+          // Coop / barn (animals.md § 3): gold and a Cultivo level.
+          TownPiece(
+            id: d.id,
+            category: TownPieceCategory.farm,
+            name: s.t('ui.town.ranch.${d.kind.name}.name'),
+            w: d.w,
+            h: d.h,
+            detail: s.t('ui.town.ranch.${d.kind.name}.info',
+                {'cap': h.cap, 'level': h.level}),
+            cost: gold(h.price),
+            why: p != null && FarmingRules.level(p) < h.level
+                ? s.t('ui.town.ranch.need_level', {'n': h.level})
+                : cantPay(h.price),
+          )
+        else if (d.kind == BuildKind.casa)
           TownPiece(
             id: d.id,
             category: TownPieceCategory.home,
-            name: d.name,
+            name: s.t('ui.town.build.${d.id}.name'),
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: s.t('ui.town.build.${d.id}.info'),
             cost: HelperRules.costText(ResidentRules.placeCost()),
             costItems: ResidentRules.placeCost().mats,
             why: p == null
@@ -123,10 +141,10 @@ class TownBuildPalette extends StatefulWidget {
           TownPiece(
             id: d.id,
             category: TownPiece.categoryOf(d.kind),
-            name: d.name,
+            name: s.t('ui.town.build.${d.id}.name'),
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: s.t('ui.town.build.${d.id}.info'),
           ),
       // Farm decorations (cozy_life.md § 2): 1×1, cheap, cosmetic.
       for (final d in kFarmDecos.values)
@@ -137,14 +155,9 @@ class TownBuildPalette extends StatefulWidget {
           w: 1,
           h: 1,
           detail: s.t('ui.town.decor.${d.id}.info'),
-          cost: s.t('ui.town.edit.lamp_detail',
-              {'cost': CozyRules.decorCost(d.id)}),
-          why: p == null
-              ? s.t('ui.town.edit.no_character')
-              : p.credits < CozyRules.decorCost(d.id)
-                  ? s.t('ui.town.edit.missing_gold',
-                      {'have': p.credits, 'need': CozyRules.decorCost(d.id)})
-                  : null,
+          cost: gold(CozyRules.decorCost(d.id)),
+          flags: decorFlags(d.id),
+          why: cantPay(CozyRules.decorCost(d.id)),
         ),
       TownPiece(
         id: kFaroId,
@@ -153,13 +166,9 @@ class TownBuildPalette extends StatefulWidget {
         w: 1,
         h: 1,
         detail: s.t('ui.town.edit.lamp_info'),
-        cost: s.t('ui.town.edit.lamp_detail', {'cost': TownRules.faroCost}),
-        why: p == null
-            ? s.t('ui.town.edit.no_character')
-            : p.credits < TownRules.faroCost
-                ? s.t('ui.town.edit.missing_gold',
-                    {'have': p.credits, 'need': TownRules.faroCost})
-                : null,
+        cost: gold(TownRules.faroCost),
+        flags: [s.t('ui.town.edit.flag_light')],
+        why: cantPay(TownRules.faroCost),
       ),
     ];
   }
@@ -182,8 +191,8 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
   String? _lastTapId;
   DateTime? _lastTapAt;
 
-  /// Columnas de la grilla (para las flechas).
-  int _cols = 1;
+  /// Columnas de la grilla (para las flechas): INVENTARIO's.
+  static const _cols = DsSizes.gridColumns;
 
   final _focus = FocusNode(debugLabel: 'town-build-palette');
 
@@ -326,57 +335,33 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
             onChanged: (i) => setState(() => _filter = cats[i]),
           ),
           SizedBox(height: DsSpace.sm),
-          // Grilla a la izquierda y detalle a la derecha, de tamaño fijo:
-          // el hover cambia el CONTENIDO del detalle, nunca el tamaño ni la
-          // posición de una casilla (así no parpadea).
+          // INVENTARIO grid (design_system.md § DsGridDetailLayout): 6
+          // cells top-left, the detail takes the rest of the width. Hover
+          // only changes the detail CONTENT, never a cell (no flicker).
           Expanded(
-            child: LayoutBuilder(builder: (context, box) {
-              final paneW = TownBuildPalette.detailWidth(box.maxWidth);
-              final gridW = box.maxWidth - paneW - DsSpace.sm;
-              _cols = ((gridW + TownBuildPalette.gap) /
-                      (TownBuildPalette.cellWidth + TownBuildPalette.gap))
-                  .floor()
-                  .clamp(1, 99);
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      key: const ValueKey('town-build-grid'),
-                      child: Wrap(
-                        spacing: TownBuildPalette.gap,
-                        runSpacing: TownBuildPalette.gap,
-                        children: [
-                          for (final p in shown)
-                            _cell(s, p, p.id == selected?.id, p.id == placing)
-                        ],
+            child: DsGridDetailLayout(
+              keyPrefix: 'town-build',
+              count: shown.length,
+              cell: (context, i, size) => _cell(s, shown[i], size,
+                  shown[i].id == selected?.id, shown[i].id == placing),
+              detail: DsDetailPane(
+                sunken: true,
+                body: _detail(
+                    s, focus, placing != null && focus?.id == placing),
+                actions: selected == null
+                    ? null
+                    : SizedBox(
+                        width: double.infinity,
+                        child: DsButton(s.t('ui.town.edit.build_place'),
+                            key: const ValueKey('town-build-place'),
+                            kind: DsButtonKind.primary,
+                            tooltip: selected.why,
+                            onPressed: selected.enabled
+                                ? () => _place(selected)
+                                : null),
                       ),
-                    ),
-                  ),
-                  SizedBox(width: DsSpace.sm),
-                  SizedBox(
-                    width: paneW,
-                    child: DsDetailPane(
-                      key: const ValueKey('town-build-pane'),
-                      sunken: true,
-                      body: _detail(
-                          s, focus, placing != null && focus?.id == placing),
-                      actions: selected == null
-                          ? null
-                          : SizedBox(
-                              width: double.infinity,
-                              child: DsButton(s.t('ui.town.edit.build_place'),
-                                  key: const ValueKey('town-build-place'),
-                                  kind: DsButtonKind.primary,
-                                  onPressed: selected.enabled
-                                      ? () => _place(selected)
-                                      : null),
-                            ),
-                    ),
-                  ),
-                ],
-              );
-            }),
+              ),
+            ),
           ),
         ],
       ),
@@ -405,17 +390,19 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         ),
         Text(p.name,
             key: const ValueKey('town-build-detail-name'),
-            style: DsText.title(_catColor(p.category))),
+            style: DsText.title()),
         Text(s.t('ui.town.edit.size', {'w': p.w, 'h': p.h}),
             style: DsText.detail()),
         gap,
-        Text(p.detail, style: DsText.body()),
+        DsGoldText(p.detail, style: DsText.body()),
         gap,
-        Text(
+        DsGoldText(
             p.cost == null
                 ? s.t('ui.town.edit.free')
                 : s.t('ui.town.edit.cost', {'cost': p.cost}),
-            style: DsText.detail(p.enabled ? null : DsColors.danger)),
+            style: p.enabled ? DsText.detail() : DsText.key()),
+        for (final f in p.flags)
+          Text(f, style: DsText.detail(DsColors.reward)),
         if (p.costItems.isNotEmpty) ...[
           gap,
           itemCostGrid(context, widget.controller.view?.me?.profile,
@@ -425,7 +412,7 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
         if (p.why case final why?)
           Text(why,
               key: const ValueKey('town-build-why'),
-              style: DsText.detail(DsColors.danger)),
+              style: DsText.key()),
         if (placing)
           Text(err ?? s.t('ui.town.edit.placing_info'),
               key: const ValueKey('town-edit-ghost'),
@@ -434,10 +421,11 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
     );
   }
 
-  Widget _cell(Strings s, TownPiece p, bool selected, bool placing) {
+  Widget _cell(
+      Strings s, TownPiece p, double size, bool selected, bool placing) {
     final color = p.enabled ? _catColor(p.category) : DsColors.textDisabled;
-    // Casilla de tamaño fijo (DsItemCell + nombre): el hover solo cambia
-    // el detalle de la derecha, nunca mueve ni agranda la casilla.
+    // INVENTARIO cell: only the piece preview; name, footprint and cost
+    // go in the fixed-size tooltip (and the detail on the right).
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) {
@@ -446,95 +434,37 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
       onExit: (_) {
         if (_hover == p.id) setState(() => _hover = null);
       },
-      child: GestureDetector(
-        key: ValueKey('town-edit-build-${p.id}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _tap(p),
-        child: SizedBox(
-          width: TownBuildPalette.cellWidth,
-          height: TownBuildPalette.cellHeight,
-          child: Column(children: [
-            DsItemCell(
-              dimension: TownBuildPalette.cell,
-              // Miniatura de la pieza con el tamaño como etiqueta chica
-              // en la esquina (town_editor.md § 1.2).
-              icon: SizedBox.square(
-                dimension: TownBuildPalette.cell - 4,
-                child: Stack(children: [
-                  Center(
-                    child: Opacity(
-                      opacity: p.enabled ? 1 : 0.4,
-                      child: TownPiecePreview(p.id,
-                          size: TownBuildPalette.cell - 20),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      color: DsColors.surfaceSunken,
-                      padding: const EdgeInsets.symmetric(horizontal: 1),
-                      child: Text(
-                        s.t('ui.town.edit.footprint', {'w': p.w, 'h': p.h}),
-                        textScaler: RetroType.fixedScaler(context),
-                        style: DsText.detail(color)
-                            .copyWith(fontSize: RetroType.label),
-                      ),
-                    ),
-                  ),
-                ]),
-              ),
-              border: placing ? DsColors.reward : color,
-              selected: selected,
-            ),
-            Expanded(child: _PieceName(p.name, enabled: p.enabled)),
+      child: DsTooltip(
+        card: IgnorePointer(
+          child: DsTooltipCard(title: p.name, children: [
+            Text(s.t('ui.town.edit.size', {'w': p.w, 'h': p.h}),
+                style: DsText.detail()),
+            DsGoldText(
+                p.cost == null
+                    ? s.t('ui.town.edit.free')
+                    : s.t('ui.town.edit.cost', {'cost': p.cost}),
+                style: DsText.detail(p.enabled ? null : DsColors.danger)),
+            for (final f in p.flags) Text(f, style: DsText.detail()),
+            if (p.why case final why?)
+              Text(why, style: DsText.detail(DsColors.danger)),
           ]),
+        ),
+        child: GestureDetector(
+          key: ValueKey('town-edit-build-${p.id}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _tap(p),
+          child: DsItemCell(
+            dimension: size,
+            icon: Opacity(
+              opacity: p.enabled ? 1 : 0.4,
+              child: TownPiecePreview(p.id,
+                  size: DsSizes.itemIcon * size / DsSizes.itemCell),
+            ),
+            border: placing ? DsColors.reward : color,
+            selected: selected,
+          ),
         ),
       ),
     );
-  }
-}
-
-/// Átomo: nombre de una casilla de la paleta. Hasta dos renglones,
-/// cortando solo entre palabras; si no entra, se acorta con "…" y el
-/// nombre completo va en un tooltip que no recibe el mouse.
-class _PieceName extends StatelessWidget {
-  const _PieceName(this.name, {required this.enabled});
-
-  final String name;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = DsText.body(enabled ? null : DsColors.textDisabled);
-    final scaler = RetroType.fixedScaler(context);
-    final dir = Directionality.of(context);
-    return LayoutBuilder(builder: (context, box) {
-      bool fits(String text, int lines) {
-        final tp = TextPainter(
-            text: TextSpan(text: text, style: style),
-            maxLines: lines,
-            textScaler: scaler,
-            textDirection: dir)
-          ..layout(maxWidth: box.maxWidth);
-        final ok = !tp.didExceedMaxLines &&
-            tp.width <= box.maxWidth &&
-            tp.height <= box.maxHeight;
-        tp.dispose();
-        return ok;
-      }
-
-      final ok = fits(name, 2) && name.split(' ').every((w) => fits(w, 1));
-      final text = Text(name,
-          maxLines: ok ? 2 : 1,
-          softWrap: ok,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          textScaler: scaler,
-          style: style);
-      if (ok) return text;
-      return DsTooltip(
-          card: IgnorePointer(child: DsTooltipCard(title: name)), child: text);
-    });
   }
 }

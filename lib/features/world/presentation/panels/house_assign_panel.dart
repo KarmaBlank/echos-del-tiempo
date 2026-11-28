@@ -7,13 +7,18 @@ import '../../../../game_engine/rules/resident_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../world_strings.dart';
+import 'life_icon.dart';
+import 'life_item_grid.dart';
 
 /// One free house cell (purely visual data).
 class HouseCellData {
-  const HouseCellData(this.id, this.title, this.line);
+  const HouseCellData(this.id, this.title, this.line, {this.level = 1});
   final String id;
   final String title;
   final String line;
+
+  /// House level (1–3): picks the `vida_casa_<level>` sprite.
+  final int level;
 }
 
 /// One resident who can move into a house (purely visual data).
@@ -43,8 +48,6 @@ class HouseAssignView extends StatefulWidget {
   /// Why ASIGNAR is grey (another player is editing); `null` = enabled.
   final String? blockedWhy;
 
-  static const cellW = 72.0, cellH = 44.0, gap = 4.0, detailWidth = 280.0;
-
   @override
   State<HouseAssignView> createState() => _HouseAssignViewState();
 }
@@ -70,40 +73,6 @@ class _HouseAssignViewState extends State<HouseAssignView> {
     }
     final sel = houses.where((h) => h.id == _house).firstOrNull ?? houses.first;
     final who = widget.candidates.where((c) => c.id == _npc).firstOrNull;
-    final grid = SingleChildScrollView(
-      child: Wrap(
-        spacing: HouseAssignView.gap,
-        runSpacing: HouseAssignView.gap,
-        children: [
-          for (final h in houses)
-            DsTooltip(
-              card: DsTooltipCard(title: h.title, children: [
-                Text(h.line, style: DsText.detail()),
-              ]),
-              child: GestureDetector(
-                key: ValueKey('houses-cell-${h.id}'),
-                onTap: () => setState(() => _house = h.id),
-                child: Container(
-                  width: HouseAssignView.cellW,
-                  height: HouseAssignView.cellH,
-                  alignment: Alignment.center,
-                  padding: EdgeInsets.all(DsSpace.xs),
-                  decoration: BoxDecoration(
-                    color: DsColors.surfaceSunken,
-                    border: Border.all(
-                        color: h.id == sel.id
-                            ? DsColors.actionPrimary
-                            : DsColors.border,
-                        width: h.id == sel.id ? 2 : 1),
-                  ),
-                  child: FittedBox(
-                      child: Text(h.title, style: DsText.detail())),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
     final detail = DsDetailPane(
       key: const ValueKey('houses-detail'),
       body: Column(
@@ -131,7 +100,8 @@ class _HouseAssignViewState extends State<HouseAssignView> {
       actions: DsButton(context.t('ui.town.houses.assign'),
           key: const ValueKey('houses-assign'),
           kind: DsButtonKind.primary,
-          tooltip: widget.blockedWhy,
+          tooltip: widget.blockedWhy ??
+              (who == null ? context.t('ui.town.houses.pick_resident') : null),
           onPressed: who == null || widget.blockedWhy != null
               ? null
               : () {
@@ -142,13 +112,36 @@ class _HouseAssignViewState extends State<HouseAssignView> {
                   });
                 }),
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: grid),
-        SizedBox(width: DsSpace.sm),
-        SizedBox(width: HouseAssignView.detailWidth, child: detail),
-      ],
+    // INVENTARIO grid (design_system.md § DsGridDetailLayout): house
+    // sprites 6 per row top-left, no text in or under the cells (name and
+    // level in the tooltip); the detail takes the rest of the width.
+    return DsGridDetailLayout(
+      keyPrefix: 'houses',
+      count: houses.length,
+      detail: detail,
+      cell: (context, i, size) {
+        final h = houses[i];
+        return KeyedSubtree(
+          key: ValueKey('houses-cell-${h.id}'),
+          child: LifeItemCell(
+            size: size,
+            selected: h.id == sel.id,
+            onTap: () => setState(() => _house = h.id),
+            data: LifeItemCellData(
+              id: 'houses-item-${h.id}',
+              icon: LifeIcon('casa_${h.level.clamp(1, 3)}',
+                  LifeIconKind.herramienta,
+                  size: LifeItemGrid.iconSize * size / LifeItemGrid.cell),
+              border: DsColors.border,
+              search: h.title,
+              detail: LifeItemDetail(
+                  name: h.title,
+                  nameColor: DsColors.textTitle,
+                  lines: [h.line]),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -169,7 +162,8 @@ class HouseAssignPanel extends StatelessWidget {
           HouseCellData(
               free[i].id,
               context.t('ui.town.houses.cell', {'n': i + 1}),
-              context.t('ui.town.houses.level', {'n': free[i].level})),
+              context.t('ui.town.houses.level', {'n': free[i].level}),
+              level: free[i].level),
       ],
       [
         for (final n in ResidentRules.awaitingHouse(town))
@@ -186,7 +180,7 @@ class HouseAssignPanel extends StatelessWidget {
     return PanelFrame(
       key: const ValueKey('panel-houses'),
       title: context.t('ui.town.houses.title'),
-      width: 720,
+      width: 1000,
       onClose: () => c.openPanel(WorldPanel.fountain),
       actions: [
         PanelButton(context.t('ui.town.fountain.close'),
@@ -194,7 +188,7 @@ class HouseAssignPanel extends StatelessWidget {
             onPressed: () => c.openPanel(WorldPanel.fountain)),
       ],
       child: SizedBox(
-        height: 320,
+        height: 420,
         child: HouseAssignView(
           houses: houses,
           candidates: people,

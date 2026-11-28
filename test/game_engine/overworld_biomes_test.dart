@@ -68,7 +68,7 @@ void main() {
     expect(e.mapFor(s).place, isNull);
   });
 
-  test('recolectar da el producto, XP de Cultivo y rebrota con el tiempo',
+  test('recolectar da el producto, XP de Granjero y rebrota con el tiempo',
       () {
     final e = sessionEngine(zones: true);
     var s = act(e, room(), 'p0', const TravelAction(kBosque));

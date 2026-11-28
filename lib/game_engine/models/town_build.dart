@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'farm_animal.dart';
 import 'farm_plot.dart';
 
 /// Filas o columnas que suma cada ampliación del pueblo (town_editor.md
@@ -33,7 +34,15 @@ enum BuildKind {
 
   /// Casa de un habitante (town_editor.md § 3.4, v0.30.0): 3 × 3, con
   /// nivel (1 a `resMaxHouse`) y el habitante que vive ahí.
-  casa('CASA');
+  casa('CASA'),
+
+  /// Coop and barn (animals.md § 3): a house and a fenced yard with farm
+  /// animals.
+  gallinero('GALLINERO'),
+  establo('ESTABLO');
+
+  /// Coop or barn.
+  bool get ranch => this == gallinero || this == establo;
 
   const BuildKind(this.label);
   final String label;
@@ -209,7 +218,18 @@ class TownBuild {
       this.tasks = const [],
       this.crew = const [],
       this.level = 1,
+      this.animals = const [],
+      this.hay = 0,
       this.resident});
+
+  /// Farm animals (coops and barns only; animals.md § 4).
+  final List<FarmAnimal> animals;
+
+  /// Hay bales in the building's store (coops and barns; animals.md § 6).
+  final int hay;
+
+  FarmAnimal? animal(int uid) =>
+      animals.where((a) => a.uid == uid).firstOrNull;
 
   /// Nivel de la casa (solo casas; 1 a `resMaxHouse`).
   final int level;
@@ -321,10 +341,14 @@ class TownBuild {
           List<int>? tasks,
           List<HelperStat>? crew,
           int? level,
+          List<FarmAnimal>? animals,
+          int? hay,
           String? resident,
           bool clearResident = false}) =>
       TownBuild(id, kind, parts ?? this.parts,
           level: level ?? this.level,
+          animals: animals ?? this.animals,
+          hay: hay ?? this.hay,
           resident: clearResident ? null : (resident ?? this.resident),
           stock: stock ?? this.stock,
           plots: plots ?? this.plots,
@@ -355,6 +379,8 @@ class TownBuild {
           'cr': [for (final c in crew) c.toJson()],
         if (level > 1) 'lv': level,
         if (resident != null) 'rs': resident,
+        if (animals.isNotEmpty) 'an': [for (final a in animals) a.toJson()],
+        if (hay > 0) 'hy': hay,
       };
 
   static Map<String, int> ints(Object? v) => v is Map
@@ -381,6 +407,13 @@ class TownBuild {
     return TownBuild(id, kind, parts,
         level: raw['lv'] is num ? (raw['lv'] as num).round().clamp(1, 9) : 1,
         resident: raw['rs'] is String ? raw['rs'] as String : null,
+        animals: raw['an'] is List
+            ? [
+                for (final a in raw['an'] as List)
+                  if (FarmAnimal.fromJson(a) case final v?) v
+              ]
+            : const [],
+        hay: raw['hy'] is num ? (raw['hy'] as num).round().clamp(0, 9999) : 0,
         stock: ints(st),
         helper: raw['hp'] is num ? (raw['hp'] as num).round().clamp(0, 99) : 0,
         chest: ints(raw['ch']),

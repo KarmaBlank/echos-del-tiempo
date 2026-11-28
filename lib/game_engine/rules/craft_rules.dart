@@ -991,7 +991,7 @@ class CraftRules {
     for (final e in m.entries) {
       if (p.material(e.key) < e.value) return 'Falta ${e.key.label}';
     }
-    if (p.credits < credits) return 'Faltan \$${credits - p.credits}';
+    if (p.credits < credits) return 'Faltan ₵${credits - p.credits}';
     return null;
   }
 

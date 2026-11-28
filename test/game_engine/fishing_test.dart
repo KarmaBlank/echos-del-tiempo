@@ -90,17 +90,19 @@ void main() {
     test('precios y venta en oro, materiales y Vender todo', () {
       final p = _withFish({'carpa_musgo': 2, 'trucha_cobre': 1, 'pez_reloj': 1});
       final one = FishingRules.sell(p, species: 'carpa_musgo')!;
-      expect(one.credits, 36);
+      final carpa = FishingRules.salePrice('carpa_musgo');
+      final trucha = FishingRules.salePrice('trucha_cobre');
+      expect(one.credits, 2 * carpa);
       expect(one.profile.life.count('carpa_musgo'), 0);
       final all = FishingRules.sell(p)!;
       expect(all.sold, 3);
-      expect(all.credits, 36 + 45);
+      expect(all.credits, 2 * carpa + trucha);
       expect(all.profile.life.count('pez_reloj'), 1, reason: 'sin legendarios');
       final mats = FishingRules.sell(p, materials: true)!;
-      // 81 × 1.2 = 97 → 3 Esquirlas (75) + 22 de oro.
-      expect(mats.esquirlas, 3);
-      expect(mats.credits, 22);
-      expect(mats.profile.material(CraftMaterial.esquirla), 3);
+      // (2 × 11 + 27) × 1.2 = 58 → 2 Esquirlas (50) + 9 de oro.
+      expect(mats.esquirlas, 2);
+      expect(mats.credits, 9);
+      expect(mats.profile.material(CraftMaterial.esquirla), 2);
       expect(FishingRules.sell(_withFish({})), isNull);
     });
 

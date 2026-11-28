@@ -32,7 +32,9 @@ List<CropDef> get _seeds => [
     ];
 
 String _gold(WidgetTester tester) =>
-    tester.widget<Text>(find.byKey(const ValueKey('trade-gold-have'))).data!;
+    tester
+        .widget<DsGoldText>(find.byKey(const ValueKey('trade-gold-have')))
+        .text;
 
 Future<void> _open(WidgetTester tester, Size size) async {
   await pumpPanel(tester,

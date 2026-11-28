@@ -313,7 +313,7 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       },
       gates: [
         for (var t = 1; t <= kLifeTiers; t++)
-          SkillTreeGate(lifeTierY(t), lifeGateHalf(t),
+          SkillTreeGate(lifeTierY(t), lifeGateHalf(t, k),
               open: lvl >= LifeTreeRules.tierLevel(t)),
       ],
       onSelect: (id) => setState(() => _sel = id),
@@ -328,7 +328,11 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
               if (text.isNotEmpty)
                 Text(TextDetail.isSummary ? plainShort(text) : text,
                     style: DsText.body()),
-              Text(_stateText(k, n), style: DsText.body()),
+              // Why it can't be taken is KEY INFO (design_system.md § 3.4).
+              Text(_stateText(k, n),
+                  style: _why(k, n) != null && !LifeTreeRules.has(p, k, n.id)
+                      ? DsText.key()
+                      : DsText.muted()),
             ]);
       },
     );
@@ -356,13 +360,18 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
   static final _catalogs = <(LifeSkillKind, String), PassiveTreeCatalog>{};
 
   PassiveTreeCatalog _catalog(BuildContext context, LifeSkillKind k) {
-    final branches = [for (final b in kLifeBranches) lifeBranchName(k, b)];
+    final branches = [for (final b in lifeBranchesOf(k)) lifeBranchName(k, b)];
     final tiers = [
       for (var t = 1; t <= kLifeTiers; t++)
         context.t('ui.town.trades.tier', {'n': LifeTreeRules.tierLevel(t)})
     ];
-    return _catalogs.putIfAbsent((k, [...branches, ...tiers].join('|')),
-        () => lifeTreeCatalog(k, branches, tiers));
+    final groups = {
+      for (final g in ['crops', 'animals'])
+        g: context.t('data.life_trees.group.$g'),
+    };
+    return _catalogs.putIfAbsent(
+        (k, [...branches, ...tiers, ...groups.values].join('|')),
+        () => lifeTreeCatalog(k, branches, tiers, groups: groups));
   }
 
   TreeNodeState _state(LifeSkillKind k, LifeTreeNode n) => n.root
@@ -386,9 +395,12 @@ double _spread(int t) => t == 0 ? 0.0 : 0.7 + 1.15 * math.sqrt(t);
 double _forkOffset(int t) => t == kLifeForkFrom || t == kLifeForkTo ? 0.5 : 0.7;
 
 /// Position (tree units) of node [n] (life_trees_v2.md § 3).
-Offset lifeNodePos(LifeTreeNode n) {
+/// With n branches the fan is centred: branch i sits at i − (n − 1) / 2
+/// (life_trees_v2.md § 8).
+Offset lifeNodePos(LifeTreeNode n, [LifeSkillKind? k]) {
   if (n.root) return Offset.zero;
-  final i = kLifeBranches.indexOf(n.branch!) - 2;
+  final bs = k == null ? kLifeBranches : lifeBranchesOf(k);
+  final i = bs.indexOf(n.branch!) - (bs.length - 1) / 2;
   var x = i * _spread(n.tier);
   if (n.tier >= kLifeForkFrom && n.tier <= kLifeForkTo) {
     // The sub-path that leans outward is the second one; the middle
@@ -399,17 +411,32 @@ Offset lifeNodePos(LifeTreeNode n) {
   return Offset(x, lifeTierY(n.tier));
 }
 
+/// Centre (tree units) of the branches of [k] in group [g].
+double _groupX(LifeSkillKind k, List<String> bs, String g, double mid) {
+  final xs = [
+    for (var i = 0; i < bs.length; i++)
+      if (lifeBranchGroup(k, bs[i]) == g) (i - mid) * _spread(kLifeTiers)
+  ];
+  return xs.reduce((a, b) => a + b) / xs.length;
+}
+
 /// Width (tree units) of the level-gate line of tier [t].
-double lifeGateHalf(int t) => 2 * _spread(t) + 1.2;
+double lifeGateHalf(int t, [LifeSkillKind? k]) =>
+    (((k == null ? kLifeBranches : lifeBranchesOf(k)).length - 1) / 2) *
+        _spread(t) +
+    1.2;
 
 /// Profession tree [k] as a skill-tree catalog (life_trees_v2.md § 3):
 /// root → start node, capstones → keystones, major nodes → notables;
 /// [branches] and [tiers] are the localized labels drawn on the canvas.
 PassiveTreeCatalog lifeTreeCatalog(
-    LifeSkillKind k, List<String> branches, List<String> tiers) {
+    LifeSkillKind k, List<String> branches, List<String> tiers,
+    {Map<String, String> groups = const {}}) {
+  final bs = lifeBranchesOf(k);
+  final mid = (bs.length - 1) / 2;
   final nodes = <String, PassiveNode>{};
   for (final n in kLifeTrees[k]!) {
-    final o = lifeNodePos(n);
+    final o = lifeNodePos(n, k);
     nodes[n.id] = PassiveNode(
       id: n.id,
       x: o.dx,
@@ -428,22 +455,35 @@ PassiveTreeCatalog lifeTreeCatalog(
     );
   }
   final top = lifeTierY(kLifeTiers) - 1.1;
-  final left = -lifeGateHalf(kLifeTiers) - 1.0;
+  final left = -lifeGateHalf(kLifeTiers, k) - 1.0;
   return PassiveTreeCatalog(
     nodes: nodes,
     startNodeByClass: const {},
     exclusions: const {},
     paths: {
-      for (var i = 0; i < kLifeBranches.length; i++)
-        'life_${k.name}_${kLifeBranches[i]}': PassivePath(
-          id: 'life_${k.name}_${kLifeBranches[i]}',
+      for (var i = 0; i < bs.length; i++)
+        'life_${k.name}_${bs[i]}': PassivePath(
+          id: 'life_${k.name}_${bs[i]}',
           name: branches[i],
           theme: '',
           classId: k.name,
           kind: 'grupo',
-          labelX: (i - 2) * _spread(kLifeTiers),
+          labelX: (i - mid) * _spread(kLifeTiers),
           labelY: top,
         ),
+      // Group headings above the branch names (CULTIVOS / ANIMALES).
+      for (final g in ['crops', 'animals'])
+        if (groups[g] != null &&
+            bs.any((b) => lifeBranchGroup(k, b) == g))
+          'life_group_$g': PassivePath(
+            id: 'life_group_$g',
+            name: groups[g]!,
+            theme: '',
+            classId: k.name,
+            kind: 'grupo',
+            labelX: _groupX(k, bs, g, mid),
+            labelY: top - 0.9,
+          ),
       // Level gates: a "Nv N" tick at the left end of each tier line.
       for (var t = 1; t <= kLifeTiers; t++)
         'life_tier_$t': PassivePath(

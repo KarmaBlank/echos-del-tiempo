@@ -11,6 +11,7 @@ import 'mulberry32.dart';
 import '../data/tuning_catalog.dart';
 import 'zone_generators.dart';
 import 'town_plan.dart';
+import 'animal_rules.dart' show AnimalRules;
 import 'zone_rules.dart';
 
 /// Puerto de `lobbyMap` y `genMap` del prototipo. Ver
@@ -325,7 +326,7 @@ abstract final class MapGenerator {
   /// procedurales. Reemplaza al overworld caminable: las zonas se eligen
   /// desde el tablero. Sin argumento, el pueblo base.
   static GameMap town([TownState t = const TownState()]) {
-    final key = TownPlan.keyOf(t);
+    final key = '${TownPlan.keyOf(t)}|${(fenceSolids(t).map((c) => '${c.$1}.${c.$2}').toList()..sort()).join(',')}';
     final hit = _towns[key];
     if (hit != null) return hit;
     if (_towns.length > 8) _towns.clear();
@@ -333,6 +334,16 @@ abstract final class MapGenerator {
   }
 
   static final _towns = <String, GameMap>{};
+
+  /// Solid fence cells of the town (base-town coordinates; town_editor.md
+  /// § 5.1): every placed `fence` piece and the yard fence of each coop /
+  /// barn. Gates (`fence_gate`, the yard gate) stay walkable.
+  static Set<(int, int)> fenceSolids(TownState t) => {
+        for (final d in t.decor)
+          if (d.$1 == 'fence') (d.$2, d.$3),
+        for (final b in t.builds)
+          if (b.kind.ranch) ...AnimalRules.fenceTiles(b),
+      };
 
   /// El pueblo de un mundo (town_editor.md): con sus ampliaciones.
   static GameMap townOf(TownState t) => town(t);
@@ -380,6 +391,9 @@ abstract final class MapGenerator {
       lobby: true,
       townOrigin: (p.ox, p.oy),
       townMarks: marks,
+      blocked: {
+        for (final (x, y) in fenceSolids(s)) (x + p.ox, y + p.oy),
+      },
     );
   }
 

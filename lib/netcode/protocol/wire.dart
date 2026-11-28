@@ -236,12 +236,24 @@ import '../../game_engine/serialization/session_json.dart';
 /// (travel town ↔ shop); a 97 peer would draw the town there.
 /// 99: rune fountain onboarding (town_editor.md § 1.5): `TownOp.seen`
 /// with id `~fountain` stores the first visit in `npcSeen`.
-/// 100-102: reserved by pending branches (farm animals, lightning rod).
-/// 103: town kitchen (farming.md § 17): the COCINA landmark joins the base
-/// town (a 99 peer draws no kitchen and lays out late spots differently)
-/// and `TownOp.seen` with id `~kitchen` stores its first open in
-/// `npcSeen`; cooking left the OFICIOS menu.
-const kProtocolVersion = 103;
+/// 100: farm animals (animals.md § 9): coops / barns in the town (`an`
+/// animals, `hy` hay store), the bag's `ag` products / `at` ranch tools /
+/// `hy` hay, `TownOp.buyAnimal / animalFeed / animalPet / animalCollect /
+/// depositHay` and `FarmShopOp.buyHay / buyRanchTool / makeHay /
+/// sellGoods`, and `agood:` ground goods; a 99 peer would drop them.
+/// 101: Granjero reform (animals.md § 9–12): `FarmAnimal.d` drops on the
+/// floor (animal parts `ap_*` and legendary products `<id>@3`), animal
+/// parts as smithing materials in `ore`, the ANIMALES tree nodes
+/// (`farm_f*`), the machines in `at` (`quesera`, `mayonesera`) and the
+/// processed products in `ag`, `FarmShopOp.processGoods` and
+/// `SmithOp.animalForge`; a 100 peer would drop them.
+/// 102-107: reserved by pending branches (lightning rod, player house,
+/// miner helpers).
+/// 108: town kitchen (farming.md § 17): the COCINA building joins the town
+/// palette (`kitchen` piece, own sprite / size / cost / flags) and
+/// `TownOp.seen` with id `~kitchen` stores its first open in `npcSeen`;
+/// cooking left the OFICIOS menu, so an older peer has no cooking entry.
+const kProtocolVersion = 108;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

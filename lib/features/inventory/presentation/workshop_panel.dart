@@ -20,6 +20,7 @@ import '../../world/presentation/panels/tool_shop_grid.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import 'inventory_strings.dart';
+import 'machine_grid.dart';
 import 'shop_sections.dart';
 
 /// Oficio de cada receta del taller (filtro de chip).
@@ -90,20 +91,26 @@ class _WorkshopPanelState extends State<WorkshopPanel> {
                     key: const ValueKey('workshop-tab-craft')),
                 DsTab(s.t('ui.inventory.workshop.tab.tools'),
                     key: const ValueKey('workshop-tab-tools')),
+                DsTab(s.t('ui.town.ranch.machine.tab'),
+                    key: const ValueKey('workshop-tab-machines')),
               ],
               index: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
             SizedBox(height: DsSpace.xs),
-            PanelHint(s.t(_tab == 0
-                ? 'ui.inventory.workshop.hint'
-                : 'ui.inventory.workshop.tools_hint')),
+            PanelHint(s.t(switch (_tab) {
+              0 => 'ui.inventory.workshop.hint',
+              1 => 'ui.inventory.workshop.tools_hint',
+              _ => 'ui.town.ranch.machine.hint',
+            })),
             Expanded(
               child: KeyedSubtree(
                 key: ValueKey('${view.actorId}-$_tab'),
-                child: _tab == 0
-                    ? WorkshopGrid(shop: shop)
-                    : ToolShopGrid(view: view, controller: controller),
+                child: switch (_tab) {
+                  0 => WorkshopGrid(shop: shop),
+                  1 => ToolShopGrid(view: view, controller: controller),
+                  _ => MachineGrid(profile: p, controller: controller),
+                },
               ),
             ),
           ],
@@ -130,10 +137,6 @@ class WorkshopGrid extends StatefulWidget {
   const WorkshopGrid({super.key, required this.shop});
 
   final ShopContext shop;
-
-  /// Grid column: 4 inventory cells per row (few recipes: the detail
-  /// gets the rest of the width).
-  static const gridWidth = LifeItemGrid.cell * 4 + LifeItemGrid.gap * 3 + 8;
 
   @override
   State<WorkshopGrid> createState() => _WorkshopGridState();
@@ -284,69 +287,40 @@ class _WorkshopGridState extends State<WorkshopGrid> {
                 selected: _filter == i,
                 onPressed: () => setState(() => _filter = i)),
         ]);
-    final grid = Wrap(
-      spacing: LifeItemGrid.gap,
-      runSpacing: LifeItemGrid.gap,
-      children: [
-        for (final id in ids)
-          KeyedSubtree(
-            key: ValueKey('workshop-cell-$id'),
-            child: LifeItemCell(
-              data: LifeItemCellData(
-                id: 'workshop-item-$id',
-                icon: _icon(id, LifeItemGrid.iconSize),
-                border: DsColors.border,
-                search: kLifeMaterials[id]!.text,
-                count: p.life.craft(id),
-                detail: _info(context, id),
-              ),
-              selected: id == sel,
-              onTap: () => setState(() {
-                _sel = id;
-                _qty = 1;
-              }),
-            ),
-          ),
-      ],
-    );
     final detail = sel == null
         ? null
         : KeyedSubtree(
             key: const ValueKey('workshop-detail'),
             child: _detail(context, sel));
-    // Filter chips in one row across the panel; under them, the recipe
-    // grid (narrow column) and the detail filling the rest.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        filters,
-        SizedBox(height: DsSpace.sm),
-        Expanded(
-          child: LayoutBuilder(builder: (context, box) {
-            if (box.maxWidth >= 560) {
-              return Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                        width: WorkshopGrid.gridWidth,
-                        child: SingleChildScrollView(child: grid)),
-                    SizedBox(width: DsSpace.sm),
-                    if (detail != null) Expanded(child: detail),
-                  ]);
-            }
-            return SingleChildScrollView(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    grid,
-                    SizedBox(height: DsSpace.sm),
-                    if (detail != null) SizedBox(height: 460, child: detail),
-                  ]),
-            );
-          }),
-        ),
-      ],
+    // INVENTARIO grid (design_system.md § DsGridDetailLayout): filters on
+    // top, 6 cells anchored top-left, the detail takes the rest.
+    return DsGridDetailLayout(
+      keyPrefix: 'workshop',
+      header: filters,
+      count: ids.length,
+      detail: detail,
+      cell: (context, i, size) {
+        final id = ids[i];
+        return KeyedSubtree(
+          key: ValueKey('workshop-cell-$id'),
+          child: LifeItemCell(
+            size: size,
+            data: LifeItemCellData(
+              id: 'workshop-item-$id',
+              icon: _icon(id, LifeItemGrid.iconSize * size / LifeItemGrid.cell),
+              border: DsColors.border,
+              search: kLifeMaterials[id]!.text,
+              count: p.life.craft(id),
+              detail: _info(context, id),
+            ),
+            selected: id == sel,
+            onTap: () => setState(() {
+              _sel = id;
+              _qty = 1;
+            }),
+          ),
+        );
+      },
     );
   }
 

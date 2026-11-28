@@ -246,7 +246,7 @@ class _RunCharacterPanelState extends ConsumerState<RunCharacterPanel> {
                   ),
             ]),
         section(ref.t('ui.run.character.bag'), [
-          Text(
+          DsGoldText(
               ref.t('ui.run.character.bag_line', {
                 'weapons': prof.items.length,
                 'potions': prof.potions,

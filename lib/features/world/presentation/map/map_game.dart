@@ -77,6 +77,7 @@ import 'water_reflection_layer.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
+import 'animal_layer.dart';
 import 'farm_layer.dart';
 import 'life_level_layer.dart';
 import '../../../../core/audio/sfx_catalog.dart';
@@ -201,6 +202,9 @@ class MapGame extends Game {
 
   /// Huerta del pueblo (farming.md § 2.3).
   late final farm = MapFarmLayer()..icon = ((id) => sprites.lifeIcon(id, ''));
+
+  /// Coops and barns (animals.md).
+  final animals = AnimalLayer();
 
   /// Cozy life art (cozy_life.md): fireflies, raft and farm decorations.
   late final cozy = CozyLayer((id) => sprites.lifeIcon(id, ''));
@@ -1240,6 +1244,19 @@ class MapGame extends Game {
             selectedChest: controller.selectedOf('chest:'),
             markOf: _npcMark,
             period: controller.helperPeriod);
+        animals.draw(c, s.town, s.time, reduceMotion ? 0.0 : t,
+            (id) => sprites.lifeIcon(id, 'herramienta'),
+            asleep: controller.animalsAsleep,
+            text: (txt, x, y, col, size) =>
+                _placeText(c, txt, x, y, col, size, 900),
+            hover: controller.hoverAnimal,
+            selectedHouse: controller.selectedOf('ranch:'),
+            selectedAnimal: switch (controller.selectedOf('animal:')
+                ?.split(':')) {
+              [final b, final u, ...] when int.tryParse(u) != null =>
+                (build: b, uid: int.parse(u)),
+              _ => null,
+            });
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');

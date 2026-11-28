@@ -72,7 +72,7 @@ enum CharacterTab {
   oficios(
       'OFICIOS',
       'HABILIDADES: nivel, XP y un árbol por oficio (1 punto por nivel; '
-          'reiniciar es gratis). INVENTARIO: las bolsas de Pesca, Cultivo y '
+          'reiniciar es gratis). INVENTARIO: las bolsas de Pesca, Granjero y '
           'Herrería, 40 casillas cada una. Solo en el pueblo.'),
   inventory(
       'EQUIPAMIENTO',
@@ -137,7 +137,7 @@ class CharacterPanel extends ConsumerStatefulWidget {
       'derecha ves cómo cambian tus stats antes de confirmar.<br>'
       '<span class="k">EQUIPAMIENTO</span> (tecla I): tus objetos; equipa, '
       'compara, tira o da a un compañero.<br>'
-      '<span class="k">OFICIOS</span>: árboles y bolsas de Pesca, Cultivo '
+      '<span class="k">OFICIOS</span>: árboles y bolsas de Pesca, Granjero '
       'y Herrería.<br>'
       '<span class="k">ÁRBOL</span>: pasivas de clase.<br>'
       '<span class="k">FILTRO</span>: qué loot ves y cómo se marca.<br>'

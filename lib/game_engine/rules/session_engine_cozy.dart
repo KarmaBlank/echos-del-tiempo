@@ -89,7 +89,7 @@ extension _CozyOp on _Op {
         gain: true);
     _spill(p, found, (x + 0.5) * 16, (y + 0.5) * 16 + 8);
     final lvl1 = FarmingRules.level(p.profile);
-    if (lvl1 > lvl0) say('${p.name} subió Cultivo a nivel $lvl1.');
+    if (lvl1 > lvl0) say('${p.name} subió Granjero a nivel $lvl1.');
     return true;
   }
 

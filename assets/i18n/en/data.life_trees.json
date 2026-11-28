@@ -226,5 +226,22 @@
   "data.life_trees.node.smith_e7s.name": "Grateful Guild",
   "data.life_trees.node.smith_e8.name": "Forge Anchor",
   "data.life_trees.node.smith_e9.name": "Village Smith",
-  "data.life_trees.node.smith_r.name": "Forge Apprentice"
+  "data.life_trees.node.smith_r.name": "Forge Apprentice",
+  "data.life_trees.branch.cultivo.f": "Pen",
+  "data.life_trees.group.crops": "CROPS",
+  "data.life_trees.group.animals": "ANIMALS",
+  "data.life_trees.node.farm_f1.name": "Warm hand",
+  "data.life_trees.node.farm_f2.name": "Tidy bale",
+  "data.life_trees.node.farm_f3.name": "Herder's eye",
+  "data.life_trees.node.farm_f4.name": "Loose feather",
+  "data.life_trees.node.farm_f5.name": "Herd that remembers",
+  "data.life_trees.node.farm_f6.name": "Bristle brush",
+  "data.life_trees.node.farm_f7.name": "Echo molt",
+  "data.life_trees.node.farm_f4s.name": "Double nest",
+  "data.life_trees.node.farm_f5s.name": "Generous udder",
+  "data.life_trees.node.farm_f6s.name": "Double shearing",
+  "data.life_trees.node.farm_f7s.name": "Yielding pen",
+  "data.life_trees.node.farm_f8.name": "Yesterday's barn",
+  "data.life_trees.node.farm_f9.name": "Shepherd of time",
+  "data.life_trees.node.farm_f10.name": "Pen of the ages"
 }

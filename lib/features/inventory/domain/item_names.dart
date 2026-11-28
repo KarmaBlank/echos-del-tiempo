@@ -8,6 +8,7 @@ import '../../../game_engine/data/smithing_catalog.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/rules/goods_rules.dart';
+import '../../../game_engine/rules/animal_rules.dart';
 import '../../../game_engine/models/item_def.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/models/weapon_passive.dart';
@@ -67,6 +68,36 @@ extension MealDefText on MealDef {
 
 extension FertDefText on FertDef {
   String get text => CatalogText.of(ItemKeys.fertName(id), name);
+}
+
+extension AnimalDefText on AnimalDef {
+  String get text => CatalogText.of(ItemKeys.animalName(id), name);
+}
+
+extension AnimalProductDefText on AnimalProductDef {
+  String get text => CatalogText.of(ItemKeys.animalProductName(id), name);
+}
+
+extension RanchToolText on RanchTool {
+  String get text => CatalogText.of(ItemKeys.ranchToolName(id), sourceName);
+}
+
+/// Hay bales (animals.md § 2).
+String get hayText => CatalogText.of(ItemKeys.hayName, 'Heno');
+
+/// The default name of [a] in the active language.
+String animalPetText(FarmAnimal a) {
+  final i = AnimalRules.nameIndex(a);
+  return CatalogText.of(
+      ItemKeys.animalPetName(a.species, i), AnimalRules.name(a));
+}
+
+/// `Huevo (rara)`: an animal product bag key in the active language.
+String animalGoodsName(String key) {
+  final pk = parseAnimalGoodsKey(key);
+  if (pk == null) return key;
+  final q = CatalogText.of('ui.town.crop_quality.${pk.$2.name}', pk.$2.label);
+  return '${pk.$1.text} ($q)';
 }
 
 extension FarmToolDefText on FarmToolDef {
@@ -196,6 +227,14 @@ String? _gearName(ItemInstance i) {
           GearV2Rules.metalName(base)),
     });
   }
+  // Forged by Brann from a legendary animal product (animals.md § 10).
+  if (kAnimals[GearRules.animalOf(i)] case final a?) {
+    return CatalogText.of('data.items.gear.ranch.name', '{type} de {item}', {
+      'type': CatalogText.of('data.items.gear.type.${gearTypeKey(a.weapon)}',
+          kGearTypeNames[a.weapon] ?? a.weapon),
+      'item': kAnimalProducts[a.legend]!.text,
+    });
+  }
   final fish = GearRules.fishOf(i);
   if (fish == null) return null;
   final type = fishForgeType(fish);
@@ -212,7 +251,7 @@ String localGoodsName(LootDrop d) {
   final (kind, id) = GoodsRules.split(d.goods ?? '');
   final n = d.count;
   if (kind == GoodsRules.gold) {
-    return CatalogText.of('ui.world.loot.gold', '$n de oro', {'n': n});
+    return CatalogText.of('ui.world.loot.gold', '₵$n', {'n': n});
   }
   final base = switch (kind) {
     'ore' => CatalogText.of(
@@ -223,6 +262,7 @@ String localGoodsName(LootDrop d) {
     'bait' =>
       CatalogText.of('data.materials.bait.$id.name', kBaits[id]?.name ?? id),
     'fert' => kFertilizers[id]?.text ?? id,
+    'agood' => animalGoodsName(id),
     _ => id,
   };
   return n > 1 ? '$n $base' : base;
