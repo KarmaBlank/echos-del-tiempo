@@ -181,7 +181,12 @@ fantasma va en el tile del mouse.
 Los jugadores no sabían que EDITAR PUEBLO, CONTRATAR y el resto viven en
 la fuente rúnica. Hasta que un jugador abre su panel por primera vez, el
 pueblo dibuja el "!" dorado de novedades (`drawNpcMark`, mismo estilo que
-`DsMark`) sobre la fuente. Al abrirlo, el cliente manda
+`DsMark`) sobre la fuente. Anclaje (v0.49.39): centrado en x sobre la
+huella del lugar y con la línea base 2 px arriba de su borde superior
+(`footprintMarkAnchor`), así la caja del "!" toca la pileta, igual que
+la marca de un habitante sobre su cabeza; mientras se muestra, el nombre
+FUENTE RÚNICA sube por encima de la marca. Antes iba fija 20 px arriba
+del borde, con el nombre en el medio, y flotaba suelta. Al abrirlo, el cliente manda
 `TownAction(TownOp.seen, id: '~fountain')`; el anfitrión guarda
 `npcSeen['~fountain']` en el perfil del jugador (JSON `seen`, ya
 existente: una partida vieja no lo trae y ve el aviso una vez). Es por
