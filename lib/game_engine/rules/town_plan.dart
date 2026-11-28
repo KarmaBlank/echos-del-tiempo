@@ -313,7 +313,7 @@ class TownPlan {
             p,
             water
                 ? Tile.water
-                : b.kind == BuildKind.casa
+                : b.kind.house
                     ? Tile.house
                     : Tile.soil);
       }

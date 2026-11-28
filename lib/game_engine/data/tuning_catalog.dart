@@ -463,6 +463,8 @@ const Map<String, TuningDef> kTuningDefaults = {
     'autoEpicMult': 0.25,
     'autoXpMult': 0.5,
     'faroCost': 300,
+    // Town kitchen (farming.md § 17): gold to build it (one per town).
+    'kitchenCost': 400,
     // Exteriores de bioma y refuerzos (overworld_biomes.md § 7): rebrote
     // de cada recolectable (s), chance de semilla del bioma, XP de Granjero
     // por recolectar, turnos de espera del refuerzo que llega a una pelea

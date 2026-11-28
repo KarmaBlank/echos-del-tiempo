@@ -39,10 +39,18 @@ enum BuildKind {
   /// Coop and barn (animals.md § 3): a house and a fenced yard with farm
   /// animals.
   gallinero('GALLINERO'),
-  establo('ESTABLO');
+  establo('ESTABLO'),
+
+  /// The town kitchen (farming.md § 17): one per town, bought with gold
+  /// from the CONSTRUIR palette; E at it opens the cooking screen.
+  cocina('COCINA');
 
   /// Coop or barn.
   bool get ranch => this == gallinero || this == establo;
+
+  /// A solid house with no chest, sign or helpers (resident house or
+  /// kitchen).
+  bool get house => this == casa || this == cocina;
 
   const BuildKind(this.label);
   final String label;

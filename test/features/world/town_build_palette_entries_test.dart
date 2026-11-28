@@ -90,6 +90,8 @@ void main() {
       // Cost: its own price, never a footprint glued in.
       final price = p.id == kFaroId
           ? TownRules.faroCost
+          : p.id == kKitchenId
+          ? TownRules.kitchenCost
           : animalHomeById(p.id)?.price ??
               (kFarmDecos.containsKey(p.id) ? CozyRules.decorCost(p.id) : null);
       if (price != null) {
@@ -101,6 +103,11 @@ void main() {
     expect(spriteOf['gallinero'], animalHomeById('gallinero')!.sprite);
     expect(spriteOf['establo'], animalHomeById('establo')!.sprite);
     expect(spriteOf['fence'], isNot(spriteOf['fence_gate']));
+    // The town kitchen (farming.md § 17): its own sprite, size and flags.
+    expect(spriteOf[kKitchenId], 'cocina');
+    final k = pieces.firstWhere((p) => p.id == kKitchenId);
+    expect((k.w, k.h), (3, 3));
+    expect(k.flags, contains(s.t('ui.town.edit.flag_unique')));
     h.c.exitTownEdit();
     await h.frames(2);
   });

@@ -1,73 +1,69 @@
-import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
 import 'package:echos_del_tiempo/game_engine/rules/cooking_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/quest_track_rules.dart';
-import 'package:echos_del_tiempo/game_engine/rules/town_plan.dart';
-import 'package:echos_del_tiempo/game_engine/rules/world_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/town_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
 
-/// The town kitchen (docs/specs/farming.md § 17): a base-town landmark,
-/// never behind a tree, with a first-open "!" and host-validated cooking.
+/// The town kitchen (docs/specs/farming.md § 17): a CONSTRUIR palette
+/// building bought with gold, one per town, with a first-open "!" and
+/// host-validated cooking.
+(int, int) freeSpot(TownState s, [String id = kKitchenId]) {
+  final (ox, oy) = s.origin;
+  for (var y = 2; y < 30; y++) {
+    for (var x = 2; x < 40; x++) {
+      if (TownRules.place(s, id, x + ox, y + oy).town != null) {
+        return (x + ox, y + oy);
+      }
+    }
+  }
+  throw StateError('no free spot');
+}
+
 void main() {
-  test('the kitchen is part of the base town, free, at its spot', () {
+  test('its own catalog entry: 3 × 3, gold, a solid house on the map', () {
+    final d = construction(kKitchenId)!;
+    expect((d.kind, d.w, d.h), (BuildKind.cocina, 3, 3));
+    expect(TownRules.kitchenCost, greaterThan(0));
     const s = TownState();
-    final k = TownPlan.landmarkOf(s, TownSpot.kitchen);
-    expect((k.x, k.y, k.w, k.h, k.tile), (28, 16, 3, 3, Tile.shop));
-    expect(TownLayout.lateSpots, contains(TownSpot.kitchen));
-    final map = MapGenerator.town(s);
+    final (x, y) = freeSpot(s);
+    final t = TownRules.place(s, kKitchenId, x, y).town!;
+    final k = t.builds.firstWhere((b) => b.kind == BuildKind.cocina);
+    expect(k.id, startsWith('k'));
+    expect(TownRules.hasKitchen(t), isTrue);
+    final map = MapGenerator.town(t);
     final (ox, oy) = map.townOrigin;
-    expect(map.tileAt(k.x + ox + 1, k.y + oy + 1), Tile.shop);
-    // E in front of its door finds the kitchen.
-    final front = ((k.x + 1.5) * 16 + ox * 16, (k.y + k.h + 0.5) * 16 + oy * 16);
-    expect(WorldRules.townSpot(front.$1, front.$2, map: map), TownSpot.kitchen);
+    expect(map.tileAt(k.bounds.x + ox + 1, k.bounds.y + oy + 1), Tile.house);
+    // One per town.
+    final (x2, y2) = freeSpot(t, kCasaId);
+    expect(TownRules.place(t, kKitchenId, x2, y2).town, isNull);
   });
 
-  test('no tree on its door row or exit landing (TownPlan.doorClearance)', () {
-    for (final s in [
-      const TownState(),
-      const TownState(sides: {TownSide.este: 1, TownSide.sur: 1}),
-    ]) {
-      final k = TownPlan.landmarkOf(s, TownSpot.kitchen);
-      final clear = TownPlan.doorClearance(s);
-      for (var x = k.x - 1; x <= k.x + k.w; x++) {
-        expect(clear, contains((x, k.y + k.h)));
-      }
-      expect(clear, contains((k.x + 1, k.y + k.h + 1)));
-      final map = MapGenerator.town(s);
-      final (ox, oy) = map.townOrigin;
-      // The base tree at (27, 19) sits on its door row: never planted.
-      expect(TownLayout.trees, contains((27, 19)));
-      for (final (x, y) in clear) {
-        if (x < k.x - 1 || x > k.x + k.w || y < k.y + k.h) continue;
-        expect(map.tileAt(x + ox, y + oy), isNot(Tile.tree), reason: '($x, $y)');
-      }
-    }
-  });
-
-  test('an old town with a build on the spot gets a free kitchen nearby', () {
-    // A farm saved before the kitchen existed, right where it goes.
-    const s = TownState(builds: [
-      TownBuild('h9', BuildKind.huerta, [TownRect(28, 16, 3, 3)]),
-    ]);
-    final k = TownPlan.landmarkOf(s, TownSpot.kitchen);
-    expect((k.x, k.y), isNot((28, 16)));
-    expect(s.builds.single.parts.single.inflate(2).overlaps(
-        TownRect(k.x, k.y, k.w, k.h)), isFalse);
-    final map = MapGenerator.town(s);
-    final (ox, oy) = map.townOrigin;
-    expect(map.tileAt(k.x + ox + 1, k.y + oy + 1), Tile.shop);
-    for (final (x, y) in TownPlan.doorClearance(s)) {
-      final mx = x + ox, my = y + oy;
-      if (mx <= 1 || my <= 0 || mx >= map.width - 2 || my >= map.height - 1) {
-        continue;
-      }
-      expect(map.tileAt(mx, my), isNot(Tile.tree), reason: '($x, $y)');
-    }
+  test('the host charges its gold and refuses a second one', () {
+    final e = sessionEngine();
+    final rich = newProfile('Ana', 'guerrero')
+        .copyWith(credits: TownRules.kitchenCost * 2);
+    var s = e.addPlayer(e.create(), 'p0', rich)!.state;
+    final (x, y) = freeSpot(s.town);
+    final r = e.apply(s, 'p0',
+        TownAction(TownOp.place, id: kKitchenId, x: x, y: y));
+    expect(r, isNotNull);
+    s = r!.state;
+    expect(TownRules.hasKitchen(s.town), isTrue);
+    expect(s.players['p0']!.profile.credits, TownRules.kitchenCost);
+    final (x2, y2) = freeSpot(s.town, kCasaId);
+    expect(e.apply(s, 'p0',
+        TownAction(TownOp.place, id: kKitchenId, x: x2, y: y2)), isNull);
+    // Without the gold the host refuses.
+    final poor = e.addPlayer(e.create(), 'p0',
+        newProfile('Ana', 'guerrero').copyWith(credits: 0))!.state;
+    expect(e.apply(poor, 'p0',
+        TownAction(TownOp.place, id: kKitchenId, x: x, y: y)), isNull);
   });
 
   test('first-open alert: unseen until opened, saved per profile', () {

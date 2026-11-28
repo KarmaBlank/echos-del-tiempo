@@ -7,7 +7,10 @@ import 'package:echos_del_tiempo/features/world/presentation/panels/character_pa
 import 'package:echos_del_tiempo/features/world/presentation/panels/cooking_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/world_screen.dart';
-import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/data/construction_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/town_build.dart';
+import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
+import 'package:echos_del_tiempo/game_engine/rules/town_rules.dart';
 import 'package:echos_del_tiempo/game_engine/models/life_skills.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/quest_track_rules.dart';
@@ -19,7 +22,7 @@ import '../../real_fonts.dart';
 import '../panel_test_harness.dart';
 import 'fishing_map_harness.dart';
 
-/// The town kitchen (docs/specs/farming.md § 17): the COCINA house shows a
+/// The town kitchen (docs/specs/farming.md § 17): a built COCINA shows a
 /// gold "!" until the first open; E opens the cooking screen; OFICIOS →
 /// INVENTARIO → CULTIVO no longer has a COCINA filter.
 /// `PREVIEW=1` writes docs/preview/kitchen/*.png.
@@ -48,12 +51,29 @@ void main() {
     final h = await FishingMapHarness.pump(tester, profile: ana());
     final c = h.c;
     expect(c.kitchenAlert, isTrue);
-    final k = TownLayout.landmark(TownSpot.kitchen);
+    // Build the kitchen on the first free spot (host side).
+    late TownBuild k;
     // ignore: invalid_use_of_visible_for_testing_member
-    c.teleport((k.x + 1.5) * 16, (k.y + k.h + 0.4) * 16);
+    c.debugTown((t) {
+      final (ox, oy) = t.origin;
+      for (var y = 2; y < 30; y++) {
+        for (var x = 2; x < 40; x++) {
+          final r = TownRules.place(t, kKitchenId, x + ox, y + oy).town;
+          if (r == null) continue;
+          k = r.builds.firstWhere((b) => b.kind == BuildKind.cocina);
+          return r;
+        }
+      }
+      throw StateError('no free spot');
+    });
+    await h.frames(2);
+    final (ox, oy) = c.town.origin;
+    final r = k.bounds;
+    // ignore: invalid_use_of_visible_for_testing_member
+    c.teleport((r.x + ox + 1.5) * 16, (r.bottom + oy + 0.4) * 16);
     await h.frames(8);
     expect(c.nearKitchen, isTrue);
-    expect(c.actionTarget?.key, 'spot:kitchen');
+    expect(c.actionTarget?.key, 'kitchen:${k.id}');
     await _shot(tester, find.byType(WorldScreen), 'kitchen_town_alert.png');
 
     expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);

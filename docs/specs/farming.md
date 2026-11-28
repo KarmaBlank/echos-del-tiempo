@@ -612,25 +612,33 @@ Visión del dueño; nombres propuestos, esperan su OK (lore.md):
 La olla del pueblo convierte cosechas (y a veces pescado) en comidas que
 dan un buff para las próximas misiones.
 
-- Dónde (protocolo 103): la casa COCINA del pueblo (`TownSpot.kitchen`,
-  `@kitchen`, 3 × 3 en (28, 16) del pueblo base, tile `Tile.shop` con el
-  sprite `items.vida_cocina` de `tool/export_kitchen_sprites.dart`:
+- Dónde (protocolo 108): la COCINA es una construcción de EDITAR PUEBLO
+  → CONSTRUIR (`BuildKind.cocina`, `kKitchenId` = `cocina` en
+  `kConstructions`, filtro HOGAR). Su propia huella 3 × 3, su propio
+  sprite `items.vida_cocina` (`tool/export_kitchen_sprites.dart`:
   ladrillo y revoque, chimenea humeante, olla en el frontón y cartel de
-  pan). Es parte del pueblo base, gratis y para todos (pilar "nada
-  obligatorio"): no se construye desde EDITAR PUEBLO. Es un lugar tardío
-  (`TownLayout.lateSpots`): en un pueblo guardado antes, si su lugar
-  está ocupado va al hueco libre más cercano (town_editor.md § 3.3); su
-  puerta nunca queda tapada por un árbol (`TownPlan.doorClearance`,
-  § 4.5). E frente a la puerta (cursor de acción `spot:kitchen`, contorno
-  blanco del sprite) abre el panel COCINA (`WorldPanel.kitchen`,
+  pan; miniatura de la paleta `LifeIcon('cocina')`), su propio costo en
+  oro (`TownRules.kitchenCost`, tuning `kitchenCost` = 400) y sus flags
+  (`TownPiece.flags`: "Abre la pantalla de cocina", "Una por pueblo",
+  "Bloquea el paso"). Una sola por pueblo (`TownRules.hasKitchen`: la
+  paleta la deja gris con "El pueblo ya tiene su cocina" y el host
+  rechaza la segunda); el host cobra el oro en `TownOp.place`. En el mapa
+  es una casa sólida (`Tile.house`, sin cofre ni cartel ni ayudantes:
+  `BuildKind.house`), id `k<n>`; se mueve y se borra como cualquier
+  construcción (borrarla no devuelve el oro). E al lado (cursor de
+  acción `kitchen:<id>`) abre el panel COCINA (`WorldPanel.kitchen`,
   `KitchenPanel`) con el organismo `CookingView`. Sin interior.
   Cualquier jugador del co-op la usa; el host valida cada acción
   (`_inTown`).
+- Reutilizable: `SessionController.openKitchen()` es la única entrada a
+  la pantalla de cocina; cualquier otro lugar para cocinar (el mueble
+  cocina de la casa del jugador) la llama y muestra el mismo
+  `KitchenPanel`, sin duplicar la UI.
 - Aviso: "!" dorado (`NpcMark.news`) sobre la casa hasta que el jugador
-  la abre por primera vez: `TownOp.seen` con id `~kitchen`
+  la abre por primera vez (si todavía no hay cocina, no hay "!"): `TownOp.seen` con id `~kitchen`
   (`QuestTrackRules.kitchenKey`) guarda la marca en `npcSeen` del perfil,
   igual que la fuente rúnica (town_editor.md § 1.5).
-- Antes (v0.45.0–protocolo 99) vivía en OFICIOS → INVENTARIO → CULTIVO →
+- Antes (v0.45.0–protocolo 101) vivía en OFICIOS → INVENTARIO → CULTIVO →
   COCINA; ese filtro ya no existe. Subtabs RECETAS / COMIDAS / COLECCIÓN; RECETAS
   y COMIDAS usan la plantilla TALLER (`DsCraftGridTemplate`: grilla con
   el detalle a la derecha) con filtros TODAS / VIDA / ATAQUE /

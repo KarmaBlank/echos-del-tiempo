@@ -1341,8 +1341,8 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente al TALLER DE OFICIOS (town_loop.md § 2.1, v0.32.3).
   bool get nearWorkshop => townSpot == TownSpot.workshop;
 
-  /// In front of the town kitchen (farming.md § 17).
-  bool get nearKitchen => townSpot == TownSpot.kitchen;
+  /// Next to the town kitchen (farming.md § 17).
+  bool get nearKitchen => nearKitchenBuild != null;
 
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
@@ -3166,7 +3166,7 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     final (ox, oy) = town.origin;
     for (final b in town.builds) {
-      if (b.kind == BuildKind.casa) continue;
+      if (b.kind.house) continue;
       if (TownRules.chestOf(town, b) == (tx - ox, ty - oy)) return b;
     }
     return null;
@@ -3316,6 +3316,24 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     return null;
   }
+
+  /// The town kitchen next to the local player (farming.md § 17; E opens
+  /// the cooking screen).
+  TownBuild? get nearKitchenBuild {
+    if (!_townFree() || _s?.place != null) return null;
+    final (px, py) = _myTile;
+    final (ox, oy) = town.origin;
+    for (final b in town.builds) {
+      if (b.kind != BuildKind.cocina) continue;
+      if (b.bounds.inflate(1).contains(px - ox, py - oy)) return b;
+    }
+    return null;
+  }
+
+  /// Opens the cooking screen (farming.md § 17). The one entry point for
+  /// every cooking spot: the town kitchen and any furniture that reuses it
+  /// (the player house's stove calls this too).
+  void openKitchen() => openPanel(WorldPanel.kitchen);
 
   /// The coop / barn whose house is next to the local player (E: panel).
   TownBuild? get nearRanchHouse {
@@ -3871,6 +3889,10 @@ class SessionController extends StateNotifier<SessionView?> {
           'Nivel ${b.level}'
               '${b.resident == null ? ' · vacía' : ' · vive ${biomeNpcName(b.resident!)}'}'
         ),
+        BuildKind.cocina => (
+            strings.t('ui.town.build.cocina.name'),
+            strings.t('ui.town.build.cocina.info')
+          ),
         BuildKind.gallinero || BuildKind.establo => (
             strings.t('ui.town.ranch.${b.kind.name}.name'),
             strings.t('ui.town.ranch.sign', {
@@ -4342,10 +4364,6 @@ class SessionController extends StateNotifier<SessionView?> {
           add(at(ActionTargetKind.shop),
               () => openPanel(WorldPanel.workshop),
               () => (WorldPrompt.workshop, null));
-        case TownSpot.kitchen:
-          add(at(ActionTargetKind.shop),
-              () => openPanel(WorldPanel.kitchen),
-              () => (WorldPrompt.kitchen, null));
         case TownSpot.portal:
           add(at(ActionTargetKind.portal),
               () => openPanel(WorldPanel.ecoPortal),
@@ -4646,6 +4664,15 @@ class SessionController extends StateNotifier<SessionView?> {
                   t.ok ? WorldPrompt.poi : WorldPrompt.spent,
                   animalPrompt(b, a)
                 ));
+      }
+      if (nearKitchenBuild case final b?) {
+        final (ox, oy) = town.origin;
+        final (px, py) = _myTile;
+        final r = b.bounds;
+        final tx = (px - ox).clamp(r.x, r.x + r.w - 1) + ox;
+        final ty = (py - oy).clamp(r.y, r.y + r.h - 1) + oy;
+        add(ActionTarget(tx, ty, ActionTargetKind.shop, key: 'kitchen:${b.id}'),
+            openKitchen, () => (WorldPrompt.kitchen, null));
       }
       if (nearRanchHouse case final b?) {
         final (ox, oy) = town.origin;

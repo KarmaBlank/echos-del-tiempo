@@ -39,7 +39,7 @@ import 'world_frame.dart';
 import 'region_light_layer.dart';
 import '../../../../game_engine/rules/quest_track_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
-import '../../../../game_engine/models/town_build.dart' show kTownStrip;
+import '../../../../game_engine/models/town_build.dart' show BuildKind, kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/data/world_events_catalog.dart';
 import '../../../../game_engine/rules/world_event_rules.dart';
@@ -1180,12 +1180,14 @@ class MapGame extends Game {
         }
       }
       // Same gold "!" over the kitchen until its first open (farming.md
-      // § 17); above its name, over the sprite's roof.
+      // § 17), over the built kitchen's roof.
       if (controller.kitchenAlert) {
-        for (final l in map.townMarks ?? TownLayout.landmarks) {
-          if (l.spot != TownSpot.kitchen) continue;
+        final (tox, toy) = s.town.origin;
+        for (final b in s.town.builds) {
+          if (b.kind != BuildKind.cocina) continue;
+          final r = b.bounds;
           drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
-              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+              NpcMark.news, (r.x + tox + r.w / 2) * ts, (r.y + toy) * ts - 12, t);
         }
       }
       farm.drawZoneLabels(
@@ -1260,7 +1262,6 @@ class MapGame extends Game {
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
-        _drawLandmarkSprite(c, map, TownSpot.kitchen, 'cocina');
         _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
@@ -2348,7 +2349,6 @@ class MapGame extends Game {
     'spot:armory',
     'spot:forge',
     'spot:workshop',
-    'spot:kitchen',
   ];
 
   void _drawObjectOutline(Canvas c, GameMap map, double t) {

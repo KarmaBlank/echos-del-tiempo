@@ -75,11 +75,11 @@ restos del pasado magitec:
 
 Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
 
-#### COCINA (protocolo 103)
+#### COCINA (protocolo 108)
 
-- Lugar fijo `TownSpot.kitchen` (`@kitchen`), 3 × 3 en (28, 16) del
-  pueblo base, al este de la huerta. E abre la cocina (RECETAS / COMIDAS
-  / COLECCIÓN); "!" dorado hasta la primera vez. Todo en farming.md § 17.
+- Construcción de EDITAR PUEBLO → CONSTRUIR (`BuildKind.cocina`), 3 × 3,
+  con oro y una por pueblo. E abre la cocina (RECETAS / COMIDAS /
+  COLECCIÓN); "!" dorado hasta la primera vez. Todo en farming.md § 17.
 
 #### TALLER DE OFICIOS (v0.32.3)
 

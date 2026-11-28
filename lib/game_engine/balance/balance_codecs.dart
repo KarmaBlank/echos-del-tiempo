@@ -1595,6 +1595,7 @@ const _townLabels = {
   'autoEpicMult': 'Auto-pesca: × chance de épico',
   'autoXpMult': 'Auto-pesca: × XP',
   'faroCost': 'Faro: oro',
+  'kitchenCost': 'Cocina: oro',
   'forageRespawnSec': 'Biomas: segundos de rebrote de una mata',
   'forageSeedChance': 'Biomas: chance de semilla al recolectar',
   'forageXp': 'Biomas: XP de Granjero por recolectar',

@@ -6,9 +6,12 @@ import '../session_view.dart';
 import '../world_strings.dart';
 import 'cooking_view.dart';
 
-/// The town kitchen (farming.md § 17): E at the COCINA house opens the
-/// cooking screen with its RECETAS / COMIDAS / COLECCIÓN subtabs (the
-/// shared [CookingView] organism). Every player in town can use it; the
+/// The cooking screen (farming.md § 17) with its RECETAS / COMIDAS /
+/// COLECCIÓN subtabs (the shared [CookingView] organism). Reusable: every
+/// cooking spot (the town COCINA building, the player house's kitchen
+/// furniture) opens it through `SessionController.openKitchen()`, which
+/// shows this panel for `WorldPanel.kitchen`; it only needs the view and
+/// the controller. Every player in town can use it; the
 /// host validates each `FarmShopOp.cook` / `eat` / `giveMeal`.
 class KitchenPanel extends StatelessWidget {
   const KitchenPanel({super.key, required this.view, required this.controller});

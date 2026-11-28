@@ -128,6 +128,7 @@ abstract final class TownRules {
       BuildKind.casa => 'c',
       BuildKind.gallinero => 'g',
       BuildKind.establo => 'e',
+      BuildKind.cocina => 'k',
     }}$n';
   }
 
@@ -186,7 +187,7 @@ abstract final class TownRules {
       while (grew) {
         grew = false;
         for (final o in [...rest]) {
-          if (o.kind != b.kind || b.kind == BuildKind.casa || b.kind.ranch) {
+          if (o.kind != b.kind || b.kind.house || b.kind.ranch) {
             continue;
           }
           final touch = o.parts
@@ -256,6 +257,9 @@ abstract final class TownRules {
       TownState s, String defId, int mx, int my) {
     final def = construction(defId);
     if (def == null) return (town: null, id: null, error: 'No existe');
+    if (def.kind == BuildKind.cocina && hasKitchen(s)) {
+      return (town: null, id: null, error: 'Ya hay una cocina');
+    }
     final (ox, oy) = s.origin;
     final b = TownBuild(_newId(s, def.kind), def.kind,
         [TownRect(mx - ox, my - oy, def.w, def.h)]);
@@ -291,6 +295,18 @@ abstract final class TownRules {
   // ---------------- faros (day_night_weather.md § 5) ----------------
 
   static int get faroCost => t.i('faroCost');
+
+  /// Gold for the town kitchen (farming.md § 17).
+  static int get kitchenCost => t.i('kitchenCost');
+
+  /// Whether [s] already has its kitchen (one per town).
+  static bool hasKitchen(TownState s) =>
+      s.builds.any((b) => b.kind == BuildKind.cocina);
+
+  /// [p] pays the kitchen, or `null` if short on gold.
+  static PlayerProfile? payKitchen(PlayerProfile p) => p.credits < kitchenCost
+      ? null
+      : p.copyWith(credits: p.credits - kitchenCost);
 
   /// El faro en el tile del mapa ([mx], [my]), o `null`.
   static (int, int)? lightAt(TownState s, int mx, int my) {
@@ -879,7 +895,7 @@ abstract final class TownRules {
       {double r = 18}) {
     final (ox, oy) = s.origin;
     for (final b in s.builds) {
-      if (b.kind == BuildKind.casa) continue;
+      if (b.kind.house) continue;
       final (cx, cy) = chestOf(s, b);
       final px = (cx + ox + 0.5) * 16, py = (cy + oy + 0.5) * 16;
       if ((px - x).abs() <= r && (py - y).abs() <= r) return b;
@@ -902,7 +918,7 @@ abstract final class TownRules {
     final b = s.build(id);
     if (b == null) return 'No existe';
     final farm = b.kind == BuildKind.huerta || b.kind.ranch;
-    if (b.kind == BuildKind.casa) return 'No es una huerta ni un lago';
+    if (b.kind.house) return 'No es una huerta ni un lago';
     if (b.helper >= helperCap(b)) {
       if (b.kind.ranch) return 'Ya tiene su granjero de corral';
       return 'No hay más lugar: agrandá ${farm ? 'la huerta' : 'el lago'}';

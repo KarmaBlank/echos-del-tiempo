@@ -31,7 +31,14 @@ const kConstructions = <ConstructionDef>[
       detail: 'Casa y patio para gallinas y patos'),
   ConstructionDef('establo', BuildKind.establo, 'ESTABLO', 7, 5,
       detail: 'Casa y patio para vacas, cabras y ovejas'),
+  // The town kitchen (farming.md § 17): its own 3 × 3 brick house.
+  ConstructionDef(kKitchenId, BuildKind.cocina, 'COCINA', 3, 3,
+      detail: 'Cocina del pueblo: recetas, comidas y colección'),
 ];
+
+/// The town kitchen (farming.md § 17): gold (`TownRules.kitchenCost`),
+/// one per town.
+const kKitchenId = 'cocina';
 
 /// La casa de un habitante (town_editor.md § 3.4): cuesta oro y tablas
 /// (`ResidentRules.placeCost`).
