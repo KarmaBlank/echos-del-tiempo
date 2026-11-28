@@ -1,6 +1,5 @@
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
-import 'package:echos_del_tiempo/game_engine/models/mine_state.dart';
 import 'package:echos_del_tiempo/game_engine/rules/helper_motion.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mine_work_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mining_rules.dart';
