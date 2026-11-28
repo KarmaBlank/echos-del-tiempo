@@ -58,13 +58,18 @@ aviso; un árbol ya revisado hoy queda en gris).
 **Contorno o recuadro (por tipo):** el recuadro verde / naranja queda
 solo para los objetivos de trabajo en el suelo (parcelas, rocas / vetas,
 matas, árboles). Todo lo demás lleva un contorno blanco de 1 px alrededor
-de su silueta: NPC y actores con sprite (silueta del sprite); objetos
+de su silueta (color `DsColors.targetOutline`): NPC, actores con sprite,
+casas de corral / establo y animales de granja (silueta del sprite; sin
+recuadro aunque estén al lado del jugador); objetos
 pintados en sus tiles (portales de Ecos, arcos de misión, piedras de
 paso, santuarios, fuente rúnica, bocas de mina, carteles, estaciones,
 cofres de lo salvaje y de la mina): la silueta son los píxeles donde el
 tile con el objeto difiere del mismo tile con suelo, y el contorno se
 dibuja debajo de los actores (nunca encima del jugador); portales de
-grieta: un óvalo blanco. Solo un objetivo marcado a la vez: con la
+grieta: un óvalo blanco. El recuadro solo vuelve como respaldo si el
+objetivo no tiene sprite ni silueta que contornear. Las siluetas se
+cachean (sprite: la misma imagen teñida; objetos: anillo por clave),
+nunca se recalculan por frame. Solo un objetivo marcado a la vez: con la
 selección en algo que no es herramienta, el recuadro de la huerta y el de
 la mina no se dibujan.
 
