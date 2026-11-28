@@ -424,8 +424,9 @@ herramienta de área trabaja menos tiles.
   "Cofre lleno" (`HelperRules.chestText`). Sale del pueblo del estado,
   sin cambio de protocolo.
 - Pescador: cada vuelta saca `fisherCatch` (2) peces de la tabla de su
-  lago (+ «Red de pescador») al cofre; nunca legendarios; XP como la
-  vieja red (× `autoMult`) para quien recoge.
+  lago (+ «Red de pescador»); nunca legendarios. Desde v0.49.44 van
+  directo a la bolsa PESCA del dueño del pueblo (fishing.md § 2.4), con
+  la XP de recoger; el cofre del lago queda vacío.
 - Borrar la construcción: el cofre va a quien borra y las semillas de
   los granjeros vuelven.
 
