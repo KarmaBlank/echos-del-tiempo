@@ -27,6 +27,7 @@ abstract final class WorldRules {
   static bool isSolid(GameMap map, int tx, int ty,
       {bool gateOpen = false, bool blockVoid = false}) {
     if (!map.contains(tx, ty)) return true;
+    if (map.blocked.contains((tx, ty))) return true;
     final c = map.tileAt(tx, ty);
     return Tile.solidTiles.contains(c) ||
         Tile.entranceZone(c) != null ||
@@ -67,6 +68,20 @@ abstract final class WorldRules {
   static bool overVoid(GameMap map, double x, double y) =>
       isVoid(map, (x / tileSize).floor(), (y / tileSize).floor());
 
+  /// The character box at (x, y) px touches a fence cell
+  /// ([GameMap.blocked]; town_editor.md § 5.1). The host checks moves
+  /// with it.
+  static bool hitsFence(GameMap map, double x, double y) {
+    if (map.blocked.isEmpty) return false;
+    for (final (ox, oy) in _probes) {
+      if (map.blocked.contains((((x + ox) / tileSize).floor(),
+          ((y + oy) / tileSize).floor()))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// `hit`: la caja del personaje en (x, y) toca algo sólido.
   static bool collides(GameMap map, double x, double y,
       {bool gateOpen = false, bool blockVoid = false}) {
@@ -100,6 +115,11 @@ abstract final class WorldRules {
     final l = math.sqrt(ix * ix + iy * iy);
     if (l == 0) return WorldPoint(x, y);
     final v = playerSpeed * speedMult * dt;
+    // Already inside something solid (a fence placed on top of the
+    // player): walk out freely instead of freezing.
+    if (collides(map, x, y, gateOpen: gateOpen)) {
+      return WorldPoint(x + ix / l * v, y + iy / l * v);
+    }
     return move(map, x, y, ix / l * v, iy / l * v,
         gateOpen: gateOpen);
   }

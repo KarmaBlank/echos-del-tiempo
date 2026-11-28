@@ -4957,7 +4957,7 @@ class SessionController extends StateNotifier<SessionView?> {
       }
     }
     // Farm animals, their eggs and the coop / barn house (animals.md
-    // § 4.2): the tile cursor (they walk; the house is a sprite).
+    // § 4.2): the white sprite outline (controls.md § Cursor de acción).
     if (!isRun && s.place == null) {
       for (final t in _animalCandidates()) {
         final r = _animalOf(t);
@@ -4967,8 +4967,7 @@ class SessionController extends StateNotifier<SessionView?> {
             ActionTarget(t.x, t.y, ActionTargetKind.animal,
                 ok: t.ok,
                 id: t.id,
-                key: 'animal:${b.id}:${a.uid}:${t.x},${t.y}',
-                outline: false),
+                key: 'animal:${b.id}:${a.uid}:${t.x},${t.y}'),
             () => careAnimal(b.id, a.uid),
             () => (
                   t.ok ? WorldPrompt.poi : WorldPrompt.spent,
@@ -4983,7 +4982,7 @@ class SessionController extends StateNotifier<SessionView?> {
         final ty = (py - oy).clamp(h.y, h.y + h.h - 1) + oy;
         add(
             ActionTarget(tx, ty, ActionTargetKind.animal,
-                key: 'ranch:${b.id}', outline: false),
+                key: 'ranch:${b.id}'),
             () => openAnimals(b.id),
             () => (
                   WorldPrompt.poi,

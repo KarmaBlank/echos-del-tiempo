@@ -1318,6 +1318,17 @@ class _Op {
           return false;
         }
         final ox = p.x, oy = p.y;
+        // Fences block (town_editor.md § 5.1): the host refuses a step
+        // into one (a player already inside may walk out).
+        {
+          final nx = a.x.isFinite && a.x != 0 ? a.x : p.x;
+          final ny = a.y.isFinite && a.y != 0 ? a.y : p.y;
+          final fm = e.mapFor(s);
+          if (WorldRules.hitsFence(fm, nx, ny) &&
+              !WorldRules.hitsFence(fm, ox, oy)) {
+            return false;
+          }
+        }
         if (a.x.isFinite && a.x != 0) p.x = a.x;
         if (a.y.isFinite && a.y != 0) p.y = a.y;
         // Encounter initiative: remember the last real step.

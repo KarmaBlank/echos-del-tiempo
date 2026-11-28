@@ -31,6 +31,7 @@ class TownPiece {
     required this.detail,
     this.cost,
     this.costItems = const {},
+    this.flags = const [],
     this.why,
   });
 
@@ -45,6 +46,10 @@ class TownPiece {
 
   /// Items it costs (id → amount), shown as a cost grid.
   final Map<String, int> costItems;
+
+  /// Its own traits (lights up at night, blocks the way...), already
+  /// translated; only the ones that apply to this piece.
+  final List<String> flags;
 
   /// Por qué no se puede poner ahora (o `null`).
   final String? why;
@@ -90,6 +95,18 @@ class TownBuildPalette extends StatefulWidget {
   /// Las piezas que se pueden poner, con su costo y motivo.
   static List<TownPiece> pieces(Strings s, SessionController c) {
     final p = c.view?.me?.profile;
+    String gold(int n) => s.t('ui.town.edit.gold', {'cost': n});
+    String? cantPay(int n) => p == null
+        ? s.t('ui.town.edit.no_character')
+        : p.credits < n
+            ? s.t('ui.town.edit.missing_gold', {'have': p.credits, 'need': n})
+            : null;
+    List<String> decorFlags(String id) => [
+          if (id == 'lamp') s.t('ui.town.edit.flag_light'),
+          if (id == 'fence') s.t('ui.town.edit.flag_blocks'),
+          if (id == 'fence_gate') s.t('ui.town.edit.flag_passable'),
+          if (id == 'stone_path') s.t('ui.town.edit.flag_walkable'),
+        ];
     return [
       for (final d in kConstructions)
         if (animalHomeById(d.id) case final h?)
@@ -102,15 +119,10 @@ class TownBuildPalette extends StatefulWidget {
             h: d.h,
             detail: s.t('ui.town.ranch.${d.kind.name}.info',
                 {'cap': h.cap, 'level': h.level}),
-            cost: s.t('ui.town.edit.lamp_detail', {'cost': h.price}),
-            why: p == null
-                ? s.t('ui.town.edit.no_character')
-                : FarmingRules.level(p) < h.level
-                    ? s.t('ui.town.ranch.need_level', {'n': h.level})
-                    : p.credits < h.price
-                        ? s.t('ui.town.edit.missing_gold',
-                            {'have': p.credits, 'need': h.price})
-                        : null,
+            cost: gold(h.price),
+            why: p != null && FarmingRules.level(p) < h.level
+                ? s.t('ui.town.ranch.need_level', {'n': h.level})
+                : cantPay(h.price),
           )
         else if (d.kind == BuildKind.home)
           // Player house (player_house.md § 1): gold, one per town.
@@ -138,10 +150,10 @@ class TownBuildPalette extends StatefulWidget {
           TownPiece(
             id: d.id,
             category: TownPieceCategory.home,
-            name: d.name,
+            name: s.t('ui.town.build.${d.id}.name'),
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: s.t('ui.town.build.${d.id}.info'),
             cost: HelperRules.costText(ResidentRules.placeCost()),
             costItems: ResidentRules.placeCost().mats,
             why: p == null
@@ -152,10 +164,10 @@ class TownBuildPalette extends StatefulWidget {
           TownPiece(
             id: d.id,
             category: TownPiece.categoryOf(d.kind),
-            name: d.name,
+            name: s.t('ui.town.build.${d.id}.name'),
             w: d.w,
             h: d.h,
-            detail: d.detail,
+            detail: s.t('ui.town.build.${d.id}.info'),
           ),
       // Farm decorations (cozy_life.md § 2): 1×1, cheap, cosmetic.
       for (final d in kFarmDecos.values)
@@ -166,14 +178,9 @@ class TownBuildPalette extends StatefulWidget {
           w: 1,
           h: 1,
           detail: s.t('ui.town.decor.${d.id}.info'),
-          cost: s.t('ui.town.edit.lamp_detail',
-              {'cost': CozyRules.decorCost(d.id)}),
-          why: p == null
-              ? s.t('ui.town.edit.no_character')
-              : p.credits < CozyRules.decorCost(d.id)
-                  ? s.t('ui.town.edit.missing_gold',
-                      {'have': p.credits, 'need': CozyRules.decorCost(d.id)})
-                  : null,
+          cost: gold(CozyRules.decorCost(d.id)),
+          flags: decorFlags(d.id),
+          why: cantPay(CozyRules.decorCost(d.id)),
         ),
       TownPiece(
         id: kFaroId,
@@ -182,13 +189,9 @@ class TownBuildPalette extends StatefulWidget {
         w: 1,
         h: 1,
         detail: s.t('ui.town.edit.lamp_info'),
-        cost: s.t('ui.town.edit.lamp_detail', {'cost': TownRules.faroCost}),
-        why: p == null
-            ? s.t('ui.town.edit.no_character')
-            : p.credits < TownRules.faroCost
-                ? s.t('ui.town.edit.missing_gold',
-                    {'have': p.credits, 'need': TownRules.faroCost})
-                : null,
+        cost: gold(TownRules.faroCost),
+        flags: [s.t('ui.town.edit.flag_light')],
+        why: cantPay(TownRules.faroCost),
       ),
     ];
   }
@@ -421,6 +424,8 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
                 ? s.t('ui.town.edit.free')
                 : s.t('ui.town.edit.cost', {'cost': p.cost}),
             style: p.enabled ? DsText.detail() : DsText.key()),
+        for (final f in p.flags)
+          Text(f, style: DsText.detail(DsColors.reward)),
         if (p.costItems.isNotEmpty) ...[
           gap,
           itemCostGrid(context, widget.controller.view?.me?.profile,
@@ -462,6 +467,7 @@ class _TownBuildPaletteState extends State<TownBuildPalette> {
                     ? s.t('ui.town.edit.free')
                     : s.t('ui.town.edit.cost', {'cost': p.cost}),
                 style: DsText.detail(p.enabled ? null : DsColors.danger)),
+            for (final f in p.flags) Text(f, style: DsText.detail()),
             if (p.why case final why?)
               Text(why, style: DsText.detail(DsColors.danger)),
           ]),

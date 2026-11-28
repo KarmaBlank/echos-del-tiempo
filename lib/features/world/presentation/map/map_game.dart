@@ -1256,7 +1256,14 @@ class MapGame extends Game {
             asleep: controller.animalsAsleep,
             text: (txt, x, y, col, size) =>
                 _placeText(c, txt, x, y, col, size, 900),
-            hover: controller.hoverAnimal);
+            hover: controller.hoverAnimal,
+            selectedHouse: controller.selectedOf('ranch:'),
+            selectedAnimal: switch (controller.selectedOf('animal:')
+                ?.split(':')) {
+              [final b, final u, ...] when int.tryParse(u) != null =>
+                (build: b, uid: int.parse(u)),
+              _ => null,
+            });
         _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
         _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
         _drawLandmarkSprite(c, map, TownSpot.shop, 'tienda');
