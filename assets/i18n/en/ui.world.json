@@ -434,12 +434,6 @@
   "ui.world.home.prompt_sleep_night": "[E] SLEEP until nightfall",
   "ui.world.home.prompt_wake": "[E] Get up",
   "ui.world.home.waiting": "Waiting for the others ({x}/{n})",
-  "ui.world.home.slept_morning": {
-    "text": "You slept like a log. The sun is up.",
-    "status": "draft"
-  },
-  "ui.world.home.slept_night": {
-    "text": "A good long nap. Night has fallen.",
-    "status": "draft"
-  }
+  "ui.world.home.slept_morning": "You slept like a log. The sun is up.",
+  "ui.world.home.slept_night": "A good long nap. Night has fallen."
 }
