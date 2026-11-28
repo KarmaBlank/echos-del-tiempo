@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/data/construction_catalog.dart';
+import '../../../../game_engine/data/animals_catalog.dart' show animalHomeById;
 import '../../../../game_engine/data/cozy_catalog.dart' show kFarmDecos;
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart';
@@ -26,11 +27,15 @@ class TownPiecePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final def = construction(id);
     final decor = kFarmDecos[id];
+    final home = animalHomeById(id);
     final Widget child = decor != null
         // Farm decorations (cozy_life.md § 2): their map sprite.
         ? LifeIcon(decor.sprite, LifeIconKind.herramienta, size: size)
         : def?.kind == BuildKind.casa
         ? LifeIcon('casa_1', LifeIconKind.herramienta, size: size)
+        // Coop / barn (animals.md § 3): the house sprite of the manifest.
+        : home != null
+        ? LifeIcon(home.sprite, LifeIconKind.herramienta, size: size)
         : CustomPaint(size: Size.square(size), painter: _PiecePainter(id, def));
     // Never paints outside its box (town_editor.md § 1.2).
     return SizedBox.square(
