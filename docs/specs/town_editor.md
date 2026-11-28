@@ -71,7 +71,7 @@ revés: clic en un tile libre y después la lista).
   detalle usa la tipografía del sistema: nombre en Título, tamaño y costo
   en Detalle, descripción en Cuerpo; entra sin scroll desde 1280×720 a
   escala 1.0 (el scroll queda solo de reserva para escalas enormes).
-  Cada pieza tiene UNA fuente de verdad (v0.49.38): id del catálogo →
+  Cada pieza tiene UNA fuente de verdad (v0.49.39): id del catálogo →
   sprite del manifest → texto i18n. Miniatura: huertas, lagos y faro con
   los pintores del mapa; casa, gallinero, establo y decoraciones con su
   sprite (`items.vida_casa_1`, `vida_gallinero`, `vida_establo`,
@@ -410,7 +410,7 @@ mapa no es decorado y no cambia.
   manifest sin tocar Dart.
 - Guardado y red: sin cambios de formato (`dc: [id, x, y]`); un save
   viejo con cercos se ve conectado al cargarlo.
-- **Colisión (v0.49.38):** el CERCO es sólido; la TRANQUERA y los huecos
+- **Colisión (v0.49.39):** el CERCO es sólido; la TRANQUERA y los huecos
   que deja el jugador al construir se cruzan. Lo mismo el cerco del
   patio de gallinero / establo (su tranquera abajo se cruza). El mapa
   del pueblo lleva esas casillas en `GameMap.blocked`

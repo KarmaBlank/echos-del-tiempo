@@ -94,7 +94,7 @@ trufas en el patio en vez de dar un producto fijo.
 - Salen en la paleta CONSTRUIR con su precio en oro y el nivel de
   Granjero pedido. Sin el nivel o sin oro, el botón gris con el motivo
   ("Necesitás Granjero nivel 6", "Falta oro (120/1500)").
-- En la paleta (v0.49.38) la casilla y el detalle muestran el sprite de
+- En la paleta (v0.49.39) la casilla y el detalle muestran el sprite de
   la casa (`items.vida_gallinero`, `items.vida_establo`, de
   `tool/export_animal_sprites.dart`), nunca la tierra arada. Detalle:
   su huella real (gallinero 5×4, establo 7×5), costo `₵{precio}` y sin
