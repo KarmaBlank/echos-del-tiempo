@@ -1172,17 +1172,22 @@ class MapGame extends Game {
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
+      final alert = controller.fountainAlert;
       for (final l in map.townMarks ?? TownLayout.landmarks) {
-        _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
-            TownPalette.label, 6, rank++);
+        // With the fountain mark showing, its name goes above the mark.
+        final lift =
+            alert && l.spot == TownSpot.fountain ? kFootprintNameLift : 0.0;
+        _placeText(c, l.name, l.center.x + ox * ts,
+            (l.y + oy) * ts - 8 - lift, TownPalette.label, 6, rank++);
       }
-      // Onboarding (town_editor.md § 1.5): gold "!" over the rune
-      // fountain until this player opens its panel once.
-      if (controller.fountainAlert) {
+      // Onboarding (town_editor.md § 1.5): gold "!" on top of the rune
+      // fountain's footprint until this player opens its panel once.
+      if (alert) {
         for (final l in map.townMarks ?? TownLayout.landmarks) {
           if (l.spot != TownSpot.fountain) continue;
+          final (mx, my) = footprintMarkAnchor(l, ox, oy);
           drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
-              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+              NpcMark.news, mx, my, t);
         }
       }
       farm.drawZoneLabels(

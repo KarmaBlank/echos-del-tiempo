@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/npc_camp_catalog.dart';
+import '../../../../game_engine/data/town_layout.dart' show TownLandmark;
 import '../../../../game_engine/rules/animal_rules.dart' show AnimalRules;
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
@@ -664,6 +665,20 @@ class MapFarmLayer {
 /// Marca de habitante sobre la cabeza (roles.md § 8.4): "!" dorado si
 /// tiene algo nuevo para contarte, "?" si tenés listo lo que pide; con un
 /// rebote chico. [t]: ms de animación.
+/// Where a structure's overhead mark goes (town_editor.md § 1.5): centred
+/// on the footprint of [l], baseline [kFootprintMarkGap] px above its top
+/// edge, so the boxed glyph touches the structure. [ox], [oy]: town
+/// origin in tiles. Returns (x, baseline y) in world px.
+(double, double) footprintMarkAnchor(TownLandmark l, int ox, int oy) =>
+    ((l.x + ox + l.w / 2) * 16.0, (l.y + oy) * 16.0 - kFootprintMarkGap);
+
+/// Gap between a footprint mark's baseline and the structure's top edge.
+const kFootprintMarkGap = 2.0;
+
+/// How far the structure's name rises while a footprint mark is shown,
+/// so it sits above the mark instead of under it.
+const kFootprintNameLift = 14.0;
+
 void drawNpcMark(MapText text, NpcMark mark, double x, double y, double t) {
   if (mark == NpcMark.none) return;
   // Fija sobre el nombre (sin rebote) y chica.
