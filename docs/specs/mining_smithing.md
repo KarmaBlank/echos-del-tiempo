@@ -194,6 +194,26 @@ cortan con "…": la caja crece y el texto baja de renglón.
   oro y lingotes, en rojo lo que falta) y MEJORAR (gris si no alcanza;
   MÁXIMO al tope). U en la estación queda como atajo: mejora el pico más
   bajo con la misma operación.
+- **Movimiento y reservas (protocolo 107).** Lo decide el
+  anfitrión en `MineWorkRules.minerStep` (Dart puro) y viaja en el
+  snapshot:
+  - **Reservas.** En cada paso los mineros eligen en orden; cada uno
+    reserva su veta destino y la baldosa a la que entra (camina o pica).
+    El siguiente saltea las vetas reservadas y nunca entra a una baldosa
+    ocupada o reservada por otro minero, así que van a vetas distintas.
+  - **Nunca comparten baldosa.** Al contratar, el minero aparece en la
+    baldosa libre caminable más cercana a la estación. Sin veta libre,
+    el minero queda quieto cerca; si comparte baldosa (partidas viejas),
+    se corre a una vecina libre.
+  - **Interpolación.** `MinerState` guarda la baldosa de origen
+    (`fx`/`fy`, JSON `fx`/`fy`) y el segundo del paso (`at`, JSON `at`).
+    La posición dibujada sale de `HelperMotion.walkThenWork` (la misma
+    curva de caminar/trabajar que usan granjeros y ayudantes de corral
+    vía `HelperMotion.workThenWalk`): camina de origen a destino en el
+    primer 40 % del paso y después trabaja. Todos los clientes calculan
+    lo mismo con la hora de la sala.
+  - **Herramienta.** Mientras camina el pico queda quieto en la mano;
+    solo se balancea al picar.
 - **Rinde menos que un jugador**: cada veta da `minerYield` (< 1) de lo
   normal, sin bonus de herramienta, aceite de veta, pasivas ni nodos de
   oficio.

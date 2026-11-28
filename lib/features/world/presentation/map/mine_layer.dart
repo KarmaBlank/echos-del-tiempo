@@ -270,6 +270,7 @@ class MineLayer {
     MineLevel lvl,
     MineLevelState st,
     double t, {
+    required double time,
     required Map<int, int> cracks,
     required (double, double)? Function(String id) playerAt,
     required ui.Image? minerSprite,
@@ -305,7 +306,9 @@ class MineLayer {
     // The rails are floor tiles (drawTrack), under the actors.
     // Miners at work.
     for (final m in st.miners) {
-      final mx = (m.x + 0.5) * ts, my = (m.y + 1) * ts;
+      // Same smooth walk as every helper (HelperMotion), from the host.
+      final pos = MineWorkRules.minerPos(m, time);
+      final mx = (pos.x + 0.5) * ts, my = (pos.y + 1) * ts;
       if (minerSprite != null) {
         final w = minerSprite.width.toDouble(),
             h = minerSprite.height.toDouble();
@@ -314,8 +317,8 @@ class MineLayer {
       } else {
         _rect(c, MinePalette.timber, mx - 3, my - 10, 6, 10);
       }
-      // Pick going up and down.
-      final a = math.sin(t / 120 + m.x) * 0.8;
+      // The pick is held steady while walking; only the dig swings it.
+      final a = pos.work ? math.sin(t / 120 + m.x) * 0.8 : -0.4;
       _pick(c, mx + 4, my - 8, a);
     }
     // Cracks (with the impact shake on the tile just hit).

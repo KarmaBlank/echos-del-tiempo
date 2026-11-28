@@ -1784,6 +1784,7 @@ class MapGame extends Game {
       // The pick shows through a swing, and stays raised while held.
       final swinging = ms < period + 150 || controller.mineHolding;
       mine.drawMine(c, lvl, s.town.mine(map.place!), t,
+          time: s.time,
           cracks: controller.mineCracks,
           playerAt: (id) => _lastDrawn[id],
           minerSprite: sprites.lifeIcon('npc_mina_miner', 'herramienta'),

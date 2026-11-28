@@ -247,7 +247,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`farm_f*`), the machines in `at` (`quesera`, `mayonesera`) and the
 /// processed products in `ag`, `FarmShopOp.processGoods` and
 /// `SmithOp.animalForge`; a 100 peer would drop them.
-const kProtocolVersion = 101;
+/// 107: miner helpers (mining_smithing.md § 1.7): `MinerState` gains
+/// `fx`/`fy` (tile walked from) and `at` (room second of the step) so
+/// clients interpolate the walk; the host reserves veins and tiles so
+/// miners never share one. A 101 peer would draw them teleporting.
+const kProtocolVersion = 107;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -109,9 +109,9 @@ extension _MiningOp on _Op {
         if (p.profile.credits < _mt.i('minerCost')) return false;
         _profileChange(
             p, p.profile.copyWith(credits: p.profile.credits - _mt.i('minerCost')));
-        final (mx, my) = MineWorkRules.minerSpawn(lvl);
-        s.town = s.town.withMine(
-            place, st.copyWith(miners: [...st.miners, MinerState(mx, my)]));
+        final (mx, my) = MineWorkRules.minerSpawn(lvl, st);
+        s.town = s.town.withMine(place,
+            st.copyWith(miners: [...st.miners, MinerState(mx, my, at: s.time)]));
         say('${p.name} contrató un minero para ${MiningRules.placeName(place)}.');
         return true;
       case MineOp.upgrade:

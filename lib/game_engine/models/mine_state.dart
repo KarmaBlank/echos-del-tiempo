@@ -57,9 +57,20 @@ class MinerState {
       {this.work = 0,
       this.sinceTorch = 0,
       this.stat = const HelperStat(),
-      this.tier = 0});
+      this.tier = 0,
+      int? fx,
+      int? fy,
+      this.at = 0})
+      : fx = fx ?? x,
+        fy = fy ?? y;
 
   final int x, y;
+
+  /// Tile it walked from on its last step (equal to [x], [y] when it did
+  /// not move) and the room second of that step ([at]): clients
+  /// interpolate between them (`MineWorkRules.minerPos`).
+  final int fx, fy;
+  final double at;
 
   /// Pick tier of this miner (0–4, § 1.7): it only breaks what a pick of
   /// that tier breaks.
@@ -74,12 +85,18 @@ class MinerState {
           int? work,
           int? sinceTorch,
           HelperStat? stat,
-          int? tier}) =>
+          int? tier,
+          int? fx,
+          int? fy,
+          double? at}) =>
       MinerState(x ?? this.x, y ?? this.y,
           work: work ?? this.work,
           sinceTorch: sinceTorch ?? this.sinceTorch,
           stat: stat ?? this.stat,
-          tier: tier ?? this.tier);
+          tier: tier ?? this.tier,
+          fx: fx ?? this.fx,
+          fy: fy ?? this.fy,
+          at: at ?? this.at);
 
   Map<String, Object?> toJson() => {
         'x': x,
@@ -88,6 +105,9 @@ class MinerState {
         if (sinceTorch != 0) 's': sinceTorch,
         if (stat.xp != 0 || stat.ups.isNotEmpty) 'st': stat.toJson(),
         if (tier != 0) 'pt': tier,
+        if (fx != x) 'fx': fx,
+        if (fy != y) 'fy': fy,
+        if (at != 0) 'at': at,
       };
 
   static MinerState? fromJson(Object? raw) {
@@ -96,7 +116,10 @@ class MinerState {
         work: raw['w'] is num ? (raw['w'] as num).toInt() : 0,
         sinceTorch: raw['s'] is num ? (raw['s'] as num).toInt() : 0,
         stat: HelperStat.fromJson(raw['st']),
-        tier: raw['pt'] is num ? (raw['pt'] as num).toInt().clamp(0, 4) : 0);
+        tier: raw['pt'] is num ? (raw['pt'] as num).toInt().clamp(0, 4) : 0,
+        fx: raw['fx'] is num ? (raw['fx'] as num).toInt() : null,
+        fy: raw['fy'] is num ? (raw['fy'] as num).toInt() : null,
+        at: raw['at'] is num ? (raw['at'] as num).toDouble() : 0);
   }
 }
 
