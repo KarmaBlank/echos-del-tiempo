@@ -1004,128 +1004,53 @@
   "ui.town.home.why.overlap": "It overlaps another piece",
   "ui.town.home.why.wall": "It goes on the back wall",
   "ui.town.home.f.bed_basic.name": "Simple bed",
-  "ui.town.home.f.bed_basic.info": {
-    "text": "A wooden cot with a wool blanket.",
-    "status": "draft"
-  },
+  "ui.town.home.f.bed_basic.info": "A wooden cot with a wool blanket.",
   "ui.town.home.f.bed_quilted.name": "Quilted bed",
-  "ui.town.home.f.bed_quilted.info": {
-    "text": "A thick mattress and a hand-sewn quilt.",
-    "status": "draft"
-  },
+  "ui.town.home.f.bed_quilted.info": "A thick mattress and a hand-sewn quilt.",
   "ui.town.home.f.bed_canopy.name": "Canopy bed",
-  "ui.town.home.f.bed_canopy.info": {
-    "text": "A double bed with curtains: sleep like royalty.",
-    "status": "draft"
-  },
+  "ui.town.home.f.bed_canopy.info": "A double bed with curtains: sleep like royalty.",
   "ui.town.home.f.picture_meadow.name": "Meadow painting",
-  "ui.town.home.f.picture_meadow.info": {
-    "text": "An oil painting of the town fields.",
-    "status": "draft"
-  },
+  "ui.town.home.f.picture_meadow.info": "An oil painting of the town fields.",
   "ui.town.home.f.picture_portrait.name": "Portrait",
-  "ui.town.home.f.picture_portrait.info": {
-    "text": "Someone from the family watches from the wall.",
-    "status": "draft"
-  },
+  "ui.town.home.f.picture_portrait.info": "Someone from the family watches from the wall.",
   "ui.town.home.f.picture_clock.name": "Wall clock",
-  "ui.town.home.f.picture_clock.info": {
-    "text": "A geared clock that ticks away.",
-    "status": "draft"
-  },
+  "ui.town.home.f.picture_clock.info": "A geared clock that ticks away.",
   "ui.town.home.f.window.name": "Window",
-  "ui.town.home.f.window.info": {
-    "text": "By day light falls on the floor; at night, none.",
-    "status": "draft"
-  },
+  "ui.town.home.f.window.info": "By day light falls on the floor; at night, none.",
   "ui.town.home.f.window_wide.name": "Wide window",
-  "ui.town.home.f.window_wide.info": {
-    "text": "A double window: more light by day.",
-    "status": "draft"
-  },
+  "ui.town.home.f.window_wide.info": "A double window: more light by day.",
   "ui.town.home.f.weapon_rack.name": "Weapon rack",
-  "ui.town.home.f.weapon_rack.info": {
-    "text": "Shows up to 3 of your weapons. E to pick them.",
-    "status": "draft"
-  },
+  "ui.town.home.f.weapon_rack.info": "Shows up to 3 of your weapons. E to pick them.",
   "ui.town.home.f.stash_chest.name": "Stash chest",
-  "ui.town.home.f.stash_chest.info": {
-    "text": "Opens the same stash as the B key.",
-    "status": "draft"
-  },
+  "ui.town.home.f.stash_chest.info": "Opens the same stash as the B key.",
   "ui.town.home.f.kitchen.name": "Kitchen",
-  "ui.town.home.f.kitchen.info": {
-    "text": "Cook just like at the CRAFT WORKSHOP.",
-    "status": "draft"
-  },
+  "ui.town.home.f.kitchen.info": "Cook just like at the CRAFT WORKSHOP.",
   "ui.town.home.f.bookshelf.name": "Bookshelf",
-  "ui.town.home.f.bookshelf.info": {
-    "text": "Old tomes and rolled-up maps.",
-    "status": "draft"
-  },
+  "ui.town.home.f.bookshelf.info": "Old tomes and rolled-up maps.",
   "ui.town.home.f.armor_stand.name": "Armour stand",
-  "ui.town.home.f.armor_stand.info": {
-    "text": "A well-polished suit of plate.",
-    "status": "draft"
-  },
+  "ui.town.home.f.armor_stand.info": "A well-polished suit of plate.",
   "ui.town.home.f.rug.name": "Rug",
-  "ui.town.home.f.rug.info": {
-    "text": "You can walk on it; it warms the floor.",
-    "status": "draft"
-  },
+  "ui.town.home.f.rug.info": "You can walk on it; it warms the floor.",
   "ui.town.home.f.plant.name": "Plant",
-  "ui.town.home.f.plant.info": {
-    "text": "A potted plant that brightens a corner.",
-    "status": "draft"
-  },
+  "ui.town.home.f.plant.info": "A potted plant that brightens a corner.",
   "ui.town.home.f.candelabra.name": "Candelabra",
-  "ui.town.home.f.candelabra.info": {
-    "text": "Three candles on a bronze stand.",
-    "status": "draft"
-  },
+  "ui.town.home.f.candelabra.info": "Three candles on a bronze stand.",
   "ui.town.home.f.table.name": "Table",
-  "ui.town.home.f.table.info": {
-    "text": "An oak table to eat or read at.",
-    "status": "draft"
-  },
+  "ui.town.home.f.table.info": "An oak table to eat or read at.",
   "ui.town.home.s.wall_plaster.name": "Plaster wall",
-  "ui.town.home.s.wall_plaster.info": {
-    "text": "Light plaster that takes paint.",
-    "status": "draft"
-  },
+  "ui.town.home.s.wall_plaster.info": "Light plaster that takes paint.",
   "ui.town.home.s.wall_wood.name": "Wooden wall",
-  "ui.town.home.s.wall_wood.info": {
-    "text": "Tongue-and-groove planks.",
-    "status": "draft"
-  },
+  "ui.town.home.s.wall_wood.info": "Tongue-and-groove planks.",
   "ui.town.home.s.wall_stone.name": "Stone wall",
-  "ui.town.home.s.wall_stone.info": {
-    "text": "Cut stone, cool in summer.",
-    "status": "draft"
-  },
+  "ui.town.home.s.wall_stone.info": "Cut stone, cool in summer.",
   "ui.town.home.s.wall_brick.name": "Brick wall",
-  "ui.town.home.s.wall_brick.info": {
-    "text": "Exposed red brick.",
-    "status": "draft"
-  },
+  "ui.town.home.s.wall_brick.info": "Exposed red brick.",
   "ui.town.home.s.floor_planks.name": "Plank floor",
-  "ui.town.home.s.floor_planks.info": {
-    "text": "Pine planks.",
-    "status": "draft"
-  },
+  "ui.town.home.s.floor_planks.info": "Pine planks.",
   "ui.town.home.s.floor_stone.name": "Stone floor",
-  "ui.town.home.s.floor_stone.info": {
-    "text": "Grey flagstones.",
-    "status": "draft"
-  },
+  "ui.town.home.s.floor_stone.info": "Grey flagstones.",
   "ui.town.home.s.floor_tiles.name": "Tiled floor",
-  "ui.town.home.s.floor_tiles.info": {
-    "text": "Checkered tiles.",
-    "status": "draft"
-  },
+  "ui.town.home.s.floor_tiles.info": "Checkered tiles.",
   "ui.town.home.s.floor_carpet.name": "Carpeted floor",
-  "ui.town.home.s.floor_carpet.info": {
-    "text": "Wall-to-wall carpet.",
-    "status": "draft"
-  }
+  "ui.town.home.s.floor_carpet.info": "Wall-to-wall carpet."
 }

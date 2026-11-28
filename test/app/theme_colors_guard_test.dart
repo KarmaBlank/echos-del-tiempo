@@ -28,6 +28,8 @@ const _allow = <String, (int, String)>{
   'lib/app/design/ds_tokens.dart':
       (1, 'Instante: celeste fijo del sistema de diseño (design_system.md)'),
   // Arte.
+  'lib/features/world/presentation/panels/home_edit_overlay.dart':
+      (1, 'arte: muestra de la pintura de pared elegida (kHomePaints)'),
   'lib/features/combat/presentation/weapon_overlay.dart':
       (40, 'arte: armas dibujadas sobre los sprites'),
   'lib/features/combat/presentation/status_icons.dart':
