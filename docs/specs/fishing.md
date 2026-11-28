@@ -71,6 +71,28 @@ Carpa del Mañana (eco del futuro), Esturión de la Era Antigua (del
 pasado avanzado) y Pez del Reloj Quieto. Nombres propuestos; esperan el
 OK del dueño (lore.md).
 
+### 2.4 Un solo lugar: la bolsa de oficios (v0.49.44)
+Los peces viven **siempre** en la bolsa PESCA de la bolsa de oficios
+(`LifeSkills.bag`, `life.addFish`). Nunca hay un segundo lugar: ni
+inventario, ni alijo, ni cofres de construcciones.
+- Toda entrada suma a la bolsa: pesca manual, auto-pesca, red de la
+  balsa, dos de una (Calma), regalos de NPC, encargos y lo que pescan los
+  pescadores del pueblo.
+- Pescadores del lago (farming.md § 8.3): lo que sacan va directo a la
+  bolsa del dueño del pueblo (el anfitrión) con el `helperXpShare` de
+  siempre; el cofre del lago ya no guarda peces. Un save viejo con peces
+  en un cofre de lago los pasa a esa bolsa en el primer tick de la sala
+  (idempotente: un cofre vacío no hace nada). Sin cambio de formato ni
+  de protocolo.
+- No hay peces como objetos (`LootDrop.goods` no tiene tipo `fish`), así
+  que inventario y alijo no tienen nada que migrar.
+- Salidas de la bolsa (a propósito): vender, canjear legendario, soltar
+  en un lago (AGREGAR ESPECIES), cocinar, encargos, crafteo de cebo y
+  mejoras de equipo de oficio. Registrar en el bestiario no saca nada.
+- EDITAR PUEBLO → lago → AGREGAR ESPECIES lista la bolsa
+  (`life.count`); test: `test/features/world/lake_stock_bag_test.dart`,
+  `test/game_engine/fish_in_bag_test.dart`.
+
 ## 3. Pesca del personaje
 
 `PlayerProfile.life` (`LifeSkills`, JSON `life`): `fx` XP total de

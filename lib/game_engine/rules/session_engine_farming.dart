@@ -121,6 +121,21 @@ extension _FarmingOp on _Op {
       _fa.lastRound = k;
       if (due) _helperRound();
     }
+    if (humans.firstOrNull case final owner?) _fishChestsToBag(owner);
+  }
+
+  /// Fish only ever live in the life bag (fishing.md § 2.4): what the
+  /// lake fishers catch goes straight into the town owner's bag, with
+  /// the usual `helperXpShare`. It also empties fish left in a lake chest
+  /// by an older save (idempotent: an empty chest is skipped).
+  void _fishChestsToBag(SessionPlayer owner) {
+    for (final b in s.town.builds) {
+      if (b.kind != BuildKind.lago || b.chest.isEmpty) continue;
+      final r = TownRules.collectChest(owner.profile, s.town, b.id);
+      if (r == null) continue;
+      s.town = r.$2;
+      _profileChange(owner, r.$1, gain: true);
+    }
   }
 
   /// El reloj del mundo y los rayos de la tormenta (day_night_weather.md
