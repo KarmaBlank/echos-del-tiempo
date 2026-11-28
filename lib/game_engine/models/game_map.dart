@@ -101,6 +101,10 @@ abstract final class Tile {
   /// dibuja pasto y el sprite de la casa va encima.
   static const house = 'z';
 
+  /// Door of the player house in town (player_house.md § 1): solid; E
+  /// enters the interior.
+  static const homeDoor = 'D';
+
   /// TALLER DE OFICIOS (sólido; town_loop.md § 2.1, v0.32.3): se dibuja
   /// pasto y el sprite del taller va encima (`items.vida_taller_oficios`).
   static const workshop = 'O';
@@ -182,6 +186,7 @@ abstract final class Tile {
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit, lantern, lanternLit, forage, forageUsed, house,
+    homeDoor,
     workshop, shop, mineEntrance, ore, oreUsed, glowPlant,
     ...MineTile.solid,
   };

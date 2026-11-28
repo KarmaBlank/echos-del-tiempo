@@ -948,5 +948,181 @@
   "ui.town.ranch.machine.empty": "Buy a machine",
   "ui.town.ranch.machine.why.none": "You need the machine",
   "ui.town.ranch.machine.why.level": "You need Farmer level {n}",
-  "ui.town.ranch.machine.why.nothing": "Nothing to process"
+  "ui.town.ranch.machine.why.nothing": "Nothing to process",
+  "ui.town.home.name": "OWN HOUSE",
+  "ui.town.home.info": "Go in and sleep until morning or nightfall",
+  "ui.town.home.only_one": "The town already has your house",
+  "ui.town.home.cost": "₵{gold}",
+  "ui.town.home.edit.apply": "APPLY",
+  "ui.town.home.edit.busy": "The house cannot be edited right now",
+  "ui.town.home.edit.button": "EDIT HOUSE",
+  "ui.town.home.edit.cancel": "CANCEL",
+  "ui.town.home.edit.done": "DONE [ESC]",
+  "ui.town.home.edit.hint": "Pick a piece in FURNISH or click a placed one",
+  "ui.town.home.edit.hint_move": "Click where it goes · Esc cancels",
+  "ui.town.home.edit.hint_place": "Click to place · Esc drops the piece",
+  "ui.town.home.edit.move": "MOVE",
+  "ui.town.home.edit.not_owner": "Only {name} can edit this house",
+  "ui.town.home.edit.palette": "FURNISH",
+  "ui.town.home.edit.place": "PLACE",
+  "ui.town.home.edit.remove": "REMOVE",
+  "ui.town.home.edit.title": "HOUSE EDITING",
+  "ui.town.home.filter.all": "ALL",
+  "ui.town.home.filter.bed": "BEDS",
+  "ui.town.home.filter.wall": "WALL",
+  "ui.town.home.filter.use": "USEFUL",
+  "ui.town.home.filter.decor": "DECOR",
+  "ui.town.home.filter.surface": "WALLS AND FLOORS",
+  "ui.town.home.kitchen.title": "KITCHEN",
+  "ui.town.home.level": "Town level {n}",
+  "ui.town.home.paint.info": "Paints the walls this colour.",
+  "ui.town.home.paint.name": "Paint {n}",
+  "ui.town.home.prompt_kitchen": "[E] Cook",
+  "ui.town.home.prompt_rack": "[E] Pick the rack weapons",
+  "ui.town.home.prompt_stash": "[E] Open the stash",
+  "ui.town.home.rack.empty": "You have no weapons to hang",
+  "ui.town.home.rack.full": "The rack already holds 3 weapons",
+  "ui.town.home.rack.hang": "HANG",
+  "ui.town.home.rack.help": "Pick up to 3 weapons to show on the rack.",
+  "ui.town.home.rack.not_owner": "This rack belongs to whoever furnished the house",
+  "ui.town.home.rack.on_rack": "On the rack",
+  "ui.town.home.rack.save": "SAVE",
+  "ui.town.home.rack.take_off": "TAKE DOWN",
+  "ui.town.home.rack.title": "WEAPON RACK",
+  "ui.town.home.size": "{w}×{h}",
+  "ui.town.home.stash_tag": "STASH",
+  "ui.town.home.why.already": "Already in place",
+  "ui.town.home.why.blocked": "That would leave a corner with no way in",
+  "ui.town.home.why.door": "It blocks the door",
+  "ui.town.home.why.level": "Needs town level {need} (now: {now})",
+  "ui.town.home.why.mat": "Missing {name} ({have}/{need})",
+  "ui.town.home.why.one_bed": "One bed has to stay",
+  "ui.town.home.why.outside": "Outside the house",
+  "ui.town.home.why.overlap": "It overlaps another piece",
+  "ui.town.home.why.wall": "It goes on the back wall",
+  "ui.town.home.f.bed_basic.name": "Simple bed",
+  "ui.town.home.f.bed_basic.info": {
+    "text": "A wooden cot with a wool blanket.",
+    "status": "draft"
+  },
+  "ui.town.home.f.bed_quilted.name": "Quilted bed",
+  "ui.town.home.f.bed_quilted.info": {
+    "text": "A thick mattress and a hand-sewn quilt.",
+    "status": "draft"
+  },
+  "ui.town.home.f.bed_canopy.name": "Canopy bed",
+  "ui.town.home.f.bed_canopy.info": {
+    "text": "A double bed with curtains: sleep like royalty.",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_meadow.name": "Meadow painting",
+  "ui.town.home.f.picture_meadow.info": {
+    "text": "An oil painting of the town fields.",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_portrait.name": "Portrait",
+  "ui.town.home.f.picture_portrait.info": {
+    "text": "Someone from the family watches from the wall.",
+    "status": "draft"
+  },
+  "ui.town.home.f.picture_clock.name": "Wall clock",
+  "ui.town.home.f.picture_clock.info": {
+    "text": "A geared clock that ticks away.",
+    "status": "draft"
+  },
+  "ui.town.home.f.window.name": "Window",
+  "ui.town.home.f.window.info": {
+    "text": "By day light falls on the floor; at night, none.",
+    "status": "draft"
+  },
+  "ui.town.home.f.window_wide.name": "Wide window",
+  "ui.town.home.f.window_wide.info": {
+    "text": "A double window: more light by day.",
+    "status": "draft"
+  },
+  "ui.town.home.f.weapon_rack.name": "Weapon rack",
+  "ui.town.home.f.weapon_rack.info": {
+    "text": "Shows up to 3 of your weapons. E to pick them.",
+    "status": "draft"
+  },
+  "ui.town.home.f.stash_chest.name": "Stash chest",
+  "ui.town.home.f.stash_chest.info": {
+    "text": "Opens the same stash as the B key.",
+    "status": "draft"
+  },
+  "ui.town.home.f.kitchen.name": "Kitchen",
+  "ui.town.home.f.kitchen.info": {
+    "text": "Cook just like at the CRAFT WORKSHOP.",
+    "status": "draft"
+  },
+  "ui.town.home.f.bookshelf.name": "Bookshelf",
+  "ui.town.home.f.bookshelf.info": {
+    "text": "Old tomes and rolled-up maps.",
+    "status": "draft"
+  },
+  "ui.town.home.f.armor_stand.name": "Armour stand",
+  "ui.town.home.f.armor_stand.info": {
+    "text": "A well-polished suit of plate.",
+    "status": "draft"
+  },
+  "ui.town.home.f.rug.name": "Rug",
+  "ui.town.home.f.rug.info": {
+    "text": "You can walk on it; it warms the floor.",
+    "status": "draft"
+  },
+  "ui.town.home.f.plant.name": "Plant",
+  "ui.town.home.f.plant.info": {
+    "text": "A potted plant that brightens a corner.",
+    "status": "draft"
+  },
+  "ui.town.home.f.candelabra.name": "Candelabra",
+  "ui.town.home.f.candelabra.info": {
+    "text": "Three candles on a bronze stand.",
+    "status": "draft"
+  },
+  "ui.town.home.f.table.name": "Table",
+  "ui.town.home.f.table.info": {
+    "text": "An oak table to eat or read at.",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_plaster.name": "Plaster wall",
+  "ui.town.home.s.wall_plaster.info": {
+    "text": "Light plaster that takes paint.",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_wood.name": "Wooden wall",
+  "ui.town.home.s.wall_wood.info": {
+    "text": "Tongue-and-groove planks.",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_stone.name": "Stone wall",
+  "ui.town.home.s.wall_stone.info": {
+    "text": "Cut stone, cool in summer.",
+    "status": "draft"
+  },
+  "ui.town.home.s.wall_brick.name": "Brick wall",
+  "ui.town.home.s.wall_brick.info": {
+    "text": "Exposed red brick.",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_planks.name": "Plank floor",
+  "ui.town.home.s.floor_planks.info": {
+    "text": "Pine planks.",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_stone.name": "Stone floor",
+  "ui.town.home.s.floor_stone.info": {
+    "text": "Grey flagstones.",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_tiles.name": "Tiled floor",
+  "ui.town.home.s.floor_tiles.info": {
+    "text": "Checkered tiles.",
+    "status": "draft"
+  },
+  "ui.town.home.s.floor_carpet.name": "Carpeted floor",
+  "ui.town.home.s.floor_carpet.info": {
+    "text": "Wall-to-wall carpet.",
+    "status": "draft"
+  }
 }

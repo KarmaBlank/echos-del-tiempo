@@ -104,6 +104,8 @@ class SessionJson {
         if (s.place != null) 'place': s.place,
         // v0.28.0 (protocolo 50): quién edita el pueblo.
         if (s.townEditor != null) 'ted': s.townEditor,
+        // Protocol 105: sleeping in the player house (player_house.md § 4).
+        if (s.sleepWait case (final a, final b)?) 'slp': [a, b],
         // v0.33.0 (protocolo 57): los que están en otro lugar.
         if (s.ownerId != null) 'own': s.ownerId,
         if (s.away.isNotEmpty)
@@ -164,6 +166,7 @@ class SessionJson {
       town: TownState.fromJson(j['town']),
       place: j.strOrNull('place'),
       townEditor: j.strOrNull('ted'),
+      sleepWait: _sleepWait(j['slp']),
       ownerId: j.strOrNull('own'),
       away: j['aw'] == null
           ? null
@@ -231,6 +234,8 @@ class SessionJson {
         if (p.wisp) 'wi': true,
         // Protocolo 83: balsa de los lagos grandes (fishing.md § 15).
         if (p.rafting) 'rf': p.raftEpoch,
+        // Protocol 105: in bed in the player house (player_house.md § 3).
+        if (p.inBed) 'bd': true,
         // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
         if (p.stashAcks.isNotEmpty)
           'sk': [
@@ -278,7 +283,13 @@ class SessionJson {
         fishLine: FishLine.fromJson(j['fl']),
         wisp: j['wi'] == true,
         raftEpoch: j.intOrNull('rf') ?? 0,
+        inBed: j['bd'] == true,
       );
+
+  static (int, int)? _sleepWait(Object? raw) =>
+      raw is List && raw.length == 2 && raw[0] is int && raw[1] is int
+          ? (raw[0] as int, raw[1] as int)
+          : null;
 
   // ------------------------------------------------------------------
   // Misión

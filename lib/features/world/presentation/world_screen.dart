@@ -52,6 +52,8 @@ import 'hud/cozy_hud_dim.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
+import 'panels/home_edit_overlay.dart';
+import 'panels/home_panels.dart';
 import 'panels/player_stall_panel.dart';
 import 'panels/fountain_panel.dart';
 import 'panels/house_assign_panel.dart';
@@ -304,7 +306,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       } else if (view.mode != SessionMode.battle &&
           (view.panel != null ||
               controller.isFishing ||
-              controller.editingTown)) {
+              controller.editingTown ||
+              controller.editingHome)) {
         controller.handleKey(event.logicalKey);
       } else {
         _openPause();
@@ -593,6 +596,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           if (controller.editingTown)
             Positioned.fill(child: TownEditOverlay(controller: controller)),
+          // EDITAR CASA (player_house.md § 8.3).
+          if (controller.editingHome)
+            Positioned.fill(
+                child: HomeEditOverlay(
+                    controller: controller, tileAt: game.tileAtScreen)),
           // Pesca en el mapa: clic mantenido = E mantenida (sin ventana).
           if (controller.isFishing)
             Positioned.fill(
@@ -940,7 +948,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return [
           // Edición del pueblo: solo su barra y su panel (town_editor.md
           // § 1); el HUD normal se oculta para que nada se pise.
-          if (!controller.editingTown)
+          if (!controller.editingTown && !controller.editingHome)
             Positioned.fill(
                 child: CozyHudDim(
               calm: controller.isFishing,
@@ -1208,6 +1216,10 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return OfferingPanel(view: view, controller: controller);
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
+      case WorldPanel.homeKitchen:
+        return HomeKitchenPanel(controller: controller, profile: me.profile);
+      case WorldPanel.homeRack:
+        return HomeRackPanel(controller: controller, profile: me.profile);
       case WorldPanel.map:
         return fullMapPanel(view, controller,
             strings: ref.strings,

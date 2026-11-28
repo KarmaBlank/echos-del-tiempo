@@ -60,6 +60,8 @@ import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../../../game_engine/rules/shop_interior_rules.dart';
 import 'shop_interior_layer.dart';
+import '../../../../game_engine/rules/home_interior_rules.dart';
+import 'home_interior_layer.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -217,6 +219,9 @@ class MapGame extends Game {
 
   /// Shop interior room and counters (player_shop.md § 6).
   late final shopRoom = ShopInteriorLayer(sprites.lifeIcon);
+
+  /// Player house interior room (player_house.md § 2).
+  late final homeRoom = HomeInteriorLayer(sprites.lifeIcon);
 
   /// Noche, lluvia y rayos (day_night_weather.md § 4).
   final sky = MapSkyLayer();
@@ -759,8 +764,9 @@ class MapGame extends Game {
     final editing = controller.editingTown;
     // Edición del pueblo: el personaje se queda quieto y WASD mueve la
     // cámara.
+    final still = editing || controller.editingHome;
     controller.updateLocal(
-        math.min(0.05, dt), editing ? 0 : ix, editing ? 0 : iy);
+        math.min(0.05, dt), still ? 0 : ix, still ? 0 : iy);
     if (!editing && _pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
     if (view != null) {
@@ -1166,17 +1172,22 @@ class MapGame extends Game {
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
       // mundo"); primero los lugares, después los carteles.
       var rank = 0;
+      final alert = controller.fountainAlert;
       for (final l in map.townMarks ?? TownLayout.landmarks) {
-        _placeText(c, l.name, l.center.x + ox * ts, (l.y + oy) * ts - 8,
-            TownPalette.label, 6, rank++);
+        // With the fountain mark showing, its name goes above the mark.
+        final lift =
+            alert && l.spot == TownSpot.fountain ? kFootprintNameLift : 0.0;
+        _placeText(c, l.name, l.center.x + ox * ts,
+            (l.y + oy) * ts - 8 - lift, TownPalette.label, 6, rank++);
       }
-      // Onboarding (town_editor.md § 1.5): gold "!" over the rune
-      // fountain until this player opens its panel once.
-      if (controller.fountainAlert) {
+      // Onboarding (town_editor.md § 1.5): gold "!" on top of the rune
+      // fountain's footprint until this player opens its panel once.
+      if (alert) {
         for (final l in map.townMarks ?? TownLayout.landmarks) {
           if (l.spot != TownSpot.fountain) continue;
+          final (mx, my) = footprintMarkAnchor(l, ox, oy);
           drawNpcMark((s, x, y, col, size) => actors.text(c, s, x, y, col, size),
-              NpcMark.news, l.center.x + ox * ts, (l.y + oy) * ts - 20, t);
+              NpcMark.news, mx, my, t);
         }
       }
       farm.drawZoneLabels(
@@ -1218,6 +1229,16 @@ class MapGame extends Game {
         shopRoom.drawRoom(c);
         shopRoom.drawCounters(c, s.players, controller.strings.t('ui.world.shop.free'),
             (txt, x, y, col, size) => _placeText(c, txt, x, y, col, size, 900));
+      }
+      // Player house interior (player_house.md § 2).
+      if (HomeInteriorRules.isHome(map.place)) {
+        homeRoom.drawRoom(c,
+            layout: HomeInteriorRules.layoutOfMap(map),
+            sky: s.town.sky,
+            weaponShape: controller.homeWeaponShape,
+            stashLabel: controller.strings.t('ui.town.home.stash_tag'),
+            ghost: controller.homeGhost,
+            selected: controller.homeEdit?.selected);
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {

@@ -819,6 +819,29 @@ class RaftAction extends SessionAction {
 }
 
 /// `wisp`: prender / apagar la Llama errante (lighting.md § 3.1.1).
+/// `sleep`: get into (or out of) a bed of the player house
+/// (player_house.md § 3). The host skips the time once every human is in
+/// bed.
+class SleepAction extends SessionAction {
+  final bool on;
+  const SleepAction(this.on);
+}
+
+/// What `HomeEditAction` does (player_house.md § 8).
+enum HomeOp { place, move, remove, surface, paint, rack }
+
+/// `hEd`: EDITAR CASA on the sender's own house layout (player_house.md
+/// § 8). [id]: furniture or surface id; [uid]: the piece; [x], [y]: the
+/// tile; [n]: the paint; [weapons]: what a rack shows.
+class HomeEditAction extends SessionAction {
+  final HomeOp op;
+  final String? id;
+  final int? uid, x, y, n;
+  final List<String> weapons;
+  const HomeEditAction(this.op,
+      {this.id, this.uid, this.x, this.y, this.n, this.weapons = const []});
+}
+
 class WispAction extends SessionAction {
   final bool on;
   const WispAction(this.on);

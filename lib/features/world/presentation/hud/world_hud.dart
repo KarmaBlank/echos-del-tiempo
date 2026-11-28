@@ -24,6 +24,7 @@ import '../../../../game_engine/data/biomes_catalog.dart' show biomeLayout, kBio
 import '../../../../game_engine/rules/biome_regions.dart' show BiomeLayout;
 import '../../../../game_engine/rules/map_discovery_rules.dart';
 import '../../../../game_engine/rules/mining_rules.dart';
+import '../../../../game_engine/rules/home_interior_rules.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -241,6 +242,8 @@ class WorldHud extends StatelessWidget {
                         onExit != null,
                         onMenu != null,
                         controller.canEditParty,
+                        HomeInteriorRules.isHome(s.place),
+                        controller.cannotEditHome,
                         controller.stashBlock == null,
                         controller.isRun,
                         s.mode == SessionMode.battle,
@@ -287,6 +290,19 @@ class WorldHud extends StatelessWidget {
                                   child:
                                       Text(context.t('ui.world.hud.journal')),
                                 ),
+                              ],
+                              // EDITAR CASA, always inside the player house
+                              // (player_house.md § 8.3); grey with the reason.
+                              if (HomeInteriorRules.isHome(s.place)) ...[
+                                const SizedBox(width: 8),
+                                DsButton(context.t('ui.town.home.edit.button'),
+                                    key: const ValueKey('hud-edit-home'),
+                                    size: DsButtonSize.compact,
+                                    kind: DsButtonKind.primary,
+                                    tooltip: controller.cannotEditHome,
+                                    onPressed: controller.cannotEditHome == null
+                                        ? controller.enterHomeEdit
+                                        : null),
                               ],
                               // Party jugando solo, en el pueblo (solo_party.md § 2.3).
                               if (controller.canEditParty) ...[
@@ -486,6 +502,18 @@ class WorldHud extends StatelessWidget {
                 ],
               ),
             ),
+            // In bed waiting for the others (player_house.md § 4).
+            if (controller.sleepWaitText case final wait?)
+              Positioned(
+                top: _gap + 96,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: DsToast(wait,
+                      key: const ValueKey('home-sleep-wait'),
+                      closeFocusable: false),
+                ),
+              ),
             Positioned(
               left: _gap,
               bottom: _gap,

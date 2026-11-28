@@ -673,5 +673,19 @@
     "text": "₵{n}",
     "status": "draft"
   },
-  "ui.world.ctl.no_ranch": "城镇里没有鸡舍或畜棚"
+  "ui.world.ctl.no_ranch": "城镇里没有鸡舍或畜棚",
+  "ui.world.home.prompt_enter": "[E] 进入你的家",
+  "ui.world.home.prompt_exit": "[E] 返回城镇",
+  "ui.world.home.prompt_sleep_morning": "[E] 睡到早上",
+  "ui.world.home.prompt_sleep_night": "[E] 睡到天黑",
+  "ui.world.home.prompt_wake": "[E] 起床",
+  "ui.world.home.waiting": "等待其他人（{x}/{n}）",
+  "ui.world.home.slept_morning": {
+    "text": "你睡得很沉。天亮了。",
+    "status": "draft"
+  },
+  "ui.world.home.slept_night": {
+    "text": "好好睡了一觉。夜幕已降临。",
+    "status": "draft"
+  }
 }

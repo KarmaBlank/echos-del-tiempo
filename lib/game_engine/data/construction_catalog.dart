@@ -31,7 +31,14 @@ const kConstructions = <ConstructionDef>[
       detail: 'Casa y patio para gallinas y patos'),
   ConstructionDef('establo', BuildKind.establo, 'ESTABLO', 7, 5,
       detail: 'Casa y patio para vacas, cabras y ovejas'),
+  // The players' own house (player_house.md § 1).
+  ConstructionDef(kPlayerHouseId, BuildKind.home, 'CASA PROPIA', 4, 3,
+      detail: 'Entrá y dormí hasta la mañana o hasta la noche'),
 ];
+
+/// The players' own house (player_house.md § 1): costs gold
+/// (`playerHouseGold`).
+const kPlayerHouseId = 'player_house';
 
 /// La casa de un habitante (town_editor.md § 3.4): cuesta oro y tablas
 /// (`ResidentRules.placeCost`).

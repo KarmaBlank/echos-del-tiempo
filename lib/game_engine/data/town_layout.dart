@@ -61,6 +61,22 @@ enum TownSpot {
   /// The players' shop house in town, or its exit door inside
   /// (player_shop.md § 6): E enters / leaves the interior.
   shop,
+
+  /// The player house door in town, or its exit door inside
+  /// (player_house.md § 1): E enters / leaves the interior.
+  home,
+
+  /// A bed inside the player house (player_house.md § 3): E offers DORMIR.
+  bed,
+
+  /// The STASH CHEST of the house (player_house.md § 8.2): opens the stash.
+  homeStash,
+
+  /// The kitchen station of the house: opens the cooking.
+  homeKitchen,
+
+  /// A weapon rack of the house: pick the weapons it shows.
+  homeRack,
 }
 
 /// Un lugar del pueblo: rectángulo de tiles, el tile que lo dibuja y su

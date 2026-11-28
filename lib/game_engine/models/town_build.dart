@@ -39,7 +39,11 @@ enum BuildKind {
   /// Coop and barn (animals.md § 3): a house and a fenced yard with farm
   /// animals.
   gallinero('GALLINERO'),
-  establo('ESTABLO');
+  establo('ESTABLO'),
+
+  /// The players' own house (player_house.md § 1): a door to an interior
+  /// with beds to sleep in.
+  home('CASA PROPIA');
 
   /// Coop or barn.
   bool get ranch => this == gallinero || this == establo;

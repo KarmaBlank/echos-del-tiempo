@@ -128,6 +128,7 @@ abstract final class TownRules {
       BuildKind.casa => 'c',
       BuildKind.gallinero => 'g',
       BuildKind.establo => 'e',
+      BuildKind.home => 'p',
     }}$n';
   }
 
@@ -186,7 +187,10 @@ abstract final class TownRules {
       while (grew) {
         grew = false;
         for (final o in [...rest]) {
-          if (o.kind != b.kind || b.kind == BuildKind.casa || b.kind.ranch) {
+          if (o.kind != b.kind ||
+              b.kind == BuildKind.casa ||
+              b.kind == BuildKind.home ||
+              b.kind.ranch) {
             continue;
           }
           final touch = o.parts
@@ -879,7 +883,7 @@ abstract final class TownRules {
       {double r = 18}) {
     final (ox, oy) = s.origin;
     for (final b in s.builds) {
-      if (b.kind == BuildKind.casa) continue;
+      if (b.kind == BuildKind.casa || b.kind == BuildKind.home) continue;
       final (cx, cy) = chestOf(s, b);
       final px = (cx + ox + 0.5) * 16, py = (cy + oy + 0.5) * 16;
       if ((px - x).abs() <= r && (py - y).abs() <= r) return b;
@@ -902,7 +906,9 @@ abstract final class TownRules {
     final b = s.build(id);
     if (b == null) return 'No existe';
     final farm = b.kind == BuildKind.huerta || b.kind.ranch;
-    if (b.kind == BuildKind.casa) return 'No es una huerta ni un lago';
+    if (b.kind == BuildKind.casa || b.kind == BuildKind.home) {
+      return 'No es una huerta ni un lago';
+    }
     if (b.helper >= helperCap(b)) {
       if (b.kind.ranch) return 'Ya tiene su granjero de corral';
       return 'No hay más lugar: agrandá ${farm ? 'la huerta' : 'el lago'}';
