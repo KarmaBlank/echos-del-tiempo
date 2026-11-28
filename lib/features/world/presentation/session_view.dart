@@ -16,6 +16,11 @@ import '../../../game_engine/rules/atlas_rules.dart';
 /// `ascension`: la Estatua del Tiempo (PRUEBAS y ASCENSIÓN,
 /// docs/specs/ascension.md).
 enum WorldPanel {
+  /// Kitchen station of the player house (player_house.md § 8.2).
+
+  /// Weapon rack of the player house: pick what it shows (§ 8.2).
+  homeRack,
+
   /// Miners of a mine level: picks and upgrades (mining_smithing.md § 1.7).
   miners,
 

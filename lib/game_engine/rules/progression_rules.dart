@@ -365,6 +365,8 @@ class ProgressionRules {
       ],
       // Pesca v0.22.0 (fishing.md § 3): el constructor ya limpia ids.
       life: raw.life,
+      // The house interior (player_house.md § 8).
+      home: raw.home,
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)

@@ -431,5 +431,19 @@
   "ui.world.cozy.searched": "You already searched this tree today",
   "ui.world.prompt.spent": "Already used",
   "ui.world.loot.gold": "₵{n}",
-  "ui.world.ctl.no_ranch": "There are no coops or barns in town"
+  "ui.world.ctl.no_ranch": "There are no coops or barns in town",
+  "ui.world.home.prompt_enter": "[E] Enter your house",
+  "ui.world.home.prompt_exit": "[E] Back to town",
+  "ui.world.home.prompt_sleep_morning": "[E] SLEEP until morning",
+  "ui.world.home.prompt_sleep_night": "[E] SLEEP until nightfall",
+  "ui.world.home.prompt_wake": "[E] Get up",
+  "ui.world.home.waiting": "Waiting for the others ({x}/{n})",
+  "ui.world.home.slept_morning": {
+    "text": "You slept like a log. The sun is up.",
+    "status": "draft"
+  },
+  "ui.world.home.slept_night": {
+    "text": "A good long nap. Night has fallen.",
+    "status": "draft"
+  }
 }

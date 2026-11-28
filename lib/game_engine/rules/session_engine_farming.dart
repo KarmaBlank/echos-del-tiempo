@@ -1053,6 +1053,19 @@ extension _FarmingOp on _Op {
         final casa = id == kCasaId;
         final ranch = animalHomeById(id) != null;
         final kitchen = id == kKitchenId;
+        // Player house (player_house.md § 1): gold, one per town.
+        if (id == kPlayerHouseId) {
+          if (HomeInteriorRules.cannotBuild(p.profile, s.town) != null) {
+            return false;
+          }
+          final r = TownRules.place(s.town, id, x, y);
+          if (r.town == null) return false;
+          s.town = r.town!;
+          _profileChange(p, p.profile.copyWith(
+              credits: p.profile.credits - HomeInteriorRules.price));
+          say('${p.name} construyó su casa.');
+          return true;
+        }
         final paid = casa
             ? HelperRules.pay(p.profile, ResidentRules.placeCost())
             : ranch
@@ -1093,6 +1106,7 @@ extension _FarmingOp on _Op {
           BuildKind.gallinero => 'un gallinero',
           BuildKind.establo => 'un establo',
           BuildKind.cocina => 'la cocina',
+          BuildKind.home => 'la casa propia',
         }}.');
         return true;
       case TownOp.track:

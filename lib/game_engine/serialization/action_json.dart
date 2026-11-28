@@ -199,6 +199,17 @@ abstract final class ActionJson {
           },
         // Protocolo 60 (v0.37.0): Llama errante.
         WispAction() => {'t': 'wisp', if (a.on) 'on': true},
+        SleepAction() => {'t': 'sleep', if (a.on) 'on': true},
+        HomeEditAction() => {
+            't': 'hEd',
+            'op': a.op.name,
+            if (a.id != null) 'id': a.id,
+            if (a.uid != null) 'u': a.uid,
+            if (a.x != null) 'x': a.x,
+            if (a.y != null) 'y': a.y,
+            if (a.n != null) 'n': a.n,
+            if (a.weapons.isNotEmpty) 'w': a.weapons,
+          },
         RaftAction() => {'t': 'raft', if (a.on) 'on': true},
         SellFishAction() => {
             't': 'fSell',
@@ -532,6 +543,24 @@ abstract final class ActionJson {
 
       case 'wisp':
         return WispAction(j['on'] == true);
+      case 'sleep':
+        return SleepAction(j['on'] == true);
+      case 'hEd':
+        final op = HomeOp.values
+            .where((o) => o.name == j['op'])
+            .firstOrNull;
+        if (op == null) throw FormatException('JSON inválido: hEd', j['op']);
+        return HomeEditAction(op,
+            id: j.strOrNull('id'),
+            uid: j.intOrNull('u'),
+            x: j.intOrNull('x'),
+            y: j.intOrNull('y'),
+            n: j.intOrNull('n'),
+            weapons: [
+              if (j['w'] case final List w)
+                for (final v in w)
+                  if (v is String) v
+            ]);
       case 'raft':
         return RaftAction(j['on'] == true);
       case 'fSell':

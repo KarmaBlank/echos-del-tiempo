@@ -29,8 +29,12 @@ abstract final class SkyRules {
     'mina_abismo',
   };
 
+  /// Interiors (player_house.md § 2): no sky, clouds, rain or night.
+  static const indoorThemes = {'interior'};
+
   static bool outdoor(String theme, {bool town = false}) =>
       !undergroundThemes.contains(theme) &&
+      !indoorThemes.contains(theme) &&
       (town || outdoorThemes.contains(theme));
 
   /// El primer día: arranca a media mañana, despejado, con pronóstico.

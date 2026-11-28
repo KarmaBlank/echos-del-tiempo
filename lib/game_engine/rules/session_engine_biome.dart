@@ -36,6 +36,7 @@ extension _BiomeOp on _Op {
     }
     final fromMine = MiningRules.parse(s.place);
     final fromShop = ShopInteriorRules.isShop(s.place);
+    final fromHome = HomeInteriorRules.isHome(s.place);
     final next = place == kPueblo ? null : place;
     if (next == s.place && portal == null) return false;
     final moved = next != s.place;
@@ -56,6 +57,11 @@ extension _BiomeOp on _Op {
       if (fromMine != null && portal == null && arrive == null) {
         final f = MiningRules.entranceFront(fromMine.$1, fromMine.$2);
         pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+      }
+      // Into / out of the player house (player_house.md § 2).
+      if (homePos(fromHome, place) case final f?) {
+        pos = WorldPoint(f.x + (i.isOdd ? 1 : -1) * 10.0 * ((i + 1) ~/ 2), f.y);
+        pos = HomeInteriorRules.safeLanding(place, s.town, pos);
       }
       // Into / out of the shop (player_shop.md § 6).
       if (shopPos(fromShop, place) case final f?) {
@@ -78,6 +84,13 @@ extension _BiomeOp on _Op {
     return true;
   }
 
+  /// Where a player lands entering or leaving the house, or `null`.
+  WorldPoint? homePos(bool fromHome, String place) {
+    if (HomeInteriorRules.isHome(place)) return HomeInteriorRules.arrival;
+    if (fromHome) return HomeInteriorRules.townFront(s.town);
+    return null;
+  }
+
   /// Where a player lands entering or leaving the shop, or `null`.
   WorldPoint? shopPos(bool fromShop, String place) {
     if (ShopInteriorRules.isShop(place)) return ShopInteriorRules.arrival;
@@ -91,6 +104,10 @@ extension _BiomeOp on _Op {
   /// Biomes need the zone unlocked; a mine is entered from its biome and
   /// left back to it (mining_smithing.md § 1.1).
   bool _canGo(SessionPlayer p, String place) {
+    if (HomeInteriorRules.isHome(place) || HomeInteriorRules.isHome(s.place)) {
+      return HomeInteriorRules.canTravel(s.place, place) &&
+          HomeInteriorRules.housesOf(s.town).isNotEmpty;
+    }
     if (ShopInteriorRules.isShop(place) || ShopInteriorRules.isShop(s.place)) {
       return ShopInteriorRules.canTravel(s.place, place);
     }

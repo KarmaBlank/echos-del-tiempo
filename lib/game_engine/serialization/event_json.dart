@@ -120,6 +120,7 @@ class EventJson {
             'x': e.tx,
             'y': e.ty,
           },
+        SleptEvent() => {'t': 'slept', if (e.toMorning) 'm': true},
         LightningEvent() => {
             't': 'bolt',
             'x': e.tx,
@@ -297,6 +298,8 @@ class EventJson {
       case 'cLoot':
         return FarmLootEvent(j.str('id'), j.str('l'), j.integer('r'),
             j.integer('x'), j.integer('y'));
+      case 'slept':
+        return SleptEvent(toMorning: j['m'] == true);
       case 'bolt':
         return LightningEvent(j.integer('x'), j.integer('y'),
             lost: j['l'] == true);

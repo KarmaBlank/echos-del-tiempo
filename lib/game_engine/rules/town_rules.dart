@@ -129,6 +129,7 @@ abstract final class TownRules {
       BuildKind.gallinero => 'g',
       BuildKind.establo => 'e',
       BuildKind.cocina => 'k',
+      BuildKind.home => 'p',
     }}$n';
   }
 

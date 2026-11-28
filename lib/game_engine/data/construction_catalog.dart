@@ -34,11 +34,18 @@ const kConstructions = <ConstructionDef>[
   // The town kitchen (farming.md § 17): its own 3 × 3 brick house.
   ConstructionDef(kKitchenId, BuildKind.cocina, 'COCINA', 3, 3,
       detail: 'Cocina del pueblo: recetas, comidas y colección'),
+  // The players' own house (player_house.md § 1).
+  ConstructionDef(kPlayerHouseId, BuildKind.home, 'CASA PROPIA', 4, 3,
+      detail: 'Entrá y dormí hasta la mañana o hasta la noche'),
 ];
 
 /// The town kitchen (farming.md § 17): gold (`TownRules.kitchenCost`),
 /// one per town.
 const kKitchenId = 'cocina';
+
+/// The players' own house (player_house.md § 1): costs gold
+/// (`playerHouseGold`).
+const kPlayerHouseId = 'player_house';
 
 /// La casa de un habitante (town_editor.md § 3.4): cuesta oro y tablas
 /// (`ResidentRules.placeCost`).

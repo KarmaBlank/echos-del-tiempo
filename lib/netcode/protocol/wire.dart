@@ -247,12 +247,22 @@ import '../../game_engine/serialization/session_json.dart';
 /// (`farm_f*`), the machines in `at` (`quesera`, `mayonesera`) and the
 /// processed products in `ag`, `FarmShopOp.processGoods` and
 /// `SmithOp.animalForge`; a 100 peer would drop them.
-/// 102-107: reserved by pending branches (lightning rod, player house,
-/// miner helpers).
+/// 102–104, 106: taken by other branches (lightning rod, town paths,
+/// town drops).
+/// 105: player house (player_house.md): `player_house` builds (`home`
+/// kind), the `home` place, `SleepAction` (`sleep`), the player's `bd`
+/// (in bed), the room's `slp` wait count, `SleptEvent` (`slept`), the
+/// EDITAR CASA action `HomeEditAction` (`hEd`) and the profile's house
+/// layout `hl`; a 101 peer would drop them.
+/// 107: miner helpers (mining_smithing.md § 1.7): `MinerState` gains
+/// `fx`/`fy` (tile walked from) and `at` (room second of the step) so
+/// clients interpolate the walk; the host reserves veins and tiles so
+/// miners never share one. A 105 peer would draw them teleporting.
 /// 108: town kitchen (farming.md § 17): the COCINA building joins the town
-/// palette (`kitchen` piece, own sprite / size / cost / flags) and
+/// palette (`cocina` piece, own sprite / size / cost / flags) and
 /// `TownOp.seen` with id `~kitchen` stores its first open in `npcSeen`;
-/// cooking left the OFICIOS menu, so an older peer has no cooking entry.
+/// cooking left the OFICIOS menu (the house's kitchen furniture opens the
+/// same cooking screen), so an older peer has no cooking entry.
 const kProtocolVersion = 108;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en

@@ -99,6 +99,7 @@ import 'light_rules.dart';
 import 'mining_rules.dart';
 import 'mine_work_rules.dart';
 import 'shop_interior_rules.dart';
+import 'home_interior_rules.dart';
 import '../data/mine_catalog.dart';
 import '../data/smithing_catalog.dart';
 import 'sky_rules.dart';
@@ -123,6 +124,7 @@ part 'session_engine_animals.dart';
 part 'session_engine_biome.dart';
 part 'session_engine_mining.dart';
 part 'session_engine_cozy.dart';
+part 'session_engine_home.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -357,6 +359,7 @@ class SessionEngine {
         s.place != null &&
         !MiningRules.isMine(s.place) &&
         !ShopInteriorRules.isShop(s.place) &&
+        !HomeInteriorRules.isHome(s.place) &&
         s.mission == null) {
       final sp = mapFor(s).spawn;
       var i = 0;
@@ -591,6 +594,10 @@ class SessionEngine {
       }
       // Shop interior (player_shop.md § 6).
       if (ShopInteriorRules.isShop(s.place)) return ShopInteriorRules.map();
+      // Player house interior (player_house.md § 2).
+      if (HomeInteriorRules.isHome(s.place)) {
+        return HomeInteriorRules.map(HomeInteriorRules.layoutOf(s));
+      }
       // Mine (mining_smithing.md § 1): a calm lobby map, no enemies.
       if (MiningRules.level(s.place, worldId: s.worldId) case final lvl?) {
         return MiningRules.mapOf(lvl, s.town.mine(s.place!));
@@ -871,6 +878,22 @@ class SessionEngine {
     final op = _Op(this, session.copy());
     final snap = op.snapshot();
     op.tick(dt, world: world);
+    // One room (no instances): the beds are checked here; with instances
+    // `WorldEngine.tick` does it across rooms (player_house.md § 4).
+    if (world && !(freeMovement && gameMode == GameModeKind.mundo)) {
+      SessionEngine.guardRule('sleep', op.sleepCheck);
+    }
+    op.settleOficios(snap);
+    op.achievements();
+    return op.result;
+  }
+
+  /// Sleeps [session] forward [seconds] of world time with the normal
+  /// step (player_house.md § 4) and wakes everyone up.
+  SessionStep fastForward(GameSession session, double seconds) {
+    final op = _Op(this, session.copy());
+    final snap = op.snapshot();
+    op.fastForward(seconds);
     op.settleOficios(snap);
     op.achievements();
     return op.result;
@@ -1535,6 +1558,12 @@ class _Op {
       case WispAction(:final on):
         p.wisp = on;
         return true;
+
+      case SleepAction(:final on):
+        return sleep(p, on);
+
+      case HomeEditAction():
+        return homeEdit(p, a);
 
       case RaftAction(:final on):
         return _raft(p, on);
@@ -3107,6 +3136,7 @@ class _Op {
     // rules after it (v0.49.32: a helper round froze the whole room).
     const g = SessionEngine.guardRule;
     g('townLock', releaseTownLock);
+    g('beds', leaveBedsOutside);
     // Mudanzas (overworld_biomes.md § 10.1): quien ya llegó al borde.
     g('departures',
         () => s.town = ResidentRules.settleDepartures(s.town, s.time));

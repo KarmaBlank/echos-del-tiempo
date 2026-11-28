@@ -6,6 +6,7 @@ import 'ascension.dart';
 import 'attributes.dart';
 import 'battle_command.dart';
 import 'eco.dart';
+import 'home_layout.dart';
 import 'item.dart';
 import 'life_skills.dart';
 import 'passive_tree.dart';
@@ -67,6 +68,7 @@ class PlayerProfile {
     LifeSkills? life,
     List<String> tracked = const [],
     Map<String, String> npcSeen = const {},
+    HomeLayout home = kDefaultHomeLayout,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -112,6 +114,7 @@ class PlayerProfile {
       life: life ?? LifeSkills.initial,
       tracked: List.unmodifiable(tracked),
       npcSeen: Map.unmodifiable(npcSeen),
+      home: home,
     );
   }
 
@@ -119,6 +122,7 @@ class PlayerProfile {
     required this.life,
     this.tracked = const [],
     this.npcSeen = const {},
+    this.home = kDefaultHomeLayout,
     this.ultNew = const {},
     this.ultOrder = const [],
     required this.ultLevels,
@@ -168,6 +172,9 @@ class PlayerProfile {
   /// Lo último que vio de cada habitante (`QuestTrackRules.newsKey`):
   /// marca "!" y revelación del encargo nuevo. JSON `seen`.
   final Map<String, String> npcSeen;
+
+  /// The inside of this player's house (player_house.md § 8, JSON `hl`).
+  final HomeLayout home;
 
   /// `uid` de armas y Ecos recién levantados, todavía sin mirar (marca
   /// NUEVO del inventario; JSON `nw`, perfil v4; loot.md § 17.4). Se
@@ -443,6 +450,7 @@ class PlayerProfile {
     LifeSkills? life,
     List<String>? tracked,
     Map<String, String>? npcSeen,
+    HomeLayout? home,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -503,6 +511,7 @@ class PlayerProfile {
       life: life ?? this.life,
       tracked: tracked == null ? this.tracked : List.unmodifiable(tracked),
       npcSeen: npcSeen == null ? this.npcSeen : Map.unmodifiable(npcSeen),
+      home: home ?? this.home,
     );
   }
 
@@ -657,6 +666,8 @@ class PlayerProfile {
         'life': life.toJson(),
         if (tracked.isNotEmpty) 'trk': tracked,
         if (npcSeen.isNotEmpty) 'seen': npcSeen,
+        // Protocol 105: the house interior (player_house.md § 8).
+        if (home != kDefaultHomeLayout) 'hl': home.toJson(),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -795,6 +806,7 @@ class PlayerProfile {
       ultOrder: _strings(json['uo']),
       life: LifeSkills.fromJson(json['life']),
       tracked: _strings(json['trk']),
+      home: HomeLayout.fromJson(json['hl']) ?? kDefaultHomeLayout,
       npcSeen: {
         if (json['seen'] case final Map m)
           for (final e in m.entries)

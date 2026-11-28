@@ -9,6 +9,7 @@ import '../../../../game_engine/models/town_build.dart';
 import '../../../../game_engine/rules/animal_rules.dart';
 import '../../../../game_engine/rules/farming_rules.dart' show FarmingRules;
 import '../../../../game_engine/rules/helper_rules.dart';
+import '../../../../game_engine/rules/home_interior_rules.dart';
 import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
@@ -58,7 +59,8 @@ class TownPiece {
   static TownPieceCategory categoryOf(BuildKind k) => switch (k) {
         BuildKind.huerta => TownPieceCategory.farm,
         BuildKind.lago => TownPieceCategory.water,
-        BuildKind.casa || BuildKind.cocina => TownPieceCategory.home,
+        BuildKind.casa || BuildKind.cocina || BuildKind.home =>
+          TownPieceCategory.home,
         BuildKind.gallinero || BuildKind.establo => TownPieceCategory.farm,
       };
 }
@@ -141,6 +143,28 @@ class TownBuildPalette extends StatefulWidget {
             why: TownRules.hasKitchen(c.town)
                 ? s.t('ui.town.edit.kitchen_built')
                 : cantPay(TownRules.kitchenCost),
+          )
+        else if (d.kind == BuildKind.home)
+          // Player house (player_house.md § 1): gold, one per town.
+          TownPiece(
+            id: d.id,
+            category: TownPieceCategory.home,
+            name: s.t('ui.town.home.name'),
+            w: d.w,
+            h: d.h,
+            detail: s.t('ui.town.home.info'),
+            cost: s.t('ui.town.home.cost', {'cost': HomeInteriorRules.price}),
+            why: p == null
+                ? s.t('ui.town.edit.no_character')
+                : HomeInteriorRules.housesOf(c.town).length >=
+                        HomeInteriorRules.maxHouses
+                    ? s.t('ui.town.home.only_one')
+                    : p.credits < HomeInteriorRules.price
+                        ? s.t('ui.town.edit.missing_gold', {
+                            'have': p.credits,
+                            'need': HomeInteriorRules.price
+                          })
+                        : null,
           )
         else if (d.kind == BuildKind.casa)
           TownPiece(

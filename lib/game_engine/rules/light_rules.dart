@@ -6,6 +6,7 @@ import '../data/mine_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import 'shop_interior_rules.dart';
+import 'sky_rules.dart';
 
 /// Una luz puesta en el mapa, en coordenadas de tile (con fracción: el
 /// centro del tile (3, 4) es (3.5, 4.5)).
@@ -81,6 +82,14 @@ typedef LightBlock = double Function(int tx, int ty);
 
 /// Reglas puras de la luz (lighting.md). Sin Flutter ni colores.
 abstract final class LightRules {
+  /// Daylight through a window (player_house.md § 8.5): 1 at full day,
+  /// fading at dusk, 0 at night (no light comes in).
+  static double daylight(SkyState sky) {
+    if (!sky.started) return 1;
+    final v = 1 - SkyRules.darkness(sky);
+    return v < 0.05 ? 0 : v;
+  }
+
   /// El mapa (o el piso [floor] de una misión) es una mazmorra oscura.
   static bool isDark(String theme, {int floor = 0}) =>
       kDarkThemes.contains(theme) ||

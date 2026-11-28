@@ -431,5 +431,13 @@
   "ui.world.cozy.searched": "Ya buscaste en este árbol hoy",
   "ui.world.prompt.spent": "Ya lo usaste",
   "ui.world.loot.gold": "₵{n}",
-  "ui.world.ctl.no_ranch": "No hay gallineros ni establos en el pueblo"
+  "ui.world.ctl.no_ranch": "No hay gallineros ni establos en el pueblo",
+  "ui.world.home.prompt_enter": "[E] Entrar a tu casa",
+  "ui.world.home.prompt_exit": "[E] Salir al pueblo",
+  "ui.world.home.prompt_sleep_morning": "[E] DORMIR hasta la mañana",
+  "ui.world.home.prompt_sleep_night": "[E] DORMIR hasta la noche",
+  "ui.world.home.prompt_wake": "[E] Levantarse",
+  "ui.world.home.waiting": "Esperando a los demás ({x}/{n})",
+  "ui.world.home.slept_morning": "Dormiste como un tronco. Ya amaneció.",
+  "ui.world.home.slept_night": "Una buena siesta. Ya cayó la noche."
 }

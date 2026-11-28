@@ -4,6 +4,8 @@ import '../models/game_map.dart';
 import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import 'map_generator.dart';
+import '../data/home_furniture_catalog.dart';
+import 'home_interior_rules.dart';
 import 'shop_interior_rules.dart';
 
 /// Colisión y movimiento en el mapa — puerto de `solidT`, `hit`,
@@ -154,6 +156,19 @@ abstract final class WorldRules {
           ? null
           : TownSpot.stall;
     }
+    // Inside the player house (player_house.md § 3): beds and the door.
+    if (HomeInteriorRules.isHome(map?.place)) {
+      if (HomeInteriorRules.nearDoor(x, y)) return TownSpot.home;
+      final l = HomeInteriorRules.layoutOfMap(map);
+      return switch (furniture(
+          HomeInteriorRules.pieceNear(l, x, y)?.id ?? '')?.kind) {
+        FurnitureKind.bed => TownSpot.bed,
+        FurnitureKind.chest => TownSpot.homeStash,
+        FurnitureKind.kitchen => TownSpot.homeKitchen,
+        FurnitureKind.rack => TownSpot.homeRack,
+        _ => null,
+      };
+    }
     // Exterior de bioma: sin los lugares del pueblo.
     if (map?.place == null) {
       for (final l in map?.townMarks ?? TownLayout.landmarks) {
@@ -189,6 +204,7 @@ abstract final class WorldRules {
           Tile.sign => TownSpot.sign,
           Tile.forage || Tile.forageUsed => TownSpot.forage,
           Tile.mineEntrance => TownSpot.mine,
+          Tile.homeDoor => TownSpot.home,
           Tile.stairsUp when map.lobby => TownSpot.mine,
           Tile.ore || Tile.oreUsed => TownSpot.ore,
           _ => null,

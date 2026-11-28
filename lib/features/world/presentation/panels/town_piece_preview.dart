@@ -36,6 +36,8 @@ class TownPiecePreview extends StatelessWidget {
         // Town kitchen (farming.md § 17): its own house sprite.
         : def?.kind == BuildKind.cocina
         ? LifeIcon('cocina', LifeIconKind.herramienta, size: size)
+        : def?.kind == BuildKind.home
+        ? LifeIcon('home_exterior', LifeIconKind.herramienta, size: size)
         // Coop / barn (animals.md § 3): the house sprite of the manifest.
         : home != null
         ? LifeIcon(home.sprite, LifeIconKind.herramienta, size: size)

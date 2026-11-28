@@ -43,14 +43,18 @@ enum BuildKind {
 
   /// The town kitchen (farming.md § 17): one per town, bought with gold
   /// from the CONSTRUIR palette; E at it opens the cooking screen.
-  cocina('COCINA');
+  cocina('COCINA'),
+
+  /// The players' own house (player_house.md § 1): a door to an interior
+  /// with beds to sleep in.
+  home('CASA PROPIA');
 
   /// Coop or barn.
   bool get ranch => this == gallinero || this == establo;
 
-  /// A solid house with no chest, sign or helpers (resident house or
-  /// kitchen).
-  bool get house => this == casa || this == cocina;
+  /// A solid house with no chest, sign or helpers (resident house,
+  /// kitchen or player house).
+  bool get house => this == casa || this == cocina || this == home;
 
   const BuildKind(this.label);
   final String label;
