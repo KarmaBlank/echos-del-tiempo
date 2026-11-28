@@ -166,7 +166,7 @@ void main() {
       final again = await catalog.npcVariantImages();
       expect(identical(again['npc_ev_visitante'], imgs['npc_ev_visitante']), isTrue);
     });
-  });
+  }, tags: 'perf');
 
   test('aspecto fijo: ignora la semilla y sobrevive encode/parse', () {
     final g = NpcVariantGenerator(testDoc);

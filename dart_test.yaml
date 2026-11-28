@@ -1,0 +1,3 @@
+tags:
+  perf:
+    # Mide tiempos: corre solo y en serie (tool/release.ps1).

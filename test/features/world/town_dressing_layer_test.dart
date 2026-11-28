@@ -130,5 +130,5 @@ void main() {
     layer.drawGround(ui.Canvas(ui.PictureRecorder()), map,
         TownDressingRules.of(3, null), (0, 0), 0, night: false);
     expect(layer.rebuilds, 2);
-  });
+  }, tags: 'perf');
 }
