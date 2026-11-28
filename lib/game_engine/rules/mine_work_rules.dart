@@ -5,6 +5,7 @@ import '../data/mine_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/game_map.dart';
 import 'battle_engine.dart' show RandomSource;
+import 'helper_motion.dart';
 import 'mining_rules.dart';
 
 /// What happens in a mine level while time passes (docs/specs/
@@ -157,8 +158,51 @@ abstract final class MineWorkRules {
   // ---------------- miners (§ 1.7) ----------------
 
   /// Where a new miner starts: next to the station.
-  static (int, int) minerSpawn(MineLevel lvl) =>
-      (lvl.station.$1 - 1, lvl.station.$2 + 1);
+  /// Next to the station, on the nearest walkable tile no other miner of
+  /// [st] stands on (two helpers never share a tile).
+  static (int, int) minerSpawn(MineLevel lvl, [MineLevelState? st]) {
+    final base = (lvl.station.$1 - 1, lvl.station.$2 + 1);
+    if (st == null || st.miners.isEmpty) return base;
+    final taken = {for (final m in st.miners) lvl.idx(m.x, m.y)};
+    return _freeNear(lvl, st, base.$1, base.$2, taken) ?? base;
+  }
+
+  /// The nearest walkable tile to ([x], [y]) (breadth-first, walking
+  /// only) whose index is not in [taken]; `null` if none.
+  static (int, int)? _freeNear(
+      MineLevel lvl, MineLevelState st, int x, int y, Set<int> taken) {
+    final seen = <int>{lvl.idx(x, y)};
+    final q = <(int, int)>[(x, y)];
+    for (var k = 0; k < q.length && k < 4096; k++) {
+      final (cx, cy) = q[k];
+      if (!taken.contains(lvl.idx(cx, cy)) &&
+          Tile.isWalkable(MiningRules.tileAt(lvl, st, cx, cy))) {
+        return (cx, cy);
+      }
+      for (final (dx, dy) in _n4) {
+        final nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= lvl.width || ny >= lvl.height) continue;
+        if (!seen.add(lvl.idx(nx, ny))) continue;
+        if (k > 0 && !Tile.isWalkable(MiningRules.tileAt(lvl, st, cx, cy))) {
+          continue;
+        }
+        q.add((nx, ny));
+      }
+    }
+    return null;
+  }
+
+  /// Where miner [m] is drawn at room second [time], in tiles (fractional
+  /// while walking), and whether it is swinging its pick. Same walk/work
+  /// curve as every helper (`HelperMotion`), over one `minerStepSec`.
+  static ({double x, double y, bool work}) minerPos(
+      MinerState m, double time) {
+    final step = math.max(0.1, t.d('minerStepSec'));
+    final f = ((time - m.at) / step).clamp(0.0, 1.0);
+    final moved = m.fx != m.x || m.fy != m.y;
+    final p = HelperMotion.walkThenWork((m.fx, m.fy), (m.x, m.y), f);
+    return (x: p.x, y: p.y, work: moved ? p.work : m.work > 0);
+  }
 
   static const _n4 = [(1, 0), (-1, 0), (0, 1), (0, -1)];
 
@@ -210,7 +254,15 @@ abstract final class MineWorkRules {
   /// vein (Dijkstra over walking and digging; a vein entered is mined).
   /// `null` when no vein is left.
   static (int, int)? nextStep(
-      MineLevel lvl, MineLevelState st, int x, int y, {int tier = 0}) {
+          MineLevel lvl, MineLevelState st, int x, int y, {int tier = 0}) =>
+      route(lvl, st, x, y, tier: tier)?.step;
+
+  /// [nextStep] plus the vein it heads to. Veins in [claimed] (tile
+  /// indexes) are skipped and tiles in [blocked] are never entered: the
+  /// reservations of the other miners (host-authoritative, § 1.7).
+  static ({(int, int) step, int target})? route(
+      MineLevel lvl, MineLevelState st, int x, int y,
+      {int tier = 0, Set<int> claimed = const {}, Set<int> blocked = const {}}) {
     final w = lvl.width, h = lvl.height;
     final dist = List<int>.filled(w * h, 1 << 30);
     final from = List<int>.filled(w * h, -1);
@@ -226,19 +278,22 @@ abstract final class MineWorkRules {
       if (d > dist[i]) continue;
       final (cx, cy) = lvl.xy(i);
       if (i != start &&
+          !claimed.contains(i) &&
           MineTile.veins.contains(MiningRules.tileAt(lvl, st, cx, cy))) {
         var k = i;
         while (from[k] != start) {
           k = from[k];
         }
-        return lvl.xy(k);
+        return (step: lvl.xy(k), target: i);
       }
       for (final (dx, dy) in _n4) {
         final nx = cx + dx, ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        final j = lvl.idx(nx, ny);
+        if (blocked.contains(j)) continue;
         final c = _cost(lvl, st, nx, ny, tier);
         if (c == null) continue;
-        final j = lvl.idx(nx, ny), nd = d + c;
+        final nd = d + c;
         if (nd < dist[j]) {
           dist[j] = nd;
           from[j] = i;
@@ -259,18 +314,50 @@ abstract final class MineWorkRules {
     if (st.cart.phase != CartPhase.mine) return st;
     var cur = st;
     final miners = <MinerState>[];
-    for (final m0 in st.miners) {
-      var m = m0;
-      final step = nextStep(lvl, cur, m.x, m.y, tier: m.tier);
-      if (step == null) {
+    // Reservations (§ 1.7): veins already targeted and tiles already
+    // taken (stood on or being entered) by the miners before this one.
+    final claimed = <int>{};
+    final taken = <int>{};
+    final all = st.miners;
+    for (var n = 0; n < all.length; n++) {
+      // Settle the last step: from now on it stands on its tile.
+      var m = all[n].copyWith(fx: all[n].x, fy: all[n].y, at: now);
+      // Standing where an earlier miner already is (stacked hires, old
+      // saves): this step it only steps aside to a free tile.
+      if (taken.contains(lvl.idx(m.x, m.y))) {
+        final free = _freeNear(lvl, cur, m.x, m.y, {
+          ...taken,
+          for (var k = n + 1; k < all.length; k++) lvl.idx(all[k].x, all[k].y),
+        });
+        if (free != null) m = m.copyWith(x: free.$1, y: free.$2, work: 0);
+        taken.add(lvl.idx(m.x, m.y));
         miners.add(m);
         continue;
       }
-      final (sx, sy) = step;
+      final here = lvl.idx(m.x, m.y);
+      // Tiles of the miners still to move this step, plus those taken.
+      final blocked = {
+        ...taken,
+        for (var k = n + 1; k < all.length; k++) lvl.idx(all[k].x, all[k].y),
+      };
+      final r = route(lvl, cur, m.x, m.y,
+          tier: m.tier, claimed: claimed, blocked: blocked);
+      if (r == null) {
+        // No free vein: idle where it is (its tile is its own).
+        m = m.copyWith(work: 0);
+        taken.add(here);
+        miners.add(m);
+        continue;
+      }
+      claimed.add(r.target);
+      final (sx, sy) = r.step;
+      taken.add(lvl.idx(sx, sy));
       final code = MiningRules.tileAt(lvl, cur, sx, sy);
       if (Tile.isWalkable(code)) {
         m = m.copyWith(x: sx, y: sy, work: 0);
       } else {
+        // Digging from its own tile: that tile stays taken too.
+        taken.add(here);
         final work = m.work + math.max(1, t.i('minerPower')).toInt();
         if (work < MiningRules.hits(code, lvl.level)) {
           m = m.copyWith(work: work);

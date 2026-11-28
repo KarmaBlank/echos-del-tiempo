@@ -10,6 +10,7 @@ import '../models/player_profile.dart';
 import '../models/world_save.dart';
 import 'animal_rules.dart';
 import 'farming_rules.dart';
+import 'helper_motion.dart';
 import 'helper_rules.dart';
 import 'fishing_rules.dart';
 import 'life_tree_rules.dart';
@@ -804,13 +805,8 @@ abstract final class TownRules {
       final k = time / 5 + i * 2.3;
       final n = yard.length;
       final a = yard[(k.floor() * 7) % n], z = yard[((k.floor() + 1) * 7) % n];
-      final f = k - k.floor();
-      final m = f < 0.6 ? 0.0 : (f - 0.6) / 0.4;
-      return (
-        x: (a.$1 + (z.$1 - a.$1) * m + ox + 0.5) * 16,
-        y: (a.$2 + (z.$2 - a.$2) * m + oy + 0.5) * 16,
-        work: f < 0.6
-      );
+      final p = HelperMotion.workThenWalk(a, z, k - k.floor());
+      return (x: (p.x + ox + 0.5) * 16, y: (p.y + oy + 0.5) * 16, work: p.work);
     }
     if (b.kind == BuildKind.lago) {
       final p = fisherAt(s, b, i, time);
@@ -832,14 +828,12 @@ abstract final class TownRules {
     final k = time / step + i * 1.7;
     final n = area.length;
     final a = area[k.floor() % n], z = area[(k.floor() + 1) % n];
-    final f = k - k.floor();
-    // Primero trabaja (60 %), después camina a la próxima parcela.
-    final m = f < 0.6 ? 0.0 : (f - 0.6) / 0.4;
-    final x = a.$1 + (z.$1 - a.$1) * m, y = a.$2 + (z.$2 - a.$2) * m;
+    // Works first, then walks to the next plot (HelperMotion).
+    final p = HelperMotion.workThenWalk(a, z, k - k.floor());
     return (
-      x: (ax + x + ox + 0.5) * 16,
-      y: (ay + y + oy + 0.5) * 16,
-      work: f < 0.6
+      x: (ax + p.x + ox + 0.5) * 16,
+      y: (ay + p.y + oy + 0.5) * 16,
+      work: p.work
     );
   }
 
